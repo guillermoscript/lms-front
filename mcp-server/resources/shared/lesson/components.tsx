@@ -63,7 +63,7 @@ const cn = (...parts: (string | false | null | undefined)[]) =>
 const CARD =
   "my-5 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
 const PRIMARY_BUTTON =
-  "cursor-pointer rounded-lg border-none bg-violet-600 px-4 py-2 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-violet-500";
+  "cursor-pointer rounded-lg border-none bg-[var(--brand-600)] px-4 py-2 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[var(--brand-500)]";
 const GHOST_BUTTON =
   "flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-[13px] font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300";
 
@@ -266,7 +266,7 @@ export function Quiz({
               className={cn(
                 "flex w-full items-start gap-3 rounded-lg border border-zinc-200 bg-transparent p-3 text-left text-[13px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-200",
                 submitted ? "cursor-default" : "cursor-pointer",
-                isSelected && !submitted && "border-violet-500 bg-violet-50 dark:bg-violet-950/40",
+                isSelected && !submitted && "border-[var(--brand-500)] bg-[var(--brand-50)] dark:bg-[var(--brand-950)]/40",
                 showResult && isCorrectOption && "border-green-500 bg-green-50 dark:bg-green-950",
                 showResult &&
                   isSelected &&
@@ -278,7 +278,7 @@ export function Quiz({
                 className={cn(
                   "mt-0.5 flex size-5 shrink-0 items-center justify-center border border-zinc-300 text-[11px] font-semibold dark:border-zinc-600",
                   allowMultiple ? "rounded" : "rounded-full",
-                  isSelected && !submitted && "border-violet-600 bg-violet-600 text-white",
+                  isSelected && !submitted && "border-[var(--brand-600)] bg-[var(--brand-600)] text-white",
                   showResult && isCorrectOption && "border-green-500 bg-green-500 text-white",
                   showResult &&
                     isSelected &&
@@ -480,7 +480,7 @@ export function Vocabulary({
                 type="button"
                 onClick={toggle}
                 aria-label={playing ? "Pause audio" : "Play pronunciation"}
-                className="flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300"
+                className="flex size-8 cursor-pointer items-center justify-center rounded-full border-none bg-[var(--brand-100)] text-[var(--brand-700)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-300)]"
               >
                 {playing ? (
                   <IconPlayerPause className="size-4" />
@@ -542,7 +542,7 @@ export function Step({ title, number, children }: Record<string, any>) {
 
   return (
     <div className="relative">
-      <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-violet-600 bg-white text-[13px] font-bold text-violet-600 dark:border-violet-400 dark:bg-zinc-950 dark:text-violet-400">
+      <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-[var(--brand-600)] bg-white text-[13px] font-bold text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:bg-zinc-950 dark:text-[var(--brand-400)]">
         {assigned ?? "•"}
       </div>
       <div className="pt-0.5">
@@ -568,9 +568,9 @@ export function Definition({
   children,
 }: Record<string, any>) {
   return (
-    <div className="my-4 rounded-lg border-l-4 border-violet-600 bg-zinc-100/60 p-4 dark:border-violet-400 dark:bg-zinc-800/50">
+    <div className="my-4 rounded-lg border-l-4 border-[var(--brand-600)] bg-zinc-100/60 p-4 dark:border-[var(--brand-400)] dark:bg-zinc-800/50">
       <div className="flex items-start gap-3">
-        <IconBook className="mt-0.5 size-5 shrink-0 text-violet-600 dark:text-violet-400" />
+        <IconBook className="mt-0.5 size-5 shrink-0 text-[var(--brand-600)] dark:text-[var(--brand-400)]" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-2">
             <span className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100">
@@ -849,7 +849,7 @@ export function Audio({ src, title }: Record<string, any>) {
     <div className={CARD}>
       {title && (
         <div className="mb-3 flex items-center gap-2">
-          <IconVolume className="size-5 shrink-0 text-violet-600 dark:text-violet-400" />
+          <IconVolume className="size-5 shrink-0 text-[var(--brand-600)] dark:text-[var(--brand-400)]" />
           <h4 className="m-0 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
             {str(title)}
           </h4>
@@ -890,7 +890,7 @@ export function Embed({ url, title, caption }: Record<string, any>) {
 export function FileDownload({ url, filename, description }: Record<string, any>) {
   return (
     <div className={cn(CARD, "flex items-center gap-4")}>
-      <IconFileDownload className="size-8 shrink-0 text-violet-600 dark:text-violet-400" />
+      <IconFileDownload className="size-8 shrink-0 text-[var(--brand-600)] dark:text-[var(--brand-400)]" />
       <div className="min-w-0 flex-1">
         <p className="m-0 truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
           {str(filename)}
@@ -906,7 +906,7 @@ export function FileDownload({ url, filename, description }: Record<string, any>
         download={str(filename)}
         target="_blank"
         rel="noopener noreferrer"
-        className="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-[13px] font-semibold text-white no-underline dark:bg-violet-500"
+        className="shrink-0 rounded-lg bg-[var(--brand-600)] px-4 py-2 text-[13px] font-semibold text-white no-underline dark:bg-[var(--brand-500)]"
       >
         Download
       </a>
@@ -937,7 +937,7 @@ export function FlashcardSet({ cards }: Record<string, any>) {
         className={cn(
           "mx-auto flex h-48 w-full max-w-md cursor-pointer items-center justify-center rounded-xl border border-zinc-200 p-6 text-center text-[13px] font-medium shadow-sm dark:border-zinc-800",
           flipped
-            ? "bg-violet-50 text-zinc-900 dark:bg-violet-950/40 dark:text-zinc-100"
+            ? "bg-[var(--brand-50)] text-zinc-900 dark:bg-[var(--brand-950)]/40 dark:text-zinc-100"
             : "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100"
         )}
       >
@@ -1164,7 +1164,7 @@ export function MatchingPairs({ pairs, explanation }: Record<string, any>) {
                 "w-full rounded-lg border border-zinc-200 p-3 text-left text-[13px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-200",
                 checked ? "cursor-default" : "cursor-pointer",
                 colorForTerm(termIndex) ?? "bg-transparent",
-                selectedTerm === termIndex && "ring-2 ring-violet-500",
+                selectedTerm === termIndex && "ring-2 ring-[var(--brand-500)]",
                 checked && connections[termIndex] === termIndex && "border-green-500",
                 checked && connections[termIndex] !== termIndex && "border-red-500"
               )}
@@ -1186,7 +1186,7 @@ export function MatchingPairs({ pairs, explanation }: Record<string, any>) {
                 "w-full rounded-lg border border-zinc-200 p-3 text-left text-[13px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-200",
                 checked ? "cursor-default" : "cursor-pointer",
                 colorForMatch(matchIndex) ?? "bg-transparent",
-                selectedMatch === matchIndex && "ring-2 ring-violet-500"
+                selectedMatch === matchIndex && "ring-2 ring-[var(--brand-500)]"
               )}
             >
               {str(entries[matchIndex]?.match)}
@@ -1266,7 +1266,7 @@ export function Ordering({ items, explanation }: Record<string, any>) {
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg border border-zinc-200 bg-transparent p-3 text-left text-[13px] text-zinc-700 dark:border-zinc-700 dark:text-zinc-200",
                 checked ? "cursor-default" : "cursor-pointer",
-                selected === index && "bg-violet-50 ring-2 ring-violet-500 dark:bg-violet-950/40",
+                selected === index && "bg-[var(--brand-50)] ring-2 ring-[var(--brand-500)] dark:bg-[var(--brand-950)]/40",
                 checked && correct && "border-green-500 bg-green-50 dark:bg-green-950",
                 checked && !correct && "border-red-500 bg-red-50 dark:bg-red-950"
               )}
@@ -1334,8 +1334,8 @@ export function LessonCheckpoint({ checkpointId, label }: Record<string, any>) {
   if (id === undefined) return null;
 
   return (
-    <div className="my-6 flex items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 dark:border-violet-900 dark:bg-violet-950/40">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300">
+    <div className="my-6 flex items-center gap-3 rounded-xl border border-[var(--brand-200)] bg-[var(--brand-50)] px-4 py-3 dark:border-[var(--brand-900)] dark:bg-[var(--brand-950)]/40">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--brand-100)] text-[var(--brand-700)] dark:bg-[var(--brand-900)] dark:text-[var(--brand-300)]">
         <IconFlag className="size-4" />
       </div>
       <div className="min-w-0">

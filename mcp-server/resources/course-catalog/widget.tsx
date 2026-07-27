@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -75,9 +76,10 @@ export default function CourseCatalog() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Browsing catalog…</p>
           </div>
         </div>
@@ -114,6 +116,7 @@ export default function CourseCatalog() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-[820px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           <div className="mb-4.5 flex flex-wrap items-baseline justify-between gap-2">
@@ -201,12 +204,12 @@ export default function CourseCatalog() {
                           <button
                             onClick={() => handleEnroll(course.id, course.title)}
                             disabled={pendingIds.has(course.id)}
-                            className="cursor-pointer rounded-full border-none bg-violet-600 px-2.5 py-[3px] text-[11px] font-bold text-white disabled:cursor-default disabled:opacity-60 dark:bg-violet-400"
+                            className="cursor-pointer rounded-full border-none bg-[var(--brand-600)] px-2.5 py-[3px] text-[11px] font-bold text-white disabled:cursor-default disabled:opacity-60 dark:bg-[var(--brand-400)]"
                           >
                             {pendingIds.has(course.id) ? "Enrolling…" : "Enroll"}
                           </button>
                         ) : course.has_access ? (
-                          <span className="rounded-full bg-violet-100 px-[9px] py-[3px] text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                          <span className="rounded-full bg-[var(--brand-100)] px-[9px] py-[3px] text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
                             Access
                           </span>
                         ) : (

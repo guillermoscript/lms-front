@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -171,12 +172,12 @@ const containerClass =
 const choiceClass = (selected: boolean, layout = "block w-full text-left") =>
   `mb-2 cursor-pointer rounded-[10px] border-[1.5px] px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 ${layout} ${
     selected
-      ? "border-violet-600 bg-violet-50 font-semibold dark:border-violet-400 dark:bg-violet-950"
+      ? "border-[var(--brand-600)] bg-[var(--brand-50)] font-semibold dark:border-[var(--brand-400)] dark:bg-[var(--brand-950)]"
       : "border-zinc-200 bg-white font-normal dark:border-zinc-800 dark:bg-zinc-900"
   }`;
 
 const primaryBtnClass =
-  "cursor-pointer rounded-[10px] border-none bg-violet-600 px-4.5 py-[9px] text-[13.5px] font-semibold text-white dark:bg-violet-400";
+  "cursor-pointer rounded-[10px] border-none bg-[var(--brand-600)] px-4.5 py-[9px] text-[13.5px] font-semibold text-white dark:bg-[var(--brand-400)]";
 
 const inputClass =
   "box-border w-full rounded-[10px] border-[1.5px] border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100";
@@ -221,6 +222,7 @@ export default function PracticePlayer() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             Setting up practice…
@@ -235,6 +237,7 @@ export default function PracticePlayer() {
   if (questions.length === 0) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-sm text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             No practice questions could be generated for “{topic}”. Ask the
@@ -353,6 +356,7 @@ export default function PracticePlayer() {
 
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className={containerClass}>
             <h2 className="m-0 mb-1 text-xl text-zinc-900 dark:text-zinc-100">
@@ -403,11 +407,12 @@ export default function PracticePlayer() {
   // ── Question screen ────────────────────────────────────────────────────────
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className={containerClass}>
           {/* Header + progress dots */}
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
-            <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+            <span className="rounded-lg bg-[var(--brand-50)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
               {isMixed
                 ? `${MIXED_COPY.pill} · ${q.topic ?? topic}`
                 : `Practice · ${topic}`}
@@ -421,7 +426,7 @@ export default function PracticePlayer() {
                   key={dot.id}
                   className={`size-2 rounded-full ${
                     i === index
-                      ? "bg-violet-600 dark:bg-violet-400"
+                      ? "bg-[var(--brand-600)] dark:bg-[var(--brand-400)]"
                       : answers[dot.id] !== undefined
                         ? "bg-green-600 dark:bg-green-400"
                         : "bg-zinc-200 dark:bg-zinc-800"
@@ -432,7 +437,7 @@ export default function PracticePlayer() {
           </div>
 
           {isMixed && index === 0 && (
-            <p className="m-0 mb-3.5 rounded-[10px] border border-violet-200 bg-violet-50 px-3 py-2 text-[12.5px] leading-[1.5] text-violet-900 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-200">
+            <p className="m-0 mb-3.5 rounded-[10px] border border-[var(--brand-200)] bg-[var(--brand-50)] px-3 py-2 text-[12.5px] leading-[1.5] text-[var(--brand-900)] dark:border-[var(--brand-900)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-200)]">
               {MIXED_COPY.banner}
             </p>
           )}
@@ -494,7 +499,7 @@ export default function PracticePlayer() {
                     const matched = ((answer as Record<string, string>) ?? {})[p.left];
                     const border =
                       pendingLeft === p.left
-                        ? "border-violet-600 bg-violet-50 font-semibold dark:border-violet-400 dark:bg-violet-950"
+                        ? "border-[var(--brand-600)] bg-[var(--brand-50)] font-semibold dark:border-[var(--brand-400)] dark:bg-[var(--brand-950)]"
                         : matched
                           ? "border-green-600 bg-white font-normal dark:border-green-400 dark:bg-zinc-900"
                           : "border-zinc-200 bg-white font-normal dark:border-zinc-800 dark:bg-zinc-900";

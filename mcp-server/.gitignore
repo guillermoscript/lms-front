@@ -42,3 +42,6 @@ Thumbs.db
 *.swo
 *~
 
+
+# Widget preview renders (regenerate with scripts/shoot-demo-widgets.sh)
+demo-shots/

@@ -1,4 +1,5 @@
 import type { MCPServer, MiddlewareContext, McpMiddlewareFn } from "mcp-use/server";
+import { demoWidgetsEnabled } from "./env.js";
 
 /**
  * Role-based tool access (Option A).
@@ -94,6 +95,10 @@ export function isToolAllowedForRole(
   role: string | undefined,
   toolName: string
 ): boolean {
+  // Dev widget previews (`MCP_DEMO_WIDGETS=1`) serve static fixtures and are
+  // meant to be reachable from an inspector session with no LMS login, so they
+  // are role-less. They do not exist at all unless the flag is set.
+  if (toolName.startsWith("lms_demo_") && demoWidgetsEnabled()) return true;
   if (role === "admin") return true;
   if (role === "student") return STUDENT_TOOLS.has(toolName);
   if (role !== "teacher") return false;

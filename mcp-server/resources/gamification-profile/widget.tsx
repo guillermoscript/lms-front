@@ -4,6 +4,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -62,7 +63,7 @@ function tierClass(tier: string | null): string {
     case "diamond":
       return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300";
     default:
-      return "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400";
+      return "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]";
   }
 }
 
@@ -82,9 +83,10 @@ export default function GamificationProfile() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading your progress…</p>
           </div>
         </div>
@@ -95,6 +97,7 @@ export default function GamificationProfile() {
   if (!props.has_profile) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="mx-auto max-w-[680px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
             <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -134,12 +137,13 @@ export default function GamificationProfile() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-[680px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Level hero */}
           <div className="mb-3.5 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mb-3.5 flex items-center gap-3.5">
-              <div className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] bg-violet-50 text-[26px] dark:bg-violet-950">
+              <div className="flex size-[52px] shrink-0 items-center justify-center rounded-[14px] bg-[var(--brand-50)] text-[26px] dark:bg-[var(--brand-950)]">
                 {props.level_icon ?? "⭐"}
               </div>
               <div className="min-w-0">
@@ -156,7 +160,7 @@ export default function GamificationProfile() {
             {/* XP progress to next level */}
             <div className="h-2.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
               <div
-                className="h-full rounded-full bg-violet-600 transition-[width] duration-400 ease-out dark:bg-violet-400"
+                className="h-full rounded-full bg-[var(--brand-600)] transition-[width] duration-400 ease-out dark:bg-[var(--brand-400)]"
                 style={{ width: `${levelPct}%` }}
               />
             </div>

@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 import { LessonBody } from "../shared/lesson";
 
@@ -65,9 +66,10 @@ export default function LessonViewer() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Opening lesson…</p>
           </div>
         </div>
@@ -87,12 +89,13 @@ export default function LessonViewer() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-[760px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
           <div className="mb-[18px]">
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
-              <span className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+              <span className="rounded-lg bg-[var(--brand-50)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
                 Lesson {lesson.sequence}
               </span>
               <span className="text-xs text-zinc-400 dark:text-zinc-500">
@@ -163,7 +166,7 @@ export default function LessonViewer() {
                   className={`cursor-pointer rounded-[10px] border-[1.5px] bg-transparent px-[18px] py-[9px] text-[13.5px] font-semibold disabled:cursor-default ${
                     askedTutor
                       ? "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400"
-                      : "border-violet-600 text-violet-600 dark:border-violet-400 dark:text-violet-400"
+                      : "border-[var(--brand-600)] text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]"
                   }`}
                 >
                   {askedTutor ? "Asked the tutor ✓" : "I don't understand this 🙋"}
@@ -176,7 +179,7 @@ export default function LessonViewer() {
                   <button
                     onClick={handleComplete}
                     disabled={isCompleting}
-                    className="cursor-pointer rounded-[10px] border-none bg-violet-600 px-[18px] py-[9px] text-[13.5px] font-semibold text-white disabled:cursor-wait disabled:opacity-70 dark:bg-violet-400"
+                    className="cursor-pointer rounded-[10px] border-none bg-[var(--brand-600)] px-[18px] py-[9px] text-[13.5px] font-semibold text-white disabled:cursor-wait disabled:opacity-70 dark:bg-[var(--brand-400)]"
                   >
                     {isCompleting ? "Marking…" : "Mark lesson complete"}
                   </button>

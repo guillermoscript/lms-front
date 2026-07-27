@@ -1,5 +1,5 @@
 import { MCPServer, oauthSupabaseProvider } from "mcp-use/server";
-import { getSupabaseUrl, shouldVerifyJwt } from "./src/env.js";
+import { getSupabaseUrl, shouldVerifyJwt, demoWidgetsEnabled } from "./src/env.js";
 import { installToolGuards } from "./src/register.js";
 import { installToolPolicy } from "./src/tool-policy.js";
 import { installAuthRoutes } from "./src/auth-routes.js";
@@ -18,6 +18,7 @@ import { registerFlashcardTools } from "./src/tools/flashcards.js";
 import { registerStudyPlanTools } from "./src/tools/study-plan.js";
 import { registerAskTeacherTools } from "./src/tools/ask-teacher.js";
 import { registerLandingPageTools } from "./src/tools/landing-pages.js";
+import { registerDemoTools } from "./src/tools/demo.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
 
@@ -49,11 +50,30 @@ const server = new MCPServer({
   ],
   // Supabase OAuth 2.1: clients authenticate against Supabase; we verify the
   // resulting JWTs. Tenant/role claims come from the LMS custom_access_token_hook.
-  oauth: oauthSupabaseProvider({
-    supabaseUrl: getSupabaseUrl(),
-    verifyJwt: shouldVerifyJwt(),
-  }),
+  //
+  // Widget-preview mode (MCP_DEMO_WIDGETS=1, dev only) drops OAuth entirely:
+  // bearer auth on /mcp would otherwise 401 the inspector before any handler
+  // runs, and the whole point of the mode is rendering widgets with no Supabase
+  // and no login. With no auth there is no tenant role, so `tools/list` exposes
+  // only the `lms_demo_*` fixtures — every real tool still refuses to run
+  // ("Authentication required" from LmsSession) because it has no session.
+  ...(demoWidgetsEnabled()
+    ? {}
+    : {
+        oauth: oauthSupabaseProvider({
+          supabaseUrl: getSupabaseUrl(),
+          verifyJwt: shouldVerifyJwt(),
+        }),
+      }),
 });
+
+// Dev-only widget previews (MCP_DEMO_WIDGETS=1, never in production). Must be
+// registered BEFORE installToolGuards: an inspector session with no LMS login
+// has no tenant role, and the guards would reject every call. These handlers
+// serve static fixtures and never touch a session or Supabase.
+if (demoWidgetsEnabled()) {
+  registerDemoTools(server);
+}
 
 // Per-tool guards: role-based call gating + audit logging to mcp_audit_log.
 // Must run BEFORE registering tools — it monkey-patches server.tool to wrap

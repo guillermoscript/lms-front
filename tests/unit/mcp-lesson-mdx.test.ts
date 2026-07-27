@@ -134,8 +134,11 @@ describe('LessonBody', () => {
       '  <Step title="Three">c</Step>',
       '</Steps>',
     ].join('\n')
+    // The step marker is the only element carrying the brand border colour.
+    // It was `border-violet-600` until widgets moved to the tenant brand ramp
+    // (`--brand-*`), so this selector tracks the accent, not a fixed hue.
     const numbersIn = (markup: string) =>
-      [...markup.matchAll(/border-violet-600[^>]*>(\d+)</g)].map((m) => m[1])
+      [...markup.matchAll(/border-\[var\(--brand-600\)\][^>]*>(\d+)</g)].map((m) => m[1])
 
     // Rendering the same content twice must not drift: a counter incremented
     // during render double-counts under React's development double-invoke and

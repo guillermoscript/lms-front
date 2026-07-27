@@ -4,6 +4,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ function statusPill(status: string): string {
 
 function completionColor(pct: number): string {
   if (pct >= 80) return "bg-green-600 dark:bg-green-400";
-  if (pct >= 40) return "bg-violet-600 dark:bg-violet-400";
+  if (pct >= 40) return "bg-[var(--brand-600)] dark:bg-[var(--brand-400)]";
   if (pct > 0) return "bg-amber-600 dark:bg-amber-400";
   return "bg-zinc-300 dark:bg-zinc-600";
 }
@@ -83,9 +84,10 @@ export default function SchoolOverview() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Crunching school stats…</p>
           </div>
         </div>
@@ -122,6 +124,7 @@ export default function SchoolOverview() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -151,7 +154,7 @@ export default function SchoolOverview() {
               "Avg completion",
               `${school.completion_rate}%`,
               undefined,
-              "text-violet-600 dark:text-violet-400"
+              "text-[var(--brand-600)] dark:text-[var(--brand-400)]"
             )}
             {kpi(
               "Avg exam score",

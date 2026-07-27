@@ -10,6 +10,20 @@
   --color-scheme: light dark;
 }
 
+/*
+ * ⚠️ THIS FILE IS NOT PART OF THE WIDGET BUILD.
+ *
+ * `mcp-use dev/build` generates its own Tailwind entry per widget at
+ * `.mcp-use/<widget>/styles.css` (`@import "tailwindcss"` + `@source` lines)
+ * and imports THAT from the generated entry.tsx. Nothing imports this file, and
+ * the CLI exposes no hook to add one — so `@theme`, `@utility` or plain rules
+ * added here silently do nothing.
+ *
+ * That is why tenant theming (resources/shared/branding.tsx) uses CSS custom
+ * properties with arbitrary-value utilities — `bg-[var(--brand-600)]` — which
+ * Tailwind compiles straight from the scanned JSX and which need no theme entry.
+ */
+
 @variant dark (&:where(.dark, .dark *));
 
 /* Custom styles */

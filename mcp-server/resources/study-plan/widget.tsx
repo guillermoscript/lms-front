@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // Props produced by lms_get_study_plan (Epic #348 Phase 4, #359).
@@ -73,9 +74,10 @@ export default function StudyPlan() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
-            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
           </div>
         </div>
       </McpUseProvider>
@@ -126,6 +128,7 @@ export default function StudyPlan() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-[640px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           <div className="mb-4 flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
@@ -151,7 +154,7 @@ export default function StudyPlan() {
                 className={
                   weekComplete
                     ? "stroke-green-600 dark:stroke-green-400"
-                    : "stroke-violet-600 dark:stroke-violet-400"
+                    : "stroke-[var(--brand-600)] dark:stroke-[var(--brand-400)]"
                 }
               />
               <text
@@ -215,7 +218,7 @@ export default function StudyPlan() {
                     "Help me plan this week: propose study goals from my next lessons, weak spots, and due flashcards, then save them with lms_set_study_plan."
                   )
                 }
-                className="mt-4 cursor-pointer rounded-lg border-none bg-violet-600 px-4 py-2 text-[13px] font-semibold text-white dark:bg-violet-400"
+                className="mt-4 cursor-pointer rounded-lg border-none bg-[var(--brand-600)] px-4 py-2 text-[13px] font-semibold text-white dark:bg-[var(--brand-400)]"
               >
                 Plan my week
               </button>
@@ -288,7 +291,7 @@ export default function StudyPlan() {
                   "Let's plan next week: look at what I finished and missed this week, my next lessons, and due flashcards, then propose next week's goals and save them with lms_set_study_plan."
                 )
               }
-              className="cursor-pointer rounded-lg border border-violet-600 bg-transparent px-4 py-2 text-[13px] font-semibold text-violet-600 dark:border-violet-400 dark:text-violet-400"
+              className="cursor-pointer rounded-lg border border-[var(--brand-600)] bg-transparent px-4 py-2 text-[13px] font-semibold text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]"
             >
               Plan next week with me
             </button>

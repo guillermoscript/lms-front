@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -97,9 +98,10 @@ export default function ArtifactSandbox() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Rendering artifact…</p>
           </div>
         </div>
@@ -120,7 +122,7 @@ export default function ArtifactSandbox() {
       onClick={() => setTab(id)}
       className={`cursor-pointer rounded-lg border-none px-3.5 py-1.5 text-[13px] transition-all duration-150 ${
         tab === id
-          ? "bg-violet-50 font-semibold text-violet-600 dark:bg-violet-950 dark:text-violet-400"
+          ? "bg-[var(--brand-50)] font-semibold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]"
           : "bg-transparent font-medium text-zinc-500 dark:text-zinc-400"
       }`}
     >
@@ -130,6 +132,7 @@ export default function ArtifactSandbox() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -201,7 +204,7 @@ export default function ArtifactSandbox() {
                   disabled={saving || !dirty}
                   className={`rounded-lg border-none px-[18px] py-2 text-[13px] font-semibold transition-all duration-150 ${
                     dirty
-                      ? "cursor-pointer bg-violet-600 text-white dark:bg-violet-400 dark:text-zinc-950"
+                      ? "cursor-pointer bg-[var(--brand-600)] text-white dark:bg-[var(--brand-400)] dark:text-zinc-950"
                       : "cursor-not-allowed bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
                   } ${saving ? "cursor-not-allowed opacity-70" : ""}`}
                 >
