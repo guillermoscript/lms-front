@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProgress } from "@/components/shared/route-progress";
+import { FeedbackButton } from "@/components/shared/feedback-button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
 import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
@@ -170,6 +171,7 @@ export default async function RootLayout({
               <TenantCssVars />
               <RouteProgress />
               {children}
+              <FeedbackButton />
               <Toaster />
             </TenantProvider>
           </ThemeProvider>

@@ -3509,7 +3509,8 @@
   "userNav": {
     "profile": "Perfil",
     "settings": "Configuración",
-    "logout": "Cerrar Sesión"
+    "logout": "Cerrar Sesión",
+    "reportProblem": "Reportar un problema"
   },
   "welcomeHero": {
     "welcomeBack": "Bienvenido, {userName}",
@@ -3989,6 +3990,10 @@
       "cancelling": "Cancelando...",
       "success": "Solicitud de pago cancelada exitosamente",
       "error": "Error al cancelar la solicitud de pago"
+    },
+    "feedbackButton": {
+      "label": "Reportar un problema",
+      "dragHint": "arrastra para mover"
     }
   },
   "landing": {
