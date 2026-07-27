@@ -1,6 +1,8 @@
 import type { Field } from '@measured/puck'
 import type { CSSProperties } from 'react'
 
+import { readableOn } from '@/lib/color/contrast'
+
 /**
  * Shared "Accent Color" support for Puck LMS blocks.
  *
@@ -38,12 +40,29 @@ function hasColor(value: string | undefined | null): value is string {
 }
 
 /**
- * Inline style that scopes a block-local `--block-accent` variable.
+ * Inline style that scopes a block-local `--block-accent` variable, paired with
+ * the `--block-accent-foreground` that reads on top of it.
+ *
  * Falls back to the tenant brand color (`--primary`) when no override is set.
+ *
+ * The foreground half exists because blocks used to hardcode
+ * `text-primary-foreground` (a near-white) over whatever colour an admin typed
+ * into the "Accent Color" field, so a pale accent rendered white-on-white
+ * (issue #569). It is computed from the accent's luminance, and for the brand
+ * fallback it defers to `--primary-foreground`, which
+ * `components/tenant/tenant-css-vars-server.tsx` derives from the tenant's
+ * primary colour for exactly the same reason.
+ *
+ * A colour we cannot parse (an unknown keyword, a `var()`) keeps the old
+ * near-white rather than guessing at something possibly worse.
  */
 export function accentVars(accentColor?: string | null): CSSProperties {
+  const explicit = hasColor(accentColor) ? accentColor.trim() : null
   return {
-    // Cast: `--block-accent` is a custom property, not in the CSSProperties type.
-    ['--block-accent' as string]: hasColor(accentColor) ? accentColor.trim() : 'var(--primary)',
+    // Cast: these are custom properties, not in the CSSProperties type.
+    ['--block-accent' as string]: explicit ?? 'var(--primary)',
+    ['--block-accent-foreground' as string]: explicit
+      ? readableOn(explicit, 'var(--primary-foreground)')
+      : 'var(--primary-foreground)',
   }
 }

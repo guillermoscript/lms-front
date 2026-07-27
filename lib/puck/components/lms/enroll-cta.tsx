@@ -74,7 +74,10 @@ export const EnrollCta: ComponentConfig<EnrollCtaProps> = {
             {subtext && <p className="mt-4 text-muted-foreground max-w-[560px] mx-auto">{subtext}</p>}
             <div className="mt-8 flex justify-center">
               <Link href={href}>
-                <Button size="lg" className="bg-[var(--block-accent)] text-white hover:opacity-90">
+                <Button
+                  size="lg"
+                  className="bg-[var(--block-accent)] text-[var(--block-accent-foreground)] hover:opacity-90"
+                >
                   {label}
                 </Button>
               </Link>
