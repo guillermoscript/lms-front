@@ -1710,6 +1710,98 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
     ],
   },
 
+  // ─────────────────────────────────────────────────────── confusion-hotspots
+  {
+    widget: "confusion-hotspots",
+    tool: "lms_demo_confusion_hotspots",
+    title: "Where students struggle (lms_get_confusion_hotspots)",
+    variants: [
+      {
+        id: "default",
+        label: "8 hotspots, 3 mislabelled items",
+        output:
+          "8 hotspot(s) (last 30 days), worst first: useEffect cleanup (7 student(s), severity 88); Memoiza la lista de resultados (6 student(s), severity 84); Parcial 1: ¿Cuándo se vuelve a ejecutar un efecto? (9 student(s), severity 79).",
+        props: {
+          course: { id: 101, title: "React 19 en la práctica" },
+          window_days: 30,
+          truncated: false,
+          sources: {
+            practice_attempts: 214,
+            exercise_evaluations: 96,
+            exam_submissions: 31,
+          },
+          severity_formula:
+            "severity = round(intensity * 60 + min(students_affected, 10) * 4), capped at 100.",
+          hotspots: [
+            { scope: "practice", ref: 5012, label: "useEffect cleanup", students_affected: 7, severity: 88, evidence: "41 attempt(s) by 9 student(s), avg score 38; 7 student(s) below 70" },
+            { scope: "exercise", ref: 3301, label: "Memoiza la lista de resultados", students_affected: 6, severity: 84, evidence: "6 of 7 student(s) not passing on their latest attempt; avg 4.3 attempt(s) per student" },
+            { scope: "exam_question", ref: 9104, label: "Parcial 1: ¿Cuándo se vuelve a ejecutar un efecto con array de dependencias vacío?", students_affected: 9, severity: 79, evidence: "9 of 12 student(s) missed it on their latest submission (75% miss rate)" },
+            { scope: "exercise", ref: 3307, label: "Extrae un custom hook de este componente", students_affected: 5, severity: 66, evidence: "5 of 9 student(s) not passing on their latest attempt; avg 2.8 attempt(s) per student" },
+            { scope: "practice", ref: 5019, label: "Server Components vs Client Components", students_affected: 4, severity: 58, evidence: "27 attempt(s) by 8 student(s), avg score 61; 4 student(s) below 70" },
+            { scope: "exam_question", ref: 9111, label: "Parcial 1: Explica por qué esta lista pierde el estado al reordenarse", students_affected: 4, severity: 47, evidence: "4 of 12 student(s) missed it on their latest submission (33% miss rate)" },
+            // A long-tail item: real but not worth reteaching for.
+            { scope: "exercise", ref: 3312, label: "Añade una key estable al map", students_affected: 1, severity: 22, evidence: "1 of 8 student(s) not passing on their latest attempt; avg 1.2 attempt(s) per student" },
+            // Practice topic with no lesson mapping — ref is null.
+            { scope: "practice", ref: null, label: "Suspense y streaming", students_affected: 2, severity: 19, evidence: "9 attempt(s) by 5 student(s), avg score 74; 2 student(s) below 70" },
+          ],
+          hardest_items: [
+            // Labelled easy, plays hard — the headline case this widget exists for.
+            { item_type: "exercise", item_id: 3301, title: "Memoiza la lista de resultados", rating: 1782, attempt_count: 31, difficulty_level: "easy", mismatch: "harder_than_labeled" },
+            { item_type: "exam_question", item_id: 9104, title: "¿Cuándo se vuelve a ejecutar un efecto con array de dependencias vacío?", rating: 1704, attempt_count: 12, difficulty_level: null, mismatch: null },
+            { item_type: "exercise", item_id: 3307, title: "Extrae un custom hook de este componente", rating: 1691, attempt_count: 25, difficulty_level: "medium", mismatch: "harder_than_labeled" },
+            { item_type: "exercise", item_id: 3305, title: "Corrige el bucle infinito de useEffect", rating: 1612, attempt_count: 18, difficulty_level: "hard", mismatch: null },
+            { item_type: "exercise", item_id: 3309, title: "Convierte la clase a función", rating: 1544, attempt_count: 22, difficulty_level: "medium", mismatch: null },
+            // Labelled hard, everyone passes it first try.
+            { item_type: "exercise", item_id: 3312, title: "Añade una key estable al map", rating: 1301, attempt_count: 40, difficulty_level: "hard", mismatch: "easier_than_labeled" },
+          ],
+        },
+      },
+      {
+        id: "all-clear",
+        label: "Activity, but nobody stuck",
+        output:
+          "No confusion hotspots in the last 30 day(s) — no low practice scores, stuck students, or missed exam questions on record for this course.",
+        props: {
+          course: { id: 102, title: "Fundamentos de TypeScript" },
+          window_days: 30,
+          truncated: false,
+          sources: {
+            practice_attempts: 88,
+            exercise_evaluations: 44,
+            exam_submissions: 12,
+          },
+          severity_formula:
+            "severity = round(intensity * 60 + min(students_affected, 10) * 4), capped at 100.",
+          hotspots: [],
+          hardest_items: [
+            { item_type: "exercise", item_id: 4401, title: "Tipa esta función genérica", rating: 1522, attempt_count: 14, difficulty_level: "medium", mismatch: null },
+            { item_type: "exercise", item_id: 4405, title: "Estrecha el tipo con un type guard", rating: 1488, attempt_count: 11, difficulty_level: "medium", mismatch: null },
+          ],
+        },
+      },
+      {
+        id: "empty",
+        label: "No student activity at all",
+        output:
+          "No confusion hotspots in the last 30 day(s) — no low practice scores, stuck students, or missed exam questions on record for this course.",
+        props: {
+          course: { id: 104, title: "Diseño de APIs REST" },
+          window_days: 30,
+          truncated: false,
+          sources: {
+            practice_attempts: 0,
+            exercise_evaluations: 0,
+            exam_submissions: 0,
+          },
+          severity_formula:
+            "severity = round(intensity * 60 + min(students_affected, 10) * 4), capped at 100.",
+          hotspots: [],
+          hardest_items: [],
+        },
+      },
+    ],
+  },
+
   // ─────────────────────────────────────────────────────────── artifact-sandbox
   {
     widget: "artifact-sandbox",

@@ -958,7 +958,8 @@
             "title": "Configuración del Curso",
             "description": "Configura los detalles del curso, precios, visibilidad y otros ajustes."
           }
-        }
+        },
+        "analytics": "Analíticas"
       },
       "newCourse": {
         "title": "Crear Nuevo Curso",
@@ -1607,6 +1608,49 @@
         "systemPromptDescription": "Instrucciones internas para el modelo de IA. Usa la sintaxis {{variable}}.",
         "systemPromptPlaceholder": "ej. Eres un asistente útil evaluando un ensayo sobre {{topic}}...",
         "livePreview": "Vista Previa en Vivo"
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "subtitle": "Dónde se atascan tus estudiantes en {course}, y si tus etiquetas de dificultad coinciden con la realidad.",
+        "backToCourse": "Volver al curso",
+        "backToCourses": "Volver a mis cursos",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Las analíticas muestran los resultados de todos los estudiantes inscritos, así que solo el autor del curso puede abrir esta página.",
+        "windowLabel": "Periodo analizado",
+        "windowDays": "{days}d",
+        "warningsTitle": "No se pudieron cargar algunas señales",
+        "warningsDesc": "Las cifras de abajo están incompletas. Es un problema al cargar datos, no una señal de que todo vaya bien:",
+        "scope": {
+          "practice": "Práctica",
+          "exercise": "Ejercicio",
+          "checkpoint": "Checkpoint",
+          "exam_question": "Pregunta de examen"
+        },
+        "difficulty": {
+          "easy": "Fácil",
+          "medium": "Media",
+          "hard": "Difícil",
+          "unlabeled": "Sin etiqueta"
+        },
+        "calibration": {
+          "title": "Calibración de dificultad",
+          "desc": "La etiqueta que le pusiste a cada elemento junto a la valoración obtenida con los intentos reales. Una valoración por encima de 1500 significa que costó más de lo normal.",
+          "empty": "Todavía ningún elemento tiene suficientes intentos. Las valoraciones aparecen cuando un ejercicio o pregunta se ha intentado al menos 3 veces.",
+          "measured": "Medida",
+          "attempts": "{count} intentos",
+          "mismatchSummary": "{count, plural, =1 {elemento se comporta distinto a como lo etiquetaste} other {elementos se comportan distinto a como los etiquetaste}}. Conviene ajustarlos o cambiar la etiqueta.",
+          "harderThanLabeled": "Más difícil de lo etiquetado",
+          "easierThanLabeled": "Más fácil de lo etiquetado",
+          "ratingHint": "Las valoraciones son tipo Elo: cada intento sube el elemento cuando los estudiantes fallan y lo baja cuando aciertan. 1500 es el punto de partida de un elemento nuevo."
+        },
+        "hotspots": {
+          "title": "Puntos de confusión",
+          "desc": "Elementos ordenados por lo mal que le va al grupo, en los últimos {days} días.",
+          "severity": "Gravedad",
+          "allClear": "Sin puntos de confusión en este periodo: nadie está atascado en un ejercicio, checkpoint, práctica o pregunta de examen.",
+          "noData": "Aún no hay actividad de estudiantes en este periodo. Cuando intenten ejercicios, checkpoints, prácticas o exámenes, sus resultados aparecerán aquí.",
+          "sources": "Basado en {practice} intentos de práctica, {exercises} intentos de ejercicio, {checkpoints} intentos de checkpoint y {exams} entregas de examen en los últimos {days} días."
+        }
       }
     },
     "admin": {

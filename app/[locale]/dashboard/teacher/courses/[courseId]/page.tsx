@@ -31,6 +31,7 @@ import {
   IconClock,
   IconVideo,
   IconChevronRight,
+  IconChartBar,
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -220,6 +221,12 @@ export default async function CourseManagementPage({ params }: PageProps) {
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconEye className="h-3.5 w-3.5" />
                   {t('tabs.preview')}
+                </Button>
+              </Link>
+              <Link href={`/dashboard/teacher/courses/${courseId}/analytics`}>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <IconChartBar className="h-3.5 w-3.5" />
+                  {t('analytics')}
                 </Button>
               </Link>
               <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
