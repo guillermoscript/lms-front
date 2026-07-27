@@ -1,6 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { DropZone } from '@measured/puck'
 import { cn } from '@/lib/utils'
+import { readableOn } from '@/lib/color/contrast'
 
 export type SectionProps = {
   backgroundColor: string
@@ -103,6 +104,23 @@ export const Section: ComponentConfig<SectionProps> = {
   render: ({ backgroundColor, backgroundImage, backgroundGradient, overlayOpacity, paddingY, maxWidth, theme }) => {
     const hasCustomBg = backgroundColor || backgroundImage || backgroundGradient
 
+    // A custom background suppresses `themeMap[theme]` — the class that carries
+    // the text colour — so the content used to fall back to the page's inherited
+    // `--foreground`, which is dark in light mode. Any dark custom background
+    // therefore rendered dark-on-dark on the live public pages (issue #569).
+    // With a flat colour we can derive the ink; behind an image or a gradient we
+    // cannot know the luminance, so those keep the existing behaviour (that is
+    // what the overlay control is for).
+    //
+    // Setting `color` alone is not enough: the blocks that land in this zone
+    // (Heading, Text) carry an explicit `text-foreground`, which beats an
+    // inherited colour. Rebinding the `--foreground` token on the section itself
+    // is what actually reaches them — `@theme inline` maps
+    // `--color-foreground: var(--foreground)`, and that re-resolves per element,
+    // so every descendant using the token follows. `color` stays for anything
+    // that simply inherits.
+    const derivedInk = backgroundColor ? readableOn(backgroundColor, '') : ''
+
     return (
       <section
         className={cn(
@@ -111,6 +129,9 @@ export const Section: ComponentConfig<SectionProps> = {
         )}
         style={{
           ...(backgroundColor ? { backgroundColor } : {}),
+          ...(derivedInk
+            ? { color: derivedInk, ['--foreground' as string]: derivedInk }
+            : {}),
           ...(backgroundImage
             ? { backgroundImage: `url(${backgroundImage})` }
             : backgroundGradient

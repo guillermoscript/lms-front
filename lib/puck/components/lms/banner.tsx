@@ -10,7 +10,7 @@ export type BannerProps = {
 } & SectionSpacingProps
 
 const bannerClasses: Record<string, string> = {
-  brand: 'bg-[var(--block-accent)] text-primary-foreground border-transparent',
+  brand: 'bg-[var(--block-accent)] text-[var(--block-accent-foreground)] border-transparent',
   info: 'bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800',
   warning: 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800',
   success: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800',

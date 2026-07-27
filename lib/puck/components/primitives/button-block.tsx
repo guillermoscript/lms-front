@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { Button } from '@/components/ui/button'
+import { readableOn } from '@/lib/color/contrast'
 import { cn } from '@/lib/utils'
 
 export type ButtonBlockProps = {
@@ -74,6 +75,9 @@ export const ButtonBlock: ComponentConfig<ButtonBlockProps> = {
   render: ({ label, href, variant, size, color, alignment }) => {
     const buttonVariant = variantMap[variant] || 'default'
     const buttonSize = sizeMap[size] || 'default'
+    // #569: the solid variant's inline background outlives the variant class's
+    // `text-primary-foreground`. An unparseable color keeps that class instead.
+    const solidInk = readableOn(color, '')
 
     const button = (
       <Button
@@ -86,7 +90,11 @@ export const ButtonBlock: ComponentConfig<ButtonBlockProps> = {
           color
             ? {
                 ...(variant === 'solid'
-                  ? { backgroundColor: color, borderColor: color }
+                  ? {
+                      backgroundColor: color,
+                      borderColor: color,
+                      ...(solidInk ? { color: solidInk } : {}),
+                    }
                   : { color, borderColor: variant === 'outline' ? color : undefined }),
               }
             : undefined

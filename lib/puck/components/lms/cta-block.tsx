@@ -17,7 +17,7 @@ export type CtaBlockProps = {
 
 const containerClasses: Record<string, string> = {
   default: 'bg-muted text-foreground',
-  gradient: 'bg-[var(--block-accent)] text-primary-foreground',
+  gradient: 'bg-[var(--block-accent)] text-[var(--block-accent-foreground)]',
   bordered: 'border-2 border-border text-foreground',
 }
 
@@ -91,7 +91,12 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
                     variant="outline"
                     className={cn(
                       'h-12 px-8 text-base font-semibold rounded-xl',
-                      isGradient && 'border-white/30 text-white hover:bg-white/10 hover:text-white'
+                      // #569: this outline button sits directly on the accent
+                      // surface, so its border and hover wash follow the same
+                      // derived foreground — a hardcoded white one disappears
+                      // against a pale accent.
+                      isGradient &&
+                        'border-[var(--block-accent-foreground)]/30 text-[var(--block-accent-foreground)] hover:bg-[var(--block-accent-foreground)]/10 hover:text-[var(--block-accent-foreground)]'
                     )}
                   >
                     {secondaryCtaLabel}

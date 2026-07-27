@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { Badge } from '@/components/ui/badge'
+import { readableOn } from '@/lib/color/contrast'
 
 export type BadgeBlockProps = {
   text: string
@@ -37,6 +38,9 @@ export const BadgeBlock: ComponentConfig<BadgeBlockProps> = {
     if (!text) return <></>
 
     const badgeVariant = variantMap[variant] || 'default'
+    // #569: the solid variant's inline background outlives the variant class's
+    // `text-primary-foreground`. An unparseable color keeps that class instead.
+    const solidInk = readableOn(color, '')
 
     return (
       <Badge
@@ -46,7 +50,11 @@ export const BadgeBlock: ComponentConfig<BadgeBlockProps> = {
           color
             ? {
                 ...(variant === 'solid'
-                  ? { backgroundColor: color, borderColor: color }
+                  ? {
+                      backgroundColor: color,
+                      borderColor: color,
+                      ...(solidInk ? { color: solidInk } : {}),
+                    }
                   : variant === 'outline'
                     ? { borderColor: color, color }
                     : { backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`, color }),
