@@ -8,6 +8,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { studentDisplayName } from "../shared/student-display";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -79,6 +80,7 @@ const STRINGS = {
     saving: "Saving…",
     saved: "Saved ✓",
     saveGrade: "Save grade",
+    unnamedStudent: "Unnamed student",
     saveFailed: "Save failed",
     submitted: "submitted",
     studentAnswer: "Student answer",
@@ -106,6 +108,7 @@ const STRINGS = {
     saving: "Guardando…",
     saved: "Guardado ✓",
     saveGrade: "Guardar nota",
+    unnamedStudent: "Estudiante sin nombre",
     saveFailed: "Error al guardar",
     submitted: "entregado el",
     studentAnswer: "Respuesta del estudiante",
@@ -210,7 +213,7 @@ export default function SubmissionGrader() {
     });
   };
 
-  const studentName = submission.student_name ?? submission.student_id.slice(0, 8);
+  const studentName = studentDisplayName(submission.student_name, t.unnamedStudent);
   const saveDisabled = saving || (!dirty && status === "teacher_reviewed");
 
   return (

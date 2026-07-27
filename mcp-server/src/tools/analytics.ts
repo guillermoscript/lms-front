@@ -26,9 +26,56 @@ async function fetchProfileNames(
     .select("id, full_name")
     .in("id", unique);
   for (const p of (data as { id: string; full_name: string | null }[] | null) ?? []) {
-    if (p.full_name) names.set(p.id, p.full_name);
+    // A whitespace-only full_name is as absent as NULL — leaving it in renders
+    // a blank name, which reads as a bug rather than as missing data.
+    const name = p.full_name?.trim();
+    if (name) names.set(p.id, name);
   }
   return names;
+}
+
+export type ExamAggregate = {
+  /** Every submission, graded or not. */
+  submitted: number;
+  /** Average over the scored ones, or null when none has been graded yet. */
+  avg: number | null;
+  /** Most recent submission date. */
+  last: string | null;
+};
+
+/**
+ * Per-student exam figures for the progress roster.
+ *
+ * `submitted` and the graded count are deliberately separate. They used to be
+ * one counter incremented only `if (score != null)`, which made an ungraded
+ * submission invisible: the student read as "0 exams" rather than as someone
+ * waiting on a grade, and the roster's "N exams" could never disagree with its
+ * average. The widget needs them to disagree — that disagreement *is* the
+ * ungraded state.
+ */
+export function aggregateExamSubmissions(
+  rows: { student_id: string; score: number | null; submission_date: string | null }[]
+): Map<string, ExamAggregate> {
+  const acc = new Map<string, { sum: number; graded: number; submitted: number; last: string | null }>();
+  for (const s of rows) {
+    const a = acc.get(s.student_id) ?? { sum: 0, graded: 0, submitted: 0, last: null };
+    a.submitted += 1;
+    if (s.score != null) {
+      a.sum += Number(s.score);
+      a.graded += 1;
+    }
+    if (s.submission_date && (!a.last || s.submission_date > a.last)) a.last = s.submission_date;
+    acc.set(s.student_id, a);
+  }
+  const out = new Map<string, ExamAggregate>();
+  for (const [id, a] of acc) {
+    out.set(id, {
+      submitted: a.submitted,
+      avg: a.graded > 0 ? Math.round(a.sum / a.graded) : null,
+      last: a.last,
+    });
+  }
+  return out;
 }
 
 export function registerAnalyticsTools(server: MCPServer) {
@@ -654,23 +701,14 @@ export function registerAnalyticsTools(server: MCPServer) {
           .eq("course_id", course_id);
         const examIds = (exams ?? []).map((e) => e.exam_id as number);
 
-        const examAgg = new Map<string, { sum: number; n: number; last: string | null }>();
+        let examAgg = new Map<string, ExamAggregate>();
         if (examIds.length > 0) {
           const { data: subs } = await supabase
             .from("exam_submissions")
             .select("student_id, score, submission_date")
             .in("exam_id", examIds)
             .in("student_id", userIds);
-          for (const s of (subs as any[]) ?? []) {
-            const a = examAgg.get(s.student_id) ?? { sum: 0, n: 0, last: null };
-            if (s.score != null) {
-              a.sum += Number(s.score);
-              a.n += 1;
-            }
-            if (s.submission_date && (!a.last || s.submission_date > a.last))
-              a.last = s.submission_date;
-            examAgg.set(s.student_id, a);
-          }
+          examAgg = aggregateExamSubmissions((subs as any[]) ?? []);
         }
 
         const names = await fetchProfileNames(supabase, userIds);
@@ -684,7 +722,6 @@ export function registerAnalyticsTools(server: MCPServer) {
           const progress =
             publishedLessons > 0 ? Math.round((completed / publishedLessons) * 100) : null;
           const ex = examAgg.get(uid);
-          const examAvg = ex && ex.n > 0 ? Math.round(ex.sum / ex.n) : null;
           const isActive = e.status === "active";
           const atRisk = isActive && publishedLessons > 0 && completed === 0;
           return {
@@ -694,8 +731,8 @@ export function registerAnalyticsTools(server: MCPServer) {
             enrolled: e.enrollment_date as string,
             completed_lessons: completed,
             progress_pct: progress,
-            exam_avg: examAvg,
-            exam_count: ex?.n ?? 0,
+            exam_avg: ex?.avg ?? null,
+            exam_count: ex?.submitted ?? 0,
             last_active: maxDate(
               lastCompletionByUser.get(uid),
               ex?.last,
