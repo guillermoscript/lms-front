@@ -737,17 +737,82 @@ export function registerStudentTools(server: MCPServer) {
           }
         }
 
-        const courses = (coursesRes.data ?? []).map((c) => ({
-          id: c.course_id,
-          title: c.title,
-          description: c.description,
-          thumbnail_url: c.thumbnail_url,
-          tags: c.tags,
-          lesson_count: lessonCounts.get(c.course_id as number) ?? 0,
-          enrolled: enrolledSet.has(c.course_id),
-          has_access: accessible.has(c.course_id) || enrolledSet.has(c.course_id),
-          covered_by_plan: planCovered.has(c.course_id),
-        }));
+        /**
+         * What a course costs to buy outright.
+         *
+         * The catalog had no price at any layer — not in the query, not in the
+         * payload, not on the card — so a student looking at a course they are
+         * not entitled to had no way to learn what it would take to get it.
+         *
+         * A course can be sold under several products (`product_courses` is
+         * many-to-many, and `.single()` on it is a known trap), so this takes
+         * the cheapest active one and presents it as a "from" price. RLS
+         * already limits `products` to `status = 'active'`, but the filter is
+         * explicit here for the same reason every tenant filter is.
+         */
+        const priceByCourse = new Map<
+          number,
+          { price: number; currency: string | null }
+        >();
+        if (catalogCourseIds.length > 0) {
+          const { data: productRows, error: productErr } = await supabase
+            .from("product_courses")
+            .select("course_id, products!inner(price, currency, status)")
+            .eq("tenant_id", tenantId)
+            .in("course_id", catalogCourseIds)
+            .eq("products.status", "active");
+
+          // Pricing is decoration on a catalog listing: if it fails, the cards
+          // render without it rather than the whole catalog 500ing.
+          if (!productErr) {
+            type EmbeddedProduct = {
+              price: number | string | null;
+              currency: string | null;
+            };
+            const rows = (productRows ?? []) as unknown as Array<{
+              course_id: number;
+              // PostgREST types a joined table as an array even when the FK
+              // makes it to-one, and the runtime shape follows the FK. Accept
+              // both rather than betting on one.
+              products: EmbeddedProduct | EmbeddedProduct[] | null;
+            }>;
+
+            for (const row of rows) {
+              const embedded = row.products;
+              if (!embedded) continue;
+              const products = Array.isArray(embedded) ? embedded : [embedded];
+              for (const product of products) {
+                const price = Number(product?.price);
+                if (!Number.isFinite(price)) continue;
+                const best = priceByCourse.get(row.course_id);
+                if (!best || price < best.price) {
+                  priceByCourse.set(row.course_id, {
+                    price,
+                    currency: product.currency ?? null,
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        const courses = (coursesRes.data ?? []).map((c) => {
+          const priced = priceByCourse.get(c.course_id as number) ?? null;
+          return {
+            id: c.course_id,
+            title: c.title,
+            description: c.description,
+            thumbnail_url: c.thumbnail_url,
+            tags: c.tags,
+            lesson_count: lessonCounts.get(c.course_id as number) ?? 0,
+            enrolled: enrolledSet.has(c.course_id),
+            has_access: accessible.has(c.course_id) || enrolledSet.has(c.course_id),
+            covered_by_plan: planCovered.has(c.course_id),
+            // null = not individually for sale (no active product covers it).
+            price: priced ? priced.price : null,
+            currency: priced ? priced.currency : null,
+          };
+        });
 
         return widget({
           props: {

@@ -78,6 +78,37 @@ Two constraints worth knowing before you touch this:
 Preview any widget under a fake school with the `brand` argument on the demo
 tools: `none` (default), `ocean`, `sunset`, `forest`.
 
+> Until #570 this argument did nothing. `src/tools/demo.ts` computed the brand
+> and named it in the output text but never attached it to the result's
+> `_meta`, so every "branded" preview rendered the platform violet. It now
+> passes it through `widget({ metadata })`, the same sideband the real server
+> uses.
+
+## Language
+
+Widget chrome is en/es. The language comes from the host —
+`useWidget().locale`, a BCP 47 tag (SEP-1865 `HostContext.locale`) — and
+`resources/shared/i18n.tsx` turns it into a string table plus `Intl`
+formatters. Only strings the widget owns are translated; course titles, lesson
+titles and tags come out of the database in the school's own language and are
+rendered verbatim.
+
+The preview harness supplies **no** host locale, so everything would otherwise
+render at the `"en"` default and the Spanish half would never be reviewable.
+Pass `lang=es` (or `en`) to any demo tool to pin it:
+
+```bash
+npx mcp-use client screenshot --mcp http://localhost:3000/mcp \
+  --tool lms_demo_school_overview variant=default lang=es \
+  --width 1100 --height 800 --theme dark --output es.png
+```
+
+That rides the same `_meta` channel as branding (`lms/locale`, see
+`src/locale.ts`). Nothing in production sets it — the host stays the source of
+truth. The fixtures are deliberately Spanish, so `lang=es` is the combination
+that matches a real school, and `lang=en` next to Spanish content is the
+mismatch #570 was filed about.
+
 ## Editing fixtures
 
 Fixtures must satisfy each widget's own `propsSchema`. When you change a widget

@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -55,6 +56,59 @@ export const widgetMetadata: WidgetMetadata = {
 
 type Props = z.infer<typeof propsSchema>;
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading course…",
+    status: {
+      published: "Published",
+      draft: "Draft",
+      archived: "Archived",
+    } as Record<string, string>,
+    enrolled: (n: string) => `${n} enrolled`,
+    created: (d: string) => `Created ${d}`,
+    sequential: "Sequential",
+    loadStats: "Load stats",
+    loadingStats: "Loading stats…",
+    statActiveEnrollments: "Active enrollments",
+    statPublishedLessons: "Published lessons",
+    statCompletionRate: "Completion rate",
+    statExams: "Exams",
+    statSubmissions: "Submissions",
+    statAvgScore: "Avg score",
+    lessonsHeading: (n: string) => `Lessons (${n})`,
+    noLessons: "No lessons yet.",
+    examsHeading: (n: string) => `Exams (${n})`,
+    noExams: "No exams yet.",
+    minutes: (n: string) => `${n} min`,
+  },
+  es: {
+    loading: "Cargando curso…",
+    status: {
+      published: "Publicado",
+      draft: "Borrador",
+      archived: "Archivado",
+    } as Record<string, string>,
+    enrolled: (n: string) => `${n} inscritos`,
+    created: (d: string) => `Creado el ${d}`,
+    sequential: "Secuencial",
+    loadStats: "Cargar estadísticas",
+    loadingStats: "Cargando estadísticas…",
+    statActiveEnrollments: "Inscripciones activas",
+    statPublishedLessons: "Lecciones publicadas",
+    statCompletionRate: "Tasa de finalización",
+    statExams: "Exámenes",
+    statSubmissions: "Entregas",
+    statAvgScore: "Nota media",
+    lessonsHeading: (n: string) => `Lecciones (${n})`,
+    noLessons: "Todavía no hay lecciones.",
+    examsHeading: (n: string) => `Exámenes (${n})`,
+    noExams: "Todavía no hay exámenes.",
+    minutes: (n: string) => `${n} min`,
+  },
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function statusPill(status: string): string {
@@ -67,19 +121,6 @@ function statusPill(status: string): string {
       return "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]";
     default:
       return "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400";
-  }
-}
-
-function formatDate(s: string | null): string {
-  if (!s) return "—";
-  try {
-    return new Date(s).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return s;
   }
 }
 
@@ -112,6 +153,8 @@ export default function CourseDetail() {
   } = useCallTool<{ course_id: number }>("lms_get_course_stats");
 
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -120,7 +163,7 @@ export default function CourseDetail() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Loading course…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -129,6 +172,7 @@ export default function CourseDetail() {
 
   const { course, lessons, exams } = props;
   const stats = parseCourseStats(statsData?.structuredContent);
+  const statusLabel = (status: string) => t.status[status.toLowerCase()] ?? status;
 
   const handleLoadStats = () => {
     setStatsVisible(true);
@@ -151,7 +195,7 @@ export default function CourseDetail() {
                   course.status
                 )}`}
               >
-                {course.status}
+                {statusLabel(course.status)}
               </span>
             </div>
 
@@ -163,13 +207,13 @@ export default function CourseDetail() {
 
             <div className="mb-3.5 flex flex-wrap gap-4">
               <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
-                👥 {course.enrollment_count} enrolled
+                👥 {t.enrolled(fmt.number(course.enrollment_count))}
               </span>
               <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
-                📅 Created {formatDate(course.created_at)}
+                📅 {t.created(fmt.date(course.created_at))}
               </span>
               {course.require_sequential_completion && (
-                <span className="text-[13px] text-zinc-400 dark:text-zinc-500">🔒 Sequential</span>
+                <span className="text-[13px] text-zinc-400 dark:text-zinc-500">🔒 {t.sequential}</span>
               )}
             </div>
 
@@ -183,29 +227,50 @@ export default function CourseDetail() {
                   : "bg-transparent"
               }`}
             >
-              {statsLoading ? "Loading stats…" : "Load stats"}
+              {statsLoading ? t.loadingStats : t.loadStats}
             </button>
 
             {/* Stats row */}
             {statsVisible && stats && (
               <div className="mt-3.5 grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-3 rounded-[10px] border border-green-200 bg-green-50 p-3.5 dark:border-green-900 dark:bg-green-950">
                 {[
-                  { label: "Active enrollments", value: stats.active_enrollments },
-                  { label: "Published lessons", value: stats.published_lessons },
                   {
-                    label: "Completion rate",
+                    label: t.statActiveEnrollments,
                     value:
-                      stats.lesson_completion_rate != null
-                        ? `${Math.round(stats.lesson_completion_rate)}%`
+                      stats.active_enrollments != null
+                        ? fmt.number(stats.active_enrollments)
                         : undefined,
                   },
-                  { label: "Exams", value: stats.exam_count },
-                  { label: "Submissions", value: stats.submission_count },
                   {
-                    label: "Avg score",
+                    label: t.statPublishedLessons,
+                    value:
+                      stats.published_lessons != null
+                        ? fmt.number(stats.published_lessons)
+                        : undefined,
+                  },
+                  {
+                    label: t.statCompletionRate,
+                    value:
+                      stats.lesson_completion_rate != null
+                        ? fmt.percent(Math.round(stats.lesson_completion_rate))
+                        : undefined,
+                  },
+                  {
+                    label: t.statExams,
+                    value: stats.exam_count != null ? fmt.number(stats.exam_count) : undefined,
+                  },
+                  {
+                    label: t.statSubmissions,
+                    value:
+                      stats.submission_count != null
+                        ? fmt.number(stats.submission_count)
+                        : undefined,
+                  },
+                  {
+                    label: t.statAvgScore,
                     value:
                       stats.average_score != null
-                        ? `${Math.round(stats.average_score)}%`
+                        ? fmt.percent(Math.round(stats.average_score))
                         : undefined,
                   },
                 ]
@@ -227,12 +292,12 @@ export default function CourseDetail() {
           {/* Lessons */}
           <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-[18px] dark:border-zinc-800 dark:bg-zinc-900">
             <h3 className="mt-0 mb-3.5 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-              Lessons ({lessons.length})
+              {t.lessonsHeading(fmt.number(lessons.length))}
             </h3>
 
             {lessons.length === 0 ? (
               <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
-                No lessons yet.
+                {t.noLessons}
               </p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -245,7 +310,7 @@ export default function CourseDetail() {
                       className="flex items-center gap-2.5 rounded-lg bg-zinc-100 px-2.5 py-2 dark:bg-zinc-800"
                     >
                       <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-50)] text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
-                        {lesson.sequence}
+                        {fmt.number(lesson.sequence)}
                       </span>
                       <span className="flex-1 text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
                         {lesson.title}
@@ -255,7 +320,7 @@ export default function CourseDetail() {
                           lesson.status
                         )}`}
                       >
-                        {lesson.status}
+                        {statusLabel(lesson.status)}
                       </span>
                     </div>
                   ))}
@@ -266,12 +331,12 @@ export default function CourseDetail() {
           {/* Exams */}
           <div className="rounded-xl border border-zinc-200 bg-white p-[18px] dark:border-zinc-800 dark:bg-zinc-900">
             <h3 className="mt-0 mb-3.5 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-              Exams ({exams.length})
+              {t.examsHeading(fmt.number(exams.length))}
             </h3>
 
             {exams.length === 0 ? (
               <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
-                No exams yet.
+                {t.noExams}
               </p>
             ) : (
               <div className="flex flex-col gap-2">
@@ -284,11 +349,11 @@ export default function CourseDetail() {
                       {exam.title}
                     </span>
                     <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                      ⏱ {exam.duration} min
+                      ⏱ {t.minutes(fmt.number(exam.duration))}
                     </span>
                     {exam.date && (
                       <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                        📅 {formatDate(exam.date)}
+                        📅 {fmt.date(exam.date)}
                       </span>
                     )}
                     <span
@@ -296,7 +361,7 @@ export default function CourseDetail() {
                         exam.status
                       )}`}
                     >
-                      {exam.status}
+                      {statusLabel(exam.status)}
                     </span>
                   </div>
                 ))}
