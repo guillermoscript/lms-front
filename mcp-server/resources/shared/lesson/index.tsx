@@ -1,4 +1,4 @@
-import { getEmbedUrl } from "./components";
+import { getEmbedUrl, VideoFallbackLink } from "./components";
 import { LessonMdxContent } from "./renderer";
 
 export { LessonMdxContent } from "./renderer";
@@ -34,14 +34,17 @@ export function LessonBody({
   return (
     <div className="space-y-5">
       {videoEmbedUrl && (
-        <div className="aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-zinc-200 dark:ring-zinc-800">
-          <iframe
-            src={videoEmbedUrl}
-            title="Video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="h-full w-full border-0"
-          />
+        <div>
+          <div className="aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-zinc-200 dark:ring-zinc-800">
+            <iframe
+              src={videoEmbedUrl}
+              title="Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="h-full w-full border-0"
+            />
+          </div>
+          <VideoFallbackLink url={videoUrl as string} />
         </div>
       )}
 

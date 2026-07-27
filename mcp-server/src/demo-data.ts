@@ -102,15 +102,18 @@ El bug estaba en \`setItems(items.push(nuevo))\`: \`push\` muta el array y devue
 Cuando termines, marca la lección como completada y pasa a **Efectos y limpieza**.`;
 
 /**
- * Lesson content that MDX cannot parse — kept deliberately.
+ * The two authoring shapes that used to blank a whole lesson (#566) — kept as a
+ * regression fixture.
  *
- * `<CodeBlock>` children are parsed as MDX, so a code sample whose first line
- * starts at column 0 with `export`/`import` is read as an ESM statement and
- * handed to acorn, which chokes on the closing `</CodeBlock>`. One bad snippet
- * fails the WHOLE document, and the renderer falls back to dumping raw source
- * at the student. This is the exact shape a teacher produces by pasting a
- * module into the documented `<CodeBlock language="tsx">…</CodeBlock>` form,
- * so the fallback state needs to stay inspectable.
+ * The `<CodeBlock>` is the case teachers hit: its children are parsed as MDX, so
+ * a sample whose first line starts at column 0 with `export`/`import` was read
+ * as an ESM statement and handed to acorn, which choked on the closing tag and
+ * failed the WHOLE document. `inlineCodeBlockBodies()` now moves the snippet to
+ * a `code` prop, so it renders like any other block.
+ *
+ * The unclosed `<Callout>` below it still cannot be parsed by anything — it is
+ * here so the per-block fallback stays inspectable: that one block degrades to
+ * its source, everything around it renders.
  */
 const BROKEN_LESSON_MDX = `Un módulo de ejemplo, pegado tal cual dentro de un bloque de código.
 
@@ -121,7 +124,13 @@ export function Contador() {
 }
 </CodeBlock>
 
-El resto de la lección ya no se renderiza: **todo** el documento cae al modo texto plano.`;
+<Callout type="warning">Esta etiqueta nunca se cierra.
+
+El resto de la lección **sí** se renderiza: sólo el bloque roto cae a texto plano.
+
+| Antes | Ahora |
+| --- | --- |
+| Documento entero en crudo | Sólo el bloque que falla |`;
 
 const ARTIFACT_HTML = `<!doctype html>
 <html lang="es">
@@ -493,14 +502,14 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
       },
       {
         id: "broken-mdx",
-        label: "Unparseable MDX — raw-source fallback",
-        output: "Lesson 5009 — content could not be parsed as MDX.",
+        label: "Module in <CodeBlock> + one unparseable block",
+        output: "Lesson 5009 — one block of the content could not be parsed as MDX.",
         props: {
           lesson: {
             id: 5009,
             course_id: 101,
             title: "Un contador con estado",
-            description: "Lección cuyo bloque de código rompe el parseo MDX.",
+            description: "Lección con un módulo en <CodeBlock> y una etiqueta sin cerrar.",
             summary: null,
             content: BROKEN_LESSON_MDX,
             video_url: null,

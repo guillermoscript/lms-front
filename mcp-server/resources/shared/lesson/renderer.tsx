@@ -33,7 +33,7 @@ import {
   Video,
   Warning,
 } from "./components";
-import { attributesToProps, nodeText, parseLessonMdx, type MdNode } from "./mdx";
+import { attributesToProps, nodeText, parseLessonBlocks, type MdNode } from "./mdx";
 
 /**
  * Renders a parsed lesson MDX tree with the same component set the web app
@@ -310,25 +310,52 @@ class RenderBoundary extends Component<
   }
 }
 
-export function LessonMdxContent({ content }: { content: string }) {
-  const tree = parseLessonMdx(content);
-
-  const fallback = (
+/** Raw source behind a banner — the last resort for a block we can not parse. */
+function SourceFallback({ source, notice }: { source: string; notice: string }) {
+  return (
     <div>
       <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-        This lesson could not be rendered fully — showing its source text.
+        {notice}
       </p>
       <pre className="m-0 overflow-x-auto text-[12.5px] whitespace-pre-wrap text-zinc-600 dark:text-zinc-400">
-        {content}
+        {source}
       </pre>
     </div>
   );
+}
 
-  if (!tree) return fallback;
+export function LessonMdxContent({ content }: { content: string }) {
+  const blocks = parseLessonBlocks(content);
+
+  // Nothing at all parsed — the document is broken end to end, so say so once
+  // rather than repeating the banner over every block.
+  if (!blocks.some((block) => block.tree)) {
+    return (
+      <SourceFallback
+        source={content}
+        notice="This lesson could not be rendered fully — showing its source text."
+      />
+    );
+  }
 
   return (
     <div className="max-w-[72ch] break-words">
-      <RenderBoundary fallback={fallback}>{renderNode(tree, {})}</RenderBoundary>
+      {blocks.map((block, index) => {
+        const fallback = (
+          <SourceFallback
+            source={block.source}
+            notice="This part of the lesson could not be rendered — showing its source text."
+          />
+        );
+
+        if (!block.tree) return <Fragment key={index}>{fallback}</Fragment>;
+
+        return (
+          <RenderBoundary key={index} fallback={fallback}>
+            {renderNode(block.tree, {})}
+          </RenderBoundary>
+        );
+      })}
     </div>
   );
 }

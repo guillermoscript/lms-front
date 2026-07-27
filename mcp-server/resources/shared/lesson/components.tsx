@@ -337,14 +337,22 @@ export function Quiz({
 
 export function CodeBlock({
   children,
+  code: codeProp,
   language,
   filename,
+  title,
   showLineNumbers,
   highlightLines,
 }: Record<string, any>) {
   const [copied, setCopied] = useState(false);
-  const code = str(children).replace(/\n$/, "");
+  // `code` is what `inlineCodeBlockBodies()` hands us: a snippet that would
+  // have broken the document if it had stayed in the children position.
+  const code = (typeof codeProp === "string" ? codeProp : str(children)).replace(/\n$/, "");
   const highlighted = arr<number>(highlightLines);
+
+  // Fenced blocks carry the name in `title="…"` meta, so JSX blocks written the
+  // same way should label themselves the same way.
+  const label = str(filename) || str(title);
 
   const copy = () => {
     // Clipboard access can be denied inside the widget sandbox — the button
@@ -362,10 +370,10 @@ export function CodeBlock({
     <div className="my-4 overflow-hidden rounded-xl border border-zinc-800 bg-[#0d1117]">
       <div className="flex items-center justify-between border-b border-zinc-700 bg-[#161b22] px-4 py-2">
         <div className="flex items-center gap-2 text-[11px] text-zinc-400">
-          {filename ? (
+          {label ? (
             <>
               <IconFile className="size-4" />
-              <span>{str(filename)}</span>
+              <span>{label}</span>
             </>
           ) : (
             <span className="uppercase">{str(language) || "Code"}</span>
@@ -807,6 +815,33 @@ export function getEmbedUrl(url: string): string | null {
   return null;
 }
 
+/**
+ * Escape hatch printed under every player.
+ *
+ * Widget hosts frame the widget itself, and both YouTube and Vimeo refuse to be
+ * framed from an origin the uploader has not allowed — so the iframe can render
+ * as an unexplained black rectangle with nothing the student can do about it.
+ * The frame either works or it does not, and there is no reliable load event to
+ * tell them apart from inside the sandbox, so the link is always offered.
+ */
+export function VideoFallbackLink({ url }: { url: string }) {
+  if (!url) return null;
+
+  return (
+    <p className="mt-1.5 mb-0 text-[11px] text-zinc-400 dark:text-zinc-500">
+      Video not playing?{" "}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-zinc-500 underline underline-offset-2 dark:text-zinc-400"
+      >
+        Open it in a new tab
+      </a>
+    </p>
+  );
+}
+
 export function Video({ url, title }: Record<string, any>) {
   const source = str(url);
   const embedUrl = getEmbedUrl(source);
@@ -840,6 +875,7 @@ export function Video({ url, title }: Record<string, any>) {
           className="h-full w-full border-0"
         />
       </div>
+      <VideoFallbackLink url={source} />
     </div>
   );
 }

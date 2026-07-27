@@ -3,30 +3,35 @@
 import { MDXClient, type SerializeResult } from 'next-mdx-remote-client'
 import { useState, useEffect } from 'react'
 import { lessonMdxComponents } from '@/components/lesson/mdx-components'
+import { inlineCodeBlockBodies } from '@/lib/lesson/mdx-source'
 
 interface MDXPreviewProps {
     content: string
 }
 
 export function MDXPreview({ content }: MDXPreviewProps) {
-    const [mdxResult, setMdxResult] = useState<SerializeResult | null>(null)
-    const [isLoading, setIsLoading] = useState(false)
+    // The compiled output is tagged with the source it came from, so "still
+    // compiling" and "nothing to compile" are derived rather than tracked in
+    // their own state — setting state synchronously in the effect body would
+    // cascade a render on every keystroke.
+    const [compiled, setCompiled] = useState<{
+        source: string
+        result: SerializeResult
+    } | null>(null)
 
     // Compile MDX content on client
     useEffect(() => {
-        if (!content) {
-            setMdxResult(null)
-            return
-        }
+        if (!content) return
 
         let cancelled = false
-        setIsLoading(true)
 
         async function compileMDX() {
             try {
                 const { serialize } = await import('next-mdx-remote-client/serialize')
                 const result = await serialize({
-                    source: content,
+                    // Same normalization the student page applies, so the
+                    // preview compiles exactly what they will see.
+                    source: inlineCodeBlockBodies(content),
                     options: {
                         mdxOptions: {
                             development: process.env.NODE_ENV === 'development',
@@ -34,20 +39,19 @@ export function MDXPreview({ content }: MDXPreviewProps) {
                     },
                 })
 
-                if (!cancelled) {
-                    setMdxResult(result)
-                    setIsLoading(false)
-                }
+                if (!cancelled) setCompiled({ source: content, result })
             } catch (err) {
                 if (!cancelled) {
                     console.error('MDX compilation error:', err)
                     // Create a result with error
-                    setMdxResult({
-                        error: err instanceof Error ? err : new Error('Failed to compile MDX'),
-                        frontmatter: {},
-                        scope: {},
+                    setCompiled({
+                        source: content,
+                        result: {
+                            error: err instanceof Error ? err : new Error('Failed to compile MDX'),
+                            frontmatter: {},
+                            scope: {},
+                        },
                     })
-                    setIsLoading(false)
                 }
             }
         }
@@ -58,6 +62,9 @@ export function MDXPreview({ content }: MDXPreviewProps) {
             cancelled = true
         }
     }, [content])
+
+    const mdxResult = content && compiled?.source === content ? compiled.result : null
+    const isLoading = Boolean(content) && mdxResult === null
 
     // Check if result has error
     const hasError = mdxResult && 'error' in mdxResult
