@@ -6,6 +6,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { NEUTRAL_TEXT, barClass, textClass } from "../shared/severity";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -51,28 +53,44 @@ export const widgetMetadata: WidgetMetadata = {
 type Props = z.infer<typeof propsSchema>;
 type Student = z.infer<typeof studentSchema>;
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading roster…",
+    roster: (n: number, s: string) =>
+      `Student roster · ${s} published lesson${n === 1 ? "" : "s"}`,
+    students: "Students",
+    avgProgress: "Avg progress",
+    atRisk: "At risk",
+    atRiskOnlyOn: "✓ At risk only",
+    atRiskOnlyOff: "Show at risk only",
+    atRiskBadge: "AT RISK",
+    lessons: (done: string, total: string) => `${done}/${total} lessons`,
+    exams: (n: number, s: string) => `${s} exam${n === 1 ? "" : "s"}`,
+    lastActive: "last active",
+    noAtRisk: "No at-risk students. 🎉",
+    noStudents: "No students enrolled.",
+  },
+  es: {
+    loading: "Cargando lista…",
+    roster: (n: number, s: string) =>
+      `Lista de estudiantes · ${s} ${n === 1 ? "lección publicada" : "lecciones publicadas"}`,
+    students: "Estudiantes",
+    avgProgress: "Progreso medio",
+    atRisk: "En riesgo",
+    atRiskOnlyOn: "✓ Solo en riesgo",
+    atRiskOnlyOff: "Ver solo en riesgo",
+    atRiskBadge: "EN RIESGO",
+    lessons: (done: string, total: string) => `${done}/${total} lecciones`,
+    exams: (n: number, s: string) => `${s} ${n === 1 ? "examen" : "exámenes"}`,
+    lastActive: "última actividad",
+    noAtRisk: "Ningún estudiante en riesgo. 🎉",
+    noStudents: "No hay estudiantes inscritos.",
+  },
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function relativeDate(s: string | null): string {
-  if (!s) return "—";
-  try {
-    return new Date(s).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return s;
-  }
-}
-
-function progressColor(pct: number | null): string {
-  if (pct == null) return "bg-zinc-300 dark:bg-zinc-600";
-  if (pct >= 80) return "bg-green-600 dark:bg-green-400";
-  if (pct >= 40) return "bg-[var(--brand-600)] dark:bg-[var(--brand-400)]";
-  if (pct > 0) return "bg-amber-600 dark:bg-amber-400";
-  return "bg-red-600 dark:bg-red-400";
-}
 
 function initials(name: string | null, id: string): string {
   if (name) {
@@ -88,6 +106,8 @@ export default function StudentProgressRoster() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
   const [atRiskOnly, setAtRiskOnly] = useState(false);
 
   if (isPending) {
@@ -97,7 +117,7 @@ export default function StudentProgressRoster() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Loading roster…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -133,22 +153,26 @@ export default function StudentProgressRoster() {
               {course.title}
             </h2>
             <div className="mt-0.5 text-[13px] text-zinc-400 dark:text-zinc-500">
-              Student roster · {course.published_lessons} published lesson
-              {course.published_lessons === 1 ? "" : "s"}
+              {t.roster(
+                course.published_lessons,
+                fmt.number(course.published_lessons)
+              )}
             </div>
           </div>
 
           {/* Summary */}
           <div className="my-3.5 flex w-fit gap-6 rounded-xl border border-zinc-200 bg-white px-[18px] py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
-            {stat("Students", String(summary.total))}
+            {/* Same accent rule as school-overview: counts are facts and stay
+                neutral; only the numbers that read as good or bad get colour. */}
+            {stat(t.students, fmt.number(summary.total))}
             {stat(
-              "Avg progress",
-              `${summary.avg_progress}%`,
-              "text-[var(--brand-600)] dark:text-[var(--brand-400)]"
+              t.avgProgress,
+              fmt.percent(summary.avg_progress),
+              textClass(summary.avg_progress)
             )}
             {stat(
-              "At risk",
-              String(summary.at_risk),
+              t.atRisk,
+              fmt.number(summary.at_risk),
               summary.at_risk > 0 ? "text-red-600 dark:text-red-400" : undefined
             )}
           </div>
@@ -163,7 +187,7 @@ export default function StudentProgressRoster() {
                   : "border-zinc-200 bg-transparent text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
               }`}
             >
-              {atRiskOnly ? "✓ At risk only" : "Show at risk only"}
+              {atRiskOnly ? t.atRiskOnlyOn : t.atRiskOnlyOff}
             </button>
           )}
 
@@ -194,7 +218,7 @@ export default function StudentProgressRoster() {
                       </span>
                       {s.at_risk && (
                         <span className="shrink-0 rounded-md bg-red-50 px-[7px] py-px text-[10.5px] font-bold text-red-600 dark:bg-red-950 dark:text-red-400">
-                          AT RISK
+                          {t.atRiskBadge}
                         </span>
                       )}
                       {s.status !== "active" && (
@@ -205,7 +229,7 @@ export default function StudentProgressRoster() {
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-[3px] bg-zinc-100 dark:bg-zinc-800">
                       <div
-                        className={`h-full rounded-[3px] transition-[width] duration-300 ${progressColor(pct)}`}
+                        className={`h-full rounded-[3px] transition-[width] duration-300 ${barClass(pct)}`}
                         style={{ width: `${pct ?? 0}%` }}
                       />
                     </div>
@@ -213,29 +237,32 @@ export default function StudentProgressRoster() {
 
                   {/* Metrics */}
                   <div className="min-w-14 shrink-0 text-right">
-                    <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                      {pct == null ? "—" : `${pct}%`}
+                    <div className={`text-sm font-bold ${textClass(pct)}`}>
+                      {fmt.percent(pct)}
                     </div>
                     <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                      {s.completed_lessons}/{course.published_lessons} lessons
+                      {t.lessons(
+                        fmt.number(s.completed_lessons),
+                        fmt.number(course.published_lessons)
+                      )}
                     </div>
                   </div>
 
                   <div className="min-w-16 shrink-0 text-right">
-                    <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                      {s.exam_avg == null ? "—" : `${s.exam_avg}%`}
+                    <div className={`text-sm font-bold ${textClass(s.exam_avg)}`}>
+                      {fmt.percent(s.exam_avg)}
                     </div>
                     <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                      {s.exam_count} exam{s.exam_count === 1 ? "" : "s"}
+                      {t.exams(s.exam_count, fmt.number(s.exam_count))}
                     </div>
                   </div>
 
                   <div className="min-w-20 shrink-0 text-right">
-                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {relativeDate(s.last_active)}
+                    <div className={`text-xs ${NEUTRAL_TEXT}`}>
+                      {fmt.date(s.last_active)}
                     </div>
                     <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                      last active
+                      {t.lastActive}
                     </div>
                   </div>
                 </div>
@@ -244,7 +271,7 @@ export default function StudentProgressRoster() {
 
             {visible.length === 0 && (
               <p className="m-0 p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
-                {atRiskOnly ? "No at-risk students. 🎉" : "No students enrolled."}
+                {atRiskOnly ? t.noAtRisk : t.noStudents}
               </p>
             )}
           </div>

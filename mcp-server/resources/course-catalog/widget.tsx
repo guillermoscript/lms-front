@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -21,6 +22,10 @@ const courseSchema = z.object({
   enrolled: z.boolean(),
   has_access: z.boolean(),
   covered_by_plan: z.boolean(),
+  // Cheapest active product covering this course. `null` = not individually
+  // for sale. Optional so a payload from an older server still validates.
+  price: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
 });
 
 const propsSchema = z.object({
@@ -41,6 +46,44 @@ export const widgetMetadata: WidgetMetadata = {
 };
 
 type Props = z.infer<typeof propsSchema>;
+
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Browsing catalog…",
+    title: "Course Catalog",
+    summary: (n: number, s: string) => `${s} published course${n === 1 ? "" : "s"}`,
+    subscriptionActive: " · subscription active",
+    empty: "No published courses found",
+    lessons: (n: number, s: string) => `${s} lesson${n === 1 ? "" : "s"}`,
+    enrolled: "✓ Enrolled",
+    // One verb for "get into this course", whichever entitlement gets you in.
+    start: "Start course",
+    enrolling: "Enrolling…",
+    getAccess: "Get access",
+    notInPlan: "Not in your plan",
+    free: "Free",
+    enrollFailed: (title: string) => `Could not enroll in "${title}". Please try again.`,
+  },
+  es: {
+    loading: "Explorando el catálogo…",
+    title: "Catálogo de cursos",
+    summary: (n: number, s: string) =>
+      `${s} ${n === 1 ? "curso publicado" : "cursos publicados"}`,
+    subscriptionActive: " · suscripción activa",
+    empty: "No se encontraron cursos publicados",
+    lessons: (n: number, s: string) => `${s} ${n === 1 ? "lección" : "lecciones"}`,
+    enrolled: "✓ Inscrito",
+    start: "Empezar curso",
+    enrolling: "Inscribiendo…",
+    getAccess: "Obtener acceso",
+    notInPlan: "No incluido en tu plan",
+    free: "Gratis",
+    enrollFailed: (title: string) =>
+      `No se pudo inscribir en "${title}". Inténtalo de nuevo.`,
+  },
+};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,6 +115,8 @@ export default function CourseCatalog() {
   const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
   const [enrollError, setEnrollError] = useState<string | null>(null);
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -80,7 +125,7 @@ export default function CourseCatalog() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Browsing catalog…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -102,7 +147,7 @@ export default function CourseCatalog() {
           );
         },
         onError: () =>
-          setEnrollError(`Could not enroll in "${title}". Please try again.`),
+          setEnrollError(t.enrollFailed(title)),
         onSettled: () => {
           setPendingIds((prev) => {
             const next = new Set(prev);
@@ -121,11 +166,11 @@ export default function CourseCatalog() {
         <div className="mx-auto max-w-[820px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           <div className="mb-4.5 flex flex-wrap items-baseline justify-between gap-2">
             <h1 className="m-0 text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Course Catalog
+              {t.title}
             </h1>
             <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
-              {total} published course{total === 1 ? "" : "s"}
-              {has_subscription ? " · subscription active" : ""}
+              {t.summary(total, fmt.number(total))}
+              {has_subscription ? t.subscriptionActive : ""}
             </span>
           </div>
 
@@ -142,44 +187,66 @@ export default function CourseCatalog() {
             <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-2 text-[32px]">📚</div>
               <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                No published courses found
+                {t.empty}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3.5">
+            /*
+              Four named rows — media, heading, tags, footer — declared on the
+              grid and adopted by every card via `grid-rows-subgrid`. Optional
+              blocks then collapse *in step*: a card with no description or no
+              tags leaves a short row rather than a hole, and the tag rows and
+              footers line up across the row instead of floating to wherever
+              each card's own content happened to end. When no card in a row
+              has a thumbnail the media row collapses to nothing, which is why
+              the placeholder below can simply not be rendered.
+            */
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] grid-rows-[auto_auto_auto_auto] gap-3.5">
               {courses.map((course) => {
                 const tags = normalizeTags(course.tags).slice(0, 3);
+                const owned = course.enrolled || enrolledIds.has(course.id);
+                const canEnter = course.covered_by_plan || course.has_access;
+                const price = course.price ?? null;
+                const priceLabel =
+                  price === null
+                    ? null
+                    : price === 0
+                      ? t.free
+                      : fmt.currency(price, course.currency);
+
                 return (
                   <div
                     key={course.id}
-                    className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                    className="row-span-4 grid grid-rows-subgrid overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
                   >
-                    {/* Thumbnail */}
-                    <div
-                      className="flex h-24 items-center justify-center bg-zinc-100 bg-cover bg-center text-[28px] dark:bg-zinc-800"
-                      style={
-                        course.thumbnail_url
-                          ? { backgroundImage: `url(${course.thumbnail_url})` }
-                          : undefined
-                      }
-                    >
-                      {!course.thumbnail_url && "📖"}
+                    {/*
+                      A 96px grey block with a book emoji on every card carried
+                      no information and cost more vertical space than the title
+                      it sat above. With no image there is simply no media row.
+                    */}
+                    {course.thumbnail_url ? (
+                      <div
+                        className="h-24 bg-zinc-100 bg-cover bg-center dark:bg-zinc-800"
+                        style={{ backgroundImage: `url(${course.thumbnail_url})` }}
+                      />
+                    ) : (
+                      <div />
+                    )}
+
+                    <div className="px-3.5 pt-3.5">
+                      <div className="text-[14.5px] leading-[1.3] font-semibold text-zinc-900 dark:text-zinc-100">
+                        {course.title}
+                      </div>
+                      {course.description && (
+                        <div className="mt-1 line-clamp-2 text-xs leading-[1.45] text-zinc-400 dark:text-zinc-500">
+                          {course.description}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex flex-1 flex-col gap-2 p-3.5">
-                      <div>
-                        <div className="text-[14.5px] leading-[1.3] font-semibold text-zinc-900 dark:text-zinc-100">
-                          {course.title}
-                        </div>
-                        {course.description && (
-                          <div className="mt-1 line-clamp-2 text-xs leading-[1.45] text-zinc-400 dark:text-zinc-500">
-                            {course.description}
-                          </div>
-                        )}
-                      </div>
-
+                    <div className="px-3.5">
                       {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-[5px]">
+                        <div className="flex flex-wrap gap-[5px] pt-2">
                           {tags.map((tag) => (
                             <span
                               key={tag}
@@ -190,34 +257,71 @@ export default function CourseCatalog() {
                           ))}
                         </div>
                       )}
+                    </div>
 
-                      <div className="mt-auto flex items-center justify-between gap-2">
-                        <span className="text-[11.5px] text-zinc-400 dark:text-zinc-500">
-                          {course.lesson_count} lesson
-                          {course.lesson_count === 1 ? "" : "s"}
-                        </span>
-                        {course.enrolled || enrolledIds.has(course.id) ? (
-                          <span className="rounded-full bg-green-100 px-[9px] py-[3px] text-[11px] font-bold text-green-600 dark:bg-green-900 dark:text-green-400">
-                            ✓ Enrolled
-                          </span>
-                        ) : course.covered_by_plan ? (
-                          <button
-                            onClick={() => handleEnroll(course.id, course.title)}
-                            disabled={pendingIds.has(course.id)}
-                            className="cursor-pointer rounded-full border-none bg-[var(--brand-600)] px-2.5 py-[3px] text-[11px] font-bold text-white disabled:cursor-default disabled:opacity-60 dark:bg-[var(--brand-400)]"
-                          >
-                            {pendingIds.has(course.id) ? "Enrolling…" : "Enroll"}
-                          </button>
-                        ) : course.has_access ? (
-                          <span className="rounded-full bg-[var(--brand-100)] px-[9px] py-[3px] text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
-                            Access
-                          </span>
-                        ) : (
-                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                            Not in plan
+                    <div className="flex items-center justify-between gap-2 px-3.5 pt-2 pb-3.5">
+                      <span className="min-w-0 text-[11.5px] text-zinc-400 dark:text-zinc-500">
+                        {t.lessons(course.lesson_count, fmt.number(course.lesson_count))}
+                        {/* Price only where it changes a decision — once the
+                            student is in, what it would have cost is noise. */}
+                        {!owned && !canEnter && priceLabel && (
+                          <span className="ml-1.5 font-semibold text-zinc-900 dark:text-zinc-100">
+                            · {priceLabel}
                           </span>
                         )}
-                      </div>
+                      </span>
+
+                      {owned ? (
+                        <span className="shrink-0 rounded-full bg-green-100 px-[9px] py-[3px] text-[11px] font-bold text-green-600 dark:bg-green-900 dark:text-green-400">
+                          {t.enrolled}
+                        </span>
+                      ) : course.covered_by_plan ? (
+                        <button
+                          onClick={() => handleEnroll(course.id, course.title)}
+                          disabled={pendingIds.has(course.id)}
+                          className="shrink-0 cursor-pointer rounded-full border-none bg-[var(--brand-600)] px-2.5 py-[3px] text-[11px] font-bold text-white disabled:cursor-default disabled:opacity-60 dark:bg-[var(--brand-400)] dark:text-zinc-950"
+                        >
+                          {pendingIds.has(course.id) ? t.enrolling : t.start}
+                        </button>
+                      ) : course.has_access ? (
+                        /*
+                          Already entitled but not enrolled — `lms_enroll_in_course`
+                          only accepts plan-covered courses, so this opens the
+                          course instead of enrolling. Different call, same act
+                          as far as the student is concerned, so the same label.
+                        */
+                        <button
+                          onClick={() =>
+                            sendFollowUpMessage(
+                              `Open the course "${course.title}" with lms_get_course_content so I can start it.`
+                            )
+                          }
+                          className="shrink-0 cursor-pointer rounded-full border-none bg-[var(--brand-600)] px-2.5 py-[3px] text-[11px] font-bold text-white dark:bg-[var(--brand-400)] dark:text-zinc-950"
+                        >
+                          {t.start}
+                        </button>
+                      ) : priceLabel ? (
+                        /*
+                          The old dead end: "Not in plan" in grey, on the only
+                          cards where the student still had a decision to make.
+                          Purchases complete in the app, so this hands off to the
+                          assistant rather than pretending to check out here.
+                        */
+                        <button
+                          onClick={() =>
+                            sendFollowUpMessage(
+                              `I want access to the course "${course.title}". What are my options — can I buy it or upgrade my plan?`
+                            )
+                          }
+                          className="shrink-0 cursor-pointer rounded-full border border-[var(--brand-600)] bg-transparent px-2.5 py-[3px] text-[11px] font-bold text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]"
+                        >
+                          {t.getAccess}
+                        </button>
+                      ) : (
+                        <span className="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500">
+                          {t.notInPlan}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

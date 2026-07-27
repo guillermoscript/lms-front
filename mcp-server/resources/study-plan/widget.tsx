@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
 import { z } from "zod";
 
 // Props produced by lms_get_study_plan (Epic #348 Phase 4, #359).
@@ -52,20 +53,73 @@ export const widgetMetadata: WidgetMetadata = {
 type Props = z.infer<typeof propsSchema>;
 type Goal = Props["goals"][number];
 
-const KIND_META: Record<Goal["kind"], { label: string; icon: string }> = {
-  lesson: { label: "Lessons", icon: "📖" },
-  practice: { label: "Practice", icon: "✏️" },
-  review: { label: "Review", icon: "🔁" },
-  exam_prep: { label: "Exam prep", icon: "📄" },
-  custom: { label: "Other", icon: "🎯" },
+const KIND_ICON: Record<Goal["kind"], string> = {
+  lesson: "📖",
+  practice: "✏️",
+  review: "🔁",
+  exam_prep: "📄",
+  custom: "🎯",
 };
 const KIND_ORDER: Goal["kind"][] = ["lesson", "practice", "review", "exam_prep", "custom"];
+
+const STRINGS = {
+  en: {
+    kinds: {
+      lesson: "Lessons",
+      practice: "Practice",
+      review: "Review",
+      exam_prep: "Exam prep",
+      custom: "Other",
+    } as Record<Goal["kind"], string>,
+    weekOf: (d: string) => `Week of ${d}`,
+    noGoals: "No goals yet this week",
+    goalsDone: (done: string, total: string) => `${done} of ${total} goals done`,
+    requiredLeft: (n: string) => ` · ${n} required left`,
+    flashcardsDue: (n: string) => ` · ${n} flashcards due`,
+    weekCompleteAll: "Week complete — every goal done!",
+    weekCompleteRequired: "Week complete — all required goals done!",
+    saveError: "Could not save that goal — it has been unchecked. Try again.",
+    nothingPlanned: "Nothing planned yet",
+    upNext: "Up next",
+    openLesson: "Open",
+    planWeek: "Plan my week",
+    required: "Required",
+    planNextWeek: "Plan next week with me",
+  },
+  es: {
+    kinds: {
+      lesson: "Lecciones",
+      practice: "Práctica",
+      review: "Repaso",
+      exam_prep: "Preparación de examen",
+      custom: "Otros",
+    } as Record<Goal["kind"], string>,
+    weekOf: (d: string) => `Semana del ${d}`,
+    noGoals: "Sin objetivos esta semana",
+    goalsDone: (done: string, total: string) =>
+      `${done} de ${total} objetivos completados`,
+    requiredLeft: (n: string) => ` · faltan ${n} obligatorios`,
+    flashcardsDue: (n: string) => ` · ${n} tarjetas pendientes`,
+    weekCompleteAll: "¡Semana completa: todos los objetivos hechos!",
+    weekCompleteRequired: "¡Semana completa: todos los obligatorios hechos!",
+    saveError:
+      "No se pudo guardar el objetivo: se ha desmarcado. Inténtalo de nuevo.",
+    nothingPlanned: "Todavía no hay nada planificado",
+    upNext: "A continuación",
+    openLesson: "Abrir",
+    planWeek: "Planificar mi semana",
+    required: "Obligatorio",
+    planNextWeek: "Planifica conmigo la próxima semana",
+  },
+};
 
 export default function StudyPlan() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const { callTool } = useCallTool("lms_complete_study_goal");
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   // Optimistic check-off: goal ids marked done locally while the tool runs.
   const [checked, setChecked] = useState<Set<number>>(new Set());
@@ -96,11 +150,9 @@ export default function StudyPlan() {
   const weekComplete =
     goals.length > 0 && (requiredGoals.length > 0 ? requiredLeft === 0 : allDone);
 
-  const weekLabel = new Date(`${week_start}T00:00:00Z`).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+  // week_start is a bare calendar date; pin it to UTC so it does not slip a day
+  // for readers west of the meridian.
+  const weekLabel = fmt.date(`${week_start}T00:00:00Z`);
 
   const check = (g: Goal) => {
     if (isDone(g)) return;
@@ -125,6 +177,49 @@ export default function StudyPlan() {
   // Progress ring geometry (SVG circle, r=26).
   const R = 26;
   const CIRC = 2 * Math.PI * R;
+
+  /**
+   * "What do I do now" — the lessons the server already worked out and sent.
+   *
+   * `context.next_lessons` was only ever rendered inside the no-goals branch,
+   * so the moment a student had a plan at all (the normal case, and both the
+   * `default` and `done` fixtures) the payload was fetched and thrown away.
+   * It is the one thing on this panel that answers "now what", so it renders
+   * whenever it is non-empty, and each row opens its lesson.
+   */
+  const upNext =
+    context.next_lessons.length === 0 ? null : (
+      <div className="mb-4">
+        <p className="m-0 mb-1.5 text-[11px] font-bold tracking-[1px] text-zinc-400 uppercase dark:text-zinc-500">
+          🧭 {t.upNext}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          {context.next_lessons.slice(0, 3).map((l) => (
+            <button
+              key={l.lesson_id}
+              onClick={() =>
+                sendFollowUpMessage(
+                  `Open lesson ${l.lesson_id} ("${l.lesson_title}") from "${l.course_title}" with lms_view_lesson.`
+                )
+              }
+              className="flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] border border-zinc-200 bg-white px-3.5 py-2.5 text-left dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-zinc-900 dark:text-zinc-100">
+                  {l.lesson_title}
+                </span>
+                <span className="block truncate text-[11px] text-zinc-400 dark:text-zinc-500">
+                  {l.course_title}
+                </span>
+              </span>
+              <span className="shrink-0 text-xs font-semibold text-[var(--brand-600)] dark:text-[var(--brand-400)]">
+                {t.openLesson} →
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
 
   return (
     <McpUseProvider autoSize>
@@ -168,14 +263,16 @@ export default function StudyPlan() {
             </svg>
             <div className="min-w-0 flex-1">
               <h2 className="m-0 text-[17px] font-bold text-zinc-900 dark:text-zinc-100">
-                Week of {weekLabel}
+                {t.weekOf(weekLabel)}
               </h2>
               <p className="mt-1 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
                 {goals.length === 0
-                  ? "No goals yet this week"
-                  : `${doneCount} of ${goals.length} goals done`}
-                {requiredLeft > 0 ? ` · ${requiredLeft} required left` : ""}
-                {context.due_reviews > 0 ? ` · ${context.due_reviews} flashcards due` : ""}
+                  ? t.noGoals
+                  : t.goalsDone(fmt.number(doneCount), fmt.number(goals.length))}
+                {requiredLeft > 0 ? t.requiredLeft(fmt.number(requiredLeft)) : ""}
+                {context.due_reviews > 0
+                  ? t.flashcardsDue(fmt.number(context.due_reviews))
+                  : ""}
               </p>
             </div>
           </div>
@@ -184,16 +281,14 @@ export default function StudyPlan() {
             <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-green-600 bg-green-100 px-4.5 py-3.5 dark:border-green-400 dark:bg-green-900">
               <span className="text-[22px]">🎉</span>
               <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                {allDone
-                  ? "Week complete — every goal done!"
-                  : "Week complete — all required goals done!"}
+                {allDone ? t.weekCompleteAll : t.weekCompleteRequired}
               </span>
             </div>
           )}
 
           {saveError && (
             <div className="mb-3 rounded-[10px] bg-red-50 px-[13px] py-[9px] text-[13px] text-red-700 dark:bg-red-950 dark:text-red-400">
-              Could not save that goal — it has been unchecked. Try again.
+              {t.saveError}
             </div>
           )}
 
@@ -201,17 +296,8 @@ export default function StudyPlan() {
             <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-2 text-3xl">🗓️</div>
               <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                Nothing planned yet
+                {t.nothingPlanned}
               </p>
-              {context.next_lessons.length > 0 && (
-                <p className="mt-2 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
-                  Up next:{" "}
-                  {context.next_lessons
-                    .slice(0, 3)
-                    .map((l) => `"${l.lesson_title}" (${l.course_title})`)
-                    .join(" · ")}
-                </p>
-              )}
               <button
                 onClick={() =>
                   sendFollowUpMessage(
@@ -220,7 +306,7 @@ export default function StudyPlan() {
                 }
                 className="mt-4 cursor-pointer rounded-lg border-none bg-[var(--brand-600)] px-4 py-2 text-[13px] font-semibold text-white dark:bg-[var(--brand-400)]"
               >
-                Plan my week
+                {t.planWeek}
               </button>
             </div>
           ) : (
@@ -228,7 +314,7 @@ export default function StudyPlan() {
               {KIND_ORDER.filter((k) => goals.some((g) => g.kind === k)).map((kind) => (
                 <div key={kind}>
                   <p className="m-0 mb-1.5 text-[11px] font-bold tracking-[1px] text-zinc-400 uppercase dark:text-zinc-500">
-                    {KIND_META[kind].icon} {KIND_META[kind].label}
+                    {KIND_ICON[kind]} {t.kinds[kind]}
                   </p>
                   <div className="flex flex-col gap-1.5">
                     {goals
@@ -272,7 +358,7 @@ export default function StudyPlan() {
                                     : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
                                 }`}
                               >
-                                Required
+                                {t.required}
                               </span>
                             )}
                           </button>
@@ -284,6 +370,8 @@ export default function StudyPlan() {
             </div>
           )}
 
+          {upNext}
+
           {goals.length > 0 && (
             <button
               onClick={() =>
@@ -293,7 +381,7 @@ export default function StudyPlan() {
               }
               className="cursor-pointer rounded-lg border border-[var(--brand-600)] bg-transparent px-4 py-2 text-[13px] font-semibold text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]"
             >
-              Plan next week with me
+              {t.planNextWeek}
             </button>
           )}
         </div>

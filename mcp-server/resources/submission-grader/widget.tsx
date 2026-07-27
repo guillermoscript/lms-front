@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -65,45 +66,89 @@ export const widgetMetadata: WidgetMetadata = {
 
 type Props = z.infer<typeof propsSchema>;
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading submission…",
+    scoreLabel: "Score (0–100)",
+    aiPoints: "AI points:",
+    gradedCount: (graded: string, total: string) => `${graded}/${total} graded`,
+    feedbackLabel: "Feedback to student",
+    feedbackPlaceholder: "Write overall feedback…",
+    saving: "Saving…",
+    saved: "Saved ✓",
+    saveGrade: "Save grade",
+    saveFailed: "Save failed",
+    submitted: "submitted",
+    studentAnswer: "Student answer",
+    noAnswer: "(no answer)",
+    correct: "Correct",
+    incorrect: "Incorrect",
+    aiFeedback: "AI feedback",
+    confidenceSuffix: (pct: string) => ` (${pct} confidence)`,
+    points: (earned: string, possible: string) => `${earned}/${possible} pts`,
+    question: (n: number) => `Q${n}`,
+    status: {
+      teacher_reviewed: "Teacher reviewed",
+      ai_reviewed: "AI reviewed",
+      pending_teacher_review: "Awaiting review",
+      pending: "Pending",
+    } as Record<string, string>,
+  },
+  es: {
+    loading: "Cargando entrega…",
+    scoreLabel: "Nota (0–100)",
+    aiPoints: "Puntos de la IA:",
+    gradedCount: (graded: string, total: string) => `${graded}/${total} calificadas`,
+    feedbackLabel: "Comentarios para el estudiante",
+    feedbackPlaceholder: "Escribe comentarios generales…",
+    saving: "Guardando…",
+    saved: "Guardado ✓",
+    saveGrade: "Guardar nota",
+    saveFailed: "Error al guardar",
+    submitted: "entregado el",
+    studentAnswer: "Respuesta del estudiante",
+    noAnswer: "(sin respuesta)",
+    correct: "Correcta",
+    incorrect: "Incorrecta",
+    aiFeedback: "Comentarios de la IA",
+    confidenceSuffix: (pct: string) => ` (confianza: ${pct})`,
+    points: (earned: string, possible: string) => `${earned}/${possible} pts`,
+    question: (n: number) => `P${n}`,
+    status: {
+      teacher_reviewed: "Revisado por el profesor",
+      ai_reviewed: "Revisado por IA",
+      pending_teacher_review: "Pendiente de revisión",
+      pending: "Pendiente",
+    } as Record<string, string>,
+  },
+};
+
+type Strings = typeof STRINGS.en;
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusPill(status: string): { classes: string; label: string } {
-  const map: Record<string, { classes: string; label: string }> = {
+function statusPill(status: string, t: Strings): { classes: string; label: string } {
+  const map: Record<string, { classes: string }> = {
     teacher_reviewed: {
       classes:
         "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400",
-      label: "Teacher reviewed",
     },
     ai_reviewed: {
       classes:
         "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]",
-      label: "AI reviewed",
     },
     pending_teacher_review: {
       classes:
         "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400",
-      label: "Awaiting review",
     },
     pending: {
       classes: "bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400",
-      label: "Pending",
     },
   };
-  return map[status] ?? map.pending;
-}
-
-function formatDate(s: string): string {
-  try {
-    return new Date(s).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return s;
-  }
+  const entry = map[status] ?? map.pending;
+  return { classes: entry.classes, label: t.status[status] ?? t.status.pending };
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -112,6 +157,8 @@ export default function SubmissionGrader() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   const [score, setScore] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -133,7 +180,7 @@ export default function SubmissionGrader() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Loading submission…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -142,7 +189,7 @@ export default function SubmissionGrader() {
 
   const { submission, questions, summary } = props;
   const status = localStatus ?? submission.review_status;
-  const pill = statusPill(status);
+  const pill = statusPill(status, t);
 
   const scoreVal = score ?? (submission.score != null ? String(submission.score) : "");
   const feedbackVal = feedback ?? submission.feedback ?? "";
@@ -178,7 +225,7 @@ export default function SubmissionGrader() {
                 {studentName}
               </h2>
               <div className="mt-0.5 text-[13px] text-zinc-400 dark:text-zinc-500">
-                {submission.exam_title} · submitted {formatDate(submission.date)}
+                {submission.exam_title} · {t.submitted} {fmt.dateTime(submission.date)}
               </div>
             </div>
             <span
@@ -193,7 +240,7 @@ export default function SubmissionGrader() {
             <div className="flex flex-wrap items-end gap-[18px]">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                  Score (0–100)
+                  {t.scoreLabel}
                 </span>
                 <input
                   type="number"
@@ -207,23 +254,29 @@ export default function SubmissionGrader() {
               </label>
 
               <div className="pb-2 text-[13px] text-zinc-400 dark:text-zinc-500">
-                AI points:{" "}
+                {t.aiPoints}{" "}
                 <strong className="text-zinc-900 dark:text-zinc-100">
-                  {summary.total_points_earned}
-                  {summary.total_points_possible ? ` / ${summary.total_points_possible}` : ""}
+                  {fmt.number(summary.total_points_earned)}
+                  {summary.total_points_possible
+                    ? ` / ${fmt.number(summary.total_points_possible)}`
+                    : ""}
                 </strong>{" "}
-                · {summary.graded_count}/{summary.question_count} graded
+                ·{" "}
+                {t.gradedCount(
+                  fmt.number(summary.graded_count),
+                  fmt.number(summary.question_count)
+                )}
               </div>
             </div>
 
             <label className="mt-3.5 block">
               <span className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-                Feedback to student
+                {t.feedbackLabel}
               </span>
               <textarea
                 value={feedbackVal}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Write overall feedback…"
+                placeholder={t.feedbackPlaceholder}
                 className="box-border h-[90px] w-full resize-y rounded-lg border border-zinc-200 bg-zinc-100 p-2.5 text-[13.5px] leading-normal text-zinc-900 [font-family:inherit] dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
               />
             </label>
@@ -239,14 +292,14 @@ export default function SubmissionGrader() {
                 } ${saving ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
               >
                 {saving
-                  ? "Saving…"
+                  ? t.saving
                   : status === "teacher_reviewed" && !dirty
-                    ? "Saved ✓"
-                    : "Save grade"}
+                    ? t.saved
+                    : t.saveGrade}
               </button>
               {saveFailed && (
                 <span className="text-[13px] text-red-600 dark:text-red-400">
-                  {saveError instanceof Error ? saveError.message : "Save failed"}
+                  {saveError instanceof Error ? saveError.message : t.saveFailed}
                 </span>
               )}
             </div>
@@ -261,13 +314,13 @@ export default function SubmissionGrader() {
                   ? {
                       classes:
                         "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400",
-                      label: "Correct",
+                      label: t.correct,
                     }
                   : correct === false
                     ? {
                         classes:
                           "bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400",
-                        label: "Incorrect",
+                        label: t.incorrect,
                       }
                     : null;
               return (
@@ -278,7 +331,7 @@ export default function SubmissionGrader() {
                   <div className="mb-2 flex items-start justify-between gap-2.5">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-bold text-[var(--brand-600)] dark:text-[var(--brand-400)]">
-                        Q{i + 1}
+                        {t.question(i + 1)}
                       </span>
                       <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                         {q.type.replace(/_/g, " ")}
@@ -287,7 +340,10 @@ export default function SubmissionGrader() {
                     <div className="flex shrink-0 items-center gap-2">
                       {q.points_possible != null && (
                         <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                          {q.points_earned ?? 0}/{q.points_possible} pts
+                          {t.points(
+                            fmt.number(q.points_earned ?? 0),
+                            fmt.number(q.points_possible)
+                          )}
                         </span>
                       )}
                       {badge && (
@@ -330,11 +386,11 @@ export default function SubmissionGrader() {
                     }`}
                   >
                     <div className="mb-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-                      Student answer
+                      {t.studentAnswer}
                     </div>
                     <div className="text-[13.5px] break-words whitespace-pre-wrap text-zinc-900 dark:text-zinc-100">
                       {q.student_answer ?? (
-                        <em className="text-zinc-400 dark:text-zinc-500">(no answer)</em>
+                        <em className="text-zinc-400 dark:text-zinc-500">{t.noAnswer}</em>
                       )}
                     </div>
                   </div>
@@ -343,9 +399,11 @@ export default function SubmissionGrader() {
                   {q.ai_feedback && (
                     <div className="text-[12.5px] leading-normal text-zinc-500 dark:text-zinc-400">
                       <span className="font-semibold">
-                        AI feedback
+                        {t.aiFeedback}
                         {q.ai_confidence != null &&
-                          ` (${Math.round(q.ai_confidence * 100)}% confidence)`}
+                          t.confidenceSuffix(
+                            fmt.percent(Math.round(q.ai_confidence * 100))
+                          )}
                       </span>
                       <Markdown content={q.ai_feedback} dark={dark} fontSize={12.5} />
                     </div>
