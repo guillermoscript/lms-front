@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -51,7 +52,7 @@ const ratingColor: Record<Rating, string> = {
   again: "border-red-600 text-red-600 dark:border-red-400 dark:text-red-400",
   hard: "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400",
   good: "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400",
-  easy: "border-violet-600 text-violet-600 dark:border-violet-400 dark:text-violet-400",
+  easy: "border-[var(--brand-600)] text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]",
 };
 
 export default function Flashcards() {
@@ -74,9 +75,10 @@ export default function Flashcards() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="flex justify-center bg-zinc-50 p-10 font-sans dark:bg-zinc-950">
-            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="size-6 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
           </div>
         </div>
       </McpUseProvider>
@@ -107,6 +109,7 @@ export default function Flashcards() {
   if (cards.length === 0) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className={container}>
             <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -135,6 +138,7 @@ export default function Flashcards() {
         : ". All comfortable — what should I tackle next?");
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className={container}>
             <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -167,7 +171,7 @@ export default function Flashcards() {
               )}
               <button
                 onClick={() => sendFollowUpMessage(summary)}
-                className="mt-4.5 cursor-pointer rounded-lg border-none bg-violet-600 px-4 py-2 text-[13px] font-semibold text-white dark:bg-violet-400"
+                className="mt-4.5 cursor-pointer rounded-lg border-none bg-[var(--brand-600)] px-4 py-2 text-[13px] font-semibold text-white dark:bg-[var(--brand-400)]"
               >
                 {againFronts.length > 0 ? "Drill my misses" : "What's next?"}
               </button>
@@ -180,6 +184,7 @@ export default function Flashcards() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className={container}>
           <div className="mb-3 flex items-baseline justify-between">
@@ -196,7 +201,7 @@ export default function Flashcards() {
 
           <div className="mb-4 h-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
             <div
-              className="h-full rounded-full bg-violet-600 dark:bg-violet-400"
+              className="h-full rounded-full bg-[var(--brand-600)] dark:bg-[var(--brand-400)]"
               style={{ width: `${Math.round((reviewed / cards.length) * 100)}%` }}
             />
           </div>
@@ -213,14 +218,14 @@ export default function Flashcards() {
             }}
             className={`flex min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-xl border bg-white px-7 py-9 text-center select-none dark:bg-zinc-900 ${
               flipped
-                ? "border-violet-600 dark:border-violet-400"
+                ? "border-[var(--brand-600)] dark:border-[var(--brand-400)]"
                 : "border-zinc-200 dark:border-zinc-800"
             }`}
           >
             <span
               className={`mb-2.5 text-[11px] font-bold tracking-[1px] uppercase ${
                 flipped
-                  ? "text-violet-600 dark:text-violet-400"
+                  ? "text-[var(--brand-600)] dark:text-[var(--brand-400)]"
                   : "text-zinc-400 dark:text-zinc-500"
               }`}
             >

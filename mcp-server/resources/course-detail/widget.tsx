@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ function statusPill(status: string): string {
     case "draft":
       return "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
     case "archived":
-      return "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400";
+      return "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]";
     default:
       return "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400";
   }
@@ -115,9 +116,10 @@ export default function CourseDetail() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading course…</p>
           </div>
         </div>
@@ -135,6 +137,7 @@ export default function CourseDetail() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Course header */}
@@ -174,9 +177,9 @@ export default function CourseDetail() {
             <button
               onClick={handleLoadStats}
               disabled={statsLoading}
-              className={`cursor-pointer rounded-lg border border-violet-600 px-4 py-[7px] text-[13px] font-medium text-violet-600 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-70 dark:border-violet-400 dark:text-violet-400 ${
+              className={`cursor-pointer rounded-lg border border-[var(--brand-600)] px-4 py-[7px] text-[13px] font-medium text-[var(--brand-600)] transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-70 dark:border-[var(--brand-400)] dark:text-[var(--brand-400)] ${
                 statsVisible
-                  ? "bg-violet-50 dark:bg-violet-950"
+                  ? "bg-[var(--brand-50)] dark:bg-[var(--brand-950)]"
                   : "bg-transparent"
               }`}
             >
@@ -241,7 +244,7 @@ export default function CourseDetail() {
                       key={lesson.id}
                       className="flex items-center gap-2.5 rounded-lg bg-zinc-100 px-2.5 py-2 dark:bg-zinc-800"
                     >
-                      <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-violet-50 text-[11px] font-bold text-violet-600 dark:bg-violet-950 dark:text-violet-400">
+                      <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand-50)] text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
                         {lesson.sequence}
                       </span>
                       <span className="flex-1 text-[13px] font-medium text-zinc-900 dark:text-zinc-100">

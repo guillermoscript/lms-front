@@ -5,6 +5,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -66,9 +67,10 @@ export default function MyExamResults() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading your exam results…</p>
           </div>
         </div>
@@ -89,6 +91,7 @@ export default function MyExamResults() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-[760px] bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           <div className="mb-[18px] flex flex-wrap items-baseline justify-between gap-2">
@@ -168,14 +171,14 @@ export default function MyExamResults() {
                       </div>
 
                       {r.feedback && (
-                        <span className="shrink-0 text-xs font-semibold text-violet-600 dark:text-violet-400">
+                        <span className="shrink-0 text-xs font-semibold text-[var(--brand-600)] dark:text-[var(--brand-400)]">
                           {isOpen ? "Hide feedback ▲" : "Feedback ▼"}
                         </span>
                       )}
                     </div>
 
                     {isOpen && r.feedback && (
-                      <div className="mr-4 mb-[13px] ml-[74px] rounded-[10px] border border-zinc-200 bg-violet-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-zinc-500 dark:border-zinc-800 dark:bg-violet-950 dark:text-zinc-400">
+                      <div className="mr-4 mb-[13px] ml-[74px] rounded-[10px] border border-zinc-200 bg-[var(--brand-50)] px-3.5 py-2.5 text-[13px] leading-relaxed text-zinc-500 dark:border-zinc-800 dark:bg-[var(--brand-950)] dark:text-zinc-400">
                         <Markdown content={r.feedback} dark={dark} fontSize={13} />
                       </div>
                     )}

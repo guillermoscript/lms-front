@@ -188,7 +188,7 @@ function renderNode(node: MdNode, ctx: WalkContext): ReactNode {
           target="_blank"
           rel="noopener noreferrer"
           title={typeof node.title === "string" ? node.title : undefined}
-          className="font-medium text-violet-700 underline decoration-violet-400 underline-offset-2 dark:text-violet-400"
+          className="font-medium text-[var(--brand-700)] underline decoration-[var(--brand-400)] underline-offset-2 dark:text-[var(--brand-400)]"
         >
           {renderChildren(node, ctx)}
         </a>

@@ -4,6 +4,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -308,6 +309,7 @@ export default function LandingPagePreview() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-zinc-500 dark:border-zinc-800 dark:border-t-zinc-400" />
@@ -333,6 +335,7 @@ export default function LandingPagePreview() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-[680px] bg-zinc-50 p-5 font-sans dark:bg-zinc-950">
           {/* Page header */}

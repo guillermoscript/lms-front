@@ -4,6 +4,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -55,9 +56,10 @@ export default function MyLearning() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading your courses…</p>
           </div>
         </div>
@@ -69,6 +71,7 @@ export default function MyLearning() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="mx-auto max-w-3xl bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -116,7 +119,7 @@ export default function MyLearning() {
                         className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
                           done
                             ? "bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400"
-                            : "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400"
+                            : "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]"
                         }`}
                       >
                         {course.progress}%
@@ -129,7 +132,7 @@ export default function MyLearning() {
                         className={`h-full rounded-full transition-[width] duration-400 ease-out ${
                           done
                             ? "bg-green-600 dark:bg-green-400"
-                            : "bg-violet-600 dark:bg-violet-400"
+                            : "bg-[var(--brand-600)] dark:bg-[var(--brand-400)]"
                         }`}
                         style={{ width: `${Math.min(course.progress, 100)}%` }}
                       />

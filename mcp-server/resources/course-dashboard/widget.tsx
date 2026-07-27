@@ -5,6 +5,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -60,7 +61,7 @@ function statusColor(status: string): string {
     case "draft":
       return "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
     case "archived":
-      return "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400";
+      return "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]";
     default:
       return "bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400";
   }
@@ -78,9 +79,10 @@ export default function CourseDashboard() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading courses…</p>
           </div>
         </div>
@@ -99,6 +101,7 @@ export default function CourseDashboard() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="min-h-0 bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -122,7 +125,7 @@ export default function CourseDashboard() {
                     onClick={() => setActiveFilter(s)}
                     className={`cursor-pointer rounded-full border px-3 py-[5px] text-xs transition-all duration-150 ${
                       active
-                        ? "border-violet-600 bg-violet-50 font-semibold text-violet-600 dark:border-violet-400 dark:bg-violet-950 dark:text-violet-400"
+                        ? "border-[var(--brand-600)] bg-[var(--brand-50)] font-semibold text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]"
                         : "border-zinc-200 bg-transparent font-normal text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
                     }`}
                   >

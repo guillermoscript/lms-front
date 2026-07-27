@@ -5,6 +5,7 @@ import {
   useWidgetTheme,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -68,7 +69,7 @@ function relativeDate(s: string | null): string {
 function progressColor(pct: number | null): string {
   if (pct == null) return "bg-zinc-300 dark:bg-zinc-600";
   if (pct >= 80) return "bg-green-600 dark:bg-green-400";
-  if (pct >= 40) return "bg-violet-600 dark:bg-violet-400";
+  if (pct >= 40) return "bg-[var(--brand-600)] dark:bg-[var(--brand-400)]";
   if (pct > 0) return "bg-amber-600 dark:bg-amber-400";
   return "bg-red-600 dark:bg-red-400";
 }
@@ -92,9 +93,10 @@ export default function StudentProgressRoster() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading roster…</p>
           </div>
         </div>
@@ -122,6 +124,7 @@ export default function StudentProgressRoster() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -141,7 +144,7 @@ export default function StudentProgressRoster() {
             {stat(
               "Avg progress",
               `${summary.avg_progress}%`,
-              "text-violet-600 dark:text-violet-400"
+              "text-[var(--brand-600)] dark:text-[var(--brand-400)]"
             )}
             {stat(
               "At risk",
@@ -179,7 +182,7 @@ export default function StudentProgressRoster() {
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-[13px] font-bold text-violet-600 uppercase dark:bg-violet-950 dark:text-violet-400">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-50)] text-[13px] font-bold text-[var(--brand-600)] uppercase dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
                     {initials(s.student_name, s.student_id)}
                   </div>
 

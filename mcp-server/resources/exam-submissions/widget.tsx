@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -104,9 +105,10 @@ export default function ExamSubmissions() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading submissions…</p>
           </div>
         </div>
@@ -140,6 +142,7 @@ export default function ExamSubmissions() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -199,7 +202,7 @@ export default function ExamSubmissions() {
                       isLast ? "" : "border-b border-zinc-200 dark:border-zinc-800"
                     } ${
                       isExpanded
-                        ? "bg-violet-50 dark:bg-violet-950"
+                        ? "bg-[var(--brand-50)] dark:bg-[var(--brand-950)]"
                         : "bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     }`}
                   >
@@ -224,7 +227,7 @@ export default function ExamSubmissions() {
                   {/* Expanded detail panel */}
                   {isExpanded && (
                     <div
-                      className={`box-border min-w-[480px] border-t border-t-violet-200 bg-violet-50 px-4 py-3.5 dark:border-t-violet-900 dark:bg-violet-950 ${
+                      className={`box-border min-w-[480px] border-t border-t-[var(--brand-200)] bg-[var(--brand-50)] px-4 py-3.5 dark:border-t-[var(--brand-900)] dark:bg-[var(--brand-950)] ${
                         idx === submissions.length - 1
                           ? ""
                           : "border-b border-b-zinc-200 dark:border-b-zinc-800"
@@ -242,7 +245,7 @@ export default function ExamSubmissions() {
                                 <span className="block text-[11px] text-zinc-400 dark:text-zinc-500">
                                   Score
                                 </span>
-                                <span className="text-xl font-bold text-violet-600 dark:text-violet-400">
+                                <span className="text-xl font-bold text-[var(--brand-600)] dark:text-[var(--brand-400)]">
                                   {detail.score}%
                                 </span>
                               </div>

@@ -45,3 +45,17 @@ export function getServiceRoleKey(): string | undefined {
 export function shouldVerifyJwt(): boolean {
   return process.env.NODE_ENV === "production";
 }
+
+/**
+ * Whether the dev-only `lms_demo_*` widget preview tools are registered.
+ *
+ * These render every MCP App widget from hand-written fixtures (`demo-data.ts`)
+ * so the inspector can show a widget with no database and no login. They expose
+ * no user data, but they are unauthenticated by design, so they are hard-gated:
+ * an explicit opt-in flag AND a non-production NODE_ENV.
+ */
+export function demoWidgetsEnabled(): boolean {
+  return (
+    process.env.MCP_DEMO_WIDGETS === "1" && process.env.NODE_ENV !== "production"
+  );
+}

@@ -2,6 +2,35 @@ import type { MCPServer } from "mcp-use/server";
 import { recordToolAudit } from "./audit.js";
 import { isToolAllowedForRole, roleOf } from "./tool-policy.js";
 import { errorResult } from "./format.js";
+import { BRANDING_META_KEY, getTenantBranding } from "./branding.js";
+import { LmsSession } from "./session.js";
+
+/**
+ * Attach the caller's school branding to a widget result.
+ *
+ * Widget payloads carry `structuredContent`; plain text/JSON results do not, so
+ * that is the test for "this renders a widget". The branding rides in `_meta`
+ * rather than in props: it stays out of the model's context, and no widget's
+ * `propsSchema` has to grow a field for it.
+ *
+ * Everything here is best-effort. An unauthenticated caller, a tenant with no
+ * colours, or a failed lookup all return the result untouched, and the widget
+ * falls back to the platform palette.
+ */
+export async function brandWidgetResult(result: unknown, ctx: unknown): Promise<unknown> {
+  if (!result || typeof result !== "object") return result;
+  const r = result as { structuredContent?: unknown; _meta?: Record<string, unknown> };
+  if (!r.structuredContent) return result;
+
+  try {
+    const branding = await getTenantBranding(LmsSession.fromContext(ctx as never));
+    if (!branding) return result;
+    r._meta = { ...(r._meta ?? {}), [BRANDING_META_KEY]: branding };
+  } catch {
+    // No session (or the lookup failed) — leave the widget on the default theme.
+  }
+  return result;
+}
 
 /**
  * Per-tool guard wrapper.
@@ -63,7 +92,7 @@ export function installToolGuards(server: MCPServer): void {
         if (result && typeof result === "object" && (result as { isError?: boolean }).isError === true) {
           success = false;
         }
-        return result;
+        return await brandWidgetResult(result, ctx);
       } catch (err) {
         success = false;
         errorMessage = err instanceof Error ? err.message : String(err);

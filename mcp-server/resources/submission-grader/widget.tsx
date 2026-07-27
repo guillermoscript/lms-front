@@ -6,6 +6,7 @@ import {
   useCallTool,
   type WidgetMetadata,
 } from "mcp-use/react";
+import { Brand } from "../shared/branding";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -75,7 +76,7 @@ function statusPill(status: string): { classes: string; label: string } {
     },
     ai_reviewed: {
       classes:
-        "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400",
+        "bg-[var(--brand-50)] text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]",
       label: "AI reviewed",
     },
     pending_teacher_review: {
@@ -128,9 +129,10 @@ export default function SubmissionGrader() {
   if (isPending) {
     return (
       <McpUseProvider autoSize>
+        <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-violet-600 dark:border-zinc-800 dark:border-t-violet-400" />
+            <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
             <p className="m-0 text-sm">Loading submission…</p>
           </div>
         </div>
@@ -166,6 +168,7 @@ export default function SubmissionGrader() {
 
   return (
     <McpUseProvider autoSize>
+      <Brand />
       <div className={dark ? "dark" : ""}>
         <div className="bg-zinc-50 p-6 font-sans dark:bg-zinc-950">
           {/* Header */}
@@ -232,7 +235,7 @@ export default function SubmissionGrader() {
                 className={`rounded-lg border-none px-5 py-2 text-[13px] font-semibold transition-all ${
                   saveDisabled
                     ? "bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
-                    : "bg-violet-600 text-white dark:bg-violet-400"
+                    : "bg-[var(--brand-600)] text-white dark:bg-[var(--brand-400)]"
                 } ${saving ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
               >
                 {saving
@@ -274,7 +277,7 @@ export default function SubmissionGrader() {
                 >
                   <div className="mb-2 flex items-start justify-between gap-2.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
+                      <span className="text-xs font-bold text-[var(--brand-600)] dark:text-[var(--brand-400)]">
                         Q{i + 1}
                       </span>
                       <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
