@@ -3,11 +3,14 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
   attributesToProps,
+  inlineCodeBlockBodies,
+  parseLessonBlocks,
   parseLessonMdx,
   resolveExpression,
   type MdNode,
 } from '@/mcp-server/resources/shared/lesson/mdx'
 import { LessonBody } from '@/mcp-server/resources/shared/lesson'
+import { inlineCodeBlockBodies as inlineCodeBlockBodiesApp } from '@/lib/lesson/mdx-source'
 
 /**
  * The MCP lesson widgets render `lessons.content` — an MDX source string — with
@@ -55,6 +58,103 @@ describe('resolveExpression', () => {
   it('falls back to the raw text rather than throwing on anything it can not resolve', () => {
     expect(resolveExpression('someRuntimeVariable')).toBe('someRuntimeVariable')
     expect(resolveExpression(`JSON.parse('{not json}')`)).toBe(`JSON.parse('{not json}')`)
+  })
+})
+
+describe('inlineCodeBlockBodies', () => {
+  // `<CodeBlock>` children are parsed as MDX, so a snippet starting at column 0
+  // with export/import was handed to acorn and failed the WHOLE document (#566).
+  const MODULE_IN_CODEBLOCK = [
+    'Before.',
+    '',
+    '<CodeBlock language="tsx" title="counter.tsx">',
+    'export function Counter() {',
+    '  const [n, setN] = useState(0)',
+    '  return <button onClick={() => setN(n + 1)}>{n}</button>',
+    '}',
+    '</CodeBlock>',
+    '',
+    'After.',
+  ].join('\n')
+
+  it('makes a module inside <CodeBlock> parse instead of failing the document', () => {
+    expect(parseLessonMdx(MODULE_IN_CODEBLOCK)).toBeNull()
+    expect(parseLessonMdx(inlineCodeBlockBodies(MODULE_IN_CODEBLOCK))).not.toBeNull()
+  })
+
+  it('round-trips the snippet byte for byte, quotes and backslashes included', () => {
+    const source = `<CodeBlock>const s = 'it\\'s'\nconst re = /\\d+/\n</CodeBlock>`
+    const element = firstJsxElement(parseLessonMdx(inlineCodeBlockBodies(source)))
+    expect(attributesToProps(element).code).toBe(`const s = 'it\\'s'\nconst re = /\\d+/`)
+  })
+
+  it('leaves blocks it has nothing to move alone', () => {
+    const selfClosing = '<CodeBlock language="ts" code={JSON.parse(\'"a"\')} />'
+    expect(inlineCodeBlockBodies(selfClosing)).toBe(selfClosing)
+    expect(inlineCodeBlockBodies('<CodeBlock language="ts"></CodeBlock>')).toBe(
+      '<CodeBlock language="ts"></CodeBlock>'
+    )
+    expect(inlineCodeBlockBodies('no code blocks here')).toBe('no code blocks here')
+  })
+
+  it('is byte-identical to the web app copy in lib/lesson/mdx-source.ts', () => {
+    // The two renderers live in separate npm projects and can not import each
+    // other, so the only thing keeping the ports honest is this assertion.
+    for (const source of [
+      MODULE_IN_CODEBLOCK,
+      '<CodeBlock>a</CodeBlock>',
+      `<CodeBlock lang="js">const x = {a: 1}\nif (x) console.log('hi')</CodeBlock>`,
+      '<CodeBlock language="ts"></CodeBlock>',
+      'plain text',
+      '<CodeBlock>one</CodeBlock>\n\n<CodeBlock>two</CodeBlock>',
+    ]) {
+      expect(inlineCodeBlockBodies(source)).toBe(inlineCodeBlockBodiesApp(source))
+    }
+  })
+})
+
+describe('parseLessonBlocks', () => {
+  it('keeps a parseable lesson as a single block', () => {
+    const blocks = parseLessonBlocks('# Title\n\nSome **text**.')
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].tree).not.toBeNull()
+  })
+
+  it('degrades only the block that can not be parsed', () => {
+    const blocks = parseLessonBlocks(
+      ['Intro.', '', '<Callout type="info">never closed', '', 'Outro.'].join('\n')
+    )
+    expect(blocks.map((block) => block.tree !== null)).toEqual([true, false, true])
+    expect(blocks[1].source).toContain('never closed')
+  })
+
+  it('re-joins segments until a multi-line element closes', () => {
+    // <Steps> alone is a parse error ("Expected a closing tag"), so the blank
+    // lines inside it must not become block boundaries.
+    const blocks = parseLessonBlocks(
+      [
+        '<Callout>unclosed', // forces the per-block path
+        '',
+        '<Steps>',
+        '',
+        '  <Step title="One">a</Step>',
+        '',
+        '</Steps>',
+      ].join('\n')
+    )
+    const parsed = blocks.filter((block) => block.tree)
+    expect(parsed).toHaveLength(1)
+    expect(parsed[0].source).toContain('</Steps>')
+  })
+
+  it('does not split inside a fenced code block', () => {
+    // An unterminated fence parses happily to end-of-input, so a bad split here
+    // would silently swallow the rest of the lesson rather than erroring.
+    const blocks = parseLessonBlocks(
+      ['<Callout>unclosed', '', '```ts', 'const a = 1', '', 'const b = 2', '```'].join('\n')
+    )
+    const fenced = blocks.find((block) => block.source.startsWith('```'))
+    expect(fenced?.source).toContain('const b = 2')
   })
 })
 
@@ -178,6 +278,80 @@ describe('LessonBody', () => {
     const broken = render(createElement(LessonBody, { content: '<Callout type="info">oops' }))
     expect(broken).toContain('could not be rendered fully')
     expect(broken).toContain('oops')
+  })
+
+  it('renders a module pasted into <CodeBlock> instead of dumping the lesson (#566)', () => {
+    const withModule = render(
+      createElement(LessonBody, {
+        content: [
+          '# Counter',
+          '',
+          '<CodeBlock language="tsx" title="counter.tsx">',
+          'export function Counter() {',
+          '  return <button>{n}</button>',
+          '}',
+          '</CodeBlock>',
+          '',
+          'Explanation **after** the snippet.',
+        ].join('\n'),
+      })
+    )
+
+    expect(withModule).not.toContain('could not be rendered')
+    expect(withModule).toContain('export function Counter')
+    expect(withModule).toContain('counter.tsx')
+    // The prose after the snippet still renders as markdown, not as raw source.
+    expect(withModule).toContain('<strong')
+  })
+
+  it('keeps a snippet literal rather than parsing it as markdown', () => {
+    // As children, `**bold**` was parsed as markdown and the asterisks were
+    // lost on the way to the <pre>.
+    const literal = render(
+      createElement(LessonBody, { content: '<CodeBlock>a = "**not bold**"</CodeBlock>' })
+    )
+    expect(literal).toContain('**not bold**')
+  })
+
+  it('degrades one broken block and renders the rest of the lesson (#566)', () => {
+    const partly = render(
+      createElement(LessonBody, {
+        content: [
+          '# Still here',
+          '',
+          '<Callout type="warning">this tag never closes',
+          '',
+          'And this paragraph must still render.',
+        ].join('\n'),
+      })
+    )
+
+    expect(partly).toContain('This part of the lesson could not be rendered')
+    expect(partly).not.toContain('could not be rendered fully')
+    expect(partly).toContain('Still here')
+    expect(partly).toContain('And this paragraph must still render.')
+  })
+
+  it('always offers a link out of an embedded video (#566)', () => {
+    // Widget hosts refuse to frame YouTube/Vimeo, and there is no reliable load
+    // event inside the sandbox — so a blocked player must never be a bare void.
+    const embedded = render(
+      createElement(LessonBody, {
+        content: null,
+        videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      })
+    )
+    expect(embedded).toContain('https://www.youtube.com/embed/dQw4w9WgXcQ')
+    expect(embedded).toContain('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"')
+
+    // Same for a <Video> authored inside the lesson body.
+    const authored = render(
+      createElement(LessonBody, {
+        content: '<Video url="https://vimeo.com/123456" />',
+      })
+    )
+    expect(authored).toContain('https://player.vimeo.com/video/123456')
+    expect(authored).toContain('href="https://vimeo.com/123456"')
   })
 
   it('renders video and embed_code the way the lesson page orders them', () => {

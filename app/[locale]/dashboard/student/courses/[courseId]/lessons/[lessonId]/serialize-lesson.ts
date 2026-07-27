@@ -1,6 +1,7 @@
 import { serialize } from 'next-mdx-remote-client/serialize'
 import type { SerializeResult } from 'next-mdx-remote-client'
 import remarkGfm from 'remark-gfm'
+import { inlineCodeBlockBodies } from '@/lib/lesson/mdx-source'
 
 /**
  * Compiles lesson MDX on the server so the client only renders the
@@ -12,7 +13,9 @@ export async function serializeLessonMdx(
   if (!content) return null
   try {
     return await serialize({
-      source: content,
+      // A `<CodeBlock>` holding a module would otherwise fail the whole
+      // document — see inlineCodeBlockBodies().
+      source: inlineCodeBlockBodies(content),
       options: {
         mdxOptions: {
           remarkPlugins: [remarkGfm],

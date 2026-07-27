@@ -6,9 +6,13 @@ import { cn } from '@/lib/utils'
 import { IconCopy, IconCheck, IconFile } from '@tabler/icons-react'
 
 interface CodeBlockProps {
-  children: string
+  children?: string
+  /** Snippet moved out of the children position by `inlineCodeBlockBodies()`. */
+  code?: string
   language?: string
   filename?: string
+  /** Alias for `filename` — what a fenced block carries in its `title="…"` meta. */
+  title?: string
   showLineNumbers?: boolean
   highlightLines?: number[]
   className?: string
@@ -16,8 +20,10 @@ interface CodeBlockProps {
 
 export function CodeBlock({
   children,
+  code: codeProp,
   language,
   filename,
+  title,
   showLineNumbers = false,
   highlightLines = [],
   className,
@@ -26,7 +32,10 @@ export function CodeBlock({
   const [copied, setCopied] = useState(false)
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
 
-  const code = typeof children === 'string' ? children.trim() : String(children).trim()
+  // `code` wins: a snippet only travels as a prop when keeping it as children
+  // would have failed the MDX compile outright.
+  const source = typeof codeProp === 'string' ? codeProp : children
+  const code = typeof source === 'string' ? source.trim() : String(source ?? '').trim()
 
   // Cargar Shiki y resaltar código
   useEffect(() => {
@@ -84,10 +93,10 @@ export function CodeBlock({
       {/* Header con filename y botón copiar */}
       <div className="flex items-center justify-between border-b border-gray-700 bg-[#161b22] px-4 py-2">
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          {filename ? (
+          {filename || title ? (
             <>
               <IconFile className="size-4" />
-              <span>{filename}</span>
+              <span>{filename || title}</span>
             </>
           ) : language ? (
             <span className="uppercase">{language}</span>
