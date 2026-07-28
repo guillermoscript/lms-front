@@ -47,6 +47,38 @@ function hotspotHref(courseId: string, h: Hotspot): string | null {
   return null
 }
 
+/**
+ * The one-line "why this is a hotspot" under each item.
+ *
+ * Built here rather than in the analytics module so it can be translated: each
+ * signal counts something different, so each gets its own message instead of a
+ * generic one that would read wrong for three scopes out of four.
+ */
+function hotspotEvidence(h: Hotspot, t: Awaited<ReturnType<typeof getTranslations>>): string {
+  if (h.scope === 'practice') {
+    return t('hotspots.evidencePractice', {
+      attempts: h.totalAttempts ?? 0,
+      students: h.studentsAttempted,
+      avg: h.avgScore ?? 0,
+      below: h.studentsAffected,
+    })
+  }
+  if (h.scope === 'exam_question') {
+    return t('hotspots.evidenceExam', {
+      missers: h.studentsAffected,
+      students: h.studentsAttempted,
+      rate: Math.round((h.studentsAffected / Math.max(h.studentsAttempted, 1)) * 100),
+    })
+  }
+  // Exercises and checkpoints share a shape: latest attempt decides "stuck".
+  const base = t('hotspots.evidenceStuck', {
+    stuck: h.studentsAffected,
+    students: h.studentsAttempted,
+    attempts: (h.avgAttempts ?? 0).toFixed(1),
+  })
+  return h.avgScore == null ? base : `${base} · ${t('hotspots.evidenceAvg', { avg: h.avgScore })}`
+}
+
 export default async function CourseAnalyticsPage({ params, searchParams }: PageProps) {
   const { courseId } = await params
   const { days: daysParam } = await searchParams
@@ -265,7 +297,9 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
                               <span className="text-sm font-medium">{h.label}</span>
                             )}
                           </div>
-                          <p className="mt-1 text-xs text-muted-foreground">{h.evidence}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {hotspotEvidence(h, t)}
+                          </p>
                         </div>
                         <SeverityBar value={h.severity} label={t('hotspots.severity')} />
                       </div>

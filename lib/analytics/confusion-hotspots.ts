@@ -27,6 +27,13 @@
  *   query; the tool was left alone to keep a shipped payload stable. So the
  *   page can surface a hotspot the tool will not — never the reverse.
  *
+ *   The second difference is presentational: this module returns only numbers
+ *   per hotspot, never a prebuilt sentence, because the page renders in `en`
+ *   and `es`. (It first returned an `evidence` string, which left every hotspot
+ *   detail line stuck in English on `/es` while the rest of the page
+ *   translated.) The MCP tool keeps its English `evidence` string — its reader
+ *   is a model, not a localised UI.
+ *
  * RLS
  *   Every read below runs as the signed-in teacher. Each source table has a
  *   teacher-scoped SELECT policy (`teachers_view_tenant_evaluations`,
@@ -61,7 +68,8 @@ export interface Hotspot {
   avgAttempts: number | null
   /** Course lesson this item belongs to, when known — lets the page deep-link. */
   lessonId: number | null
-  evidence: string
+  /** Total attempts behind this row, where the signal counts them (practice only). */
+  totalAttempts: number | null
 }
 
 export type DifficultyLabel = 'easy' | 'medium' | 'hard'
@@ -344,7 +352,7 @@ async function loadPractice(
       avgScore: Math.round(avg),
       avgAttempts: null,
       lessonId: b.lessonId,
-      evidence: `${b.scores.length} attempt(s) by ${b.users.size} student(s) · average ${Math.round(avg)}% · ${b.struggling.size} below ${LOW_SCORE}%`,
+      totalAttempts: b.scores.length,
     })
   }
   return { hotspots, rowCount: rows.length }
@@ -538,7 +546,7 @@ function rollUpAttempts<K extends string | number>(
       avgScore: avgScore == null ? null : Math.round(avgScore),
       avgAttempts: Math.round(avgAttempts * 10) / 10,
       lessonId: d.lessonId,
-      evidence: `${b.stuck.size} of ${b.attempted.size} student(s) still failing on their latest attempt · ${avgAttempts.toFixed(1)} attempt(s) each on average${avgScore == null ? '' : ` · average ${Math.round(avgScore)}%`}`,
+      totalAttempts: null,
     })
   }
   return out
@@ -644,7 +652,7 @@ async function loadExamQuestionMisses(
       avgScore: null,
       avgAttempts: null,
       lessonId: null,
-      evidence: `${b.missers.size} of ${b.attempts} student(s) missed it on their latest submission · ${Math.round(missRate * 100)}% miss rate`,
+      totalAttempts: null,
     })
   }
   return { hotspots, submissionCount: subById.size }

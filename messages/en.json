@@ -1649,7 +1649,11 @@
           "severity": "Severity",
           "allClear": "No hotspots in this window — nobody is stuck on an exercise, checkpoint, drill or exam question.",
           "noData": "No student activity in this window yet. Once students attempt exercises, checkpoints, practice drills or exams, their results appear here.",
-          "sources": "Based on {practice} practice attempts, {exercises} exercise attempts, {checkpoints} checkpoint attempts and {exams} exam submissions in the last {days} days."
+          "sources": "Based on {practice} practice attempts, {exercises} exercise attempts, {checkpoints} checkpoint attempts and {exams} exam submissions in the last {days} days.",
+          "evidencePractice": "{attempts} attempt(s) by {students} student(s) · average {avg}% · {below} below 70%",
+          "evidenceStuck": "{stuck} of {students} student(s) still failing on their latest attempt · {attempts} attempt(s) each on average",
+          "evidenceAvg": "average {avg}%",
+          "evidenceExam": "{missers} of {students} student(s) missed it on their latest submission · {rate}% miss rate"
         }
       }
     },

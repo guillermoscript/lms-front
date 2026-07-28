@@ -1649,7 +1649,11 @@
           "severity": "Gravedad",
           "allClear": "Sin puntos de confusión en este periodo: nadie está atascado en un ejercicio, checkpoint, práctica o pregunta de examen.",
           "noData": "Aún no hay actividad de estudiantes en este periodo. Cuando intenten ejercicios, checkpoints, prácticas o exámenes, sus resultados aparecerán aquí.",
-          "sources": "Basado en {practice} intentos de práctica, {exercises} intentos de ejercicio, {checkpoints} intentos de checkpoint y {exams} entregas de examen en los últimos {days} días."
+          "sources": "Basado en {practice} intentos de práctica, {exercises} intentos de ejercicio, {checkpoints} intentos de checkpoint y {exams} entregas de examen en los últimos {days} días.",
+          "evidencePractice": "{attempts} intento(s) de {students} estudiante(s) · promedio {avg}% · {below} por debajo del 70%",
+          "evidenceStuck": "{stuck} de {students} estudiante(s) siguen fallando en su último intento · {attempts} intento(s) cada uno en promedio",
+          "evidenceAvg": "promedio {avg}%",
+          "evidenceExam": "{missers} de {students} estudiante(s) la fallaron en su última entrega · {rate}% de fallo"
         }
       }
     },

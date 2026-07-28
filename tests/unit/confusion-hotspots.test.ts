@@ -116,7 +116,8 @@ describe('exercise hotspots', () => {
     const hot = bySc(await run(db), 'exercise')[0]
     // u1 peaked at attempt 6, u2 at attempt 1 → mean 3.5
     expect(hot.avgAttempts).toBe(3.5)
-    expect(hot.evidence).toContain('3.5 attempt(s)')
+    // Attempt totals are a practice-only counter; exercises report the mean.
+    expect(hot.totalAttempts).toBeNull()
   })
 
   it('reports no hotspot when everyone eventually passes', async () => {
@@ -245,6 +246,9 @@ describe('practice-topic hotspots', () => {
     expect(hot.avgScore).toBe(60)
     expect(hot.studentsAffected).toBe(2)
     expect(hot.lessonId).toBe(4)
+    // The page renders this count, so it must be attempts and not students.
+    expect(hot.totalAttempts).toBe(3)
+    expect(hot.studentsAttempted).toBe(3)
   })
 
   it('excludes attempts older than the look-back window', async () => {
