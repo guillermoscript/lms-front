@@ -27,12 +27,19 @@ export default async function DashboardLayout({
         <SidebarProvider>
             <AppSidebar userRole={role} />
             <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <header className="flex h-16 min-w-0 shrink-0 items-center gap-2 border-b px-4">
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="mr-2 h-4" />
-                    <div className="ml-auto flex items-center gap-4">
+                    <div className="ml-auto flex min-w-0 items-center gap-4">
+                        {/* #586: gated at `lg`, not `md`. The desktop sidebar
+                            arrives at `md` and takes 256px, which leaves the
+                            inset too narrow for these chips — the page ended up
+                            scrolling sideways between 768px and ~890px. Below
+                            `lg` the same card is reachable in the avatar
+                            dropdown (see components/user-nav.tsx), so the two
+                            breakpoints must stay in lockstep. */}
                         {role === 'student' && (
-                            <div className="hidden md:block">
+                            <div className="hidden lg:block">
                                 <GamificationHeaderCard />
                             </div>
                         )}

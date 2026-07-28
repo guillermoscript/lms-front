@@ -19,7 +19,9 @@ export function GamificationHeaderCard() {
 
     if (loading) {
         return (
-            <div className="flex items-center gap-4 px-3 py-1.5 bg-muted/50 rounded-xl border border-border">
+            // #586: same `max-w-full overflow-hidden` as the loaded state below,
+            // so the skeleton cannot be wider than the thing it stands in for.
+            <div className="flex items-center gap-4 px-3 py-1.5 bg-muted/50 rounded-xl border border-border max-w-full overflow-hidden">
                 <Skeleton className="h-6 w-20 rounded-md" />
                 <Skeleton className="h-6 w-16 rounded-md" />
                 <Skeleton className="h-6 w-16 rounded-md" />
@@ -30,7 +32,10 @@ export function GamificationHeaderCard() {
     if (!summary) return null;
 
     return (
-        <div className="flex items-center gap-1 md:gap-2 bg-muted/50 border border-border rounded-xl p-1 md:p-1.5 max-w-full overflow-hidden">
+        <div
+            data-slot="gamification-header-card"
+            className="flex items-center gap-1 md:gap-2 bg-muted/50 border border-border rounded-xl p-1 md:p-1.5 max-w-full overflow-hidden"
+        >
             {/* Level & XP */}
             <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-2.5 py-1 rounded-lg hover:bg-accent/50 transition-colors shrink-0">
                 <div className="relative flex items-center justify-center">
