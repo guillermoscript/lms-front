@@ -32,7 +32,7 @@ export function UserNav({ user }: UserNavProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full border border-border/50 overflow-hidden transition-colors">
+          <Button data-testid="user-nav-trigger" variant="ghost" className="relative h-8 w-8 rounded-full border border-border/50 overflow-hidden transition-colors">
             <CurrentUserAvatar />
           </Button>
         }
@@ -81,8 +81,12 @@ export function UserNav({ user }: UserNavProps) {
             <span>{t('logout')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator className="flex md:hidden" />
-        <DropdownMenuGroup className="flex md:hidden p-2">
+        {/* #586: `lg`, matching the header's gate in
+            app/[locale]/dashboard/layout.tsx. These two breakpoints are a pair —
+            whenever the header hides the card, this has to show it, or the
+            streak and coins become unreachable between 768px and 1023px. */}
+        <DropdownMenuSeparator className="flex lg:hidden" />
+        <DropdownMenuGroup className="flex lg:hidden p-2">
           <GamificationHeaderCard />
         </DropdownMenuGroup>
       </DropdownMenuContent>
