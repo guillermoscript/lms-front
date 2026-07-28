@@ -1,26 +1,15 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
-import { cn } from '@/lib/utils'
-import Markdown from 'react-markdown'
+import ExerciseBrief from '@/components/exercises/exercise-brief'
+import ExerciseHeader from '@/components/exercises/exercise-header'
+import ExerciseWorkspace, { initialWorkspacePanel } from '@/components/exercises/exercise-workspace'
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
 import { toast } from 'sonner'
-import {
-  IconCheck,
-  IconClock,
-  IconFlame,
-  IconInfoCircle,
-  IconSparkles,
-  IconLoader2,
-  IconAlertTriangle,
-  IconArrowRight,
-  IconTrophy,
-  IconCode,
-} from '@tabler/icons-react'
+import { IconLoader2, IconAlertTriangle, IconArrowRight } from '@tabler/icons-react'
 
 interface ArtifactExerciseProps {
   exercise: {
@@ -64,7 +53,7 @@ export default function ArtifactExercise({
   initialEvaluation = null,
 }: ArtifactExerciseProps) {
   const t = useTranslations('exercises.artifact')
-  const tAudio = useTranslations('exercises.audio')
+  const tWorkspace = useTranslations('exercises.workspace')
   const tGamification = useTranslations('gamification')
 
   const config = exercise.exercise_config ?? {}
@@ -76,25 +65,8 @@ export default function ArtifactExercise({
   const [passed, setPassed] = useState<boolean>(isExerciseCompleted)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rateLimited, setRateLimited] = useState(false)
-
-  const completionData = exercise.exercise_completions?.[0]
-  const completionScore = completionData?.score ?? (evaluation?.score || 0)
-  const completionDate = completionData?.completed_at
-
-  const difficultyLabels: Record<string, string> = {
-    easy: tAudio('beginner'),
-    medium: tAudio('intermediate'),
-    hard: tAudio('advanced'),
-  }
-  const difficultyConfig: Record<string, { color: string; icon: typeof IconFlame }> = {
-    easy: { color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20', icon: IconSparkles },
-    medium: { color: 'text-amber-600 bg-amber-500/10 border-amber-500/20', icon: IconFlame },
-    hard: { color: 'text-rose-600 bg-rose-500/10 border-rose-500/20', icon: IconFlame },
-  }
-
-  const difficulty = difficultyConfig[exercise.difficulty_level] || difficultyConfig.easy
-  const difficultyLabel = difficultyLabels[exercise.difficulty_level] || difficultyLabels.easy
-  const DifficultyIcon = difficulty.icon
+  /** Bumped on every fresh grade so the workspace can surface the result panel. */
+  const [gradedNonce, setGradedNonce] = useState(0)
 
   const handleSubmit = useCallback(async (content: string, metadata: Record<string, unknown> = {}) => {
     setSubmitState('evaluating')
@@ -126,6 +98,7 @@ export default function ArtifactExercise({
       setEvaluation(result)
       setPassed(result.passed)
       setSubmitState('done')
+      setGradedNonce((n) => n + 1)
 
       // Send feedback back to iframe
       iframeRef.current?.contentWindow?.postMessage(
@@ -171,174 +144,103 @@ export default function ArtifactExercise({
     setEvaluation(null)
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
+  const taskPanel = (
+    <div className="space-y-4">
+      {rateLimited && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] px-4 py-3">
+          <p className="flex items-center gap-2.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
+            <IconAlertTriangle size={16} className="shrink-0" aria-hidden="true" />
+            {t('rateLimited')}
+          </p>
+        </div>
+      )}
+
+      {submitState === 'evaluating' && (
+        <div
+          className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3"
+          role="status"
+        >
+          <IconLoader2 size={16} className="animate-spin text-primary shrink-0" aria-hidden="true" />
+          <p className="text-sm font-medium">{t('evaluating')}</p>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">
+          {errorMsg}
+        </div>
+      )}
+
+      {artifactHtml && (
+        // The srcDoc is authored as a light-mode document, so the frame keeps a
+        // white backing in both themes rather than showing a dark seam round it.
+        <div className="rounded-xl border overflow-hidden bg-white">
+          <iframe
+            ref={iframeRef}
+            srcDoc={artifactHtml}
+            sandbox="allow-scripts"
+            className="w-full border-0"
+            style={{ minHeight: '500px' }}
+            title={exercise.title}
+          />
+        </div>
+      )}
+    </div>
+  )
+
+  // One result card across every engine. This block used to be a near-copy of
+  // ExerciseResultSummary that printed the score over the PASS MARK, alongside
+  // a second trophy card printing a *different* score from exercise_completions.
+  const resultPanel =
+    evaluation && submitState !== 'evaluating' ? (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="font-bold border-2 text-primary border-primary/20 bg-primary/5 uppercase tracking-wider text-[10px] px-2.5 py-0.5">
-            <IconCode size={10} className="mr-1" aria-hidden="true" />
-            {t('typeLabel')}
-          </Badge>
-          <Badge variant="outline" className={cn('font-bold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider', difficulty.color)}>
-            <DifficultyIcon size={11} className="mr-1" aria-hidden="true" />
-            {difficultyLabel}
-          </Badge>
-          {exercise.time_limit && (
-            <Badge variant="outline" className="font-bold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider text-muted-foreground">
-              <IconClock size={11} className="mr-1" aria-hidden="true" />
-              {exercise.time_limit} min
-            </Badge>
-          )}
-          {(isExerciseCompleted || passed) && (
-            <Badge className="bg-emerald-500 text-white font-bold text-[10px] px-2.5 py-0.5 uppercase tracking-wider">
-              <IconCheck size={11} className="mr-1" aria-hidden="true" />
-              {tAudio('completed')}
-            </Badge>
-          )}
-        </div>
+        <ExerciseResultSummary
+          score={evaluation.score}
+          passed={evaluation.passed}
+          feedback={evaluation.feedback}
+          strengths={evaluation.strengths}
+          improvements={evaluation.improvements}
+          // The API response carries its own threshold; the prop is the
+          // fallback for a restored attempt that predates that field.
+          passingScore={evaluation.passingScore ?? passingScore}
+        />
 
-        <h1 className="text-2xl md:text-3xl font-black tracking-tight text-balance leading-tight">
-          {exercise.title}
-        </h1>
+        {!evaluation.passed && !rateLimited && (
+          <Button
+            onClick={handleTryAgain}
+            className="w-full gap-2.5 h-11 text-sm font-semibold tracking-wide"
+          >
+            {t('tryAgain')}
+            <IconArrowRight size={16} className="ml-auto opacity-60" />
+          </Button>
+        )}
       </div>
+    ) : undefined
 
-      {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Instructions */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-primary/10 bg-primary/[0.03]">
-              <h2 className="font-bold text-xs flex items-center gap-2 text-primary uppercase tracking-wider">
-                <IconInfoCircle size={14} aria-hidden="true" />
-                {tAudio('instructions')}
-              </h2>
-            </div>
-            <div className="px-5 py-4">
-              <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:text-foreground/80 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-bold prose-li:text-foreground/80 prose-headings:text-sm">
-                <Markdown>{exercise.instructions}</Markdown>
-              </div>
-            </div>
-          </div>
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <ExerciseHeader
+        typeLabel={t('typeLabel')}
+        title={exercise.title}
+        difficulty={exercise.difficulty_level}
+        timeLimit={exercise.time_limit}
+        completed={isExerciseCompleted || passed}
+      />
 
-          {isExerciseCompletedSection && (
-            <div className="space-y-4">{isExerciseCompletedSection}</div>
-          )}
-        </div>
-
-        {/* Right: Artifact + Results */}
-        <div className="lg:col-span-8">
-          <div className="lg:sticky lg:top-6 space-y-4">
-            {/* Completion summary */}
-            {(isExerciseCompleted || passed) && (
-              <div className="rounded-2xl border-2 border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.06] to-emerald-500/[0.02] p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                      <IconTrophy size={18} />
-                      {tAudio('completedScore')}
-                    </h3>
-                    {completionDate && (
-                      <p className="text-xs text-emerald-600/70 dark:text-emerald-400/60 mt-1">
-                        {tAudio('completedOn', {
-                          date: new Date(completionDate).toLocaleDateString(undefined, {
-                            month: 'long', day: 'numeric', year: 'numeric',
-                          }),
-                        })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400">
-                      {Math.round(completionScore)}
-                    </span>
-                    <span className="text-lg font-bold text-emerald-600/40">/</span>
-                    <span className="text-lg font-bold text-emerald-600/60 tabular-nums">100</span>
-                  </div>
-                </div>
-                <p className="text-sm text-emerald-600/80 dark:text-emerald-400/70">
-                  {tAudio('exerciseMarkedComplete')}
-                </p>
-              </div>
-            )}
-
-            {/* Rate limit banner */}
-            {rateLimited && (
-              <div className="rounded-xl border-2 border-amber-500/20 bg-amber-500/[0.05] p-5">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-amber-500/10 p-2">
-                    <IconAlertTriangle size={20} className="text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-amber-700 dark:text-amber-400">{t('rateLimited')}</h3>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Evaluating state */}
-            {submitState === 'evaluating' && (
-              <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3">
-                <IconLoader2 size={16} className="animate-spin text-primary shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{t('evaluating')}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Error */}
-            {errorMsg && (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                {errorMsg}
-              </div>
-            )}
-
-            {/* Sandboxed iframe */}
-            {artifactHtml && (
-              <div className="rounded-xl border-2 border-border/50 overflow-hidden bg-white">
-                <iframe
-                  ref={iframeRef}
-                  srcDoc={artifactHtml}
-                  sandbox="allow-scripts"
-                  className="w-full border-0"
-                  style={{ minHeight: '500px' }}
-                  title={exercise.title}
-                />
-              </div>
-            )}
-
-            {/* Evaluation result — also shown for a restored prior attempt, whose
-                submitState is still 'idle' because nothing was submitted this visit. */}
-            {/* One result card across every engine. This block used to be a
-                near-copy of ExerciseResultSummary that printed the score over
-                the PASS MARK, twice: "62 / 70" reads as 89% when 62 is a fail. */}
-            {evaluation && submitState !== 'evaluating' && (
-              <div className="space-y-4">
-                <ExerciseResultSummary
-                  score={evaluation.score}
-                  passed={evaluation.passed}
-                  feedback={evaluation.feedback}
-                  strengths={evaluation.strengths}
-                  improvements={evaluation.improvements}
-                  // The API response carries its own threshold; the prop is the
-                  // fallback for a restored attempt that predates that field.
-                  passingScore={evaluation.passingScore ?? passingScore}
-                />
-
-                {!evaluation.passed && !rateLimited && (
-                  <Button
-                    onClick={handleTryAgain}
-                    className="w-full gap-2.5 h-11 text-sm font-semibold tracking-wide"
-                  >
-                    {t('tryAgain')}
-                    <IconArrowRight size={16} className="ml-auto opacity-60" />
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <ExerciseWorkspace
+        brief={<ExerciseBrief instructions={exercise.instructions} />}
+        task={taskPanel}
+        taskLabel={tWorkspace('task')}
+        result={resultPanel}
+        resultPassed={evaluation?.passed}
+        related={isExerciseCompletedSection}
+        initialPanel={initialWorkspacePanel({
+          hasResult: Boolean(resultPanel),
+          passed: evaluation?.passed,
+          attempted: isExerciseCompleted || Boolean(initialEvaluation),
+        })}
+        revealResultNonce={gradedNonce}
+      />
     </div>
   )
 }

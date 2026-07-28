@@ -267,7 +267,8 @@ export default async function ExercisePage({ params }: PageProps) {
     const t = await getTranslations('exercises.audio')
     const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
         <>
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 mb-3">{t('moreExercises')}</h3>
+            {/* Full-strength muted, not /70: the faded variant measured 2.76:1. */}
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('moreExercises')}</h3>
             <div className="grid gap-3">
                 {otherExercises.map((ex) => (
                     <ExerciseCard
@@ -409,6 +410,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     studentId={userId}
                     isExerciseCompletedSection={otherExercisesSection}
                     resultSummary={resultSummary}
+                    resultPassed={latestEvaluation?.passed}
                 >
                     {chatComponent}
                 </EssayExercise>

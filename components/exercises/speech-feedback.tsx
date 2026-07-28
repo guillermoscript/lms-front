@@ -21,8 +21,8 @@ function ScoreCircle({ score, label, passingScore }: { score: number; label: str
   const offset = circumference - (score / 100) * circumference
 
   const color =
-    score >= 80 ? 'text-emerald-500 stroke-emerald-500' :
-    score >= 60 ? 'text-amber-500 stroke-amber-500' :
+    score >= 80 ? 'text-emerald-700 dark:text-emerald-400 stroke-emerald-600' :
+    score >= 60 ? 'text-amber-700 dark:text-amber-400 stroke-amber-500' :
     'text-rose-500 stroke-rose-500'
 
   // Threshold marker in un-rotated SVG space (parent CSS -rotate-90 handles visual positioning)
@@ -85,8 +85,8 @@ function MetricBadge({ label, value, good }: { label: string; value: string | nu
     <div className="flex flex-col items-center gap-1 rounded-xl border bg-card px-4 py-3 text-center min-w-[80px]">
       <span className={cn(
         'text-lg font-black tabular-nums',
-        good === true ? 'text-emerald-600' :
-        good === false ? 'text-amber-600' :
+        good === true ? 'text-emerald-700 dark:text-emerald-400' :
+        good === false ? 'text-amber-700 dark:text-amber-400' :
         'text-foreground'
       )}>
         {value}
@@ -111,11 +111,11 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
           <div className="rounded-2xl border-2 border-emerald-500/20 bg-emerald-500/[0.05] p-5">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-emerald-500/10 p-2">
-                <IconCheck size={20} className="text-emerald-600" />
+                <IconCheck size={20} className="text-emerald-700 dark:text-emerald-400" />
               </div>
               <div>
                 <h3 className="font-bold text-emerald-700 dark:text-emerald-400">{t('passed')}</h3>
-                <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">{t('passedMessage')}</p>
+                <p className="text-sm text-emerald-800 dark:text-emerald-300">{t('passedMessage')}</p>
               </div>
             </div>
           </div>
@@ -123,11 +123,11 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
           <div className="rounded-2xl border-2 border-amber-500/20 bg-amber-500/[0.05] p-5">
             <div className="flex items-center gap-3">
               <div className="rounded-full bg-amber-500/10 p-2">
-                <IconAlertTriangle size={20} className="text-amber-600" />
+                <IconAlertTriangle size={20} className="text-amber-700 dark:text-amber-400" />
               </div>
               <div>
                 <h3 className="font-bold text-amber-700 dark:text-amber-400">{t('notPassed')}</h3>
-                <p className="text-sm text-amber-600/80 dark:text-amber-400/80">
+                <p className="text-sm text-amber-800 dark:text-amber-300">
                   {t('notPassedMessage', { score: passingScore ?? 70 })}
                 </p>
               </div>
@@ -171,7 +171,7 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
           <ul className="space-y-2">
             {strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                <span className="mt-0.5 shrink-0 text-emerald-500">•</span>
+                <span className="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-400">•</span>
                 {s}
               </li>
             ))}
@@ -188,7 +188,7 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
           <ul className="space-y-2">
             {improvements.map((imp, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-400">•</span>
                 {imp}
               </li>
             ))}
@@ -199,7 +199,7 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
       {/* Focus Next */}
       {focus_next && (
         <div className="rounded-2xl border-2 border-primary/15 bg-primary/[0.03] p-5">
-          <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+          <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
             {t('focusNext')}
           </h3>
           <p className="text-sm text-foreground/80">{focus_next}</p>
@@ -218,7 +218,7 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
               <span
                 key={i}
                 className={cn(
-                  seg.type === 'filler' && 'rounded px-0.5 bg-orange-500/15 text-orange-700 dark:text-orange-400 font-medium',
+                  seg.type === 'filler' && 'rounded px-0.5 bg-orange-500/15 text-orange-800 dark:text-orange-300 font-medium',
                   seg.type === 'long_pause' && 'rounded px-1 bg-muted text-muted-foreground text-xs font-mono'
                 )}
               >
