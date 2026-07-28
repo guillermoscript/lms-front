@@ -4,14 +4,11 @@ import { useState, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import Markdown from 'react-markdown'
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
 import {
   IconCheck,
   IconClock,
-  IconFlame,
-  IconInfoCircle,
   IconMicrophone,
   IconSparkles,
   IconLoader2,
@@ -26,6 +23,9 @@ import {
 } from '@tabler/icons-react'
 import { MediaRecorderComponent } from './media-recorder'
 import { SpeechFeedback } from './speech-feedback'
+import ExerciseBrief from './exercise-brief'
+import ExerciseHeader from './exercise-header'
+import ExerciseWorkspace, { initialWorkspacePanel } from './exercise-workspace'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 
 interface SubmissionHistoryItem {
@@ -134,16 +134,14 @@ function RetryPanel({
   return (
     <div className="rounded-2xl border-2 border-primary/15 bg-gradient-to-br from-primary/[0.04] to-primary/[0.01] p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-black tabular-nums tracking-tight text-foreground">
-              {Math.round(score)}
-            </span>
-            <span className="text-lg font-bold text-muted-foreground/60">/</span>
-            <span className="text-lg font-bold text-primary tabular-nums">
-              {passingScore}
-            </span>
-          </div>
+        {/* Out of 100, not out of the pass mark: "64 / 70" reads as 91% when
+            64 is a failure. The threshold is metadata, and `pointsAway` below
+            already says how far off it was. */}
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-bold tabular-nums tracking-tight text-foreground">
+            {Math.round(score)}
+          </span>
+          <span className="text-lg font-semibold text-muted-foreground tabular-nums">/ 100</span>
         </div>
         <div className="rounded-full border-2 border-primary/20 bg-primary/5 p-2.5">
           <IconTarget size={20} className="text-primary" />
@@ -279,6 +277,7 @@ export default function AudioExercise({
   maxDailyAttempts: serverMaxDailyAttempts,
 }: AudioExerciseProps) {
   const t = useTranslations('exercises.audio')
+  const tWorkspace = useTranslations('exercises.workspace')
 
   const config = exercise.exercise_config ?? {}
   const maxDaily = serverMaxDailyAttempts ?? config.max_daily_attempts ?? 5
@@ -299,6 +298,8 @@ export default function AudioExercise({
   )
   const [attemptsUsed, setAttemptsUsed] = useState(serverDailyAttemptsUsed ?? 0)
   const [submissionHistory, setSubmissionHistory] = useState(initialHistory)
+  /** Bumped on every fresh grade so the workspace can surface the result panel. */
+  const [gradedNonce, setGradedNonce] = useState(0)
 
   // Best completion score from DB (for revisit display)
   const completionData = exercise.exercise_completions?.[0]
@@ -306,20 +307,6 @@ export default function AudioExercise({
   const completionDate = completionData?.completed_at
     ?? submissionHistory.find(s => s.status === 'completed')?.created_at
 
-  const difficultyLabels: Record<string, string> = {
-    easy: t('beginner'),
-    medium: t('intermediate'),
-    hard: t('advanced'),
-  }
-  const difficultyConfig: Record<string, { color: string; icon: typeof IconFlame }> = {
-    easy: { color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20', icon: IconSparkles },
-    medium: { color: 'text-amber-600 bg-amber-500/10 border-amber-500/20', icon: IconFlame },
-    hard: { color: 'text-rose-600 bg-rose-500/10 border-rose-500/20', icon: IconFlame },
-  }
-
-  const difficulty = difficultyConfig[exercise.difficulty_level] || difficultyConfig.easy
-  const difficultyLabel = difficultyLabels[exercise.difficulty_level] || difficultyLabels.easy
-  const DifficultyIcon = difficulty.icon
   const minDuration = config.min_duration_seconds ?? 5
   const maxDuration = config.max_duration_seconds ?? 300
 
@@ -403,6 +390,7 @@ export default function AudioExercise({
       setPassed(didPass)
       setShowRecorder(false)
       setSubmitState('done')
+      setGradedNonce((n) => n + 1)
 
       // Fire confetti on passing
       if (didPass) {
@@ -437,203 +425,169 @@ export default function AudioExercise({
     setErrorMsg(null)
   }
 
+  const briefPanel = (
+    <div className="space-y-4 lg:space-y-6">
+      <ExerciseBrief instructions={exercise.instructions} />
+
+      {config.topic_prompt && (
+        <div className="rounded-xl border bg-card px-4 py-3 lg:px-5 lg:py-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+            {t('topicPrompt')}
+          </p>
+          <p className="text-sm text-foreground/80 leading-relaxed max-w-[68ch]">
+            {config.topic_prompt}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+
+  // What the student can act on right now: the counter, whatever is blocking
+  // them, and the recorder itself.
+  const taskPanel = (
+    <div className="space-y-4">
+      {!isUnlimited && passed !== true && <AttemptCounter used={attemptsUsed} max={maxDaily} />}
+
+      {dailyLimitReached && passed !== true && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] px-4 py-3">
+          <p className="flex items-center gap-2.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
+            <IconAlertTriangle size={16} className="shrink-0" aria-hidden="true" />
+            {t('dailyLimitReached')}
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t('dailyLimitMessage', { limit: maxDaily })}
+          </p>
+        </div>
+      )}
+
+      {showRetryPanel && (
+        <RetryPanel
+          score={evaluation.score}
+          passingScore={passingScore}
+          onRecordAgain={handleTryAgain}
+        />
+      )}
+
+      {/* Kept beside the recorder on a retry: this is the one place the student
+          needs the verdict and the control at the same time. */}
+      {showFeedbackSummary && <CollapsibleFeedbackSummary evaluation={evaluation} />}
+
+      {showRecorder && !dailyLimitReached && (
+        <div className="rounded-xl border bg-card p-5">
+          <h3 className="mb-4 text-sm font-semibold flex items-center gap-2">
+            <IconMicrophone size={16} className="text-primary" aria-hidden="true" />
+            {t('recordYourResponse')}
+          </h3>
+
+          {errorMsg && (
+            <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">
+              {errorMsg}
+            </div>
+          )}
+
+          {submitState === 'analyzing' && (
+            <div className="mb-4 flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3" role="status">
+              <IconLoader2 size={16} className="animate-spin text-primary shrink-0" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-medium">{t('analyzing')}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('analyzingDescription')}</p>
+              </div>
+            </div>
+          )}
+
+          {submitState !== 'analyzing' && (
+            <MediaRecorderComponent
+              onRecordingComplete={handleRecordingComplete}
+              isSubmitting={submitState === 'uploading'}
+              minDurationSeconds={minDuration}
+              maxDurationSeconds={maxDuration}
+              disabled={submitState === 'uploading'}
+            />
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-4">
+            <span>{t('durationRange', { min: `${minDuration}s`, max: formatDuration(maxDuration) })}</span>
+            <span>{t('uploadLimit')}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  const hasResult =
+    isExerciseCompleted || passed === true || (evaluation && !showRecorder) || submissionHistory.length > 0
+
+  const resultPanel = hasResult ? (
+    <div className="space-y-4">
+      {(isExerciseCompleted || passed === true) && (
+        <CompletionSummary
+          score={completionScore}
+          passingScore={passingScore}
+          completedDate={completionDate}
+        />
+      )}
+
+      {evaluation && !showRecorder && (
+        <div className="rounded-xl border bg-card p-5">
+          <h3 className="mb-5 text-sm font-semibold flex items-center gap-2">
+            <IconSparkles size={16} className="text-primary" aria-hidden="true" />
+            {t('aiFeedback')}
+          </h3>
+          <SpeechFeedback
+            evaluation={evaluation}
+            passed={passed}
+            passingScore={passingScore}
+            onTryAgain={passed !== true && !dailyLimitReached ? handleTryAgain : undefined}
+          />
+        </div>
+      )}
+
+      {submissionHistory.length > 0 && (
+        <div className="rounded-xl border bg-card p-5">
+          <h3 className="mb-4 text-sm font-semibold flex items-center gap-2">
+            <IconClock size={16} className="text-muted-foreground" aria-hidden="true" />
+            {t('submissionHistory')}
+          </h3>
+          <div className="space-y-3">
+            {submissionHistory.map((sub, idx) => (
+              <SubmissionHistoryRow
+                key={sub.id}
+                submission={sub}
+                attemptNumber={submissionHistory.length - idx}
+                passingScore={passingScore}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  ) : undefined
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline" className="font-bold border-2 text-primary border-primary/20 bg-primary/5 uppercase tracking-wider text-[10px] px-2.5 py-0.5">
-            <IconMicrophone size={10} className="mr-1" aria-hidden="true" />
-            {t('title')}
-          </Badge>
-          <Badge variant="outline" className={cn('font-bold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider', difficulty.color)}>
-            <DifficultyIcon size={11} className="mr-1" aria-hidden="true" />
-            {difficultyLabel}
-          </Badge>
-          {exercise.time_limit && (
-            <Badge variant="outline" className="font-bold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider text-muted-foreground">
-              <IconClock size={11} className="mr-1" aria-hidden="true" />
-              {exercise.time_limit} min
-            </Badge>
-          )}
-          {(isExerciseCompleted || passed === true) && (
-            <Badge className="bg-emerald-500 text-white font-bold text-[10px] px-2.5 py-0.5 uppercase tracking-wider">
-              <IconCheck size={11} className="mr-1" aria-hidden="true" />
-              {t('completed')}
-            </Badge>
-          )}
-        </div>
+    <div className="space-y-4 sm:space-y-6">
+      <ExerciseHeader
+        typeLabel={t('title')}
+        title={exercise.title}
+        description={exercise.description}
+        difficulty={exercise.difficulty_level}
+        timeLimit={exercise.time_limit}
+        completed={isExerciseCompleted || passed === true}
+      />
 
-        <h1 className="text-2xl md:text-3xl font-black tracking-tight text-balance leading-tight">
-          {exercise.title}
-        </h1>
-
-        {exercise.description && (
-          <div className="text-muted-foreground text-sm md:text-base leading-relaxed max-w-2xl prose prose-sm prose-neutral dark:prose-invert prose-p:text-muted-foreground prose-p:leading-relaxed">
-            <Markdown>{exercise.description}</Markdown>
-          </div>
-        )}
-      </div>
-
-      {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left: Instructions */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-primary/10 bg-primary/[0.03]">
-              <h2 className="font-bold text-xs flex items-center gap-2 text-primary uppercase tracking-wider">
-                <IconInfoCircle size={14} aria-hidden="true" />
-                {t('instructions')}
-              </h2>
-            </div>
-            <div className="px-5 py-4">
-              <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:text-foreground/80 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-bold prose-li:text-foreground/80 prose-headings:text-sm">
-                <Markdown>{exercise.instructions}</Markdown>
-              </div>
-            </div>
-          </div>
-
-          {config.topic_prompt && (
-            <div className="rounded-2xl border-2 border-violet-500/15 bg-violet-500/[0.03] px-5 py-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-2">
-                {t('topicPrompt')}
-              </p>
-              <p className="text-sm text-foreground/80 leading-relaxed">{config.topic_prompt}</p>
-            </div>
-          )}
-
-          {isExerciseCompletedSection && (
-            <div className="space-y-4">{isExerciseCompletedSection}</div>
-          )}
-        </div>
-
-        {/* Right: Recorder / Results */}
-        <div className="lg:col-span-8">
-          <div className="lg:sticky lg:top-6 space-y-4">
-            {/* 0. Completion summary (when exercise is completed from DB) */}
-            {(isExerciseCompleted || passed === true) && (
-              <CompletionSummary
-                score={completionScore}
-                passingScore={passingScore}
-                completedDate={completionDate}
-              />
-            )}
-
-            {/* 1. Attempt Counter (visible when limited AND not yet completed) */}
-            {!isUnlimited && passed !== true && (
-              <AttemptCounter used={attemptsUsed} max={maxDaily} />
-            )}
-
-            {/* 2. Daily limit banner */}
-            {dailyLimitReached && passed !== true && (
-              <div className="rounded-xl border-2 border-amber-500/20 bg-amber-500/[0.05] p-5">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-amber-500/10 p-2">
-                    <IconAlertTriangle size={20} className="text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-amber-700 dark:text-amber-400">{t('dailyLimitReached')}</h3>
-                    <p className="text-sm text-amber-600/80 dark:text-amber-400/80">
-                      {t('dailyLimitMessage', { limit: maxDaily })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 3. Retry Panel (after failing, recorder hidden) */}
-            {showRetryPanel && (
-              <RetryPanel
-                score={evaluation.score}
-                passingScore={passingScore}
-                onRecordAgain={handleTryAgain}
-              />
-            )}
-
-            {/* 4. Collapsible feedback summary (visible alongside recorder on retry) */}
-            {showFeedbackSummary && (
-              <CollapsibleFeedbackSummary evaluation={evaluation} />
-            )}
-
-            {/* 5. Recording area */}
-            {showRecorder && !dailyLimitReached && (
-              <div className="rounded-xl border bg-card p-5">
-                <h3 className="mb-4 text-sm font-semibold flex items-center gap-2">
-                  <IconMicrophone size={16} className="text-primary" />
-                  {t('recordYourResponse')}
-                </h3>
-
-                {errorMsg && (
-                  <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-                    {errorMsg}
-                  </div>
-                )}
-
-                {submitState === 'analyzing' && (
-                  <div className="mb-4 flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3">
-                    <IconLoader2 size={16} className="animate-spin text-primary shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">{t('analyzing')}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{t('analyzingDescription')}</p>
-                    </div>
-                  </div>
-                )}
-
-                {submitState !== 'analyzing' && (
-                  <MediaRecorderComponent
-                    onRecordingComplete={handleRecordingComplete}
-                    isSubmitting={submitState === 'uploading'}
-                    minDurationSeconds={minDuration}
-                    maxDurationSeconds={maxDuration}
-                    disabled={submitState === 'uploading'}
-                  />
-                )}
-
-                <div className="mt-4 flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-4">
-                  <span>{t('durationRange', { min: `${minDuration}s`, max: formatDuration(maxDuration) })}</span>
-                  <span>{t('uploadLimit')}</span>
-                </div>
-              </div>
-            )}
-
-            {/* 6. Full Feedback (when recorder is hidden) */}
-            {evaluation && !showRecorder && (
-              <div className="rounded-xl border bg-card p-5">
-                <h3 className="mb-5 text-sm font-semibold flex items-center gap-2">
-                  <IconSparkles size={16} className="text-primary" />
-                  {t('aiFeedback')}
-                </h3>
-                <SpeechFeedback
-                  evaluation={evaluation}
-                  passed={passed}
-                  passingScore={passingScore}
-                  onTryAgain={passed !== true && !dailyLimitReached ? handleTryAgain : undefined}
-                />
-              </div>
-            )}
-
-            {/* 7. Submission History */}
-            {submissionHistory.length > 0 && (
-              <div className="rounded-xl border bg-card p-5">
-                <h3 className="mb-4 text-sm font-semibold flex items-center gap-2">
-                  <IconClock size={16} className="text-muted-foreground" />
-                  {t('submissionHistory')}
-                </h3>
-                <div className="space-y-3">
-                  {submissionHistory.map((sub, idx) => (
-                    <SubmissionHistoryRow
-                      key={sub.id}
-                      submission={sub}
-                      attemptNumber={submissionHistory.length - idx}
-                      passingScore={passingScore}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <ExerciseWorkspace
+        brief={briefPanel}
+        task={taskPanel}
+        taskLabel={tWorkspace('record')}
+        result={resultPanel}
+        resultPassed={passed}
+        related={isExerciseCompletedSection}
+        initialPanel={initialWorkspacePanel({
+          hasResult: Boolean(resultPanel),
+          passed,
+          attempted: submissionHistory.length > 0,
+        })}
+        revealResultNonce={gradedNonce}
+      />
     </div>
   )
 }
@@ -689,8 +643,8 @@ function SubmissionHistoryRow({
               className={cn(
                 'text-[10px] font-bold px-2 py-0',
                 didPass
-                  ? 'border-emerald-500/30 text-emerald-600 bg-emerald-500/10'
-                  : 'border-amber-500/30 text-amber-600 bg-amber-500/10'
+                  ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
+                  : 'border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10'
               )}
             >
               {Math.round(score)}/100

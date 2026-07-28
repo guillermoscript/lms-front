@@ -5343,6 +5343,14 @@
         "title": "No se encontraron ejercicios",
         "description": "No hay ejercicios activos para este curso en este momento."
       }
+    },
+    "workspace": {
+      "brief": "Instrucciones",
+      "result": "Resultado",
+      "sections": "Secciones del ejercicio",
+      "task": "Ejercicio",
+      "coach": "Tutor IA",
+      "record": "Grabar"
     }
   },
   "exams": {

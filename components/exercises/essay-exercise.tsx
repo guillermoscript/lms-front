@@ -2,10 +2,10 @@
 
 import { ReactNode } from "react";
 import * as motion from "motion/react-client";
-import { Badge } from "@/components/ui/badge";
-import { IconCheck, IconClock, IconFlame, IconInfoCircle, IconSparkles } from "@tabler/icons-react";
-import { cn } from "@/lib/utils";
-import Markdown from "react-markdown";
+import { useTranslations } from "next-intl";
+import ExerciseBrief from "@/components/exercises/exercise-brief";
+import ExerciseHeader from "@/components/exercises/exercise-header";
+import ExerciseWorkspace, { initialWorkspacePanel } from "@/components/exercises/exercise-workspace";
 
 interface EssayExerciseProps {
     exercise: any;
@@ -16,15 +16,11 @@ interface EssayExerciseProps {
     studentId: string;
     children: ReactNode;
     isExerciseCompletedSection?: ReactNode;
-    /** Last graded attempt, shown above the chat when the student returns. */
+    /** Last graded attempt, shown when the student returns. */
     resultSummary?: ReactNode;
+    /** Whether that attempt passed — drives which panel opens on a phone. */
+    resultPassed?: boolean;
 }
-
-const difficultyConfig: Record<string, { label: string; color: string; icon: typeof IconFlame }> = {
-    easy: { label: "Beginner", color: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20", icon: IconSparkles },
-    medium: { label: "Intermediate", color: "text-amber-600 bg-amber-500/10 border-amber-500/20", icon: IconFlame },
-    hard: { label: "Advanced", color: "text-rose-600 bg-rose-500/10 border-rose-500/20", icon: IconFlame },
-};
 
 const typeLabels: Record<string, string> = {
     essay: "Essay",
@@ -43,99 +39,41 @@ export default function EssayExercise({
     children,
     isExerciseCompletedSection,
     resultSummary,
+    resultPassed,
 }: EssayExerciseProps) {
-    const difficulty = difficultyConfig[exercise.difficulty_level] || difficultyConfig.easy;
-    const DifficultyIcon = difficulty.icon;
+    const t = useTranslations("exercises.workspace");
     const typeLabel = typeLabels[exercise.exercise_type] || "Exercise";
 
     return (
         <div className="space-y-4 sm:space-y-6">
-            {/* Exercise Header */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-3 sm:space-y-4"
             >
-                <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="font-bold border-2 text-primary border-primary/20 bg-primary/5 uppercase tracking-wider text-[10px] px-2.5 py-0.5">
-                        {typeLabel}
-                    </Badge>
-                    <Badge variant="outline" className={cn("font-bold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider", difficulty.color)}>
-                        <DifficultyIcon size={11} className="mr-1" aria-hidden="true" />
-                        {difficulty.label}
-                    </Badge>
-                    {exercise.time_limit && (
-                        <Badge variant="outline" className="font-bold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider text-muted-foreground">
-                            <IconClock size={11} className="mr-1" aria-hidden="true" />
-                            {exercise.time_limit} min
-                        </Badge>
-                    )}
-                    {isExerciseCompleted && (
-                        <Badge className="bg-emerald-500 text-white font-bold text-[10px] px-2.5 py-0.5 uppercase tracking-wider">
-                            <IconCheck size={11} className="mr-1" aria-hidden="true" />
-                            Completed
-                        </Badge>
-                    )}
-                </div>
-
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-balance leading-tight">
-                    {exercise.title}
-                </h1>
-
-                {exercise.description && (
-                    <div className="text-muted-foreground text-sm md:text-base leading-relaxed max-w-2xl prose prose-sm prose-neutral dark:prose-invert prose-p:text-muted-foreground prose-p:leading-relaxed">
-                        <Markdown>{exercise.description}</Markdown>
-                    </div>
-                )}
+                <ExerciseHeader
+                    typeLabel={typeLabel}
+                    title={exercise.title}
+                    description={exercise.description}
+                    difficulty={exercise.difficulty_level}
+                    timeLimit={exercise.time_limit}
+                    completed={isExerciseCompleted}
+                />
             </motion.div>
 
-            {/* Main Layout: Instructions + Chat */}
-            <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.1 }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6"
-            >
-                {/* Last graded attempt — first for a returning student, and
-                    deliberately OUTSIDE the sticky chat column: adding it there
-                    pushed that column past the viewport height, and `sticky`
-                    stops pinning once the element is taller than its scrollport. */}
-                {resultSummary && (
-                    <div className="lg:col-span-12 order-first">{resultSummary}</div>
-                )}
-
-                {/* Instructions */}
-                <div className="lg:col-span-4 order-1">
-                    <div className="rounded-xl sm:rounded-2xl border sm:border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">
-                        <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-primary/10 bg-primary/[0.03]">
-                            <h2 className="font-bold text-xs flex items-center gap-2 text-primary uppercase tracking-wider">
-                                <IconInfoCircle size={14} aria-hidden="true" />
-                                Instructions
-                            </h2>
-                        </div>
-                        <div className="px-4 py-3 sm:px-5 sm:py-4">
-                            <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:text-foreground/80 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-bold prose-li:text-foreground/80 prose-headings:text-sm">
-                                <Markdown>{exercise.instructions}</Markdown>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* AI Chat — before "More Exercises" on mobile */}
-                <div className="lg:col-span-8 order-2">
-                    <div className="lg:sticky lg:top-6">
-                        {children}
-                    </div>
-                </div>
-
-                {/* Other Exercises — last on mobile */}
-                {isExerciseCompletedSection && (
-                    <div className="lg:col-span-4 order-3 space-y-4">
-                        {isExerciseCompletedSection}
-                    </div>
-                )}
-            </motion.div>
+            <ExerciseWorkspace
+                brief={<ExerciseBrief instructions={exercise.instructions} />}
+                task={children}
+                taskLabel={t("coach")}
+                result={resultSummary}
+                resultPassed={resultPassed}
+                related={isExerciseCompletedSection}
+                initialPanel={initialWorkspacePanel({
+                    hasResult: Boolean(resultSummary),
+                    passed: resultPassed,
+                    attempted: isExerciseCompleted || Boolean(resultSummary),
+                })}
+            />
         </div>
     );
 }

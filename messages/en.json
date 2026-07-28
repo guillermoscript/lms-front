@@ -5350,6 +5350,14 @@
         "title": "No exercises found",
         "description": "There are no active exercises for this course at the moment."
       }
+    },
+    "workspace": {
+      "brief": "Instructions",
+      "result": "Result",
+      "sections": "Exercise sections",
+      "task": "Exercise",
+      "coach": "AI Coach",
+      "record": "Record"
     }
   },
   "exams": {
