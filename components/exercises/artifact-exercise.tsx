@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
 import { cn } from '@/lib/utils'
 import Markdown from 'react-markdown'
 import { useTranslations } from 'next-intl'
@@ -16,7 +17,6 @@ import {
   IconSparkles,
   IconLoader2,
   IconAlertTriangle,
-  IconTarget,
   IconArrowRight,
   IconTrophy,
   IconCode,
@@ -40,6 +40,9 @@ interface ArtifactExerciseProps {
   isExerciseCompleted: boolean
   passingScore: number
   isExerciseCompletedSection?: React.ReactNode
+  /** Last graded attempt from exercise_evaluations. The route has always written
+   * one; it was simply never read back, so reloading the page lost the feedback. */
+  initialEvaluation?: EvaluationResult | null
 }
 
 interface EvaluationResult {
@@ -58,6 +61,7 @@ export default function ArtifactExercise({
   isExerciseCompleted,
   passingScore,
   isExerciseCompletedSection,
+  initialEvaluation = null,
 }: ArtifactExerciseProps) {
   const t = useTranslations('exercises.artifact')
   const tAudio = useTranslations('exercises.audio')
@@ -68,7 +72,7 @@ export default function ArtifactExercise({
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
-  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null)
+  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(initialEvaluation)
   const [passed, setPassed] = useState<boolean>(isExerciseCompleted)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rateLimited, setRateLimited] = useState(false)
@@ -303,98 +307,32 @@ export default function ArtifactExercise({
               </div>
             )}
 
-            {/* Evaluation result */}
-            {evaluation && submitState === 'done' && (
-              <div className="rounded-xl border bg-card p-5 space-y-5">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <IconSparkles size={16} className="text-primary" />
-                  {tAudio('aiFeedback')}
-                </h3>
+            {/* Evaluation result — also shown for a restored prior attempt, whose
+                submitState is still 'idle' because nothing was submitted this visit. */}
+            {/* One result card across every engine. This block used to be a
+                near-copy of ExerciseResultSummary that printed the score over
+                the PASS MARK, twice: "62 / 70" reads as 89% when 62 is a fail. */}
+            {evaluation && submitState !== 'evaluating' && (
+              <div className="space-y-4">
+                <ExerciseResultSummary
+                  score={evaluation.score}
+                  passed={evaluation.passed}
+                  feedback={evaluation.feedback}
+                  strengths={evaluation.strengths}
+                  improvements={evaluation.improvements}
+                  // The API response carries its own threshold; the prop is the
+                  // fallback for a restored attempt that predates that field.
+                  passingScore={evaluation.passingScore ?? passingScore}
+                />
 
-                {/* Score */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-baseline gap-3">
-                    <div className="flex items-baseline gap-1">
-                      <span className={cn(
-                        'text-4xl font-black tabular-nums tracking-tight',
-                        evaluation.passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-foreground'
-                      )}>
-                        {evaluation.score}
-                      </span>
-                      <span className="text-lg font-bold text-muted-foreground/60">/</span>
-                      <span className="text-lg font-bold text-primary tabular-nums">{evaluation.passingScore}</span>
-                    </div>
-                  </div>
-                  <Badge className={cn(
-                    'font-bold text-xs px-3 py-1',
-                    evaluation.passed
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-amber-500/10 text-amber-700 border-amber-500/30'
-                  )}>
-                    {evaluation.passed ? t('passed') : t('failed')}
-                  </Badge>
-                </div>
-
-                {/* Feedback */}
-                <p className="text-sm text-foreground/80 leading-relaxed">{evaluation.feedback}</p>
-
-                {/* Strengths */}
-                {evaluation.strengths.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-2">
-                      {t('strengths')}
-                    </p>
-                    <ul className="space-y-1.5">
-                      {evaluation.strengths.map((s, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                          <span className="mt-0.5 shrink-0 text-emerald-500">+</span>
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Improvements */}
-                {evaluation.improvements.length > 0 && (
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-2">
-                      {t('improvements')}
-                    </p>
-                    <ul className="space-y-1.5">
-                      {evaluation.improvements.map((imp, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                          <span className="mt-0.5 shrink-0 text-amber-500">-</span>
-                          {imp}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Try again */}
                 {!evaluation.passed && !rateLimited && (
-                  <div className="rounded-2xl border-2 border-primary/15 bg-gradient-to-br from-primary/[0.04] to-primary/[0.01] p-5">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black tabular-nums tracking-tight text-foreground">
-                          {evaluation.score}
-                        </span>
-                        <span className="text-sm font-bold text-muted-foreground/60">/</span>
-                        <span className="text-sm font-bold text-primary tabular-nums">{evaluation.passingScore}</span>
-                      </div>
-                      <div className="rounded-full border-2 border-primary/20 bg-primary/5 p-2">
-                        <IconTarget size={18} className="text-primary" />
-                      </div>
-                    </div>
-                    <Button
-                      onClick={handleTryAgain}
-                      className="w-full gap-2.5 h-11 text-sm font-bold tracking-wide"
-                    >
-                      {t('tryAgain')}
-                      <IconArrowRight size={16} className="ml-auto opacity-60" />
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={handleTryAgain}
+                    className="w-full gap-2.5 h-11 text-sm font-semibold tracking-wide"
+                  >
+                    {t('tryAgain')}
+                    <IconArrowRight size={16} className="ml-auto opacity-60" />
+                  </Button>
                 )}
               </div>
             )}

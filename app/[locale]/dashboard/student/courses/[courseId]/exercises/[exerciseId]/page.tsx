@@ -5,6 +5,8 @@ import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-a
 import { getTranslations } from 'next-intl/server'
 import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { toLatestEvaluation, type LatestExerciseEvaluation } from '@/lib/exercises/latest-evaluation'
+import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 
 import dynamic from 'next/dynamic'
@@ -171,14 +173,22 @@ export default async function ExercisePage({ params }: PageProps) {
 
     // Fetch evaluation history from unified exercise_evaluations table
     let submissionHistory: { id: number; ai_evaluation: SpeechEvaluation | null; score: number | null; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
+    // Newest graded attempt, replayed to the student when they come back to a
+    // finished exercise. Derived from the same rows as submissionHistory — the
+    // artifact/essay engines write here too, their results were just never read.
+    let latestEvaluation: LatestExerciseEvaluation | null = null
     try {
-        const { data: evaluations } = await supabase
+        const { data: evaluations, error: evaluationsError } = await supabase
             .from('exercise_evaluations')
             .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at')
             .eq('exercise_id', parseInt(exerciseId))
             .eq('user_id', userId)
             .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
+
+        // PostgREST reports failures in `error`, not by throwing, so without this
+        // the catch below never fires and a broken query looks like "no attempts".
+        if (evaluationsError) console.error('Error fetching exercise evaluations:', evaluationsError)
 
         // Map to legacy format for AudioExercise component compatibility
         submissionHistory = (evaluations ?? []).map(ev => ({
@@ -192,8 +202,11 @@ export default async function ExercisePage({ params }: PageProps) {
                 (ev.ai_metrics as unknown as { duration_seconds?: number | null } | null)
                     ?.duration_seconds ?? null,
         }))
-    } catch {
+
+        latestEvaluation = toLatestEvaluation(evaluations?.[0] ?? null)
+    } catch (err) {
         // RLS or table access may fail — gracefully degrade
+        console.error('Error fetching exercise evaluations:', err)
     }
 
     const exerciseConfig = exercise.exercise_config as unknown as {
@@ -267,6 +280,33 @@ export default async function ExercisePage({ params }: PageProps) {
         </>
     ) : null
 
+    // Code challenges are graded by their own test runner and never write an
+    // exercise_evaluations row, so their reviewable record is the completion.
+    const codeCompletion = exercise.exercise_completions?.[0] as
+        | { score?: number | null; completed_at?: string | null }
+        | undefined
+
+    const resultSummary = latestEvaluation ? (
+        <ExerciseResultSummary
+            score={latestEvaluation.score}
+            passed={latestEvaluation.passed}
+            feedback={latestEvaluation.feedback}
+            strengths={latestEvaluation.strengths}
+            improvements={latestEvaluation.improvements}
+            attemptNumber={latestEvaluation.attemptNumber}
+            completedAt={latestEvaluation.createdAt}
+            passingScore={passingScore}
+        />
+    ) : null
+
+    const codeResultSummary = codeCompletion ? (
+        <ExerciseResultSummary
+            score={codeCompletion.score ?? null}
+            passed
+            completedAt={codeCompletion.completed_at ?? null}
+        />
+    ) : null
+
     const chatComponent = (
         <ExerciseChat
             apiEndpoint="/api/chat/exercises/student"
@@ -287,6 +327,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     isExerciseCompleted={isExerciseCompleted}
                     studentId={userId}
                     courseId={courseId}
+                    resultSummary={codeResultSummary}
                 >
                     <CodeChallengeWrapper
                         exercise={exercise}
@@ -325,6 +366,18 @@ export default async function ExercisePage({ params }: PageProps) {
                     isExerciseCompleted={isExerciseCompleted}
                     passingScore={passingScore}
                     isExerciseCompletedSection={otherExercisesSection}
+                    initialEvaluation={
+                        latestEvaluation
+                            ? {
+                                  score: latestEvaluation.score ?? 0,
+                                  feedback: latestEvaluation.feedback ?? '',
+                                  passed: latestEvaluation.passed,
+                                  strengths: latestEvaluation.strengths,
+                                  improvements: latestEvaluation.improvements,
+                                  passingScore,
+                              }
+                            : null
+                    }
                 />
             ) : exercise.exercise_type === 'audio_evaluation' ? (
                 <AudioExercise
@@ -355,6 +408,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     profile={profile}
                     studentId={userId}
                     isExerciseCompletedSection={otherExercisesSection}
+                    resultSummary={resultSummary}
                 >
                     {chatComponent}
                 </EssayExercise>

@@ -2,14 +2,25 @@
 
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import type { LessonCheckpointClientData } from '@/lib/checkpoints/load'
-import type { CheckpointAttemptResult } from '@/lib/checkpoints/types'
+import {
+  shouldAutoExpandCheckpoint,
+  type CheckpointAttemptResult,
+  type SubmittedCheckpointResponse,
+} from '@/lib/checkpoints/types'
 
 export interface CheckpointsContextValue {
   /** Initial checkpoint data merged with any results recorded this session. */
   checkpoints: LessonCheckpointClientData[]
   courseId: number
   getCheckpoint: (checkpointId: number) => LessonCheckpointClientData | undefined
-  recordResult: (checkpointId: number, result: CheckpointAttemptResult) => void
+  /** `submitted` is the student's own answer; it is not part of the server's
+   * grading response, so the form hands it over to keep `latestAttempt` a
+   * complete mirror of what a page reload would restore. */
+  recordResult: (
+    checkpointId: number,
+    result: CheckpointAttemptResult,
+    submitted?: SubmittedCheckpointResponse
+  ) => void
   /** Full result of the last attempt made THIS session (incl. per-question
    * feedback). Lives here, not in the card, because the MDX tree remounts on
    * every provider update and would otherwise drop the feedback on submit. */
@@ -39,11 +50,13 @@ export function CheckpointsProvider({
   children,
 }: CheckpointsProviderProps) {
   const [results, setResults] = useState<Record<number, CheckpointAttemptResult>>({})
+  const [submissions, setSubmissions] = useState<Record<number, SubmittedCheckpointResponse>>({})
   const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({})
 
   const checkpoints = initialCheckpoints.map((cp) => {
     const result = results[cp.id]
     if (!result) return cp
+    const submitted = submissions[cp.id] ?? {}
     return {
       ...cp,
       attemptCount: result.attemptNumber,
@@ -53,6 +66,12 @@ export function CheckpointsProvider({
         passed: result.passed,
         score: result.score,
         evaluatorType: result.evaluatorType,
+        feedback: result.feedback,
+        nextStepHint: result.nextStepHint,
+        perQuestion: result.perQuestion,
+        aiUnavailable: result.aiUnavailable,
+        submittedText: submitted.text,
+        submittedAnswers: submitted.answers,
       },
     }
   })
@@ -61,16 +80,30 @@ export function CheckpointsProvider({
     return checkpoints.find((cp) => cp.id === checkpointId)
   }
 
-  function recordResult(checkpointId: number, result: CheckpointAttemptResult) {
+  function recordResult(
+    checkpointId: number,
+    result: CheckpointAttemptResult,
+    submitted?: SubmittedCheckpointResponse
+  ) {
     setResults((prev) => ({ ...prev, [checkpointId]: result }))
+    if (submitted) setSubmissions((prev) => ({ ...prev, [checkpointId]: submitted }))
   }
 
   function getResult(checkpointId: number) {
     return results[checkpointId] ?? null
   }
 
+  /**
+   * Collapsed by default, EXCEPT when the student has a graded attempt they did
+   * not pass. That is the one case where the card holds something they need to
+   * act on — the AI's feedback and next-step hint — and leaving it behind a
+   * chevron meant a returning student saw only a score chip. An explicit
+   * toggle still wins, so they can close it.
+   */
   function isExpanded(checkpointId: number) {
-    return expandedIds[checkpointId] === true
+    const stored = expandedIds[checkpointId]
+    if (stored !== undefined) return stored
+    return shouldAutoExpandCheckpoint(getCheckpoint(checkpointId)?.latestAttempt)
   }
 
   function setExpanded(checkpointId: number, expanded: boolean) {

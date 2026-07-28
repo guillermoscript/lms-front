@@ -16,6 +16,8 @@ interface EssayExerciseProps {
     studentId: string;
     children: ReactNode;
     isExerciseCompletedSection?: ReactNode;
+    /** Last graded attempt, shown above the chat when the student returns. */
+    resultSummary?: ReactNode;
 }
 
 const difficultyConfig: Record<string, { label: string; color: string; icon: typeof IconFlame }> = {
@@ -40,6 +42,7 @@ export default function EssayExercise({
     isExerciseCompleted,
     children,
     isExerciseCompletedSection,
+    resultSummary,
 }: EssayExerciseProps) {
     const difficulty = difficultyConfig[exercise.difficulty_level] || difficultyConfig.easy;
     const DifficultyIcon = difficulty.icon;
@@ -94,6 +97,14 @@ export default function EssayExercise({
                 transition={{ duration: 0.35, delay: 0.1 }}
                 className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6"
             >
+                {/* Last graded attempt — first for a returning student, and
+                    deliberately OUTSIDE the sticky chat column: adding it there
+                    pushed that column past the viewport height, and `sticky`
+                    stops pinning once the element is taller than its scrollport. */}
+                {resultSummary && (
+                    <div className="lg:col-span-12 order-first">{resultSummary}</div>
+                )}
+
                 {/* Instructions */}
                 <div className="lg:col-span-4 order-1">
                     <div className="rounded-xl sm:rounded-2xl border sm:border-2 border-primary/10 bg-gradient-to-b from-primary/[0.03] to-transparent overflow-hidden">

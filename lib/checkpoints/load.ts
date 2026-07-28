@@ -1,10 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   parseCheckpointQuestions,
+  parseStoredEvaluation,
+  parseStoredResponse,
   toClientCheckpointQuestions,
   type CheckpointEvaluatorType,
   type CheckpointPlacement,
   type ClientCheckpointExercise,
+  type PerQuestionResult,
 } from './types'
 
 export interface CheckpointAttemptSummary {
@@ -13,6 +16,15 @@ export interface CheckpointAttemptSummary {
   passed: boolean | null
   score: number | null
   evaluatorType: CheckpointEvaluatorType
+  /** Graded feedback, restored from the attempt row so a student returning to a
+   * finished checkpoint re-reads the AI's message instead of a bare score badge. */
+  feedback?: string
+  nextStepHint?: string
+  perQuestion?: PerQuestionResult[]
+  aiUnavailable?: boolean
+  /** The student's own answer, so they can see what they were graded on. */
+  submittedText?: string
+  submittedAnswers?: Record<string, string | number | boolean>
 }
 
 /** Everything the student lesson needs to render one checkpoint. Client-safe:
@@ -72,7 +84,9 @@ export async function loadLessonCheckpoints(
 
   const { data: attempts } = await adminClient
     .from('lesson_checkpoint_attempts')
-    .select('checkpoint_id, attempt_number, completed, passed, score, evaluator_type')
+    .select(
+      'checkpoint_id, attempt_number, completed, passed, score, evaluator_type, response, evaluation'
+    )
     .eq('user_id', args.userId)
     .eq('lesson_id', args.lessonId)
     .order('attempt_number', { ascending: false })
@@ -85,12 +99,19 @@ export async function loadLessonCheckpoints(
       (countByCheckpoint.get(attempt.checkpoint_id) ?? 0) + 1
     )
     if (!latestByCheckpoint.has(attempt.checkpoint_id)) {
+      // Mapped field by field, not spread: the parsers return the response's own
+      // vocabulary (`text`/`answers`), which a spread would silently drop here
+      // rather than fail to type-check.
+      const submitted = parseStoredResponse(attempt.response)
       latestByCheckpoint.set(attempt.checkpoint_id, {
         attemptNumber: attempt.attempt_number,
         completed: attempt.completed,
         passed: attempt.passed,
         score: attempt.score === null ? null : Number(attempt.score),
         evaluatorType: attempt.evaluator_type as CheckpointEvaluatorType,
+        ...parseStoredEvaluation(attempt.evaluation),
+        submittedText: submitted.text,
+        submittedAnswers: submitted.answers,
       })
     }
   }

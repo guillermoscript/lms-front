@@ -3791,8 +3791,11 @@
       "requiredBadge": "Obligatorio",
       "completedBadge": "Completado",
       "scoreLabel": "Puntaje: {score}%",
+      "scoreOutOf": "Puntaje: {score} / 100",
       "passed": "Aprobado",
       "notPassed": "Aún no aprobado",
+      "yourAnswer": "Tu respuesta",
+      "attemptCounter": "Intento {attempt} de {total}",
       "correct": "Correcto",
       "incorrect": "Incorrecto",
       "nextStep": "Siguiente paso",
@@ -5206,6 +5209,11 @@
       "improvements": "Áreas de Mejora",
       "tryAgain": "Intentar de Nuevo",
       "rateLimited": "Demasiadas entregas. Por favor espera un momento antes de intentar de nuevo."
+    },
+    "result": {
+      "title": "Tu último resultado",
+      "noFeedbackRecorded": "Este ejercicio se califica automáticamente, así que no hay comentarios escritos para revisar.",
+      "passMark": "Nota mínima {score}"
     },
     "audio": {
       "title": "Ejercicio de Audio",
