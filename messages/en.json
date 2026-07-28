@@ -958,7 +958,8 @@
             "title": "Course Settings",
             "description": "Configure course details, pricing, visibility, and other settings."
           }
-        }
+        },
+        "analytics": "Analytics"
       },
       "newCourse": {
         "title": "Create New Course",
@@ -1607,6 +1608,53 @@
         "systemPromptDescription": "Internal instructions for the AI model. Use {{variable}} syntax.",
         "systemPromptPlaceholder": "e.g. You are a helpful assistant evaluating an essay about {{topic}}...",
         "livePreview": "Live Preview"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "subtitle": "Where students struggle in {course} — and whether your difficulty labels match reality.",
+        "backToCourse": "Back to course",
+        "backToCourses": "Back to my courses",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "Analytics show every enrolled student's results, so only the course author can open this page.",
+        "windowLabel": "Look-back window",
+        "windowDays": "{days}d",
+        "warningsTitle": "Some signals could not be loaded",
+        "warningsDesc": "The figures below are incomplete. This is a data-loading problem, not a sign that students are doing fine:",
+        "scope": {
+          "practice": "Practice",
+          "exercise": "Exercise",
+          "checkpoint": "Checkpoint",
+          "exam_question": "Exam question"
+        },
+        "difficulty": {
+          "easy": "Easy",
+          "medium": "Medium",
+          "hard": "Hard",
+          "unlabeled": "No label"
+        },
+        "calibration": {
+          "title": "Difficulty calibration",
+          "desc": "The label you gave each item next to the rating earned from real attempts. A rating above 1500 means students found it harder than average.",
+          "empty": "No item has enough attempts yet. Ratings appear once an exercise or exam question has been attempted at least 3 times.",
+          "measured": "Measured",
+          "attempts": "{count} attempts",
+          "mismatchSummary": "{count, plural, =1 {item plays differently than you labelled it} other {items play differently than you labelled them}}. Consider retuning them or changing the label.",
+          "harderThanLabeled": "Harder than labelled",
+          "easierThanLabeled": "Easier than labelled",
+          "ratingHint": "Ratings are Elo-style: every attempt moves an item up when students fail it and down when they pass. 1500 is the starting point for a brand-new item."
+        },
+        "hotspots": {
+          "title": "Confusion hotspots",
+          "desc": "Items ranked by how badly the group is failing them, over the last {days} days.",
+          "severity": "Severity",
+          "allClear": "No hotspots in this window — nobody is stuck on an exercise, checkpoint, drill or exam question.",
+          "noData": "No student activity in this window yet. Once students attempt exercises, checkpoints, practice drills or exams, their results appear here.",
+          "sources": "Based on {practice} practice attempts, {exercises} exercise attempts, {checkpoints} checkpoint attempts and {exams} exam submissions in the last {days} days.",
+          "evidencePractice": "{attempts} attempt(s) by {students} student(s) · average {avg}% · {below} below 70%",
+          "evidenceStuck": "{stuck} of {students} student(s) still failing on their latest attempt · {attempts} attempt(s) each on average",
+          "evidenceAvg": "average {avg}%",
+          "evidenceExam": "{missers} of {students} student(s) missed it on their latest submission · {rate}% miss rate"
+        }
       }
     },
     "admin": {

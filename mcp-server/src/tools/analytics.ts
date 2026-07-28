@@ -1145,7 +1145,7 @@ export function registerAnalyticsTools(server: MCPServer) {
     {
       name: "lms_get_confusion_hotspots",
       description:
-        "Where students collectively struggle in a course: practice topics with low scores, exercises students are stuck on, and exam questions with high miss rates. Ranked by severity. Also returns hardest_items — the highest-Elo-rated exercises/exam questions in the course (item_ratings, #396) with ≥3 attempts, as an independent difficulty signal alongside the severity ranking. Use it to decide what to reteach or which remediation exercises to draft.",
+        "Where students collectively struggle in a course: practice topics with low scores, exercises students are stuck on, and exam questions with high miss rates. Ranked by severity. Also returns hardest_items — the highest-Elo-rated exercises/exam questions in the course (item_ratings, #396) with ≥3 attempts — each carrying the teacher's own difficulty_level and a mismatch flag when the measured rating contradicts that label, so an exercise marked 'easy' that students keep failing is called out. Renders an interactive hotspots widget. Use it to decide what to reteach, which remediation exercises to draft, or which difficulty labels to retune.",
       schema: z.object({
         course_id: z.number().describe("The course to analyze"),
         days: z
@@ -1161,6 +1161,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
+      },
+      widget: {
+        name: "confusion-hotspots",
+        invoking: "Analysing student results…",
+        invoked: "Hotspots ready",
       },
     },
     async (input, ctx) => {
@@ -1181,7 +1186,10 @@ export function registerAnalyticsTools(server: MCPServer) {
         const EVIDENCE_CAP = 3;
 
         type Hotspot = {
-          scope: "lesson" | "exercise" | "exam_question";
+          // "practice" rather than "lesson": these rows are practice-drill
+          // topics, which may or may not map to a lesson. Calling them lessons
+          // misled every reader of this payload, the widget included.
+          scope: "practice" | "exercise" | "exam_question";
           ref: number | string | null;
           label: string;
           students_affected: number;
@@ -1233,9 +1241,9 @@ export function registerAnalyticsTools(server: MCPServer) {
             if (b.below70.size === 0) continue;
             const avg = b.scores.reduce((s, v) => s + v, 0) / b.scores.length;
             hotspots.push({
-              scope: "lesson",
+              scope: "practice",
               ref: b.lesson_id,
-              label: `Practice: ${topic}`,
+              label: topic,
               students_affected: b.below70.size,
               severity: severityOf(1 - avg / 100, b.below70.size),
               evidence: `${b.scores.length} attempt(s) by ${b.users.size} student(s), avg score ${Math.round(avg)}; ${b.below70.size} student(s) below 70`,
@@ -1300,7 +1308,9 @@ export function registerAnalyticsTools(server: MCPServer) {
             hotspots.push({
               scope: "exercise",
               ref: exerciseId,
-              label: `Exercise: ${b.title}`,
+              // No "Exercise:" prefix — `scope` already carries that, and the
+              // widget renders it as a chip beside the label.
+              label: b.title,
               students_affected: b.stuck.size,
               severity: severityOf(b.stuck.size / b.total.size, b.stuck.size),
               evidence: `${b.stuck.size} of ${b.total.size} student(s) not passing on their latest attempt; avg ${avgAttempts.toFixed(1)} attempt(s) per student`,
@@ -1399,7 +1409,7 @@ export function registerAnalyticsTools(server: MCPServer) {
               hotspots.push({
                 scope: "exam_question",
                 ref: questionId,
-                label: `${examTitle ? `${examTitle}: ` : ""}"${b.text.slice(0, 120)}"`,
+                label: `${examTitle ? `${examTitle}: ` : ""}${b.text.slice(0, 120)}`,
                 students_affected: b.missers.size,
                 severity: severityOf(missRate, b.missers.size),
                 evidence: `${b.missers.size} of ${b.attempts} student(s) missed it on their latest submission (${Math.round(missRate * 100)}% miss rate)`,
@@ -1415,12 +1425,17 @@ export function registerAnalyticsTools(server: MCPServer) {
         //    highest-rated exercises/exam questions in the course with enough
         //    attempts to be meaningful. item_ratings has no join to titles, so
         //    enrich with a second pass keyed by item_type.
+        type DifficultyLabel = "easy" | "medium" | "hard";
         type HardestItem = {
           item_type: "exercise" | "exam_question";
           item_id: number;
           title: string;
           rating: number;
           attempt_count: number;
+          /** The teacher's own label. Always null for exam questions. */
+          difficulty_level: DifficultyLabel | null;
+          /** Set only when the measured rating contradicts the label. */
+          mismatch: "harder_than_labeled" | "easier_than_labeled" | null;
         };
         let hardestItems: HardestItem[] = [];
         const itemRatingsRes = await supabase
@@ -1446,15 +1461,21 @@ export function registerAnalyticsTools(server: MCPServer) {
             .filter((r) => r.item_type === "exam_question")
             .map((r) => r.item_id);
           const titleByExercise = new Map<number, string>();
+          const difficultyByExercise = new Map<number, DifficultyLabel | null>();
           const textByQuestion = new Map<number, string>();
           if (exerciseIds.length > 0) {
             const exRes = await supabase
               .from("exercises")
-              .select("id, title")
+              .select("id, title, difficulty_level")
               .in("id", exerciseIds);
             if (!exRes.error)
-              for (const e of exRes.data ?? [])
+              for (const e of exRes.data ?? []) {
                 titleByExercise.set(e.id as number, e.title as string);
+                difficultyByExercise.set(
+                  e.id as number,
+                  (e.difficulty_level as DifficultyLabel) ?? null
+                );
+              }
           }
           if (questionIds.length > 0) {
             // exam_questions has NO tenant_id — reached only via these ids,
@@ -1470,21 +1491,59 @@ export function registerAnalyticsTools(server: MCPServer) {
                   (q.question_text as string).slice(0, 120)
                 );
           }
-          hardestItems = rows.map((r) => ({
-            item_type: r.item_type,
-            item_id: r.item_id,
-            title:
+          // Elo bands each label implies, so a teacher's stated difficulty can
+          // be checked against what students actually experienced. Bands overlap
+          // on purpose — only a clear divergence is worth flagging. Mirrored in
+          // lib/analytics/confusion-hotspots.ts (DIFFICULTY_BANDS).
+          const BANDS: Record<DifficultyLabel, { floor: number; ceiling: number }> = {
+            easy: { floor: -Infinity, ceiling: 1550 },
+            medium: { floor: 1380, ceiling: 1680 },
+            hard: { floor: 1500, ceiling: Infinity },
+          };
+
+          hardestItems = rows.map((r) => {
+            const rating = Math.round(Number(r.rating));
+            const declared =
               r.item_type === "exercise"
-                ? (titleByExercise.get(r.item_id) ?? `Exercise ${r.item_id}`)
-                : (textByQuestion.get(r.item_id) ?? `Question ${r.item_id}`),
-            rating: Math.round(Number(r.rating)),
-            attempt_count: r.attempt_count,
-          }));
+                ? (difficultyByExercise.get(r.item_id) ?? null)
+                : null;
+            const band = declared ? BANDS[declared] : null;
+            const mismatch = !band
+              ? null
+              : rating > band.ceiling
+                ? ("harder_than_labeled" as const)
+                : rating < band.floor
+                  ? ("easier_than_labeled" as const)
+                  : null;
+            return {
+              item_type: r.item_type,
+              item_id: r.item_id,
+              title:
+                r.item_type === "exercise"
+                  ? (titleByExercise.get(r.item_id) ?? `Exercise ${r.item_id}`)
+                  : (textByQuestion.get(r.item_id) ?? `Question ${r.item_id}`),
+              rating,
+              attempt_count: r.attempt_count,
+              difficulty_level: declared,
+              mismatch,
+            };
+          });
         }
 
-        return ok(
-          {
-            course_id: input.course_id,
+        const mislabeledCount = hardestItems.filter((i) => i.mismatch !== null).length;
+
+        const { data: courseRow } = await supabase
+          .from("courses")
+          .select("title")
+          .eq("course_id", input.course_id)
+          .single();
+
+        return widget({
+          props: {
+            course: {
+              id: input.course_id,
+              title: (courseRow?.title as string) ?? `Course ${input.course_id}`,
+            },
             window_days: days,
             hotspots: top,
             truncated: hotspots.length > top.length,
@@ -1497,13 +1556,19 @@ export function registerAnalyticsTools(server: MCPServer) {
             severity_formula:
               "severity = round(intensity * 60 + min(students_affected, 10) * 4), capped at 100. intensity: practice = 1 - avg_score/100; exercise = share of attempting students whose latest attempt failed; exam_question = miss rate across latest submissions (miss = incorrect or < 70% of points).",
           },
-          top.length === 0
-            ? `No confusion hotspots in the last ${days} day(s) — no low practice scores, stuck students, or missed exam questions on record for this course.`
-            : `${top.length} hotspot(s) (last ${days} days), worst first: ${top
-                .slice(0, EVIDENCE_CAP)
-                .map((h) => `${h.label} (${h.students_affected} student(s), severity ${h.severity})`)
-                .join("; ")}${top.length > EVIDENCE_CAP ? "; …" : ""}. Consider drafting remediation with the generate-remediation-exercises prompt.`
-        );
+          output: text(
+            top.length === 0
+              ? `No confusion hotspots in the last ${days} day(s) — no low practice scores, stuck students, or missed exam questions on record for this course.`
+              : `${top.length} hotspot(s) (last ${days} days), worst first: ${top
+                  .slice(0, EVIDENCE_CAP)
+                  .map((h) => `${h.label} (${h.students_affected} student(s), severity ${h.severity})`)
+                  .join("; ")}${top.length > EVIDENCE_CAP ? "; …" : ""}.${
+                  mislabeledCount > 0
+                    ? ` ${mislabeledCount} of the rated items are labelled with a difficulty that contradicts their measured rating.`
+                    : ""
+                } Consider drafting remediation with the generate-remediation-exercises prompt.`
+          ),
+        });
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }

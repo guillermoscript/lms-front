@@ -10,8 +10,8 @@
  *
  * Supported: select (incl. `{count:'exact', head:true}` and one-level embedded
  * `table(cols)`), insert, update, upsert (on a caller-declared conflict key),
- * eq/neq/in/is/not-is/lt/lte/gt/gte, order, limit, single, maybeSingle, and
- * awaiting the builder directly. Everything else throws loudly rather than
+ * eq/neq/in/is/not-is/lt/lte/gt/gte, order, limit, range, single, maybeSingle,
+ * and awaiting the builder directly. Everything else throws loudly rather than
  * silently returning nothing.
  */
 
@@ -64,13 +64,30 @@ export function createFakeSupabase(db: Db, opts: FakeSupabaseOptions = {}) {
     let wantCount = false
     let headOnly = false
     let take = Infinity
+    let sort: { col: string; ascending: boolean } | null = null
+    let window: { from: number; to: number } | null = null
     let pending: { op: 'insert' | 'update' | 'upsert'; values: Row; onConflict?: string } | null =
       null
 
     db[table] = db[table] || []
 
-    const matched = () => {
+    /** Rows after filters and ordering, before any limit/range window. */
+    const filtered = () => {
       const rows = db[table].filter((r) => preds.every((p) => p(r)))
+      if (!sort) return rows
+      const { col, ascending } = sort
+      return [...rows].sort((a, z) => {
+        const l = a[col] as never
+        const r = z[col] as never
+        if (l === r) return 0
+        return (l < r ? -1 : 1) * (ascending ? 1 : -1)
+      })
+    }
+
+    const matched = () => {
+      const rows = filtered()
+      // `.range()` wins over `.limit()`, matching PostgREST when both are sent.
+      if (window) return rows.slice(window.from, window.to + 1)
       return take === Infinity ? rows : rows.slice(0, take)
     }
 
@@ -113,7 +130,7 @@ export function createFakeSupabase(db: Db, opts: FakeSupabaseOptions = {}) {
       }
       const rows = matched()
       if (wantCount) {
-        return { data: headOnly ? null : embed(cols, rows), error: null, count: rows.length }
+        return { data: headOnly ? null : embed(cols, rows), error: null, count: filtered().length }
       }
       return { data: embed(cols, rows), error: null }
     }
@@ -179,7 +196,18 @@ export function createFakeSupabase(db: Db, opts: FakeSupabaseOptions = {}) {
       lte: cmp(preds, (a, c) => a <= c),
       gt: cmp(preds, (a, c) => a > c),
       gte: cmp(preds, (a, c) => a >= c),
-      order() {
+      order(col?: string, o?: { ascending?: boolean }) {
+        if (col) sort = { col, ascending: o?.ascending !== false }
+        return b
+      },
+      /**
+       * Keyset window used by `fetchAllRows`. `count` deliberately stays the
+       * FULL match count, as PostgREST reports it — that is the number
+       * `fetchAllRows` asserts completeness against, so returning a per-page
+       * count here would make a truncated sweep look complete.
+       */
+      range(from: number, to: number) {
+        window = { from, to }
         return b
       },
       limit(n: number) {
