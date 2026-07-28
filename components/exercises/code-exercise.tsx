@@ -12,12 +12,15 @@ interface CodeExerciseProps {
     studentId: string;
     courseId: string;
     children: ReactNode;
+    /** Prior completion record, shown when the student returns to a solved challenge. */
+    resultSummary?: ReactNode;
 }
 
 export default function CodeExercise({
     exercise,
     isExerciseCompleted,
     children,
+    resultSummary,
 }: CodeExerciseProps) {
     return (
         <div className="space-y-6 pb-20">
@@ -41,6 +44,8 @@ export default function CodeExercise({
                     </div>
                 </div>
             </motion.div>
+
+            {resultSummary}
 
             <Tabs defaultValue="environment" className="space-y-4">
                 <TabsList className="bg-muted/50 p-1">

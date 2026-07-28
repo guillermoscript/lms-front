@@ -1,7 +1,7 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { IconChevronDown, IconCircleCheck, IconFlag } from '@tabler/icons-react'
+import { IconChevronDown, IconCircleCheck, IconFlag, IconTarget } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { useCheckpoints } from './checkpoints-provider'
@@ -32,6 +32,10 @@ export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
   const setExpanded = (value: boolean) => ctx.setExpanded(numericId, value)
 
   const isCompleted = checkpoint.latestAttempt?.completed === true
+  // A failed attempt is still `completed`, so completion alone must not drive
+  // the tone: a green tick over "Score: 64%" against a pass mark of 70 told the
+  // student they had passed. `passed` is null for engines that do not grade.
+  const didNotPass = isCompleted && checkpoint.latestAttempt?.passed === false
   const title = checkpoint.label || checkpoint.exercise.title
 
   return (
@@ -46,10 +50,20 @@ export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
           <div
             className={cn(
               'flex size-7 shrink-0 items-center justify-center rounded-full',
-              isCompleted ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-primary/10 text-primary'
+              didNotPass
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                : isCompleted
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-primary/10 text-primary'
             )}
           >
-            {isCompleted ? <IconCircleCheck className="size-4" /> : <IconFlag className="size-4" />}
+            {didNotPass ? (
+              <IconTarget className="size-4" />
+            ) : isCompleted ? (
+              <IconCircleCheck className="size-4" />
+            ) : (
+              <IconFlag className="size-4" />
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{title}</p>
@@ -60,7 +74,13 @@ export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
                 </Badge>
               )}
               {isCompleted && (
-                <Badge variant="secondary" className="text-[0.625rem]">
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    'text-[0.625rem]',
+                    didNotPass && 'bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                  )}
+                >
                   {checkpoint.latestAttempt?.score !== null && checkpoint.latestAttempt?.score !== undefined
                     ? t('scoreLabel', { score: Math.round(checkpoint.latestAttempt.score) })
                     : t('completedBadge')}

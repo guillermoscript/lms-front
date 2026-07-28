@@ -3946,8 +3946,11 @@
       "requiredBadge": "Required",
       "completedBadge": "Completed",
       "scoreLabel": "Score: {score}%",
+      "scoreOutOf": "Score: {score} / 100",
       "passed": "Passed",
       "notPassed": "Not passed yet",
+      "yourAnswer": "Your answer",
+      "attemptCounter": "Attempt {attempt} of {total}",
       "correct": "Correct",
       "incorrect": "Incorrect",
       "nextStep": "Next step",
@@ -5213,6 +5216,11 @@
       "improvements": "Areas to Improve",
       "tryAgain": "Try Again",
       "rateLimited": "Too many submissions. Please wait a moment before trying again."
+    },
+    "result": {
+      "title": "Your last result",
+      "noFeedbackRecorded": "This exercise is graded automatically, so there is no written feedback to review.",
+      "passMark": "Pass mark {score}"
     },
     "audio": {
       "title": "Audio Exercise",
