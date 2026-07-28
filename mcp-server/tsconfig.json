@@ -20,5 +20,8 @@
     }
   },
   "include": ["index.ts", "src/**/*", "resources/**/*", "server.ts", ".mcp-use/**/*.d.ts"],
-  "exclude": ["node_modules", "dist"]
+  // Test files are excluded from the build: `vitest` resolves from the repo
+  // root's node_modules here, but the Docker image copies only mcp-server/,
+  // so compiling them fails the production build with TS2307.
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
 }
