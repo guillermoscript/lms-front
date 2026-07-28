@@ -89,7 +89,12 @@ const STRINGS = {
     incorrect: "Incorrect",
     aiFeedback: "AI feedback",
     confidenceSuffix: (pct: string) => ` (${pct} confidence)`,
+    lowConfidence: (pct: string) => `${pct} confidence · review this`,
     points: (earned: string, possible: string) => `${earned}/${possible} pts`,
+    notGraded: "Not graded",
+    teacherAdjusted: "Teacher adjusted",
+    ungradedNote: (points: string, questions: number) =>
+      `${points} pts across ${questions} question${questions === 1 ? "" : "s"} not graded yet`,
     question: (n: number) => `Q${n}`,
     status: {
       teacher_reviewed: "Teacher reviewed",
@@ -117,7 +122,12 @@ const STRINGS = {
     incorrect: "Incorrecta",
     aiFeedback: "Comentarios de la IA",
     confidenceSuffix: (pct: string) => ` (confianza: ${pct})`,
+    lowConfidence: (pct: string) => `confianza: ${pct} · revisa esta`,
     points: (earned: string, possible: string) => `${earned}/${possible} pts`,
+    notGraded: "Sin calificar",
+    teacherAdjusted: "Ajustada por el profesor",
+    ungradedNote: (points: string, questions: number) =>
+      `${points} pts en ${questions} pregunta${questions === 1 ? "" : "s"} sin calificar`,
     question: (n: number) => `P${n}`,
     status: {
       teacher_reviewed: "Revisado por el profesor",
@@ -131,6 +141,21 @@ const STRINGS = {
 type Strings = typeof STRINGS.en;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Below this, the AI is guessing rather than grading — the teacher should
+ * re-read the answer instead of trusting the suggested score.
+ */
+const LOW_CONFIDENCE = 0.6;
+
+/**
+ * `points_earned: null` means nobody has graded the question — never a zero.
+ * Same rule `shared/severity.ts` states for progress bars: no data and a real
+ * zero are different facts and must not render alike.
+ */
+function isUngraded(q: Props["questions"][number]): boolean {
+  return q.points_earned == null;
+}
 
 function statusPill(status: string, t: Strings): { classes: string; label: string } {
   const map: Record<string, { classes: string }> = {
@@ -216,6 +241,15 @@ export default function SubmissionGrader() {
   const studentName = studentDisplayName(submission.student_name, t.unnamedStudent);
   const saveDisabled = saving || (!dirty && status === "teacher_reviewed");
 
+  // The summary counts only graded questions into total_points_earned, but
+  // total_points_possible spans the whole exam — so "60 / 100" can read as
+  // "lost 40 points" when part of that gap is simply not graded yet.
+  const ungradedQuestions = questions.filter(isUngraded);
+  const ungradedPoints = ungradedQuestions.reduce(
+    (total, q) => total + (q.points_possible ?? 0),
+    0
+  );
+
   return (
     <McpUseProvider autoSize>
       <Brand />
@@ -272,6 +306,12 @@ export default function SubmissionGrader() {
               </div>
             </div>
 
+            {ungradedQuestions.length > 0 && (
+              <div className="mt-2 text-[12.5px] font-medium text-amber-700 dark:text-amber-400">
+                {t.ungradedNote(fmt.number(ungradedPoints), ungradedQuestions.length)}
+              </div>
+            )}
+
             <label className="mt-3.5 block">
               <span className="mb-1.5 block text-xs font-semibold text-zinc-500 dark:text-zinc-400">
                 {t.feedbackLabel}
@@ -311,6 +351,9 @@ export default function SubmissionGrader() {
           {/* Questions */}
           <div className="flex flex-col gap-3">
             {questions.map((q, i) => {
+              const ungraded = isUngraded(q);
+              const lowConfidence =
+                q.ai_confidence != null && q.ai_confidence < LOW_CONFIDENCE;
               const correct = q.is_correct;
               const badge =
                 correct === true
@@ -329,7 +372,11 @@ export default function SubmissionGrader() {
               return (
                 <div
                   key={q.question_id}
-                  className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+                  className={`rounded-xl border bg-white p-4 dark:bg-zinc-900 ${
+                    lowConfidence
+                      ? "border-amber-300 dark:border-amber-800"
+                      : "border-zinc-200 dark:border-zinc-800"
+                  }`}
                 >
                   <div className="mb-2 flex items-start justify-between gap-2.5">
                     <div className="flex items-baseline gap-2">
@@ -340,13 +387,31 @@ export default function SubmissionGrader() {
                         {q.type.replace(/_/g, " ")}
                       </span>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                       {q.points_possible != null && (
-                        <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                        <span
+                          className={`text-xs font-semibold ${
+                            ungraded
+                              ? "text-zinc-400 dark:text-zinc-500"
+                              : "text-zinc-900 dark:text-zinc-100"
+                          }`}
+                        >
+                          {/* fmt.number renders null as an em dash, so an
+                              ungraded question reads "—/15 pts", never "0/15". */}
                           {t.points(
-                            fmt.number(q.points_earned ?? 0),
+                            fmt.number(q.points_earned),
                             fmt.number(q.points_possible)
                           )}
+                        </span>
+                      )}
+                      {ungraded && (
+                        <span className="rounded-lg bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                          {t.notGraded}
+                        </span>
+                      )}
+                      {q.is_overridden && (
+                        <span className="rounded-lg bg-[var(--brand-50)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
+                          {t.teacherAdjusted}
                         </span>
                       )}
                       {badge && (
@@ -401,13 +466,25 @@ export default function SubmissionGrader() {
                   {/* AI feedback + confidence */}
                   {q.ai_feedback && (
                     <div className="text-[12.5px] leading-normal text-zinc-500 dark:text-zinc-400">
-                      <span className="font-semibold">
-                        {t.aiFeedback}
-                        {q.ai_confidence != null &&
-                          t.confidenceSuffix(
-                            fmt.percent(Math.round(q.ai_confidence * 100))
-                          )}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold">
+                          {t.aiFeedback}
+                          {/* A confident score stays inline and quiet; only a
+                              guess is promoted to a pill that says so. */}
+                          {q.ai_confidence != null &&
+                            !lowConfidence &&
+                            t.confidenceSuffix(
+                              fmt.percent(Math.round(q.ai_confidence * 100))
+                            )}
+                        </span>
+                        {q.ai_confidence != null && lowConfidence && (
+                          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                            {t.lowConfidence(
+                              fmt.percent(Math.round(q.ai_confidence * 100))
+                            )}
+                          </span>
+                        )}
+                      </div>
                       <Markdown content={q.ai_feedback} dark={dark} fontSize={12.5} />
                     </div>
                   )}
