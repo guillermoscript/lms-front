@@ -1,0 +1,517 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-28T16:58:04Z",
+  "title": "Design System: LMS Platform",
+  "extensions": {
+    "colorMeta": {
+      "slate-teal": {
+        "role": "primary",
+        "displayName": "Slate Teal",
+        "canonical": "oklch(0.52 0.105 223.128)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 223.128)",
+          "oklch(0.26 0.065 223.128)",
+          "oklch(0.37 0.09 223.128)",
+          "oklch(0.45 0.1 223.128)",
+          "oklch(0.52 0.105 223.128)",
+          "oklch(0.65 0.115 223.128)",
+          "oklch(0.8 0.085 223.128)",
+          "oklch(0.95 0.03 223.128)"
+        ]
+      },
+      "slate-teal-deep": {
+        "role": "primary",
+        "displayName": "Slate Teal Deep",
+        "canonical": "oklch(0.45 0.085 224.283)",
+        "tonalRamp": [
+          "oklch(0.15 0.035 224.283)",
+          "oklch(0.24 0.055 224.283)",
+          "oklch(0.33 0.07 224.283)",
+          "oklch(0.45 0.085 224.283)",
+          "oklch(0.56 0.095 224.283)",
+          "oklch(0.68 0.1 224.283)",
+          "oklch(0.82 0.07 224.283)",
+          "oklch(0.95 0.025 224.283)"
+        ]
+      },
+      "slate-teal-mid": {
+        "role": "secondary",
+        "displayName": "Slate Teal Mid",
+        "canonical": "oklch(0.609 0.126 221.723)",
+        "tonalRamp": [
+          "oklch(0.16 0.045 221.723)",
+          "oklch(0.27 0.075 221.723)",
+          "oklch(0.38 0.1 221.723)",
+          "oklch(0.49 0.118 221.723)",
+          "oklch(0.609 0.126 221.723)",
+          "oklch(0.72 0.13 221.723)",
+          "oklch(0.85 0.09 221.723)",
+          "oklch(0.96 0.03 221.723)"
+        ]
+      },
+      "slate-teal-bright": {
+        "role": "secondary",
+        "displayName": "Slate Teal Bright",
+        "canonical": "oklch(0.715 0.143 215.221)",
+        "tonalRamp": [
+          "oklch(0.17 0.05 215.221)",
+          "oklch(0.29 0.085 215.221)",
+          "oklch(0.41 0.11 215.221)",
+          "oklch(0.53 0.13 215.221)",
+          "oklch(0.63 0.14 215.221)",
+          "oklch(0.715 0.143 215.221)",
+          "oklch(0.86 0.1 215.221)",
+          "oklch(0.96 0.035 215.221)"
+        ]
+      },
+      "slate-teal-pale": {
+        "role": "secondary",
+        "displayName": "Slate Teal Pale",
+        "canonical": "oklch(0.865 0.127 207.078)",
+        "tonalRamp": [
+          "oklch(0.18 0.045 207.078)",
+          "oklch(0.31 0.08 207.078)",
+          "oklch(0.44 0.105 207.078)",
+          "oklch(0.57 0.125 207.078)",
+          "oklch(0.68 0.135 207.078)",
+          "oklch(0.78 0.135 207.078)",
+          "oklch(0.865 0.127 207.078)",
+          "oklch(0.96 0.045 207.078)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.141 0.005 285.823)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "oklch(0.552 0.016 285.938)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.45 0.008 286.0)",
+          "oklch(0.62 0.012 286.0)",
+          "oklch(0.8 0.006 286.2)",
+          "oklch(0.92 0.004 286.32)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "paper-raised": {
+        "role": "neutral",
+        "displayName": "Paper Raised",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.45 0.008 286.0)",
+          "oklch(0.62 0.012 286.0)",
+          "oklch(0.8 0.006 286.2)",
+          "oklch(0.92 0.004 286.32)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "surface-quiet": {
+        "role": "neutral",
+        "displayName": "Surface Quiet",
+        "canonical": "oklch(0.967 0.001 286.375)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "surface-slate": {
+        "role": "neutral",
+        "displayName": "Surface Slate",
+        "canonical": "oklch(0.21 0.006 285.885)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "surface-slate-quiet": {
+        "role": "neutral",
+        "displayName": "Surface Slate Quiet",
+        "canonical": "oklch(0.274 0.006 286.033)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.92 0.004 286.32)",
+        "tonalRamp": [
+          "oklch(1 0 0 / 5%)",
+          "oklch(1 0 0 / 10%)",
+          "oklch(1 0 0 / 15%)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.92 0.004 286.32)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "ring-neutral": {
+        "role": "neutral",
+        "displayName": "Ring Neutral",
+        "canonical": "oklch(0.705 0.015 286.067)",
+        "tonalRamp": [
+          "oklch(0.141 0.005 285.823)",
+          "oklch(0.21 0.006 285.885)",
+          "oklch(0.274 0.006 286.033)",
+          "oklch(0.4 0.01 285.938)",
+          "oklch(0.552 0.016 285.938)",
+          "oklch(0.705 0.015 286.067)",
+          "oklch(0.85 0.008 286.2)",
+          "oklch(0.967 0.001 286.375)"
+        ]
+      },
+      "alert": {
+        "role": "tertiary",
+        "displayName": "Alert",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.2 0.08 27.325)",
+          "oklch(0.3 0.13 27.325)",
+          "oklch(0.4 0.18 27.325)",
+          "oklch(0.5 0.22 27.325)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.704 0.191 22.216)",
+          "oklch(0.84 0.1 27.325)",
+          "oklch(0.95 0.035 27.325)"
+        ]
+      },
+      "alert-dark": {
+        "role": "tertiary",
+        "displayName": "Alert Dark",
+        "canonical": "oklch(0.704 0.191 22.216)",
+        "tonalRamp": [
+          "oklch(0.2 0.07 22.216)",
+          "oklch(0.3 0.11 22.216)",
+          "oklch(0.4 0.15 22.216)",
+          "oklch(0.5 0.18 22.216)",
+          "oklch(0.6 0.19 22.216)",
+          "oklch(0.704 0.191 22.216)",
+          "oklch(0.85 0.09 22.216)",
+          "oklch(0.95 0.03 22.216)"
+        ]
+      },
+      "on-teal": {
+        "role": "primary",
+        "displayName": "On Teal",
+        "canonical": "oklch(0.984 0.019 200.873)",
+        "tonalRamp": [
+          "oklch(0.2 0.02 200.873)",
+          "oklch(0.32 0.03 200.873)",
+          "oklch(0.45 0.035 200.873)",
+          "oklch(0.58 0.035 200.873)",
+          "oklch(0.7 0.03 200.873)",
+          "oklch(0.82 0.025 200.873)",
+          "oklch(0.92 0.022 200.873)",
+          "oklch(0.984 0.019 200.873)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles and prose h1. One per view."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings and prose h2."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, table headers, form section labels. The workhorse heading of the staff register."
+      },
+      "body-learner": {
+        "displayName": "Body, learner",
+        "purpose": "Lesson prose, exercise statements, exam questions. Anything read for more than a few seconds. Capped at 65ch."
+      },
+      "body-staff": {
+        "displayName": "Body, staff",
+        "purpose": "The base-mira default. Dense tables, dashboards, filter bars, admin forms. Prohibited on learner surfaces."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Badges, chips, xs buttons, metadata stamps. Sentence case, never uppercase-tracked-out."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code blocks, inline code, IDs, fixed-width tabular figures. Geist Mono."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay-low",
+        "value": "0 1px 2px 0 oklch(0.141 0.005 285.823 / 0.05)",
+        "purpose": "Tooltips and small popovers. The border does most of the separation."
+      },
+      {
+        "name": "overlay-standard",
+        "value": "0 4px 6px -1px oklch(0.141 0.005 285.823 / 0.1), 0 2px 4px -2px oklch(0.141 0.005 285.823 / 0.1)",
+        "purpose": "Dropdown menus, comboboxes, select popups, hover cards. Default for anything anchored to a trigger."
+      },
+      {
+        "name": "overlay-detached",
+        "value": "0 10px 15px -3px oklch(0.141 0.005 285.823 / 0.1), 0 4px 6px -4px oklch(0.141 0.005 285.823 / 0.1)",
+        "purpose": "Dialogs and sheets, fully detached from their trigger and sitting over a scrim."
+      },
+      {
+        "name": "surface-hairline",
+        "value": "inset 0 0 0 1px oklch(0.141 0.005 285.823 / 0.1)",
+        "purpose": "The Card ring. Not a shadow in spirit: a theme-reactive hairline that replaces elevation on every in-layout surface."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quart",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Default easing for state transitions. PROPOSED: no ease tokens exist in app/globals.css yet; transitions currently fall back to the Tailwind default."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Entrances of floating layers (popover, dialog, sheet). PROPOSED."
+      },
+      {
+        "name": "duration-state",
+        "value": "150ms",
+        "purpose": "Hover, focus, and color transitions on controls. Matches the current Tailwind transition-colors default."
+      },
+      {
+        "name": "duration-overlay",
+        "value": "220ms",
+        "purpose": "Floating-layer entrance and exit. PROPOSED."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms",
+        "purpose": "Under prefers-reduced-motion, transitions collapse to instant state changes rather than to slower ones. Never animate a layout property in any mode."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (staff register)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The base-mira default. 28px tall, 12px text, filled Slate Teal. Correct on dashboards and admin forms, prohibited as a learner primary action.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; padding: 0 8px; border: 1px solid transparent; border-radius: calc(var(--radius, 0.625rem) - 2px); background: var(--primary, oklch(0.52 0.105 223.128)); color: var(--primary-foreground, oklch(0.984 0.019 200.873)); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.75rem; line-height: 1.625; font-weight: 500; white-space: nowrap; cursor: pointer; outline: none; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1), opacity 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary, oklch(0.52 0.105 223.128)) 80%, transparent); } .ds-btn-primary:focus-visible { border-color: var(--ring, oklch(0.705 0.015 286.067)); box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring, oklch(0.705 0.015 286.067)) 30%, transparent); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Primary Button (learner register)",
+      "kind": "button",
+      "refersTo": "button-primary-learner",
+      "description": "The single filled element on a learner view: the next action. 40px tall, 14px text, generous padding. Minimum touch target on any learner surface.",
+      "html": "<button class=\"ds-btn-primary-learner\">Continue<svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M12 5l7 7-7 7\"/></svg></button>",
+      "css": ".ds-btn-primary-learner { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: 1px solid transparent; border-radius: calc(var(--radius, 0.625rem) - 2px); background: var(--primary, oklch(0.52 0.105 223.128)); color: var(--primary-foreground, oklch(0.984 0.019 200.873)); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.875rem; line-height: 1.4; font-weight: 500; cursor: pointer; outline: none; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary-learner .ds-icon { width: 16px; height: 16px; flex-shrink: 0; } .ds-btn-primary-learner:hover { background: color-mix(in oklch, var(--primary, oklch(0.52 0.105 223.128)) 80%, transparent); } .ds-btn-primary-learner:focus-visible { box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring, oklch(0.705 0.015 286.067)) 30%, transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The default for anything that is not the single next action. Hairline border, muted hover fill, no background at rest.",
+      "html": "<button class=\"ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; padding: 0 8px; border: 1px solid var(--border, oklch(0.92 0.004 286.32)); border-radius: calc(var(--radius, 0.625rem) - 2px); background: transparent; color: var(--foreground, oklch(0.141 0.005 285.823)); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.75rem; line-height: 1.625; font-weight: 500; cursor: pointer; outline: none; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-outline:hover { background: color-mix(in oklch, var(--input, oklch(0.92 0.004 286.32)) 50%, transparent); } .ds-btn-outline:focus-visible { border-color: var(--ring, oklch(0.705 0.015 286.067)); box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring, oklch(0.705 0.015 286.067)) 30%, transparent); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "A 10 percent Alert tint with Alert-colored text, escalating to 20 percent on hover. A solid red fill is prohibited system-wide.",
+      "html": "<button class=\"ds-btn-destructive\">Delete course</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; padding: 0 8px; border: 1px solid transparent; border-radius: calc(var(--radius, 0.625rem) - 2px); background: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 10%, transparent); color: var(--destructive, oklch(0.577 0.245 27.325)); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.75rem; line-height: 1.625; font-weight: 500; cursor: pointer; outline: none; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-destructive:hover { background: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); } .ds-btn-destructive:focus-visible { border-color: color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 40%, transparent); box-shadow: 0 0 0 2px color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "28px tall, hairline border, 20 percent tonal fill. Focus shifts the border to ring color plus a 2px ring at 30 percent. No glow, no scale.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Nombre del curso\" />",
+      "css": ".ds-input { display: block; width: 100%; min-width: 0; height: 28px; padding: 2px 8px; border: 1px solid var(--input, oklch(0.92 0.004 286.32)); border-radius: calc(var(--radius, 0.625rem) - 2px); background: color-mix(in oklch, var(--input, oklch(0.92 0.004 286.32)) 20%, transparent); color: var(--foreground, oklch(0.141 0.005 285.823)); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.75rem; line-height: 1.625; outline: none; transition: border-color 150ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.552 0.016 285.938)); } .ds-input:focus-visible { border-color: var(--ring, oklch(0.705 0.015 286.067)); box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring, oklch(0.705 0.015 286.067)) 30%, transparent); } .ds-input[aria-invalid=\"true\"] { border-color: var(--destructive, oklch(0.577 0.245 27.325)); box-shadow: 0 0 0 2px color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Flat surface with a theme-reactive hairline ring at 10 percent of the text color. No shadow, ever. Nesting a card inside a card is prohibited.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><div class=\"ds-card-title\">Progreso del curso</div><div class=\"ds-card-description\">4 de 12 lecciones completadas</div></div><div class=\"ds-card-content\">Continúa donde lo dejaste.</div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 16px; overflow: hidden; padding: 16px 0; border-radius: var(--radius, 0.625rem); background: var(--card, oklch(1 0 0)); color: var(--card-foreground, oklch(0.141 0.005 285.823)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--card-foreground, oklch(0.141 0.005 285.823)) 10%, transparent); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.75rem; line-height: 1.625; } .ds-card-header { display: grid; gap: 4px; padding: 0 16px; } .ds-card-title { font-size: 0.875rem; font-weight: 500; } .ds-card-description { font-size: 0.75rem; line-height: 1.625; color: var(--muted-foreground, oklch(0.552 0.016 285.938)); } .ds-card-content { padding: 0 16px; }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "description": "Active state carried by fill and weight together, never by color alone. Uses the dedicated sidebar token set so it sits a half-step off the page without a shadow.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20\"/><path d=\"M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z\"/></svg>Mis cursos</a><a class=\"ds-nav-item\" href=\"#\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 20V10M18 20V4M6 20v-4\"/></svg>Progreso</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; padding: 8px; background: var(--sidebar, oklch(0.985 0 0)); border-radius: var(--radius, 0.625rem); } .ds-nav-item { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: calc(var(--radius, 0.625rem) - 2px); color: var(--sidebar-foreground, oklch(0.141 0.005 285.823)); font-family: var(--font-sans, 'Noto Sans', sans-serif); font-size: 0.75rem; line-height: 1.625; font-weight: 400; text-decoration: none; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-nav-item .ds-icon { width: 14px; height: 14px; flex-shrink: 0; } .ds-nav-item:hover { background: var(--sidebar-accent, oklch(0.967 0.001 286.375)); } .ds-nav-item-active { background: var(--sidebar-primary, oklch(0.609 0.126 221.723)); color: var(--sidebar-primary-foreground, oklch(0.984 0.019 200.873)); font-weight: 500; } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in oklch, var(--sidebar-ring, oklch(0.705 0.015 286.067)) 30%, transparent); }"
+    },
+    {
+      "name": "Gamification Ledger Chip",
+      "kind": "chip",
+      "description": "Signature component. XP, streaks, levels, and achievements render as ledger entries, not reward graphics. Label-sized type on a tonal fill. No saturated medal, no confetti, no exclamation mark.",
+      "html": "<div class=\"ds-ledger\"><span class=\"ds-ledger-chip\">+40 XP</span><span class=\"ds-ledger-label\">Checkpoint completado</span><span class=\"ds-ledger-meta\">hoy 14:02</span></div>",
+      "css": ".ds-ledger { display: flex; align-items: center; gap: 8px; padding: 8px 0; font-family: var(--font-sans, 'Noto Sans', sans-serif); border-bottom: 1px solid color-mix(in oklch, var(--foreground, oklch(0.141 0.005 285.823)) 10%, transparent); } .ds-ledger-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: calc(var(--radius, 0.625rem) - 4px); background: var(--muted, oklch(0.967 0.001 286.375)); color: var(--foreground, oklch(0.141 0.005 285.823)); font-size: 0.625rem; font-weight: 500; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; } .ds-ledger-label { font-size: 0.75rem; line-height: 1.625; color: var(--foreground, oklch(0.141 0.005 285.823)); } .ds-ledger-meta { margin-left: auto; font-size: 0.625rem; color: var(--muted-foreground, oklch(0.552 0.016 285.938)); font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Classroom",
+    "overview": "A good classroom is not decorated. It is arranged. The walls recede, the light is even, the seats face one direction, and everything you notice is either the material or your own place in the sequence. That is the whole system: a quiet room built so the content can be the loudest thing in it. Nothing on screen is present for atmosphere. If an element is not carrying information, state, or a next action, it is removed rather than styled down.\n\nThe room has two arrangements. On learner surfaces (lesson, exercise, checkpoint, exam, browse) it is a reading room: generous, single-focus, one primary action visible, body type sized for a session that lasts an hour on a phone. On staff surfaces (analytics, grading, payouts, enrollment, platform panel) it is a desk: dense, comparative, scan-first, small type in exchange for seeing more at once. Same tokens, same components, two spacing registers. The component library defaults to the desk, so the reading room is always an explicit choice.\n\nThe room is also rented. Every school overrides the primary color, the corner radius, and the body typeface through CSS custom properties, so nothing structural may depend on any of the three. What stays constant is the arrangement: the hierarchy, the density rules, the hairlines, the placement of the next action. Two schools must be recognizably the same product and recognizably different brands. This system explicitly rejects the generic shadcn template look, gamified candy, the cluttered enterprise LMS, and SaaS marketing cliché.",
+    "keyCharacteristics": [
+      "Flat surfaces, hairline separation, shadows reserved for floating layers only",
+      "Muted teal accent at low chroma, deployed sparingly, never as decoration",
+      "Neutrals held at a constant violet-grey hue that is deliberately independent of the tenant brand",
+      "Two named density registers, learner and staff, never averaged",
+      "Progress communicated by position and sequence, not by reward graphics",
+      "Bilingual layouts (en/es) with Spanish as the sizing case, not the afterthought"
+    ],
+    "rules": [
+      {
+        "name": "The Constant Neutral Rule",
+        "body": "The neutrals sit at hue 285 to 286, a cool violet-grey, while the brand sits at hue 223. They are not tinted toward the brand, and this is deliberate rather than an oversight. The brand hue is tenant-variable; a neutral tinted toward it would shift under every school, and the whole product would change temperature per tenant. The neutral axis is the constant that makes two tenants read as one product. Never re-tint neutrals to match a tenant primary.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Filled Element Rule",
+        "body": "On any learner view, exactly one element carries a filled Slate Teal background: the next action. Everything else is text, hairline, or tonal fill. If a screen has two filled teal elements, one of them is not the next action and should be an outline or ghost variant.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tenant-Proof Rule",
+        "body": "Every contrast, emphasis, and state decision must hold when the primary is replaced by an arbitrary tenant color. Color is never the sole carrier of meaning: status, validation, correctness, and severity always pair color with text, icon, or position. Derived inks are computed from the resolved color, never hardcoded. This has already shipped as a bug (issue #569); it is not hypothetical.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Pure Ink Rule",
+        "body": "#000 and #fff are prohibited as text colors. Text on light is Ink at lightness 0.141; text on dark is oklch(0.985 0 0). Pure white survives only as a page background.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Registers Rule",
+        "body": "base-mira ships tuned for dense tooling: h-7 buttons, text-xs bodies, text-xs/relaxed cards. Those defaults are the staff register and they are correct there. Learner surfaces must explicitly opt into the learner register: size=\"lg\" or larger controls, text-sm minimum and text-base for read prose, gap and padding one step up from the component default. Never ship a lesson, exercise, checkpoint, or exam surface on the raw component defaults. A learner reading 12px prose for an hour on a mid-range Android is the failure this rule exists to prevent.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Sans Rule",
+        "body": "There is exactly one sans in the system, bound to --font-sans, and every text role resolves through it. Display is that face at weight 700, not a second family. Adding a display or heading font is prohibited: it doubles the font payload for the mid-range-Android baseline, and because tenants override --font-sans, a hardcoded second face would pair a school's chosen font against one they never picked. Geist Mono is the only other family, and it earns its place by doing work no sans can do. Geist Sans was previously loaded with no consumer and has been removed.",
+        "section": "typography"
+      },
+      {
+        "name": "The Spanish Sizing Rule",
+        "body": "Spanish strings run 20 to 30 percent longer than English. Every label, button, table header, and nav item is sized against its Spanish string, not its English one. If it only fits in English, it does not fit. Truncation is a bug, not a layout strategy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Measure Rule",
+        "body": "Read prose is capped at 65ch and never exceeds 75ch. This is already enforced by .prose { max-width: 65ch } in app/globals.css; do not override it to fill a wide container. Empty space beside a column of text is correct.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tenant Typeface Rule",
+        "body": "Tenants may override --font-sans entirely (components/tenant/tenant-css-vars.tsx). No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and ch-based widths outside the prose container are all prohibited.",
+        "section": "typography"
+      },
+      {
+        "name": "The Nothing Floats Rule",
+        "body": "Cards, panels, table rows, list items, sidebars, headers, and stat blocks are flat. If it participates in the page layout, it gets a hairline or a tonal fill, never a shadow. If you reach for shadow-md on a card to make it pop, the hierarchy is wrong somewhere else.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Hairline Composites Rule",
+        "body": "Borders use ring-foreground/10 or oklch(1 0 0 / 10%) style alpha values rather than solid greys, so a divider stays correct over paper, over a muted fill, and over any tonal dark layer. A solid oklch(0.92 ...) border hardcoded onto a dark surface is a bug.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Two-Layer Limit Rule",
+        "body": "No more than two nested elevation contexts. A card inside a card is prohibited outright. A popover inside a dialog is the maximum stack.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use OKLCH for every color. The entire token layer is OKLCH and mixing in hex or HSL breaks the tenant-theming pipeline.",
+      "Do pick a register before you start: staff (base-mira defaults, text-xs, h-7) or learner (text-sm minimum, text-base prose, 40px controls, 24px padding). Write it down in the component before styling.",
+      "Do keep exactly one filled Slate Teal element per learner view: the next action.",
+      "Do pair every color signal with a text, icon, or positional signal. Status, validation, correctness, severity, all of them.",
+      "Do separate surfaces with ring-1 ring-foreground/10 or a tonal fill step.",
+      "Do size every label against its Spanish string and check the layout at /es before calling it done.",
+      "Do design the empty, missing, loading, and error states in the same pass as the happy path. Missing data renders as missing; ungraded renders as ungraded, never as zero (issues #567, #568).",
+      "Do respect prefers-reduced-motion by collapsing transitions to instant state changes, not to slower ones.",
+      "Do ease out with exponential curves (ease-out-quart / quint / expo) on the transitions that remain.",
+      "Do verify focus rings and contrast against a non-default tenant primary, not just the shipped Slate Teal."
+    ],
+    "donts": [
+      "Don't ship the generic shadcn template: default zinc neutrals, identical icon-heading-text card grids repeated down a page, everything wrapped in a bordered box, or a hero-metric row of big numbers with small labels. This is the single most likely failure mode in this codebase.",
+      "Don't ship gamified candy: cartoon mascots, ambient confetti, bouncy or elastic easing, saturated primary-colored reward badges, or exclamation marks in system copy. Adults use this, and the creator's professional reputation is attached to it.",
+      "Don't build a cluttered enterprise LMS: dense nav trees, competing toolbars, tables without hierarchy, five routes to the same page. No Moodle, no Blackboard, no Canvas.",
+      "Don't use SaaS marketing cliché: gradient text (background-clip: text is banned outright), glassmorphic hero cards, purple-and-blue mesh gradients. This applies to (public)/* and to everything the AI landing-page builder is permitted to emit.",
+      "Don't put a shadow on anything that participates in the page layout. Cards, rows, panels, headers, sidebars: flat.",
+      "Don't nest a card inside a card. Ever.",
+      "Don't use a border-left or border-right greater than 1px as a colored accent stripe on a card, list item, callout, or alert. The neutral .prose blockquote border is the only exception in the system.",
+      "Don't hardcode a derived ink, tint, or contrast value against Slate Teal. Compute it from the resolved primary; tenants override it.",
+      "Don't re-tint the neutrals toward a tenant's brand hue. The violet-grey neutral axis is what keeps two tenants recognizable as one product.",
+      "Don't use a solid red fill for destructive actions. Tint at 10 percent with Alert-colored text.",
+      "Don't render text-xs body copy on a learner surface. That is the staff register leaking into a reading session.",
+      "Don't let color be the only difference between two states, two series, or two severities.",
+      "Don't reach for a modal first. Exhaust inline and progressive-disclosure alternatives; the product already has sheets and popovers for detail.",
+      "Don't animate layout properties. Transform and opacity only.",
+      "Don't add a second hue to a chart. The ramp is monochromatic by design because a second hue collides with tenant theming; encode the second dimension with label, shape, or order."
+    ]
+  }
+}
