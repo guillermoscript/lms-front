@@ -13,10 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { IconLogout, IconSettings, IconUser } from "@tabler/icons-react"
+import { IconBug, IconLogout, IconSettings, IconUser } from "@tabler/icons-react"
 import { GamificationHeaderCard } from "./gamification/gamification-header-card"
 import { CurrentUserAvatar } from "./current-user-avatar"
 import { useLogout } from "@/hooks/use-logout"
+import { openFeedbackDialog } from "@/lib/sentry/feedback"
 
 interface UserNavProps {
   user: User | null
@@ -58,6 +59,16 @@ export function UserNav({ user }: UserNavProps) {
           <DropdownMenuItem className="rounded-lg mx-1 cursor-pointer gap-2 focus:bg-accent text-muted-foreground focus:text-accent-foreground" render={<Link href="/dashboard/settings" />}>
             <IconSettings className="h-4 w-4" />
             <span>{t('settings')}</span>
+          </DropdownMenuItem>
+          {/* Discoverable entry point for bug reports. The floating puck is fast for
+              people who know it's there; this is how everyone else finds it, and it
+              costs no screen space. */}
+          <DropdownMenuItem
+            className="rounded-lg mx-1 cursor-pointer gap-2 focus:bg-accent text-muted-foreground focus:text-accent-foreground"
+            onClick={() => { void openFeedbackDialog() }}
+          >
+            <IconBug className="h-4 w-4" />
+            <span>{t('reportProblem')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
