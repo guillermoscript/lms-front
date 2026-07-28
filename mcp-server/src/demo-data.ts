@@ -653,6 +653,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: true,
               has_access: true,
               covered_by_plan: true,
+              price: 49,
+              currency: "usd",
             },
             {
               id: 102,
@@ -664,6 +666,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: true,
               has_access: true,
               covered_by_plan: true,
+              price: 39,
+              currency: "usd",
             },
             {
               id: 103,
@@ -675,6 +679,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: false,
               has_access: true,
               covered_by_plan: true,
+              price: 45,
+              currency: "usd",
             },
             {
               id: 107,
@@ -688,6 +694,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               // Sold separately: on a plan, but this one is not covered.
               has_access: false,
               covered_by_plan: false,
+              price: 89,
+              currency: "usd",
             },
             {
               id: 108,
@@ -699,6 +707,9 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: false,
               has_access: true,
               covered_by_plan: false,
+              // A $0 product: free, but still a product.
+              price: 0,
+              currency: "usd",
             },
             {
               id: 109,
@@ -710,6 +721,9 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: false,
               has_access: false,
               covered_by_plan: false,
+              // No active product covers it — nothing to sell, so no CTA.
+              price: null,
+              currency: null,
             },
           ],
         },
@@ -732,6 +746,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: false,
               has_access: false,
               covered_by_plan: false,
+              price: 49,
+              currency: "usd",
             },
             {
               id: 108,
@@ -743,6 +759,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: true,
               has_access: true,
               covered_by_plan: false,
+              price: 0,
+              currency: "usd",
             },
             {
               id: 109,
@@ -754,6 +772,8 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
               enrolled: false,
               has_access: false,
               covered_by_plan: false,
+              price: 129,
+              currency: "usd",
             },
           ],
         },

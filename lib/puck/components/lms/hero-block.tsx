@@ -94,7 +94,8 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
           'relative flex items-center px-6 py-16',
           minHeightClasses[minHeight] || 'min-h-[500px]',
           backgroundImage ? 'bg-cover bg-center' : 'bg-[var(--block-accent)]',
-          'text-primary-foreground'
+          // #569: only the accent-painted branch has a --block-accent-foreground to read.
+          backgroundImage ? 'text-primary-foreground' : 'text-[var(--block-accent-foreground)]'
         )}
         style={
           backgroundImage
@@ -145,12 +146,18 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
                 </Button>
               </a>
             )}
+            {/*
+              #569: this button's own background is a 10% wash, so it reads as
+              whatever is behind it — the accent. Its ink follows the derived
+              foreground, falling back to white so the background-image branch
+              (which sets no accent var) is unchanged.
+            */}
             {secondaryCtaLabel && (
               <a href={secondaryCtaHref}>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 px-8 text-base font-semibold rounded-xl border-white/30 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+                  className="h-12 px-8 text-base font-semibold rounded-xl border-[var(--block-accent-foreground,#fff)]/30 bg-[var(--block-accent-foreground,#fff)]/10 text-[var(--block-accent-foreground,#fff)] backdrop-blur-sm hover:bg-[var(--block-accent-foreground,#fff)]/20 hover:text-[var(--block-accent-foreground,#fff)]"
                 >
                   {secondaryCtaLabel}
                 </Button>

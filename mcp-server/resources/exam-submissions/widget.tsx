@@ -7,6 +7,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { isNamedStudent, studentDisplayName } from "../shared/student-display";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -14,7 +16,8 @@ import { Markdown } from "../shared/markdown";
 
 const submissionSchema = z.object({
   id: z.number(),
-  student_name: z.string(),
+  // `lms_list_exam_submissions` sends `null` when the profile has no full name.
+  student_name: z.string().nullable(),
   score: z.number().nullable(),
   submission_date: z.string(),
   review_status: z.string().nullable(),
@@ -38,6 +41,59 @@ export const widgetMetadata: WidgetMetadata = {
 
 type Props = z.infer<typeof propsSchema>;
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading submissions…",
+    heading: (id: number) => `Exam #${id} — Submissions`,
+    subtitle: (n: number, count: string) =>
+      `${count} submission${n === 1 ? "" : "s"} · Click a row to see details`,
+    colStudent: "Student",
+    colScore: "Score",
+    colDate: "Date",
+    colStatus: "Status",
+    empty: "No submissions yet",
+    unnamedStudent: "Unnamed student",
+    loadingDetails: "Loading details…",
+    detailScore: "Score",
+    detailReviewStatus: "Review status",
+    detailFeedback: "Feedback",
+    noDetail: "No additional detail available.",
+    reviewStatus: {
+      approved: "Approved",
+      graded: "Graded",
+      rejected: "Rejected",
+      failed: "Failed",
+      pending: "Pending",
+    } as Record<string, string>,
+  },
+  es: {
+    loading: "Cargando entregas…",
+    heading: (id: number) => `Examen n.º ${id} — Entregas`,
+    subtitle: (n: number, count: string) =>
+      `${count} ${n === 1 ? "entrega" : "entregas"} · Haz clic en una fila para ver los detalles`,
+    colStudent: "Estudiante",
+    colScore: "Nota",
+    colDate: "Fecha",
+    colStatus: "Estado",
+    empty: "Todavía no hay entregas",
+    unnamedStudent: "Estudiante sin nombre",
+    loadingDetails: "Cargando detalles…",
+    detailScore: "Nota",
+    detailReviewStatus: "Estado de revisión",
+    detailFeedback: "Comentarios",
+    noDetail: "No hay más detalles disponibles.",
+    reviewStatus: {
+      approved: "Aprobada",
+      graded: "Calificada",
+      rejected: "Rechazada",
+      failed: "Suspendida",
+      pending: "Pendiente",
+    } as Record<string, string>,
+  },
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function reviewPill(status: string | null): { bg: string; text: string } {
@@ -60,18 +116,6 @@ function reviewPill(status: string | null): { bg: string; text: string } {
         bg: "bg-amber-100 dark:bg-amber-950",
         text: "text-amber-600 dark:text-amber-400",
       };
-  }
-}
-
-function formatDate(s: string): string {
-  try {
-    return new Date(s).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  } catch {
-    return s;
   }
 }
 
@@ -101,6 +145,8 @@ export default function ExamSubmissions() {
   );
 
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -109,7 +155,7 @@ export default function ExamSubmissions() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Loading submissions…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -117,6 +163,11 @@ export default function ExamSubmissions() {
   }
 
   const { submissions, total, exam_id } = props;
+
+  const reviewLabel = (status: string | null): string => {
+    const key = (status ?? "pending").toLowerCase();
+    return t.reviewStatus[key] ?? status ?? "pending";
+  };
 
   const handleRowClick = async (id: number) => {
     if (expandedId === id) {
@@ -148,10 +199,10 @@ export default function ExamSubmissions() {
           {/* Header */}
           <div className="mb-4">
             <h2 className="m-0 text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Exam #{exam_id} — Submissions
+              {t.heading(exam_id)}
             </h2>
             <p className="mt-0.5 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
-              {total} submission{total !== 1 ? "s" : ""} · Click a row to see details
+              {t.subtitle(total, fmt.number(total))}
             </p>
           </div>
 
@@ -159,7 +210,7 @@ export default function ExamSubmissions() {
           <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             {/* Header row */}
             <div className="grid min-w-[480px] grid-cols-[minmax(140px,1fr)_80px_120px_100px] border-b border-zinc-200 bg-zinc-100 px-4 py-[9px] dark:border-zinc-800 dark:bg-zinc-800">
-              {["Student", "Score", "Date", "Status"].map((col) => (
+              {[t.colStudent, t.colScore, t.colDate, t.colStatus].map((col) => (
                 <span
                   key={col}
                   className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase dark:text-zinc-500"
@@ -173,7 +224,7 @@ export default function ExamSubmissions() {
             {submissions.length === 0 && (
               <div className="p-10 text-center text-zinc-400 dark:text-zinc-500">
                 <div className="mb-2.5 text-3xl">📋</div>
-                <p className="m-0 text-sm">No submissions yet</p>
+                <p className="m-0 text-sm">{t.empty}</p>
               </div>
             )}
 
@@ -206,20 +257,26 @@ export default function ExamSubmissions() {
                         : "bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     }`}
                   >
-                    <span className="overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap text-zinc-900 dark:text-zinc-100">
-                      {sub.student_name}
+                    <span
+                      className={`overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap ${
+                        isNamedStudent(sub.student_name)
+                          ? "text-zinc-900 dark:text-zinc-100"
+                          : "text-zinc-400 italic dark:text-zinc-500"
+                      }`}
+                    >
+                      {studentDisplayName(sub.student_name, t.unnamedStudent)}
                     </span>
                     <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                      {sub.score != null ? `${sub.score}%` : "—"}
+                      {fmt.percent(sub.score)}
                     </span>
                     <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {formatDate(sub.submission_date)}
+                      {fmt.date(sub.submission_date)}
                     </span>
                     <span className="inline-flex items-center">
                       <span
                         className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${pill.bg} ${pill.text}`}
                       >
-                        {sub.review_status ?? "pending"}
+                        {reviewLabel(sub.review_status)}
                       </span>
                     </span>
                   </div>
@@ -235,7 +292,7 @@ export default function ExamSubmissions() {
                     >
                       {isLoadingThis ? (
                         <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
-                          Loading details…
+                          {t.loadingDetails}
                         </p>
                       ) : detail ? (
                         <div className="flex flex-col gap-2">
@@ -243,24 +300,24 @@ export default function ExamSubmissions() {
                             {detail.score != null && (
                               <div>
                                 <span className="block text-[11px] text-zinc-400 dark:text-zinc-500">
-                                  Score
+                                  {t.detailScore}
                                 </span>
                                 <span className="text-xl font-bold text-[var(--brand-600)] dark:text-[var(--brand-400)]">
-                                  {detail.score}%
+                                  {fmt.percent(detail.score)}
                                 </span>
                               </div>
                             )}
                             {detail.review_status && (
                               <div>
                                 <span className="block text-[11px] text-zinc-400 dark:text-zinc-500">
-                                  Review status
+                                  {t.detailReviewStatus}
                                 </span>
                                 <span
                                   className={`text-[13px] font-semibold ${
                                     reviewPill(detail.review_status).text
                                   }`}
                                 >
-                                  {detail.review_status}
+                                  {reviewLabel(detail.review_status)}
                                 </span>
                               </div>
                             )}
@@ -268,7 +325,7 @@ export default function ExamSubmissions() {
                           {detail.feedback && (
                             <div>
                               <span className="mb-1 block text-[11px] text-zinc-400 dark:text-zinc-500">
-                                Feedback
+                                {t.detailFeedback}
                               </span>
                               <Markdown
                                 content={detail.feedback}
@@ -280,7 +337,7 @@ export default function ExamSubmissions() {
                         </div>
                       ) : (
                         <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
-                          No additional detail available.
+                          {t.noDetail}
                         </p>
                       )}
                     </div>

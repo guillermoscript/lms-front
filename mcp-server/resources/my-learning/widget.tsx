@@ -5,6 +5,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -46,12 +47,42 @@ export const widgetMetadata: WidgetMetadata = {
 
 type Props = z.infer<typeof propsSchema>;
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading your courses…",
+    title: "My Learning",
+    summary: (n: number, count: string, avg: string) =>
+      `${count} course${n === 1 ? "" : "s"} · ${avg} average progress`,
+    emptyTitle: "No enrolled courses yet",
+    emptyHint: "Browse the catalog to find your first course.",
+    lessonsDone: (done: string, total: string) => `${done}/${total} lessons completed`,
+    complete: "✓ Course complete",
+    resume: (seq: string, title: string) => `Continue · Lesson ${seq}: ${title}`,
+  },
+  es: {
+    loading: "Cargando tus cursos…",
+    title: "Mi aprendizaje",
+    summary: (n: number, count: string, avg: string) =>
+      `${count} ${n === 1 ? "curso" : "cursos"} · ${avg} de progreso medio`,
+    emptyTitle: "Todavía no tienes cursos",
+    emptyHint: "Explora el catálogo para encontrar tu primer curso.",
+    lessonsDone: (done: string, total: string) =>
+      `${done}/${total} lecciones completadas`,
+    complete: "✓ Curso completado",
+    resume: (seq: string, title: string) => `Continuar · Lección ${seq}: ${title}`,
+  },
+};
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function MyLearning() {
-  const { props, isPending } = useWidget<Props>();
+  const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -60,7 +91,7 @@ export default function MyLearning() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Loading your courses…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -77,11 +108,10 @@ export default function MyLearning() {
           {/* Header */}
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h1 className="m-0 text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              My Learning
+              {t.title}
             </h1>
             <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
-              {total} course{total === 1 ? "" : "s"} · {average_progress}%
-              average progress
+              {t.summary(total, fmt.number(total), fmt.percent(average_progress))}
             </span>
           </div>
 
@@ -89,10 +119,10 @@ export default function MyLearning() {
             <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-2 text-3xl">🎓</div>
               <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                No enrolled courses yet
+                {t.emptyTitle}
               </p>
               <p className="mt-1.5 mb-0 text-[13px] text-zinc-400 dark:text-zinc-500">
-                Browse the catalog to find your first course.
+                {t.emptyHint}
               </p>
             </div>
           ) : (
@@ -140,18 +170,35 @@ export default function MyLearning() {
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {course.lessons_completed}/{course.lessons_total} lessons
-                        completed
+                        {t.lessonsDone(
+                          fmt.number(course.lessons_completed),
+                          fmt.number(course.lessons_total)
+                        )}
                       </span>
                       {done ? (
                         <span className="text-xs font-semibold text-green-600 dark:text-green-400">
-                          ✓ Course complete
+                          {t.complete}
                         </span>
                       ) : course.next_lesson ? (
-                        <span className="rounded-lg bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                          Next: Lesson {course.next_lesson.sequence} ·{" "}
-                          {course.next_lesson.title}
-                        </span>
+                        /*
+                          Getting the student back into the lesson is the entire
+                          job of this card, and it used to be a grey pill that
+                          looked like a caption. It is the primary action, so it
+                          is now the only thing on the card that looks like one.
+                        */
+                        <button
+                          onClick={() =>
+                            sendFollowUpMessage(
+                              `Open lesson ${course.next_lesson!.id} ("${course.next_lesson!.title}") from "${course.title}" with lms_view_lesson.`
+                            )
+                          }
+                          className="max-w-full cursor-pointer truncate rounded-lg border-none bg-[var(--brand-600)] px-3 py-1.5 text-xs font-semibold text-white dark:bg-[var(--brand-400)] dark:text-zinc-950"
+                        >
+                          {t.resume(
+                            fmt.number(course.next_lesson.sequence),
+                            course.next_lesson.title
+                          )}
+                        </button>
                       ) : null}
                     </div>
                   </div>

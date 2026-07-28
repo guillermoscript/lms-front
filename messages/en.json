@@ -3664,7 +3664,8 @@
   "userNav": {
     "profile": "Profile",
     "settings": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "reportProblem": "Report a problem"
   },
   "welcomeHero": {
     "welcomeBack": "Welcome back, {userName}",
@@ -4144,6 +4145,10 @@
       "cancelling": "Cancelling...",
       "success": "Payment request cancelled.",
       "error": "Could not cancel the request. Please try again."
+    },
+    "feedbackButton": {
+      "label": "Report a problem",
+      "dragHint": "drag to move"
     }
   },
   "courseDetails": {

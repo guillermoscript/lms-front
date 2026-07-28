@@ -7,6 +7,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useStrings } from "../shared/i18n";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -63,6 +64,75 @@ type Question = z.infer<typeof questionSchema>;
 // match → right-item per left-item, order → arranged items.
 type Answer = number | boolean | string | Record<string, string> | string[];
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Setting up practice…",
+    noQuestions: (topic: string) =>
+      `No practice questions could be generated for “${topic}”. Ask the tutor to try a different topic or lesson.`,
+    practice: "Practice",
+    mixedPractice: "Mixed practice",
+    mixedBanner:
+      "Mixed practice: questions jump between topics on purpose. It feels harder — that's the point: it measurably improves long-term retention.",
+    questionOf: (current: number, total: number) => `Question ${current} of ${total}`,
+    trueLabel: "True",
+    falseLabel: "False",
+    noAnswer: "(no answer)",
+    freeTextPlaceholder: "Write your answer — the tutor will grade it",
+    fillBlankPlaceholder: "Type your answer",
+    matchHint: "Tap an item on the left, then its match on the right.",
+    orderHint: "Arrange with the ↑ / ↓ buttons.",
+    moveUp: (item: string) => `Move "${item}" up`,
+    moveDown: (item: string) => `Move "${item}" down`,
+    back: "Back",
+    next: "Next",
+    finish: "Finish",
+    answersSent: "Answers sent",
+    scoreCorrect: (correct: number, total: number) => `${correct}/${total} correct`,
+    freeTextSentSuffix:
+      " — your free-text answers went to the tutor for grading.",
+    recordingSuffix: " — recording your attempt…",
+    recordedSuffix: " — attempt recorded. The tutor will pick it up from here.",
+    yourAnswer: "Your answer: ",
+    correctLabel: " · Correct: ",
+    awaitingGrading: " · Awaiting tutor grading",
+  },
+  es: {
+    loading: "Preparando la práctica…",
+    noQuestions: (topic: string) =>
+      `No se pudieron generar preguntas de práctica para “${topic}”. Pídele al tutor que pruebe con otro tema o lección.`,
+    practice: "Práctica",
+    mixedPractice: "Práctica mixta",
+    mixedBanner:
+      "Práctica mezclada: las preguntas saltan entre temas a propósito. Se siente más difícil — esa es la idea: mejora de forma comprobada la retención a largo plazo.",
+    questionOf: (current: number, total: number) => `Pregunta ${current} de ${total}`,
+    trueLabel: "Verdadero",
+    falseLabel: "Falso",
+    noAnswer: "(sin respuesta)",
+    freeTextPlaceholder: "Escribe tu respuesta — el tutor la calificará",
+    fillBlankPlaceholder: "Escribe tu respuesta",
+    matchHint: "Toca un elemento de la izquierda y luego su pareja a la derecha.",
+    orderHint: "Ordena con los botones ↑ / ↓.",
+    moveUp: (item: string) => `Subir "${item}"`,
+    moveDown: (item: string) => `Bajar "${item}"`,
+    back: "Atrás",
+    next: "Siguiente",
+    finish: "Finalizar",
+    answersSent: "Respuestas enviadas",
+    scoreCorrect: (correct: number, total: number) => `${correct}/${total} correctas`,
+    freeTextSentSuffix:
+      " — tus respuestas de texto libre se enviaron al tutor para su calificación.",
+    recordingSuffix: " — registrando tu intento…",
+    recordedSuffix: " — intento registrado. El tutor lo retomará desde aquí.",
+    yourAnswer: "Tu respuesta: ",
+    correctLabel: " · Correcta: ",
+    awaitingGrading: " · Esperando la calificación del tutor",
+  },
+};
+
+type Strings = typeof STRINGS.en;
+
 // ── Grading (closed types only) ─────────────────────────────────────────────
 
 function isCorrect(q: Question, answer: Answer | undefined): boolean | null {
@@ -95,12 +165,12 @@ function isCorrect(q: Question, answer: Answer | undefined): boolean | null {
   }
 }
 
-function expectedAnswerText(q: Question): string {
+function expectedAnswerText(q: Question, t: Strings): string {
   switch (q.type) {
     case "multiple_choice":
       return q.options?.[q.correct as number] ?? "";
     case "true_false":
-      return q.correct ? "True" : "False";
+      return q.correct ? t.trueLabel : t.falseLabel;
     case "fill_blank":
       return Array.isArray(q.correct) ? q.correct[0] : String(q.correct ?? "");
     case "match":
@@ -112,13 +182,13 @@ function expectedAnswerText(q: Question): string {
   }
 }
 
-function answerText(q: Question, answer: Answer | undefined): string {
-  if (answer === undefined) return "(no answer)";
+function answerText(q: Question, answer: Answer | undefined, t: Strings): string {
+  if (answer === undefined) return t.noAnswer;
   switch (q.type) {
     case "multiple_choice":
       return q.options?.[answer as number] ?? String(answer);
     case "true_false":
-      return answer ? "True" : "False";
+      return answer ? t.trueLabel : t.falseLabel;
     case "match":
       return Object.entries(answer as Record<string, string>)
         .map(([l, r]) => `${l} → ${r}`)
@@ -129,24 +199,6 @@ function answerText(q: Question, answer: Answer | undefined): string {
       return String(answer);
   }
 }
-
-// mcp-server widgets have no i18n layer; the mixed-practice explainer is the
-// one string the issue (#393) requires in en/es, so pick by browser locale.
-const IS_ES =
-  typeof navigator !== "undefined" &&
-  (navigator.language || "").toLowerCase().startsWith("es");
-
-const MIXED_COPY = IS_ES
-  ? {
-      pill: "Práctica mixta",
-      banner:
-        "Práctica mezclada: las preguntas saltan entre temas a propósito. Se siente más difícil — esa es la idea: mejora de forma comprobada la retención a largo plazo.",
-    }
-  : {
-      pill: "Mixed practice",
-      banner:
-        "Mixed practice: questions jump between topics on purpose. It feels harder — that's the point: it measurably improves long-term retention.",
-    };
 
 /** Deterministic-enough shuffle for presentation (never mutates the input). */
 function shuffled<T>(items: T[]): T[] {
@@ -187,6 +239,7 @@ const inputClass =
 export default function PracticePlayer() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
+  const t = useStrings(STRINGS);
   const { callTool: recordAttempt, isPending: isRecording } = useCallTool(
     "lms_record_practice_attempt"
   );
@@ -225,7 +278,7 @@ export default function PracticePlayer() {
         <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            Setting up practice…
+            {t.loading}
           </div>
         </div>
       </McpUseProvider>
@@ -240,8 +293,7 @@ export default function PracticePlayer() {
         <Brand />
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-sm text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
-            No practice questions could be generated for “{topic}”. Ask the
-            tutor to try a different topic or lesson.
+            {t.noQuestions(topic)}
           </div>
         </div>
       </McpUseProvider>
@@ -282,7 +334,7 @@ export default function PracticePlayer() {
       prompt: x.prompt,
       type: x.type,
       ...(x.topic ? { topic: x.topic } : {}),
-      answer: answerText(x, effectiveAnswer(x)),
+      answer: answerText(x, effectiveAnswer(x), t),
       correct: isCorrect(x, effectiveAnswer(x)),
     }));
 
@@ -360,15 +412,15 @@ export default function PracticePlayer() {
         <div className={dark ? "dark" : ""}>
           <div className={containerClass}>
             <h2 className="m-0 mb-1 text-xl text-zinc-900 dark:text-zinc-100">
-              {hasFreeText ? "Answers sent" : `${correctCount}/${closedTotal} correct`}
+              {hasFreeText ? t.answersSent : t.scoreCorrect(correctCount, closedTotal)}
             </h2>
             <p className="m-0 mb-4 text-[13px] text-zinc-500 dark:text-zinc-400">
               {topic}
               {hasFreeText
-                ? " — your free-text answers went to the tutor for grading."
+                ? t.freeTextSentSuffix
                 : isRecording
-                  ? " — recording your attempt…"
-                  : " — attempt recorded. The tutor will pick it up from here."}
+                  ? t.recordingSuffix
+                  : t.recordedSuffix}
             </p>
             {results.map(({ q: rq, correct }) => (
               <div
@@ -385,11 +437,12 @@ export default function PracticePlayer() {
                   {correct === null ? "✍️" : correct ? "✓" : "✗"} {rq.prompt}
                 </div>
                 <div className="text-zinc-500 dark:text-zinc-400">
-                  Your answer: {answerText(rq, effectiveAnswer(rq))}
+                  {t.yourAnswer}
+                  {answerText(rq, effectiveAnswer(rq), t)}
                   {correct === false && (
-                    <> · Correct: {expectedAnswerText(rq)}</>
+                    <>{t.correctLabel}{expectedAnswerText(rq, t)}</>
                   )}
-                  {correct === null && <> · Awaiting tutor grading</>}
+                  {correct === null && <>{t.awaitingGrading}</>}
                 </div>
                 {correct !== null && rq.explanation && (
                   <div className="mt-1 text-[12.5px] leading-[1.5] text-zinc-600 dark:text-zinc-300">
@@ -414,12 +467,12 @@ export default function PracticePlayer() {
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
             <span className="rounded-lg bg-[var(--brand-50)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
               {isMixed
-                ? `${MIXED_COPY.pill} · ${q.topic ?? topic}`
-                : `Practice · ${topic}`}
+                ? `${t.mixedPractice} · ${q.topic ?? topic}`
+                : `${t.practice} · ${topic}`}
             </span>
             <div
               className="flex gap-[5px]"
-              aria-label={`Question ${index + 1} of ${questions.length}`}
+              aria-label={t.questionOf(index + 1, questions.length)}
             >
               {questions.map((dot, i) => (
                 <span
@@ -438,7 +491,7 @@ export default function PracticePlayer() {
 
           {isMixed && index === 0 && (
             <p className="m-0 mb-3.5 rounded-[10px] border border-[var(--brand-200)] bg-[var(--brand-50)] px-3 py-2 text-[12.5px] leading-[1.5] text-[var(--brand-900)] dark:border-[var(--brand-900)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-200)]">
-              {MIXED_COPY.banner}
+              {t.mixedBanner}
             </p>
           )}
 
@@ -462,7 +515,7 @@ export default function PracticePlayer() {
                   onClick={() => setAnswer(v)}
                   className={choiceClass(answer === v, "flex-1 text-center")}
                 >
-                  {v ? "True" : "False"}
+                  {v ? t.trueLabel : t.falseLabel}
                 </button>
               ))}
             </div>
@@ -474,7 +527,7 @@ export default function PracticePlayer() {
                 value={(answer as string) ?? ""}
                 onChange={(e) => setAnswer(e.target.value)}
                 rows={5}
-                placeholder="Write your answer — the tutor will grade it"
+                placeholder={t.freeTextPlaceholder}
                 className={`${inputClass} resize-y [font-family:inherit]`}
               />
             ) : (
@@ -482,7 +535,7 @@ export default function PracticePlayer() {
                 type="text"
                 value={(answer as string) ?? ""}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Type your answer"
+                placeholder={t.fillBlankPlaceholder}
                 className={inputClass}
               />
             )
@@ -491,7 +544,7 @@ export default function PracticePlayer() {
           {q.type === "match" && (
             <div>
               <p className="m-0 mb-2 text-xs text-zinc-400 dark:text-zinc-500">
-                Tap an item on the left, then its match on the right.
+                {t.matchHint}
               </p>
               <div className="flex gap-3">
                 <div className="flex-1">
@@ -545,7 +598,7 @@ export default function PracticePlayer() {
           {q.type === "order" && (
             <div>
               <p className="m-0 mb-2 text-xs text-zinc-400 dark:text-zinc-500">
-                Arrange with the ↑ / ↓ buttons.
+                {t.orderHint}
               </p>
               {(((answer as string[]) ?? initialOrders[q.id]) ?? []).map(
                 (item, i, arr) => (
@@ -555,7 +608,7 @@ export default function PracticePlayer() {
                   >
                     <span className="flex-1">{item}</span>
                     <button
-                      aria-label={`Move "${item}" up`}
+                      aria-label={t.moveUp(item)}
                       disabled={i === 0}
                       onClick={() => {
                         const next = [...arr];
@@ -567,7 +620,7 @@ export default function PracticePlayer() {
                       ↑
                     </button>
                     <button
-                      aria-label={`Move "${item}" down`}
+                      aria-label={t.moveDown(item)}
                       disabled={i === arr.length - 1}
                       onClick={() => {
                         const next = [...arr];
@@ -591,7 +644,7 @@ export default function PracticePlayer() {
               disabled={index === 0}
               className="cursor-pointer rounded-[10px] border border-zinc-200 bg-transparent px-4.5 py-[9px] text-[13.5px] font-semibold text-zinc-500 disabled:cursor-default disabled:opacity-40 dark:border-zinc-800 dark:text-zinc-400"
             >
-              Back
+              {t.back}
             </button>
             <button
               onClick={() => {
@@ -605,7 +658,7 @@ export default function PracticePlayer() {
               disabled={!answeredCurrent}
               className={`${primaryBtnClass} disabled:cursor-default disabled:opacity-50`}
             >
-              {isLast ? "Finish" : "Next"}
+              {isLast ? t.finish : t.next}
             </button>
           </div>
         </div>

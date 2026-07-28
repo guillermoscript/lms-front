@@ -1,3 +1,4 @@
+import { readableOn } from '@/lib/color/contrast'
 import { getPresetById, FONT_OPTIONS, type StoredPreset, type CSSVariableMap } from '@/lib/themes/presets'
 
 /**
@@ -63,6 +64,17 @@ export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor 
     brandOverrides.push(`--primary: ${primaryColor};`)
     brandOverrides.push(`--sidebar-primary: ${primaryColor};`)
     brandOverrides.push(`--ring: ${primaryColor};`)
+
+    // `--primary-foreground` is the text drawn on top of `--primary`, and the
+    // stock value is a near-white. Overriding the brand colour without it left
+    // every primary surface — buttons, the Puck hero/CTA/banner blocks, the
+    // sidebar — white-on-pale for any school with a light brand colour (#569).
+    // Derived only when the colour parses; an exotic value keeps the default.
+    const primaryInk = readableOn(primaryColor, '')
+    if (primaryInk) {
+      brandOverrides.push(`--primary-foreground: ${primaryInk};`)
+      brandOverrides.push(`--sidebar-primary-foreground: ${primaryInk};`)
+    }
   }
   if (secondaryColor) {
     brandOverrides.push(`--secondary-brand: ${secondaryColor};`)

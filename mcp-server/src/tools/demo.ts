@@ -3,6 +3,7 @@ import type { MCPServer } from "mcp-use/server";
 import { widget, text } from "mcp-use/server";
 import { WIDGET_DEMOS } from "../demo-data.js";
 import { BRANDING_META_KEY, type TenantBranding } from "../branding.js";
+import { LOCALE_META_KEY, SUPPORTED_LANGS } from "../locale.js";
 
 /**
  * Fake schools to preview tenant theming with.
@@ -74,6 +75,12 @@ export function registerDemoTools(server: MCPServer): void {
             .describe(
               "Preview the widget with a fake school's brand colour. 'none' (default) uses the platform palette."
             ),
+          lang: z
+            .enum(SUPPORTED_LANGS)
+            .optional()
+            .describe(
+              "Render the widget's own strings in this language. Normally the host supplies the locale; the preview harness does not, so it defaults to 'en'. The fixtures are Spanish, so 'es' is what a real school looks like."
+            ),
         }),
         annotations: {
           readOnlyHint: true,
@@ -87,17 +94,28 @@ export function registerDemoTools(server: MCPServer): void {
           invoked: `${demo.widget} demo ready`,
         },
       },
-      async (input: { variant?: string; brand?: string }) => {
+      async (input: { variant?: string; brand?: string; lang?: string }) => {
         const chosen =
           demo.variants.find((v) => v.id === input.variant) ?? demo.variants[0];
         const branding = DEMO_BRANDS[input.brand ?? "none"] ?? null;
 
+        // `_meta` is the same sideband the real server uses for branding
+        // (`brandWidgetResult` in register.ts), which these tools deliberately
+        // sit in front of. It has to be built here or it never reaches the
+        // widget: until now this handler computed `branding`, named it in the
+        // output text and then dropped it, so `brand=ocean|sunset|forest` — a
+        // documented feature — themed nothing at all.
+        const metadata: Record<string, unknown> = {};
+        if (branding) metadata[BRANDING_META_KEY] = branding;
+        if (input.lang) metadata[LOCALE_META_KEY] = input.lang;
+
         const result = widget({
           props: chosen.props,
+          metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
           output: text(
             `[DEMO FIXTURE — not real data] ${demo.widget} · ${chosen.id}: ${chosen.label}${
               branding ? ` · brand: ${branding.name} (${branding.primary_color})` : ""
-            }\n\n${chosen.output}`
+            }${input.lang ? ` · lang: ${input.lang}` : ""}\n\n${chosen.output}`
           ),
         });
 

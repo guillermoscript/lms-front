@@ -5,6 +5,14 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import {
+  CARD_DARK,
+  CARD_LIGHT,
+  accentTextOn,
+  readableOn,
+  withAlpha,
+} from "../shared/contrast";
+import type { CSSProperties } from "react";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -49,6 +57,11 @@ type Section = z.infer<typeof sectionSchema>;
 // ── Accent color ─────────────────────────────────────────────────────────────
 // Mirrors the app's accentVars(): explicit block color wins, else the tenant's
 // brand color (var(--primary) in the real render), else a neutral fallback.
+//
+// The accent is author-chosen and can be any colour, so nothing here may assume
+// what reads on top of it. Every foreground is derived from the surface it sits
+// on via ../shared/contrast (issue #569): `readableOn()` where we paint the
+// accent and write on it, `accentTextOn()` where the accent *is* the text.
 
 const FALLBACK_ACCENT = "#7c3aed";
 
@@ -74,38 +87,47 @@ function TypeBadge({ type }: { type: string }) {
 function CtaPills({
   ctas,
   accent,
-  onDark,
+  onAccentSurface,
 }: {
   ctas: string[];
   accent: string;
-  onDark?: boolean;
+  /** True when these pills sit on the accent itself (the hero), not on a card. */
+  onAccentSurface?: boolean;
 }) {
   if (ctas.length === 0) return null;
+  // The ink that reads on the accent — white over a dark accent, near-black over
+  // a pale one. On the hero the primary button inverts onto that ink, so its
+  // label is the accent nudged until it clears AA against the ink it sits on.
+  const ink = readableOn(accent);
   return (
     <div className="mt-3 flex flex-wrap justify-center gap-2">
       {ctas.map((c, i) =>
         i === 0 ? (
-          // Primary CTA: on a colored hero the real button is white-on-accent;
-          // elsewhere it's accent-on-white.
+          // Primary CTA: on a colored hero the real button inverts (ink-filled,
+          // accent label); elsewhere it's the accent filled, labelled in ink.
           <span
             key={i}
             className="rounded-lg px-3 py-1 text-xs font-semibold"
             style={
-              onDark
-                ? { background: "#ffffff", color: accent }
-                : { background: accent, color: "#ffffff" }
+              onAccentSurface
+                ? { background: ink, color: accentTextOn(accent, ink) }
+                : { background: accent, color: ink }
             }
+          >
+            {c}
+          </span>
+        ) : onAccentSurface ? (
+          <span
+            key={i}
+            className="rounded-lg border px-3 py-1 text-xs font-semibold"
+            style={{ borderColor: withAlpha(ink, 40), color: ink }}
           >
             {c}
           </span>
         ) : (
           <span
             key={i}
-            className={
-              onDark
-                ? "rounded-lg border border-white/40 px-3 py-1 text-xs font-semibold text-white"
-                : "rounded-lg border border-zinc-300 px-3 py-1 text-xs font-semibold text-zinc-600 dark:border-zinc-600 dark:text-zinc-300"
-            }
+            className="rounded-lg border border-zinc-300 px-3 py-1 text-xs font-semibold text-zinc-600 dark:border-zinc-600 dark:text-zinc-300"
           >
             {c}
           </span>
@@ -120,21 +142,25 @@ function SectionCard({ section, brand }: { section: Section; brand: string | nul
   const accent = accentOf(section, brand);
 
   if (layout === "hero") {
+    const ink = readableOn(accent);
     return (
       <div
         className="relative rounded-xl px-6 py-10 text-center"
         style={{ background: accent }}
       >
         <TypeBadge type={section.type} />
-        <div className="text-xl leading-tight font-bold text-white">
+        <div className="text-xl leading-tight font-bold" style={{ color: ink }}>
           {heading || "Hero headline"}
         </div>
         {subtitle && (
-          <div className="mx-auto mt-2 max-w-[420px] text-[13px] leading-snug text-white/85">
+          <div
+            className="mx-auto mt-2 max-w-[420px] text-[13px] leading-snug"
+            style={{ color: withAlpha(ink, 85) }}
+          >
             {subtitle}
           </div>
         )}
-        <CtaPills ctas={ctas} accent={accent} onDark />
+        <CtaPills ctas={ctas} accent={accent} onAccentSurface />
       </div>
     );
   }
@@ -183,7 +209,25 @@ function SectionCard({ section, brand }: { section: Section; brand: string | nul
             const [value, ...rest] = it.split(" ");
             return (
               <div key={i} className="text-center">
-                <div className="text-lg font-bold tabular-nums" style={{ color: accent }}>
+                {/*
+                  The accent is the type here, on a card that is white in light
+                  mode and zinc-900 in dark. Both inks are computed up front and
+                  CSS picks between them through the same `dark:` variant that
+                  paints the card — resources/styles.css is not part of the
+                  widget build, so `dark:` is Tailwind's default
+                  prefers-color-scheme query, not the `.dark` class this widget
+                  sets. Choosing the surface in JS from useWidgetTheme() would
+                  drift from the card underneath.
+                */}
+                <div
+                  className="text-lg font-bold tabular-nums text-[var(--stat-ink-light)] dark:text-[var(--stat-ink-dark)]"
+                  style={
+                    {
+                      "--stat-ink-light": accentTextOn(accent, CARD_LIGHT),
+                      "--stat-ink-dark": accentTextOn(accent, CARD_DARK),
+                    } as CSSProperties
+                  }
+                >
                   {value}
                 </div>
                 <div className="text-[11px] text-zinc-400 dark:text-zinc-500">
@@ -373,8 +417,8 @@ export default function LandingPagePreview() {
                 href={preview_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white no-underline"
-                style={{ background: headerAccent }}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold no-underline"
+                style={{ background: headerAccent, color: readableOn(headerAccent) }}
               >
                 Open real preview ↗
               </a>
