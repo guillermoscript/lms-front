@@ -16,14 +16,14 @@ implementation.
   isolation and ownership**. The server holds no elevated data privileges.
 - **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
   the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
-  tools; `student` gets only the 18 self-scoped learning/practice tools (list
+  tools; `student` gets only the 30 self-scoped learning/practice tools (list
   hiding in `src/tool-policy.ts`, call-time gating in `src/register.ts`).
 - **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
   via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
 
 ## What it exposes
 
-- **75 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **91 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -47,8 +47,16 @@ implementation.
   replace-per-week, `lms_get_study_plan` with next-lesson + due-card context,
   `lms_complete_study_goal`), and consented teacher escalation
   (`lms_ask_teacher` — notifies the course's teacher via a SECURITY DEFINER
-  RPC, enrollment-validated and rate-limited to 3/day/course).
-- **17 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+  RPC, enrollment-validated and rate-limited to 3/day/course), and
+  certificates (`lms_my_certificates`, `lms_get_certificate_eligibility`,
+  `lms_issue_certificate` — always through the `issue_certificate_if_eligible`
+  SECURITY DEFINER function, never a direct insert;
+  `lms_list_course_certificates`, `lms_get_certificate_template`,
+  `lms_set_certificate_template`, and admin-only `lms_revoke_certificate`.
+  Issuance is **template-gated**: a course with no active
+  `certificate_templates` row issues nothing at all, whatever a student has
+  completed — which is what the eligibility and template tools surface).
+- **21 widgets** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
   drill into a submission), `lesson-preview` (← `lms_get_lesson`),
@@ -67,7 +75,12 @@ implementation.
   Again/Hard/Good/Easy self-rating → `lms_grade_review`, end-of-session
   summary with a drill-my-misses action), `study-plan`
   (← `lms_get_study_plan`: weekly progress ring, kind-grouped goal checklist
-  with check-off → `lms_complete_study_goal`, plan-next-week action).
+  with check-off → `lms_complete_study_goal`, plan-next-week action),
+  `my-certificates` (← `lms_my_certificates`: validity, verification code and
+  public verify link per credential); teacher/admin `course-certificates`
+  (← `lms_list_course_certificates`: template criteria, issued roster, and an
+  Issue button per awaiting student calling `lms_issue_certificate` — disabled
+  while the course has no active template, since nothing could be issued).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
 - **12 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course, generate-remediation-exercises,
