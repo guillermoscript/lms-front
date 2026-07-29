@@ -38,7 +38,7 @@ Three deliberate consequences of the flag, all dev-only:
 2. **Demo tools register before `installToolGuards()`**, so the role gate does
    not reject them (an inspector session with no login has no tenant role) and
    they never write to `mcp_audit_log`.
-3. **`tools/list` shows only the 18 demo tools.** With no auth there is no role,
+3. **`tools/list` shows only the 21 demo tools.** With no auth there is no role,
    so the existing policy filter hides everything else. Real tools still refuse
    to run — `LmsSession.fromContext` throws "Authentication required."
 

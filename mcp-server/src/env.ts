@@ -41,6 +41,24 @@ export function getServiceRoleKey(): string | undefined {
   return process.env.SUPABASE_SERVICE_ROLE_KEY || undefined;
 }
 
+/**
+ * Root domain the LMS tenants are served under (e.g. `lmsplatform.com`, or
+ * `lvh.me:3000` locally). Optional.
+ *
+ * Only used to build shareable absolute URLs for things a widget links out to —
+ * today the public certificate verification page,
+ * `https://<tenant-slug>.<domain>/verify/<code>`. A tenant with its own
+ * `tenants.domain` wins over this. When neither is known the widget shows the
+ * verification code alone rather than an unclickable guess.
+ */
+export function getPlatformDomain(): string | undefined {
+  const raw =
+    process.env.LMS_PLATFORM_DOMAIN ||
+    process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ||
+    undefined;
+  return raw?.trim().replace(/^https?:\/\//, "").replace(/\/$/, "") || undefined;
+}
+
 /** Whether JWTs should be cryptographically verified (disable only in local dev). */
 export function shouldVerifyJwt(): boolean {
   return process.env.NODE_ENV === "production";

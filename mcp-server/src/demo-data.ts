@@ -2018,6 +2018,174 @@ export const WIDGET_DEMOS: WidgetDemo[] = [
       },
     ],
   },
+
+  // ────────────────────────────────────────────────────────── my-certificates
+  {
+    widget: "my-certificates",
+    tool: "lms_demo_my_certificates",
+    title: "A student's own certificates (lms_my_certificates)",
+    variants: [
+      {
+        id: "default",
+        label: "3 certificates: valid, expiring, revoked",
+        output: "3 certificate(s), 1 currently valid.",
+        props: {
+          total: 3,
+          valid: 1,
+          certificates: [
+            {
+              certificate_id: "c1f0a4de-1b21-4a55-9a6e-2b0d7e4c1101",
+              course_id: 101,
+              course_title: "React 19 en la práctica",
+              verification_code: "A7K2M9QX4R1TB6VZ0P3N",
+              verify_url: "https://code-academy.lmsplatform.com/verify/A7K2M9QX4R1TB6VZ0P3N",
+              pdf_url: "https://cdn.lmsplatform.com/certs/c1f0a4de.pdf",
+              issued_at: "2026-06-18T10:22:00Z",
+              expires_at: null,
+              revoked_at: null,
+              revoke_reason: null,
+              status: "valid",
+              share_count: 4,
+              view_count: 37,
+            },
+            {
+              // Expiry is the branch schools forget exists: expiration_days is
+              // optional, so most certificates never expire and this one must
+              // not read like an error.
+              certificate_id: "c1f0a4de-1b21-4a55-9a6e-2b0d7e4c1102",
+              course_id: 102,
+              course_title: "Fundamentos de bases de datos",
+              verification_code: "B3D8W1LC5H7YE2QM6F0S",
+              verify_url: "https://code-academy.lmsplatform.com/verify/B3D8W1LC5H7YE2QM6F0S",
+              pdf_url: null,
+              issued_at: "2025-02-02T09:00:00Z",
+              expires_at: "2026-02-02T09:00:00Z",
+              revoked_at: null,
+              revoke_reason: null,
+              status: "expired",
+              share_count: 0,
+              view_count: 2,
+            },
+            {
+              // No course title: certificates.course_id is ON DELETE SET NULL,
+              // so a deleted course leaves a real, still-verifiable credential
+              // with nothing to name it.
+              certificate_id: "c1f0a4de-1b21-4a55-9a6e-2b0d7e4c1103",
+              course_id: null,
+              course_title: null,
+              verification_code: "Z9V4T2GK8J6XN1RA5C7U",
+              verify_url: null,
+              pdf_url: null,
+              issued_at: "2026-01-14T16:40:00Z",
+              expires_at: null,
+              revoked_at: "2026-03-01T11:05:00Z",
+              revoke_reason: "Issued in error during a data import.",
+              status: "revoked",
+              share_count: 0,
+              view_count: 11,
+            },
+          ],
+        },
+      },
+      {
+        id: "empty",
+        label: "No certificates yet",
+        output: "You have no certificates yet.",
+        props: { total: 0, valid: 0, certificates: [] },
+      },
+    ],
+  },
+
+  // ────────────────────────────────────────────────────── course-certificates
+  {
+    widget: "course-certificates",
+    tool: "lms_demo_course_certificates",
+    title: "Course certificate roster (lms_list_course_certificates)",
+    variants: [
+      {
+        id: "default",
+        label: "Template active, 3 issued, 3 awaiting",
+        output:
+          "3 certificate(s) issued for «React 19 en la práctica»; 3 of 6 active student(s) still awaiting one.",
+        props: {
+          course: { id: 101, title: "React 19 en la práctica" },
+          template: {
+            name: "Certificado de finalización",
+            issuer_name: "Code Academy",
+            is_active: true,
+            min_lesson_completion_pct: 100,
+            min_exam_pass_score: 70,
+            requires_all_exams: true,
+            expiration_days: null,
+          },
+          summary: { issued: 3, revoked: 1, active_students: 6, awaiting: 3 },
+          certificates: [
+            {
+              certificate_id: "d2e1b5cf-2c32-4b66-8b7f-3c1e8f5d2201",
+              student_id: "u-001",
+              student_name: "Alicia Nguyen",
+              verification_code: "A7K2M9QX4R1TB6VZ0P3N",
+              verify_url: "https://code-academy.lmsplatform.com/verify/A7K2M9QX4R1TB6VZ0P3N",
+              issued_at: "2026-06-18T10:22:00Z",
+              expires_at: null,
+              revoked_at: null,
+              revoke_reason: null,
+              status: "valid",
+            },
+            {
+              certificate_id: "d2e1b5cf-2c32-4b66-8b7f-3c1e8f5d2202",
+              student_id: "u-005",
+              student_name: "Emma Whitfield",
+              verification_code: "M4P8R2XW9K1LQ7ZC3B6T",
+              verify_url: "https://code-academy.lmsplatform.com/verify/M4P8R2XW9K1LQ7ZC3B6T",
+              issued_at: "2026-07-02T08:15:00Z",
+              expires_at: "2027-07-02T08:15:00Z",
+              revoked_at: null,
+              revoke_reason: null,
+              status: "valid",
+            },
+            {
+              // The profile row has no full_name — the widget must say so
+              // rather than invent a name out of the user id.
+              certificate_id: "d2e1b5cf-2c32-4b66-8b7f-3c1e8f5d2203",
+              student_id: "u-008",
+              student_name: null,
+              verification_code: "Q1N6H3JD7S9WF2VK8Y5R",
+              verify_url: null,
+              issued_at: "2026-07-11T19:03:00Z",
+              expires_at: null,
+              revoked_at: null,
+              revoke_reason: null,
+              status: "valid",
+            },
+          ],
+          awaiting: [
+            { student_id: "u-002", student_name: "Bruno Salas" },
+            { student_id: "u-004", student_name: "Diego Fernández" },
+            { student_id: "u-006", student_name: null },
+          ],
+        },
+      },
+      {
+        id: "no-template",
+        label: "No template — the course issues nothing",
+        output:
+          "Course «Diseño de APIs REST» has no active certificate template, so nothing is issued automatically.",
+        props: {
+          course: { id: 104, title: "Diseño de APIs REST" },
+          template: null,
+          summary: { issued: 0, revoked: 0, active_students: 4, awaiting: 4 },
+          certificates: [],
+          awaiting: [
+            { student_id: "u-011", student_name: "Lucía Ferrer" },
+            { student_id: "u-012", student_name: "Marc Oliver" },
+            { student_id: "u-013", student_name: "Nadia Rahmani" },
+            { student_id: "u-014", student_name: "Oscar Peña" },
+          ],
+        },
+      },
+    ],
+  },
 ];
 
 /** Look a demo up by tool name. */

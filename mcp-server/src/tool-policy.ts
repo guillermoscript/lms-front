@@ -68,12 +68,23 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_get_study_plan",
   "lms_complete_study_goal",
   "lms_ask_teacher",
+  // Certificates — self-scoped. `lms_issue_certificate` writes, but only ever
+  // through `issue_certificate_if_eligible`, which re-checks the course's
+  // template criteria in the database; a student naming someone else's
+  // student_id is refused in the handler.
+  "lms_my_certificates",
+  "lms_get_certificate_eligibility",
+  "lms_issue_certificate",
 ]);
 
 const TEACHER_DENY_TOOLS = new Set<string>([
   // Destructive — admin only. Analytics tools stay allowed for teachers because
   // they are ownership-scoped (a teacher only ever sees their own courses' data).
   "lms_archive_course",
+  // Revoking a credential a student already holds is destructive and public
+  // (the verify page flips to "revoked"), so it follows lms_archive_course.
+  // Teachers keep every other certificate tool for their own courses.
+  "lms_revoke_certificate",
   // School-wide cross-course aggregate — admin only. A teacher would see only a
   // partial "school" (their own courses via RLS), which is misleading; the
   // per-course tools (lms_get_course_stats, lms_get_student_progress) cover them.
