@@ -31,6 +31,7 @@ interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
 
 export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const t = useTranslations('auth.signup')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -41,20 +42,39 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const searchParams = useSearchParams()
   const nextPath = getSafeNextPath(searchParams.get('next'), '')
 
+  // Supabase returns raw English strings; map the ones users actually hit to
+  // translated copy and keep the rest as a last resort.
+  const localizedError = (err: unknown) => {
+    const raw = err instanceof Error ? err.message : ''
+    const m = raw.toLowerCase()
+    if (m.includes('already registered') || m.includes('already exists')) return t('errors.emailTaken')
+    if (m.includes('rate limit') || m.includes('too many')) return t('errors.rateLimited')
+    if (m.includes('password')) return t('errors.weakPassword')
+    return raw || t('errors.generic')
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
+    const name = fullName.trim()
+    if (!name) {
+      setError(t('errors.nameRequired'))
+      return
+    }
     setIsLoading(true)
     setError(null)
 
     try {
       await supabase.auth.signOut({ scope: 'local' })
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/confirm${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`,
           data: {
+            // handle_new_user() copies full_name into profiles. Without it every
+            // teacher/admin list shows the student as "Unknown Student".
+            full_name: name,
             // handle_new_user() reads preferred_tenant_id to stamp the JWT's
             // tenant claim; without it a fresh signup can't see tenant content.
             ...(tenantId ? { tenant_id: tenantId, preferred_tenant_id: tenantId } : {}),
@@ -70,7 +90,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       }
       router.push(data.session && nextPath ? nextPath : '/auth/sign-up-success')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      setError(localizedError(error))
     } finally {
       setIsLoading(false)
     }
@@ -91,7 +111,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       })
       if (error) throw error
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      setError(localizedError(error))
       setIsSocialLoading(false)
     }
   }
@@ -144,11 +164,25 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
               </div>
 
               <div className="grid gap-2">
+                <Label htmlFor="full-name">{t('fullName')}</Label>
+                <Input
+                  id="full-name"
+                  data-testid="signup-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder={t('fullNamePlaceholder')}
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="email">{t('email')}</Label>
                 <Input
                   id="email"
                   data-testid="signup-email"
                   type="email"
+                  autoComplete="email"
                   placeholder="m@example.com"
                   required
                   value={email}
@@ -164,6 +198,8 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                     id="password"
                     data-testid="signup-password"
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    aria-describedby="password-hint"
                     required
                     minLength={6}
                     value={password}
@@ -173,14 +209,21 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                     <InputGroupButton
                       size="icon-xs"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                     >
                       {showPassword ? <EyeOff /> : <Eye />}
                     </InputGroupButton>
                   </InputGroupAddon>
                 </InputGroup>
+                <p id="password-hint" className="text-xs text-muted-foreground">
+                  {t('passwordHint')}
+                </p>
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading || isSocialLoading} data-testid="signup-submit">
                 {isLoading ? t('submitting') : t('submit')}
               </Button>

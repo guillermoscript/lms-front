@@ -183,8 +183,18 @@
       "login": "Inicia sesión",
       "orContinueWith": "O continuar con email",
       "continueWithGoogle": "Registrarse con Google",
+      "fullName": "Nombre completo",
+      "fullNamePlaceholder": "Ada Lovelace",
+      "passwordHint": "Al menos 6 caracteres",
+      "showPassword": "Mostrar contraseña",
+      "hidePassword": "Ocultar contraseña",
       "errors": {
-        "passwordsDontMatch": "Las contraseñas no coinciden"
+        "passwordsDontMatch": "Las contraseñas no coinciden",
+        "nameRequired": "Ingresa tu nombre",
+        "emailTaken": "Ese correo ya tiene una cuenta. Inicia sesión.",
+        "weakPassword": "La contraseña debe tener al menos 6 caracteres.",
+        "rateLimited": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+        "generic": "Algo salió mal. Inténtalo de nuevo."
       }
     },
     "forgotPassword": {

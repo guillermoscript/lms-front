@@ -35,6 +35,7 @@ import {
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
@@ -181,9 +182,28 @@ export default async function CourseManagementPage({ params }: PageProps) {
     ? await supabase.from('profiles').select('id, full_name, avatar_url').in('id', enrolledUserIds)
     : { data: [] }
   const profilesMap = new Map((enrollmentProfiles || []).map((p) => [p.id, p]))
+
+  // The email/password sign-up form never collects a name (only Google gives one),
+  // so handle_new_user() leaves profiles.full_name NULL and every row rendered
+  // "Unknown Student". Fall back to the auth email — profiles has no email column,
+  // so it only comes from the admin API, one call per user (chunked to spare GoTrue).
+  const namelessIds = enrolledUserIds.filter((id) => !profilesMap.get(id)?.full_name)
+  const emailMap = new Map<string, string>()
+  if (namelessIds.length > 0) {
+    const adminClient = createAdminClient()
+    for (let i = 0; i < namelessIds.length; i += 20) {
+      const chunk = namelessIds.slice(i, i + 20)
+      const results = await Promise.all(chunk.map((id) => adminClient.auth.admin.getUserById(id)))
+      results.forEach((r, j) => {
+        if (r.data?.user?.email) emailMap.set(chunk[j], r.data.user.email)
+      })
+    }
+  }
+
   const enrollments = rawEnrollments.map((e) => ({
     ...e,
     profiles: profilesMap.get(e.user_id) || null,
+    email: emailMap.get(e.user_id) || null,
   }))
 
   return (
