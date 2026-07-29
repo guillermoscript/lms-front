@@ -55,7 +55,10 @@ export default async function EditLessonPage({ params }: PageProps) {
   const [{ data: lesson }, { data: resources }, uiState] = await Promise.all([
     supabase
       .from('lessons')
-      .select('*')
+      // The AI task lives in lessons_ai_tasks — that is what the student runtime
+      // reads and what the editor writes. The lessons.ai_task_* columns are
+      // legacy and only ever populated by a version restore.
+      .select('*, lessons_ai_tasks(task_instructions, system_prompt)')
       .eq('id', parseInt(lessonId))
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
@@ -72,6 +75,10 @@ export default async function EditLessonPage({ params }: PageProps) {
   if (!lesson) {
     notFound()
   }
+
+  const aiTask = Array.isArray(lesson.lessons_ai_tasks)
+    ? lesson.lessons_ai_tasks[0]
+    : lesson.lessons_ai_tasks
 
   return (
     <div className="min-h-screen bg-background">
@@ -93,8 +100,11 @@ export default async function EditLessonPage({ params }: PageProps) {
           sequence: lesson.sequence,
           status: lesson.status as 'draft' | 'published' | 'archived',
           publish_at: lesson.publish_at || null,
-          ai_task_description: lesson.ai_task_description || null,
-          ai_task_instructions: lesson.ai_task_instructions || null,
+          // Deliberately not falling back to lessons.ai_task_* here: those
+          // columns can hold a task the student runtime no longer serves, and
+          // showing it would tell the teacher a removed task is still live.
+          ai_task_description: aiTask?.task_instructions || null,
+          ai_task_instructions: aiTask?.system_prompt || null,
           is_preview: lesson.is_preview ?? null,
           resources: resources || [],
         }}

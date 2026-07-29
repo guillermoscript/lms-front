@@ -1073,6 +1073,92 @@
         "removeOption": "Remove option",
         "dragQuestion": "Drag to reorder question"
       },
+      "versionHistory": {
+        "trigger": "History",
+        "title": "Version History",
+        "versionsSaved": "{count, plural, =0 {No versions saved} one {# version saved} other {# versions saved}}",
+        "loading": "Loading history…",
+        "loadFailed": "Failed to load version history",
+        "emptyTitle": "No versions yet",
+        "emptyBody": "Versions are created automatically when you save changes.",
+        "latest": "Latest",
+        "modePreview": "Preview",
+        "modeCompare": "Compare",
+        "restore": "Restore this version",
+        "restored": "Restored to version {version}",
+        "restoreFailed": "Restore failed: {message}",
+        "confirmTitle": "Restore version {version}?",
+        "confirmBody": "This will revert the content to version {version}. Your current state will be saved as a new version, so you can always undo this restore.",
+        "cancel": "Cancel",
+        "confirmAction": "Restore",
+        "selectTitle": "Select a version",
+        "selectBody": "Choose a version from the timeline to preview its content or compare changes.",
+        "comparingWithCurrent": "Comparing with current state",
+        "preview": {
+          "untitledLesson": "Untitled lesson",
+          "untitledExam": "Untitled exam",
+          "untitledExercise": "Untitled exercise",
+          "untitledTemplate": "Untitled template",
+          "video": "Video",
+          "content": "Content",
+          "source": "Source",
+          "rendered": "Rendered",
+          "showAll": "Show all",
+          "showAllLines": "Show all {count} lines",
+          "collapse": "Collapse",
+          "aiTaskConfig": "AI task configuration",
+          "taskPrompt": "Task prompt",
+          "systemPrompt": "System prompt",
+          "instructions": "Instructions",
+          "taskTemplate": "Task template",
+          "systemTemplate": "System prompt template",
+          "questions": "Questions",
+          "showQuestions": "{count, plural, one {Show # question} other {Show # questions}}",
+          "duration": "Duration",
+          "durationValue": "{minutes} min",
+          "timeLimit": "Time limit",
+          "status": {
+            "published": "Published",
+            "draft": "Draft",
+            "archived": "Archived"
+          }
+        },
+        "diff": {
+          "back": "Back to history",
+          "heading": "Comparing changes",
+          "versusCurrent": "{date} vs current state",
+          "changes": "{count, plural, one {# change} other {# changes}}",
+          "changesLabel": "{count, plural, one {Change} other {Changes}}",
+          "removed": "Removed",
+          "added": "Added",
+          "changed": "Changed",
+          "version": "Version",
+          "current": "Current",
+          "empty": "(empty)",
+          "noDiffTitle": "No differences found",
+          "noDiffBody": "This version is identical to the current state.",
+          "showUnchanged": "{count, plural, one {Show # unchanged field} other {Show # unchanged fields}}",
+          "hideUnchanged": "{count, plural, one {Hide # unchanged field} other {Hide # unchanged fields}}",
+          "fields": {
+            "title": "Title",
+            "description": "Description",
+            "content": "Content",
+            "video_url": "Video URL",
+            "ai_task_description": "AI task prompt",
+            "ai_task_instructions": "AI grading instructions",
+            "duration": "Duration (minutes)",
+            "questions": "Questions",
+            "instructions": "Instructions",
+            "exercise_type": "Type",
+            "difficulty_level": "Difficulty",
+            "time_limit": "Time limit",
+            "name": "Name",
+            "task_description_template": "Task template",
+            "system_prompt_template": "System template",
+            "variables": "Variables"
+          }
+        }
+      },
       "lessonEditor": {
         "generateQuestions": {
           "button": "Generate questions",
@@ -1175,10 +1261,27 @@
         "aiTaskPromptPlaceholder": "e.g. Present yourself in English using at least 5 sentences.",
         "aiTaskPromptHint": "The task students will see. Be specific about what they need to do.",
         "aiGradingInsLabel": "Grading Instructions (hidden from students)",
+        "aiGradingInsLabelShort": "Grading instructions",
+        "aiHiddenBadge": "Hidden from students",
         "aiGradingInsPlaceholder": "e.g. Check for correct grammar, at least 5 sentences, and a greeting.",
         "aiGradingInsHint": "Tell the AI how to evaluate whether the student completed the task correctly.",
         "optional": "Optional",
-        "aiTaskOptionalHint": "Skip this if the lesson doesn't need a practice task.",
+        "aiTaskOptionalHint": "Skip it if the lesson doesn't need a practice task.",
+        "aiTaskStateSaved": "Saved",
+        "aiTaskStateUnsaved": "Unsaved changes",
+        "aiTaskStateNone": "No task yet",
+        "aiTaskRemoveWarning": "Both fields are empty. Saving the lesson removes this task, and students will no longer see it.",
+        "mdWrite": "Write",
+        "mdPreview": "Preview",
+        "mdPreviewEmpty": "Nothing to preview yet. Write the task on the Write tab.",
+        "mdBold": "Bold",
+        "mdItalic": "Italic",
+        "mdHeading": "Heading",
+        "mdList": "Bulleted list",
+        "mdLink": "Link",
+        "mdCode": "Code block",
+        "mdLinkText": "link text",
+        "charCount": "{count, plural, one {# character} other {# characters}}",
         "contentLabel": "Content",
         "contentPlaceholder": "# Lesson Content...",
         "contentDefault": "# New topic\n\nWrite the lesson content here...\n\n<Callout type=\"info\">Add learning objectives here</Callout>",
@@ -1231,6 +1334,249 @@
           "save": {
             "title": "Save & Publish",
             "description": "Save Draft keeps your work without making it visible to students. Publish makes the lesson live immediately."
+          }
+        },
+        "blockEditor": {
+          "addBlock": "Add block",
+          "dragBlock": "Drag block",
+          "moveUp": "Move up",
+          "moveDown": "Move down",
+          "moreOptions": "More options",
+          "duplicate": "Duplicate",
+          "remove": "Delete",
+          "unknownBlock": "Unknown block",
+          "explanationLabel": "Explanation (optional)",
+          "explanationPlaceholder": "Explanation shown after answering…",
+          "expiringUrl": "This signed URL expires (~1 hour) and will stop working for students. {hint}",
+          "groups": {
+            "text": "Text",
+            "media": "Media",
+            "interactive": "Interactive",
+            "data": "Data",
+            "structure": "Structure"
+          },
+          "blocks": {
+            "text": {
+              "label": "Text",
+              "description": "Formatted paragraph"
+            },
+            "heading": {
+              "label": "Heading",
+              "description": "Title or subtitle"
+            },
+            "callout": {
+              "label": "Callout",
+              "description": "Highlighted note (info, warning, etc.)"
+            },
+            "code": {
+              "label": "Code",
+              "description": "Code block with highlighting"
+            },
+            "quiz": {
+              "label": "Quiz",
+              "description": "Multiple-choice question"
+            },
+            "spoiler": {
+              "label": "Spoiler",
+              "description": "Expandable hidden content"
+            },
+            "steps": {
+              "label": "Steps",
+              "description": "Numbered list of steps"
+            },
+            "vocabulary": {
+              "label": "Vocabulary",
+              "description": "Word with translation"
+            },
+            "definition": {
+              "label": "Definition",
+              "description": "Term with definition"
+            },
+            "image": {
+              "label": "Image",
+              "description": "Image with caption"
+            },
+            "video": {
+              "label": "Video",
+              "description": "Embedded video"
+            },
+            "divider": {
+              "label": "Divider",
+              "description": "Dividing line"
+            },
+            "audio": {
+              "label": "Audio",
+              "description": "Audio player"
+            },
+            "embed": {
+              "label": "Embed",
+              "description": "Embedded content (iframe)"
+            },
+            "file-download": {
+              "label": "File",
+              "description": "Downloadable file"
+            },
+            "glossary": {
+              "label": "Glossary",
+              "description": "List of terms and definitions"
+            },
+            "comparison": {
+              "label": "Comparison",
+              "description": "Side-by-side comparison"
+            },
+            "table": {
+              "label": "Table",
+              "description": "Table with headers and rows"
+            },
+            "flashcard-set": {
+              "label": "Flashcards",
+              "description": "Study cards"
+            },
+            "fill-in-the-blank": {
+              "label": "Fill in",
+              "description": "Sentence with blanks"
+            },
+            "matching-pairs": {
+              "label": "Match",
+              "description": "Connect terms with answers"
+            },
+            "ordering": {
+              "label": "Order",
+              "description": "Put items in sequence"
+            },
+            "checkpoint": {
+              "label": "Checkpoint",
+              "description": "Review exercise linked to the lesson"
+            }
+          },
+          "text": {
+            "placeholder": "Write your text here… (supports Markdown)"
+          },
+          "heading": {
+            "placeholder": "Heading title"
+          },
+          "callout": {
+            "placeholder": "Callout content…",
+            "info": "Info",
+            "warning": "Warning",
+            "success": "Success",
+            "error": "Error"
+          },
+          "code": {
+            "filenamePlaceholder": "file.js (optional)",
+            "placeholder": "// Your code here…"
+          },
+          "quiz": {
+            "questionPlaceholder": "Write your question…",
+            "optionsHint": "Options (click the circle to mark the correct one)",
+            "markCorrect": "Mark option {number} as correct",
+            "optionPlaceholder": "Option {number}",
+            "removeOption": "Remove option",
+            "addOption": "Add option"
+          },
+          "spoiler": {
+            "title": "Spoiler / Hidden content",
+            "buttonPlaceholder": "Button text (e.g. Show solution)",
+            "contentPlaceholder": "Hidden content…"
+          },
+          "steps": {
+            "titlePlaceholder": "Step title",
+            "descriptionPlaceholder": "Step description…",
+            "removeStep": "Remove step",
+            "addStep": "Add step"
+          },
+          "vocabulary": {
+            "word": "Word",
+            "translation": "Translation",
+            "audioUrl": "Audio URL (optional)"
+          },
+          "definition": {
+            "termPlaceholder": "Term to define",
+            "definitionPlaceholder": "Definition…"
+          },
+          "image": {
+            "urlPlaceholder": "Image URL",
+            "upload": "Upload",
+            "uploadHint": "Use the “Upload” button to host it permanently.",
+            "altPlaceholder": "Alt text (accessibility)",
+            "captionPlaceholder": "Caption (optional)"
+          },
+          "video": {
+            "urlPlaceholder": "YouTube or Vimeo URL (e.g. https://www.youtube.com/watch?v=…)",
+            "unrecognized": "Unrecognized URL. Please use a YouTube or Vimeo link.",
+            "previewTitle": "Video preview"
+          },
+          "audio": {
+            "urlPlaceholder": "Audio URL (e.g. https://example.com/audio.mp3)",
+            "titlePlaceholder": "Title (optional)",
+            "unsupported": "Your browser does not support the audio element.",
+            "uploadHint": "Use a permanent link (external hosting)."
+          },
+          "embed": {
+            "urlPlaceholder": "Embed URL (e.g. https://codepen.io/…)",
+            "titlePlaceholder": "Title (optional)",
+            "captionPlaceholder": "Caption (optional)",
+            "previewTitle": "Embed preview"
+          },
+          "fileDownload": {
+            "urlPlaceholder": "File URL (e.g. https://example.com/document.pdf)",
+            "uploadHint": "Attach the file as a lesson resource (resource links are regenerated automatically).",
+            "filenamePlaceholder": "Filename (e.g. worksheet.pdf)",
+            "descriptionPlaceholder": "Description (optional)"
+          },
+          "glossary": {
+            "termPlaceholder": "Term",
+            "definitionPlaceholder": "Definition",
+            "removeTerm": "Remove term",
+            "addTerm": "Add term"
+          },
+          "comparison": {
+            "titlePlaceholder": "Title",
+            "positive": "Positive",
+            "negative": "Negative",
+            "neutral": "Neutral",
+            "pointPlaceholder": "Point {number}",
+            "removePoint": "Remove point",
+            "addPoint": "Add point",
+            "sideA": "Side A",
+            "sideB": "Side B",
+            "summaryPlaceholder": "Summary (optional)"
+          },
+          "table": {
+            "alternatingRows": "Alternating rows",
+            "colPlaceholder": "Col {number}",
+            "removeColumn": "Remove column",
+            "removeRow": "Remove row",
+            "addRow": "Row",
+            "addColumn": "Column"
+          },
+          "flashcards": {
+            "front": "Front",
+            "back": "Back",
+            "removeCard": "Remove card",
+            "addCard": "Add card"
+          },
+          "fillInTheBlank": {
+            "segmentsLabel": "Segments (plain text and blanks)",
+            "removeSegment": "Remove segment",
+            "addText": "Add text",
+            "addBlank": "Add blank",
+            "blankPlaceholder": "Correct answer…",
+            "textPlaceholder": "Text…"
+          },
+          "matchingPairs": {
+            "termHeader": "Term",
+            "pairHeader": "Match",
+            "termPlaceholder": "Term…",
+            "pairPlaceholder": "Match…",
+            "removePair": "Remove pair",
+            "addPair": "Add pair"
+          },
+          "ordering": {
+            "hint": "Enter the items in the correct order",
+            "itemPlaceholder": "Item {number}",
+            "removeItem": "Remove item",
+            "addItem": "Add item"
           }
         }
       },

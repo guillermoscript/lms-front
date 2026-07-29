@@ -9,7 +9,6 @@ import {
   IconLayoutGrid,
   IconPaperclip,
   IconRobot,
-  IconCheck,
 } from '@tabler/icons-react'
 
 export interface LessonEditorProps {
@@ -53,9 +52,17 @@ export interface StepDefinition {
   complete: boolean
 }
 
+/** The AI task as it exists on the server, so the editor can tell a saved task
+ *  apart from an unsaved edit without re-fetching. */
+export interface SavedAITask {
+  description: string
+  instructions: string
+}
+
 export interface LessonEditorContextValue {
   // State
   formData: LessonFormData
+  savedTask: SavedAITask
   loading: boolean
   error: string | null
   saveSuccess: boolean
@@ -126,6 +133,11 @@ export function LessonEditorProvider({
     is_preview: initialData?.is_preview ?? false,
   })
 
+  const [savedTask, setSavedTask] = useState<SavedAITask>({
+    description: initialData?.ai_task_description?.trim() || '',
+    instructions: initialData?.ai_task_instructions?.trim() || '',
+  })
+
   const updateField = useCallback(
     <K extends keyof LessonFormData>(key: K, value: LessonFormData[K]) => {
       setFormData((prev) => ({ ...prev, [key]: value }))
@@ -169,6 +181,11 @@ export function LessonEditorProvider({
         return
       }
 
+      setSavedTask({
+        description: formData.ai_task_description.trim(),
+        instructions: formData.ai_task_instructions.trim(),
+      })
+
       if (publish) {
         router.push(`/dashboard/teacher/courses/${courseId}`)
       } else if (!initialData) {
@@ -179,9 +196,9 @@ export function LessonEditorProvider({
         setSaveSuccess(true)
         setLoading(false)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving lesson:', err)
-      setError(err.message || t('saveError'))
+      setError(err instanceof Error ? err.message : t('saveError'))
       setLoading(false)
     }
   }
@@ -222,12 +239,12 @@ export function LessonEditorProvider({
   ]
 
   const value = useMemo(() => ({
-    formData, loading, error, saveSuccess, activeStep, showPreview, contentMode,
+    formData, savedTask, loading, error, saveSuccess, activeStep, showPreview, contentMode,
     initialData, courseId, courseTitle,
     updateField, setFormData, handleSave, setActiveStep, setShowPreview,
     setContentMode, setError,
     isDetailsComplete, isContentComplete, hasAITask, hasResources, steps,
-  }), [formData, loading, error, saveSuccess, activeStep, showPreview, contentMode,
+  }), [formData, savedTask, loading, error, saveSuccess, activeStep, showPreview, contentMode,
     initialData, courseId, courseTitle, isDetailsComplete, isContentComplete, hasAITask, hasResources])
 
   return (

@@ -43,7 +43,7 @@ export async function createLesson(courseId: number, data: LessonFormData) {
 
     if (error) throw error
 
-    if (data.ai_task_description || data.ai_task_instructions) {
+    if (data.ai_task_description?.trim() || data.ai_task_instructions?.trim()) {
       const { error: taskError } = await ctx.supabase
         .from('lessons_ai_tasks')
         .upsert(
@@ -92,7 +92,7 @@ export async function updateLesson(
 
     if (error) throw error
 
-    if (data.ai_task_description || data.ai_task_instructions) {
+    if (data.ai_task_description?.trim() || data.ai_task_instructions?.trim()) {
       const { error: taskError } = await ctx.supabase
         .from('lessons_ai_tasks')
         .upsert(
@@ -103,6 +103,14 @@ export async function updateLesson(
           },
           { onConflict: 'lesson_id' }
         )
+      if (taskError) throw taskError
+    } else {
+      // Both fields cleared means the teacher removed the task. Without this the
+      // old task stays live for students while the editor shows it as gone.
+      const { error: taskError } = await ctx.supabase
+        .from('lessons_ai_tasks')
+        .delete()
+        .eq('lesson_id', lessonId)
       if (taskError) throw taskError
     }
 
