@@ -183,8 +183,18 @@
       "login": "Login",
       "orContinueWith": "Or continue with email",
       "continueWithGoogle": "Sign up with Google",
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Ada Lovelace",
+      "passwordHint": "At least 6 characters",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "errors": {
-        "passwordsDontMatch": "Passwords do not match"
+        "passwordsDontMatch": "Passwords do not match",
+        "nameRequired": "Please enter your name",
+        "emailTaken": "That email already has an account. Log in instead.",
+        "weakPassword": "Your password must be at least 6 characters.",
+        "rateLimited": "Too many attempts. Wait a minute and try again.",
+        "generic": "Something went wrong. Please try again."
       }
     },
     "forgotPassword": {

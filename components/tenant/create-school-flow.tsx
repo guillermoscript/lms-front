@@ -45,6 +45,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
   const [signedInEmail, setSignedInEmail] = useState(user?.email || '')
 
   // Account state
+  const [ownerName, setOwnerName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -86,6 +87,12 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
     e.preventDefault()
     setError(null)
 
+    const name = ownerName.trim()
+    if (!name) {
+      setError('Please enter your name')
+      return
+    }
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
       return
@@ -102,6 +109,9 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=/create-school`,
+        // handle_new_user() copies full_name into profiles; without it the owner
+        // shows up as "Unknown" in every people list.
+        data: { full_name: name },
       },
     })
 
@@ -264,17 +274,33 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="owner-name" className="text-zinc-300">Your name</Label>
+                <Input
+                  id="owner-name"
+                  type="text"
+                  autoComplete="name"
+                  value={ownerName}
+                  onChange={(e) => setOwnerName(e.target.value)}
+                  placeholder="Ada Lovelace"
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  required
+                  disabled={loading}
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="email" className="text-zinc-300">Email</Label>
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="bg-zinc-800 border-zinc-700 text-white"
                   required
                   disabled={loading}
-                  autoFocus
                 />
               </div>
 

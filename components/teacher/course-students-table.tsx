@@ -25,6 +25,8 @@ interface StudentEnrollment {
   enrollment_date: string
   status: string
   profiles?: { full_name?: string | null; avatar_url?: string | null } | null
+  /** Auth email, resolved server-side when the profile has no full_name. */
+  email?: string | null
 }
 
 interface IssuedCertificate {
@@ -69,17 +71,22 @@ export function CourseStudentsTable({ enrollments, issuedCertificates, courseId 
           </TableHeader>
           <TableBody>
             {paginatedEnrollments.length > 0 ? (
-              paginatedEnrollments.map((enrollment) => (
+              paginatedEnrollments.map((enrollment) => {
+                // Most students sign up without a name, so the email is the only
+                // thing that identifies them — show it instead of "Unknown Student".
+                const displayName =
+                  enrollment.profiles?.full_name || enrollment.email || t('studentList.unknownStudent')
+                return (
                 <TableRow key={enrollment.enrollment_id}>
                   <TableCell className="px-4">
                     <div className="flex items-center gap-3">
                       <Avatar size="sm">
                         {enrollment.profiles?.avatar_url && (
-                          <AvatarImage src={enrollment.profiles.avatar_url} alt={enrollment.profiles?.full_name || ''} />
+                          <AvatarImage src={enrollment.profiles.avatar_url} alt={displayName} />
                         )}
-                        <AvatarFallback>{getInitials(enrollment.profiles?.full_name)}</AvatarFallback>
+                        <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
                       </Avatar>
-                      <span className="font-medium">{enrollment.profiles?.full_name || t('studentList.unknownStudent')}</span>
+                      <span className="font-medium truncate">{displayName}</span>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 whitespace-nowrap text-muted-foreground">
@@ -98,12 +105,13 @@ export function CourseStudentsTable({ enrollments, issuedCertificates, courseId 
                     <IssueCertificateButton
                       courseId={courseId}
                       userId={enrollment.user_id}
-                      studentName={enrollment.profiles?.full_name || t('studentList.unknownStudent')}
+                      studentName={displayName}
                       existingCertificateId={issuedCertificates.find((c) => c.user_id === enrollment.user_id)?.id}
                     />
                   </TableCell>
                 </TableRow>
-              ))
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className="py-12 text-center">
