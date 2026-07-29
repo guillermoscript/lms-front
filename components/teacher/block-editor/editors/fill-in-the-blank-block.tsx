@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { FillInTheBlankBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +15,7 @@ interface FillInTheBlankBlockEditorProps {
 }
 
 export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const updateSegment = (index: number, value: string) => {
     const newSegments = [...block.segments]
     newSegments[index] = { ...newSegments[index], value }
@@ -32,12 +35,12 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
     <div className="space-y-3 rounded-lg border bg-gradient-to-br from-teal-500/5 to-cyan-500/5 p-4">
       <div className="flex items-center gap-2 text-sm font-medium text-teal-600">
         <IconTextPlus className="h-4 w-4" />
-        Completar espacios en blanco
+        {t('blocks.fill-in-the-blank.label')}
       </div>
 
       <div className="space-y-2">
         <span className="text-xs text-muted-foreground">
-          Segmentos (texto normal y espacios en blanco)
+          {t('fillInTheBlank.segmentsLabel')}
         </span>
         {block.segments.map((segment, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -52,7 +55,7 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
             <Input
               value={segment.value}
               onChange={(e) => updateSegment(index, e.target.value)}
-              placeholder={segment.type === 'blank' ? 'Respuesta correcta...' : 'Texto...'}
+              placeholder={t(segment.type === 'blank' ? 'fillInTheBlank.blankPlaceholder' : 'fillInTheBlank.textPlaceholder')}
               className={cn(
                 'flex-1',
                 segment.type === 'blank' && 'border-dashed border-primary'
@@ -63,7 +66,7 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
               onClick={() => removeSegment(index)}
               disabled={block.segments.length <= 1}
               className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
-              aria-label="Eliminar segmento"
+              aria-label={t('fillInTheBlank.removeSegment')}
             >
               <IconTrash className="h-4 w-4" />
             </button>
@@ -80,7 +83,7 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
           className="flex-1"
         >
           <IconPlus className="h-4 w-4 mr-2" />
-          Añadir texto
+          {t('fillInTheBlank.addText')}
         </Button>
         <Button
           type="button"
@@ -90,16 +93,16 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
           className="flex-1"
         >
           <IconPlus className="h-4 w-4 mr-2" />
-          Añadir blanco
+          {t('fillInTheBlank.addBlank')}
         </Button>
       </div>
 
       <div>
-        <span className="text-xs text-muted-foreground">Explicación (opcional)</span>
+        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}
-          placeholder="Explicación que se mostrará después de responder..."
+          placeholder={t('explanationPlaceholder')}
           className="mt-1 min-h-[60px]"
         />
       </div>

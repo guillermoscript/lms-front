@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   IconPlus,
   IconAlignLeft,
@@ -32,7 +33,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { BLOCK_METAS, type BlockType } from './types'
+import type { BlockType } from './types'
 import { cn } from '@/lib/utils'
 
 // Map block types to actual Tabler icons and colors
@@ -65,23 +66,23 @@ const BLOCK_ICONS: Record<BlockType, { icon: typeof IconAlignLeft; color: string
 // Group blocks by category for the palette
 const BLOCK_GROUPS = [
   {
-    label: 'Texto',
+    key: 'text',
     types: ['text', 'heading', 'callout'] as BlockType[],
   },
   {
-    label: 'Media',
+    key: 'media',
     types: ['image', 'video', 'audio', 'embed', 'file-download', 'code'] as BlockType[],
   },
   {
-    label: 'Interactivo',
+    key: 'interactive',
     types: ['quiz', 'flashcard-set', 'fill-in-the-blank', 'matching-pairs', 'ordering', 'checkpoint'] as BlockType[],
   },
   {
-    label: 'Datos',
+    key: 'data',
     types: ['table', 'comparison', 'glossary', 'definition'] as BlockType[],
   },
   {
-    label: 'Estructura',
+    key: 'structure',
     types: ['steps', 'spoiler', 'vocabulary', 'divider'] as BlockType[],
   },
 ]
@@ -96,6 +97,7 @@ interface AddBlockMenuProps {
 const PALETTE_POPOVER_CLASS = 'w-[360px] p-3'
 
 export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const [open, setOpen] = useState(false)
 
   const handleSelect = (type: BlockType) => {
@@ -130,7 +132,7 @@ export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProp
           className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/30 px-4 py-3 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
         >
           <IconPlus className="h-4 w-4" />
-          Añadir bloque
+          {t('addBlock')}
         </PopoverTrigger>
         <PopoverContent align="center" side="bottom" className={PALETTE_POPOVER_CLASS} sideOffset={4}>
           <BlockPalette onSelect={handleSelect} />
@@ -144,7 +146,7 @@ export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProp
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className="inline-flex items-center gap-1 rounded-md p-1 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        aria-label="Añadir bloque"
+        aria-label={t('addBlock')}
       >
         <IconPlus className="h-4 w-4" />
       </PopoverTrigger>
@@ -157,18 +159,17 @@ export function AddBlockMenu({ onSelect, position = 'inline' }: AddBlockMenuProp
 
 // Visual grid palette showing all block types grouped
 function BlockPalette({ onSelect }: { onSelect: (type: BlockType) => void }) {
-  const metaMap = Object.fromEntries(BLOCK_METAS.map((m) => [m.type, m]))
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
 
   return (
     <div className="space-y-3">
       {BLOCK_GROUPS.map((group) => (
-        <div key={group.label}>
+        <div key={group.key}>
           <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {group.label}
+            {t(`groups.${group.key}`)}
           </p>
           <div className="grid grid-cols-3 gap-1.5">
             {group.types.map((type) => {
-              const meta = metaMap[type]
               const iconData = BLOCK_ICONS[type]
               const Icon = iconData.icon
               return (
@@ -186,7 +187,7 @@ function BlockPalette({ onSelect }: { onSelect: (type: BlockType) => void }) {
                     <Icon className={cn('h-4 w-4', iconData.color)} />
                   </div>
                   <span className="text-xs font-medium leading-tight text-foreground/80 group-hover:text-foreground">
-                    {meta?.label || type}
+                    {t(`blocks.${type}.label`)}
                   </span>
                 </button>
               )

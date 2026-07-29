@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { StepsBlock, StepItem } from '../types'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +14,7 @@ interface StepsBlockEditorProps {
 }
 
 export function StepsBlockEditor({ block, onChange }: StepsBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const addStep = () => {
     onChange({
       steps: [...block.steps, { title: `Paso ${block.steps.length + 1}`, content: '' }],
@@ -34,7 +37,7 @@ export function StepsBlockEditor({ block, onChange }: StepsBlockEditorProps) {
     <div className="space-y-3 rounded-lg border p-3">
       <div className="flex items-center gap-2 text-sm font-medium">
         <IconListNumbers className="h-4 w-4 text-primary" />
-        Pasos
+        {t('blocks.steps.label')}
       </div>
 
       <div className="space-y-3">
@@ -47,13 +50,13 @@ export function StepsBlockEditor({ block, onChange }: StepsBlockEditorProps) {
               <Input
                 value={step.title}
                 onChange={(e) => updateStep(index, { title: e.target.value })}
-                placeholder="Título del paso"
+                placeholder={t('steps.titlePlaceholder')}
                 className="font-medium h-8"
               />
               <Textarea
                 value={step.content}
                 onChange={(e) => updateStep(index, { content: e.target.value })}
-                placeholder="Descripción del paso..."
+                placeholder={t('steps.descriptionPlaceholder')}
                 className="min-h-[60px]"
               />
             </div>
@@ -62,7 +65,7 @@ export function StepsBlockEditor({ block, onChange }: StepsBlockEditorProps) {
               onClick={() => removeStep(index)}
               disabled={block.steps.length <= 1}
               className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30 self-start"
-              aria-label="Eliminar paso"
+              aria-label={t('steps.removeStep')}
             >
               <IconTrash className="h-4 w-4" />
             </button>
@@ -72,7 +75,7 @@ export function StepsBlockEditor({ block, onChange }: StepsBlockEditorProps) {
 
       <Button type="button" variant="outline" size="sm" onClick={addStep} className="w-full">
         <IconPlus className="h-4 w-4 mr-2" />
-        Añadir paso
+        {t('steps.addStep')}
       </Button>
     </div>
   )

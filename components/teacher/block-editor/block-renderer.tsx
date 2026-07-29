@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type {
   Block,
   TextBlock,
@@ -56,6 +58,8 @@ interface BlockRendererProps {
 }
 
 export function BlockRenderer({ block, onChange, checkpointContext }: BlockRendererProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
+
   switch (block.type) {
     case 'text':
       return <TextBlockEditor block={block} onChange={onChange} />
@@ -106,6 +110,6 @@ export function BlockRenderer({ block, onChange, checkpointContext }: BlockRende
         <CheckpointBlockEditor block={block} onChange={onChange} checkpointContext={checkpointContext} />
       )
     default:
-      return <div className="text-muted-foreground text-sm">Bloque desconocido</div>
+      return <div className="text-muted-foreground text-sm">{t('unknownBlock')}</div>
   }
 }

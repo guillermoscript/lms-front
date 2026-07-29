@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -22,7 +23,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { IconHistory, IconLoader2, IconRestore, IconGitCompare, IconEye, IconClock, IconDots } from '@tabler/icons-react'
+import { IconHistory, IconLoader2, IconRestore, IconGitCompare, IconEye, IconClock } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { VersionPreview } from './version-preview'
 import { VersionDiffPanel } from './version-diff-panel'
@@ -58,22 +59,21 @@ const ID_PARAMS: Record<string, string> = {
   prompt_template: '_template_id',
 }
 
-function timeAgo(dateStr: string): string {
-  const now = Date.now()
-  const then = new Date(dateStr).getTime()
-  const diffMs = now - then
-  const minutes = Math.floor(diffMs / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return new Date(dateStr).toLocaleDateString()
+/** Relative age in the reader's language: "16 days ago" / "hace 16 días". */
+function timeAgo(dateStr: string, locale: string): string {
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  const minutes = Math.round(diffMs / 60000)
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  if (Math.abs(minutes) < 60) return rtf.format(-minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  if (Math.abs(hours) < 24) return rtf.format(-hours, 'hour')
+  const days = Math.round(hours / 24)
+  if (Math.abs(days) < 30) return rtf.format(-days, 'day')
+  return rtf.format(-Math.round(days / 30), 'month')
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
+function formatDate(dateStr: string, locale: string): string {
+  return new Date(dateStr).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -82,25 +82,21 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function formatDateShort(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString('en-US', {
+function formatTime(dateStr: string, locale: string): string {
+  return new Date(dateStr).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   })
 }
 
 /** Group versions by date for the timeline sidebar */
-function groupByDate(versions: ContentVersion[]): { date: string; versions: ContentVersion[] }[] {
+function groupByDate(
+  versions: ContentVersion[],
+  locale: string
+): { date: string; versions: ContentVersion[] }[] {
   const groups: Record<string, ContentVersion[]> = {}
   for (const v of versions) {
-    const dateKey = new Date(v.created_at).toLocaleDateString('en-US', {
+    const dateKey = new Date(v.created_at).toLocaleDateString(locale, {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -112,6 +108,8 @@ function groupByDate(versions: ContentVersion[]): { date: string; versions: Cont
 }
 
 export function VersionHistorySheet({ contentType, contentId, onRestore, currentSnapshot }: VersionHistorySheetProps) {
+  const t = useTranslations('dashboard.teacher.versionHistory')
+  const locale = useLocale()
   const [open, setOpen] = useState(false)
   const [versions, setVersions] = useState<ContentVersion[]>([])
   const [loading, setLoading] = useState(false)
@@ -132,7 +130,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
       .limit(50)
 
     if (error) {
-      toast.error('Failed to load version history')
+      toast.error(t('loadFailed'))
     } else {
       setVersions(data || [])
       if (data && data.length > 0) {
@@ -140,7 +138,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
       }
     }
     setLoading(false)
-  }, [contentType, contentId])
+  }, [contentType, contentId, t])
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen)
@@ -165,23 +163,23 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
     })
 
     if (error) {
-      toast.error(`Restore failed: ${error.message}`)
+      toast.error(t('restoreFailed', { message: error.message }))
     } else {
-      toast.success(`Restored to version ${versionNumber}`)
+      toast.success(t('restored', { version: versionNumber }))
       setOpen(false)
       onRestore?.()
     }
     setRestoring(false)
   }
 
-  const dateGroups = groupByDate(versions)
+  const dateGroups = groupByDate(versions, locale)
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpen}>
         <DialogTrigger render={<Button variant="outline" size="sm" className="gap-2" />}>
           <IconHistory aria-hidden="true" className="h-4 w-4" />
-          History
+          {t('trigger')}
         </DialogTrigger>
         <DialogContent
           showCloseButton
@@ -196,11 +194,11 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
               <div>
                 <DialogHeader className="p-0 space-y-0">
                   <DialogTitle className="text-base font-semibold leading-none">
-                    Version History
+                    {t('title')}
                   </DialogTitle>
                 </DialogHeader>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {versions.length} {versions.length === 1 ? 'version' : 'versions'} saved
+                  {t('versionsSaved', { count: versions.length })}
                 </p>
               </div>
             </div>
@@ -221,7 +219,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                       )}
                     >
                       <IconEye aria-hidden="true" className="h-3.5 w-3.5" />
-                      Preview
+                      {t('modePreview')}
                     </button>
                     <button
                       onClick={() => setViewMode('diff')}
@@ -234,7 +232,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                       )}
                     >
                       <IconGitCompare aria-hidden="true" className="h-3.5 w-3.5" />
-                      Compare
+                      {t('modeCompare')}
                     </button>
                   </div>
                 )}
@@ -250,7 +248,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                   ) : (
                     <IconRestore aria-hidden="true" className="h-3.5 w-3.5" />
                   )}
-                  Restore this version
+                  {t('restore')}
                 </Button>
               </div>
             )}
@@ -264,7 +262,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <IconLoader2 aria-hidden="true" className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Loading history...</p>
+                    <p className="text-xs text-muted-foreground">{t('loading')}</p>
                   </div>
                 ) : versions.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-3">
@@ -272,10 +270,8 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                       <IconHistory aria-hidden="true" className="h-7 w-7 text-muted-foreground/40" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">No versions yet</p>
-                      <p className="text-xs text-muted-foreground">
-                        Versions are created automatically when you save changes.
-                      </p>
+                      <p className="text-sm font-medium">{t('emptyTitle')}</p>
+                      <p className="text-xs text-muted-foreground">{t('emptyBody')}</p>
                     </div>
                   </div>
                 ) : (
@@ -291,7 +287,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
 
                         {/* Timeline items */}
                         <div className="px-3 space-y-0.5">
-                          {group.versions.map((v, idx) => {
+                          {group.versions.map((v) => {
                             const isSelected = selectedVersion?.id === v.id
                             const isLatest = versions[0]?.id === v.id
                             return (
@@ -332,7 +328,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                                             ? 'bg-primary-foreground/20 text-primary-foreground'
                                             : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                         )}>
-                                          Latest
+                                          {t('latest')}
                                         </span>
                                       )}
                                     </div>
@@ -341,9 +337,9 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                                       isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground'
                                     )}>
                                       <IconClock aria-hidden="true" className="h-3 w-3" />
-                                      <span className="tabular-nums">{formatTime(v.created_at)}</span>
+                                      <span className="tabular-nums">{formatTime(v.created_at, locale)}</span>
                                       <span className="opacity-50">·</span>
-                                      <span>{timeAgo(v.created_at)}</span>
+                                      <span>{timeAgo(v.created_at, locale)}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -368,11 +364,11 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                       v{selectedVersion.version_number}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {formatDate(selectedVersion.created_at)}
+                      {formatDate(selectedVersion.created_at, locale)}
                     </span>
                     {viewMode === 'diff' && (
                       <span className="text-xs text-muted-foreground ml-auto">
-                        Comparing with current state
+                        {t('comparingWithCurrent')}
                       </span>
                     )}
                   </div>
@@ -388,7 +384,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                       ) : currentSnapshot ? (
                         <VersionDiffPanel
                           versionNumber={selectedVersion.version_number}
-                          versionDate={formatDate(selectedVersion.created_at)}
+                          versionDate={formatDate(selectedVersion.created_at, locale)}
                           oldSnapshot={selectedVersion.snapshot as Record<string, unknown>}
                           newSnapshot={currentSnapshot as Record<string, unknown>}
                           contentType={contentType}
@@ -405,10 +401,8 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                     <IconHistory aria-hidden="true" className="h-10 w-10 text-muted-foreground/30" />
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-base font-medium">Select a version</p>
-                    <p className="text-sm text-muted-foreground max-w-xs">
-                      Choose a version from the timeline to preview its content or compare changes.
-                    </p>
+                    <p className="text-base font-medium">{t('selectTitle')}</p>
+                    <p className="text-sm text-muted-foreground max-w-xs">{t('selectBody')}</p>
                   </div>
                 </div>
               )}
@@ -420,16 +414,15 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
       <AlertDialog open={confirmVersion !== null} onOpenChange={(open) => !open && setConfirmVersion(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore version {confirmVersion}?</AlertDialogTitle>
+            <AlertDialogTitle>{t('confirmTitle', { version: confirmVersion ?? 0 })}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will revert the content to version {confirmVersion}. Your current state will be saved
-              as a new version, so you can always undo this restore.
+              {t('confirmBody', { version: confirmVersion ?? 0 })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={() => confirmVersion && handleRestore(confirmVersion)}>
-              Restore
+              {t('confirmAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

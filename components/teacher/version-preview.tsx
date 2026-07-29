@@ -1,31 +1,49 @@
 'use client'
 
+import { useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { IconChevronDown, IconVideo, IconRobot, IconFileText, IconClipboardList, IconTemplate, IconClock } from '@tabler/icons-react'
+import { IconChevronDown, IconVideo, IconRobot, IconFileText, IconClipboardList, IconTemplate, IconCode, IconEye } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+
+// Version content is MDX, so "rendered" has to compile it the way the lesson
+// page does. Markdown-only rendering would silently drop the components.
+const MDXPreview = dynamic(
+  () => import('./mdx-preview').then((m) => m.MDXPreview),
+  {
+    ssr: false,
+    loading: () => <div className="h-4 w-40 rounded bg-muted motion-safe:animate-pulse" />,
+  }
+)
 
 interface VersionPreviewProps {
   contentType: 'lesson' | 'exam' | 'exercise' | 'prompt_template'
   snapshot: Record<string, unknown>
 }
 
+const PREVIEW_NS = 'dashboard.teacher.versionHistory.preview'
+
 function StatusBadge({ status }: { status: string | undefined }) {
+  const t = useTranslations(PREVIEW_NS)
   if (!status) return null
   const colors: Record<string, string> = {
     published: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
     draft: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
   }
+  const known = status === 'published' || status === 'draft' || status === 'archived'
   return (
     <span className={cn(
-      'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border capitalize',
+      'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border',
+      !known && 'capitalize',
       colors[status] || 'bg-muted text-muted-foreground border-border'
     )}>
-      {status}
+      {known ? t(`status.${status}` as 'status.published') : status}
     </span>
   )
 }
@@ -33,60 +51,124 @@ function StatusBadge({ status }: { status: string | undefined }) {
 function SectionBlock({
   icon: Icon,
   label,
+  trailing,
   children,
   className,
 }: {
   icon?: React.ComponentType<{ className?: string }>
   label: string
+  trailing?: React.ReactNode
   children: React.ReactNode
   className?: string
 }) {
   return (
     <div className={cn('space-y-2.5', className)}>
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground/70" />}
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-          {label}
-        </span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
+        </div>
+        {trailing}
       </div>
       {children}
     </div>
   )
 }
 
-function ExpandableContent({ label, content, icon, maxLines = 8 }: {
+function ExpandableContent({ label, content, icon, maxLines = 8, renderable = false }: {
   label: string
   content: string
   icon?: React.ComponentType<{ className?: string }>
   maxLines?: number
+  /** Lesson content is MDX and can be shown compiled; prompts stay as source. */
+  renderable?: boolean
 }) {
+  const t = useTranslations(PREVIEW_NS)
+  const [open, setOpen] = useState(false)
+  const [view, setView] = useState<'source' | 'rendered'>('source')
+
+  const isRendered = renderable && view === 'rendered'
+  const lineCount = content.split('\n').length
+  const isTruncated = !open && (lineCount > maxLines || content.length > maxLines * 90)
+
   return (
-    <SectionBlock icon={icon} label={label}>
-      <Collapsible>
-        <CollapsibleTrigger className="group w-full text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg outline-none">
-          <div
-            className="relative rounded-lg border bg-[#1e1e2e] p-4 text-sm font-mono leading-relaxed whitespace-pre-wrap text-[#cdd6f4] overflow-hidden transition-colors group-hover:border-primary/30"
-            style={{
-              display: '-webkit-box',
-              WebkitLineClamp: maxLines,
-              WebkitBoxOrient: 'vertical' as const,
-              overflow: 'hidden',
-            }}
-          >
-            {content}
+    <SectionBlock
+      icon={icon}
+      label={label}
+      trailing={
+        renderable ? (
+          <div className="inline-flex items-center rounded-lg border bg-muted/40 p-0.5">
+            <button
+              type="button"
+              onClick={() => setView('source')}
+              aria-pressed={view === 'source'}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                'outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
+                view === 'source'
+                  ? 'bg-background text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <IconCode aria-hidden="true" className="h-3.5 w-3.5" />
+              {t('source')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('rendered')}
+              aria-pressed={view === 'rendered'}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                'outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
+                view === 'rendered'
+                  ? 'bg-background text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <IconEye aria-hidden="true" className="h-3.5 w-3.5" />
+              {t('rendered')}
+            </button>
           </div>
-          <span className="flex items-center gap-1.5 mt-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-            <IconChevronDown aria-hidden="true" className="h-3.5 w-3.5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            <span className="group-data-[state=open]:hidden">Show all</span>
-            <span className="hidden group-data-[state=open]:inline">Collapse</span>
-          </span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="rounded-lg border bg-[#1e1e2e] p-4 text-sm font-mono leading-relaxed whitespace-pre-wrap text-[#cdd6f4] mt-2">
-            {content}
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+        ) : undefined
+      }
+    >
+      <div
+        className={cn(
+          'rounded-lg border p-4 text-sm leading-relaxed',
+          isRendered ? 'bg-background' : 'bg-muted/40 font-mono whitespace-pre-wrap',
+          open ? 'max-h-[28rem] overflow-y-auto' : 'overflow-hidden'
+        )}
+        style={
+          open
+            ? undefined
+            : {
+                display: '-webkit-box',
+                WebkitLineClamp: maxLines,
+                WebkitBoxOrient: 'vertical' as const,
+              }
+        }
+      >
+        {isRendered ? <MDXPreview content={content} /> : content}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded text-xs font-medium text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+      >
+        <IconChevronDown
+          aria-hidden="true"
+          className={cn('h-3.5 w-3.5 transition-transform duration-200', open && 'rotate-180')}
+        />
+        {open
+          ? t('collapse')
+          : isTruncated
+            ? t('showAllLines', { count: lineCount })
+            : t('showAll')}
+      </button>
     </SectionBlock>
   )
 }
@@ -101,6 +183,7 @@ function MetaPill({ label, value }: { label: string; value: string | number }) {
 }
 
 function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const t = useTranslations(PREVIEW_NS)
   const title = snapshot.title as string | undefined
   const description = snapshot.description as string | undefined
   const content = snapshot.content as string | undefined
@@ -110,15 +193,23 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
   const aiTaskInstructions = snapshot.ai_task_instructions as string | undefined
   const aiTask = snapshot.ai_task as Record<string, unknown> | null | undefined
 
-  const taskPrompt = aiTaskDescription || (aiTask as Record<string, unknown> | null)?.task_instructions as string | undefined
-  const systemPrompt = aiTaskInstructions || (aiTask as Record<string, unknown> | null)?.system_prompt as string | undefined
+  // lessons_ai_tasks is the live source of truth, so a snapshot that recorded it
+  // as null means there was no task — the legacy lesson columns can still hold a
+  // removed one, and are only trusted for snapshots taken before that key existed.
+  const snapshotHasTaskRow = 'ai_task' in snapshot
+  const taskPrompt = snapshotHasTaskRow
+    ? (aiTask?.task_instructions as string | undefined)
+    : aiTaskDescription
+  const systemPrompt = snapshotHasTaskRow
+    ? (aiTask?.system_prompt as string | undefined)
+    : aiTaskInstructions
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-xl font-bold tracking-tight leading-snug">{title || 'Untitled Lesson'}</h3>
+          <h3 className="text-xl font-bold tracking-tight leading-snug">{title || t('untitledLesson')}</h3>
           <StatusBadge status={status} />
         </div>
         {description && (
@@ -128,7 +219,7 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
 
       {/* Video */}
       {videoUrl && (
-        <SectionBlock icon={IconVideo} label="Video">
+        <SectionBlock icon={IconVideo} label={t('video')}>
           <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/40 border font-mono text-sm truncate">
             {videoUrl}
           </div>
@@ -137,7 +228,7 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
 
       {/* Content */}
       {content && (
-        <ExpandableContent label="Content" content={content} icon={IconFileText} />
+        <ExpandableContent label={t('content')} content={content} icon={IconFileText} renderable />
       )}
 
       {/* AI Task */}
@@ -145,15 +236,15 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
         <div className="space-y-4 pt-4 border-t">
           <div className="flex items-center gap-2">
             <IconRobot className="h-4 w-4 text-violet-500" />
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-              AI Task Configuration
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {t('aiTaskConfig')}
             </span>
           </div>
           {taskPrompt && (
-            <ExpandableContent label="Task Prompt" content={taskPrompt} maxLines={4} />
+            <ExpandableContent label={t('taskPrompt')} content={taskPrompt} maxLines={4} />
           )}
           {systemPrompt && (
-            <ExpandableContent label="System Prompt" content={systemPrompt} maxLines={4} />
+            <ExpandableContent label={t('systemPrompt')} content={systemPrompt} maxLines={4} />
           )}
         </div>
       )}
@@ -162,6 +253,7 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
 }
 
 function ExamPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const t = useTranslations(PREVIEW_NS)
   const title = snapshot.title as string | undefined
   const description = snapshot.description as string | undefined
   const status = snapshot.status as string | undefined
@@ -173,7 +265,7 @@ function ExamPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-xl font-bold tracking-tight leading-snug">{title || 'Untitled Exam'}</h3>
+          <h3 className="text-xl font-bold tracking-tight leading-snug">{title || t('untitledExam')}</h3>
           <StatusBadge status={status} />
         </div>
         {description && (
@@ -183,17 +275,19 @@ function ExamPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
 
       {/* Meta */}
       <div className="flex flex-wrap gap-2">
-        {duration !== undefined && <MetaPill label="Duration" value={`${duration}m`} />}
-        <MetaPill label="Questions" value={questions.length} />
+        {duration !== undefined && (
+          <MetaPill label={t('duration')} value={t('durationValue', { minutes: duration })} />
+        )}
+        <MetaPill label={t('questions')} value={questions.length} />
       </div>
 
       {/* Questions */}
       {questions.length > 0 && (
-        <SectionBlock icon={IconClipboardList} label="Questions">
+        <SectionBlock icon={IconClipboardList} label={t('questions')}>
           <Collapsible>
             <CollapsibleTrigger className="group flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring rounded outline-none py-1">
               <IconChevronDown aria-hidden="true" className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-              <span>Show {questions.length} questions</span>
+              <span>{t('showQuestions', { count: questions.length })}</span>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-3 space-y-3">
               {questions.map((q, i) => (
@@ -241,6 +335,7 @@ function ExamPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
 }
 
 function ExercisePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const t = useTranslations(PREVIEW_NS)
   const title = snapshot.title as string | undefined
   const description = snapshot.description as string | undefined
   const status = snapshot.status as string | undefined
@@ -260,7 +355,7 @@ function ExercisePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-xl font-bold tracking-tight leading-snug">{title || 'Untitled Exercise'}</h3>
+          <h3 className="text-xl font-bold tracking-tight leading-snug">{title || t('untitledExercise')}</h3>
           <div className="flex gap-2 shrink-0">
             <StatusBadge status={status} />
             {exerciseType && (
@@ -285,18 +380,21 @@ function ExercisePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
             {difficultyLevel}
           </span>
         )}
-        {timeLimit !== undefined && <MetaPill label="Time limit" value={`${timeLimit}m`} />}
+        {timeLimit !== undefined && (
+          <MetaPill label={t('timeLimit')} value={t('durationValue', { minutes: timeLimit })} />
+        )}
       </div>
 
       {/* Instructions */}
       {instructions && (
-        <ExpandableContent label="Instructions" content={instructions} icon={IconFileText} maxLines={6} />
+        <ExpandableContent label={t('instructions')} content={instructions} icon={IconFileText} maxLines={6} />
       )}
     </div>
   )
 }
 
 function TemplatePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const t = useTranslations(PREVIEW_NS)
   const name = snapshot.name as string | undefined
   const category = snapshot.category as string | undefined
   const description = snapshot.description as string | undefined
@@ -308,7 +406,7 @@ function TemplatePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-xl font-bold tracking-tight leading-snug">{name || 'Untitled Template'}</h3>
+          <h3 className="text-xl font-bold tracking-tight leading-snug">{name || t('untitledTemplate')}</h3>
           {category && (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20 capitalize">
               {category}
@@ -322,10 +420,10 @@ function TemplatePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
 
       {/* Templates */}
       {taskTemplate && (
-        <ExpandableContent label="Task Template" content={taskTemplate} icon={IconTemplate} maxLines={6} />
+        <ExpandableContent label={t('taskTemplate')} content={taskTemplate} icon={IconTemplate} maxLines={6} />
       )}
       {sysTemplate && (
-        <ExpandableContent label="System Prompt Template" content={sysTemplate} icon={IconRobot} maxLines={6} />
+        <ExpandableContent label={t('systemTemplate')} content={sysTemplate} icon={IconRobot} maxLines={6} />
       )}
     </div>
   )

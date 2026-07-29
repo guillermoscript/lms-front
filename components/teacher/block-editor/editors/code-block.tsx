@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { CodeBlock } from '../types'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
@@ -31,6 +33,7 @@ const languages = [
 ]
 
 export function CodeBlockEditor({ block, onChange }: CodeBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   return (
     <div className="rounded-lg border bg-[#0d1117] overflow-hidden">
       <div className="flex items-center gap-2 border-b border-gray-700 bg-[#161b22] px-3 py-2">
@@ -53,14 +56,14 @@ export function CodeBlockEditor({ block, onChange }: CodeBlockEditorProps) {
         <Input
           value={block.filename || ''}
           onChange={(e) => onChange({ filename: e.target.value || undefined })}
-          placeholder="archivo.js (opcional)"
+          placeholder={t('code.filenamePlaceholder')}
           className="flex-1 h-7 text-xs bg-transparent border-gray-600 text-gray-300 placeholder:text-gray-500"
         />
       </div>
       <Textarea
         value={block.code}
         onChange={(e) => onChange({ code: e.target.value })}
-        placeholder="// Tu código aquí..."
+        placeholder={t('code.placeholder')}
         className="min-h-[120px] font-mono text-sm text-gray-300 bg-transparent border-0 rounded-none resize-y focus-visible:ring-0"
       />
     </div>

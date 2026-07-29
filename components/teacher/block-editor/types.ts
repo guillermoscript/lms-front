@@ -206,39 +206,8 @@ export type Block =
   | OrderingBlock
   | CheckpointBlock
 
-// Block metadata for the add menu
-export interface BlockMeta {
-  type: BlockType
-  label: string
-  icon: string
-  description: string
-}
-
-export const BLOCK_METAS: BlockMeta[] = [
-  { type: 'text', label: 'Texto', icon: 'text', description: 'Párrafo de texto con formato' },
-  { type: 'heading', label: 'Encabezado', icon: 'heading', description: 'Título o subtítulo' },
-  { type: 'callout', label: 'Callout', icon: 'alert', description: 'Nota destacada (info, warning, etc.)' },
-  { type: 'code', label: 'Código', icon: 'code', description: 'Bloque de código con resaltado' },
-  { type: 'quiz', label: 'Quiz', icon: 'quiz', description: 'Pregunta de opción múltiple' },
-  { type: 'spoiler', label: 'Spoiler', icon: 'eye-off', description: 'Contenido oculto expandible' },
-  { type: 'steps', label: 'Pasos', icon: 'list-numbers', description: 'Lista de pasos numerados' },
-  { type: 'vocabulary', label: 'Vocabulario', icon: 'book', description: 'Palabra con traducción' },
-  { type: 'definition', label: 'Definición', icon: 'book-open', description: 'Término con definición' },
-  { type: 'image', label: 'Imagen', icon: 'photo', description: 'Imagen con caption' },
-  { type: 'video', label: 'Video', icon: 'video', description: 'Video embebido' },
-  { type: 'divider', label: 'Separador', icon: 'minus', description: 'Línea divisoria' },
-  { type: 'audio', label: 'Audio', icon: 'volume', description: 'Reproductor de audio' },
-  { type: 'embed', label: 'Embed', icon: 'world-www', description: 'Contenido embebido (iframe)' },
-  { type: 'file-download', label: 'Archivo', icon: 'file-download', description: 'Archivo descargable' },
-  { type: 'glossary', label: 'Glosario', icon: 'list-details', description: 'Lista de términos y definiciones' },
-  { type: 'comparison', label: 'Comparación', icon: 'arrows-exchange', description: 'Comparación lado a lado' },
-  { type: 'table', label: 'Tabla', icon: 'table', description: 'Tabla con encabezados y filas' },
-  { type: 'flashcard-set', label: 'Flashcards', icon: 'cards', description: 'Tarjetas de estudio' },
-  { type: 'fill-in-the-blank', label: 'Completar', icon: 'text-plus', description: 'Oración con espacios en blanco' },
-  { type: 'matching-pairs', label: 'Emparejar', icon: 'arrows-shuffle', description: 'Conectar términos con respuestas' },
-  { type: 'ordering', label: 'Ordenar', icon: 'sort-ascending', description: 'Ordenar elementos en secuencia' },
-  { type: 'checkpoint', label: 'Checkpoint', icon: 'checkpoint', description: 'Ejercicio de repaso vinculado a la lección' },
-]
+// Block labels and descriptions are translated at the view
+// (dashboard.teacher.lessonEditor.blockEditor.blocks.<type>), keyed by BlockType.
 
 // Factory to create empty blocks
 export function createBlock(type: BlockType): Block {

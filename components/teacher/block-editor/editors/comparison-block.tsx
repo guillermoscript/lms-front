@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { ComparisonBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -22,6 +24,8 @@ function SideEditor({
   side: { title: string; points: string[]; highlight: Highlight }
   onChangeSide: (updates: Partial<typeof side>) => void
 }) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
+
   const addPoint = () => {
     onChangeSide({ points: [...side.points, ''] })
   }
@@ -42,7 +46,7 @@ function SideEditor({
       <Input
         value={side.title}
         onChange={(e) => onChangeSide({ title: e.target.value })}
-        placeholder="Título"
+        placeholder={t('comparison.titlePlaceholder')}
         className="font-medium h-8"
       />
       <select
@@ -50,9 +54,9 @@ function SideEditor({
         onChange={(e) => onChangeSide({ highlight: e.target.value as Highlight })}
         className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
       >
-        <option value="positive">Positivo</option>
-        <option value="negative">Negativo</option>
-        <option value="neutral">Neutral</option>
+        <option value="positive">{t('comparison.positive')}</option>
+        <option value="negative">{t('comparison.negative')}</option>
+        <option value="neutral">{t('comparison.neutral')}</option>
       </select>
 
       <div className="space-y-1">
@@ -61,7 +65,7 @@ function SideEditor({
             <Input
               value={point}
               onChange={(e) => updatePoint(index, e.target.value)}
-              placeholder={`Punto ${index + 1}`}
+              placeholder={t('comparison.pointPlaceholder', { number: index + 1 })}
               className="h-8 flex-1"
             />
             <button
@@ -69,7 +73,7 @@ function SideEditor({
               onClick={() => removePoint(index)}
               disabled={side.points.length <= 1}
               className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
-              aria-label="Eliminar punto"
+              aria-label={t('comparison.removePoint')}
             >
               <IconTrash className="h-3.5 w-3.5" />
             </button>
@@ -79,30 +83,31 @@ function SideEditor({
 
       <Button type="button" variant="outline" size="sm" onClick={addPoint} className="w-full">
         <IconPlus className="h-3.5 w-3.5 mr-1" />
-        Añadir punto
+        {t('comparison.addPoint')}
       </Button>
     </div>
   )
 }
 
 export function ComparisonBlockEditor({ block, onChange }: ComparisonBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   return (
     <div className="space-y-3 rounded-lg border p-3">
       <div className="flex items-center gap-2 text-sm font-medium">
         <IconArrowsExchange className="h-4 w-4 text-primary" />
-        Comparación
+        {t('blocks.comparison.label')}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <SideEditor
-          label="Lado A"
+          label={t('comparison.sideA')}
           side={block.sideA}
           onChangeSide={(updates) =>
             onChange({ sideA: { ...block.sideA, ...updates } })
           }
         />
         <SideEditor
-          label="Lado B"
+          label={t('comparison.sideB')}
           side={block.sideB}
           onChangeSide={(updates) =>
             onChange({ sideB: { ...block.sideB, ...updates } })
@@ -113,7 +118,7 @@ export function ComparisonBlockEditor({ block, onChange }: ComparisonBlockEditor
       <Textarea
         value={block.summary ?? ''}
         onChange={(e) => onChange({ summary: e.target.value || undefined })}
-        placeholder="Resumen (opcional)"
+        placeholder={t('comparison.summaryPlaceholder')}
         className="min-h-[60px]"
       />
     </div>

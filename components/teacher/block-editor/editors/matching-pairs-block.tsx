@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { MatchingPairsBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +14,7 @@ interface MatchingPairsBlockEditorProps {
 }
 
 export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const addPair = () => {
     onChange({ pairs: [...block.pairs, { term: '', match: '' }] })
   }
@@ -31,13 +34,13 @@ export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlock
     <div className="space-y-3 rounded-lg border bg-gradient-to-br from-indigo-500/5 to-violet-500/5 p-4">
       <div className="flex items-center gap-2 text-sm font-medium text-indigo-600">
         <IconArrowsShuffle className="h-4 w-4" />
-        Emparejar
+        {t('blocks.matching-pairs.label')}
       </div>
 
       <div className="space-y-2">
         <div className="flex gap-2 px-6">
-          <span className="flex-1 text-xs text-muted-foreground">Término</span>
-          <span className="flex-1 text-xs text-muted-foreground">Pareja</span>
+          <span className="flex-1 text-xs text-muted-foreground">{t('matchingPairs.termHeader')}</span>
+          <span className="flex-1 text-xs text-muted-foreground">{t('matchingPairs.pairHeader')}</span>
           <span className="w-7" />
         </div>
         {block.pairs.map((pair, index) => (
@@ -46,13 +49,13 @@ export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlock
             <Input
               value={pair.term}
               onChange={(e) => updatePair(index, 'term', e.target.value)}
-              placeholder="Término..."
+              placeholder={t('matchingPairs.termPlaceholder')}
               className="flex-1"
             />
             <Input
               value={pair.match}
               onChange={(e) => updatePair(index, 'match', e.target.value)}
-              placeholder="Pareja..."
+              placeholder={t('matchingPairs.pairPlaceholder')}
               className="flex-1"
             />
             <button
@@ -60,7 +63,7 @@ export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlock
               onClick={() => removePair(index)}
               disabled={block.pairs.length <= 2}
               className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
-              aria-label="Eliminar pareja"
+              aria-label={t('matchingPairs.removePair')}
             >
               <IconTrash className="h-4 w-4" />
             </button>
@@ -76,15 +79,15 @@ export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlock
         className="w-full"
       >
         <IconPlus className="h-4 w-4 mr-2" />
-        Añadir pareja
+        {t('matchingPairs.addPair')}
       </Button>
 
       <div>
-        <span className="text-xs text-muted-foreground">Explicación (opcional)</span>
+        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}
-          placeholder="Explicación que se mostrará después de responder..."
+          placeholder={t('explanationPlaceholder')}
           className="mt-1 min-h-[60px]"
         />
       </div>

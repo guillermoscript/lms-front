@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { useRef, useState } from 'react'
 import type { ImageBlock } from '../types'
 import { Input } from '@/components/ui/input'
@@ -14,6 +16,7 @@ interface ImageBlockEditorProps {
 }
 
 export function ImageBlockEditor({ block, onChange }: ImageBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -46,13 +49,13 @@ export function ImageBlockEditor({ block, onChange }: ImageBlockEditorProps) {
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex items-center gap-2 text-sm font-medium">
         <IconPhoto className="h-4 w-4 text-primary" />
-        Imagen
+        {t('blocks.image.label')}
       </div>
       <div className="flex gap-2">
         <Input
           value={block.src}
           onChange={(e) => onChange({ src: e.target.value })}
-          placeholder="URL de la imagen"
+          placeholder={t('image.urlPlaceholder')}
           className="flex-1"
         />
         <input
@@ -75,7 +78,7 @@ export function ImageBlockEditor({ block, onChange }: ImageBlockEditorProps) {
           ) : (
             <IconUpload className="h-4 w-4" />
           )}
-          Subir
+          {t('image.upload')}
         </Button>
       </div>
       {uploadError && (
@@ -83,17 +86,17 @@ export function ImageBlockEditor({ block, onChange }: ImageBlockEditorProps) {
       )}
       <ExpiringUrlWarning
         url={block.src}
-        hint="Usa el botón «Subir» para alojarla de forma permanente."
+        hint={t('image.uploadHint')}
       />
       <Input
         value={block.alt}
         onChange={(e) => onChange({ alt: e.target.value })}
-        placeholder="Texto alternativo (accesibilidad)"
+        placeholder={t('image.altPlaceholder')}
       />
       <Input
         value={block.caption || ''}
         onChange={(e) => onChange({ caption: e.target.value || undefined })}
-        placeholder="Pie de imagen (opcional)"
+        placeholder={t('image.captionPlaceholder')}
         className="text-sm"
       />
       {block.src && (

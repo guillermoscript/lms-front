@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
@@ -63,8 +63,8 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
     setOpen(true)
   }
 
-  const handleSubmit = (message: any) => {
-    if (!message.text.trim()) return
+  const handleSubmit = (message: { text?: string }) => {
+    if (!message.text?.trim()) return
     sendMessage({
       text: message.text,
     })
@@ -81,7 +81,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
         type="button"
         variant="outline"
         onClick={handleTest}
-        className="gap-2 shadow-sm hover:shadow transition-all"
+        className="gap-2"
       >
         <IconPlayerPlay className="h-4 w-4" />
         {t('buttonText')}
@@ -123,7 +123,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 )}
 
                 {messages.map((message) => (
-                  <Message key={message.id} from={message.role as any}>
+                  <Message key={message.id} from={message.role as ComponentProps<typeof Message>['from']}>
                     <MessageContent>
                       {message.parts.map((part, index) => {
                         if (part.type === 'text') {
@@ -161,7 +161,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 </PromptInputBody>
                 <PromptInputFooter>
                   <PromptInputTools />
-                  <PromptInputSubmit status={status as any} />
+                  <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
                 </PromptInputFooter>
               </PromptInput>
             </div>
