@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
@@ -17,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { BLOCK_METAS, type BlockType } from './types'
+import type { BlockType } from './types'
 import { BLOCK_ICONS } from './add-block-menu'
 import { AddBlockMenu } from './add-block-menu'
 import { cn } from '@/lib/utils'
@@ -47,6 +48,7 @@ export function SortableBlock({
   onMoveDown,
   onAddAfter,
 }: SortableBlockProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const {
     attributes,
     listeners,
@@ -61,7 +63,6 @@ export function SortableBlock({
     transition,
   }
 
-  const meta = BLOCK_METAS.find((m) => m.type === blockType)
   const iconData = BLOCK_ICONS[blockType]
   const TypeIcon = iconData?.icon
 
@@ -90,7 +91,7 @@ export function SortableBlock({
             className="cursor-grab rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            aria-label="Arrastrar bloque"
+            aria-label={t('dragBlock')}
           >
             <IconGripVertical className="h-3.5 w-3.5" />
           </button>
@@ -99,7 +100,7 @@ export function SortableBlock({
           <div className="flex items-center gap-1.5 px-1">
             {TypeIcon && <TypeIcon className={cn('h-3 w-3', iconData?.color || 'text-muted-foreground')} />}
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              {meta?.label || blockType}
+              {t(`blocks.${blockType}.label`)}
             </span>
           </div>
 
@@ -113,7 +114,7 @@ export function SortableBlock({
                 type="button"
                 onClick={onMoveUp}
                 className="rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
-                aria-label="Mover arriba"
+                aria-label={t('moveUp')}
               >
                 <IconChevronUp className="h-3.5 w-3.5" />
               </button>
@@ -123,7 +124,7 @@ export function SortableBlock({
                 type="button"
                 onClick={onMoveDown}
                 className="rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
-                aria-label="Mover abajo"
+                aria-label={t('moveDown')}
               >
                 <IconChevronDown className="h-3.5 w-3.5" />
               </button>
@@ -133,19 +134,19 @@ export function SortableBlock({
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="rounded p-0.5 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
-                aria-label="Más opciones"
+                aria-label={t('moreOptions')}
               >
                 <IconDotsVertical className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuItem onClick={onDuplicate}>
                   <IconCopy className="mr-2 h-3.5 w-3.5" />
-                  Duplicar
+                  {t('duplicate')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
                   <IconTrash className="mr-2 h-3.5 w-3.5" />
-                  Eliminar
+                  {t('remove')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

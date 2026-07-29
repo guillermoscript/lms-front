@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { TableBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,7 @@ interface TableBlockEditorProps {
 }
 
 export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const colCount = block.headers.length
 
   const addColumn = () => {
@@ -54,7 +57,7 @@ export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium">
           <IconTable className="h-4 w-4 text-primary" />
-          Tabla
+          {t('blocks.table.label')}
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input
@@ -63,7 +66,7 @@ export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
             onChange={(e) => onChange({ striped: e.target.checked })}
             className="rounded"
           />
-          Filas alternadas
+          {t('table.alternatingRows')}
         </label>
       </div>
 
@@ -77,7 +80,7 @@ export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
                     <Input
                       value={header}
                       onChange={(e) => updateHeader(colIndex, e.target.value)}
-                      placeholder={`Col ${colIndex + 1}`}
+                      placeholder={t('table.colPlaceholder', { number: colIndex + 1 })}
                       className="h-8 font-medium"
                     />
                     <button
@@ -85,7 +88,7 @@ export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
                       onClick={() => removeColumn(colIndex)}
                       disabled={colCount <= 2}
                       className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30 shrink-0"
-                      aria-label="Eliminar columna"
+                      aria-label={t('table.removeColumn')}
                     >
                       <IconTrash className="h-3.5 w-3.5" />
                     </button>
@@ -114,7 +117,7 @@ export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
                     onClick={() => removeRow(rowIndex)}
                     disabled={block.rows.length <= 1}
                     className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
-                    aria-label="Eliminar fila"
+                    aria-label={t('table.removeRow')}
                   >
                     <IconTrash className="h-3.5 w-3.5" />
                   </button>
@@ -128,11 +131,11 @@ export function TableBlockEditor({ block, onChange }: TableBlockEditorProps) {
       <div className="flex gap-2">
         <Button type="button" variant="outline" size="sm" onClick={addRow} className="flex-1">
           <IconPlus className="h-4 w-4 mr-1" />
-          Fila
+          {t('table.addRow')}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={addColumn} className="flex-1">
           <IconPlus className="h-4 w-4 mr-1" />
-          Columna
+          {t('table.addColumn')}
         </Button>
       </div>
     </div>

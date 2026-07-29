@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import { useState } from 'react'
 import type { QuizBlock } from '../types'
 import { Input } from '@/components/ui/input'
@@ -14,6 +16,7 @@ interface QuizBlockEditorProps {
 }
 
 export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const addOption = () => {
     onChange({ options: [...block.options, ''] })
   }
@@ -45,19 +48,19 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
     <div className="space-y-3 rounded-lg border bg-gradient-to-br from-purple-500/5 to-blue-500/5 p-4">
       <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
         <IconCircleCheck className="h-4 w-4" />
-        Quiz
+        {t('blocks.quiz.label')}
       </div>
       
       <Input
         value={block.question}
         onChange={(e) => onChange({ question: e.target.value })}
-        placeholder="Escribe tu pregunta..."
+        placeholder={t('quiz.questionPlaceholder')}
         className="font-medium"
       />
 
       <div className="space-y-2">
         <span className="text-xs text-muted-foreground">
-          Opciones (haz clic en el círculo para marcar la correcta)
+          {t('quiz.optionsHint')}
         </span>
         {block.options.map((option, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -70,7 +73,7 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
                   ? 'border-green-500 bg-green-500 text-white'
                   : 'border-muted-foreground/30 hover:border-green-500/50'
               )}
-              aria-label={`Marcar opción ${index + 1} como correcta`}
+              aria-label={t('quiz.markCorrect', { number: index + 1 })}
             >
               {block.correctIndex === index && (
                 <IconCircleCheck className="h-3 w-3" />
@@ -79,7 +82,7 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
             <Input
               value={option}
               onChange={(e) => updateOption(index, e.target.value)}
-              placeholder={`Opción ${index + 1}`}
+              placeholder={t('quiz.optionPlaceholder', { number: index + 1 })}
               className="flex-1"
             />
             <button
@@ -87,7 +90,7 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
               onClick={() => removeOption(index)}
               disabled={block.options.length <= 2}
               className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30"
-              aria-label="Eliminar opción"
+              aria-label={t('quiz.removeOption')}
             >
               <IconTrash className="h-4 w-4" />
             </button>
@@ -101,16 +104,16 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
           className="w-full"
         >
           <IconPlus className="h-4 w-4 mr-2" />
-          Añadir opción
+          {t('quiz.addOption')}
         </Button>
       </div>
 
       <div>
-        <span className="text-xs text-muted-foreground">Explicación (opcional)</span>
+        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}
-          placeholder="Explicación que se mostrará después de responder..."
+          placeholder={t('explanationPlaceholder')}
           className="mt-1 min-h-[60px]"
         />
       </div>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { GlossaryBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -11,6 +13,7 @@ interface GlossaryBlockEditorProps {
 }
 
 export function GlossaryBlockEditor({ block, onChange }: GlossaryBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const addItem = () => {
     onChange({
       items: [...block.items, { term: '', definition: '' }],
@@ -33,7 +36,7 @@ export function GlossaryBlockEditor({ block, onChange }: GlossaryBlockEditorProp
     <div className="space-y-3 rounded-lg border p-3">
       <div className="flex items-center gap-2 text-sm font-medium">
         <IconListDetails className="h-4 w-4 text-primary" />
-        Glosario
+        {t('blocks.glossary.label')}
       </div>
 
       <div className="space-y-3">
@@ -43,13 +46,13 @@ export function GlossaryBlockEditor({ block, onChange }: GlossaryBlockEditorProp
               <Input
                 value={item.term}
                 onChange={(e) => updateItem(index, { term: e.target.value })}
-                placeholder="Término"
+                placeholder={t('glossary.termPlaceholder')}
                 className="font-medium h-8"
               />
               <Input
                 value={item.definition}
                 onChange={(e) => updateItem(index, { definition: e.target.value })}
-                placeholder="Definición"
+                placeholder={t('glossary.definitionPlaceholder')}
                 className="h-8"
               />
             </div>
@@ -58,7 +61,7 @@ export function GlossaryBlockEditor({ block, onChange }: GlossaryBlockEditorProp
               onClick={() => removeItem(index)}
               disabled={block.items.length <= 1}
               className="p-1 text-muted-foreground hover:text-destructive disabled:opacity-30 self-center"
-              aria-label="Eliminar término"
+              aria-label={t('glossary.removeTerm')}
             >
               <IconTrash className="h-4 w-4" />
             </button>
@@ -68,7 +71,7 @@ export function GlossaryBlockEditor({ block, onChange }: GlossaryBlockEditorProp
 
       <Button type="button" variant="outline" size="sm" onClick={addItem} className="w-full">
         <IconPlus className="h-4 w-4 mr-2" />
-        Añadir término
+        {t('glossary.addTerm')}
       </Button>
     </div>
   )

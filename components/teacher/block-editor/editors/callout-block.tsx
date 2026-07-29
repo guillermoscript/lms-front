@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { CalloutBlock } from '../types'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -25,6 +27,7 @@ const variants = {
 }
 
 export function CalloutBlockEditor({ block, onChange }: CalloutBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const v = variants[block.variant] || variants.info
   const Icon = v.icon
 
@@ -41,16 +44,16 @@ export function CalloutBlockEditor({ block, onChange }: CalloutBlockEditorProps)
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="info">Info</SelectItem>
-              <SelectItem value="warning">Warning</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="error">Error</SelectItem>
+              <SelectItem value="info">{t('callout.info')}</SelectItem>
+              <SelectItem value="warning">{t('callout.warning')}</SelectItem>
+              <SelectItem value="success">{t('callout.success')}</SelectItem>
+              <SelectItem value="error">{t('callout.error')}</SelectItem>
             </SelectContent>
           </Select>
           <Textarea
             value={block.content}
             onChange={(e) => onChange({ content: e.target.value })}
-            placeholder="Contenido del callout..."
+            placeholder={t('callout.placeholder')}
             className="min-h-[60px] resize-none border-0 bg-transparent p-0 focus-visible:ring-0"
           />
         </div>

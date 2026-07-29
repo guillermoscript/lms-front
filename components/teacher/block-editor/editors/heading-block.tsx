@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 import type { HeadingBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import {
@@ -16,6 +18,7 @@ interface HeadingBlockEditorProps {
 }
 
 export function HeadingBlockEditor({ block, onChange }: HeadingBlockEditorProps) {
+  const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   const fontSizes: Record<number, string> = {
     1: 'text-2xl font-bold',
     2: 'text-xl font-semibold',
@@ -40,7 +43,7 @@ export function HeadingBlockEditor({ block, onChange }: HeadingBlockEditorProps)
       <Input
         value={block.content}
         onChange={(e) => onChange({ content: e.target.value })}
-        placeholder="Título del encabezado"
+        placeholder={t('heading.placeholder')}
         className={`flex-1 border-0 bg-transparent p-0 focus-visible:ring-0 ${fontSizes[block.level]}`}
       />
     </div>
