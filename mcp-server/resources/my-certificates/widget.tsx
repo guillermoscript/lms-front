@@ -6,6 +6,8 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { LoadMore, usePagedItems } from "../shared/paging";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -29,6 +31,14 @@ const certificateSchema = z.object({
 
 const propsSchema = z.object({
   total: z.number(),
+  // Pagination window this payload represents. Optional so a payload from an
+  // older server still validates — it simply renders as a single full page.
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  has_more: z.boolean().optional(),
+  /** Repeated on every page so "load more" keeps the same filter. */
+  include_revoked: z.boolean().optional(),
+  /** Page-level — recomputed below from the rows actually loaded. */
   valid: z.number(),
   certificates: z.array(certificateSchema),
 });
@@ -107,13 +117,23 @@ const PILL: Record<Certificate["status"], string> = {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function MyCertificates() {
+function MyCertificates() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
 
   const dark = theme === "dark";
   const t = useStrings(STRINGS);
   const fmt = useFormat();
+
+  // Before the isPending guard: hooks run unconditionally, and the seed is
+  // re-read from props on every render until a page is actually appended.
+  const paged = usePagedItems<Certificate>({
+    toolName: "lms_my_certificates",
+    itemsKey: "certificates",
+    initialItems: props?.certificates,
+    page: props,
+    args: { include_revoked: props?.include_revoked ?? false },
+  });
 
   if (isPending) {
     return (
@@ -129,7 +149,10 @@ export default function MyCertificates() {
     );
   }
 
-  const { total, valid, certificates } = props;
+  const { total } = props;
+  const certificates = paged.items;
+  // Recomputed from the rows on screen: props.valid covers one page.
+  const valid = certificates.filter((c) => c.status === "valid").length;
 
   const statusLabel = (status: Certificate["status"]) =>
     status === "valid" ? t.valid : status === "expired" ? t.expired : t.revoked;
@@ -233,8 +256,17 @@ export default function MyCertificates() {
               ))}
             </div>
           )}
+
+          <LoadMore
+            shown={certificates.length}
+            total={total}
+            paged={paged}
+            formatNumber={fmt.number}
+          />
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(MyCertificates);

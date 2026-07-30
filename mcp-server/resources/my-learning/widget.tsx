@@ -6,6 +6,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -77,7 +78,7 @@ const STRINGS = {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function MyLearning() {
+function MyLearning() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
@@ -211,3 +212,5 @@ export default function MyLearning() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(MyLearning);

@@ -7,6 +7,8 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { LoadMore, usePagedItems } from "../shared/paging";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -25,6 +27,11 @@ const resultSchema = z.object({
 
 const propsSchema = z.object({
   total: z.number(),
+  // Pagination window this payload represents. Optional so a payload from an
+  // older server still validates — it simply renders as a single full page.
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  has_more: z.boolean().optional(),
   average_score: z.number().nullable(),
   results: z.array(resultSchema),
 });
@@ -41,6 +48,7 @@ export const widgetMetadata: WidgetMetadata = {
 };
 
 type Props = z.infer<typeof propsSchema>;
+type Result = z.infer<typeof resultSchema>;
 
 // ── Strings ──────────────────────────────────────────────────────────────────
 
@@ -87,7 +95,7 @@ const PASS_THRESHOLD = 70;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function MyExamResults() {
+function MyExamResults() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
@@ -95,6 +103,15 @@ export default function MyExamResults() {
   const dark = theme === "dark";
   const t = useStrings(STRINGS);
   const fmt = useFormat();
+
+  // Before the isPending guard: hooks run unconditionally, and the seed is
+  // re-read from props on every render until a page is actually appended.
+  const paged = usePagedItems<Result>({
+    toolName: "lms_my_exam_results",
+    itemsKey: "results",
+    initialItems: props?.results,
+    page: props,
+  });
 
   if (isPending) {
     return (
@@ -110,7 +127,14 @@ export default function MyExamResults() {
     );
   }
 
-  const { total, average_score, results } = props;
+  const { total } = props;
+  const results = paged.items;
+  // Recomputed from the rows on screen: the server's average covers one page.
+  const graded = results.filter((r) => r.score !== null);
+  const average_score =
+    graded.length > 0
+      ? Math.round(graded.reduce((sum, r) => sum + (r.score ?? 0), 0) / graded.length)
+      : null;
 
   const toggle = (id: number) => {
     setExpanded((prev) => {
@@ -221,8 +245,17 @@ export default function MyExamResults() {
               })}
             </div>
           )}
+
+          <LoadMore
+            shown={results.length}
+            total={total}
+            paged={paged}
+            formatNumber={fmt.number}
+          />
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(MyExamResults);

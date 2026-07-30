@@ -9,6 +9,7 @@ import {
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { studentDisplayName, studentInitials } from "../shared/student-display";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -88,6 +89,8 @@ const STRINGS = {
     colStudent: "Student",
     colDate: "Date",
     colCode: "Code",
+    colStatus: "Status",
+    tableCaption: (course: string) => `Certificates issued for ${course}`,
     noneIssued: "No certificates issued yet.",
     awaitingTitle: "Awaiting a certificate",
     issue: "Issue",
@@ -119,6 +122,8 @@ const STRINGS = {
     colStudent: "Estudiante",
     colDate: "Fecha",
     colCode: "Código",
+    colStatus: "Estado",
+    tableCaption: (course: string) => `Certificados emitidos de ${course}`,
     noneIssued: "Todavía no se ha emitido ningún certificado.",
     awaitingTitle: "Pendientes de certificado",
     issue: "Emitir",
@@ -165,7 +170,7 @@ function didIssue(raw: unknown): boolean {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function CourseCertificates() {
+function CourseCertificates() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   // Explicit generics: `mcp-use dev` generates the tool-registry types, and a
@@ -302,67 +307,109 @@ export default function CourseCertificates() {
           <h2 className="mt-0 mb-2 text-[11px] font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">
             {t.issuedTitle}
           </h2>
+          {/*
+            A real <table>. The column widths were a CSS grid, which meant a
+            screen reader got four unlabelled runs of text per certificate with
+            no way to tell which was the code and which the date. `table-fixed`
+            plus the colgroup below reproduces the grid exactly — two flexible
+            columns splitting the remainder, two fixed — so nothing moved.
+          */}
           <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="grid min-w-[520px] grid-cols-[minmax(150px,1fr)_104px_minmax(140px,1fr)_136px] border-b border-zinc-200 bg-zinc-100 px-4 py-[9px] dark:border-zinc-800 dark:bg-zinc-800">
-              {[t.colStudent, t.colDate, t.colCode, ""].map((col, i) => (
-                <span
-                  key={i}
-                  className="text-[11px] font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400"
-                >
-                  {col}
-                </span>
-              ))}
-            </div>
-
-            {certificates.length === 0 ? (
-              <div className="p-10 text-center text-zinc-400 dark:text-zinc-500">
-                <div className="mb-2.5 text-3xl">🎓</div>
-                <p className="m-0 text-sm">{t.noneIssued}</p>
-              </div>
-            ) : (
-              certificates.map((c, idx) => (
-                <div
-                  key={c.certificate_id}
-                  className={`grid min-w-[520px] grid-cols-[minmax(150px,1fr)_104px_minmax(140px,1fr)_136px] items-center px-4 py-3 ${
-                    idx === certificates.length - 1
-                      ? ""
-                      : "border-b border-zinc-100 dark:border-zinc-800"
-                  }`}
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                      {studentInitials(c.student_name)}
-                    </span>
-                    <span className="truncate text-sm text-zinc-900 dark:text-zinc-100">
-                      {studentDisplayName(c.student_name, t.unnamed)}
-                    </span>
-                  </div>
-                  <span className="text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
-                    {fmt.date(c.issued_at)}
-                  </span>
-                  <code className="truncate text-[12px] text-zinc-700 dark:text-zinc-300">
-                    {c.verification_code}
-                  </code>
-                  <div className="flex items-center justify-end gap-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${PILL[c.status]}`}
+            <table className="w-full min-w-[520px] table-fixed border-collapse text-left">
+              <caption className="sr-only">
+                {t.tableCaption(course.title)}
+              </caption>
+              <colgroup>
+                <col />
+                <col className="w-[104px]" />
+                <col />
+                <col className="w-[136px]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+                  {[
+                    { key: "student", label: t.colStudent },
+                    { key: "date", label: t.colDate },
+                    { key: "code", label: t.colCode },
+                    // The actions column has no visible heading; it still needs
+                    // a name, or the status pill is announced under nothing.
+                    { key: "status", label: t.colStatus, visuallyHidden: true },
+                  ].map((col) => (
+                    <th
+                      key={col.key}
+                      scope="col"
+                      className="px-4 py-[9px] text-[11px] font-bold tracking-wider text-zinc-500 uppercase first:pl-4 last:pr-4 dark:text-zinc-400"
                     >
-                      {statusLabel(c.status)}
-                    </span>
-                    {c.verify_url && (
-                      <a
-                        href={c.verify_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] font-semibold whitespace-nowrap text-[var(--brand-700)] no-underline hover:underline dark:text-[var(--brand-400)]"
-                      >
-                        {t.verify}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+                      <span className={col.visuallyHidden ? "sr-only" : undefined}>
+                        {col.label}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {certificates.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="p-10 text-center text-zinc-400 dark:text-zinc-500"
+                    >
+                      <div className="mb-2.5 text-3xl">🎓</div>
+                      <p className="m-0 text-sm">{t.noneIssued}</p>
+                    </td>
+                  </tr>
+                ) : (
+                  certificates.map((c) => (
+                    <tr
+                      key={c.certificate_id}
+                      className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800"
+                    >
+                      {/* The student names the row, so it is a header cell. */}
+                      <th scope="row" className="px-4 py-3 font-normal">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span
+                            aria-hidden="true"
+                            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                          >
+                            {studentInitials(c.student_name)}
+                          </span>
+                          <span className="truncate text-sm text-zinc-900 dark:text-zinc-100">
+                            {studentDisplayName(c.student_name, t.unnamed)}
+                          </span>
+                        </div>
+                      </th>
+                      <td className="px-4 py-3 text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
+                        {fmt.date(c.issued_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <code className="block truncate text-[12px] text-zinc-700 dark:text-zinc-300">
+                          {c.verification_code}
+                        </code>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${PILL[c.status]}`}
+                          >
+                            {statusLabel(c.status)}
+                          </span>
+                          {c.verify_url && (
+                            <a
+                              href={c.verify_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-semibold whitespace-nowrap text-[var(--brand-700)] no-underline hover:underline dark:text-[var(--brand-400)]"
+                            >
+                              {t.verify}
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
 
           {/* Awaiting */}
@@ -371,22 +418,21 @@ export default function CourseCertificates() {
               <h2 className="mt-6 mb-2 text-[11px] font-bold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">
                 {t.awaitingTitle}
               </h2>
-              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                {awaiting.map((s, idx) => {
+              <ul className="m-0 list-none overflow-hidden rounded-xl border border-zinc-200 bg-white p-0 dark:border-zinc-800 dark:bg-zinc-900">
+                {awaiting.map((s) => {
                   const done = issuedIds.has(s.student_id);
                   const busy = pendingId === s.student_id;
                   const error = errors[s.student_id];
                   return (
-                    <div
+                    <li
                       key={s.student_id}
-                      className={
-                        idx === awaiting.length - 1
-                          ? ""
-                          : "border-b border-zinc-100 dark:border-zinc-800"
-                      }
+                      className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800"
                     >
                       <div className="flex items-center gap-3 px-4 py-2.5">
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                        <span
+                          aria-hidden="true"
+                          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-[11px] font-bold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                        >
                           {studentInitials(s.student_name)}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-sm text-zinc-900 dark:text-zinc-100">
@@ -408,14 +454,17 @@ export default function CourseCertificates() {
                         )}
                       </div>
                       {error && (
-                        <p className="mt-0 mr-4 mb-2.5 ml-[54px] rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                        <p
+                          role="alert"
+                          className="mt-0 mr-4 mb-2.5 ml-[54px] rounded-lg bg-amber-50 px-3 py-2 text-[12px] text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                        >
                           {error}
                         </p>
                       )}
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             </>
           )}
         </div>
@@ -423,3 +472,5 @@ export default function CourseCertificates() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(CourseCertificates);

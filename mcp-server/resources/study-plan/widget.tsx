@@ -8,6 +8,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // Props produced by lms_get_study_plan (Epic #348 Phase 4, #359).
@@ -113,7 +114,7 @@ const STRINGS = {
   },
 };
 
-export default function StudyPlan() {
+function StudyPlan() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const { callTool } = useCallTool("lms_complete_study_goal");
   const theme = useWidgetTheme();
@@ -389,3 +390,5 @@ export default function StudyPlan() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(StudyPlan);

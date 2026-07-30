@@ -5,6 +5,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 import { LessonBody } from "../shared/lesson";
 
@@ -58,7 +60,14 @@ function statusPill(status: string): string {
   }
 }
 
-function humanFileSize(bytes: number | null): string {
+/**
+ * `1.5 MB` / `1,5 MB`. The unit abbreviations are the same in both languages;
+ * the decimal separator is not, so the number goes through `Intl`.
+ */
+function humanFileSize(
+  bytes: number | null,
+  formatNumber: (n: number | null, opts?: Intl.NumberFormatOptions) => string
+): string {
   if (bytes === null || bytes === 0) return "—";
   const units = ["B", "KB", "MB", "GB"];
   let size = bytes;
@@ -67,7 +76,8 @@ function humanFileSize(bytes: number | null): string {
     size /= 1024;
     unit++;
   }
-  return `${size.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
+  const digits = unit === 0 ? 0 : 1;
+  return `${formatNumber(size, { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${units[unit]}`;
 }
 
 function fileIcon(mimeType: string | null): string {
@@ -93,8 +103,9 @@ function fileIcon(mimeType: string | null): string {
   return "📎";
 }
 
-function humanMime(mimeType: string | null): string {
-  if (!mimeType) return "File";
+function humanMime(mimeType: string | null, fallback: string): string {
+  // Format names ("PDF", "Word") are proper nouns — only the fallback varies.
+  if (!mimeType) return fallback;
   const map: Record<string, string> = {
     "application/pdf": "PDF",
     "image/png": "PNG",
@@ -118,13 +129,47 @@ function humanMime(mimeType: string | null): string {
   return parts[parts.length - 1].toUpperCase().slice(0, 10);
 }
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading lesson…",
+    lessonNumber: (n: string) => `Lesson ${n}`,
+    status: { published: "Published", draft: "Draft", archived: "Archived" } as Record<
+      string,
+      string
+    >,
+    contentHeading: "Content (preview)",
+    noContent: "No written content for this lesson.",
+    resourcesHeading: (n: string) => `Attached resources (${n})`,
+    noResources: "No files attached to this lesson.",
+    /** Fallback label for a file whose MIME type we do not have a name for. */
+    genericFile: "File",
+  },
+  es: {
+    loading: "Cargando la lección…",
+    lessonNumber: (n: string) => `Lección ${n}`,
+    status: { published: "Publicada", draft: "Borrador", archived: "Archivada" } as Record<
+      string,
+      string
+    >,
+    contentHeading: "Contenido (vista previa)",
+    noContent: "Esta lección no tiene contenido escrito.",
+    resourcesHeading: (n: string) => `Recursos adjuntos (${n})`,
+    noResources: "Esta lección no tiene archivos adjuntos.",
+    genericFile: "Archivo",
+  },
+};
+
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function LessonPreview() {
+function LessonPreview() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
 
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -133,7 +178,7 @@ export default function LessonPreview() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Loading lesson…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -152,14 +197,14 @@ export default function LessonPreview() {
             {/* Breadcrumb-ish sequence + status */}
             <div className="mb-2.5 flex items-center gap-2">
               <span className="rounded-lg bg-[var(--brand-50)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
-                Lesson {lesson.sequence}
+                {t.lessonNumber(fmt.number(lesson.sequence))}
               </span>
               <span
                 className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${statusPill(
                   lesson.status
                 )}`}
               >
-                {lesson.status}
+                {t.status[lesson.status.toLowerCase()] ?? lesson.status}
               </span>
             </div>
 
@@ -177,13 +222,13 @@ export default function LessonPreview() {
           {/* Content preview — video, embed and MDX exactly as students see it */}
           <div className="mb-5">
             <div className="mb-3 text-[11px] font-bold tracking-[0.06em] text-zinc-400 uppercase dark:text-zinc-500">
-              Content (preview)
+              {t.contentHeading}
             </div>
             <LessonBody
               content={lesson.content}
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
-              emptyMessage="No written content for this lesson."
+              emptyMessage={t.noContent}
             />
           </div>
 
@@ -191,13 +236,13 @@ export default function LessonPreview() {
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
               <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                Attached resources ({resources.length})
+                {t.resourcesHeading(fmt.number(resources.length))}
               </span>
             </div>
 
             {resources.length === 0 ? (
               <div className="p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
-                No files attached to this lesson.
+                {t.noResources}
               </div>
             ) : (
               <div>
@@ -218,11 +263,11 @@ export default function LessonPreview() {
                         {res.file_name}
                       </div>
                       <div className="mt-px text-[11px] text-zinc-400 dark:text-zinc-500">
-                        {humanMime(res.mime_type)}
+                        {humanMime(res.mime_type, t.genericFile)}
                       </div>
                     </div>
                     <span className="shrink-0 text-xs text-zinc-400 tabular-nums dark:text-zinc-500">
-                      {humanFileSize(res.file_size)}
+                      {humanFileSize(res.file_size, fmt.number)}
                     </span>
                   </div>
                 ))}
@@ -234,3 +279,5 @@ export default function LessonPreview() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(LessonPreview);

@@ -438,7 +438,14 @@ export function registerStudentTools(server: MCPServer) {
             : null;
 
         return widget({
-          props: { total: count ?? results.length, average_score: avg, results },
+          props: {
+            total: count ?? results.length,
+            offset: input.offset,
+            limit: input.limit,
+            has_more: (count ?? results.length) > input.offset + results.length,
+            average_score: avg,
+            results,
+          },
           output: text(
             results.length === 0
               ? "You have no exam submissions yet."
@@ -817,6 +824,13 @@ export function registerStudentTools(server: MCPServer) {
         return widget({
           props: {
             total: coursesRes.count ?? courses.length,
+            // Echoed so "load more" repeats the same query rather than
+            // silently widening it to the unfiltered catalog.
+            search: input.search ?? null,
+            offset: input.offset,
+            limit: input.limit,
+            has_more:
+              (coursesRes.count ?? courses.length) > input.offset + courses.length,
             has_subscription: planIds.length > 0,
             courses,
           },
