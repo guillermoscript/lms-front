@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { generateObject } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
 import { AI_MODELS } from '@/lib/ai/config'
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
@@ -107,18 +108,17 @@ export async function generateStarterCourse(
       )
     }
 
-    const { object: outline } = await generateObject({
+    const { object: outline } = await propagateAttributes(
+      { userId, metadata: { tenantId } },
+      () => generateObject({
       model: AI_MODELS.starterCourse,
       schema: outlineSchema,
       system:
         'You draft starter courses for an online school platform. The school owner gives a one-sentence description; you produce a practical, well-sequenced course outline. Every lesson gets a short Markdown content stub the owner will expand — not full lesson text. Write all output in the same language as the owner’s description.',
       prompt: `The school owner describes the course they want to create:\n\n"${prompt}"\n\nDraft the course: a title, a catalog description, a thumbnail image prompt, and an outline of at most ${MAX_LESSONS} lessons in teaching order. Each lesson content stub should use Markdown headings and end with a "> TODO:" line telling the author what to fill in.`,
-      experimental_telemetry: {
-        isEnabled: true,
-        functionId: 'starter-course-generator',
-        metadata: { userId, tenantId },
-      },
-    })
+      experimental_telemetry: { functionId: 'starter-course-generator' },
+      }),
+    )
 
     // Auth and role are validated above; use the admin client like
     // createCourse() does, since JWT tenant_role claims can be stale for RLS.

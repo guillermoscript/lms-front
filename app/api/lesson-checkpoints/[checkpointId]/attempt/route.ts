@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { generateObject } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
@@ -190,19 +191,18 @@ export async function POST(
           typeof config.evaluation_criteria === 'string'
             ? config.evaluation_criteria
             : ''
-        const { object } = await generateObject({
+        const { object } = await propagateAttributes(
+          { userId: user.id, metadata: { checkpointId: String(checkpointId), exerciseId: String(exercise.id), tenantId } },
+          () => generateObject({
           model: AI_MODELS.grader,
           schema: aiEvaluationSchema,
           system: systemPrompt
             ? `${systemPrompt}\n\nYou are evaluating one short student checkpoint answer. Be fair, concise, and formative.`
             : 'You are an expert educational evaluator. Evaluate the student answer fairly and constructively. Be concise and formative.',
           prompt: `## Exercise: ${exercise.title}\n\n## Instructions given to the student:\n${exercise.instructions}\n${criteria ? `\n## Evaluation criteria:\n${criteria}\n` : ''}\n## Student answer:\n${body.text}\n\nScore 0-100. "feedback" is 2-4 sentences of explanatory feedback; "next_step_hint" is one actionable next step. Respond in the language of the student's answer.`,
-          experimental_telemetry: {
-            isEnabled: true,
-            functionId: 'checkpoint-evaluator',
-            metadata: { checkpointId, exerciseId: exercise.id, userId: user.id, tenantId },
-          },
-        })
+          experimental_telemetry: { functionId: 'checkpoint-evaluator' },
+          }),
+        )
         evaluatorType = 'ai'
         score = Math.max(0, Math.min(100, Math.round(object.score)))
         passed = score >= passingScore

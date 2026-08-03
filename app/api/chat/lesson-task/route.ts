@@ -4,6 +4,7 @@ import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
 import { fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -59,15 +60,18 @@ export async function POST(req: Request) {
     }
 
     // 3. Stream Response
-    const result = streamText({
+    const modelMessages = await convertToModelMessages(messages)
+    const result = propagateAttributes(
+        { userId: user.id, metadata: { lessonId: String(lessonId), tenantId } },
+        () => streamText({
         model: AI_MODELS.tutor,
         system: PROMPTS.lessonTutor(lesson, aiTask),
-        messages: await convertToModelMessages(messages),
+        messages: modelMessages,
         tools: createLessonTools(supabase, { lessonId: String(lessonId), userId: user.id }),
-        experimental_telemetry: { isEnabled: true, functionId: 'lesson-tutor', metadata: { lessonId: String(lessonId), userId: user.id, tenantId } },
+        experimental_telemetry: { functionId: 'lesson-tutor' },
         onFinish: async (event) => {
             // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
-            const messageData: any = {
+            const messageData = {
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'assistant',
@@ -78,7 +82,8 @@ export async function POST(req: Request) {
             if (error) console.error('Failed to persist lesson assistant message:', error)
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),
-    })
+        }),
+    )
 
     return result.toUIMessageStreamResponse()
 }

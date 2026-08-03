@@ -18,6 +18,7 @@ import { AI_MODELS } from '@/lib/ai/config'
 import { getLessonTranscript, type LessonTranscript } from '@/lib/lessons/video-transcript'
 import type { GenerateQuestionsResponse } from '@/lib/lessons/generated-questions'
 import { generateObject } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -189,17 +190,16 @@ ${transcript ? `\n## Video transcript (${transcript.language}), one segment per 
 Draft ${MIN_QUESTIONS}-${MAX_QUESTIONS} questions following the rules.`
 
   try {
-    const { object } = await generateObject({
-      model: AI_MODELS.questionGenerator,
-      schema: generationSchema,
-      system,
-      prompt,
-      experimental_telemetry: {
-        isEnabled: true,
-        functionId: 'lesson-question-generator',
-        metadata: { userId: user.id, tenantId, lessonId },
-      },
-    })
+    const { object } = await propagateAttributes(
+      { userId: user.id, metadata: { tenantId, lessonId: String(lessonId) } },
+      () => generateObject({
+        model: AI_MODELS.questionGenerator,
+        schema: generationSchema,
+        system,
+        prompt,
+        experimental_telemetry: { functionId: 'lesson-question-generator' },
+      }),
+    )
 
     const response: GenerateQuestionsResponse = {
       questions: object.questions,

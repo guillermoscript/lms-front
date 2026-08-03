@@ -3,6 +3,7 @@ import { AI_CONFIG, AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
 import { lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { z } from 'zod'
 
@@ -224,11 +225,14 @@ export async function POST(req: Request) {
     }
 
     // Stream response
-    const result = streamText({
+    const modelMessages = await convertToModelMessages(messages)
+    const result = propagateAttributes(
+        { userId: user.id, metadata: { tenantId, contextPage: contextPage || '' } },
+        () => streamText({
         model: AI_MODELS.aristotle,
         system: systemPrompt,
-        messages: await convertToModelMessages(messages),
-        experimental_telemetry: { isEnabled: true, functionId: 'aristotle-assistant', metadata: { userId: user.id, tenantId, contextPage: contextPage || '' } },
+        messages: modelMessages,
+        experimental_telemetry: { functionId: 'aristotle-assistant' },
         onFinish: async (event) => {
             if (event.text) {
                 const { error } = await supabase.from('aristotle_messages').insert({
@@ -241,7 +245,8 @@ export async function POST(req: Request) {
             }
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),
-    })
+        }),
+    )
 
     return result.toUIMessageStreamResponse()
 }
