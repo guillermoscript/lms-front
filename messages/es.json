@@ -5161,6 +5161,10 @@
       "description": "Crea páginas hermosas y personalizables para tu escuela con nuestro constructor visual. Disponible en el plan Starter ($9/mes) y superiores.",
       "upgrade": "Mejorar Plan"
     },
+    "freeLimit": {
+      "title": "Ya usaste tu página de inicio gratuita",
+      "description": "El plan gratuito incluye 1 página de inicio. Mejora tu plan para crear páginas ilimitadas y desbloquear el asistente de IA."
+    },
     "pageCard": {
       "section": "sección",
       "sections": "secciones",

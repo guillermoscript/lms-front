@@ -21,7 +21,6 @@ import {
   Bell,
   FileText,
   Layers,
-  Lock,
   Sparkles,
   TrendingUp,
   Award,
@@ -38,10 +37,10 @@ import type { Metadata } from "next";
 import { buildPageMetadata, getRequestBaseUrl } from "@/lib/seo";
 import { JsonLd, organizationJsonLd } from "@/lib/structured-data";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
+import type { Data } from "@measured/puck";
 import { getLandingData } from "@/lib/puck/utils/landing-data";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
-const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -60,25 +59,24 @@ export default async function LandingPage() {
         url: baseUrl,
         logo: tenant.logo_url,
       })
-      // Check if tenant has a paid plan with a custom active landing page
-      if (PAID_PLANS.includes(tenant.plan)) {
-        const adminClient = createAdminClient()
-        const { data: customPage } = await adminClient
-          .from('landing_pages')
-          .select('puck_data')
-          .eq('tenant_id', tenantId)
-          .eq('slug', 'home')
-          .eq('is_published', true)
-          .maybeSingle()
-        if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
-          const landingData = await getLandingData(tenantId)
-          return (
-            <>
-              <JsonLd data={orgStructuredData} />
-              <PuckPageRenderer data={customPage.puck_data as any} landingData={landingData} />
-            </>
-          )
-        }
+      // Custom landing pages are available on every plan (free is capped at one
+      // page at creation time — see app/actions/admin/landing-pages.ts)
+      const adminClient = createAdminClient()
+      const { data: customPage } = await adminClient
+        .from('landing_pages')
+        .select('puck_data')
+        .eq('tenant_id', tenantId)
+        .eq('slug', 'home')
+        .eq('is_published', true)
+        .maybeSingle()
+      if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
+        const landingData = await getLandingData(tenantId)
+        return (
+          <>
+            <JsonLd data={orgStructuredData} />
+            <PuckPageRenderer data={customPage.puck_data as unknown as Data} landingData={landingData} />
+          </>
+        )
       }
 
       // Fallback: default school landing page
@@ -97,8 +95,6 @@ export default async function LandingPage() {
       )
     }
   }
-
-  const t = await getTranslations("landing");
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-hidden selection:bg-blue-500/30">
@@ -421,7 +417,7 @@ export default async function LandingPage() {
                 </div>
                 {/* Leaderboard mini */}
                 <div className="border-t border-zinc-800 pt-4">
-                  <p className="text-xs text-zinc-500 mb-2 font-medium">This Week's Leaders</p>
+                  <p className="text-xs text-zinc-500 mb-2 font-medium">This Week&apos;s Leaders</p>
                   {[
                     { rank: 1, name: "Maria S.", xp: "4,820 XP" },
                     { rank: 2, name: "Carlos R.", xp: "4,210 XP" },
@@ -452,7 +448,7 @@ export default async function LandingPage() {
               Everything Included
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight" style={{ textWrap: "balance" }}>
-              Every Feature You Need, Nothing You Don't
+              Every Feature You Need, Nothing You Don&apos;t
             </h2>
             <p className="text-zinc-400 text-lg leading-relaxed">
               No plugins. No paid add-ons. No nickel-and-diming. Everything ships in the box.
@@ -555,7 +551,7 @@ export default async function LandingPage() {
                 Every School Is a Completely Separate World
               </h2>
               <p className="text-zinc-400 leading-relaxed">
-                Database-level isolation means School A can never see School B's students,
+                Database-level isolation means School A can never see School B&apos;s students,
                 courses, or transactions — even if they share the same platform.
                 RLS policies enforce this at the query level, not the application layer.
               </p>
@@ -649,7 +645,7 @@ export default async function LandingPage() {
               Start Free. Grow Without Limits.
             </h2>
             <p className="text-zinc-400 text-lg">
-              No platform fee on the free plan. Upgrade when you're ready to scale.
+              No platform fee on the free plan. Upgrade when you&apos;re ready to scale.
             </p>
           </div>
 

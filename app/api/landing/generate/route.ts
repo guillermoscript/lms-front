@@ -44,9 +44,9 @@ export const maxDuration = 120
 const MAX_MESSAGES = 20
 const MAX_CONTENT_LEN = 4000
 
-// Plans allowed to use the landing-page builder + its AI assistant. Mirrors the UI gate in
-// components/admin/landing-page/landing-pages-client.tsx (PAID_PLANS / canUseBuilder) so the
-// endpoint can't be called directly on the free plan to burn OpenAI tokens.
+// Plans allowed to use the landing-page AI assistant. The builder itself is available on every
+// plan (free is capped at one page), but the AI assistant stays paid-only — the UI hides the
+// panel (PuckEditor aiEnabled) and this server gate stops direct calls from burning OpenAI tokens.
 const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
 
 // AI generation is expensive (OpenAI tokens + ~10s of compute), so cap how often a single user

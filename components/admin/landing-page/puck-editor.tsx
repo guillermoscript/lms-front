@@ -28,8 +28,10 @@ interface Props {
   pageName: string
   pageStatus: 'draft' | 'published'
   initialData: Data
-  brandingSettings: Record<string, any>
+  brandingSettings: Record<string, unknown>
   landingData: LandingData
+  /** The AI assistant is a paid feature — /api/landing/generate rejects free-plan tenants */
+  aiEnabled?: boolean
   onBack: () => void
 }
 
@@ -87,7 +89,7 @@ function SaveButton({ pageId, saving, onSaveStateChange }: { pageId: string; sav
   )
 }
 
-export function PuckEditor({ pageId, pageName, pageStatus, initialData, brandingSettings, landingData, onBack }: Props) {
+export function PuckEditor({ pageId, pageName, pageStatus, initialData, brandingSettings, landingData, aiEnabled = true, onBack }: Props) {
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(pageStatus)
   const [brandingOpen, setBrandingOpen] = useState(false)
@@ -154,7 +156,7 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, branding
                 <IconPalette className="w-4 h-4" />
                 {t('editor.branding')}
               </Button>
-              <AiChatPanel />
+              {aiEnabled && <AiChatPanel />}
               <SaveButton pageId={pageId} saving={saving} onSaveStateChange={setSaving} />
               {children}
             </>

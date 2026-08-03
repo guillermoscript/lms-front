@@ -40,7 +40,6 @@ export const FEATURE_REQUIRED_PLAN: Record<string, string> = {
   leaderboard: 'starter',
   achievements: 'starter',
   analytics: 'starter',
-  landing_pages: 'starter',
   community: 'starter',
   store: 'pro',
   ai_grading: 'pro',
