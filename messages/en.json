@@ -5168,6 +5168,10 @@
       "description": "Create beautiful, customizable pages for your school with our drag-and-drop builder. Available on Starter plan ($9/mo) and above.",
       "upgrade": "Upgrade Plan"
     },
+    "freeLimit": {
+      "title": "You've used your free landing page",
+      "description": "The free plan includes 1 landing page. Upgrade to create unlimited pages and unlock the AI page assistant."
+    },
     "pageCard": {
       "section": "section",
       "sections": "sections",

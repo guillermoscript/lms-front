@@ -19,7 +19,7 @@ const DEFAULT_FEATURES: PlanFeatures = {
   xp: true,
   levels: true,
   streaks: true,
-  landing_pages: false,
+  landing_pages: true,
   remove_branding: false,
   voice_exercises: false,
   community: false,

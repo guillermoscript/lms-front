@@ -5,9 +5,9 @@ import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-ren
 import { getLandingData } from '@/lib/puck/utils/landing-data'
 import { ogImageUrl } from '@/lib/seo'
 import type { Metadata } from 'next'
+import type { Data } from '@measured/puck'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
-const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -18,7 +18,7 @@ async function getPageData(slug: string) {
   if (tenantId === DEFAULT_TENANT_ID) return null
 
   const tenant = await getCurrentTenant()
-  if (!tenant || !PAID_PLANS.includes(tenant.plan)) return null
+  if (!tenant) return null
 
   const adminClient = createAdminClient()
   const { data: page } = await adminClient
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const result = await getPageData(slug)
   if (!result) return {}
 
-  const rootProps = (result.page.puck_data as any)?.root?.props
+  const rootProps = (result.page.puck_data as { root?: { props?: Record<string, string | undefined> } })?.root?.props
   const title =
     rootProps?.metaTitle ||
     result.page.title ||
@@ -71,5 +71,5 @@ export default async function CustomPage({ params }: PageProps) {
   if (!result) notFound()
 
   const landingData = await getLandingData(result.tenantId)
-  return <PuckPageRenderer data={result.page.puck_data as any} landingData={landingData} />
+  return <PuckPageRenderer data={result.page.puck_data as unknown as Data} landingData={landingData} />
 }

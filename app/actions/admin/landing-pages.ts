@@ -74,6 +74,29 @@ function validateSlug(slug: string): string | null {
   return null
 }
 
+// Free plan gets the builder but is capped at one page. The client hides the
+// create/duplicate buttons at the cap (landing-pages-client.tsx) — this is the
+// server-side enforcement so the actions can't be called directly around it.
+const FREE_PLAN_PAGE_LIMIT = 1
+
+async function checkFreePlanPageLimit(
+  adminClient: ReturnType<typeof createAdminClient>,
+  tenantId: string
+): Promise<string | null> {
+  const { data: planResult } = await adminClient.rpc('get_plan_features', { _tenant_id: tenantId })
+  const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
+  if (plan !== 'free') return null
+
+  const { count } = await adminClient
+    .from('landing_pages')
+    .select('page_id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+  if ((count ?? 0) >= FREE_PLAN_PAGE_LIMIT) {
+    return 'The free plan includes 1 landing page. Upgrade your plan to create more pages.'
+  }
+  return null
+}
+
 function friendlyDbError(err: unknown): string {
   const msg = err instanceof Error
     ? err.message
@@ -163,6 +186,9 @@ export async function createLandingPage(
     const pageSlug = sanitizeSlug(slug)
     const slugError = validateSlug(pageSlug)
     if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+
+    const limitError = await checkFreePlanPageLimit(adminClient, tenantId)
+    if (limitError) return { success: false, error: limitError } as ActionResult<LandingPage>
 
     const { data, error } = await adminClient
       .from('landing_pages')
@@ -352,6 +378,9 @@ export async function duplicateLandingPage(id: string, newName: string): Promise
 
     const nameError = validateName(newName)
     if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+
+    const limitError = await checkFreePlanPageLimit(adminClient, tenantId)
+    if (limitError) return { success: false, error: limitError } as ActionResult<LandingPage>
 
     const { data: original } = await adminClient
       .from('landing_pages')

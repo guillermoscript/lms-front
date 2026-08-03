@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -77,11 +77,13 @@ interface Props {
   plan: string
   tenantId: string
   templates: PuckTemplate[]
-  brandingSettings: Record<string, any>
+  brandingSettings: Record<string, unknown>
   landingData: LandingData
 }
 
-const PAID_PLANS = ['starter', 'pro', 'business', 'enterprise']
+// The builder is available on every plan; free tenants are capped at one page.
+// Keep in sync with the server-side cap in app/actions/admin/landing-pages.ts.
+const FREE_PLAN_PAGE_LIMIT = 1
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -104,9 +106,13 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
   const t = useTranslations('landingPageBuilder')
   const [pages, setPages] = useState<LandingPage[]>(initialPages)
 
-  useEffect(() => {
+  // Sync server-provided pages after router.refresh() — render-time adjustment
+  // instead of an effect (react-hooks/set-state-in-effect)
+  const [prevInitialPages, setPrevInitialPages] = useState(initialPages)
+  if (prevInitialPages !== initialPages) {
+    setPrevInitialPages(initialPages)
     setPages(initialPages)
-  }, [initialPages])
+  }
 
   const [editingPage, setEditingPage] = useState<LandingPage | null>(null)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
@@ -114,7 +120,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const pendingRef = useRef(false)
 
-  const canUseBuilder = PAID_PLANS.includes(plan)
+  const atFreePageLimit = plan === 'free' && pages.length >= FREE_PLAN_PAGE_LIMIT
   const isLoading = loadingAction !== null
 
   const withGuard = useCallback(async <T,>(actionKey: string, fn: () => Promise<T>): Promise<T | null> => {
@@ -214,6 +220,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         initialData={editingPage.puck_data || { root: { props: {} }, content: [], zones: {} }}
         brandingSettings={brandingSettings}
         landingData={landingData}
+        aiEnabled={plan !== 'free'}
         onBack={() => {
           router.refresh()
           setEditingPage(null)
@@ -224,21 +231,23 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
 
   return (
     <div className="space-y-6">
-      {/* Feature gate for free plan */}
-      {!canUseBuilder && (
+      {/* Free plan is capped at one page — nudge toward upgrade once the cap is hit */}
+      {atFreePageLimit && (
         <Card>
-          <CardContent className="py-12">
-            <div className="flex flex-col items-center justify-center gap-4 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
-                <IconLock className="h-5 w-5 text-muted-foreground" />
+          <CardContent className="py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <IconLock className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">{t('freeLimit.title')}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {t('freeLimit.description')}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-base">{t('featureGate.title')}</h3>
-                <p className="text-muted-foreground text-sm mt-1.5 max-w-md leading-relaxed">
-                  {t('featureGate.description')}
-                </p>
-              </div>
-              <Button onClick={() => router.push('/dashboard/admin/billing/upgrade')} className="gap-2">
+              <Button onClick={() => router.push('/dashboard/admin/billing/upgrade')} size="sm" className="gap-2 shrink-0">
                 {t('featureGate.upgrade')}
                 <IconArrowRight className="w-4 h-4" />
               </Button>
@@ -248,8 +257,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
       )}
 
       {/* Pages list */}
-      {canUseBuilder && (
-        <>
+      <>
           {pages.length === 0 ? (
             <Card>
               <CardContent className="py-16">
@@ -275,7 +283,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
               <CardHeader>
                 <CardTitle>{t('title')}</CardTitle>
                 <div className="col-start-2 row-span-2 row-start-1 self-start justify-self-end">
-                  <Button onClick={() => setShowTemplatePicker(true)} disabled={isLoading} size="sm" className="gap-2">
+                  <Button onClick={() => setShowTemplatePicker(true)} disabled={isLoading || atFreePageLimit} size="sm" className="gap-2">
                     <IconPlus className="w-4 h-4" />
                     {t('newPage')}
                   </Button>
@@ -394,7 +402,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                                       <><IconWorldUpload className="w-4 h-4 mr-2" /> {t('pageCard.activate')}</>
                                     )}
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={isLoading}>
+                                  <DropdownMenuItem onClick={() => handleDuplicate(page)} disabled={isLoading || atFreePageLimit}>
                                     <IconCopy className="w-4 h-4 mr-2" /> {t('pageCard.duplicate')}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
@@ -418,7 +426,6 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
             </Card>
           )}
         </>
-      )}
 
       <TemplatePicker
         open={showTemplatePicker}
