@@ -23,10 +23,37 @@ test.describe('Authentication Security', () => {
   test('sign-up page accessible with form fields', async ({ page }) => {
     await page.goto(`${BASE}/en/auth/sign-up`)
     await expect(page.getByTestId('signup-title')).toBeVisible()
+    await expect(page.getByTestId('signup-name')).toBeVisible()
     await expect(page.getByTestId('signup-email')).toBeVisible()
     await expect(page.getByTestId('signup-password')).toBeVisible()
-    await expect(page.getByTestId('signup-repeat-password')).toBeVisible()
     await expect(page.getByTestId('signup-submit')).toBeVisible()
+  })
+
+  test('sign-up requires a full name', async ({ page }) => {
+    await page.goto(`${BASE}/en/auth/sign-up`)
+    await page.getByTestId('signup-email').fill(`e2e-noname-${Date.now()}@e2etest.com`)
+    await page.getByTestId('signup-password').fill('password123')
+    await page.getByTestId('signup-submit').click()
+    // HTML5 `required` blocks submission — still on sign-up, name flagged invalid
+    await expect(page).toHaveURL(/\/auth\/sign-up/)
+    const nameMissing = await page
+      .getByTestId('signup-name')
+      .evaluate((el) => (el as HTMLInputElement).validity.valueMissing)
+    expect(nameMissing).toBe(true)
+  })
+
+  test('sign-up with full name reaches success page', async ({ page }) => {
+    // Guards #590: signing up without a name made students read as "Unknown Student".
+    // Local GoTrue autoconfirms (enable_confirmations = false), so a successful
+    // sign-up lands on /auth/sign-up-success.
+    await page.goto(`${BASE}/en/auth/sign-up`)
+    await page.getByTestId('signup-name').fill('E2E Signup Tester')
+    await page.getByTestId('signup-email').fill(`e2e-signup-${Date.now()}@e2etest.com`)
+    await page.getByTestId('signup-password').fill('password123')
+    await page.getByTestId('signup-submit').click()
+    // A confirmed sign-up either shows the success page or — since the new user
+    // has a session but no tenant membership — gets proxied to /join-school.
+    await page.waitForURL(/\/auth\/sign-up-success|\/join-school/, { timeout: 20_000 })
   })
 
   // ─── Route Guards — Unauthenticated ──────────────────────────────────────

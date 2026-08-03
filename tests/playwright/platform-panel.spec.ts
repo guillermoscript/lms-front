@@ -345,7 +345,20 @@ test.describe('Platform Plans', () => {
 // Platform Referrals
 // ─────────────────────────────────────────────────────────────
 
-test.describe('Platform Referrals', () => {
+// While the referral program is hidden, the route must redirect — not 404 or
+// render the dead page (see app/[locale]/platform/referrals/page.tsx).
+test.describe('Platform Referrals (hidden)', () => {
+  test('referrals page redirects to platform overview while hidden', async ({ page }) => {
+    await loginAsSuperAdmin(page)
+    await page.goto(`${PLATFORM_BASE}/referrals`)
+    await page.waitForURL(/\/platform(?!\/referrals)/, { timeout: 10_000 })
+    expect(page.url()).not.toContain('/referrals')
+  })
+})
+
+// Skipped: /platform/referrals redirects to /platform until the referral schema
+// lands (see app/[locale]/platform/referrals/page.tsx) — unskip when restored.
+test.describe.skip('Platform Referrals', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsSuperAdmin(page)
     await page.goto(`${PLATFORM_BASE}/referrals`)
