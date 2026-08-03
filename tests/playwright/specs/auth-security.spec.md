@@ -42,10 +42,12 @@ Password for all: `password123`
 | # | Test | Selector | Expected |
 |---|------|----------|----------|
 | 2.1 | Sign-up title visible | `[data-testid="signup-title"]` | visible |
-| 2.2 | Email input visible | `[data-testid="signup-email"]` | visible |
-| 2.3 | Password input visible | `[data-testid="signup-password"]` | visible |
-| 2.4 | Repeat password input visible | `[data-testid="signup-repeat-password"]` | visible |
+| 2.2 | Full name input visible | `[data-testid="signup-name"]` | visible |
+| 2.3 | Email input visible | `[data-testid="signup-email"]` | visible |
+| 2.4 | Password input visible | `[data-testid="signup-password"]` | visible |
 | 2.5 | Submit button visible | `[data-testid="signup-submit"]` | visible |
+| 2.6 | Full name is required | submit without name | stays on sign-up; `signup-name` fails `validity.valueMissing` |
+| 2.7 | Sign-up with name succeeds | fill name/email/password; submit | lands on `/auth/sign-up-success` or `/join-school` (guards #590 "Unknown Student") |
 
 ---
 

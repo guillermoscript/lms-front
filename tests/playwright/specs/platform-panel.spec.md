@@ -85,6 +85,8 @@ Precondition: logged in as super admin; navigated to PLATFORM_BASE/plans.
 
 ### Platform Referrals (P1)
 
+**Currently skipped:** `/platform/referrals` redirects to `/platform` until the referral schema lands (see `app/[locale]/platform/referrals/page.tsx`). One active guard test asserts the redirect. Unskip the block when the page is restored.
+
 Precondition: logged in as super admin; navigated to PLATFORM_BASE/referrals.
 
 | # | Test | Assertions | Selectors |
