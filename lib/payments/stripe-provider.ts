@@ -43,7 +43,7 @@ export class StripePaymentProvider implements IPaymentProvider {
 
   constructor(apiKey: string) {
     this.stripe = new Stripe(apiKey, {
-      apiVersion: '2026-02-25.clover',
+      apiVersion: '2026-07-29.dahlia',
     })
   }
 

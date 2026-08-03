@@ -53,7 +53,8 @@ const toIso = (unix: unknown): string | undefined =>
     ? new Date(unix * 1000).toISOString()
     : undefined
 
-// API 2026-02-25.clover (pinned in lib/stripe.ts): current_period_start/end moved
+// Since API 2026-02-25.clover (lib/stripe.ts pins a later version, shapes
+// unchanged): current_period_start/end moved
 // off the Subscription onto its SubscriptionItems, and Invoice.subscription moved
 // under parent.subscription_details. Same accessors as the student webhook —
 // lib/payments/stripe-provider.ts:454-460. The `??` fallbacks read the pre-clover
