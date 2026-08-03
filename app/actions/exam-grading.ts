@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 
 /**
  * AI Persona configurations for exam grading
@@ -365,13 +366,16 @@ IMPORTANT: Use the exact "Question ID" number from each question header above (e
 Evaluate these free-text answers now:`
 
     // Call OpenAI model via AI SDK
-    const result = await generateText({
-      model: openai('gpt-4o-mini'),
-      prompt: aiPrompt,
-      temperature: 0.3, // Lower temperature for more consistent grading
-      topP: 0.8,
-      experimental_telemetry: { isEnabled: true, functionId: 'exam-grading', metadata: { examId: String(params.examId), submissionId: String(params.submissionId) } },
-    })
+    const result = await propagateAttributes(
+      { metadata: { examId: String(params.examId), submissionId: String(params.submissionId) } },
+      () => generateText({
+        model: openai('gpt-4o-mini'),
+        prompt: aiPrompt,
+        temperature: 0.3, // Lower temperature for more consistent grading
+        topP: 0.8,
+        experimental_telemetry: { functionId: 'exam-grading' },
+      }),
+    )
 
     const text = result.text
 

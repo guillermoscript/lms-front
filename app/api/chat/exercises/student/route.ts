@@ -4,6 +4,7 @@ import { PROMPTS } from '@/lib/ai/prompts'
 import { createExerciseTools } from '@/lib/ai/tools'
 import { fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -55,12 +56,15 @@ export async function POST(req: Request) {
     }
 
     // 3. Stream Response
-    const result = streamText({
+    const modelMessages = await convertToModelMessages(messages)
+    const result = propagateAttributes(
+        { userId: user.id, metadata: { exerciseId: String(exerciseId), tenantId } },
+        () => streamText({
         model: AI_MODELS.coach,
         system: PROMPTS.exerciseCoach(exercise),
-        messages: await convertToModelMessages(messages),
+        messages: modelMessages,
         tools: createExerciseTools(supabase, { exerciseId: String(exerciseId), userId: user.id, tenantId, exerciseType: exercise.exercise_type }),
-        experimental_telemetry: { isEnabled: true, functionId: 'exercise-coach', metadata: { exerciseId: String(exerciseId), userId: user.id, tenantId } },
+        experimental_telemetry: { functionId: 'exercise-coach' },
         onFinish: async (event) => {
             const { error } = await supabase.from('exercise_messages').insert({
                 exercise_id: exerciseId,
@@ -71,7 +75,8 @@ export async function POST(req: Request) {
             if (error) console.error('Failed to persist exercise assistant message:', error)
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),
-    })
+        }),
+    )
 
     return result.toUIMessageStreamResponse()
 }

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { propagateAttributes } from '@langfuse/tracing'
 
 export const maxDuration = 120
 
@@ -14,13 +15,17 @@ export async function POST(req: Request) {
   const { instructions, system_prompt, messages } = await req.json()
 
   // Stream Response (Preview mode: no tools, no database saves)
-  const result = streamText({
-    model: AI_MODELS.coach,
-    system: PROMPTS.previewExercise(instructions, system_prompt),
-    messages: await convertToModelMessages(messages),
-    experimental_telemetry: { isEnabled: true, functionId: 'preview-exercise', metadata: { userId: user.id } },
-    stopWhen: stepCountIs(AI_CONFIG.maxSteps),
-  })
+  const modelMessages = await convertToModelMessages(messages)
+  const result = propagateAttributes(
+    { userId: user.id },
+    () => streamText({
+      model: AI_MODELS.coach,
+      system: PROMPTS.previewExercise(instructions, system_prompt),
+      messages: modelMessages,
+      experimental_telemetry: { functionId: 'preview-exercise' },
+      stopWhen: stepCountIs(AI_CONFIG.maxSteps),
+    }),
+  )
 
   return result.toUIMessageStreamResponse()
 }
