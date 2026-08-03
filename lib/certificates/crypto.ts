@@ -3,8 +3,8 @@
  * Handles key generation, signing, and verification using Ed25519
  */
 
-import { ed25519 } from '@noble/curves/ed25519';
-import { bytesToHex, hexToBytes } from '@noble/curves/abstract/utils';
+import { ed25519 } from '@noble/curves/ed25519.js';
+import { bytesToHex, hexToBytes } from '@noble/curves/utils.js';
 import crypto from 'crypto';
 
 // =====================================================
@@ -41,7 +41,7 @@ export interface JsonWebKey {
  */
 export function generateIssuerKeyPair(): KeyPair {
     // Generate random private key
-    const privateKeyBytes = ed25519.utils.randomPrivateKey();
+    const privateKeyBytes = ed25519.utils.randomSecretKey();
 
     // Derive public key
     const publicKeyBytes = ed25519.getPublicKey(privateKeyBytes);
@@ -77,7 +77,7 @@ export function generateIssuerKeyPair(): KeyPair {
  * Returns Ed25519Signature2020 proof
  */
 export function signCredential(
-    credential: any,
+    credential: object,
     privateKeyHex: string,
     verificationMethod: string
 ): SignatureProof {
@@ -109,11 +109,11 @@ export function signCredential(
 /**
  * Add cryptographic proof to credential
  */
-export function addProofToCredential(
-    credential: any,
+export function addProofToCredential<T extends object>(
+    credential: T,
     privateKeyHex: string,
     verificationMethod: string
-): any {
+): T & { proof: SignatureProof } {
     const proof = signCredential(credential, privateKeyHex, verificationMethod);
 
     return {
@@ -130,11 +130,14 @@ export function addProofToCredential(
  * Verify Ed25519 signature on a credential
  */
 export function verifyCredential(
-    credential: any,
+    credential: object,
     publicKeyHex: string
 ): boolean {
     try {
-        const { proof, ...credentialWithoutProof } = credential;
+        const { proof, ...credentialWithoutProof } = credential as {
+            proof?: SignatureProof;
+            [key: string]: unknown;
+        };
 
         if (!proof || proof.type !== 'Ed25519Signature2020') {
             return false;
@@ -217,15 +220,16 @@ export function decryptPrivateKey(
  * Canonicalize JSON (RFC 8785)
  * Sorts keys and removes whitespace
  */
-function canonicalize(obj: any): string {
+function canonicalize(obj: unknown): string {
     if (obj === null) return 'null';
     if (typeof obj !== 'object') return JSON.stringify(obj);
     if (Array.isArray(obj)) {
         return '[' + obj.map(canonicalize).join(',') + ']';
     }
 
-    const keys = Object.keys(obj).sort();
-    const pairs = keys.map(key => `"${key}":${canonicalize(obj[key])}`);
+    const rec = obj as Record<string, unknown>;
+    const keys = Object.keys(rec).sort();
+    const pairs = keys.map(key => `"${key}":${canonicalize(rec[key])}`);
     return '{' + pairs.join(',') + '}';
 }
 
@@ -267,8 +271,19 @@ function base58Decode(str: string): Uint8Array {
         num = num * FIFTY_EIGHT + BigInt(value);
     }
 
-    const hex = num.toString(16).padStart(64, '0');
-    return hexToBytes(hex);
+    // BigInt drops leading zero bits, so pad to even length for hexToBytes and
+    // restore leading zero bytes (base58 encodes each as a leading '1').
+    let hex = num.toString(16);
+    if (hex.length % 2) hex = '0' + hex;
+    const bytes = num === BigInt(0) ? new Uint8Array(0) : hexToBytes(hex);
+
+    let leadingZeros = 0;
+    for (let i = 0; i < str.length && str[i] === '1'; i++) leadingZeros++;
+    if (leadingZeros === 0) return bytes;
+
+    const out = new Uint8Array(leadingZeros + bytes.length);
+    out.set(bytes, leadingZeros);
+    return out;
 }
 
 /**
