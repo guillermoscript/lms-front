@@ -4413,9 +4413,9 @@ export type Database = {
           amount: number
           created_at: string | null
           currency: string | null
-          idempotency_key: string | null
           failed_at: string | null
           failure_reason: string | null
+          idempotency_key: string | null
           note: string | null
           paid_at: string | null
           payout_id: number
@@ -4432,9 +4432,9 @@ export type Database = {
           amount: number
           created_at?: string | null
           currency?: string | null
-          idempotency_key?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          idempotency_key?: string | null
           note?: string | null
           paid_at?: string | null
           payout_id?: number
@@ -4451,9 +4451,9 @@ export type Database = {
           amount?: number
           created_at?: string | null
           currency?: string | null
-          idempotency_key?: string | null
           failed_at?: string | null
           failure_reason?: string | null
+          idempotency_key?: string | null
           note?: string | null
           paid_at?: string | null
           payout_id?: number
@@ -4595,6 +4595,7 @@ export type Database = {
           confirmed_by: string | null
           created_at: string | null
           currency: string
+          expires_at: string
           interval: string
           notes: string | null
           plan_id: string
@@ -4613,6 +4614,7 @@ export type Database = {
           confirmed_by?: string | null
           created_at?: string | null
           currency?: string
+          expires_at?: string
           interval?: string
           notes?: string | null
           plan_id: string
@@ -4631,6 +4633,7 @@ export type Database = {
           confirmed_by?: string | null
           created_at?: string | null
           currency?: string
+          expires_at?: string
           interval?: string
           notes?: string | null
           plan_id?: string
@@ -4765,10 +4768,12 @@ export type Database = {
           interval: string
           payment_provider: string
           plan_id: string
-          renewal_reminder_sent_at: string | null
-          status: string
+          plan_override_at: string | null
+          plan_override_by: string | null
           provider_customer_id: string | null
           provider_subscription_id: string | null
+          renewal_reminder_sent_at: string | null
+          status: string
           subscription_id: string
           tenant_id: string
           updated_at: string | null
@@ -4783,10 +4788,12 @@ export type Database = {
           interval?: string
           payment_provider?: string
           plan_id: string
-          renewal_reminder_sent_at?: string | null
-          status?: string
+          plan_override_at?: string | null
+          plan_override_by?: string | null
           provider_customer_id?: string | null
           provider_subscription_id?: string | null
+          renewal_reminder_sent_at?: string | null
+          status?: string
           subscription_id?: string
           tenant_id: string
           updated_at?: string | null
@@ -4801,10 +4808,12 @@ export type Database = {
           interval?: string
           payment_provider?: string
           plan_id?: string
-          renewal_reminder_sent_at?: string | null
-          status?: string
+          plan_override_at?: string | null
+          plan_override_by?: string | null
           provider_customer_id?: string | null
           provider_subscription_id?: string | null
+          renewal_reminder_sent_at?: string | null
+          status?: string
           subscription_id?: string
           tenant_id?: string
           updated_at?: string | null
@@ -5704,6 +5713,35 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_billing_customers: {
+        Row: {
+          created_at: string
+          payment_provider: string
+          provider_customer_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          payment_provider: string
+          provider_customer_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          payment_provider?: string
+          provider_customer_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_billing_customers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_invitations: {
         Row: {
           accepted_at: string | null
@@ -5776,35 +5814,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tenant_payment_wallets_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenant_billing_customers: {
-        Row: {
-          created_at: string
-          payment_provider: string
-          provider_customer_id: string
-          tenant_id: string
-        }
-        Insert: {
-          created_at?: string
-          payment_provider: string
-          provider_customer_id: string
-          tenant_id: string
-        }
-        Update: {
-          created_at?: string
-          payment_provider?: string
-          provider_customer_id?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_billing_customers_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6392,6 +6401,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: number
       }
+      can_read_exam: { Args: { _exam_id: number }; Returns: boolean }
       cancel_subscription: {
         Args: { _plan_id: number; _user_id: string }
         Returns: undefined
@@ -6497,9 +6507,9 @@ export type Database = {
       }
       get_daily_digest_candidates: {
         Args: {
-          _after_tenant_id?: string | null
-          _after_user_id?: string | null
-          _limit?: number | null
+          _after_tenant_id?: string
+          _after_user_id?: string
+          _limit?: number
         }
         Returns: {
           current_streak: number
