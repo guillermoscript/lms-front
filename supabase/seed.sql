@@ -690,18 +690,41 @@ ON CONFLICT (tenant_id, setting_key) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 18. PLATFORM SUBSCRIPTIONS  (Code Academy is on Pro plan)
 -- ---------------------------------------------------------------------------
-INSERT INTO platform_subscriptions (tenant_id, plan_id, status, payment_method, interval, current_period_start, current_period_end, cancel_at_period_end)
+INSERT INTO platform_subscriptions (tenant_id, plan_id, status, payment_provider, interval, current_period_start, current_period_end, cancel_at_period_end)
 VALUES (
   '00000000-0000-0000-0000-000000000002',
   (SELECT plan_id FROM platform_plans WHERE slug = 'pro'),
   'active',
-  'manual_transfer',
+  'manual',
   'monthly',
   NOW(),
   NOW() + interval '30 days',
   false
 )
 ON CONFLICT (tenant_id) DO NOTHING;
+
+
+-- ---------------------------------------------------------------------------
+-- 18b. PLATFORM PLAN PRICES  (issue #601 / #602)
+--
+-- Without at least one row here every card upgrade 400s with "Stripe price not
+-- configured for this plan" — the funnel dead-ends before it reaches Stripe,
+-- which is the bug #602 documents. Seeding it means a local dev can walk the
+-- upgrade path without hand-written SQL.
+--
+-- These are PLACEHOLDER ids, not real Stripe prices: they get you past the
+-- configuration gate, and Stripe itself will then reject them. To exercise a
+-- real checkout, replace them with your own test-mode price ids.
+-- ---------------------------------------------------------------------------
+INSERT INTO platform_plan_prices (plan_id, payment_provider, interval, provider_price_id, currency, amount)
+SELECT pp.plan_id, 'stripe', i.interval,
+       'price_local_' || pp.slug || '_' || i.interval,
+       'usd',
+       CASE WHEN i.interval = 'yearly' THEN pp.price_yearly ELSE pp.price_monthly END
+FROM platform_plans pp
+CROSS JOIN (VALUES ('monthly'), ('yearly')) AS i(interval)
+WHERE pp.slug <> 'free'
+ON CONFLICT (plan_id, payment_provider, interval) DO NOTHING;
 
 
 -- ===========================================================================

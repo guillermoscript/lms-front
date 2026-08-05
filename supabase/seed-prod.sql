@@ -38,7 +38,7 @@ BEGIN
     -- commerce
     'products','plans','subscriptions','transactions','payment_requests',
     'revenue_splits','payouts','invoices',
-    'platform_subscriptions','platform_payment_requests',
+    'platform_subscriptions','platform_payment_requests','tenant_billing_customers',
     -- community
     'community_posts','community_comments','community_reactions',
     'community_polls','community_poll_votes','community_spaces',

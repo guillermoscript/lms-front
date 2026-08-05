@@ -22,7 +22,7 @@ export const runtime = 'nodejs'
  * migration 20260719120000) so the flow lives in the app layer, where it can send
  * admin emails and honor pending renewal requests — neither of which SQL could do.
  *
- * Scope: only payment_method='manual_transfer'. Stripe platform subs stay
+ * Scope: only payment_provider='manual'. Stripe platform subs stay
  * webhook-driven; their expiry is handled by /api/stripe/platform-webhook.
  *
  * Phases (all status-gated, so re-running is idempotent):
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
   const { data: reminderSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_method', 'manual_transfer')
+    .eq('payment_provider', 'manual')
     .eq('status', 'active')
     .eq('cancel_at_period_end', false)
     .is('renewal_reminder_sent_at', null)
@@ -175,7 +175,7 @@ export async function GET(req: NextRequest) {
   const { data: lapsedSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_method', 'manual_transfer')
+    .eq('payment_provider', 'manual')
     .eq('status', 'active')
     .eq('cancel_at_period_end', false)
     .not('current_period_end', 'is', null)
@@ -221,7 +221,7 @@ export async function GET(req: NextRequest) {
   const { data: expiredSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_method', 'manual_transfer')
+    .eq('payment_provider', 'manual')
     .eq('status', 'past_due')
     .not('grace_period_end', 'is', null)
     .lt('grace_period_end', nowIso)
@@ -263,7 +263,7 @@ export async function GET(req: NextRequest) {
   const { data: cancelSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_method', 'manual_transfer')
+    .eq('payment_provider', 'manual')
     .eq('status', 'active')
     .eq('cancel_at_period_end', true)
     .not('current_period_end', 'is', null)

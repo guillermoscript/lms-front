@@ -43,16 +43,16 @@ export async function POST(req: NextRequest) {
     // Check for existing active subscription
     const { data: existingSub } = await adminClient
       .from('platform_subscriptions')
-      .select('subscription_id, stripe_subscription_id, status, payment_method')
+      .select('subscription_id, provider_subscription_id, status, payment_provider')
       .eq('tenant_id', tenantId)
       .single()
 
     // Block only if there's an active Stripe subscription (not manual)
-    // Allow checkout when switching from manual_transfer to Stripe
+    // Allow checkout when switching from a manual subscription to Stripe
     if (
-      existingSub?.stripe_subscription_id &&
+      existingSub?.provider_subscription_id &&
       existingSub.status === 'active' &&
-      existingSub.payment_method !== 'manual_transfer'
+      existingSub.payment_provider !== 'manual'
     ) {
       return NextResponse.json(
         { error: 'Active subscription exists. Use billing portal to change plans.' },
@@ -76,9 +76,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot subscribe to free plan via checkout' }, { status: 400 })
     }
 
-    const stripePriceId = interval === 'yearly'
-      ? plan.stripe_price_id_yearly
-      : plan.stripe_price_id_monthly
+    // Price ids live per (plan, provider, interval) in platform_plan_prices (#601).
+    const { data: price } = await adminClient
+      .from('platform_plan_prices')
+      .select('provider_price_id')
+      .eq('plan_id', planId)
+      .eq('payment_provider', 'stripe')
+      .eq('interval', interval === 'yearly' ? 'yearly' : 'monthly')
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const stripePriceId = price?.provider_price_id
 
     if (!stripePriceId) {
       return NextResponse.json(
@@ -87,14 +95,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Get or create Stripe customer for the tenant (platform billing)
+    // Get or create the tenant's Stripe customer (platform billing). The id now
+    // lives per-provider in tenant_billing_customers rather than on `tenants`.
     const { data: tenant } = await adminClient
       .from('tenants')
-      .select('stripe_customer_id, billing_email, name')
+      .select('billing_email, name')
       .eq('id', tenantId)
       .single()
 
-    let stripeCustomerId = tenant?.stripe_customer_id
+    const { data: billingCustomer } = await adminClient
+      .from('tenant_billing_customers')
+      .select('provider_customer_id')
+      .eq('tenant_id', tenantId)
+      .eq('payment_provider', 'stripe')
+      .maybeSingle()
+
+    let stripeCustomerId = billingCustomer?.provider_customer_id
     const stripe = getStripe()
 
     if (!stripeCustomerId) {
@@ -109,11 +125,19 @@ export async function POST(req: NextRequest) {
       stripeCustomerId = customer.id
 
       await adminClient
+        .from('tenant_billing_customers')
+        .upsert(
+          {
+            tenant_id: tenantId,
+            payment_provider: 'stripe',
+            provider_customer_id: stripeCustomerId,
+          },
+          { onConflict: 'tenant_id,payment_provider' }
+        )
+
+      await adminClient
         .from('tenants')
-        .update({
-          stripe_customer_id: stripeCustomerId,
-          billing_email: tenant?.billing_email || user.email,
-        })
+        .update({ billing_email: tenant?.billing_email || user.email })
         .eq('id', tenantId)
     }
 

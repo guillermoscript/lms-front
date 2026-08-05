@@ -195,15 +195,31 @@ export async function POST(req: NextRequest) {
             .upsert({
               tenant_id: tenantId,
               plan_id: planId,
-              stripe_subscription_id: subscription.id,
-              stripe_customer_id: session.customer as string,
+              provider_subscription_id: subscription.id,
+              provider_customer_id: session.customer as string,
               status: 'active',
-              payment_method: 'stripe',
+              payment_provider: 'stripe',
               interval: interval,
               ...(periodStart ? { current_period_start: periodStart } : {}),
               ...(periodEnd ? { current_period_end: periodEnd } : {}),
               updated_at: now,
             }, { onConflict: 'tenant_id' })
+        )
+
+        // Record the tenant's Stripe customer. Since #601 this lives per-provider
+        // in tenant_billing_customers rather than on `tenants`.
+        await unwrap(
+          'tenant_billing_customers upsert',
+          adminClient
+            .from('tenant_billing_customers')
+            .upsert(
+              {
+                tenant_id: tenantId,
+                payment_provider: 'stripe',
+                provider_customer_id: session.customer as string,
+              },
+              { onConflict: 'tenant_id,payment_provider' }
+            )
         )
 
         // Update tenant plan
@@ -215,7 +231,6 @@ export async function POST(req: NextRequest) {
               plan: planSlug,
               billing_status: 'active',
               ...(periodEnd ? { billing_period_end: periodEnd } : {}),
-              stripe_customer_id: session.customer as string,
               updated_at: now,
             })
             .eq('id', tenantId)
@@ -360,11 +375,11 @@ export async function POST(req: NextRequest) {
         if (!subscriptionId) break
 
         const sub = await unwrap(
-          'platform_subscriptions lookup by stripe id',
+          'platform_subscriptions lookup by provider subscription id',
           adminClient
             .from('platform_subscriptions')
             .select('tenant_id')
-            .eq('stripe_subscription_id', subscriptionId)
+            .eq('provider_subscription_id', subscriptionId)
             .maybeSingle()
         )
 
@@ -438,11 +453,11 @@ export async function POST(req: NextRequest) {
         if (!subscriptionId) break
 
         const sub = await unwrap(
-          'platform_subscriptions lookup by stripe id',
+          'platform_subscriptions lookup by provider subscription id',
           adminClient
             .from('platform_subscriptions')
             .select('tenant_id, status')
-            .eq('stripe_subscription_id', subscriptionId)
+            .eq('provider_subscription_id', subscriptionId)
             .maybeSingle()
         )
 

@@ -153,7 +153,7 @@ export interface AtRiskTenant {
  * path upserts on it, so a tenant cannot actually hold two rows — but the old
  * plain `.set()` over an unordered list meant that if the constraint were ever
  * relaxed (per-plan history, say), a stale `canceled` row could donate its
- * `payment_method` and `grace_period_end`, and therefore its countdown, to the
+ * `payment_provider` and `grace_period_end`, and therefore its countdown, to the
  * dashboard. Ranking explicitly costs nothing and removes the trap.
  */
 function subscriptionRank(sub: PastDueSubscriptionInput): number {

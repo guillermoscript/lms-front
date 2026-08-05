@@ -15,8 +15,6 @@ interface PlanRow {
   name: string | null
   transaction_fee_percent: number
   limits: { max_courses?: number; max_students?: number } | null
-  stripe_price_id_monthly: string | null
-  stripe_price_id_yearly: string | null
 }
 
 interface FakeConfig {
@@ -26,6 +24,13 @@ interface FakeConfig {
   courseCount?: number
   studentCount?: number
   adminUsers?: string[]
+  /**
+   * Stripe price ids per plan, keyed by plan_id then interval. Since #601 these
+   * live in `platform_plan_prices` rather than on `platform_plans`, so a plan
+   * with no purchasable price is expressed by omitting it here — that is the
+   * "revert impossible" case, not a null column on the plan row.
+   */
+  prices?: Record<string, Partial<Record<'monthly' | 'yearly', string>>>
 }
 
 interface Recorder {
@@ -47,9 +52,11 @@ function makeFakeAdmin(cfg: FakeConfig) {
     stripeUpdates: [],
   }
 
+  const prices = cfg.prices ?? DEFAULT_PLAN_PRICES
+
   function makeBuilder(table: string) {
-    let usedOr = false
     let lastInsert: unknown = null
+    const filters: Record<string, unknown> = {}
     const builder: Record<string, unknown> = {
       select(cols: string) {
         if (table === 'platform_plans') calls.planSelects.push(cols)
@@ -68,19 +75,34 @@ function makeFakeAdmin(cfg: FakeConfig) {
         calls.inserts.push({ table, values })
         return builder
       },
-      or() {
-        usedOr = true
-        return builder
-      },
-      eq() {
+      eq(col: string, value: unknown) {
+        filters[col] = value
         return builder
       },
       neq() {
         return builder
       },
       maybeSingle() {
+        if (table === 'platform_plan_prices') {
+          // price id -> plan (the portal event carries only the price)
+          if (filters.provider_price_id) {
+            const planId = Object.keys(prices).find((id) =>
+              Object.values(prices[id]).includes(filters.provider_price_id as string)
+            )
+            return Promise.resolve({ data: planId ? { plan_id: planId } : null, error: null })
+          }
+          // plan + interval -> price id (resolving the revert target)
+          const interval = filters.interval as 'monthly' | 'yearly'
+          const priceId = prices[filters.plan_id as string]?.[interval] ?? null
+          return Promise.resolve({
+            data: priceId ? { provider_price_id: priceId } : null,
+            error: null,
+          })
+        }
         if (table === 'platform_plans') {
-          return Promise.resolve({ data: usedOr ? (cfg.newPlan ?? null) : (cfg.oldPlan ?? null), error: null })
+          const planId = filters.plan_id
+          const match = [cfg.newPlan, cfg.oldPlan].find((p) => p && p.plan_id === planId)
+          return Promise.resolve({ data: match ?? null, error: null })
         }
         if (table === 'platform_subscriptions') {
           return Promise.resolve({ data: cfg.currentSub ?? null, error: null })
@@ -157,8 +179,6 @@ const PRO: PlanRow = {
   name: 'Pro',
   transaction_fee_percent: 2,
   limits: { max_courses: 100, max_students: 1000 },
-  stripe_price_id_monthly: 'price_pro_m',
-  stripe_price_id_yearly: 'price_pro_y',
 }
 
 const STARTER: PlanRow = {
@@ -167,8 +187,12 @@ const STARTER: PlanRow = {
   name: 'Starter',
   transaction_fee_percent: 5,
   limits: { max_courses: 15, max_students: 200 },
-  stripe_price_id_monthly: 'price_starter_m',
-  stripe_price_id_yearly: 'price_starter_y',
+}
+
+/** Stands in for the `platform_plan_prices` rows both fixture plans have (#601). */
+const DEFAULT_PLAN_PRICES: Record<string, Partial<Record<'monthly' | 'yearly', string>>> = {
+  [PRO_ID]: { monthly: 'price_pro_m', yearly: 'price_pro_y' },
+  [STARTER_ID]: { monthly: 'price_starter_m', yearly: 'price_starter_y' },
 }
 
 function subscriptionEvent(priceId = 'price_starter_m') {
@@ -269,7 +293,10 @@ describe('applyPortalPlanChange', () => {
   it('revert impossible (old plan has no Stripe prices) → downgrade applied to DB + admins warned', async () => {
     const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
       newPlan: STARTER,
-      oldPlan: { ...PRO, stripe_price_id_monthly: null, stripe_price_id_yearly: null },
+      oldPlan: PRO,
+      // PRO absent from `prices` — it has no purchasable Stripe price, so the
+      // revert has nothing to revert to.
+      prices: { [STARTER_ID]: { monthly: 'price_starter_m', yearly: 'price_starter_y' } },
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
       courseCount: 50,
       adminUsers: ['admin-a'],

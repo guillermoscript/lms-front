@@ -4659,6 +4659,53 @@ export type Database = {
           },
         ]
       }
+      platform_plan_prices: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_type"]
+          interval: string
+          is_active: boolean
+          payment_provider: string
+          plan_id: string
+          price_id: string
+          provider_price_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          interval: string
+          is_active?: boolean
+          payment_provider: string
+          plan_id: string
+          price_id?: string
+          provider_price_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_type"]
+          interval?: string
+          is_active?: boolean
+          payment_provider?: string
+          plan_id?: string
+          price_id?: string
+          provider_price_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+        ]
+      }
       platform_plans: {
         Row: {
           created_at: string | null
@@ -4672,8 +4719,6 @@ export type Database = {
           price_yearly: number
           slug: string
           sort_order: number
-          stripe_price_id_monthly: string | null
-          stripe_price_id_yearly: string | null
           transaction_fee_percent: number
           updated_at: string | null
         }
@@ -4689,8 +4734,6 @@ export type Database = {
           price_yearly?: number
           slug: string
           sort_order?: number
-          stripe_price_id_monthly?: string | null
-          stripe_price_id_yearly?: string | null
           transaction_fee_percent?: number
           updated_at?: string | null
         }
@@ -4706,8 +4749,6 @@ export type Database = {
           price_yearly?: number
           slug?: string
           sort_order?: number
-          stripe_price_id_monthly?: string | null
-          stripe_price_id_yearly?: string | null
           transaction_fee_percent?: number
           updated_at?: string | null
         }
@@ -4722,12 +4763,12 @@ export type Database = {
           current_period_start: string | null
           grace_period_end: string | null
           interval: string
-          payment_method: string
+          payment_provider: string
           plan_id: string
           renewal_reminder_sent_at: string | null
           status: string
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
+          provider_customer_id: string | null
+          provider_subscription_id: string | null
           subscription_id: string
           tenant_id: string
           updated_at: string | null
@@ -4740,12 +4781,12 @@ export type Database = {
           current_period_start?: string | null
           grace_period_end?: string | null
           interval?: string
-          payment_method?: string
+          payment_provider?: string
           plan_id: string
           renewal_reminder_sent_at?: string | null
           status?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
           subscription_id?: string
           tenant_id: string
           updated_at?: string | null
@@ -4758,12 +4799,12 @@ export type Database = {
           current_period_start?: string | null
           grace_period_end?: string | null
           interval?: string
-          payment_method?: string
+          payment_provider?: string
           plan_id?: string
           renewal_reminder_sent_at?: string | null
           status?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
+          provider_customer_id?: string | null
+          provider_subscription_id?: string | null
           subscription_id?: string
           tenant_id?: string
           updated_at?: string | null
@@ -5742,6 +5783,35 @@ export type Database = {
           },
         ]
       }
+      tenant_billing_customers: {
+        Row: {
+          created_at: string
+          payment_provider: string
+          provider_customer_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          payment_provider: string
+          provider_customer_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          payment_provider?: string
+          provider_customer_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_billing_customers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings: {
         Row: {
           created_at: string | null
@@ -5830,7 +5900,6 @@ export type Database = {
           status: string | null
           stripe_account_id: string | null
           stripe_charges_enabled: boolean
-          stripe_customer_id: string | null
           stripe_details_submitted: boolean
           stripe_payouts_enabled: boolean
           updated_at: string | null
@@ -5852,7 +5921,6 @@ export type Database = {
           status?: string | null
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean
-          stripe_customer_id?: string | null
           stripe_details_submitted?: boolean
           stripe_payouts_enabled?: boolean
           updated_at?: string | null
@@ -5874,7 +5942,6 @@ export type Database = {
           status?: string | null
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean
-          stripe_customer_id?: string | null
           stripe_details_submitted?: boolean
           stripe_payouts_enabled?: boolean
           updated_at?: string | null

@@ -164,7 +164,7 @@ function seedSub(over: Row = {}) {
   db.platform_subscriptions.push({
     tenant_id: TENANT,
     plan_id: PLAN,
-    payment_method: 'manual_transfer',
+    payment_provider: 'manual',
     status: 'active',
     cancel_at_period_end: false,
     current_period_end: daysFromNow(-1),

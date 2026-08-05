@@ -22,7 +22,7 @@ async function verifySuperAdmin() {
 
 const TENANT_SELECT = 'id, name, plan, access_cutoff_at'
 const SUBSCRIPTION_SELECT =
-  'tenant_id, status, payment_method, current_period_end, grace_period_end, updated_at'
+  'tenant_id, status, payment_provider, current_period_end, grace_period_end, updated_at'
 
 /**
  * Mapped through helpers rather than an `as` cast so a drifting select list
@@ -45,7 +45,7 @@ function toTenantRow(row: {
 function toSubscriptionInput(row: {
   tenant_id: string
   status: string | null
-  payment_method: string | null
+  payment_provider: string | null
   current_period_end: string | null
   grace_period_end: string | null
   updated_at: string | null
@@ -53,7 +53,7 @@ function toSubscriptionInput(row: {
   return {
     tenantId: row.tenant_id,
     status: row.status,
-    paymentMethod: row.payment_method,
+    paymentMethod: row.payment_provider,
     currentPeriodEnd: row.current_period_end,
     gracePeriodEnd: row.grace_period_end,
     updatedAt: row.updated_at,

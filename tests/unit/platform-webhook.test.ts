@@ -267,10 +267,10 @@ describe('platform webhook — checkout.session.completed', () => {
     expect(sub.values).toMatchObject({
       tenant_id: TENANT,
       plan_id: PLAN_ID,
-      stripe_subscription_id: 'sub_123',
-      stripe_customer_id: 'cus_1',
+      provider_subscription_id: 'sub_123',
+      provider_customer_id: 'cus_1',
       status: 'active',
-      payment_method: 'stripe',
+      payment_provider: 'stripe',
       interval: 'monthly',
       current_period_start: START_ISO,
       current_period_end: END_ISO,
@@ -281,7 +281,14 @@ describe('platform webhook — checkout.session.completed', () => {
       plan: 'pro',
       billing_status: 'active',
       billing_period_end: END_ISO,
-      stripe_customer_id: 'cus_1',
+    })
+
+    // The customer id moved off `tenants` into tenant_billing_customers (#601).
+    const billingCustomer = writesTo('tenant_billing_customers', 'upsert')[0]
+    expect(billingCustomer.values).toMatchObject({
+      tenant_id: TENANT,
+      payment_provider: 'stripe',
+      provider_customer_id: 'cus_1',
     })
 
     const split = writesTo('revenue_splits', 'upsert')[0]

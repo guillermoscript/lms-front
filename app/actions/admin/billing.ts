@@ -70,10 +70,10 @@ export async function getSubscriptionStatus() {
   // here is the same number the downgrade pre-flight and course-creation
   // enforcement compare against — it used to count archived courses that
   // neither of those did.
-  const [tenantResult, subscriptionResult, usage] = await Promise.all([
+  const [tenantResult, subscriptionResult, billingCustomerResult, usage] = await Promise.all([
     adminClient
       .from('tenants')
-      .select('plan, billing_status, billing_period_end, billing_email, stripe_customer_id, access_cutoff_at')
+      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at')
       .eq('id', tenantId)
       .single(),
     adminClient
@@ -81,6 +81,13 @@ export async function getSubscriptionStatus() {
       .select('*, platform_plans(*)')
       .eq('tenant_id', tenantId)
       .single(),
+    // The customer id now lives per-provider in tenant_billing_customers (#601).
+    adminClient
+      .from('tenant_billing_customers')
+      .select('provider_customer_id')
+      .eq('tenant_id', tenantId)
+      .eq('payment_provider', 'stripe')
+      .maybeSingle(),
     countTenantUsage(adminClient, tenantId),
   ])
 
@@ -107,11 +114,11 @@ export async function getSubscriptionStatus() {
     billingStatus: tenant?.billing_status || 'free',
     billingPeriodEnd: tenant?.billing_period_end,
     billingEmail: tenant?.billing_email,
-    hasStripeCustomer: !!tenant?.stripe_customer_id,
+    hasStripeCustomer: !!billingCustomerResult.data?.provider_customer_id,
     accessCutoffAt: tenant?.access_cutoff_at ?? null,
     subscription: subscription ? {
       status: subscription.status,
-      paymentMethod: subscription.payment_method,
+      paymentMethod: subscription.payment_provider,
       interval: subscription.interval,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       currentPeriodStart: subscription.current_period_start,
@@ -122,7 +129,7 @@ export async function getSubscriptionStatus() {
       amount: nextPaymentAmount,
       currency: 'USD',
       dueDate: nextPaymentDate,
-      paymentMethod: subscription?.payment_method || null,
+      paymentMethod: subscription?.payment_provider || null,
     } : null,
     usage: {
       courses: {
@@ -349,7 +356,7 @@ export async function confirmManualPayment(requestId: string) {
       tenant_id: request.tenant_id,
       plan_id: request.plan_id,
       status: 'active',
-      payment_method: 'manual_transfer',
+      payment_provider: 'manual',
       interval: request.interval,
       current_period_start: periodStart.toISOString(),
       current_period_end: periodEnd.toISOString(),
@@ -413,20 +420,20 @@ async function resolvePlatformPlanChange(
 ) {
   const { data: sub } = await adminClient
     .from('platform_subscriptions')
-    .select('stripe_subscription_id, stripe_customer_id, payment_method, status')
+    .select('provider_subscription_id, provider_customer_id, payment_provider, status')
     .eq('tenant_id', tenantId)
     .single()
 
   if (!sub || sub.status !== 'active') {
     throw new Error('No active subscription to change')
   }
-  if (sub.payment_method !== 'stripe' || !sub.stripe_subscription_id) {
+  if (sub.payment_provider !== 'stripe' || !sub.provider_subscription_id) {
     throw new Error('In-app plan change is only available for Stripe subscriptions.')
   }
 
   const { data: plan } = await adminClient
     .from('platform_plans')
-    .select('plan_id, slug, name, transaction_fee_percent, stripe_price_id_monthly, stripe_price_id_yearly')
+    .select('plan_id, slug, name, transaction_fee_percent')
     .eq('plan_id', planId)
     .eq('is_active', true)
     .single()
@@ -436,14 +443,24 @@ async function resolvePlatformPlanChange(
     throw new Error('To move to the Free plan, cancel your subscription instead.')
   }
 
-  const targetPriceId = interval === 'yearly' ? plan.stripe_price_id_yearly : plan.stripe_price_id_monthly
+  // Price ids live per (plan, provider, interval) since #601.
+  const { data: price } = await adminClient
+    .from('platform_plan_prices')
+    .select('provider_price_id')
+    .eq('plan_id', planId)
+    .eq('payment_provider', 'stripe')
+    .eq('interval', interval)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  const targetPriceId = price?.provider_price_id
   if (!targetPriceId) {
     throw new Error('Stripe price is not configured for this plan. Please contact support.')
   }
 
   const { getStripe } = await import('@/lib/stripe')
   const stripe = getStripe()
-  const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id)
+  const stripeSub = await stripe.subscriptions.retrieve(sub.provider_subscription_id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const item = (stripeSub as any).items?.data?.[0]
   if (!item?.id) {
@@ -452,10 +469,10 @@ async function resolvePlatformPlanChange(
 
   return {
     stripe,
-    subId: sub.stripe_subscription_id as string,
+    subId: sub.provider_subscription_id as string,
     itemId: item.id as string,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    customerId: (sub.stripe_customer_id as string) || ((stripeSub as any).customer as string),
+    customerId: (sub.provider_customer_id as string) || ((stripeSub as any).customer as string),
     targetPriceId: targetPriceId as string,
     plan,
   }
@@ -602,7 +619,7 @@ export async function cancelSubscription() {
 
   const { data: subscription } = await adminClient
     .from('platform_subscriptions')
-    .select('stripe_subscription_id, payment_method, status')
+    .select('provider_subscription_id, payment_provider, status')
     .eq('tenant_id', tenantId)
     .single()
 
@@ -610,10 +627,10 @@ export async function cancelSubscription() {
     throw new Error('No active subscription to cancel')
   }
 
-  if (subscription.payment_method === 'stripe' && subscription.stripe_subscription_id) {
+  if (subscription.payment_provider === 'stripe' && subscription.provider_subscription_id) {
     // Cancel via Stripe (at period end).
     const { getStripe } = await import('@/lib/stripe')
-    await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
+    await getStripe().subscriptions.update(subscription.provider_subscription_id, {
       cancel_at_period_end: true,
     })
     // Mirror locally so the overview reflects the pending cancellation
@@ -659,7 +676,7 @@ export async function reactivateSubscription() {
 
   const { data: subscription } = await adminClient
     .from('platform_subscriptions')
-    .select('stripe_subscription_id, payment_method, status, cancel_at_period_end, current_period_end')
+    .select('provider_subscription_id, payment_provider, status, cancel_at_period_end, current_period_end')
     .eq('tenant_id', tenantId)
     .single()
 
@@ -680,11 +697,11 @@ export async function reactivateSubscription() {
     throw new Error('Your billing period has already ended. Please start a new plan instead.')
   }
 
-  if (subscription.payment_method === 'stripe' && subscription.stripe_subscription_id) {
+  if (subscription.payment_provider === 'stripe' && subscription.provider_subscription_id) {
     // Stripe is authoritative for Stripe subs — clear it there first so a
     // failure leaves both sides still cancelling rather than disagreeing.
     const { getStripe } = await import('@/lib/stripe')
-    await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
+    await getStripe().subscriptions.update(subscription.provider_subscription_id, {
       cancel_at_period_end: false,
     })
   }
@@ -781,7 +798,7 @@ export async function requestManualRenewal() {
     .single()
 
   if (!subscription) throw new Error('No active subscription found')
-  if (subscription.payment_method !== 'manual_transfer') {
+  if (subscription.payment_provider !== 'manual') {
     throw new Error('Renewal is only for manual transfer subscriptions')
   }
 

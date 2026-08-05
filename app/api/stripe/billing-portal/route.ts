@@ -37,14 +37,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Only school admins can manage billing' }, { status: 403 })
     }
 
-    // Get tenant's Stripe customer ID
-    const { data: tenant } = await adminClient
-      .from('tenants')
-      .select('stripe_customer_id')
-      .eq('id', tenantId)
-      .single()
+    // Get tenant's Stripe customer ID (per-provider since #601)
+    const { data: billingCustomer } = await adminClient
+      .from('tenant_billing_customers')
+      .select('provider_customer_id')
+      .eq('tenant_id', tenantId)
+      .eq('payment_provider', 'stripe')
+      .maybeSingle()
 
-    if (!tenant?.stripe_customer_id) {
+    if (!billingCustomer?.provider_customer_id) {
       return NextResponse.json({ error: 'No billing account found' }, { status: 400 })
     }
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
     const returnUrl = `${origin}/${locale}/dashboard/admin/billing`
 
     const session = await getStripe().billingPortal.sessions.create({
-      customer: tenant.stripe_customer_id,
+      customer: billingCustomer.provider_customer_id,
       return_url: returnUrl,
     })
 

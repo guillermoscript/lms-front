@@ -76,7 +76,7 @@ function seedSub(over: Row = {}) {
       subscription_id: 'sub-row-1',
       tenant_id: TENANT,
       plan_id: PLAN_PRO,
-      payment_method: 'manual_transfer',
+      payment_provider: 'manual',
       status: 'active',
       interval: 'yearly',
       cancel_at_period_end: false,
@@ -85,7 +85,7 @@ function seedSub(over: Row = {}) {
       current_period_end: daysFromNow(5),
       grace_period_end: null,
       renewal_reminder_sent_at: null,
-      stripe_subscription_id: null,
+      provider_subscription_id: null,
       plan_override_by: null,
       plan_override_at: null,
       ...over,
@@ -130,8 +130,6 @@ beforeEach(() => {
         sort_order: 3,
         is_active: true,
         limits: { max_courses: 100, max_students: 1000 },
-        stripe_price_id_monthly: 'price_pro_m',
-        stripe_price_id_yearly: 'price_pro_y',
       },
       {
         plan_id: PLAN_BUSINESS,
@@ -143,10 +141,16 @@ beforeEach(() => {
         sort_order: 4,
         is_active: true,
         limits: { max_courses: -1, max_students: 5000 },
-        stripe_price_id_monthly: 'price_biz_m',
-        stripe_price_id_yearly: 'price_biz_y',
       },
     ],
+    // Price ids moved out of platform_plans into platform_plan_prices (#601).
+    platform_plan_prices: [
+      { plan_id: PLAN_PRO, payment_provider: 'stripe', interval: 'monthly', provider_price_id: 'price_pro_m', is_active: true },
+      { plan_id: PLAN_PRO, payment_provider: 'stripe', interval: 'yearly', provider_price_id: 'price_pro_y', is_active: true },
+      { plan_id: PLAN_BUSINESS, payment_provider: 'stripe', interval: 'monthly', provider_price_id: 'price_biz_m', is_active: true },
+      { plan_id: PLAN_BUSINESS, payment_provider: 'stripe', interval: 'yearly', provider_price_id: 'price_biz_y', is_active: true },
+    ],
+    tenant_billing_customers: [],
     platform_subscriptions: [],
     platform_payment_requests: [],
     revenue_splits: [],
@@ -195,8 +199,8 @@ describe('#546 §1 — reactivateSubscription', () => {
 
   it('clears the cancellation on Stripe first for a Stripe subscription', async () => {
     const sub = seedSub({
-      payment_method: 'stripe',
-      stripe_subscription_id: 'sub_live',
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub_live',
       cancel_at_period_end: true,
     })
 
@@ -220,8 +224,8 @@ describe('#546 §1 — reactivateSubscription', () => {
 describe('#546 §1 — changePlan does not leave a cancellation behind', () => {
   it('sends cancel_at_period_end: false to Stripe and mirrors it locally', async () => {
     const sub = seedSub({
-      payment_method: 'stripe',
-      stripe_subscription_id: 'sub_live',
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub_live',
       cancel_at_period_end: true,
       canceled_at: daysFromNow(-2),
       plan_override_at: daysFromNow(-20),
