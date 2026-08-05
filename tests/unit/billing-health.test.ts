@@ -10,13 +10,13 @@ const NOW = new Date('2026-07-24T00:00:00.000Z')
 const sub = (overrides: {
   tenantId: string
   status?: string | null
-  paymentMethod?: string | null
+  paymentProvider?: string | null
   currentPeriodEnd?: string | null
   gracePeriodEnd?: string | null
   updatedAt?: string | null
 }) => ({
   status: 'past_due',
-  paymentMethod: null,
+  paymentProvider: null,
   currentPeriodEnd: null,
   gracePeriodEnd: null,
   updatedAt: null,
@@ -24,12 +24,12 @@ const sub = (overrides: {
 })
 
 describe('computeBillingHealth', () => {
-  it('manual_transfer with grace time remaining computes a positive countdown', () => {
+  it('manual with grace time remaining computes a positive countdown', () => {
     const result = computeBillingHealth(
       [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
       [sub({
         tenantId: 't1',
-        paymentMethod: 'manual_transfer',
+        paymentProvider: 'manual',
         currentPeriodEnd: '2026-07-17T00:00:00.000Z',
         gracePeriodEnd: '2026-07-27T00:00:00.000Z',
       })],
@@ -41,12 +41,35 @@ describe('computeBillingHealth', () => {
     expect(result[0].pastDueSince).toBe('2026-07-17T00:00:00.000Z')
   })
 
-  it('manual_transfer with grace already expired still reports a (negative/zero) countdown, not a crash', () => {
+  it('does not treat the retired manual_transfer slug as manual', () => {
+    // #601 folded `payment_method IN ('stripe','manual_transfer')` into the
+    // 8-value `payment_provider` slug, where bank transfer is `'manual'`. Every
+    // reader here kept comparing against `'manual_transfer'` for a commit, and
+    // this suite did not notice because its own fixtures used the retired value
+    // too — so a manual school's countdown silently became null while the tests
+    // stayed green. Pinning the dead string means the fixtures can never drift
+    // back into agreement with a bug.
     const result = computeBillingHealth(
       [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
       [sub({
         tenantId: 't1',
-        paymentMethod: 'manual_transfer',
+        paymentProvider: 'manual_transfer',
+        currentPeriodEnd: '2026-07-17T00:00:00.000Z',
+        gracePeriodEnd: '2026-07-27T00:00:00.000Z',
+      })],
+      NOW,
+    )
+    expect(result[0].daysUntilDowngrade).toBeNull()
+    expect(result[0].graceEndsAt).toBeNull()
+    expect(result[0].isEstimate).toBe(true)
+  })
+
+  it('manual with grace already expired still reports a (negative/zero) countdown, not a crash', () => {
+    const result = computeBillingHealth(
+      [{ tenantId: 't1', tenantName: 'School A', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
+      [sub({
+        tenantId: 't1',
+        paymentProvider: 'manual',
         currentPeriodEnd: '2026-07-01T00:00:00.000Z',
         gracePeriodEnd: '2026-07-08T00:00:00.000Z',
       })],
@@ -61,7 +84,7 @@ describe('computeBillingHealth', () => {
       [{ tenantId: 't2', tenantName: 'School B', plan: 'pro', accessCutoffAt: null, reasons: ['tenant_past_due'] }],
       [sub({
         tenantId: 't2',
-        paymentMethod: 'stripe',
+        paymentProvider: 'stripe',
         currentPeriodEnd: '2026-07-20T00:00:00.000Z',
         gracePeriodEnd: null,
       })],
@@ -80,7 +103,7 @@ describe('computeBillingHealth', () => {
       NOW,
     )
     expect(result).toHaveLength(1)
-    expect(result[0].paymentMethod).toBeNull()
+    expect(result[0].paymentProvider).toBeNull()
     expect(result[0].daysUntilDowngrade).toBeNull()
     expect(result[0].isEstimate).toBe(true)
   })
@@ -93,9 +116,9 @@ describe('computeBillingHealth', () => {
         { tenantId: 'soon', tenantName: 'Soon School', plan: 'starter', accessCutoffAt: null, reasons: ['tenant_past_due'] },
       ],
       [
-        sub({ tenantId: 'stripe-tenant', paymentMethod: 'stripe' }),
-        sub({ tenantId: 'far', paymentMethod: 'manual_transfer', gracePeriodEnd: '2026-08-10T00:00:00.000Z' }),
-        sub({ tenantId: 'soon', paymentMethod: 'manual_transfer', gracePeriodEnd: '2026-07-25T00:00:00.000Z' }),
+        sub({ tenantId: 'stripe-tenant', paymentProvider: 'stripe' }),
+        sub({ tenantId: 'far', paymentProvider: 'manual', gracePeriodEnd: '2026-08-10T00:00:00.000Z' }),
+        sub({ tenantId: 'soon', paymentProvider: 'manual', gracePeriodEnd: '2026-07-25T00:00:00.000Z' }),
       ],
       NOW,
     )
@@ -118,7 +141,7 @@ describe('computeBillingHealth', () => {
       [{ tenantId: 't4', tenantName: 'Drifted School', plan: 'pro', accessCutoffAt: null, reasons: ['subscription_past_due'] }],
       [sub({
         tenantId: 't4',
-        paymentMethod: 'manual_transfer',
+        paymentProvider: 'manual',
         currentPeriodEnd: '2026-07-10T00:00:00.000Z',
         gracePeriodEnd: '2026-07-30T00:00:00.000Z',
       })],
@@ -134,7 +157,7 @@ describe('computeBillingHealth', () => {
   it('surfaces a cutoff-only tenant with healthy billing', () => {
     const result = computeBillingHealth(
       [{ tenantId: 't5', tenantName: 'Over Limit School', plan: 'starter', accessCutoffAt: '2026-08-07T00:00:00.000Z', reasons: ['access_cutoff_scheduled'] }],
-      [sub({ tenantId: 't5', status: 'active', paymentMethod: 'manual_transfer', gracePeriodEnd: null })],
+      [sub({ tenantId: 't5', status: 'active', paymentProvider: 'manual', gracePeriodEnd: null })],
       NOW,
     )
     expect(result).toHaveLength(1)
@@ -170,7 +193,7 @@ describe('computeBillingHealth', () => {
     const stale = sub({
       tenantId: 't7',
       status: 'canceled',
-      paymentMethod: 'stripe',
+      paymentProvider: 'stripe',
       currentPeriodEnd: '2026-01-01T00:00:00.000Z',
       gracePeriodEnd: null,
       updatedAt: '2026-01-02T00:00:00.000Z',
@@ -178,7 +201,7 @@ describe('computeBillingHealth', () => {
     const current = sub({
       tenantId: 't7',
       status: 'past_due',
-      paymentMethod: 'manual_transfer',
+      paymentProvider: 'manual',
       currentPeriodEnd: '2026-07-15T00:00:00.000Z',
       gracePeriodEnd: '2026-07-29T00:00:00.000Z',
       updatedAt: '2026-07-15T00:00:00.000Z',
@@ -187,7 +210,7 @@ describe('computeBillingHealth', () => {
 
     for (const subs of [[stale, current], [current, stale]]) {
       const result = computeBillingHealth(tenants, subs, NOW)
-      expect(result[0].paymentMethod).toBe('manual_transfer')
+      expect(result[0].paymentProvider).toBe('manual')
       expect(result[0].graceEndsAt).toBe('2026-07-29T00:00:00.000Z')
       expect(result[0].daysUntilDowngrade).toBe(5)
       expect(result[0].isEstimate).toBe(false)
@@ -198,14 +221,14 @@ describe('computeBillingHealth', () => {
     const older = sub({
       tenantId: 't8',
       status: 'past_due',
-      paymentMethod: 'stripe',
+      paymentProvider: 'stripe',
       gracePeriodEnd: null,
       updatedAt: '2026-06-01T00:00:00.000Z',
     })
     const newer = sub({
       tenantId: 't8',
       status: 'past_due',
-      paymentMethod: 'manual_transfer',
+      paymentProvider: 'manual',
       gracePeriodEnd: '2026-07-28T00:00:00.000Z',
       updatedAt: '2026-07-20T00:00:00.000Z',
     })
@@ -213,7 +236,7 @@ describe('computeBillingHealth', () => {
 
     for (const subs of [[older, newer], [newer, older]]) {
       const result = computeBillingHealth(tenants, subs, NOW)
-      expect(result[0].paymentMethod).toBe('manual_transfer')
+      expect(result[0].paymentProvider).toBe('manual')
       expect(result[0].daysUntilDowngrade).toBe(4)
     }
   })
@@ -233,7 +256,7 @@ describe('computeBillingHealth', () => {
       [sub({
         tenantId: 't9',
         status: 'canceled',
-        paymentMethod: 'manual_transfer',
+        paymentProvider: 'manual',
         currentPeriodEnd: '2026-06-01T00:00:00.000Z',
         gracePeriodEnd: '2026-06-08T00:00:00.000Z',
         updatedAt: '2026-06-08T00:00:00.000Z',
@@ -270,12 +293,12 @@ describe('computeBillingHealth', () => {
         sub({
           tenantId: 'lapsed',
           status: 'canceled',
-          paymentMethod: 'manual_transfer',
+          paymentProvider: 'manual',
           gracePeriodEnd: '2026-06-08T00:00:00.000Z',
         }),
         sub({
           tenantId: 'live',
-          paymentMethod: 'manual_transfer',
+          paymentProvider: 'manual',
           gracePeriodEnd: '2026-07-30T00:00:00.000Z',
         }),
       ],

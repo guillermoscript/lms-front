@@ -37,7 +37,7 @@ interface BillingDashboardClientProps {
     hasStripeCustomer: boolean
     subscription: {
       status: string
-      paymentMethod: string
+      paymentProvider: string
       interval: string
       cancelAtPeriodEnd: boolean
       currentPeriodStart: string | null
@@ -48,7 +48,7 @@ interface BillingDashboardClientProps {
       amount: number
       currency: string
       dueDate: string
-      paymentMethod: string | null
+      paymentProvider: string | null
     } | null
     usage: {
       courses: { current: number; limit: number }
@@ -192,7 +192,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
     (r) => !['confirmed', 'rejected', 'expired'].includes(r.status)
   )
 
-  const isManualSub = status.subscription?.paymentMethod === 'manual_transfer'
+  const isManualSub = status.subscription?.paymentProvider === 'manual'
   const periodEnd = status.subscription?.currentPeriodEnd ? new Date(status.subscription.currentPeriodEnd) : null
   const now = new Date()
   const daysUntilEnd = periodEnd ? Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null

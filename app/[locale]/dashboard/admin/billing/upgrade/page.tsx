@@ -26,7 +26,7 @@ export default async function UpgradePage({
     intervalParam === 'yearly' || intervalParam === 'monthly' ? intervalParam : undefined
 
   const sub = status.subscription
-  const activeStripeSub = !!sub && sub.paymentMethod === 'stripe' && sub.status === 'active'
+  const activeStripeSub = !!sub && sub.paymentProvider === 'stripe' && sub.status === 'active'
   const currentInterval: 'monthly' | 'yearly' = sub?.interval === 'yearly' ? 'yearly' : 'monthly'
 
   return (

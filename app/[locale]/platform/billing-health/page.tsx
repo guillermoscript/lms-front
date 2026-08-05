@@ -1,5 +1,10 @@
-import { getAtRiskTenants } from '@/app/actions/platform/billing-health'
+import Link from 'next/link'
+import {
+  getAtRiskTenants,
+  getPlanConfigurationHealth,
+} from '@/app/actions/platform/billing-health'
 import type { AtRiskReason } from '@/lib/billing/billing-health'
+import { providerLabel } from '@/lib/billing/plan-prices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
@@ -23,7 +28,10 @@ function reasonLabel(reason: AtRiskReason, cutoffActive: boolean): string {
 }
 
 export default async function PlatformBillingHealthPage() {
-  const atRisk = await getAtRiskTenants()
+  const [atRisk, planHealth] = await Promise.all([
+    getAtRiskTenants(),
+    getPlanConfigurationHealth(),
+  ])
 
   // The metric cards deliberately keep counting past-due tenants only, so the
   // numbers do not silently change meaning now that #514 also lists tenants
@@ -36,7 +44,7 @@ export default async function PlatformBillingHealthPage() {
       t.reasons.includes('tenant_past_due') || t.reasons.includes('subscription_past_due')
     if (isPastDue) {
       counts.pastDue++
-      if (t.paymentMethod === 'manual_transfer') {
+      if (t.paymentProvider === 'manual') {
         counts.manualTransfer++
         if (t.daysUntilDowngrade !== null && t.daysUntilDowngrade <= 3) counts.urgent++
       } else {
@@ -93,6 +101,100 @@ export default async function PlatformBillingHealthPage() {
           downgrade or access cutoff.
         </p>
       </div>
+
+      {/*
+        Plan configuration (#602). Its own section, not a row in the at-risk
+        table: a plan with no price belongs to no tenant and breaks checkout for
+        every school at once, so it outranks any individual school's countdown.
+      */}
+      <Card className="mb-8" data-testid="plan-configuration-health">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Plan configuration
+            {planHealth.unpurchasable.length === 0 &&
+            planHealth.partiallyPriced.length === 0 ? (
+              <Badge variant="secondary" className="text-[10px]" data-testid="plan-config-status" data-status="ok">
+                All plans purchasable
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="text-[10px]" data-testid="plan-config-status" data-status="broken">
+                {planHealth.unpurchasable.length + planHealth.partiallyPriced.length} needing attention
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {planHealth.unpurchasable.length === 0 && planHealth.partiallyPriced.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Every active paid plan has an active provider price. Card checkout can reach a
+              hosted page for all of them.
+            </p>
+          ) : (
+            <>
+              {planHealth.unpurchasable.length > 0 && (
+                <div
+                  className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/40"
+                  data-testid="unpurchasable-plans"
+                >
+                  <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                    Not purchasable — no active provider price
+                  </p>
+                  <p className="mt-0.5 text-xs text-red-700/80 dark:text-red-400/80">
+                    These plans are advertised with a price but every card upgrade fails with
+                    &ldquo;price not configured&rdquo;. The only way to pay for them is an offline
+                    transfer.
+                  </p>
+                  <ul className="mt-3 space-y-1.5 text-sm">
+                    {planHealth.unpurchasable.map((plan) => (
+                      <li
+                        key={plan.planId}
+                        className="flex items-center gap-2"
+                        data-testid="unpurchasable-plan-row"
+                        data-plan-slug={plan.slug}
+                      >
+                        <span className="font-medium text-red-800 dark:text-red-300">{plan.name}</span>
+                        <Badge variant="outline" className="font-mono text-[10px]">{plan.slug}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {planHealth.partiallyPriced.length > 0 && (
+                <div
+                  className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/40"
+                  data-testid="partially-priced-plans"
+                >
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                    Priced on some intervals only
+                  </p>
+                  <ul className="mt-3 space-y-1.5 text-sm">
+                    {planHealth.partiallyPriced.map((plan) => (
+                      <li
+                        key={plan.planId}
+                        data-testid="partially-priced-plan-row"
+                        data-plan-slug={plan.slug}
+                      >
+                        <span className="font-medium text-amber-800 dark:text-amber-300">{plan.name}</span>{' '}
+                        <span className="text-amber-700/80 dark:text-amber-400/80">
+                          — no price for {plan.missingIntervals.join(' or ')}; buyable via{' '}
+                          {plan.providers.map((p) => providerLabel(p.provider)).join(', ')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="text-sm">
+                <Link href="/platform/plans" className="text-primary underline underline-offset-4">
+                  Configure provider prices on /platform/plans
+                </Link>
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="billing-health-metrics">
         {metricCards.map((card) => (
@@ -155,7 +257,7 @@ export default async function PlatformBillingHealthPage() {
                         </div>
                       </td>
                       <td className="py-2.5 text-muted-foreground">
-                        {t.paymentMethod === 'manual_transfer' ? 'Manual transfer' : t.paymentMethod === 'stripe' ? 'Stripe' : '—'}
+                        {t.paymentProvider ? providerLabel(t.paymentProvider) : '—'}
                       </td>
                       <td className="py-2.5 text-muted-foreground">
                         {t.pastDueSince ? format(new Date(t.pastDueSince), 'MMM d, yyyy') : '—'}
