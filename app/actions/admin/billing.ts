@@ -118,7 +118,11 @@ export async function getSubscriptionStatus() {
     accessCutoffAt: tenant?.access_cutoff_at ?? null,
     subscription: subscription ? {
       status: subscription.status,
-      paymentMethod: subscription.payment_provider,
+      // Named for the column it carries (#602). While this was `paymentMethod`
+      // its readers compared it against `'manual_transfer'`, which #601 folded
+      // into `'manual'` — so every bank-transfer school was rendered as a card
+      // payer and lost its manual-renewal UI.
+      paymentProvider: subscription.payment_provider,
       interval: subscription.interval,
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       currentPeriodStart: subscription.current_period_start,
@@ -129,7 +133,7 @@ export async function getSubscriptionStatus() {
       amount: nextPaymentAmount,
       currency: 'USD',
       dueDate: nextPaymentDate,
-      paymentMethod: subscription?.payment_provider || null,
+      paymentProvider: subscription?.payment_provider || null,
     } : null,
     usage: {
       courses: {

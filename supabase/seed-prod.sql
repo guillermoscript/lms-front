@@ -116,6 +116,40 @@ ON CONFLICT (slug) DO UPDATE SET
 
 
 -- ---------------------------------------------------------------------------
+-- 1b. PLATFORM PLAN PRICES (#602)
+-- ---------------------------------------------------------------------------
+-- Before this block a freshly provisioned production database had no purchasable
+-- plan at all: `platform_plan_prices` (and before #601, platform_plans.stripe_price_id_*)
+-- was read by checkout and written by nothing, so every card upgrade 400'd on
+-- "Stripe price not configured for this plan" while the pricing page happily
+-- advertised $9/mo.
+--
+-- A placeholder slot is created for every (paid plan x interval) so a super admin
+-- sees the full grid on /platform/plans and only has to paste the real id and flip
+-- the toggle -- no SQL, which was the whole failure mode.
+--
+-- They are seeded is_active = false ON PURPOSE, and this is a deliberate reading of
+-- #602's "seed-prod produces a purchasable plan": an *active* row holding a fake id
+-- would be worse than none. Checkout would sail past the "not configured" guard and
+-- die inside Stripe on `No such price: seed_placeholder_...`, which is a harder error
+-- to diagnose and reaches the school as a broken hosted page rather than a clean
+-- message. Inactive instead means /platform/billing-health flags each plan loudly and
+-- names the fix, until a real id is entered. Making a plan live is one toggle.
+INSERT INTO platform_plan_prices (plan_id, payment_provider, interval, provider_price_id, currency, amount, is_active)
+SELECT pp.plan_id,
+       'stripe',
+       i.interval,
+       'seed_placeholder_' || pp.slug || '_' || i.interval,
+       'usd',
+       CASE WHEN i.interval = 'yearly' THEN pp.price_yearly ELSE pp.price_monthly END,
+       false
+FROM platform_plans pp
+CROSS JOIN (VALUES ('monthly'), ('yearly')) AS i(interval)
+WHERE pp.slug <> 'free'
+ON CONFLICT (plan_id, payment_provider, interval) DO NOTHING;
+
+
+-- ---------------------------------------------------------------------------
 -- 2. DEFAULT TENANT
 -- ---------------------------------------------------------------------------
 INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status)

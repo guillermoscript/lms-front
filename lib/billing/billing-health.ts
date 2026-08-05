@@ -25,7 +25,7 @@
  *
  * Two past-due paths write `tenants.billing_status = 'past_due'`, and they
  * carry different amounts of information:
- *  - manual_transfer (app/api/cron/expire-platform-subscriptions/route.ts)
+ *  - manual (app/api/cron/expire-platform-subscriptions/route.ts)
  *    stamps a real `platform_subscriptions.grace_period_end` deadline —
  *    downgrade date is exact.
  *  - stripe (app/api/stripe/platform-webhook/route.ts) has no local grace
@@ -114,7 +114,7 @@ export function mergeAtRiskTenants(input: {
 export interface PastDueSubscriptionInput {
   tenantId: string
   status: string | null
-  paymentMethod: string | null
+  paymentProvider: string | null
   currentPeriodEnd: string | null
   gracePeriodEnd: string | null
   updatedAt: string | null
@@ -124,7 +124,7 @@ export interface AtRiskTenant {
   tenantId: string
   tenantName: string
   plan: string | null
-  paymentMethod: string | null
+  paymentProvider: string | null
   pastDueSince: string | null
   graceEndsAt: string | null
   /**
@@ -204,10 +204,15 @@ export function computeBillingHealth(
       reasons.includes('tenant_past_due') || reasons.includes('subscription_past_due')
 
     const sub = subByTenant.get(tenant.tenantId) ?? null
-    const paymentMethod = sub?.paymentMethod ?? null
-    const isManualTransfer = paymentMethod === 'manual_transfer'
+    const paymentProvider = sub?.paymentProvider ?? null
+    // `'manual'`, not `'manual_transfer'`: #601 folded the old two-value
+    // `payment_method` enum into the 8-value provider slug the student half
+    // already uses. This comparison kept the retired string for a commit, which
+    // silently emptied every manual school's countdown while the unit tests —
+    // whose fixtures also predated the fold — stayed green.
+    const isManual = paymentProvider === 'manual'
 
-    const graceEndsAt = isPastDue && isManualTransfer ? sub?.gracePeriodEnd ?? null : null
+    const graceEndsAt = isPastDue && isManual ? sub?.gracePeriodEnd ?? null : null
     const daysUntilDowngrade = graceEndsAt
       ? Math.ceil((new Date(graceEndsAt).getTime() - now.getTime()) / DAY_MS)
       : null
@@ -216,11 +221,11 @@ export function computeBillingHealth(
       tenantId: tenant.tenantId,
       tenantName: tenant.tenantName,
       plan: tenant.plan,
-      paymentMethod,
+      paymentProvider,
       pastDueSince: isPastDue ? sub?.currentPeriodEnd ?? null : null,
       graceEndsAt,
       daysUntilDowngrade,
-      isEstimate: isPastDue && !isManualTransfer,
+      isEstimate: isPastDue && !isManual,
       accessCutoffAt: tenant.accessCutoffAt,
       accessCutoffActive: tenant.accessCutoffAt
         ? new Date(tenant.accessCutoffAt).getTime() <= now.getTime()

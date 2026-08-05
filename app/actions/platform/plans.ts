@@ -1,13 +1,19 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
+import {
+  PLAN_PRICE_CURRENCIES,
+  PLAN_PRICE_INTERVALS,
+  PLAN_PRICE_PROVIDERS,
+  type PlanPriceCurrency,
+  type PlanPriceInterval,
+  type PlanPriceProvider,
+} from '@/lib/billing/plan-prices'
 
 async function verifySuperAdmin() {
-  const supabase = await createClient()
   const userId = await getCurrentUserId()
   if (!userId) throw new Error('Not authenticated')
   if (!(await isSuperAdmin())) throw new Error('Super admin only')
@@ -73,6 +79,111 @@ export async function createPlatformPlan(data: {
   return { success: true }
 }
 
+/**
+ * Set (or clear) what a plan costs on one provider, for one interval — the
+ * write that #602 says has never existed anywhere in the repo.
+ *
+ * Upserts on the table's own `(plan_id, payment_provider, interval)` unique
+ * constraint, so re-saving a combination corrects it rather than failing; that
+ * is what a super admin fixing a mistyped Stripe price id actually wants.
+ *
+ * Every enum-ish field is validated here rather than left to the CHECK
+ * constraints. A rejected CHECK surfaces as an opaque Postgres error string in
+ * a toast; validating first means the caller gets told which field is wrong.
+ * The lists come from `lib/billing/plan-prices.ts`, which mirrors the
+ * migration — so this accepts everything the database accepts, including
+ * providers the editor's own dropdown does not yet offer.
+ */
+export async function upsertPlatformPlanPrice(input: {
+  planId: string
+  paymentProvider: string
+  interval: string
+  providerPriceId: string
+  currency?: string
+  amount?: number | null
+  isActive?: boolean
+}) {
+  await verifySuperAdmin()
+
+  const provider = input.paymentProvider as PlanPriceProvider
+  if (!PLAN_PRICE_PROVIDERS.includes(provider)) {
+    throw new Error(`Unknown payment provider: ${input.paymentProvider}`)
+  }
+
+  const interval = input.interval as PlanPriceInterval
+  if (!PLAN_PRICE_INTERVALS.includes(interval)) {
+    throw new Error(`Interval must be monthly or yearly, got: ${input.interval}`)
+  }
+
+  const currency = (input.currency ?? 'usd') as PlanPriceCurrency
+  if (!PLAN_PRICE_CURRENCIES.includes(currency)) {
+    throw new Error(`Unsupported currency: ${input.currency}`)
+  }
+
+  // NOT NULL in the schema, and a whitespace-only id would pass that while
+  // still never matching anything at the provider.
+  const providerPriceId = input.providerPriceId.trim()
+  if (!providerPriceId) throw new Error('Provider price ID is required')
+
+  // `amount` is nullable on purpose (the migration's own note): on a non-USD
+  // rail the provider may charge something that is not `platform_plans.price_*`,
+  // and where it does match there is nothing to record. A negative or NaN
+  // amount is a typo either way.
+  const amount = input.amount ?? null
+  if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
+    throw new Error('Amount must be a positive number, or left blank')
+  }
+
+  const adminClient = createAdminClient()
+
+  const { data: plan } = await adminClient
+    .from('platform_plans')
+    .select('plan_id')
+    .eq('plan_id', input.planId)
+    .maybeSingle()
+  if (!plan) throw new Error('Plan not found')
+
+  const { error } = await adminClient.from('platform_plan_prices').upsert(
+    {
+      plan_id: input.planId,
+      payment_provider: provider,
+      interval,
+      provider_price_id: providerPriceId,
+      currency,
+      amount,
+      is_active: input.isActive ?? true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'plan_id,payment_provider,interval' }
+  )
+
+  if (error) throw new Error(`Failed to save plan price: ${error.message}`)
+  revalidatePath('/platform/plans')
+  revalidatePath('/platform/billing-health')
+  return { success: true }
+}
+
+/**
+ * Remove a provider price outright. Deactivating (`is_active = false`) is the
+ * safer everyday move and is what the editor's toggle does; this is for a row
+ * created against the wrong plan, where leaving it inactive just clutters the
+ * dialog forever.
+ */
+export async function deletePlatformPlanPrice(priceId: string) {
+  await verifySuperAdmin()
+  const adminClient = createAdminClient()
+
+  const { error } = await adminClient
+    .from('platform_plan_prices')
+    .delete()
+    .eq('price_id', priceId)
+
+  if (error) throw new Error(`Failed to delete plan price: ${error.message}`)
+  revalidatePath('/platform/plans')
+  revalidatePath('/platform/billing-health')
+  return { success: true }
+}
+
 export async function togglePlanActive(planId: string, isActive: boolean) {
   await verifySuperAdmin()
   const adminClient = createAdminClient()
@@ -101,10 +212,7 @@ export async function togglePlanActive(planId: string, isActive: boolean) {
 }
 
 export async function rejectManualPayment(requestId: string, reason: string) {
-  const supabase = await createClient()
-  const userId = await getCurrentUserId()
-  if (!userId) throw new Error('Not authenticated')
-  if (!(await isSuperAdmin())) throw new Error('Super admin only')
+  await verifySuperAdmin()
 
   const adminClient = createAdminClient()
   const { error } = await adminClient

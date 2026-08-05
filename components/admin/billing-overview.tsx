@@ -16,7 +16,7 @@ interface BillingOverviewProps {
   billingPeriodEnd: string | null
   subscription: {
     status: string
-    paymentMethod: string
+    paymentProvider: string
     interval: string
     cancelAtPeriodEnd: boolean
     currentPeriodStart: string | null
@@ -27,7 +27,7 @@ interface BillingOverviewProps {
     amount: number
     currency: string
     dueDate: string
-    paymentMethod: string | null
+    paymentProvider: string | null
   } | null
   usage: {
     courses: { current: number; limit: number }
@@ -67,7 +67,7 @@ export function BillingOverview({
   const gracePeriodEnd = subscription?.gracePeriodEnd ? new Date(subscription.gracePeriodEnd) : null
   const now = new Date()
   const daysUntilEnd = periodEnd ? Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
-  const isManualSub = subscription?.paymentMethod === 'manual_transfer'
+  const isManualSub = subscription?.paymentProvider === 'manual'
   const isPastDue = billingStatus === 'past_due'
   const showRenewalWarning = isManualSub && !isPastDue && daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0
   const daysInGracePeriod = gracePeriodEnd ? Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
@@ -174,7 +174,7 @@ export function BillingOverview({
               <div className="text-left sm:text-right">
                 <p className="font-semibold tabular-nums">{formattedUpcomingAmount}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {upcomingPayment.paymentMethod === 'manual_transfer' ? t('bankTransfer') : t('cardPayment')}
+                  {upcomingPayment.paymentProvider === 'manual' ? t('bankTransfer') : t('cardPayment')}
                 </p>
               </div>
             </section>

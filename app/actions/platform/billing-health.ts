@@ -12,6 +12,13 @@ import {
   type AtRiskTenantRow,
   type PastDueSubscriptionInput,
 } from '@/lib/billing/billing-health'
+import {
+  findPartiallyPricedPlans,
+  findUnpurchasablePlans,
+  type PlanPurchasability,
+  type PlatformPlanInput,
+  type PlatformPlanPriceInput,
+} from '@/lib/billing/plan-prices'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -53,7 +60,10 @@ function toSubscriptionInput(row: {
   return {
     tenantId: row.tenant_id,
     status: row.status,
-    paymentMethod: row.payment_provider,
+    // Field and column agree by name since #602. Before that this mapped
+    // `payment_provider` onto a field called `paymentMethod`, and every reader
+    // compared it against `'manual_transfer'` — a value #601 had retired.
+    paymentProvider: row.payment_provider,
     currentPeriodEnd: row.current_period_end,
     gracePeriodEnd: row.grace_period_end,
     updatedAt: row.updated_at,
@@ -161,4 +171,69 @@ export async function getAtRiskTenants(): Promise<AtRiskTenant[]> {
     [...pastDueSubscriptionRows, ...knownSubscriptions.map(toSubscriptionInput)],
     new Date(),
   )
+}
+
+export interface PlanConfigurationHealth {
+  /** Active paid plans with no active provider price — card checkout 400s. */
+  unpurchasable: PlanPurchasability[]
+  /** Buyable, but not on every interval they quote a price for. */
+  partiallyPriced: PlanPurchasability[]
+}
+
+/**
+ * The plan-configuration half of billing health (#602).
+ *
+ * Deliberately a separate action from `getAtRiskTenants` rather than another
+ * branch inside it: that one returns `AtRiskTenant[]`, and a plan with no price
+ * belongs to no tenant. Two reads, its own section on the page.
+ *
+ * Both tables are small and bounded (five plans, at most a handful of price
+ * rows each), so this does not need `fetchAllRows` — but it *is* the check that
+ * catches a truncated or empty price table, so it reads every row rather than
+ * probing one plan at a time.
+ */
+export async function getPlanConfigurationHealth(): Promise<PlanConfigurationHealth> {
+  await verifySuperAdmin()
+  const admin = createAdminClient()
+
+  const [{ data: planRows, error: plansError }, { data: priceRows, error: pricesError }] =
+    await Promise.all([
+      admin
+        .from('platform_plans')
+        .select('plan_id, slug, name, price_monthly, price_yearly, is_active')
+        .order('sort_order', { ascending: true }),
+      admin
+        .from('platform_plan_prices')
+        .select('price_id, plan_id, payment_provider, interval, provider_price_id, currency, amount, is_active'),
+    ])
+
+  // A failed read must not render as "everything is configured" — that is the
+  // silent-green failure this whole check exists to prevent.
+  if (plansError) throw new Error(`Failed to fetch platform plans: ${plansError.message}`)
+  if (pricesError) throw new Error(`Failed to fetch plan prices: ${pricesError.message}`)
+
+  const plans: PlatformPlanInput[] = (planRows || []).map((row) => ({
+    planId: row.plan_id,
+    slug: row.slug,
+    name: row.name,
+    priceMonthly: Number(row.price_monthly ?? 0),
+    priceYearly: Number(row.price_yearly ?? 0),
+    isActive: row.is_active,
+  }))
+
+  const prices: PlatformPlanPriceInput[] = (priceRows || []).map((row) => ({
+    priceId: row.price_id,
+    planId: row.plan_id,
+    paymentProvider: row.payment_provider,
+    interval: row.interval,
+    providerPriceId: row.provider_price_id,
+    currency: row.currency,
+    amount: row.amount,
+    isActive: row.is_active,
+  }))
+
+  return {
+    unpurchasable: findUnpurchasablePlans(plans, prices),
+    partiallyPriced: findPartiallyPricedPlans(plans, prices),
+  }
 }
