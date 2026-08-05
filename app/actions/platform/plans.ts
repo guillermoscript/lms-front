@@ -82,25 +82,6 @@ export async function createPlatformPlan(data: {
 }
 
 /**
- * Every provider price a plan can be bought through (#602).
- *
- * Returns inactive rows as well: the editor has to show a price that was
- * toggled off, or turning it back on would mean retyping the provider's id
- * from memory.
- */
-export async function getPlatformPlanPrices() {
-  await verifySuperAdmin()
-  const adminClient = createAdminClient()
-  const { data, error } = await adminClient
-    .from('platform_plan_prices')
-    .select('*')
-    .order('payment_provider', { ascending: true })
-    .order('interval', { ascending: true })
-  if (error) throw new Error(`Failed to fetch plan prices: ${error.message}`)
-  return data || []
-}
-
-/**
  * Set (or clear) what a plan costs on one provider, for one interval — the
  * write that #602 says has never existed anywhere in the repo.
  *
