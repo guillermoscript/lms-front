@@ -104,7 +104,7 @@ beforeEach(() => {
         plan_id: PLAN_PRO,
         status: 'active',
         interval: 'monthly',
-        payment_method: 'manual_transfer',
+        payment_provider: 'manual',
         cancel_at_period_end: false,
         current_period_end: new Date(Date.now() + 5 * 86_400_000).toISOString(),
       },

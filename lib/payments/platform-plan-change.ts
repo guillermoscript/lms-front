@@ -51,12 +51,31 @@ interface PlanRow {
   name: string | null
   transaction_fee_percent: number
   limits: { max_courses?: number; max_students?: number } | null
-  stripe_price_id_monthly: string | null
-  stripe_price_id_yearly: string | null
 }
 
 const PLAN_COLUMNS =
-  'plan_id, slug, name, transaction_fee_percent, limits, stripe_price_id_monthly, stripe_price_id_yearly'
+  'plan_id, slug, name, transaction_fee_percent, limits'
+
+/**
+ * Resolve a plan's Stripe price id for an interval from `platform_plan_prices`
+ * (#601). Returns null when the plan has no active Stripe price for it.
+ */
+async function stripePriceIdFor(
+  admin: SupabaseClient,
+  planId: string,
+  interval: 'monthly' | 'yearly',
+): Promise<string | null> {
+  const { data } = (await admin
+    .from('platform_plan_prices')
+    .select('provider_price_id')
+    .eq('plan_id', planId)
+    .eq('payment_provider', 'stripe')
+    .eq('interval', interval)
+    .eq('is_active', true)
+    .maybeSingle()) as { data: { provider_price_id: string } | null }
+
+  return data?.provider_price_id ?? null
+}
 
 export async function applyPortalPlanChange(
   // Stripe.Subscription with 2026-02-25.clover typing quirks — treated as any
@@ -73,11 +92,22 @@ export async function applyPortalPlanChange(
     return { action: 'ignored', reason: 'missing tenant_id or price on event' }
   }
 
-  const { data: newPlan } = (await admin
-    .from('platform_plans')
-    .select(PLAN_COLUMNS)
-    .or(`stripe_price_id_monthly.eq.${newPriceId},stripe_price_id_yearly.eq.${newPriceId}`)
-    .maybeSingle()) as { data: PlanRow | null }
+  // The price -> plan mapping now lives in platform_plan_prices (#601), so the
+  // lookup is a join through it rather than an OR across two plan columns.
+  const { data: matchedPrice } = (await admin
+    .from('platform_plan_prices')
+    .select('plan_id')
+    .eq('payment_provider', 'stripe')
+    .eq('provider_price_id', newPriceId)
+    .maybeSingle()) as { data: { plan_id: string } | null }
+
+  const { data: newPlan } = matchedPrice
+    ? ((await admin
+        .from('platform_plans')
+        .select(PLAN_COLUMNS)
+        .eq('plan_id', matchedPrice.plan_id)
+        .maybeSingle()) as { data: PlanRow | null })
+    : { data: null }
 
   if (!newPlan) {
     return { action: 'ignored', reason: `no platform plan matches price ${newPriceId}` }
@@ -144,9 +174,10 @@ export async function applyPortalPlanChange(
   // falling back to whichever price the old plan actually has.
   const preferYearly =
     currentSub?.interval === 'yearly' || item?.price?.recurring?.interval === 'year'
-  const oldPriceId = preferYearly
-    ? oldPlan?.stripe_price_id_yearly || oldPlan?.stripe_price_id_monthly
-    : oldPlan?.stripe_price_id_monthly || oldPlan?.stripe_price_id_yearly
+  const oldPriceId = oldPlan
+    ? (await stripePriceIdFor(admin, oldPlan.plan_id, preferYearly ? 'yearly' : 'monthly')) ||
+      (await stripePriceIdFor(admin, oldPlan.plan_id, preferYearly ? 'monthly' : 'yearly'))
+    : null
 
   if (oldPriceId && item?.id) {
     try {

@@ -24,7 +24,7 @@ export default async function TenantsPage({
 
   let query = adminClient
     .from('tenants')
-    .select('id, name, slug, plan, status, created_at, stripe_customer_id')
+    .select('id, name, slug, plan, status, created_at')
     .order('created_at', { ascending: false })
     .limit(100)
 

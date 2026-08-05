@@ -307,7 +307,7 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
         tenant_id: tenantId,
         plan_id: plan.plan_id,
         status: 'active',
-        payment_method: 'manual_transfer',
+        payment_provider: 'manual',
         interval: 'monthly',
         current_period_start: nowIso,
         current_period_end: null,
