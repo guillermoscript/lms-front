@@ -90,6 +90,14 @@ Neither Binance Pay nor Solana has a product catalog, so their price rows carry
 (falling back to the plan's list price). Requiring an id there would only produce
 placeholders — the #602 failure mode.
 
+**Both crypto rails are dormant until someone prices them.** The code and the schema
+are deployed, but a rail appears in the payment-method dialog only when
+`platform_plan_prices` holds an active row for that plan/interval/provider — which is
+the on/off switch, not a feature flag. Only the local seed writes crypto rows, so a
+fresh production database has none. The go-live checklist (credentials, webhook
+registration, wallet, the mainnet USDC mint, and how to revert) is in
+[`DEPLOYMENT.md → Going live with the crypto rails`](DEPLOYMENT.md#going-live-with-the-crypto-rails--checklist).
+
 ### Key Distinction: Two Stripe Integrations
 
 | | School Billing (NEW) | Student Payments (EXISTING) |

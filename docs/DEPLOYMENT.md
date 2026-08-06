@@ -426,6 +426,51 @@ browser polls. It needs `SOLANA_RPC_URL` and `SOLANA_PLATFORM_WALLET`; set
 price oracle) and leave it unset to settle in native SOL at the Pyth quote locked at
 checkout.
 
+### Going live with the crypto rails — checklist
+
+Merged in #611 and applied to the cloud database, but **dormant**: the code shipped,
+the schema shipped, and nothing is reachable by any school. The payment-method dialog
+lists a rail only when `platform_plan_prices` has an active row for that plan,
+interval AND provider, so a rail with no rows simply does not exist as far as the UI
+is concerned. That is the on/off switch — there is no feature flag to find.
+
+The two rails are independent. Turning one on does not require the other.
+
+**Binance Pay — needs a merchant account.** Without one, add no `binance` price rows
+and there is nothing else to do or undo. When you have one:
+
+1. Set `BINANCE_PAY_API_KEY` / `BINANCE_PAY_API_SECRET` (merchant dashboard).
+2. Register `https://<domain>/api/billing/webhook/binance` there.
+3. Add a Binance Pay price row per paid plan and interval under **Platform → Plans →
+   Prices**. Leave the provider-price-id field blank (it disables itself — Binance has
+   no catalog) and set the amount.
+4. Buy the cheapest plan from a school account and let it settle. Renewal is a second
+   purchase, not an automatic charge — Binance has no recurring billing, so the expiry
+   cron owns the period.
+
+**Solana — needs only a wallet.** No merchant, no account, no approval:
+
+1. Hold a **mainnet** keypair for `SOLANA_PLATFORM_WALLET`. The devnet address in a
+   `.env.local` works on mainnet too — the same address exists on both networks — but
+   only if you still have its private key. If it was a throwaway, generate a new one.
+   Every school's plan payment lands here in full; there is no split.
+2. `SOLANA_RPC_URL` — the public `api.mainnet-beta.solana.com` will rate-limit a real
+   funnel. A Helius/QuickNode free tier is enough.
+3. `SOLANA_USDC_MINT` — mainnet USDC is `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`.
+   **Verify it against an official source before pasting**; paying to the wrong mint is
+   unrecoverable and there is no refund path on this rail. Leaving it unset settles in
+   native SOL at the Pyth quote locked at checkout — it works, but it puts a price
+   oracle in the money path for no benefit.
+4. Add a Solana price row per paid plan and interval, same as step 3 above.
+5. Pay the cheapest plan yourself, once, from a real wallet. **The on-chain transfer is
+   the only part of this flow that has never run** — everything up to it (intent row,
+   settlement lock, transaction building, polling, activation) is covered by tests, and
+   the transfer itself is not.
+
+**Reverting** is deactivating the price rows (the toggle in the prices editor), not a
+deploy. A school mid-payment keeps its pending request; the QR it already holds still
+settles, because `/api/billing/solana/tx` reads the request, not the price table.
+
 ---
 
 ## 7. Verification Checklist
