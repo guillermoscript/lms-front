@@ -142,7 +142,12 @@ export async function getSubscriptionStatus() {
       },
     },
     features: planDetails?.features || {},
-    transactionFeePercent: planDetails?.transaction_fee_percent || 10,
+    // `??`, never `||` (#613). Business and Enterprise carry a genuine 0% fee,
+    // and `0 || 10` is 10 — so the two plans whose zero fee is the reason to buy
+    // them were the only two told they pay the Free-plan rate. The 10 here is
+    // the fallback for a tenant whose `plan` slug matches no platform_plans row,
+    // which is the only case it was ever meant to cover.
+    transactionFeePercent: planDetails?.transaction_fee_percent ?? 10,
   }
 }
 
