@@ -164,6 +164,19 @@ export async function createCourse(courseData: CourseFormData) {
     throw new Error(`Failed to create course: ${error.message}`)
   }
 
+  // The course row now exists, so the tenant's course count has changed —
+  // reconcile the access cutoff at the moment usage moves rather than waiting up
+  // to 24h for the nightly sweep (issue #513). `checkCourseLimit` above blocks at
+  // `currentCount < limit` and counts *all* courses, while
+  // `computePlanLimitViolations` flags at `>` and counts only non-archived ones,
+  // so a legitimate creation normally produces no violation; this call exists to
+  // catch the cases where those two independent limit computations drift, and to
+  // clear a stale cutoff once a tenant drops back under its limit.
+  // Non-blocking, via the shared wrapper: reconciliation must never fail a course
+  // that was already created, and `archiveCourse`/`deleteCourse` below reconcile
+  // the same way.
+  await reconcileAccessCutoffSafely(adminClient, tenantId)
+
   revalidatePath('/dashboard/teacher/courses')
   return course
 }

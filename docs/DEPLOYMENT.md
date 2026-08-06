@@ -258,10 +258,56 @@ After saving, **redeploy** the app. Allow 1-2 minutes for Let's Encrypt to issue
 
 ### 3.5 Cron Jobs
 
-Since there's no Vercel cron, set up a system cron on the server:
+`vercel.json` declares these schedules, but **Dokploy does not read `vercel.json`** —
+something on this side has to call the routes or they never run at all. Every
+`/api/cron/*` route authenticates with `Authorization: Bearer $CRON_SECRET`
+(§3.3), so any scheduler that can issue an HTTP GET will do.
+
+**Pick exactly one of the three mechanisms below.** Running two means every route
+fires twice; the routes are written to tolerate that, but it doubles the load and
+makes logs hard to read.
+
+#### Option A — GitHub Actions (default, and what the repo ships)
+
+`.github/workflows/cron.yml` runs all seven schedules. It needs two repository
+settings under **Settings → Secrets and variables → Actions**:
+
+| Kind | Name | Value |
+|---|---|---|
+| Secret | `CRON_SECRET` | Same value as the `CRON_SECRET` env var on the Dokploy app |
+| Variable | `CRON_BASE_URL` | Production origin, e.g. `https://lmsplatform.com` |
+
+A missing setting fails the run loudly rather than silently no-opping. Verify it
+end to end with a manual run:
+
+```bash
+gh workflow run cron.yml -f route=enforce-plan-limits
+gh run watch
+```
+
+Two caveats: GitHub delays scheduled runs under load (dropping high-frequency
+ones first, so the `*/10` reconcilers are the most affected), and it disables
+scheduled workflows after 60 days with no repository activity. If either matters
+for your deployment, use Option B instead.
+
+#### Option B — Dokploy scheduled task
+
+In the Dokploy dashboard, open the LMS application → **Schedules** → create one
+per line below, shell `bash`, command:
+
+```bash
+curl -sS -f -H "Authorization: Bearer $CRON_SECRET" https://lmsplatform.com/api/cron/<route>
+```
+
+Most reliable of the three (it runs on the host, on time), but it is invisible to
+the repository — nothing in code review will tell you it exists or that it broke.
+If you choose this, disable the schedules in `.github/workflows/cron.yml`.
+
+#### Option C — host crontab
 
 ```bash
 # crontab -e
+# Expire lapsed student subscriptions
 0 0 * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/expire-subscriptions
 # Daily digest + streak nudge — must run HOURLY (each tenant sends at its own local hour)
 0 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/daily-digest
@@ -269,7 +315,18 @@ Since there's no Vercel cron, set up a system cron on the server:
 0 1 * * 1 curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/league-rollover
 # Expire lapsed manual-transfer platform (school billing) subscriptions: reminders, grace, downgrade to free. Replaces the retired pg_cron job.
 0 2 * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/expire-platform-subscriptions
+# Reconcile access cutoffs for tenants that grew past their plan limits with no plan-change event
+0 3 * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/enforce-plan-limits
+# Confirm on-chain Solana payments
+*/10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/solana-reconcile
+# Confirm Binance personal-wallet payments
+*/10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/binance-personal-reconcile
 ```
+
+> `/api/cron/solana-pull` exists but is deliberately not on any schedule here or
+> in `vercel.json`. It submits on-chain USDC transfers for native Solana
+> subscriptions; enabling it is a separate decision. Run it manually via
+> `gh workflow run cron.yml -f route=solana-pull` if needed.
 
 ---
 

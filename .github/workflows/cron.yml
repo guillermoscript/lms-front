@@ -1,0 +1,137 @@
+# Scheduled invocation of the app's /api/cron/* routes (issue #513).
+#
+# Production runs on Dokploy, which does not read `vercel.json` — so the seven
+# cron routes declared there had no scheduler at all and every non-payment
+# lifecycle job (access-cutoff enforcement, platform-subscription expiry, daily
+# digest, league rollover, payment reconciliation) was inert in production.
+#
+# Each route authenticates with the same `Authorization: Bearer $CRON_SECRET`
+# header it already implements, so no application code changed to support this.
+#
+# Required repository settings (Settings → Secrets and variables → Actions):
+#   secret   CRON_SECRET    — must match the CRON_SECRET env var on the Dokploy app
+#   variable CRON_BASE_URL  — the production origin, e.g. https://preciopana.com
+# Both are checked at runtime; a missing one fails the run loudly rather than
+# silently doing nothing, which is the failure mode this workflow exists to fix.
+#
+# Caveats worth knowing before relying on this:
+#   * GitHub delays scheduled runs under load, and drops high-frequency ones
+#     first — the */10 reconcilers are the most affected. If exact cadence
+#     matters for those, prefer a Dokploy scheduled task (see docs/DEPLOYMENT.md).
+#   * GitHub disables scheduled workflows after 60 days with no repository
+#     activity. Re-enable from the Actions tab if that happens.
+#   * Run ONE mechanism. If a Dokploy schedule is added later, remove the
+#     corresponding schedule here so routes don't fire twice.
+
+name: Scheduled cron routes
+
+on:
+  schedule:
+    # Keep these in sync with vercel.json and with the case block below.
+    - cron: '*/10 * * * *' # solana-reconcile + binance-personal-reconcile
+    - cron: '0 * * * *' # daily-digest — hourly by design (each tenant sends at its own local hour)
+    - cron: '0 0 * * *' # expire-subscriptions
+    - cron: '0 1 * * 1' # league-rollover (pg_cron also runs it Mondays 00:05; this is the fallback)
+    - cron: '0 2 * * *' # expire-platform-subscriptions
+    - cron: '0 3 * * *' # enforce-plan-limits
+  workflow_dispatch:
+    inputs:
+      route:
+        description: 'Cron route to run now'
+        required: true
+        type: choice
+        options:
+          - enforce-plan-limits
+          - expire-platform-subscriptions
+          - expire-subscriptions
+          - daily-digest
+          - league-rollover
+          - solana-reconcile
+          - binance-personal-reconcile
+          # Never scheduled: solana-pull submits on-chain USDC transfers and has
+          # never had a scheduler in vercel.json either. Available here for
+          # manual runs only — putting it on a timer needs its own review.
+          - solana-pull
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize per trigger so a slow run can't overlap the next tick.
+  group: cron-${{ github.event.schedule || inputs.route }}
+  cancel-in-progress: false
+
+jobs:
+  invoke:
+    name: Invoke cron route(s)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve routes for this trigger
+        id: resolve
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_ROUTE: ${{ inputs.route }}
+        run: |
+          set -euo pipefail
+          if [ -n "${DISPATCH_ROUTE:-}" ]; then
+            routes="$DISPATCH_ROUTE"
+          else
+            case "${SCHEDULE:-}" in
+              '*/10 * * * *') routes='solana-reconcile binance-personal-reconcile' ;;
+              '0 * * * *')    routes='daily-digest' ;;
+              '0 0 * * *')    routes='expire-subscriptions' ;;
+              '0 1 * * 1')    routes='league-rollover' ;;
+              '0 2 * * *')    routes='expire-platform-subscriptions' ;;
+              '0 3 * * *')    routes='enforce-plan-limits' ;;
+              *)
+                echo "::error::Schedule '${SCHEDULE:-}' has no route mapping. Add it to the case block in .github/workflows/cron.yml."
+                exit 1
+                ;;
+            esac
+          fi
+          echo "Resolved routes: $routes"
+          echo "routes=$routes" >> "$GITHUB_OUTPUT"
+
+      - name: Invoke
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          CRON_BASE_URL: ${{ vars.CRON_BASE_URL }}
+          ROUTES: ${{ steps.resolve.outputs.routes }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_BASE_URL:-}" ]; then
+            echo "::error::Repository variable CRON_BASE_URL is not set (expected e.g. https://preciopana.com)."
+            exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::Repository secret CRON_SECRET is not set. It must match the CRON_SECRET env var on the Dokploy app."
+            exit 1
+          fi
+
+          base="${CRON_BASE_URL%/}"
+          failed=0
+
+          for route in $ROUTES; do
+            url="$base/api/cron/$route"
+            echo "--- GET $url"
+            # The secret is passed via env into the header and never printed;
+            # GitHub also masks it in logs. Body is capped so a large digest
+            # response can't flood the log.
+            code="$(curl -sS -o /tmp/cron-body.txt -w '%{http_code}' \
+              --max-time 600 --retry 2 --retry-delay 15 --retry-connrefused \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$url")" || code='000'
+
+            echo "HTTP $code"
+            head -c 2000 /tmp/cron-body.txt || true
+            echo
+
+            if [ "$code" != '200' ]; then
+              echo "::error::$route returned HTTP $code"
+              failed=1
+            fi
+          done
+
+          exit "$failed"
