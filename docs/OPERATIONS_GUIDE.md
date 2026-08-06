@@ -210,7 +210,7 @@ Events: payment_intent.succeeded, charge.refunded, payout.paid, charge.dispute.c
 
 **Webhook 2 — School Billing (Stripe Billing):**
 ```
-Endpoint: https://yourdomain.com/api/stripe/platform-webhook
+Endpoint: https://yourdomain.com/api/billing/webhook/stripe
 Events: checkout.session.completed, invoice.payment_failed, customer.subscription.deleted
 ```
 → Copy the signing secret to `STRIPE_PLATFORM_WEBHOOK_SECRET`

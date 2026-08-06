@@ -94,14 +94,19 @@ All API routes live under `app/api/`. Tenant context (`x-tenant-id` header) is i
 
 ---
 
-## 3. Stripe -- Platform Billing
+## 3. Platform Billing (school → platform)
 
-### `POST /api/stripe/checkout-session`
+Provider-agnostic since #603: both routes go through `IPaymentProvider`, and the
+provider is a value (a `platform_plan_prices` row) rather than part of the path or
+the handler. Stripe is the only one configured today; adding Lemon Squeezy or PayPal
+is a price row plus a webhook registration.
+
+### `POST /api/billing/checkout`
 
 | | |
 |---|---|
 | **Auth** | Yes (`getUser()` + tenant admin check) |
-| **Description** | Creates a Stripe Checkout Session for a school to subscribe to a platform plan (Stripe Billing, not Connect). |
+| **Description** | Starts a hosted subscription checkout for a school buying a platform plan. Billed to the platform account — this is **not** Connect. |
 
 **Request Body:**
 
@@ -109,14 +114,27 @@ All API routes live under `app/api/`. Tenant context (`x-tenant-id` header) is i
 |-------|------|----------|-------------|
 | `planId` | `string` | Yes | Platform plan ID |
 | `interval` | `string` | No | `monthly` (default) or `yearly` |
+| `provider` | `string` | No | Provider slug to pay with. Omitted → the provider the tenant's existing subscription uses, else the only one with an active price row for the plan + interval. |
+| `locale` | `string` | No | Locale for the success/cancel URLs; falls back to the request's own. |
 
 **Success Response (200):**
 
 | Field | Type |
 |-------|------|
-| `url` | `string` (Stripe Checkout URL) |
+| `url` | `string` (provider-hosted checkout URL) |
+| `provider` | `string` (the slug the checkout was started on) |
 
-**Error Responses:** `400` missing plan / free plan / active sub exists / no Stripe price, `401` unauthorized, `403` not admin, `404` plan not found.
+**Error Responses:** `400` missing plan / invalid interval / free plan / already
+subscribed on this provider / no price row for the requested provider (the message
+names the providers that *are* configured) / several providers configured and none
+chosen; `401` unauthorized; `403` not admin; `404` plan not found; `501` provider
+cannot run a hosted checkout; `502` the superseded subscription could not be
+cancelled at its provider, or the provider returned no URL.
+
+**Switching payment method:** starting a checkout on a provider the school is not
+currently on supersedes the live subscription — cancelled at the old provider first,
+so the school is never billed twice. Switching *to* the same provider it is already
+on is rejected: that is a plan change, handled in-app with proration.
 
 ---
 
@@ -139,24 +157,38 @@ All API routes live under `app/api/`. Tenant context (`x-tenant-id` header) is i
 
 ---
 
-### `POST /api/stripe/platform-webhook`
+### `POST /api/billing/webhook/[provider]`
 
 | | |
 |---|---|
-| **Auth** | Stripe signature (`stripe-signature` header, `STRIPE_PLATFORM_WEBHOOK_SECRET`) |
-| **Description** | Handles Stripe Billing webhook events for school-to-platform subscriptions. |
+| **Auth** | The provider's own signature. Stripe: `stripe-signature` header verified against `STRIPE_PLATFORM_WEBHOOK_SECRET` (**not** the Connect secret — separate registration, separate secret). |
+| **Description** | Platform-billing webhook. Same five-step pipeline as the student endpoint: verify → persist to `webhook_events` (idempotent) → normalize → dispatch → 200. |
+| **Providers** | `stripe`, `lemonsqueezy`, `paypal`. Anything else 404s: a provider with no signed webhook must never have an endpoint, or that endpoint is an unauthenticated way to activate a school's plan. |
 
-**Handled Events:**
+**Normalized events and what they apply:**
 
-| Event | Action |
+| `NormalizedBillingEvent.type` | Action |
 |-------|--------|
-| `checkout.session.completed` | Activates platform subscription, updates tenant plan and revenue splits |
-| `customer.subscription.updated` | Syncs period/status, handles plan changes via portal (with downgrade limit checks) |
-| `customer.subscription.deleted` | Downgrades tenant to free plan, resets revenue split to 10% |
-| `invoice.payment_failed` | Marks subscription `past_due`, emails school admins |
-| `invoice.paid` | Re-activates subscription after successful retry |
+| `subscription.activated` | Upserts `platform_subscriptions`, records the customer in `tenant_billing_customers`, sets the tenant's plan and rewrites `revenue_splits` from the plan's transaction fee |
+| `subscription.renewed` | Extends the period, returns the subscription to `active`, clears `renewal_reminder_sent_at` |
+| `subscription.past_due` | Marks both tables `past_due` and emails the school's admins — **only on the transition into dunning**, so one failed charge does not send three copies |
+| `subscription.canceled` / `subscription.expired` | `downgradeTenantToFree()`: cancels, resets the tenant, rewrites the split to the free plan's fee, reconciles the access cutoff |
 
-**Response:** `{ received: true }` (200) or `400`/`500` on error.
+A provider price change that is not our own activation runs through
+`applyPortalPlanChange`, which enforces the target plan's limits and reverts the
+swap at the provider when a downgrade would exceed them.
+
+**Idempotency:** keyed on `(provider, provider_event_id)` in `webhook_events`, under
+a `platform:<provider>` namespace. The namespace matters — the student Connect route
+logs under plain `stripe`, both endpoints can be registered for the same event types
+on the same Stripe account, and one shared key space would let whichever route ran
+first mark an event processed and make the other skip work it had not done.
+
+**Response:** `{ received: true }` (200), `{ received: true, duplicate: true }` on a
+replay, `{ received: true, ignored: true }` for an event type we do not model, or
+`400` (bad signature) / `404` (unknown provider) / `422` (event carries no id to
+dedupe on) / `500` (dispatch failed — `processed_at` stays unset so the provider
+retries).
 
 ---
 

@@ -94,6 +94,7 @@ export class BinancePersonalProvider implements IPaymentProvider {
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,

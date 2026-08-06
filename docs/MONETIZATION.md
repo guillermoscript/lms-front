@@ -65,7 +65,7 @@ Yearly pricing: ~17% discount (e.g. Starter $90/year instead of $108).
 |--|--|--|
 | **Who pays** | School admin pays platform | Student pays school |
 | **Stripe mode** | Stripe Billing (Checkout + Subscriptions) | Stripe Connect (PaymentIntents) |
-| **Webhook** | `/api/stripe/platform-webhook` | `/api/stripe/webhook` |
+| **Webhook** | `/api/billing/webhook/stripe` | `/api/stripe/webhook` |
 | **Webhook secret** | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` |
 | **Customer ID stored in** | `tenants.stripe_customer_id` | `profiles.stripe_customer_id` |
 | **Revenue** | Platform revenue (SaaS fees) | School revenue (course sales) |
@@ -88,9 +88,9 @@ All plan checks should go through this function, NOT hardcoded constants.
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/stripe/checkout-session` | POST | Creates Stripe Checkout Session for school plan upgrade. Verifies admin role. |
-| `/api/stripe/billing-portal` | POST | Creates Stripe Billing Portal session for managing subscription/invoices. |
-| `/api/stripe/platform-webhook` | POST | Handles: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.paid` |
+| `/api/billing/checkout` | POST | Starts a hosted subscription checkout for a school plan, on whichever provider has an active `platform_plan_prices` row. Verifies admin role; supersedes a live subscription when the school switches provider. |
+| `/api/stripe/billing-portal` | POST | Creates Stripe Billing Portal session for managing subscription/invoices. Still Stripe-only — capability-gating it is #604. |
+| `/api/billing/webhook/[provider]` | POST | Platform-billing webhook for `stripe` / `lemonsqueezy` / `paypal`. Verify → `webhook_events` (idempotent) → normalize → `dispatchPlatformBillingEvent`. |
 
 ### Server Actions (`app/actions/admin/billing.ts`)
 
@@ -153,7 +153,7 @@ All plan checks should go through this function, NOT hardcoded constants.
 ### Via Stripe Checkout (Card Payment)
 
 ```
-Admin clicks "Subscribe" → POST /api/stripe/checkout-session
+Admin clicks "Subscribe" → POST /api/billing/checkout
   → Creates Stripe Checkout Session
   → Redirects to Stripe hosted page
   → Student pays
@@ -342,7 +342,7 @@ STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...   # Separate from Connect webhook
 1. Create Stripe Product "LMS Platform Subscription" in dashboard
 2. Create 8 Prices (4 monthly + 4 yearly for Starter/Pro/Business/Enterprise)
 3. Store price IDs in `platform_plans.stripe_price_id_monthly` / `stripe_price_id_yearly`
-4. Create webhook endpoint at `https://yourdomain.com/api/stripe/platform-webhook`
+4. Create webhook endpoint at `https://yourdomain.com/api/billing/webhook/stripe`
 5. Subscribe to events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.paid`
 6. Copy webhook signing secret to `STRIPE_PLATFORM_WEBHOOK_SECRET`
 

@@ -48,6 +48,7 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,

@@ -22,16 +22,22 @@ interface PlanData {
 interface PlanComparisonTableProps {
   plans: PlanData[]
   currentPlan?: string
-  onSelectPlan?: (planId: string, interval: 'monthly' | 'yearly') => void
-  onManualTransfer?: (planId: string, interval: 'monthly' | 'yearly') => void
+  /**
+   * The school picked this plan. WHICH payment method it pays with is a separate
+   * step the caller owns — this component no longer decides, because it used to
+   * decide by hardcoding one button for Stripe and one for a bank wire, which
+   * made every other configured provider unreachable (#603).
+   */
+  onChoosePlan?: (planId: string, interval: 'monthly' | 'yearly') => void
   loading?: boolean
   showActions?: boolean
   preselectedPlan?: string
   initialInterval?: 'monthly' | 'yearly'
   /**
-   * When true, the tenant already has an active Stripe subscription. CTAs become
-   * direction-aware (Upgrade / Downgrade / Switch interval) and route through an
-   * in-app Stripe subscription update instead of a fresh checkout / bank transfer.
+   * When true, the tenant already has a live subscription with a provider that
+   * can swap plans in place. CTAs become direction-aware (Upgrade / Downgrade /
+   * Switch interval) and route through an in-app subscription update rather than
+   * a fresh checkout.
    */
   existingSubscriber?: boolean
   /** The tenant's current billing interval — enables same-plan interval switches. */
@@ -80,8 +86,7 @@ function FeatureValue({ value }: { value: boolean | string | undefined }) {
 export function PlanComparisonTable({
   plans,
   currentPlan = 'free',
-  onSelectPlan,
-  onManualTransfer,
+  onChoosePlan,
   loading = false,
   showActions = true,
   preselectedPlan,
@@ -231,16 +236,34 @@ export function PlanComparisonTable({
                   {existingSubscriber ? (
                     isCurrent ? (
                       currentInterval && interval !== currentInterval ? (
-                        <Button className="w-full" onClick={() => onSelectPlan?.(plan.plan_id, interval)} disabled={loading}>
+                        <Button className="w-full" onClick={() => onChoosePlan?.(plan.plan_id, interval)} disabled={loading}>
                           {interval === 'yearly' ? 'Switch to yearly billing' : 'Switch to monthly billing'}
                         </Button>
                       ) : (
-                        <Button variant="outline" className="w-full" disabled>Current plan</Button>
+                        <>
+                          <Button variant="outline" className="w-full" disabled>Current plan</Button>
+                          {/*
+                            The only route to a different payment method for a
+                            school staying on its current plan. Without it, a
+                            school whose card starts failing has nothing to
+                            click: every other CTA on this screen is a plan
+                            change (#603).
+                          */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => onChoosePlan?.(plan.plan_id, interval)}
+                            disabled={loading}
+                          >
+                            Change payment method
+                          </Button>
+                        </>
                       )
                     ) : plan.slug === 'free' ? (
                       <Button variant="ghost" className="w-full" disabled>Cancel to downgrade</Button>
                     ) : (
-                      <Button className="w-full" onClick={() => onSelectPlan?.(plan.plan_id, interval)} disabled={loading}>
+                      <Button className="w-full" onClick={() => onChoosePlan?.(plan.plan_id, interval)} disabled={loading}>
                         {planIndex > currentIndex ? 'Upgrade to this plan' : 'Downgrade to this plan'}
                       </Button>
                     )
@@ -249,16 +272,9 @@ export function PlanComparisonTable({
                   ) : plan.slug === 'free' ? (
                     <Button variant="ghost" className="w-full" disabled>Free plan</Button>
                   ) : (
-                    <>
-                      <Button className="w-full" onClick={() => onSelectPlan?.(plan.plan_id, interval)} disabled={loading}>
-                        {loading ? 'Opening checkout...' : 'Choose plan'}
-                      </Button>
-                      {onManualTransfer && (
-                        <Button variant="ghost" size="sm" className="w-full" onClick={() => onManualTransfer(plan.plan_id, interval)} disabled={loading}>
-                          Pay via bank transfer
-                        </Button>
-                      )}
-                    </>
+                    <Button className="w-full" onClick={() => onChoosePlan?.(plan.plan_id, interval)} disabled={loading}>
+                      {loading ? 'Opening checkout...' : 'Choose plan'}
+                    </Button>
                   )}
                 </CardFooter>
               )}

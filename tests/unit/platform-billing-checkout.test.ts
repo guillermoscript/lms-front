@@ -1,0 +1,382 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { NextRequest } from 'next/server'
+import {
+  resolveCheckoutProvider,
+  describeResolutionError,
+  isPlatformCheckoutProvider,
+  platformWebhookNamespace,
+  type PlatformPriceRow,
+} from '@/lib/billing/platform-billing'
+import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+
+/**
+ * `POST /api/billing/checkout` — the provider-agnostic replacement for
+ * `/api/stripe/checkout-session` (#603) — plus the pure resolution logic behind
+ * it.
+ *
+ * The bug class this guards against is #602's: a plan that cannot be bought,
+ * failing with one catch-all message that told nobody which of the several
+ * possible misconfigurations it was.
+ */
+
+const price = (over: Partial<PlatformPriceRow> = {}): PlatformPriceRow => ({
+  paymentProvider: 'stripe',
+  interval: 'monthly',
+  providerPriceId: 'price_pro_m',
+  currency: 'usd',
+  amount: 29,
+  ...over,
+})
+
+describe('resolveCheckoutProvider', () => {
+  it('uses the only priced provider when there is exactly one', () => {
+    const res = resolveCheckoutProvider([price()], 'monthly')
+    expect(res.ok && res.value.provider).toBe('stripe')
+    expect(res.ok && res.value.price.providerPriceId).toBe('price_pro_m')
+  })
+
+  it('honours an explicit request over everything else', () => {
+    const res = resolveCheckoutProvider(
+      [price(), price({ paymentProvider: 'lemonsqueezy', providerPriceId: 'variant_1' })],
+      'monthly',
+      { requested: 'lemonsqueezy', tenantProvider: 'stripe' },
+    )
+    expect(res.ok && res.value.provider).toBe('lemonsqueezy')
+  })
+
+  it('prefers the rail the tenant is already on over an arbitrary pick', () => {
+    const res = resolveCheckoutProvider(
+      [price(), price({ paymentProvider: 'lemonsqueezy', providerPriceId: 'variant_1' })],
+      'monthly',
+      { tenantProvider: 'lemonsqueezy' },
+    )
+    expect(res.ok && res.value.provider).toBe('lemonsqueezy')
+  })
+
+  it('refuses to guess between several providers', () => {
+    const res = resolveCheckoutProvider(
+      [price(), price({ paymentProvider: 'lemonsqueezy', providerPriceId: 'variant_1' })],
+      'monthly',
+    )
+    expect(res.ok).toBe(false)
+    expect(!res.ok && res.error.kind).toBe('ambiguous')
+  })
+
+  it('separates "no price at all" from "no price on the provider you asked for"', () => {
+    // #602 shipped for months because a single catch-all string could not tell
+    // these two apart, and neither could anyone reading the logs.
+    const none = resolveCheckoutProvider([], 'monthly')
+    expect(!none.ok && none.error.kind).toBe('no_prices')
+
+    const wrongProvider = resolveCheckoutProvider([price()], 'monthly', { requested: 'lemonsqueezy' })
+    expect(!wrongProvider.ok && wrongProvider.error.kind).toBe('provider_unpriced')
+    expect(!wrongProvider.ok && describeResolutionError(wrongProvider.error, 'monthly')).toContain(
+      'stripe',
+    )
+  })
+
+  it('treats a plan priced only monthly as unbuyable yearly', () => {
+    const res = resolveCheckoutProvider([price()], 'yearly')
+    expect(!res.ok && res.error.kind).toBe('no_prices')
+  })
+
+  it('rejects a provider that cannot run a platform checkout', () => {
+    const res = resolveCheckoutProvider(
+      [price({ paymentProvider: 'solana', providerPriceId: 'x' })],
+      'monthly',
+      { requested: 'solana' },
+    )
+    expect(!res.ok && res.error.kind).toBe('unsupported')
+  })
+
+  it('ignores a stored tenant provider that has no price for this interval', () => {
+    const res = resolveCheckoutProvider([price()], 'monthly', { tenantProvider: 'lemonsqueezy' })
+    expect(res.ok && res.value.provider).toBe('stripe')
+  })
+})
+
+describe('platform billing capability', () => {
+  it('is separate from supportsHostedCheckout, which describes the STUDENT shape', () => {
+    // Stripe's student checkout is a Connect PaymentIntent confirmed with
+    // Elements, so supportsHostedCheckout is false — yet Stripe Checkout
+    // Sessions on the platform account are exactly a hosted platform checkout.
+    // Gating the new route on the old flag would have rejected the one provider
+    // platform billing works with today.
+    expect(PROVIDER_CAPABILITIES.stripe.supportsHostedCheckout).toBe(false)
+    expect(PROVIDER_CAPABILITIES.stripe.supportsPlatformBillingCheckout).toBe(true)
+  })
+
+  it('excludes every rail that cannot bill a school recurringly', () => {
+    for (const slug of ['manual', 'solana', 'solana_subs', 'binance', 'binance_personal'] as const) {
+      expect(isPlatformCheckoutProvider(slug)).toBe(false)
+    }
+  })
+
+  it('namespaces the platform webhook ledger away from the student one', () => {
+    expect(platformWebhookNamespace('stripe')).toBe('platform:stripe')
+    expect(platformWebhookNamespace('stripe')).not.toBe('stripe')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Route
+// ---------------------------------------------------------------------------
+
+interface Write {
+  table: string
+  op: 'update' | 'upsert'
+  values: Record<string, unknown>
+}
+
+const state: {
+  user: { id: string; email: string } | null
+  role: string | null
+  prices: PlatformPriceRow[]
+  plan: { plan_id: string; slug: string; name: string } | null
+  existingSub: Record<string, unknown> | null
+  billingCustomer: string | null
+  writes: Write[]
+  checkoutCalls: Record<string, unknown>[]
+  cancelCalls: { id: string; immediate: boolean }[]
+  cancelThrows: boolean
+} = {
+  user: null,
+  role: null,
+  prices: [],
+  plan: null,
+  existingSub: null,
+  billingCustomer: null,
+  writes: [],
+  checkoutCalls: [],
+  cancelCalls: [],
+  cancelThrows: false,
+}
+
+const TENANT = '00000000-0000-0000-0000-000000000001'
+const PLAN_ID = 'f9318c3a-815d-448d-802e-cf356c2791a4'
+
+function makeBuilder(table: string, writes: Write[]) {
+  let pending: Write | null = null
+  const b: Record<string, unknown> = {
+    select: () => b,
+    eq: () => b,
+    update(values: Record<string, unknown>) {
+      pending = { table, op: 'update', values }
+      writes.push(pending)
+      return b
+    },
+    upsert(values: Record<string, unknown>) {
+      pending = { table, op: 'upsert', values }
+      writes.push(pending)
+      return b
+    },
+    maybeSingle: () => Promise.resolve(settle()),
+    single: () => Promise.resolve(settle()),
+    then: (resolve: (v: unknown) => unknown) => Promise.resolve(settle()).then(resolve),
+  }
+  function settle() {
+    if (pending) return { data: null, error: null }
+    if (table === 'tenant_users') return { data: state.role ? { role: state.role } : null, error: null }
+    if (table === 'platform_plans') {
+      return state.plan ? { data: state.plan, error: null } : { data: null, error: { message: 'not found' } }
+    }
+    if (table === 'platform_subscriptions') return { data: state.existingSub, error: null }
+    if (table === 'tenants') return { data: { billing_email: 'billing@school.test', name: 'School' }, error: null }
+    if (table === 'tenant_billing_customers') {
+      return { data: state.billingCustomer ? { provider_customer_id: state.billingCustomer } : null, error: null }
+    }
+    return { data: null, error: null }
+  }
+  return b
+}
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: () =>
+    Promise.resolve({
+      auth: { getUser: () => Promise.resolve({ data: { user: state.user }, error: null }) },
+      from: (table: string) => makeBuilder(table, state.writes),
+    }),
+}))
+
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => Promise.resolve({ from: (table: string) => makeBuilder(table, state.writes) }),
+}))
+
+vi.mock('@/lib/supabase/tenant', () => ({ getCurrentTenantId: () => Promise.resolve(TENANT) }))
+
+vi.mock('@/lib/i18n/request-locale', () => ({ resolveRequestLocale: () => 'es' }))
+
+vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/billing/platform-billing')>()
+  return {
+    ...actual,
+    getActivePlanPrices: () => Promise.resolve(state.prices),
+    getPlatformBillingProvider: (provider: string) => ({
+      provider,
+      ensureCustomer: () => Promise.resolve({ providerCustomerId: 'cus_new' }),
+      cancelSubscription: (id: string, immediate: boolean) => {
+        if (state.cancelThrows) return Promise.reject(new Error('provider down'))
+        state.cancelCalls.push({ id, immediate })
+        return Promise.resolve()
+      },
+      createCheckoutSession: (params: Record<string, unknown>) => {
+        state.checkoutCalls.push(params)
+        return Promise.resolve({ kind: 'redirect', url: 'https://pay.example/session', reference: 'r' })
+      },
+    }),
+  }
+})
+
+import { POST } from '@/app/api/billing/checkout/route'
+
+function makeReq(body: Record<string, unknown>): NextRequest {
+  return {
+    json: () => Promise.resolve(body),
+    headers: new Headers({ origin: 'https://school.lvh.me:3000' }),
+  } as unknown as NextRequest
+}
+
+beforeEach(() => {
+  state.user = { id: 'user-1', email: 'admin@school.test' }
+  state.role = 'admin'
+  state.prices = [price()]
+  state.plan = { plan_id: PLAN_ID, slug: 'pro', name: 'Pro' }
+  state.existingSub = null
+  state.billingCustomer = 'cus_existing'
+  state.writes = []
+  state.checkoutCalls = []
+  state.cancelCalls = []
+  state.cancelThrows = false
+})
+
+describe('POST /api/billing/checkout — guards', () => {
+  it('401s an anonymous caller', async () => {
+    state.user = null
+    expect((await POST(makeReq({ planId: PLAN_ID }))).status).toBe(401)
+  })
+
+  it('403s a non-admin member', async () => {
+    state.role = 'teacher'
+    expect((await POST(makeReq({ planId: PLAN_ID }))).status).toBe(403)
+  })
+
+  it('400s a missing plan id and an invalid interval', async () => {
+    expect((await POST(makeReq({}))).status).toBe(400)
+    expect((await POST(makeReq({ planId: PLAN_ID, interval: 'weekly' }))).status).toBe(400)
+  })
+
+  it('404s an unknown or inactive plan', async () => {
+    state.plan = null
+    expect((await POST(makeReq({ planId: PLAN_ID }))).status).toBe(404)
+  })
+
+  it('rejects the free plan', async () => {
+    state.plan = { plan_id: PLAN_ID, slug: 'free', name: 'Free' }
+    const res = await POST(makeReq({ planId: PLAN_ID }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('free plan')
+  })
+
+  it('names the configured providers when the requested one has no price', async () => {
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'lemonsqueezy' }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('stripe')
+  })
+})
+
+describe('POST /api/billing/checkout — happy path', () => {
+  it('starts a hosted checkout and preserves the requester locale in both URLs', async () => {
+    const res = await POST(makeReq({ planId: PLAN_ID, interval: 'monthly', locale: 'es' }))
+    expect(res.status).toBe(200)
+    expect((await res.json())).toMatchObject({ url: 'https://pay.example/session', provider: 'stripe' })
+
+    const call = state.checkoutCalls[0]
+    expect(call).toMatchObject({
+      mode: 'subscription',
+      hosted: true,
+      providerPriceId: 'price_pro_m',
+      providerCustomerId: 'cus_existing',
+      successUrl: 'https://school.lvh.me:3000/es/dashboard/admin/billing?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://school.lvh.me:3000/es/dashboard/admin/billing/upgrade',
+    })
+    // The webhook resolves the tenant and plan from exactly this bag.
+    expect(call.metadata).toMatchObject({
+      tenant_id: TENANT,
+      plan_id: PLAN_ID,
+      plan_slug: 'pro',
+      interval: 'monthly',
+    })
+  })
+
+  it('creates and stores a billing customer when the tenant has none', async () => {
+    state.billingCustomer = null
+    await POST(makeReq({ planId: PLAN_ID }))
+    expect(state.checkoutCalls[0].providerCustomerId).toBe('cus_new')
+    expect(
+      state.writes.find((w) => w.table === 'tenant_billing_customers')?.values,
+    ).toMatchObject({ tenant_id: TENANT, payment_provider: 'stripe', provider_customer_id: 'cus_new' })
+  })
+})
+
+describe('POST /api/billing/checkout — switching payment method', () => {
+  it('supersedes a live subscription on ANOTHER provider instead of double-billing', async () => {
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: 'sub_old',
+      status: 'active',
+      payment_provider: 'lemonsqueezy',
+    }
+    state.prices = [price()] // only stripe is priced
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
+    expect(res.status).toBe(200)
+    // Cancelled at the old provider, immediately — a lingering subscription
+    // would auto-renew into a second charge.
+    expect(state.cancelCalls).toEqual([{ id: 'sub_old', immediate: true }])
+    expect(state.writes.find((w) => w.table === 'platform_subscriptions')?.values).toMatchObject({
+      status: 'canceled',
+    })
+    expect(state.checkoutCalls).toHaveLength(1)
+  })
+
+  it('refuses to start the new subscription if the old one cannot be cancelled', async () => {
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: 'sub_old',
+      status: 'active',
+      payment_provider: 'lemonsqueezy',
+    }
+    state.cancelThrows = true
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
+    expect(res.status).toBe(502)
+    expect(state.checkoutCalls).toHaveLength(0)
+  })
+
+  it('sends a same-provider plan change back to the in-app flow', async () => {
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: 'sub_live',
+      status: 'active',
+      payment_provider: 'stripe',
+    }
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('billing page')
+    expect(state.checkoutCalls).toHaveLength(0)
+  })
+
+  it('lets a school on manual transfer start a card subscription', async () => {
+    // `manual` is not a live provider subscription — there is nothing to cancel,
+    // and the old route already allowed this direction.
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: null,
+      status: 'active',
+      payment_provider: 'manual',
+    }
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
+    expect(res.status).toBe(200)
+    expect(state.cancelCalls).toHaveLength(0)
+  })
+})

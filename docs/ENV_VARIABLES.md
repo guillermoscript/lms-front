@@ -46,7 +46,7 @@ These power the school-to-platform subscription flow. Schools pay the platform f
 
 | Variable | Required | Description | Where to get it | Example |
 |----------|----------|-------------|-----------------|---------|
-| `STRIPE_PLATFORM_WEBHOOK_SECRET` | **Required** (if platform billing enabled) | Signing secret for the `/api/stripe/platform-webhook` endpoint. Handles `checkout.session.completed`, `customer.subscription.updated/deleted`, `invoice.payment_succeeded/failed`. | Stripe Dashboard > Developers > Webhooks > Select platform endpoint > Signing secret | `whsec_xyz789...` |
+| `STRIPE_PLATFORM_WEBHOOK_SECRET` | **Required** (if platform billing enabled) | Signing secret for the `/api/billing/webhook/stripe` endpoint. Handles `checkout.session.completed`, `customer.subscription.updated/deleted`, `invoice.payment_succeeded/failed`. | Stripe Dashboard > Developers > Webhooks > Select platform endpoint > Signing secret | `whsec_xyz789...` |
 
 > **Note:** `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are shared between both Stripe integrations (Connect and Billing). They come from the same Stripe account.
 

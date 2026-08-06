@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { checkPlanLimits, countTenantUsage, formatPlanLimitError } from '@/lib/billing/plan-limits'
 import { classifyPlanChange } from '@/lib/billing/plan-change'
+import { PLAN_PRICE_PROVIDERS, type PlanPriceProvider } from '@/lib/billing/plan-prices'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 import {
   OPEN_REQUEST_STATUSES,
@@ -168,9 +169,28 @@ export async function getAvailablePlans() {
 /**
  * Request a plan upgrade via manual bank transfer
  */
-export async function requestManualPlanUpgrade(planId: string, interval: 'monthly' | 'yearly' = 'monthly', bankReference?: string, notes?: string) {
+/**
+ * Open an out-of-band settlement request for a platform plan.
+ *
+ * `paymentProvider` names the rail the school will actually settle on — a bank
+ * wire (`manual`, the default and what every request was before #603), or any
+ * other provider the school can reach but we cannot charge automatically. It is
+ * copied onto the subscription when a super admin confirms the payment, so the
+ * billing screens stop calling a USDT transfer a bank transfer.
+ */
+export async function requestManualPlanUpgrade(
+  planId: string,
+  interval: 'monthly' | 'yearly' = 'monthly',
+  bankReference?: string,
+  notes?: string,
+  paymentProvider: string = 'manual',
+) {
   const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
+
+  if (!PLAN_PRICE_PROVIDERS.includes(paymentProvider as PlanPriceProvider)) {
+    throw new Error('Unknown payment method')
+  }
 
   // Get plan details
   const { data: plan } = await adminClient
@@ -237,6 +257,7 @@ export async function requestManualPlanUpgrade(planId: string, interval: 'monthl
       currency: 'usd',
       status: 'pending',
       request_type: requestType,
+      payment_provider: paymentProvider,
       bank_reference: bankReference || null,
       notes: notes || null,
       expires_at: requestExpiresAt(),
@@ -360,7 +381,10 @@ export async function confirmManualPayment(requestId: string) {
       tenant_id: request.tenant_id,
       plan_id: request.plan_id,
       status: 'active',
-      payment_provider: 'manual',
+      // The rail the school actually settled on (#603). Hardcoding 'manual'
+      // here made every out-of-band payment look like a bank wire on the
+      // billing screens, whatever the school had really used.
+      payment_provider: request.payment_provider || 'manual',
       interval: request.interval,
       current_period_start: periodStart.toISOString(),
       current_period_end: periodEnd.toISOString(),

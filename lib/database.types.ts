@@ -4598,6 +4598,7 @@ export type Database = {
           expires_at: string
           interval: string
           notes: string | null
+          payment_provider: string
           plan_id: string
           proof_url: string | null
           request_id: string
@@ -4617,6 +4618,7 @@ export type Database = {
           expires_at?: string
           interval?: string
           notes?: string | null
+          payment_provider?: string
           plan_id: string
           proof_url?: string | null
           request_id?: string
@@ -4636,6 +4638,7 @@ export type Database = {
           expires_at?: string
           interval?: string
           notes?: string | null
+          payment_provider?: string
           plan_id?: string
           proof_url?: string | null
           request_id?: string

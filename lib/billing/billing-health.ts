@@ -28,7 +28,7 @@
  *  - manual (app/api/cron/expire-platform-subscriptions/route.ts)
  *    stamps a real `platform_subscriptions.grace_period_end` deadline —
  *    downgrade date is exact.
- *  - stripe (app/api/stripe/platform-webhook/route.ts) has no local grace
+ *  - stripe (app/api/billing/webhook/[provider]/route.ts) has no local grace
  *    deadline — Stripe's own dunning/retry schedule decides when
  *    `customer.subscription.deleted` eventually fires. There is no column
  *    anywhere that stores that date, so this module reports `isEstimate:

@@ -20,7 +20,10 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   Currency,
+  EnsureCustomerParams,
+  SubscriptionLifecycleStatus,
 } from './types'
+import { SUBSCRIPTION_LIFECYCLE_STATUSES } from './types'
 
 export class StripePaymentProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'stripe'
@@ -31,6 +34,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: true,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -40,11 +44,20 @@ export class StripePaymentProvider implements IPaymentProvider {
     settlesToPlatformAccount: false,
   }
   private stripe: Stripe
+  /**
+   * Signing secret `verifyWebhook` checks against. Defaults to the Connect
+   * (student-payments) endpoint's secret; platform billing constructs the
+   * provider with `STRIPE_PLATFORM_WEBHOOK_SECRET` instead, because the two
+   * endpoints are separate Stripe webhook registrations with separate secrets
+   * and verifying one against the other's secret fails closed (#603).
+   */
+  private webhookSecret?: string
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, webhookSecret?: string) {
     this.stripe = new Stripe(apiKey, {
       apiVersion: '2026-07-29.dahlia',
     })
+    this.webhookSecret = webhookSecret
   }
 
   /**
@@ -349,8 +362,64 @@ export class StripePaymentProvider implements IPaymentProvider {
    * Both return `kind: 'client_secret'`; the existing Stripe Elements
    * confirmation on the client works unchanged for either.
    */
+  /**
+   * Create a stored Stripe Customer for card-on-file recurring billing.
+   *
+   * Platform billing needs one before a hosted subscription Checkout Session;
+   * the caller persists the id (`tenant_billing_customers` for a school,
+   * `profiles.stripe_customer_id` for a student) and passes it back, so this
+   * only ever creates.
+   */
+  async ensureCustomer(params: EnsureCustomerParams): Promise<{ providerCustomerId: string }> {
+    try {
+      const customer = await this.stripe.customers.create({
+        email: params.email || undefined,
+        name: params.name,
+        metadata: params.metadata,
+      })
+      return { providerCustomerId: customer.id }
+    } catch (error) {
+      throw new Error(`Stripe ensureCustomer failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
     try {
+      // Hosted subscription checkout on the PLATFORM account — school → platform
+      // billing (#603). Distinct from the branch below in three ways that matter:
+      // it is a Checkout Session (redirect) rather than a PaymentIntent confirmed
+      // with Elements, it takes no Connect `transfer_data` / application fee
+      // because the platform IS the seller here, and it creates the subscription
+      // itself once the buyer pays, so we never pass `default_incomplete`.
+      if (params.hosted && params.mode === 'subscription') {
+        if (!params.providerCustomerId) {
+          throw new Error('providerCustomerId is required for a hosted Stripe subscription checkout')
+        }
+        const metadata = { reference: params.reference, ...(params.metadata || {}) }
+        const session = await this.stripe.checkout.sessions.create({
+          customer: params.providerCustomerId,
+          mode: 'subscription',
+          line_items: [{ price: params.providerPriceId, quantity: 1 }],
+          success_url: params.successUrl,
+          cancel_url: params.cancelUrl,
+          metadata,
+          // Echoed onto the Subscription so `customer.subscription.*` events —
+          // which do NOT carry the session — can still resolve the tenant.
+          subscription_data: { metadata },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
+
+        if (!session.url) {
+          throw new Error('Stripe returned a checkout session with no URL')
+        }
+        return {
+          kind: 'redirect',
+          url: session.url,
+          reference: params.reference,
+          providerRef: session.id,
+        }
+      }
+
       if (params.mode === 'subscription') {
         if (!params.providerCustomerId) {
           throw new Error('providerCustomerId is required for a Stripe subscription')
@@ -423,7 +492,7 @@ export class StripePaymentProvider implements IPaymentProvider {
    * student-payments endpoint secret). Used by the unified webhook route.
    */
   async verifyWebhook(rawBody: string, headers: Record<string, string>): Promise<boolean> {
-    const secret = process.env.STRIPE_WEBHOOK_SECRET
+    const secret = this.webhookSecret ?? process.env.STRIPE_WEBHOOK_SECRET
     if (!secret) return false
     const signature = headers['stripe-signature'] ?? headers['Stripe-Signature']
     if (!signature) return false
@@ -457,45 +526,120 @@ export class StripePaymentProvider implements IPaymentProvider {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const subPeriodEnd = (s: any) => toDate(s?.items?.data?.[0]?.current_period_end)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subPeriodStart = (s: any) => toDate(s?.items?.data?.[0]?.current_period_start)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invoiceSubId = (inv: any): string | undefined => {
       const sub = inv?.parent?.subscription_details?.subscription ?? inv?.subscription
       return (typeof sub === 'string' ? sub : sub?.id) ?? undefined
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customerId = (o: any): string | undefined =>
+      typeof o?.customer === 'string' ? o.customer : (o?.customer?.id ?? undefined)
+    const mapStatus = (s: unknown): SubscriptionLifecycleStatus | undefined =>
+      typeof s === 'string' && SUBSCRIPTION_LIFECYCLE_STATUSES.includes(s as SubscriptionLifecycleStatus)
+        ? (s as SubscriptionLifecycleStatus)
+        : undefined
+    // Subscription detail platform billing stores (#603). The student loop
+    // ignores every one of these; they exist so the applier never has to call
+    // back into Stripe to learn what the event already carried.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subDetail = (s: any) => {
+      const item = s?.items?.data?.[0]
+      const recurring = item?.price?.recurring?.interval
+      return {
+        providerCustomerId: customerId(s),
+        providerPriceId: item?.price?.id as string | undefined,
+        providerSubscriptionItemId: item?.id as string | undefined,
+        periodStart: subPeriodStart(s),
+        periodEnd: subPeriodEnd(s),
+        interval:
+          recurring === 'year' ? ('yearly' as const)
+            : recurring === 'month' ? ('monthly' as const)
+              : undefined,
+        subscriptionStatus: mapStatus(s?.status),
+        cancelAtPeriodEnd: typeof s?.cancel_at_period_end === 'boolean' ? s.cancel_at_period_end : undefined,
+        canceledAt: toDate(s?.canceled_at),
+        metadata: (s?.metadata ?? undefined) as Record<string, string> | undefined,
+      }
+    }
 
     switch (event.type) {
+      // Platform billing's activation event (#603): the school completes a
+      // hosted Checkout Session and Stripe creates the subscription. Our own
+      // metadata (tenant/plan/interval) rides on the session, so this is the
+      // only event that can bind a brand-new subscription to a tenant.
+      // One-time sessions are not modelled — the Connect route owns those.
+      case 'checkout.session.completed': {
+        if (obj.mode !== 'subscription') return null
+        const subscriptionId =
+          typeof obj.subscription === 'string' ? obj.subscription : obj.subscription?.id
+        if (!subscriptionId) return null
+        return {
+          type: 'subscription.activated',
+          providerEventId: eventId,
+          providerSubscriptionId: subscriptionId,
+          providerCustomerId: customerId(obj),
+          reference: obj.metadata?.reference,
+          metadata: (obj.metadata ?? undefined) as Record<string, string> | undefined,
+          subscriptionStatus: 'active',
+          raw: event,
+        }
+      }
       case 'customer.subscription.deleted':
         return {
           type: 'subscription.expired',
           providerEventId: eventId,
           providerSubscriptionId: obj.id,
-          periodEnd: subPeriodEnd(obj),
+          ...subDetail(obj),
           raw: event,
         }
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
+        const detail = subDetail(obj)
         if (obj.status === 'active' || obj.status === 'trialing') {
           return {
             type: 'subscription.activated',
             providerEventId: eventId,
             providerSubscriptionId: obj.id,
-            periodEnd: subPeriodEnd(obj),
+            ...detail,
             raw: event,
           }
         }
         if (obj.status === 'past_due') {
-          return { type: 'subscription.past_due', providerEventId: eventId, providerSubscriptionId: obj.id, raw: event }
+          return { type: 'subscription.past_due', providerEventId: eventId, providerSubscriptionId: obj.id, ...detail, raw: event }
         }
         if (obj.status === 'canceled') {
-          return { type: 'subscription.canceled', providerEventId: eventId, providerSubscriptionId: obj.id, raw: event }
+          return { type: 'subscription.canceled', providerEventId: eventId, providerSubscriptionId: obj.id, ...detail, raw: event }
         }
-        return null
+        // `incomplete` / `unpaid` / `paused` / anything Stripe adds later. These
+        // used to normalize to null — silence — which left a subscription that
+        // is demonstrably not paying reading as healthy on every screen. They
+        // map to the "needs attention, not terminal" bucket instead, exactly as
+        // the Stripe-shaped platform route did before #603, and `past_due`
+        // revokes no access on either side (the status-change trigger matches
+        // neither of its branches).
+        if (typeof obj.status !== 'string') return null
+        return {
+          type: 'subscription.past_due',
+          providerEventId: eventId,
+          providerSubscriptionId: obj.id,
+          ...detail,
+          raw: event,
+        }
       }
+      // `invoice.paid` and `invoice.payment_succeeded` are near-duplicates that
+      // both fire on a renewal; platform billing was registered for the former,
+      // the student loop for the latter. Both mean the same thing to us.
+      case 'invoice.paid':
       case 'invoice.payment_succeeded':
         return {
           type: 'subscription.renewed',
           providerEventId: eventId,
           providerSubscriptionId: invoiceSubId(obj),
+          providerCustomerId: customerId(obj),
+          periodStart: toDate(obj.lines?.data?.[0]?.period?.start ?? obj.period_start),
           periodEnd: toDate(obj.lines?.data?.[0]?.period?.end ?? obj.period_end),
+          subscriptionStatus: 'active',
           raw: event,
         }
       case 'invoice.payment_failed':

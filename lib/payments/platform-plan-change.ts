@@ -2,22 +2,27 @@
  * Portal plan-change handler for the platform (school → platform) billing
  * webhook.
  *
- * Applies a `customer.subscription.updated` price change from the Stripe
- * Customer Portal to our plan state (`tenants.plan`,
+ * Applies a price change made at the PROVIDER — a school using its billing
+ * portal, or any out-of-band swap — to our plan state (`tenants.plan`,
  * `platform_subscriptions.plan_id`, `revenue_splits`), enforcing the target
  * plan's course/student limits on downgrades.
  *
- * Invariant this module exists to protect: the Stripe subscription price and
- * the DB plan may NEVER disagree after the webhook returns. A downgrade that
- * exceeds the target plan's limits is REVERTED on Stripe (back to the old
- * plan's price, no proration) and school admins are notified; if the revert
- * is impossible (old plan has no Stripe price) or fails, the downgrade is
- * applied to the DB instead — consistency wins over enforcement — and admins
- * are warned they are over the new plan's limits.
+ * Invariant this module exists to protect: the provider's subscription price
+ * and the DB plan may NEVER disagree after the webhook returns. A downgrade
+ * that exceeds the target plan's limits is REVERTED at the provider (back to
+ * the old plan's price, no proration) and school admins are notified; if the
+ * revert is impossible (old plan has no price on that provider, or the provider
+ * cannot swap in place) or fails, the downgrade is applied to the DB instead —
+ * consistency wins over enforcement — and admins are warned they are over the
+ * new plan's limits.
  *
- * The revert triggers an echo `customer.subscription.updated` event; it maps
- * back to the plan already recorded in `platform_subscriptions.plan_id` and
- * hits the no-op guard, so the loop terminates.
+ * The revert triggers an echo subscription-updated event; it maps back to the
+ * plan already recorded in `platform_subscriptions.plan_id` and hits the no-op
+ * guard, so the loop terminates.
+ *
+ * Provider-agnostic since #603: it takes a normalized `PortalPlanChangeInput`
+ * and a `revertToPrice` callback rather than a `Stripe.Subscription` and a
+ * Stripe client.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -26,16 +31,36 @@ import { downgradeBlockedTemplate } from '@/lib/email/templates/downgrade-blocke
 import { countTenantUsage, computePlanLimitViolations } from '@/lib/billing/plan-limits'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 
+/**
+ * The plan-change-relevant slice of a provider subscription event, already
+ * normalized (#603). Was a raw `Stripe.Subscription`, which made this module —
+ * shared by every platform-billing provider — read one provider's payload shape.
+ */
+export interface PortalPlanChangeInput {
+  /** Provider slug the subscription lives on. */
+  provider: string
+  tenantId?: string
+  providerSubscriptionId?: string
+  /** The price the subscription is NOW on — what the change is detected from. */
+  providerPriceId?: string
+  /** Billing cadence implied by that price, when the event reported one. */
+  interval?: 'monthly' | 'yearly'
+}
+
 export interface PortalPlanChangeDeps {
   /** Service-role Supabase client (bypasses RLS). */
   admin: SupabaseClient
-  /** Platform Stripe client — only `subscriptions.update` is used. */
-  stripe: {
-    subscriptions: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      update: (id: string, params: any) => Promise<any>
-    }
-  }
+  /**
+   * Put the subscription back on `providerPriceId` without proration — the
+   * revert half of the over-limit downgrade guard.
+   *
+   * Supplied by the caller from the provider's own `updateSubscription`, and
+   * only when `supportsPlanChange` says it exists. Omitted means there is no
+   * way to move the subscription back, so the downgrade is applied to the DB
+   * instead (consistency wins over enforcement) exactly as it always did when a
+   * revert failed.
+   */
+  revertToPrice?: (providerSubscriptionId: string, providerPriceId: string) => Promise<void>
   /** Injectable for tests; defaults to the Mailgun sender. */
   sendEmailFn?: typeof sendEmail
 }
@@ -57,19 +82,21 @@ const PLAN_COLUMNS =
   'plan_id, slug, name, transaction_fee_percent, limits'
 
 /**
- * Resolve a plan's Stripe price id for an interval from `platform_plan_prices`
- * (#601). Returns null when the plan has no active Stripe price for it.
+ * Resolve a plan's price id on a given provider and interval from
+ * `platform_plan_prices` (#601). Returns null when the plan has no active price
+ * row for that combination.
  */
-async function stripePriceIdFor(
+async function providerPriceIdFor(
   admin: SupabaseClient,
   planId: string,
+  provider: string,
   interval: 'monthly' | 'yearly',
 ): Promise<string | null> {
   const { data } = (await admin
     .from('platform_plan_prices')
     .select('provider_price_id')
     .eq('plan_id', planId)
-    .eq('payment_provider', 'stripe')
+    .eq('payment_provider', provider)
     .eq('interval', interval)
     .eq('is_active', true)
     .maybeSingle()) as { data: { provider_price_id: string } | null }
@@ -78,15 +105,11 @@ async function stripePriceIdFor(
 }
 
 export async function applyPortalPlanChange(
-  // Stripe.Subscription with 2026-02-25.clover typing quirks — treated as any
-  // like the rest of the webhook.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  subscription: any,
-  { admin, stripe, sendEmailFn = sendEmail }: PortalPlanChangeDeps
+  input: PortalPlanChangeInput,
+  { admin, revertToPrice, sendEmailFn = sendEmail }: PortalPlanChangeDeps
 ): Promise<PortalPlanChangeResult> {
-  const tenantId = subscription?.metadata?.tenant_id as string | undefined
-  const item = subscription?.items?.data?.[0]
-  const newPriceId = item?.price?.id as string | undefined
+  const { provider, tenantId, providerSubscriptionId } = input
+  const newPriceId = input.providerPriceId
 
   if (!tenantId || !newPriceId) {
     return { action: 'ignored', reason: 'missing tenant_id or price on event' }
@@ -97,7 +120,7 @@ export async function applyPortalPlanChange(
   const { data: matchedPrice } = (await admin
     .from('platform_plan_prices')
     .select('plan_id')
-    .eq('payment_provider', 'stripe')
+    .eq('payment_provider', provider)
     .eq('provider_price_id', newPriceId)
     .maybeSingle()) as { data: { plan_id: string } | null }
 
@@ -128,7 +151,7 @@ export async function applyPortalPlanChange(
   }
 
   // Override guard (#546 §3). A super admin has deliberately put this tenant on
-  // a plan Stripe knows nothing about, so Stripe's price and our plan_id are
+  // a plan the provider knows nothing about, so its price and our plan_id are
   // SUPPOSED to disagree. Reconciling here would read the comp as a portal
   // downgrade and — because the tenant is typically over the real plan's limits,
   // which is why it was comped — push the subscription onto the comped plan's
@@ -172,19 +195,15 @@ export async function applyPortalPlanChange(
 
   // Revert to the old plan's price on the subscription's billing interval,
   // falling back to whichever price the old plan actually has.
-  const preferYearly =
-    currentSub?.interval === 'yearly' || item?.price?.recurring?.interval === 'year'
+  const preferYearly = currentSub?.interval === 'yearly' || input.interval === 'yearly'
   const oldPriceId = oldPlan
-    ? (await stripePriceIdFor(admin, oldPlan.plan_id, preferYearly ? 'yearly' : 'monthly')) ||
-      (await stripePriceIdFor(admin, oldPlan.plan_id, preferYearly ? 'monthly' : 'yearly'))
+    ? (await providerPriceIdFor(admin, oldPlan.plan_id, provider, preferYearly ? 'yearly' : 'monthly')) ||
+      (await providerPriceIdFor(admin, oldPlan.plan_id, provider, preferYearly ? 'monthly' : 'yearly'))
     : null
 
-  if (oldPriceId && item?.id) {
+  if (oldPriceId && providerSubscriptionId && revertToPrice) {
     try {
-      await stripe.subscriptions.update(subscription.id, {
-        items: [{ id: item.id, price: oldPriceId }],
-        proration_behavior: 'none',
-      })
+      await revertToPrice(providerSubscriptionId, oldPriceId)
       await notifyAdmins(admin, sendEmailFn, {
         tenantId,
         outcome: 'reverted',
@@ -197,8 +216,8 @@ export async function applyPortalPlanChange(
       )
       return { action: 'reverted' }
     } catch (err) {
-      console.error(`Failed to revert Stripe subscription for tenant ${tenantId}:`, err)
-      // Fall through: if we cannot put Stripe back, the DB follows Stripe.
+      console.error(`Failed to revert ${provider} subscription for tenant ${tenantId}:`, err)
+      // Fall through: if we cannot put the provider back, the DB follows it.
     }
   }
 

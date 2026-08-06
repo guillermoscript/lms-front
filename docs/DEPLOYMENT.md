@@ -393,9 +393,22 @@ Create two webhook endpoints in the Stripe Dashboard:
 - Signing secret → `STRIPE_WEBHOOK_SECRET`
 
 **Platform Billing:**
-- URL: `https://lmsplatform.com/api/stripe/platform-webhook`
-- Events: `checkout.session.completed`, `charge.refunded`, `invoice.payment_failed`
+- URL: `https://lmsplatform.com/api/billing/webhook/stripe`
+- Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`
 - Signing secret → `STRIPE_PLATFORM_WEBHOOK_SECRET`
+
+> **Upgrading an existing deployment (#603):** this endpoint moved from
+> `/api/stripe/platform-webhook` to `/api/billing/webhook/stripe`. **Edit the URL on
+> the existing Stripe endpoint rather than creating a new one** — that keeps the
+> signing secret, so `STRIPE_PLATFORM_WEBHOOK_SECRET` needs no change. Until the URL
+> is repointed, Stripe posts to a path that no longer exists: plan activations,
+> renewals and dunning all stop silently, because a school's payment succeeds at
+> Stripe and only our side of it goes missing. The old path is deleted outright — no
+> forwarder — so a 404 in the Stripe dashboard's delivery log is the symptom.
+>
+> The path is provider-shaped (`/api/billing/webhook/<provider>`), so a second
+> platform-billing rail (Lemon Squeezy, PayPal) is registered the same way at its own
+> slug and needs no new code.
 
 ---
 

@@ -13,11 +13,26 @@ import { LemonSqueezyProvider } from './lemonsqueezy-provider'
 import { SolanaProvider } from './solana-provider'
 import { SolanaSubscriptionsProvider } from './solana-subscriptions-provider'
 
+export interface GetProviderOptions {
+  /**
+   * Verify webhooks against THIS signing secret instead of the provider's
+   * default env var.
+   *
+   * A provider can be registered for more than one of our endpoints, each with
+   * its own secret: Stripe signs the student Connect webhook with
+   * `STRIPE_WEBHOOK_SECRET` and the school → platform billing webhook with
+   * `STRIPE_PLATFORM_WEBHOOK_SECRET` (#603). Verifying one against the other's
+   * secret fails closed, so the caller that owns the endpoint supplies it.
+   */
+  webhookSecret?: string
+}
+
 /**
  * Get payment provider instance based on provider type
  */
 export function getPaymentProvider(
-  provider: PaymentProvider = 'stripe'
+  provider: PaymentProvider = 'stripe',
+  options: GetProviderOptions = {}
 ): IPaymentProvider {
   switch (provider) {
     case 'stripe':
@@ -25,7 +40,7 @@ export function getPaymentProvider(
       if (!stripeKey) {
         throw new Error('STRIPE_SECRET_KEY is required')
       }
-      return new StripePaymentProvider(stripeKey)
+      return new StripePaymentProvider(stripeKey, options.webhookSecret)
 
     case 'paypal': {
       const paypalClientId = process.env.PAYPAL_CLIENT_ID
@@ -70,7 +85,7 @@ export function getPaymentProvider(
           'LEMONSQUEEZY_API_KEY, LEMONSQUEEZY_STORE_ID and LEMONSQUEEZY_WEBHOOK_SECRET are required',
         )
       }
-      return new LemonSqueezyProvider(lsKey, lsStore, lsSecret)
+      return new LemonSqueezyProvider(lsKey, lsStore, options.webhookSecret ?? lsSecret)
     }
 
     case 'solana': {
