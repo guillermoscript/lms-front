@@ -44,6 +44,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
+    supportsPlatformBillingCheckout: true,
     supportsRefunds: true,
     isMerchantOfRecord: true,
     selfManagedPeriod: false,

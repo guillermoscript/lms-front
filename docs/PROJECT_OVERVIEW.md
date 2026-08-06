@@ -101,7 +101,7 @@ Two separate Stripe integrations:
 | Who pays | Student pays school | School admin pays platform |
 | Stripe mode | PaymentIntents with Connect | Checkout + Subscriptions |
 | Revenue split | Configurable (default 80/20) | Fixed tier pricing |
-| Webhook | `/api/stripe/webhook` | `/api/stripe/platform-webhook` |
+| Webhook | `/api/stripe/webhook` | `/api/billing/webhook/stripe` |
 
 Manual/offline payment flow: student submits payment request, admin confirms, system enrolls.
 

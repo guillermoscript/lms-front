@@ -220,7 +220,7 @@ Tenant Admin                   Super Admin                    Database
 Tenant Admin                   Stripe                         Database
   │                               │                              │
   │── Click "Subscribe" ────────> │                              │
-  │── /api/stripe/checkout-session│                              │
+  │── /api/billing/checkout│                              │
   │── Stripe Checkout hosted page │                              │
   │── Pays with card ───────────> │                              │
   │                               │── webhook: session.completed─│
@@ -291,8 +291,8 @@ Tenant Admin                   Stripe                         Database
 | `app/[locale]/platform/billing/` | Super admin billing panel |
 | `app/[locale]/platform/billing/billing-actions.tsx` | Super admin confirm/reject buttons |
 | `app/actions/platform/plans.ts` | Super admin actions: confirm, reject, force change |
-| `app/api/stripe/checkout-session/route.ts` | Stripe Checkout for plan upgrades |
-| `app/api/stripe/platform-webhook/route.ts` | Stripe webhook for billing events |
+| `app/api/billing/checkout/route.ts` | Stripe Checkout for plan upgrades |
+| `app/api/billing/webhook/[provider]/route.ts` | Stripe webhook for billing events |
 
 ---
 
@@ -302,7 +302,7 @@ Tenant Admin                   Stripe                         Database
 |--|--|--|
 | **Who pays** | Student pays school | School admin pays platform |
 | **Stripe mode** | Stripe Connect (PaymentIntents) | Stripe Billing (Checkout + Subscriptions) |
-| **Webhook** | `/api/stripe/webhook` | `/api/stripe/platform-webhook` |
+| **Webhook** | `/api/stripe/webhook` | `/api/billing/webhook/stripe` |
 | **Env var** | `STRIPE_WEBHOOK_SECRET` | `STRIPE_PLATFORM_WEBHOOK_SECRET` |
 | **Customer ID** | `profiles.stripe_customer_id` | `tenants.stripe_customer_id` |
 | **Manual flow** | `payment_requests` table | `platform_payment_requests` table |

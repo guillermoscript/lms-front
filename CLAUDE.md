@@ -93,7 +93,7 @@ Two separate Stripe integrations:
 |--|--|--|
 | **Who pays** | School admin pays platform | Student pays school |
 | **Stripe mode** | Billing (Checkout + Subscriptions) | Connect (PaymentIntents) |
-| **Webhook** | `/api/stripe/platform-webhook` | `/api/stripe/webhook` |
+| **Webhook** | `/api/billing/webhook/stripe` | `/api/stripe/webhook` |
 | **Env var** | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` |
 | **Customer ID** | `tenants.stripe_customer_id` | `profiles.stripe_customer_id` |
 

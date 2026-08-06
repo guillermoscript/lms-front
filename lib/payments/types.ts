@@ -111,6 +111,21 @@ export interface ProviderCapabilities {
   emitsRenewalWebhooks: boolean
   /** Provider returns a hosted redirect URL for checkout (LS/MP/PayPal). */
   supportsHostedCheckout: boolean
+  /**
+   * Provider can host a checkout page for a subscription billed to the
+   * PLATFORM's own account and hand back a redirect URL — the school → platform
+   * loop (#600/#603).
+   *
+   * Deliberately NOT the same flag as `supportsHostedCheckout`, which describes
+   * the student → school checkout SHAPE. Stripe is `false` there because we use
+   * Connect + PaymentIntents/Elements and confirm client-side (`client_secret`),
+   * yet Stripe Checkout Sessions on the platform account are exactly this
+   * ability. Collapsing the two would have made platform billing reject the one
+   * provider it currently works with.
+   *
+   * Gates `POST /api/billing/checkout` and, with it, `CreateCheckoutParams.hosted`.
+   */
+  supportsPlatformBillingCheckout: boolean
   /** Provider can issue programmatic refunds. */
   supportsRefunds: boolean
   /** Provider is the legal seller and remits tax (Lemon Squeezy / Paddle). */
@@ -178,6 +193,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: true,  // Checkout Sessions on the platform account (not Connect)
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -190,6 +206,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
+    supportsPlatformBillingCheckout: false, // TODO(#479): flip once proven against real credentials
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -202,6 +219,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
+    supportsPlatformBillingCheckout: true, // Merchant of Record — hosted page, remits VAT for us
     supportsRefunds: true,
     isMerchantOfRecord: true,
     selfManagedPeriod: false,
@@ -214,6 +232,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -230,6 +249,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -244,6 +264,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: false,      // settles via platform_payment_requests, no hosted page
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -260,6 +281,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: true,
+    supportsPlatformBillingCheckout: false,     // student-side rail, not a SaaS subscription rail
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -278,6 +300,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
+    supportsPlatformBillingCheckout: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -313,6 +336,17 @@ export interface CreateCheckoutParams {
    * `application_fee_amount` for one-time charges). 0–100.
    */
   applicationFeePercent?: number
+  /**
+   * Ask the provider for a HOSTED checkout page (a redirect URL) instead of its
+   * inline / client-confirmed flow. Capability-gated by
+   * `supportsPlatformBillingCheckout`; ignored by providers whose only checkout
+   * is already a redirect.
+   *
+   * Exists because the same provider can offer both shapes: Stripe's student
+   * checkout is a Connect PaymentIntent confirmed with Elements, while platform
+   * billing needs a Checkout Session on our own account (#603).
+   */
+  hosted?: boolean
   successUrl?: string
   cancelUrl?: string
   /**
@@ -375,12 +409,61 @@ export type BillingEventType =
   | 'subscription.expired'
   | 'refund.succeeded'
 
+/**
+ * The lifecycle state a subscription is in, as reported by the event that
+ * carries one. Mirrors the `platform_subscriptions.status` CHECK
+ * (`20260217040000_platform_billing.sql`) rather than any provider's own
+ * vocabulary, so a provider adapter has to map INTO it.
+ *
+ * `BillingEventType` alone cannot carry this: it has one `subscription.activated`
+ * for what the platform loop must distinguish as `active` vs `trialing`, and no
+ * member at all for `incomplete` / `unpaid`. The student dispatcher derives
+ * status from the event type and ignores this field.
+ */
+export const SUBSCRIPTION_LIFECYCLE_STATUSES = [
+  'active',
+  'trialing',
+  'past_due',
+  'canceled',
+  'incomplete',
+  'incomplete_expired',
+  'unpaid',
+] as const
+
+export type SubscriptionLifecycleStatus = (typeof SUBSCRIPTION_LIFECYCLE_STATUSES)[number]
+
 export interface NormalizedBillingEvent {
   type: BillingEventType
   /** Provider's own unique event id — the idempotency key for webhook_events. */
   providerEventId?: string
   providerSubscriptionId?: string
   providerPaymentId?: string
+  // -------------------------------------------------------------------------
+  // Subscription detail (#603). All optional and all ignored by the student
+  // dispatcher — platform billing stores a richer row than the student loop
+  // does (interval, both period bounds, the cancel schedule, the customer id),
+  // and re-fetching them from the provider inside the dispatcher would put
+  // provider identity back into the applier.
+  // -------------------------------------------------------------------------
+  /** Provider's customer id (`tenant_billing_customers.provider_customer_id`). */
+  providerCustomerId?: string
+  /** Provider price/variant the subscription is now billed on. */
+  providerPriceId?: string
+  /**
+   * Provider's id for the billable line the price sits on (Stripe subscription
+   * item). Needed to swap the price back on an over-limit downgrade revert.
+   */
+  providerSubscriptionItemId?: string
+  /** Start of the period this event reports. */
+  periodStart?: Date
+  /** Billing cadence implied by the subscription's current price. */
+  interval?: 'monthly' | 'yearly'
+  /** Current lifecycle state, where the event reports one. */
+  subscriptionStatus?: SubscriptionLifecycleStatus
+  /** A cancel is scheduled for the end of the current period. */
+  cancelAtPeriodEnd?: boolean
+  /** When the cancel was requested, if one was. */
+  canceledAt?: Date
   /** Our correlation id, recovered from provider metadata. */
   reference?: string
   /**

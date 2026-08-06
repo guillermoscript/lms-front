@@ -289,7 +289,7 @@ Two independent integrations — student→school payments (Connect) and school�
 
 ```bash
 stripe listen --forward-to lvh.me:3000/api/stripe/webhook           # → STRIPE_WEBHOOK_SECRET
-stripe listen --forward-to lvh.me:3000/api/stripe/platform-webhook  # → STRIPE_PLATFORM_WEBHOOK_SECRET
+stripe listen --forward-to lvh.me:3000/api/billing/webhook/stripe  # → STRIPE_PLATFORM_WEBHOOK_SECRET
 ```
 
 Each `stripe listen` prints its own signing secret; they are different values, don't cross them.

@@ -155,7 +155,7 @@ function chargedIntervals(plan: PlatformPlanInput): PlanPriceInterval[] {
  * Joins plans to their price rows and reports, per plan, what it can be bought
  * through. Inactive price rows are ignored everywhere — a row toggled off is
  * exactly as unbuyable as a row that does not exist, and
- * `app/api/stripe/checkout-session/route.ts` filters on `is_active` too.
+ * `app/api/billing/checkout/route.ts` filters on `is_active` too.
  */
 export function summarizePlanPurchasability(
   plans: PlatformPlanInput[],

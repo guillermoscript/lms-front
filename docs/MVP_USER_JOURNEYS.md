@@ -309,7 +309,7 @@ Login → Super Admin Panel → Manage Tenants → Monitor Platform → Handle B
 | **Subscribe to plan** | Pricing → Checkout → Stripe payment → Subscription created → Browse & enroll | `handle_new_subscription()` creates subscription, student manually enrolls from browse |
 | **Manual payment** | Products page → Submit request → Admin approves → Enrollment | Admin payment-requests dashboard |
 | **Stripe Connect** (multi-tenant) | School admin connects Stripe → Payments route to school account | `transfer_data.destination` with platform `application_fee_amount` |
-| **Platform billing** (school plans) | Admin selects plan → Stripe Billing checkout → Plan activated | Webhook at `/api/stripe/platform-webhook` handles subscription lifecycle |
+| **Platform billing** (school plans) | Admin selects plan → Stripe Billing checkout → Plan activated | Webhook at `/api/billing/webhook/stripe` handles subscription lifecycle |
 
 ---
 

@@ -23,7 +23,7 @@ export const runtime = 'nodejs'
  * admin emails and honor pending renewal requests — neither of which SQL could do.
  *
  * Scope: only payment_provider='manual'. Stripe platform subs stay
- * webhook-driven; their expiry is handled by /api/stripe/platform-webhook.
+ * webhook-driven; their expiry is handled by /api/billing/webhook/[provider].
  *
  * Phases (all status-gated, so re-running is idempotent):
  *   0. Request TTL — open payment request past `expires_at` → `expired` + email.

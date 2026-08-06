@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
 
 /**
- * Pins the portal plan-change CONTRACT (issue #461): Stripe price and DB plan
- * may never disagree after the webhook. Over-limit downgrades revert Stripe and
- * leave the DB alone; if revert is impossible/fails, the DB follows Stripe;
+ * Pins the portal plan-change CONTRACT (issue #461): the provider's price and
+ * the DB plan may never disagree after the webhook. Over-limit downgrades revert
+ * at the provider and leave the DB alone; if revert is impossible/fails, the DB
+ * follows the provider;
  * the echo event of a revert is a no-op (loop terminates). Fluent fake records
  * writes, same approach as webhook-dispatch.test.ts.
  */
@@ -25,7 +26,7 @@ interface FakeConfig {
   studentCount?: number
   adminUsers?: string[]
   /**
-   * Stripe price ids per plan, keyed by plan_id then interval. Since #601 these
+   * Provider price ids per plan, keyed by plan_id then interval. Since #601 these
    * live in `platform_plan_prices` rather than on `platform_plans`, so a plan
    * with no purchasable price is expressed by omitting it here — that is the
    * "revert impossible" case, not a null column on the plan row.
@@ -39,7 +40,7 @@ interface Recorder {
   inserts: { table: string; values: unknown }[]
   planSelects: string[]
   emails: { to: string; subject: string }[]
-  stripeUpdates: { id: string; params: Record<string, unknown> }[]
+  reverts: { id: string; priceId: string }[]
 }
 
 function makeFakeAdmin(cfg: FakeConfig) {
@@ -49,7 +50,7 @@ function makeFakeAdmin(cfg: FakeConfig) {
     inserts: [],
     planSelects: [],
     emails: [],
-    stripeUpdates: [],
+    reverts: [],
   }
 
   const prices = cfg.prices ?? DEFAULT_PLAN_PRICES
@@ -152,20 +153,19 @@ function makeFakeAdmin(cfg: FakeConfig) {
     return Promise.resolve(true)
   }
 
-  function makeStripe(shouldThrow = false) {
-    return {
-      subscriptions: {
-        update(id: string, params: Record<string, unknown>) {
-          if (shouldThrow) return Promise.reject(new Error('stripe down'))
-          calls.stripeUpdates.push({ id, params })
-          return Promise.resolve({})
-        },
-      },
+  // The revert callback the caller builds from the provider's own
+  // `updateSubscription` (#603). Was a Stripe client; the module no longer
+  // knows which provider it is putting back.
+  function makeRevert(shouldThrow = false) {
+    return (id: string, priceId: string) => {
+      if (shouldThrow) return Promise.reject(new Error('provider down'))
+      calls.reverts.push({ id, priceId })
+      return Promise.resolve()
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { admin: admin as any, calls, sendEmailFn: sendEmailFn as any, makeStripe }
+  return { admin: admin as any, calls, sendEmailFn: sendEmailFn as any, makeRevert }
 }
 
 // plan_id is a uuid in the real schema (platform_plans.plan_id) — fixtures
@@ -195,17 +195,20 @@ const DEFAULT_PLAN_PRICES: Record<string, Partial<Record<'monthly' | 'yearly', s
   [STARTER_ID]: { monthly: 'price_starter_m', yearly: 'price_starter_y' },
 }
 
+/** The normalized slice a provider webhook now hands the module (#603). */
 function subscriptionEvent(priceId = 'price_starter_m') {
   return {
-    id: 'sub_123',
-    metadata: { tenant_id: 'tenant-1' },
-    items: { data: [{ id: 'si_1', price: { id: priceId, recurring: { interval: 'month' } } }] },
+    provider: 'stripe',
+    tenantId: 'tenant-1',
+    providerSubscriptionId: 'sub_123',
+    providerPriceId: priceId,
+    interval: 'monthly' as const,
   }
 }
 
 describe('applyPortalPlanChange', () => {
-  it('under-limit downgrade → applied: tenants.plan + platform_subscriptions.plan_id + revenue_splits updated, no Stripe call', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+  it('under-limit downgrade → applied: tenants.plan + platform_subscriptions.plan_id + revenue_splits updated, no provider call', async () => {
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
@@ -214,19 +217,19 @@ describe('applyPortalPlanChange', () => {
     })
     const result = await applyPortalPlanChange(subscriptionEvent(), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
     expect(result.action).toBe('applied')
     expect(calls.updates.find((u) => u.table === 'tenants')?.values.plan).toBe('starter')
     expect(calls.updates.find((u) => u.table === 'platform_subscriptions')?.values.plan_id).toBe(STARTER_ID)
     expect(calls.upserts.find((u) => u.table === 'revenue_splits')?.values.platform_percentage).toBe(5)
-    expect(calls.stripeUpdates).toHaveLength(0)
+    expect(calls.reverts).toHaveLength(0)
     expect(calls.emails).toHaveLength(0)
   })
 
-  it('over-limit downgrade → reverted: Stripe pushed back to old price, DB plan untouched, admins notified', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+  it('over-limit downgrade → reverted: provider pushed back to old price, DB plan untouched, admins notified', async () => {
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
@@ -236,16 +239,12 @@ describe('applyPortalPlanChange', () => {
     })
     const result = await applyPortalPlanChange(subscriptionEvent(), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
     expect(result.action).toBe('reverted')
-    expect(calls.stripeUpdates).toHaveLength(1)
-    expect(calls.stripeUpdates[0].id).toBe('sub_123')
-    expect(calls.stripeUpdates[0].params).toMatchObject({
-      items: [{ id: 'si_1', price: 'price_pro_m' }],
-      proration_behavior: 'none',
-    })
+    expect(calls.reverts).toHaveLength(1)
+    expect(calls.reverts[0]).toEqual({ id: 'sub_123', priceId: 'price_pro_m' })
     // DB plan must NOT change
     expect(calls.updates.find((u) => u.table === 'tenants')).toBeUndefined()
     expect(calls.updates.find((u) => u.table === 'platform_subscriptions')).toBeUndefined()
@@ -260,30 +259,30 @@ describe('applyPortalPlanChange', () => {
   })
 
   it('echo event after revert (price maps to current plan) → complete no-op', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: PRO,
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
       courseCount: 50,
     })
     const result = await applyPortalPlanChange(subscriptionEvent('price_pro_m'), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
     expect(result.action).toBe('noop')
     expect(calls.updates).toHaveLength(0)
     expect(calls.upserts).toHaveLength(0)
-    expect(calls.stripeUpdates).toHaveLength(0)
+    expect(calls.reverts).toHaveLength(0)
     expect(calls.emails).toHaveLength(0)
   })
 
   it('regression: the plan lookup selects `limits` (the old inline guard never did, so it was dead)', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
     })
-    await applyPortalPlanChange(subscriptionEvent(), { admin, stripe: makeStripe(), sendEmailFn })
+    await applyPortalPlanChange(subscriptionEvent(), { admin, revertToPrice: makeRevert(), sendEmailFn })
     expect(calls.planSelects.length).toBeGreaterThan(0)
     for (const cols of calls.planSelects) {
       expect(cols).toContain('limits')
@@ -291,7 +290,7 @@ describe('applyPortalPlanChange', () => {
   })
 
   it('revert impossible (old plan has no Stripe prices) → downgrade applied to DB + admins warned', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
       // PRO absent from `prices` — it has no purchasable Stripe price, so the
@@ -303,18 +302,18 @@ describe('applyPortalPlanChange', () => {
     })
     const result = await applyPortalPlanChange(subscriptionEvent(), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
     expect(result.action).toBe('applied_over_limit')
-    expect(calls.stripeUpdates).toHaveLength(0)
+    expect(calls.reverts).toHaveLength(0)
     expect(calls.updates.find((u) => u.table === 'tenants')?.values.plan).toBe('starter')
     expect(calls.inserts.find((i) => i.table === 'notifications')).toBeDefined()
     expect(calls.emails).toHaveLength(1)
   })
 
-  it('Stripe revert fails → falls through: DB follows Stripe (applied_over_limit)', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+  it('revert fails → falls through: DB follows the provider (applied_over_limit)', async () => {
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
@@ -323,7 +322,7 @@ describe('applyPortalPlanChange', () => {
     })
     const result = await applyPortalPlanChange(subscriptionEvent(), {
       admin,
-      stripe: makeStripe(true),
+      revertToPrice: makeRevert(true),
       sendEmailFn,
     })
     expect(result.action).toBe('applied_over_limit')
@@ -332,15 +331,15 @@ describe('applyPortalPlanChange', () => {
   })
 
   it('unknown price → ignored, nothing written', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({ newPlan: null })
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({ newPlan: null })
     const result = await applyPortalPlanChange(subscriptionEvent('price_unknown'), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
     expect(result.action).toBe('ignored')
     expect(calls.updates).toHaveLength(0)
-    expect(calls.stripeUpdates).toHaveLength(0)
+    expect(calls.reverts).toHaveLength(0)
   })
 })
 
@@ -366,37 +365,37 @@ describe('applyPortalPlanChange — super-admin plan override (#546 §3)', () =>
   })
 
   it('never reprices a comped tenant on Stripe', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin(comped('2026-07-20T00:00:00.000Z'))
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped('2026-07-20T00:00:00.000Z'))
 
     const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
 
     expect(result).toMatchObject({ action: 'ignored' })
-    expect(calls.stripeUpdates).toHaveLength(0)
+    expect(calls.reverts).toHaveLength(0)
     expect(calls.updates).toHaveLength(0)
     expect(calls.upserts).toHaveLength(0)
     expect(calls.emails).toHaveLength(0)
   })
 
   it('control: without the override marker the same event reprices Stripe onto the comped plan', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin(comped(null))
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped(null))
 
     const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
 
     expect(result.action).toBe('reverted')
-    const items = calls.stripeUpdates[0].params.items as { price: string }[]
+    const items = [{ price: calls.reverts[0].priceId }]
     expect(items[0].price).toBe('price_pro_m')
   })
 
   it('clearing the override lets portal changes reconcile again', async () => {
-    const { admin, calls, sendEmailFn, makeStripe } = makeFakeAdmin({
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
       currentSub: { plan_id: PRO.plan_id, interval: 'monthly', plan_override_at: null },
@@ -406,7 +405,7 @@ describe('applyPortalPlanChange — super-admin plan override (#546 §3)', () =>
 
     const result = await applyPortalPlanChange(subscriptionEvent(), {
       admin,
-      stripe: makeStripe(),
+      revertToPrice: makeRevert(),
       sendEmailFn,
     })
 

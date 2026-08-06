@@ -208,7 +208,7 @@ docker build \
 | Webhook | Route | Env var |
 |---------|-------|---------|
 | Student payments (Connect) | `/api/stripe/webhook` | `STRIPE_WEBHOOK_SECRET` |
-| School billing (Platform) | `/api/stripe/platform-webhook` | `STRIPE_PLATFORM_WEBHOOK_SECRET` |
+| School billing (Platform) | `/api/billing/webhook/stripe` | `STRIPE_PLATFORM_WEBHOOK_SECRET` |
 
 ### Enrollment CHECK constraint violation
 **Cause:** Enrollments require either `product_id` OR `subscription_id` — not both, not neither.

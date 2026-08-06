@@ -81,6 +81,7 @@ export class BinancePayProvider implements IPaymentProvider {
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: true,
+    supportsPlatformBillingCheckout: false,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
