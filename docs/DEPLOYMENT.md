@@ -159,8 +159,23 @@ STRIPE_SECRET_KEY=sk_live_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Stripe — Platform Billing
-STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...
+# Platform Billing (school pays the platform) — one section per rail.
+# Only the rails you actually price in Platform → Plans need to be set.
+STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...        # Stripe; separate registration from the Connect webhook above
+LEMONSQUEEZY_API_KEY=
+LEMONSQUEEZY_STORE_ID=
+LEMONSQUEEZY_WEBHOOK_SECRET=
+# Lemon Squeezy and Binance Pay share one merchant account with the student→school loop;
+# the two are kept apart by the platform:<provider> webhook_events namespace — no second account needed.
+BINANCE_PAY_API_KEY=
+BINANCE_PAY_API_SECRET=
+# Solana has no webhook — do not register one. Payments are proven on chain by
+# /api/billing/solana/verify, which the school's browser polls.
+SOLANA_RPC_URL=
+SOLANA_PLATFORM_WALLET=
+SOLANA_USDC_MINT=                               # Set = settle in USDC (recommended, no price oracle). Unset = settle in native SOL at the Pyth quote locked at checkout.
+# PayPal is coded but its platform-billing checkout is capability-disabled pending #479 —
+# no PAYPAL_* needed here; PayPal is still used for student→school payments (configured elsewhere in this file).
 
 # OpenAI (AI grading)
 OPENAI_API_KEY=sk-...
@@ -440,9 +455,14 @@ The LMS relies on `custom_access_token_hook()` for JWT claims:
 
 ---
 
-## 6. Stripe Webhook Configuration
+## 6. Payment Webhook Configuration
 
-Create two webhook endpoints in the Stripe Dashboard:
+Register one endpoint per provider per money loop. Stripe is the only provider
+needing two registrations — the others sign both loops with a single secret, and
+the two loops are kept apart by the `platform:<provider>` `webhook_events`
+namespace rather than by separate credentials.
+
+Both of these are in the Stripe Dashboard:
 
 **Student Payments (Connect):**
 - URL: `https://lmsplatform.com/api/stripe/webhook`

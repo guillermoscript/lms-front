@@ -10,7 +10,7 @@
 ## Executive Summary
 
 Implemented the full business monetization stack for the LMS platform:
-- **School billing** via Stripe Checkout (card) and manual bank transfer
+- **School billing** on any priced rail — Stripe, Lemon Squeezy, Binance Pay, Solana or manual bank transfer (#600)
 - **5-tier pricing** (Free → Enterprise) with feature gating
 - **Dynamic transaction fees** that decrease with higher plans
 - **LATAM payment support** with multi-currency and structured bank details
@@ -50,13 +50,15 @@ Yearly pricing: ~17% discount (e.g. Starter $90/year instead of $108).
 
 | Table | Purpose |
 |-------|---------|
-| `platform_plans` | Plan definitions: slug, name, prices (monthly/yearly), Stripe price IDs, features JSONB, limits JSONB, transaction_fee_percent |
-| `platform_subscriptions` | One per tenant. Tracks Stripe subscription ID, status, payment method, billing period. `UNIQUE(tenant_id)` |
+| `platform_plans` | Plan definitions: slug, name, list prices (monthly/yearly), features JSONB, limits JSONB, transaction_fee_percent. Carries **no** provider price ids — those moved to `platform_plan_prices` in #601 |
+| `platform_plan_prices` | One row per (plan, provider, interval): `provider_price_id` for catalog rails, `amount` for catalog-less ones. An active row is what makes a rail selectable at checkout (#602) |
+| `platform_subscriptions` | One per tenant. Tracks `payment_provider`, `provider_subscription_id`, status, interval, billing period, `cancel_at_period_end`, `grace_period_end`. `UNIQUE(tenant_id)` |
+| `tenant_billing_customers` | The tenant's customer id **per provider** (#601) — replaces the single `tenants.stripe_customer_id` column, which no longer exists |
 | `platform_payment_requests` | Manual bank transfer requests for plan upgrades. Status flow: `pending` → `instructions_sent` → `payment_received` → `confirmed` |
 
 ### Altered Tables
 
-- **`tenants`** — Added: `stripe_customer_id`, `billing_email`, `billing_period_end`, `billing_status`
+- **`tenants`** — Added: `billing_email`, `billing_period_end`, `billing_status` (and `stripe_customer_id`, since dropped by #601 in favour of `tenant_billing_customers`)
 - **`currency_type` enum** — Added: `mxn`, `cop`, `clp`, `pen`, `ars`, `brl`
 
 ### Which rails a school can pay the platform with
@@ -98,16 +100,35 @@ fresh production database has none. The go-live checklist (credentials, webhook
 registration, wallet, the mainnet USDC mint, and how to revert) is in
 [`DEPLOYMENT.md → Going live with the crypto rails`](DEPLOYMENT.md#going-live-with-the-crypto-rails--checklist).
 
-### Key Distinction: Two Stripe Integrations
+### Key Distinction: Two Money Loops
 
-| | School Billing (NEW) | Student Payments (EXISTING) |
+Both loops are provider-agnostic — the student loop since #280, the school loop
+since #600. They are separate *loops*, not separate Stripe integrations, and the
+only thing they share is the `IPaymentProvider` contract in `lib/payments`.
+
+| | School Billing (school → platform) | Student Payments (student → school) |
 |--|--|--|
-| **Who pays** | School admin pays platform | Student pays school |
-| **Stripe mode** | Stripe Billing (Checkout + Subscriptions) | Stripe Connect (PaymentIntents) |
-| **Webhook** | `/api/billing/webhook/stripe` | `/api/stripe/webhook` |
-| **Webhook secret** | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` |
-| **Customer ID stored in** | `tenants.stripe_customer_id` | `profiles.stripe_customer_id` |
-| **Revenue** | Platform revenue (SaaS fees) | School revenue (course sales) |
+| **Who pays** | School admin pays the platform | Student pays the school |
+| **Rails** | Stripe, Lemon Squeezy, Binance Pay, Solana, manual bank transfer (PayPal coded, off until #479) | Stripe Connect, PayPal, Lemon Squeezy, Binance Pay, `binance_personal`, Solana, `solana_subs`, manual |
+| **Which rail** | whichever has an active `platform_plan_prices` row and `supportsPlatformBillingCheckout` | `products.payment_provider` / `plans.payment_provider`, enabled per tenant in `tenant_settings` |
+| **Entry point** | `POST /api/billing/checkout` | `components/public/checkout-form.tsx` |
+| **Webhook** | `/api/billing/webhook/[provider]`, namespaced `platform:<provider>` | `/api/payments/webhook/[provider]`; Stripe Connect also on `/api/stripe/webhook` |
+| **Applier** | `dispatchPlatformBillingEvent` | `dispatchBillingEvent` |
+| **Customer ID stored in** | `tenant_billing_customers(tenant_id, payment_provider, provider_customer_id)` — per rail since #601 | `profiles.stripe_customer_id` |
+| **Grants** | `tenants.plan` + `platform_subscriptions` → plan features and limits | `entitlements` → course access |
+| **Revenue** | Platform revenue (SaaS subscription fees) | School revenue, less the platform's transaction fee |
+
+Where Stripe *is* still special, it is special twice over, and the two must not be
+confused: school billing uses **Stripe Billing** on the platform account with
+`STRIPE_PLATFORM_WEBHOOK_SECRET`, while student payments use **Stripe Connect** with
+`STRIPE_WEBHOOK_SECRET` and the school's connected account. Two registrations, two
+secrets, one Stripe account.
+
+The two loops can run on the same merchant account for a Merchant-of-Record or crypto
+rail (Lemon Squeezy, Binance Pay), which is why `webhook_events` namespaces the
+platform loop as `platform:<provider>`: the same provider event id can legitimately
+arrive at both endpoints, and one shared key space would let whichever route ran first
+mark it processed and make the other skip work it had not done.
 
 ### Single Source of Truth: `get_plan_features()`
 
@@ -191,43 +212,73 @@ All plan checks should go through this function, NOT hardcoded constants.
 
 ## How Plan Changes Work
 
-### Via Stripe Checkout (Card Payment)
+### Via hosted checkout (any priced rail)
+
+One path for every rail that carries `supportsPlatformBillingCheckout` — Stripe,
+Lemon Squeezy, Binance Pay, Solana. Which one runs is resolved from
+`platform_plan_prices` by `resolveCheckoutProvider`, never from a provider name in
+the route.
 
 ```
-Admin clicks "Subscribe" → POST /api/billing/checkout
-  → Creates Stripe Checkout Session
-  → Redirects to Stripe hosted page
-  → Student pays
-  → Stripe fires checkout.session.completed webhook
-  → platform-webhook handler:
-    1. Upserts platform_subscriptions
-    2. Updates tenants.plan = new slug
-    3. Updates tenants.billing_status = 'active'
-    4. Updates revenue_splits.platform_percentage to match new plan's fee
+Admin picks a plan, then a payment method → POST /api/billing/checkout
+  → resolveCheckoutProvider(prices, interval): explicit choice > rail already on
+    file > the only priced one
+  → provider.createCheckoutSession({ hosted: true })
+  → school pays on the provider's page (or scans the QR, for Solana)
+  → confirmation arrives:
+      webhook rails  → POST /api/billing/webhook/[provider]  (signature verified,
+                       deduped in webhook_events under `platform:<provider>`)
+      Solana         → the QR page polls POST /api/billing/solana/verify, which
+                       proves the transfer on chain
+  → both call dispatchPlatformBillingEvent, which:
+    1. Upserts platform_subscriptions (provider, ids, status, period)
+    2. Updates tenants.plan / billing_status / billing_period_end
+    3. Rewrites revenue_splits to the new plan's transaction_fee_percent
+    4. Reconciles any access cutoff left over from being over-limit
 ```
 
-### Via Manual Bank Transfer
+On a rail with no subscription object of its own (`selfManagedPeriod` — Binance Pay,
+Solana), step 1 *derives* `current_period_end` from the interval, because the provider
+reports no period. A subscription with a NULL period end never lapses, never reminds
+and shows no next-payment date, so this is the whole difference between a paid month
+and a free one.
+
+### Via manual bank transfer
 
 ```
-Admin clicks "Pay via bank transfer" → requestManualPlanUpgrade()
-  → Creates platform_payment_requests row (status: 'pending')
-  → Platform sends bank instructions via email (manual step)
-  → Admin makes bank transfer
-  → Super admin calls confirmManualPayment(requestId)
+Admin clicks "Bank transfer" → requestManualPlanUpgrade()
+  → Creates platform_payment_requests row (status 'pending', expires_at +14d)
+  → Super admin marks instructions sent → 'instructions_sent'
+  → School transfers, optionally uploads proof → 'payment_received'
+  → Super admin calls confirmManualPayment(requestId) on /platform/billing
+    0. Blocks if the tenant is over the target plan's limits
     1. Updates request status to 'confirmed'
-    2. Upserts platform_subscriptions (payment_method: 'manual_transfer')
-    3. Updates tenants.plan
-    4. Updates revenue_splits
+    2. Upserts platform_subscriptions (payment_provider: 'manual'), extending
+       from the old period end on a renewal rather than restarting it
+    3. Updates tenants.plan / billing_status / billing_period_end
+    4. Rewrites revenue_splits
+    5. Reconciles the access cutoff
 ```
 
-### Cancellation
+### Cancellation and lapse
 
 ```
 Admin clicks "Cancel" → cancelSubscription()
-  → If Stripe: sets cancel_at_period_end on Stripe subscription
-  → If manual: marks cancel_at_period_end in DB
-  → At period end, Stripe fires customer.subscription.deleted
-  → Webhook downgrades to free plan
+  → supportsNativeSubscriptions (Stripe, Lemon Squeezy, PayPal):
+      cancel at period end AT THE PROVIDER; its renewal webhook stops arriving
+      and the terminal event downgrades us
+  → selfManagedPeriod (manual, Binance Pay, Solana):
+      set cancel_at_period_end in the DB; nothing renews it anyway
+  → either way cancel_at_period_end is the ONLY signal a cancel is scheduled
+    (#545); cancel_at is informational and the two are cleared together
+
+/api/cron/expire-platform-subscriptions sweeps every selfManagedPeriod rail daily:
+  phase 0  retire payment requests past expires_at
+  phase 1  remind, once, within 7 days of period end
+  phase 2  period end passed → 'past_due' + 7-day grace window
+  phase 3  grace closed → downgradeTenantToFree(), unless a renewal request is
+           still open (a school that has already sent money is not cut off)
+  phase 4  cancel_at_period_end and the period has ended → downgradeTenantToFree()
 ```
 
 ---
@@ -372,20 +423,47 @@ The `getRoutingNumberLabel(countryCode)` function returns country-specific label
 
 ## Environment Variables
 
-### New (Required for Stripe billing)
+### Required for school billing
+
+Per rail, and only for the rails you actually price. The full annotated list is in
+[`DEPLOYMENT.md → Environment Variables`](DEPLOYMENT.md#33-environment-variables).
 
 ```env
-STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...   # Separate from Connect webhook
+STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...   # Stripe — separate from the Connect webhook
+LEMONSQUEEZY_API_KEY=                      # Lemon Squeezy — same account as the student loop
+LEMONSQUEEZY_STORE_ID=
+LEMONSQUEEZY_WEBHOOK_SECRET=
+BINANCE_PAY_API_KEY=                       # Binance Pay — same merchant account as the student loop
+BINANCE_PAY_API_SECRET=
+SOLANA_RPC_URL=                            # Solana — no webhook exists; /api/billing/solana/verify proves it on chain
+SOLANA_PLATFORM_WALLET=
+SOLANA_USDC_MINT=
 ```
 
-### Stripe Setup Steps
+Manual bank transfer needs no credentials at all — it settles through
+`platform_payment_requests` under a super admin's eye.
 
-1. Create Stripe Product "LMS Platform Subscription" in dashboard
-2. Create 8 Prices (4 monthly + 4 yearly for Starter/Pro/Business/Enterprise)
-3. Store price IDs in `platform_plans.stripe_price_id_monthly` / `stripe_price_id_yearly`
-4. Create webhook endpoint at `https://yourdomain.com/api/billing/webhook/stripe`
+### Stripe setup steps
+
+1. Create a Stripe Product, e.g. "LMS Platform Subscription"
+2. Create 8 Prices (4 monthly + 4 yearly, for Starter / Pro / Business / Enterprise)
+3. Enter each price id in **Platform → Plans → Edit plan → Prices**, which writes
+   `platform_plan_prices(plan_id, payment_provider, interval, provider_price_id)`.
+   **Do not look for a price column on `platform_plans`** — there is none, and
+   there never was one anything wrote, which is what made every card upgrade 400
+   until #602. A plan with no active price row for a rail simply does not offer
+   that rail; it no longer fails at checkout.
+4. Create a webhook endpoint at `https://yourdomain.com/api/billing/webhook/stripe`
 5. Subscribe to events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.paid`
-6. Copy webhook signing secret to `STRIPE_PLATFORM_WEBHOOK_SECRET`
+6. Copy the webhook signing secret to `STRIPE_PLATFORM_WEBHOOK_SECRET`
+
+### Other rails
+
+Same shape, one step shorter. Lemon Squeezy takes its variant id in the same
+Prices editor; Binance Pay and Solana have no catalog, so their rows carry a plain
+`amount` and no `provider_price_id`. Registering the webhook (or, for Solana,
+deliberately not registering one) is covered in
+[`DEPLOYMENT.md → Payment Webhook Configuration`](DEPLOYMENT.md#6-payment-webhook-configuration).
 
 ---
 
@@ -405,8 +483,8 @@ Both `messages/en.json` and `messages/es.json` received:
 
 1. As school admin → `/dashboard/admin/billing` shows free plan with 5/5 courses, 0/50 students
 2. Click "Upgrade" → plan comparison page renders with monthly/yearly toggle
-3. Select Starter ($9/mo) → Stripe Checkout opens
-4. Pay with test card `4242 4242 4242 4242` → webhook fires → `tenants.plan` = `starter`
+3. Select Starter ($9/mo) → the payment-method dialog lists every rail with an active price row, plus bank transfer
+4. Pick Stripe, pay with test card `4242 4242 4242 4242` → webhook fires → `tenants.plan` = `starter`. On a crypto rail the same assertion holds once the QR / hosted order settles; on bank transfer, once a super admin confirms
 5. Billing page now shows Starter, next billing date, usage meters updated (15 courses max)
 6. `revenue_splits.platform_percentage` updated from 10 to 5
 7. Test manual transfer: request upgrade to Pro → `platform_payment_requests` created → super admin confirms → plan activates
