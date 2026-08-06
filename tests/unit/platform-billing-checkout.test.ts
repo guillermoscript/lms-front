@@ -5,6 +5,8 @@ import {
   describeResolutionError,
   isPlatformCheckoutProvider,
   platformWebhookNamespace,
+  PLATFORM_SELF_MANAGED_PROVIDERS,
+  PLATFORM_WEBHOOK_PROVIDERS,
   type PlatformPriceRow,
 } from '@/lib/billing/platform-billing'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
@@ -81,10 +83,13 @@ describe('resolveCheckoutProvider', () => {
   })
 
   it('rejects a provider that cannot run a platform checkout', () => {
+    // `solana_subs` auto-pulls on chain but can only be cancelled by the payer's
+    // own wallet, so it stays out of platform billing even though `solana` does
+    // not (#610).
     const res = resolveCheckoutProvider(
-      [price({ paymentProvider: 'solana', providerPriceId: 'x' })],
+      [price({ paymentProvider: 'solana_subs', providerPriceId: 'x' })],
       'monthly',
-      { requested: 'solana' },
+      { requested: 'solana_subs' },
     )
     expect(!res.ok && res.error.kind).toBe('unsupported')
   })
@@ -106,10 +111,39 @@ describe('platform billing capability', () => {
     expect(PROVIDER_CAPABILITIES.stripe.supportsPlatformBillingCheckout).toBe(true)
   })
 
-  it('excludes every rail that cannot bill a school recurringly', () => {
-    for (const slug of ['manual', 'solana', 'solana_subs', 'binance', 'binance_personal'] as const) {
+  it('excludes every rail a school cannot actually buy a plan on', () => {
+    // `manual` settles through platform_payment_requests rather than a checkout;
+    // `solana_subs` cannot be cancelled without the payer's wallet;
+    // `binance_personal` pays a SCHOOL's account, and the payee here is us.
+    for (const slug of ['manual', 'solana_subs', 'binance_personal'] as const) {
       expect(isPlatformCheckoutProvider(slug)).toBe(false)
     }
+  })
+
+  it('includes the crypto rails opened in #610', () => {
+    for (const slug of ['binance', 'solana'] as const) {
+      expect(isPlatformCheckoutProvider(slug)).toBe(true)
+    }
+  })
+
+  it('keeps every self-managed rail out of the webhook allowlist unless it signs', () => {
+    // A provider with no signed webhook must never get an endpoint: that
+    // endpoint would be an unauthenticated way to activate a subscription.
+    expect(PLATFORM_WEBHOOK_PROVIDERS).toContain('binance')
+    expect(PLATFORM_WEBHOOK_PROVIDERS).not.toContain('solana')
+    expect(PLATFORM_WEBHOOK_PROVIDERS).not.toContain('manual')
+  })
+
+  it('derives the cron\'s self-managed set from the capability, not a slug list', () => {
+    // The four cron phases hardcoded 'manual', so the first non-manual
+    // self-managed subscription would never have expired or reminded.
+    expect(PLATFORM_SELF_MANAGED_PROVIDERS).toEqual(
+      expect.arrayContaining(['manual', 'binance', 'solana']),
+    )
+    // Rails that renew themselves must NOT be cron-expired.
+    expect(PLATFORM_SELF_MANAGED_PROVIDERS).not.toContain('stripe')
+    expect(PLATFORM_SELF_MANAGED_PROVIDERS).not.toContain('lemonsqueezy')
+    expect(PLATFORM_SELF_MANAGED_PROVIDERS).not.toContain('solana_subs')
   })
 
   it('namespaces the platform webhook ledger away from the student one', () => {
@@ -132,13 +166,16 @@ const state: {
   user: { id: string; email: string } | null
   role: string | null
   prices: PlatformPriceRow[]
-  plan: { plan_id: string; slug: string; name: string } | null
+  plan: { plan_id: string; slug: string; name: string; price_monthly: number; price_yearly: number } | null
   existingSub: Record<string, unknown> | null
   billingCustomer: string | null
   writes: Write[]
   checkoutCalls: Record<string, unknown>[]
   cancelCalls: { id: string; immediate: boolean }[]
   cancelThrows: boolean
+  overLimit: boolean
+  openRequest: boolean
+  recordedRequests: Record<string, unknown>[]
 } = {
   user: null,
   role: null,
@@ -150,6 +187,9 @@ const state: {
   checkoutCalls: [],
   cancelCalls: [],
   cancelThrows: false,
+  overLimit: false,
+  openRequest: false,
+  recordedRequests: [],
 }
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
@@ -221,11 +261,41 @@ vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
       },
       createCheckoutSession: (params: Record<string, unknown>) => {
         state.checkoutCalls.push(params)
-        return Promise.resolve({ kind: 'redirect', url: 'https://pay.example/session', reference: 'r' })
+        // Solana hands back a QR and an on-chain reference, not a redirect.
+        return Promise.resolve(
+          provider === 'solana'
+            ? { kind: 'qr', url: 'solana:https://school.lvh.me/api/billing/solana/tx', reference: 'r', providerRef: 'RefPubkey111' }
+            : { kind: 'redirect', url: 'https://pay.example/session', reference: 'r' },
+        )
       },
     }),
   }
 })
+
+vi.mock('@/lib/billing/plan-limits', () => ({
+  checkPlanLimits: () =>
+    Promise.resolve(
+      state.overLimit
+        ? { ok: false, violations: [{ kind: 'courses', limit: 5, usage: 9 }], planName: 'Starter' }
+        : { ok: true, violations: [], planName: 'Pro' },
+    ),
+  formatPlanLimitError: (r: { ok: boolean }) => (r.ok ? null : 'You are over the limits of that plan'),
+}))
+
+vi.mock('@/lib/billing/payment-request-ttl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/billing/payment-request-ttl')>()
+  return { ...actual, hasOpenPaymentRequest: () => Promise.resolve(state.openRequest) }
+})
+
+vi.mock('@/lib/billing/solana-platform-payment', () => ({
+  getPlatformSolanaConfig: () => ({ rpcUrl: 'https://rpc.test', platformWallet: {} }),
+  quotePlatformSettlement: () =>
+    Promise.resolve({ currency: 'usdc', base: 29_000_000, mint: 'Mint111', solUsd: null }),
+  recordSolanaPlatformRequest: (params: Record<string, unknown>) => {
+    state.recordedRequests.push(params)
+    return Promise.resolve({ requestId: 'req-1' })
+  },
+}))
 
 import { POST } from '@/app/api/billing/checkout/route'
 
@@ -240,13 +310,16 @@ beforeEach(() => {
   state.user = { id: 'user-1', email: 'admin@school.test' }
   state.role = 'admin'
   state.prices = [price()]
-  state.plan = { plan_id: PLAN_ID, slug: 'pro', name: 'Pro' }
+  state.plan = { plan_id: PLAN_ID, slug: 'pro', name: 'Pro', price_monthly: 29, price_yearly: 290 }
   state.existingSub = null
   state.billingCustomer = 'cus_existing'
   state.writes = []
   state.checkoutCalls = []
   state.cancelCalls = []
   state.cancelThrows = false
+  state.overLimit = false
+  state.openRequest = false
+  state.recordedRequests = []
 })
 
 describe('POST /api/billing/checkout — guards', () => {
@@ -271,7 +344,7 @@ describe('POST /api/billing/checkout — guards', () => {
   })
 
   it('rejects the free plan', async () => {
-    state.plan = { plan_id: PLAN_ID, slug: 'free', name: 'Free' }
+    state.plan = { plan_id: PLAN_ID, slug: 'free', name: 'Free', price_monthly: 0, price_yearly: 0 }
     const res = await POST(makeReq({ planId: PLAN_ID }))
     expect(res.status).toBe(400)
     expect((await res.json()).error).toContain('free plan')
@@ -378,5 +451,108 @@ describe('POST /api/billing/checkout — switching payment method', () => {
     const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
     expect(res.status).toBe(200)
     expect(state.cancelCalls).toHaveLength(0)
+  })
+})
+
+
+describe('POST /api/billing/checkout — crypto rails (#610)', () => {
+  const solanaPrice = () => [price({ paymentProvider: 'solana', providerPriceId: null, amount: 29 })]
+  const binancePrice = () => [price({ paymentProvider: 'binance', providerPriceId: null, amount: 29 })]
+
+  it('starts a Solana checkout and records the intent the wallet will settle', async () => {
+    state.prices = solanaPrice()
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'solana' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    // The client must be told this is a QR: a `solana:` URL is not somewhere a
+    // desktop browser can be navigated to.
+    expect(body.kind).toBe('qr')
+    expect(body.requestId).toBe('req-1')
+    expect(state.recordedRequests).toHaveLength(1)
+    // Recorded against the reference the provider minted, which is the only
+    // thing tying the anonymous /tx call back to this school and amount.
+    expect(state.recordedRequests[0].reference).toBe('RefPubkey111')
+    expect(state.recordedRequests[0].amountUsd).toBe(29)
+  })
+
+  it('charges the plan list price when a catalog-less row carries no amount', async () => {
+    state.prices = [
+      price({ paymentProvider: 'binance', providerPriceId: null, amount: null, interval: 'yearly' }),
+    ]
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'binance', interval: 'yearly' }))
+    expect(res.status).toBe(200)
+    expect(state.checkoutCalls[0].amount).toBe(290)
+  })
+
+  it('refuses a crypto checkout the school is already over the limits of', async () => {
+    // The pre-flight has to happen BEFORE the QR: a confirmed transfer cannot
+    // be refunded from this app, so an activation-time refusal would take the
+    // money and withhold the plan.
+    state.overLimit = true
+    state.prices = solanaPrice()
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'solana' }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('over the limits')
+    expect(state.checkoutCalls).toHaveLength(0)
+    expect(state.recordedRequests).toHaveLength(0)
+  })
+
+  it('does not check limits on a rail that can bill the school again next month', async () => {
+    state.overLimit = true
+    state.prices = [price()]
+    expect((await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))).status).toBe(200)
+  })
+
+  it('refuses a second Solana request while one is still open', async () => {
+    state.openRequest = true
+    state.prices = solanaPrice()
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'solana' }))
+    expect(res.status).toBe(400)
+    expect(state.recordedRequests).toHaveLength(0)
+  })
+
+  it('lets a school renew on the SAME self-managed rail', async () => {
+    // The same-provider guard exists to stop a second PROVIDER-side
+    // subscription. Binance has none: paying again IS the renewal, and blocking
+    // it would leave the school no way to buy its next period.
+    state.prices = binancePrice()
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: 'order_123',
+      status: 'active',
+      payment_provider: 'binance',
+    }
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'binance' }))
+    expect(res.status).toBe(200)
+    expect(state.checkoutCalls).toHaveLength(1)
+  })
+
+  it('never cancels the period a same-rail renewal is extending', async () => {
+    state.prices = binancePrice()
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: 'order_123',
+      status: 'active',
+      payment_provider: 'binance',
+    }
+    await POST(makeReq({ planId: PLAN_ID, provider: 'binance' }))
+    const cancels = state.writes.filter(
+      (w) => w.table === 'platform_subscriptions' && w.values.status === 'canceled',
+    )
+    expect(cancels).toHaveLength(0)
+  })
+
+  it('still supersedes when the school moves from a card to crypto', async () => {
+    state.prices = binancePrice()
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      provider_subscription_id: 'sub_live',
+      status: 'active',
+      payment_provider: 'stripe',
+    }
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'binance' }))
+    expect(res.status).toBe(200)
+    expect(state.cancelCalls).toEqual([{ id: 'sub_live', immediate: true }])
   })
 })

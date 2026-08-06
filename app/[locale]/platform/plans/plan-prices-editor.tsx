@@ -34,6 +34,7 @@ import {
   providerLabel,
   type PlatformPlanPriceInput,
 } from "@/lib/billing/plan-prices"
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/types"
 
 interface Props {
   planId: string
@@ -75,6 +76,12 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
   const editingExisting = prices.find(
     (p) => p.paymentProvider === form.paymentProvider && p.interval === form.interval
   )
+
+  // Binance Pay and Solana have no remote catalog to hold a price id (#610), so
+  // the field is neither required nor meaningful for them — and an input that
+  // demands a value nobody can supply is how placeholder ids get typed in.
+  const catalogLess =
+    PROVIDER_CAPABILITIES[form.paymentProvider as PaymentProvider]?.createsCatalog === false
 
   async function handleSave() {
     setSaving(true)
@@ -198,7 +205,9 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
                             {price.interval}
                           </td>
                           <td className="max-w-[14rem] truncate py-2.5 font-mono text-xs">
-                            {price.providerPriceId}
+                            {price.providerPriceId ?? (
+                              <span className="text-muted-foreground">no catalog</span>
+                            )}
                           </td>
                           <td className="py-2.5 tabular-nums text-muted-foreground">
                             {price.amount === null
@@ -280,15 +289,24 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor={`price-id-${planId}`}>Provider price ID</Label>
+                <Label htmlFor={`price-id-${planId}`}>
+                  Provider price ID{catalogLess ? " (not used)" : ""}
+                </Label>
                 <Input
                   id={`price-id-${planId}`}
                   className="font-mono text-xs"
-                  placeholder="price_1234…"
+                  placeholder={catalogLess ? "No catalog — leave blank" : "price_1234…"}
                   value={form.providerPriceId}
                   onChange={(e) => setForm((p) => ({ ...p, providerPriceId: e.target.value }))}
+                  disabled={catalogLess}
                   data-testid="plan-price-id-input"
                 />
+                {catalogLess && (
+                  <p className="text-xs text-muted-foreground">
+                    {providerLabel(form.paymentProvider)} has no product catalog to point at. Set the
+                    amount below instead — it is what the school is charged.
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
@@ -351,7 +369,7 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={saving || form.providerPriceId.trim() === ""}
+              disabled={saving || (!catalogLess && form.providerPriceId.trim() === "")}
               data-testid="plan-price-save-btn"
             >
               {saving ? "Saving…" : editingExisting ? "Update price" : "Add price"}

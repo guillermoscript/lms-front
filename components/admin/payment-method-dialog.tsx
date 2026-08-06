@@ -11,8 +11,15 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { IconBuildingBank, IconCreditCard, IconLoader2 } from '@tabler/icons-react'
+import { IconBuildingBank, IconCoin, IconCreditCard, IconLoader2 } from '@tabler/icons-react'
 import { providerLabel } from '@/lib/billing/plan-prices'
+
+/**
+ * Rails that move crypto rather than money from a card or a bank (#610). A card
+ * icon on a Solana button reads as a promise the flow does not keep — the
+ * school is about to be shown a QR, not a card form.
+ */
+const CRYPTO_RAILS = new Set(['solana', 'binance'])
 
 /**
  * How a school pays the platform for a plan.
@@ -92,6 +99,8 @@ export function PaymentMethodDialog({
             >
               {loading ? (
                 <IconLoader2 aria-hidden className="size-5 shrink-0 animate-spin" />
+              ) : CRYPTO_RAILS.has(provider) ? (
+                <IconCoin aria-hidden className="size-5 shrink-0 text-primary" />
               ) : (
                 <IconCreditCard aria-hidden className="size-5 shrink-0 text-primary" />
               )}

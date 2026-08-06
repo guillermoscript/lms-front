@@ -325,3 +325,41 @@ describe('expire-platform-subscriptions: §1 cancel-then-repay', () => {
     expect(downgraded).toEqual([])
   })
 })
+
+describe('expire-platform-subscriptions: #610 every rail whose period we own', () => {
+  it('lapses a Binance Pay subscription exactly like a bank transfer', async () => {
+    // The four phases filtered `payment_provider = 'manual'`, so the first
+    // non-manual self-managed rail would have kept its plan forever: no
+    // reminder, no grace window, no downgrade — one month's money for good.
+    const sub = seedSub({ payment_provider: 'binance', current_period_end: daysFromNow(-1) })
+    const res = await GET(req())
+
+    expect((await res.json()).graceStarted).toBe(1)
+    expect(sub.status).toBe('past_due')
+    expect(sub.grace_period_end).toBeTruthy()
+  })
+
+  it('reminds a Solana subscriber before its period ends', async () => {
+    const sub = seedSub({ payment_provider: 'solana', current_period_end: daysFromNow(3) })
+    const res = await GET(req())
+
+    expect((await res.json()).reminded).toBe(1)
+    expect(sub.renewal_reminder_sent_at).toBeTruthy()
+  })
+
+  it('never touches a rail that renews itself', async () => {
+    // Stripe expiry is decided by its webhook. Lapsing it here would downgrade
+    // a school whose card is fine but whose renewal event is a minute late.
+    const sub = seedSub({ payment_provider: 'stripe', current_period_end: daysFromNow(-30) })
+    const res = await GET(req())
+
+    expect((await res.json()).graceStarted).toBe(0)
+    expect(sub.status).toBe('active')
+  })
+
+  it('never expires a solana_subs row the crank is still charging', async () => {
+    const sub = seedSub({ payment_provider: 'solana_subs', current_period_end: daysFromNow(-2) })
+    await GET(req())
+    expect(sub.status).toBe('active')
+  })
+})

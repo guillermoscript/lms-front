@@ -410,6 +410,22 @@ Create two webhook endpoints in the Stripe Dashboard:
 > platform-billing rail (Lemon Squeezy, PayPal) is registered the same way at its own
 > slug and needs no new code.
 
+**Binance Pay (platform billing, #610):**
+- URL: `https://lmsplatform.com/api/billing/webhook/binance`
+- Register it in the Binance Pay merchant dashboard against the SAME merchant account
+  `BINANCE_PAY_API_KEY` / `BINANCE_PAY_API_SECRET` point at — platform billing and
+  student payments share it, and the two loops are kept apart by the
+  `platform:binance` namespace on `webhook_events`, not by separate credentials.
+- Verification uses Binance's published certificate, so there is no signing secret to
+  set for this endpoint.
+
+**Solana (platform billing, #610):** no webhook exists and none should be registered.
+Payments are proven on chain by `/api/billing/solana/verify`, which the school's own
+browser polls. It needs `SOLANA_RPC_URL` and `SOLANA_PLATFORM_WALLET`; set
+`SOLANA_USDC_MINT` to settle in USDC (recommended — a 1:1 USD stablecoin needs no
+price oracle) and leave it unset to settle in native SOL at the Pyth quote locked at
+checkout.
+
 ---
 
 ## 7. Verification Checklist

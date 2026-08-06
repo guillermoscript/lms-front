@@ -11,6 +11,7 @@ import {
   REQUEST_TTL_DAYS,
   isRequestOpen,
 } from '@/lib/billing/payment-request-ttl'
+import { PLATFORM_SELF_MANAGED_PROVIDERS } from '@/lib/billing/platform-billing'
 
 export const runtime = 'nodejs'
 
@@ -22,8 +23,17 @@ export const runtime = 'nodejs'
  * migration 20260719120000) so the flow lives in the app layer, where it can send
  * admin emails and honor pending renewal requests — neither of which SQL could do.
  *
- * Scope: only payment_provider='manual'. Stripe platform subs stay
- * webhook-driven; their expiry is handled by /api/billing/webhook/[provider].
+ * Scope: every rail whose billing period WE own — `manual`, plus the crypto
+ * rails opened to platform billing in #610 (Binance Pay, Solana), which have no
+ * subscription object to renew and no renewal webhook to hear it from. The set
+ * is derived from `selfManagedPeriod` rather than listed here, because a
+ * hardcoded 'manual' is exactly what left the first non-manual self-managed
+ * subscription active forever: unreminded, ungraced and never downgraded.
+ *
+ * Rails that renew themselves (Stripe, Lemon Squeezy, PayPal) stay
+ * webhook-driven and must NOT appear here — their expiry is decided by
+ * /api/billing/webhook/[provider]. So does `solana_subs`, whose crank cron
+ * charges it each period.
  *
  * Phases (all status-gated, so re-running is idempotent):
  *   0. Request TTL — open payment request past `expires_at` → `expired` + email.
@@ -147,7 +157,7 @@ export async function GET(req: NextRequest) {
   const { data: reminderSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_provider', 'manual')
+    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
     .eq('status', 'active')
     .eq('cancel_at_period_end', false)
     .is('renewal_reminder_sent_at', null)
@@ -175,7 +185,7 @@ export async function GET(req: NextRequest) {
   const { data: lapsedSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_provider', 'manual')
+    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
     .eq('status', 'active')
     .eq('cancel_at_period_end', false)
     .not('current_period_end', 'is', null)
@@ -221,7 +231,7 @@ export async function GET(req: NextRequest) {
   const { data: expiredSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_provider', 'manual')
+    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
     .eq('status', 'past_due')
     .not('grace_period_end', 'is', null)
     .lt('grace_period_end', nowIso)
@@ -263,7 +273,7 @@ export async function GET(req: NextRequest) {
   const { data: cancelSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .eq('payment_provider', 'manual')
+    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
     .eq('status', 'active')
     .eq('cancel_at_period_end', true)
     .not('current_period_end', 'is', null)

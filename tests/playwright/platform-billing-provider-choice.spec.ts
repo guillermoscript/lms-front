@@ -58,15 +58,44 @@ test.describe('platform billing — payment method choice', () => {
     await expect(dialog.getByRole('button', { name: /Bank transfer/ })).toBeVisible()
   })
 
-  test('never offers a rail that cannot bill a school recurringly', async ({ page }) => {
+  test('offers the crypto rails a super admin has priced', async ({ page }) => {
+    // #610: the seed prices Binance Pay and Solana for every paid plan, and a
+    // catalog-less row (`provider_price_id IS NULL`) is a real, buyable price —
+    // the dialog must not treat a missing provider id as a missing price.
     await clickByText(page, 'Choose plan')
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toBeVisible()
 
-    // Student-side rails have no place on a SaaS subscription screen. The filter
-    // is the `supportsPlatformBillingCheckout` capability, never a slug list.
-    for (const rail of ['Solana', 'Binance Pay', 'Binance (personal)']) {
-      await expect(dialog.getByRole('button', { name: rail })).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Binance Pay', exact: true })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Solana', exact: true })).toBeVisible()
+  })
+
+  test('a Solana checkout lands on the QR page, not an unhandled protocol', async ({ page }) => {
+    // The client cannot navigate to a `solana:` URL. Choosing this rail has to
+    // produce a page with a scannable code and a poll behind it.
+    await clickByText(page, 'Choose plan')
+    await expect(page.getByRole('alertdialog')).toBeVisible()
+    await clickByText(page, 'Solana')
+
+    await page.waitForSelector('[data-testid="platform-solana-checkout"]', { timeout: 15_000 })
+    await expect(page).toHaveURL(/\/dashboard\/admin\/billing\/checkout\//)
+    // The QR is rendered client-side from the request's stored reference, so it
+    // survives the reload a wallet hand-off can cause.
+    await expect(page.getByRole('img', { name: /QR/i })).toBeVisible()
+  })
+
+  test('never offers a rail a school cannot buy a plan on', async ({ page }) => {
+    await clickByText(page, 'Choose plan')
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible()
+
+    // The filter is the `supportsPlatformBillingCheckout` capability, never a
+    // slug list. `Binance (personal)` pays a SCHOOL's own account and the payee
+    // here is the platform; `Solana (subscription)` auto-pulls on chain and can
+    // only be cancelled by the payer's wallet, so neither belongs on this
+    // screen even though plain Solana and Binance Pay now do (#610).
+    for (const rail of ['Binance (personal)', 'Solana (subscription)']) {
+      await expect(dialog.getByRole('button', { name: rail, exact: true })).toHaveCount(0)
     }
   })
 

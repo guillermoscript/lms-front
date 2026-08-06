@@ -23,8 +23,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
 import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
 import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
-import type { NormalizedBillingEvent, SubscriptionLifecycleStatus } from '@/lib/payments/types'
+import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import type {
+  NormalizedBillingEvent,
+  PaymentProvider,
+  SubscriptionLifecycleStatus,
+} from '@/lib/payments/types'
 
 /**
  * `platform_subscriptions.status` is CHECK-constrained
@@ -128,6 +134,32 @@ interface StoredSubscription {
 function mapInterval(value: unknown): 'monthly' | 'yearly' | undefined {
   if (value === undefined || value === null || value === '') return undefined
   return value === 'yearly' ? 'yearly' : 'monthly'
+}
+
+/**
+ * The period a payment on a self-managed rail buys (#610).
+ *
+ * Binance Pay and Solana have no subscription object and no renewal webhook: a
+ * plan purchase is a one-time payment, and the period it opens is ours to
+ * derive. Renewing before the current one lapses extends from its end rather
+ * than from now, so paying early never costs the school the remaining days —
+ * the same arithmetic `confirmManualPayment` applies to a bank wire.
+ */
+export function selfManagedPeriod(
+  storedEnd: string | null | undefined,
+  interval: 'monthly' | 'yearly' | undefined,
+  now: Date,
+): { start: Date; end: Date } {
+  const stored = storedEnd ? new Date(storedEnd) : null
+  const start = stored && stored > now ? stored : now
+  const end = new Date(start)
+  // UTC arithmetic, not local: `setMonth` rolls over in the server's own zone,
+  // so a period that crosses a DST boundary would land an hour early or late
+  // depending on where the process happens to run. Nothing here is local to
+  // anyone — the school, the chain and the cron all read this as an instant.
+  if (interval === 'yearly') end.setUTCFullYear(end.getUTCFullYear() + 1)
+  else end.setUTCMonth(end.getUTCMonth() + 1)
+  return { start, end }
 }
 
 /**
@@ -294,12 +326,32 @@ export async function dispatchPlatformBillingEvent(
   // suppress the reconciliation below. It is therefore read only while the
   // tenant has no plan on file; from then on the price is the source of truth
   // and `applyPortalPlanChange` maps it, with downgrade limits enforced.
+  //
+  // A self-managed rail is the exception: it has no subscription object for the
+  // provider to echo stale metadata from. Each Binance order / Solana transfer
+  // is minted for one specific purchase and carries that purchase's plan, so a
+  // school moving from Starter to Pro would otherwise have its Pro payment
+  // extend its Starter period.
+  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
   const isFirstActivation = !stored?.plan_id
-  const planId = isFirstActivation ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
-  const planSlug = isFirstActivation
+  const trustMetadataPlan = isFirstActivation || selfManaged
+  const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
+  const planSlug = trustMetadataPlan
     ? (event.metadata?.plan_slug ?? event.metadata?.planSlug)
     : undefined
   const interval = event.interval ?? mapInterval(event.metadata?.interval)
+
+  // Providers that bill on a schedule report the period they just charged for.
+  // The ones WE own report nothing, and a subscription with a NULL
+  // current_period_end never lapses, never reminds and shows no next-payment
+  // date — it is the whole difference between a paid month and a free one.
+  const derived =
+    selfManaged && !event.periodEnd && status === 'active'
+      ? selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
+      : null
+
+  const effectiveStart = periodStart ?? derived?.start.toISOString()
+  const effectiveEnd = periodEnd ?? derived?.end.toISOString()
 
   const subscriptionPatch: Record<string, unknown> = {
     status,
@@ -309,11 +361,22 @@ export async function dispatchPlatformBillingEvent(
     ...(event.providerSubscriptionId ? { provider_subscription_id: event.providerSubscriptionId } : {}),
     ...(event.providerCustomerId ? { provider_customer_id: event.providerCustomerId } : {}),
     ...(interval ? { interval } : {}),
-    ...(periodStart ? { current_period_start: periodStart } : {}),
-    ...(periodEnd ? { current_period_end: periodEnd } : {}),
+    ...(effectiveStart ? { current_period_start: effectiveStart } : {}),
+    ...(effectiveEnd ? { current_period_end: effectiveEnd } : {}),
     ...(event.cancelAtPeriodEnd !== undefined
       ? { cancel_at_period_end: event.cancelAtPeriodEnd, canceled_at: event.canceledAt?.toISOString() ?? null }
-      : {}),
+      : // A rail that reports nothing about scheduled cancellation still says
+        // something by being paid: a fresh period un-cancels, exactly as
+        // confirmManualPayment treats a confirmed transfer (#546 §1). Without
+        // this the school pays for a month and the cron's cancel phase still
+        // drops it to free at the end of it.
+        derived
+        ? { cancel_at_period_end: false, canceled_at: null }
+        : {}),
+    // Paid means out of dunning. The cron reopens a window if the new period
+    // lapses too, but leaving a stale one behind lets phase 3 downgrade a
+    // school that has just paid.
+    ...(status === 'active' ? { grace_period_end: null } : {}),
     // A paid period resets the reminder stamp so the next cycle can remind
     // again — the same un-cancel semantics confirmManualPayment applies (#546).
     ...(status === 'active' ? { renewal_reminder_sent_at: null } : {}),
@@ -349,7 +412,7 @@ export async function dispatchPlatformBillingEvent(
       .update({
         billing_status: status,
         ...(planSlug ? { plan: planSlug } : {}),
-        ...(periodEnd ? { billing_period_end: periodEnd } : {}),
+        ...(effectiveEnd ? { billing_period_end: effectiveEnd } : {}),
         updated_at: now,
       })
       .eq('id', tenantId),
@@ -357,6 +420,15 @@ export async function dispatchPlatformBillingEvent(
 
   if (planId) {
     await applyRevenueSplit(admin, tenantId, planId, now)
+  }
+
+  // A paid period clears any cutoff scheduled while the school was over its
+  // limits — the same close-out `confirmManualPayment` runs after a confirmed
+  // transfer. Best-effort: a reconcile failure must not 500 an event whose
+  // subscription and tenant writes have already landed, or the provider
+  // redelivers a payment we have applied.
+  if (status === 'active') {
+    await reconcileAccessCutoffSafely(admin, tenantId)
   }
 
   // A price change made at the provider (billing portal, or any out-of-band

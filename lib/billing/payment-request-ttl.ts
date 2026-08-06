@@ -8,12 +8,17 @@
  * and never paying therefore kept the paid plan — its course/student limits and
  * its reduced transaction fee — forever.
  *
- * Every request now carries `expires_at` (created + TTL). Three call sites read
+ * Every request now carries `expires_at` (created + TTL). Four call sites read
  * these rules and must agree, which is why they live here:
  *   - the two duplicate-request guards in `app/actions/admin/billing.ts`
  *   - the downgrade pause in `app/api/cron/expire-platform-subscriptions`
  *   - the sweep in that same cron that flips lapsed rows to `expired`
+ *   - the Solana platform checkout (#610), whose pending intent IS one of these
+ *     rows — a school must not be able to open a second one by starting a
+ *     crypto payment on top of a bank transfer it has already requested
  */
+
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /** Statuses that mean "this request is still an open promise to pay". */
 export const OPEN_REQUEST_STATUSES = ['pending', 'instructions_sent', 'payment_received'] as const
@@ -50,4 +55,28 @@ export function isRequestOpen(
   // treat it as open so a legitimate in-flight request is never dropped.
   if (!request.expires_at) return true
   return new Date(request.expires_at).getTime() > now.getTime()
+}
+
+/**
+ * Is there an open (pending and not lapsed) platform payment request for this
+ * tenant? One helper for every duplicate guard so a renewal can never be
+ * created alongside a pending upgrade — the combination that used to disable
+ * both guards permanently, because each returned `PGRST116 / data: null` from
+ * `.single()` once two rows matched.
+ */
+export async function hasOpenPaymentRequest(
+  admin: SupabaseClient,
+  tenantId: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from('platform_payment_requests')
+    .select('request_id, status, expires_at')
+    .eq('tenant_id', tenantId)
+    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  return ((data as { status: string; expires_at: string | null }[] | null) || []).some((r) =>
+    isRequestOpen(r),
+  )
 }

@@ -43,12 +43,60 @@ import {
 
 const BINANCE_PAY_BASE_URL = 'https://bpay.binanceapi.com'
 
-/** Shape of the JSON we place in the order's passThroughInfo (≤512 chars). */
+/**
+ * Shape of the JSON we place in the order's passThroughInfo (≤512 chars).
+ *
+ * Two vocabularies on purpose. The student loop (`/api/payments/checkout`)
+ * speaks camelCase; platform billing (`/api/billing/checkout`, #603) speaks the
+ * snake_case keys its dispatcher resolves a tenant by. Both are carried
+ * verbatim rather than translated, so each dispatcher reads the bag it wrote
+ * and neither has to know the other exists.
+ */
 interface BinancePassThrough {
   userId?: string
   tenantId?: string
   planId?: string
   productId?: string
+  tenant_id?: string
+  plan_id?: string
+  plan_slug?: string
+  interval?: string
+  /** Our own reference, when it did not fit `merchantTradeNo`. See below. */
+  ref?: string
+}
+
+/** Keys carried into passThroughInfo, in the order they are dropped if oversized. */
+const PASS_THROUGH_KEYS: (keyof BinancePassThrough)[] = [
+  'userId',
+  'tenantId',
+  'planId',
+  'productId',
+  'tenant_id',
+  'plan_id',
+  'plan_slug',
+  'interval',
+  'ref',
+]
+
+/** Binance Pay accepts a `merchantTradeNo` of at most 32 alphanumeric chars. */
+const MERCHANT_TRADE_NO = /^[A-Za-z0-9]{1,32}$/
+
+/**
+ * A `merchantTradeNo` Binance will accept for this checkout.
+ *
+ * The student loop passes `transaction_id`, which is already digits and IS the
+ * correlation key the webhook is matched on — so it must survive untouched.
+ * Platform billing passes `platform:<tenantId>:<planId>` (issue #610), which is
+ * both too long and not alphanumeric; that loop correlates through
+ * `passThroughInfo` instead, so a synthesized value costs nothing there.
+ *
+ * Random rather than a hash of the reference: Binance rejects a repeat
+ * `merchantTradeNo`, and a school that abandons a checkout and starts another
+ * for the same plan would otherwise be unable to pay at all.
+ */
+export function toMerchantTradeNo(reference: string): string {
+  if (MERCHANT_TRADE_NO.test(reference)) return reference
+  return `p${crypto.randomBytes(15).toString('hex')}`
 }
 
 /**
@@ -69,6 +117,39 @@ export function normalizeBinanceCurrency(raw: string): string {
   return USD_PEGGED_TICKERS.has(lower) ? 'usd' : lower
 }
 
+/** Binance rejects a `passThroughInfo` longer than this. */
+const PASS_THROUGH_LIMIT = 512
+
+/**
+ * The correlation bag echoed back on every notification for this order.
+ *
+ * `ref` is carried only when `merchantTradeNo` had to be synthesized, so the
+ * loop that started the checkout still gets its own reference back on the
+ * webhook rather than a value it has never seen.
+ *
+ * Oversize is handled by dropping keys from the end of `PASS_THROUGH_KEYS`
+ * rather than by truncating the JSON: half a string parses as nothing at all,
+ * and the tenant binding lives in this bag.
+ */
+export function buildPassThrough(
+  params: CreateCheckoutParams,
+  merchantTradeNo: string,
+): BinancePassThrough {
+  const metadata = params.metadata ?? {}
+  const bag: BinancePassThrough = {}
+  for (const key of PASS_THROUGH_KEYS) {
+    const value = key === 'ref' ? params.reference : metadata[key]
+    if (typeof value === 'string' && value) bag[key] = value
+  }
+  if (merchantTradeNo === params.reference) delete bag.ref
+
+  for (const key of [...PASS_THROUGH_KEYS].reverse()) {
+    if (JSON.stringify(bag).length <= PASS_THROUGH_LIMIT) break
+    delete bag[key]
+  }
+  return bag
+}
+
 export class BinancePayProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'binance'
 
@@ -81,7 +162,10 @@ export class BinancePayProvider implements IPaymentProvider {
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: true,
-    supportsPlatformBillingCheckout: false,
+    // Same hosted C2B order, billed to the PLATFORM's own merchant account
+    // (#610). A plan bought here is a one-time payment that opens a period —
+    // `selfManagedPeriod` below is what makes the expiry cron own its renewal.
+    supportsPlatformBillingCheckout: true,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -164,18 +248,14 @@ export class BinancePayProvider implements IPaymentProvider {
    * the plan-vs-product event mapping.
    */
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
-    const passThrough: BinancePassThrough = {
-      userId: params.metadata?.userId,
-      tenantId: params.metadata?.tenantId,
-      ...(params.metadata?.planId ? { planId: params.metadata.planId } : {}),
-      ...(params.metadata?.productId ? { productId: params.metadata.productId } : {}),
-    }
+    const merchantTradeNo = toMerchantTradeNo(params.reference)
+    const passThrough = buildPassThrough(params, merchantTradeNo)
 
     const data = await this.api(
       '/binancepay/openapi/v3/order',
       {
         env: { terminalType: 'WEB' },
-        merchantTradeNo: params.reference,
+        merchantTradeNo,
         orderAmount: Number(params.amount.toFixed(2)),
         // Binance Pay orders are denominated in crypto; USDT is the 1:1 USD
         // stablecoin (same convention as the Solana USDC settlement path).
@@ -287,7 +367,6 @@ export class BinancePayProvider implements IPaymentProvider {
       data = {}
     }
 
-    const reference: string | undefined = data.merchantTradeNo
     let passThrough: BinancePassThrough = {}
     try {
       passThrough =
@@ -298,13 +377,22 @@ export class BinancePayProvider implements IPaymentProvider {
       passThrough = {}
     }
 
+    // `merchantTradeNo` is the student loop's correlation key, but a platform
+    // checkout had to synthesize one (see toMerchantTradeNo) and stashed its
+    // real reference in the bag — hand each loop back the value it issued.
+    const reference: string | undefined = passThrough.ref ?? data.merchantTradeNo
+
+    // The whole bag, not a curated pair: the student dispatcher binds an owner
+    // with userId/tenantId, the platform one resolves a tenant with tenant_id
+    // and reads plan_id/plan_slug/interval off the same object (#610).
     const metadata: Record<string, string> = {}
-    if (passThrough.userId) metadata.userId = passThrough.userId
-    if (passThrough.tenantId) metadata.tenantId = passThrough.tenantId
+    for (const [key, value] of Object.entries(passThrough)) {
+      if (typeof value === 'string' && value) metadata[key] = value
+    }
 
     if (bizType === 'PAY') {
       if (bizStatus === 'PAY_SUCCESS') {
-        if (passThrough.planId) {
+        if (passThrough.planId || passThrough.plan_id) {
           return {
             type: 'subscription.activated',
             providerEventId,

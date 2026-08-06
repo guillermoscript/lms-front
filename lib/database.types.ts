@@ -4601,9 +4601,15 @@ export type Database = {
           payment_provider: string
           plan_id: string
           proof_url: string | null
+          provider_charge_id: string | null
+          provider_reference: string | null
           request_id: string
           request_type: string | null
           requested_by: string
+          settlement_base: number | null
+          settlement_currency: string | null
+          settlement_mint: string | null
+          settlement_sol_usd: number | null
           status: string
           tenant_id: string
           updated_at: string | null
@@ -4621,9 +4627,15 @@ export type Database = {
           payment_provider?: string
           plan_id: string
           proof_url?: string | null
+          provider_charge_id?: string | null
+          provider_reference?: string | null
           request_id?: string
           request_type?: string | null
           requested_by: string
+          settlement_base?: number | null
+          settlement_currency?: string | null
+          settlement_mint?: string | null
+          settlement_sol_usd?: number | null
           status?: string
           tenant_id: string
           updated_at?: string | null
@@ -4641,9 +4653,15 @@ export type Database = {
           payment_provider?: string
           plan_id?: string
           proof_url?: string | null
+          provider_charge_id?: string | null
+          provider_reference?: string | null
           request_id?: string
           request_type?: string | null
           requested_by?: string
+          settlement_base?: number | null
+          settlement_currency?: string | null
+          settlement_mint?: string | null
+          settlement_sol_usd?: number | null
           status?: string
           tenant_id?: string
           updated_at?: string | null
@@ -4675,7 +4693,7 @@ export type Database = {
           payment_provider: string
           plan_id: string
           price_id: string
-          provider_price_id: string
+          provider_price_id: string | null
           updated_at: string
         }
         Insert: {
@@ -4687,7 +4705,7 @@ export type Database = {
           payment_provider: string
           plan_id: string
           price_id?: string
-          provider_price_id: string
+          provider_price_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -4699,7 +4717,7 @@ export type Database = {
           payment_provider?: string
           plan_id?: string
           price_id?: string
-          provider_price_id?: string
+          provider_price_id?: string | null
           updated_at?: string
         }
         Relationships: [

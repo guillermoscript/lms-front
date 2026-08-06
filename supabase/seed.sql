@@ -726,6 +726,26 @@ CROSS JOIN (VALUES ('monthly'), ('yearly')) AS i(interval)
 WHERE pp.slug <> 'free'
 ON CONFLICT (plan_id, payment_provider, interval) DO NOTHING;
 
+-- The crypto rails (#610). No placeholder ids here, and none possible: neither
+-- provider has a catalog to point at, so `provider_price_id` is NULL and the
+-- amount in this row IS what the school is charged. Seeding them means a local
+-- dev sees the same payment-method dialog a configured platform shows.
+--
+-- Unlike the Stripe rows above, these are not placeholders — a Binance Pay
+-- checkout or a Solana QR built from them is real, and will settle against
+-- whatever BINANCE_PAY_* / SOLANA_PLATFORM_WALLET the environment points at
+-- (devnet, for any sane local setup).
+INSERT INTO platform_plan_prices (plan_id, payment_provider, interval, provider_price_id, currency, amount)
+SELECT pp.plan_id, r.provider, i.interval,
+       NULL,
+       'usd',
+       CASE WHEN i.interval = 'yearly' THEN pp.price_yearly ELSE pp.price_monthly END
+FROM platform_plans pp
+CROSS JOIN (VALUES ('monthly'), ('yearly')) AS i(interval)
+CROSS JOIN (VALUES ('binance'), ('solana')) AS r(provider)
+WHERE pp.slug <> 'free'
+ON CONFLICT (plan_id, payment_provider, interval) DO NOTHING;
+
 
 -- ===========================================================================
 -- CODE ACADEMY PRO — Rich Content Seed

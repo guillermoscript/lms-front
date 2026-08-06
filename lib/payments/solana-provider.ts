@@ -47,7 +47,10 @@ export class SolanaProvider implements IPaymentProvider {
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
-    supportsPlatformBillingCheckout: false,
+    // A school can buy a platform plan on this rail too (#610) — the QR is the
+    // checkout and `/api/billing/solana/verify` is the confirmation. Mirrors
+    // PROVIDER_CAPABILITIES.solana.
+    supportsPlatformBillingCheckout: true,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -113,7 +116,11 @@ export class SolanaProvider implements IPaymentProvider {
       // also the unguessable lookup key /tx uses to load the pending transaction.
       const reference = generateReference()
 
-      const link = new URL(`${appUrl}/api/payments/solana/tx`)
+      // `hosted` marks the school → platform loop (#610). Its transfer has one
+      // recipient — us — so it is built by a different endpoint than the
+      // student one, which splits the payment with the school.
+      const path = params.hosted ? '/api/billing/solana/tx' : '/api/payments/solana/tx'
+      const link = new URL(`${appUrl}${path}`)
       link.searchParams.set('reference', reference)
       const url = encodeURL({ link })
 

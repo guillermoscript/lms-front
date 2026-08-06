@@ -12,6 +12,7 @@ import {
   type PlanPriceInterval,
   type PlanPriceProvider,
 } from '@/lib/billing/plan-prices'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -98,7 +99,7 @@ export async function upsertPlatformPlanPrice(input: {
   planId: string
   paymentProvider: string
   interval: string
-  providerPriceId: string
+  providerPriceId: string | null
   currency?: string
   amount?: number | null
   isActive?: boolean
@@ -120,15 +121,24 @@ export async function upsertPlatformPlanPrice(input: {
     throw new Error(`Unsupported currency: ${input.currency}`)
   }
 
-  // NOT NULL in the schema, and a whitespace-only id would pass that while
-  // still never matching anything at the provider.
-  const providerPriceId = input.providerPriceId.trim()
-  if (!providerPriceId) throw new Error('Provider price ID is required')
+  // Required only where a remote catalog exists to hold it. Binance Pay and
+  // Solana have none (`createsCatalog: false`), so there is no id to paste and
+  // demanding one would only produce placeholders — the exact failure mode #602
+  // was filed for. A whitespace-only id is nothing either way.
+  const providerPriceId = (input.providerPriceId ?? '').trim() || null
+  const needsCatalogId = PROVIDER_CAPABILITIES[provider as PaymentProvider]?.createsCatalog !== false
+  if (!providerPriceId && needsCatalogId) {
+    throw new Error('Provider price ID is required')
+  }
 
   // `amount` is nullable on purpose (the migration's own note): on a non-USD
   // rail the provider may charge something that is not `platform_plans.price_*`,
   // and where it does match there is nothing to record. A negative or NaN
   // amount is a typo either way.
+  //
+  // A catalog-less rail is the exception: with no price id at the provider,
+  // this column is the only thing that says what the school is charged, and a
+  // checkout falls back to the plan's list price without it.
   const amount = input.amount ?? null
   if (amount !== null && (!Number.isFinite(amount) || amount < 0)) {
     throw new Error('Amount must be a positive number, or left blank')
