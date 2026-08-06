@@ -523,10 +523,17 @@ export class StripePaymentProvider implements IPaymentProvider {
     const toDate = (unix?: number) => (unix ? new Date(unix * 1000) : undefined)
     // API 2026-02-25.clover: current_period_end moved off the Subscription onto
     // its items; the Invoice's subscription moved under parent.subscription_details.
+    // API 2026-02-25.clover moved the periods off the Subscription onto its
+    // items. The `??` fallbacks read the pre-clover shape so a replayed old
+    // payload — or an account still pinned to an older version, which is what
+    // `stripe listen` replays by default — still resolves a period instead of
+    // silently recording none.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subPeriodEnd = (s: any) => toDate(s?.items?.data?.[0]?.current_period_end)
+    const subPeriodEnd = (s: any) =>
+      toDate(s?.items?.data?.[0]?.current_period_end ?? s?.current_period_end)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subPeriodStart = (s: any) => toDate(s?.items?.data?.[0]?.current_period_start)
+    const subPeriodStart = (s: any) =>
+      toDate(s?.items?.data?.[0]?.current_period_start ?? s?.current_period_start)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invoiceSubId = (inv: any): string | undefined => {
       const sub = inv?.parent?.subscription_details?.subscription ?? inv?.subscription

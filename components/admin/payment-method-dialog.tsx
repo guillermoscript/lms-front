@@ -75,12 +75,18 @@ export function PaymentMethodDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="flex flex-col gap-2">
+        {/*
+          `min-w-0` is load-bearing: the dialog panel sizes to its content, and
+          Button carries `whitespace-nowrap`, so the bank-transfer description
+          would otherwise set a one-line intrinsic width and push every option
+          out past the panel's right edge.
+        */}
+        <div className="flex w-full min-w-0 flex-col gap-2">
           {providers.map((provider) => (
             <Button
               key={provider}
               variant="outline"
-              className="h-auto w-full justify-start gap-3 py-3"
+              className="h-auto w-full min-w-0 justify-start gap-3 whitespace-normal py-3 text-left"
               disabled={loading}
               onClick={() => onSelectProvider(provider)}
             >
@@ -89,19 +95,19 @@ export function PaymentMethodDialog({
               ) : (
                 <IconCreditCard aria-hidden className="size-5 shrink-0 text-primary" />
               )}
-              <span className="flex-1 text-left font-medium">{providerLabel(provider)}</span>
+              <span className="min-w-0 flex-1 text-left font-medium">{providerLabel(provider)}</span>
               {provider === activeProvider && <Badge variant="secondary">Current method</Badge>}
             </Button>
           ))}
 
           <Button
             variant="outline"
-            className="h-auto w-full justify-start gap-3 py-3"
+            className="h-auto w-full min-w-0 justify-start gap-3 whitespace-normal py-3 text-left"
             disabled={loading}
             onClick={onSelectManual}
           >
             <IconBuildingBank aria-hidden className="size-5 shrink-0 text-primary" />
-            <span className="flex-1 text-left">
+            <span className="min-w-0 flex-1 text-left">
               <span className="block font-medium">Bank transfer</span>
               <span className="block text-xs text-muted-foreground">
                 We send payment instructions and activate the plan once the transfer lands.
