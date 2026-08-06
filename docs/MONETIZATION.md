@@ -59,6 +59,37 @@ Yearly pricing: ~17% discount (e.g. Starter $90/year instead of $108).
 - **`tenants`** — Added: `stripe_customer_id`, `billing_email`, `billing_period_end`, `billing_status`
 - **`currency_type` enum** — Added: `mxn`, `cop`, `clp`, `pen`, `ars`, `brl`
 
+### Which rails a school can pay the platform with
+
+`supportsPlatformBillingCheckout` in `lib/payments/types.ts` decides, and a rail
+needs an active `platform_plan_prices` row before it appears in the payment-method
+dialog.
+
+| Rail | Shape | Who owns the period |
+|--|--|--|
+| Stripe | Checkout Session on the platform account | Stripe (renewal webhooks) |
+| Lemon Squeezy | Hosted page, Merchant of Record (remits VAT) | Lemon Squeezy |
+| PayPal | Hosted page — off until #479 proves it against real credentials | PayPal |
+| Binance Pay | Hosted C2B order, USDT-denominated (#610) | **Us** — one payment buys one period |
+| Solana | QR (Solana Pay transaction request), confirmed on chain (#610) | **Us** |
+
+The crypto rails have no native subscription: each payment buys one period, and
+`/api/cron/expire-platform-subscriptions` reminds, grace-windows and downgrades them
+exactly as it does a bank transfer. That is also why a second checkout on the SAME
+crypto rail is allowed — it is how a school renews — while a second checkout on
+Stripe is refused as a double subscription.
+
+Two rails stay out on purpose: `solana_subs` (auto-pull, but only the payer's wallet
+can revoke the delegation, so a school could not cancel from the billing page) and
+`binance_personal` (pays a *school's* own account; the payee here is the platform).
+They have no price rows, 404 on the webhook route, and are filtered out of the dialog
+by capability rather than by slug.
+
+Neither Binance Pay nor Solana has a product catalog, so their price rows carry
+`provider_price_id = NULL` and the row's own `amount` is what the school is charged
+(falling back to the plan's list price). Requiring an id there would only produce
+placeholders — the #602 failure mode.
+
 ### Key Distinction: Two Stripe Integrations
 
 | | School Billing (NEW) | Student Payments (EXISTING) |
@@ -90,7 +121,9 @@ All plan checks should go through this function, NOT hardcoded constants.
 |-------|--------|---------|
 | `/api/billing/checkout` | POST | Starts a hosted subscription checkout for a school plan, on whichever provider has an active `platform_plan_prices` row. Verifies admin role; supersedes a live subscription when the school switches provider. |
 | `/api/stripe/billing-portal` | POST | Creates Stripe Billing Portal session for managing subscription/invoices. Still Stripe-only — capability-gating it is #604. |
-| `/api/billing/webhook/[provider]` | POST | Platform-billing webhook for `stripe` / `lemonsqueezy` / `paypal`. Verify → `webhook_events` (idempotent) → normalize → `dispatchPlatformBillingEvent`. |
+| `/api/billing/webhook/[provider]` | POST | Platform-billing webhook for `stripe` / `lemonsqueezy` / `paypal` / `binance`. Verify → `webhook_events` (idempotent, namespaced `platform:<provider>`) → normalize → `dispatchPlatformBillingEvent`. A provider with no signed webhook (Solana, manual) is deliberately absent: the endpoint would be an unauthenticated way to activate a plan. |
+| `/api/billing/solana/tx` | GET/POST | Solana Pay transaction request for a platform plan (#610). Called by the WALLET, with no session — it loads the pending `platform_payment_requests` row by its unguessable `provider_reference` and returns a single transfer of the locked amount to `SOLANA_PLATFORM_WALLET`. |
+| `/api/billing/solana/verify` | POST | Polled by the QR page. Proves the transfer on chain, claims the signature into `provider_charge_id` (UNIQUE — one payment settles one request), then dispatches `subscription.activated` through the same dispatcher the webhooks use. |
 
 ### Server Actions (`app/actions/admin/billing.ts`)
 

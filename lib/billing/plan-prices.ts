@@ -51,19 +51,30 @@ export type PlanPriceProvider = (typeof PLAN_PRICE_PROVIDERS)[number]
  * school selling a course to a student, and only some rails fit it (#600):
  * Stripe for native subscriptions and dunning, Lemon Squeezy because
  * `isMerchantOfRecord` makes it the legal seller and it remits VAT for us, and
- * PayPal once #479 has run it against real credentials. Crypto rails stay
- * student-side — a subscription with proration and dunning is not what they
- * are for — and `manual` settles through `platform_payment_requests`, which
- * carries its own amount snapshot and needs no price id.
+ * PayPal once #479 has run it against real credentials.
+ *
+ * Binance Pay and Solana joined in #610. Neither renews itself — each payment
+ * buys one period and the expiry cron lapses it — but "no native recurring
+ * billing" is a weaker objection than it looks for the schools this platform
+ * sells to: a LATAM creator who holds USDT and no card could not pay us at all
+ * before, and a rail with no proration is still better than a rail with no
+ * payment. `solana_subs` stays out despite auto-pulling, because cancelling one
+ * needs the payer's own wallet signature — a subscription a school cannot stop
+ * from our billing page is not one to sell it.
+ *
+ * `manual` settles through `platform_payment_requests`, which carries its own
+ * amount snapshot and needs no price id.
  *
  * A narrower list than the CHECK on purpose: the action still accepts anything
- * the database accepts, so #603/#605 can write a provider this list has not
+ * the database accepts, so a later issue can write a provider this list has not
  * caught up with yet.
  */
 export const PLATFORM_BILLING_UI_PROVIDERS: readonly PlanPriceProvider[] = [
   'stripe',
   'lemonsqueezy',
   'paypal',
+  'binance',
+  'solana',
 ]
 
 /** Values of the `currency_type` Postgres enum, which `currency` is typed as. */
@@ -111,7 +122,8 @@ export interface PlatformPlanPriceInput {
   planId: string
   paymentProvider: string
   interval: string
-  providerPriceId: string
+  /** NULL on catalog-less rails (Binance Pay, Solana) — see the migration. */
+  providerPriceId: string | null
   currency: string
   amount: number | null
   isActive: boolean

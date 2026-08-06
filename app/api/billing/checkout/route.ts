@@ -26,6 +26,14 @@ import {
   getPlatformBillingProvider,
   resolveCheckoutProvider,
 } from '@/lib/billing/platform-billing'
+import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
+import { hasOpenPaymentRequest } from '@/lib/billing/payment-request-ttl'
+import {
+  getPlatformSolanaConfig,
+  quotePlatformSettlement,
+  recordSolanaPlatformRequest,
+  type PlatformSettlement,
+} from '@/lib/billing/solana-platform-payment'
 
 export const runtime = 'nodejs'
 
@@ -65,7 +73,7 @@ export async function POST(req: NextRequest) {
 
     const { data: plan, error: planError } = await adminClient
       .from('platform_plans')
-      .select('plan_id, slug, name')
+      .select('plan_id, slug, name, price_monthly, price_yearly')
       .eq('plan_id', planId)
       .eq('is_active', true)
       .single()
@@ -108,22 +116,80 @@ export async function POST(req: NextRequest) {
 
     const { provider, price } = resolved.value
 
-    // Changing plan on the SAME provider is an in-app subscription update
-    // (proration preview + swap), not a second checkout — starting one here
-    // would leave the school paying for two subscriptions at once.
-    if (liveSub && liveSub.payment_provider === provider) {
-      return NextResponse.json(
-        { error: 'You already have an active subscription on this payment method. Change your plan from the billing page instead.' },
-        { status: 400 },
-      )
-    }
-
     const capabilities = PROVIDER_CAPABILITIES[provider]
     if (!capabilities?.supportsPlatformBillingCheckout) {
       return NextResponse.json(
         { error: `${provider} cannot be used to pay for a platform plan.` },
         { status: 400 },
       )
+    }
+
+    // Changing plan on the SAME provider is an in-app subscription update
+    // (proration preview + swap), not a second checkout — starting one here
+    // would leave the school paying for two subscriptions at once.
+    //
+    // Only where the PROVIDER bills on a schedule, though (#610). On a rail
+    // whose period we own, a second checkout on the same rail is not a second
+    // subscription — it is how the school renews or moves plan at all, and
+    // refusing it would leave a Binance/Solana subscriber with no way to pay
+    // for their next month.
+    if (liveSub && liveSub.payment_provider === provider && capabilities.supportsNativeSubscriptions) {
+      return NextResponse.json(
+        { error: 'You already have an active subscription on this payment method. Change your plan from the billing page instead.' },
+        { status: 400 },
+      )
+    }
+
+    // Pre-flight the target plan's limits on rails we cannot refund in-app.
+    // A crypto transfer is final the moment it confirms, so "you are over the
+    // limits of the plan you just paid for" has to be said BEFORE the QR or the
+    // Binance page is shown — not at activation, the way a bank transfer's
+    // super-admin confirm can say it (`confirmManualPayment`).
+    if (capabilities.selfManagedPeriod) {
+      const limitCheck = await checkPlanLimits(adminClient, tenantId, { planId })
+      if (!limitCheck.ok) {
+        return NextResponse.json(
+          { error: formatPlanLimitError(limitCheck) || 'Plan limits exceeded' },
+          { status: 400 },
+        )
+      }
+    }
+
+    // What the school owes, in USD. The price row's own amount wins — a rail
+    // may be priced differently — and the plan's list price is the fallback for
+    // a catalog-less row that carries no amount of its own.
+    const listPrice = Number(interval === 'yearly' ? plan.price_yearly : plan.price_monthly) || 0
+    const amountUsd = price.amount ?? listPrice
+    if (!(amountUsd > 0)) {
+      console.error(`[billing/checkout] ${provider} price for ${plan.slug}/${interval} resolves to 0`)
+      return NextResponse.json({ error: 'This plan has no price to charge on that method.' }, { status: 400 })
+    }
+
+    // A crypto rail needs its intent recorded before the QR exists: the wallet
+    // hits `/api/billing/solana/tx` with no session, and the only thing tying
+    // that anonymous call to a school, a plan and an amount is this row.
+    // Guarded like the manual request it is — one open promise to pay at a time,
+    // or a school could hold a plan with a QR it never scans.
+    //
+    // Every reason to refuse is checked HERE, above the supersession below: that
+    // step cancels the school's live subscription, and refusing afterwards would
+    // leave it with neither the old plan nor the new one.
+    let solanaSettlement: PlatformSettlement | null = null
+    if (provider === 'solana') {
+      const config = getPlatformSolanaConfig()
+      if (!config) {
+        return NextResponse.json(
+          { error: 'Solana payments are not configured on this platform yet.' },
+          { status: 503 },
+        )
+      }
+      if (await hasOpenPaymentRequest(adminClient, tenantId)) {
+        return NextResponse.json(
+          { error: 'You already have a pending plan change request. Please wait for it to be processed.' },
+          { status: 400 },
+        )
+      }
+      solanaSettlement = await quotePlatformSettlement(amountUsd, config)
     }
 
     const paymentProvider = getPlatformBillingProvider(provider)
@@ -140,7 +206,12 @@ export async function POST(req: NextRequest) {
     // checkout starts a fresh paid period, and a lingering old subscription
     // would auto-renew into a double charge. Mirrors the student supersession
     // model from #463.
-    if (liveSub) {
+    //
+    // Only when the rail actually changes: a renewal on the SAME self-managed
+    // rail reaches this far (see the guard above), and cancelling the row the
+    // school is in the middle of paying to extend would take away the period it
+    // has already bought.
+    if (liveSub && liveSub.payment_provider !== provider) {
       const oldCaps = PROVIDER_CAPABILITIES[liveSub.payment_provider as PaymentProvider]
       if (oldCaps?.supportsNativeSubscriptions) {
         try {
@@ -226,11 +297,11 @@ export async function POST(req: NextRequest) {
     const session = await paymentProvider.createCheckoutSession({
       mode: 'subscription',
       hosted: true,
-      providerPriceId: price.providerPriceId,
+      providerPriceId: price.providerPriceId ?? '',
       // The provider charges what its own price row says; this is carried for
       // adapters that need an explicit amount (hosted pages that do not read it
-      // off the price object).
-      amount: price.amount ?? 0,
+      // off the price object, and every catalog-less rail).
+      amount: amountUsd,
       currency: price.currency,
       reference: `platform:${tenantId}:${plan.plan_id}`,
       providerCustomerId,
@@ -250,7 +321,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Could not start checkout' }, { status: 502 })
     }
 
-    return NextResponse.json({ url: session.url, provider })
+    // The QR's on-chain reference is minted by the provider, so the row is
+    // written now that we have it. A failure here must fail the request: a
+    // scannable QR with no row behind it is a payment nobody can credit.
+    if (solanaSettlement) {
+      if (!session.providerRef) {
+        console.error('[billing/checkout] solana session carried no on-chain reference')
+        return NextResponse.json({ error: 'Could not start checkout' }, { status: 502 })
+      }
+      const { requestId } = await recordSolanaPlatformRequest({
+        admin: adminClient,
+        tenantId,
+        userId: user.id,
+        planId: plan.plan_id,
+        amountUsd,
+        interval,
+        reference: session.providerRef,
+        settlement: solanaSettlement,
+      })
+      return NextResponse.json({ kind: session.kind, url: session.url, provider, requestId })
+    }
+
+    // `kind` is carried on every response so the client presents what it was
+    // actually given rather than assuming a redirect — the two shapes differ by
+    // more than a URL.
+    return NextResponse.json({ kind: session.kind, url: session.url, provider })
   } catch (error) {
     console.error('[billing/checkout] error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

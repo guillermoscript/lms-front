@@ -2363,6 +2363,24 @@
           "close": "Close",
           "success": "Plan updated",
           "error": "Failed to change plan"
+        },
+        "cryptoCheckout": {
+          "breadcrumb": "Crypto payment",
+          "title": "Pay with Solana",
+          "subtitle": "{plan}, billed {interval}.",
+          "monthly": "monthly",
+          "yearly": "yearly",
+          "scan": "Scan this code with a Solana wallet. Your plan activates as soon as the transfer confirms on chain.",
+          "qrAlt": "Solana Pay QR code",
+          "copyLink": "Copy payment link",
+          "copied": "Payment link copied",
+          "copyFailed": "Could not copy the payment link",
+          "waiting": "Waiting for the payment…",
+          "confirmed": "Payment confirmed — your plan is active",
+          "mismatch": "The transfer we found does not match the amount owed. Contact support before paying again.",
+          "expired": "This payment request has expired. Start the upgrade again to get a fresh one.",
+          "backToBilling": "Back to billing",
+          "usdEquivalent": "≈ ${amount} USD"
         }
       },
       "users": {

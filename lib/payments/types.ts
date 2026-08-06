@@ -232,7 +232,11 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
-    supportsPlatformBillingCheckout: false,
+    // Not a hosted page — the school scans a QR and the payment is proven
+    // on-chain by /api/billing/solana/verify (#610). The flag says the rail can
+    // carry a school→platform purchase, not that a redirect URL exists;
+    // `CheckoutSession.kind` is what tells the caller how to present it.
+    supportsPlatformBillingCheckout: true,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -281,7 +285,10 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: false,
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: true,
-    supportsPlatformBillingCheckout: false,     // student-side rail, not a SaaS subscription rail
+    // The same hosted C2B order, billed to the platform's own merchant account
+    // (#610). Correlation rides in `passThroughInfo`, not in `merchantTradeNo`,
+    // which is capped at 32 alphanumeric characters.
+    supportsPlatformBillingCheckout: true,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -345,6 +352,12 @@ export interface CreateCheckoutParams {
    * Exists because the same provider can offer both shapes: Stripe's student
    * checkout is a Connect PaymentIntent confirmed with Elements, while platform
    * billing needs a Checkout Session on our own account (#603).
+   *
+   * For a provider whose checkout is a QR rather than a page (Solana Pay), it
+   * carries the same meaning one level down: this is the school → platform
+   * loop, so the transaction-request link must point at that loop's endpoint
+   * (`/api/billing/solana/tx`, which pays the platform in full) and not at the
+   * student one (`/api/payments/solana/tx`, which splits with the school).
    */
   hosted?: boolean
   successUrl?: string

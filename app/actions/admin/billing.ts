@@ -9,6 +9,7 @@ import { PLAN_PRICE_PROVIDERS, type PlanPriceProvider } from '@/lib/billing/plan
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 import {
   OPEN_REQUEST_STATUSES,
+  hasOpenPaymentRequest,
   isRequestOpen,
   requestExpiresAt,
 } from '@/lib/billing/payment-request-ttl'
@@ -33,30 +34,6 @@ async function verifyAdminAccess() {
   }
 
   return { userId, tenantId, supabase }
-}
-
-/**
- * Is there an open (pending and not lapsed) platform payment request for this
- * tenant? One helper for both duplicate guards so a renewal can never be
- * created alongside a pending upgrade — the combination that used to disable
- * both guards permanently, because each returned `PGRST116 / data: null` from
- * `.single()` once two rows matched.
- */
-async function hasOpenPaymentRequest(
-  adminClient: Awaited<ReturnType<typeof createAdminClient>>,
-  tenantId: string,
-): Promise<boolean> {
-  const { data } = await adminClient
-    .from('platform_payment_requests')
-    .select('request_id, status, expires_at')
-    .eq('tenant_id', tenantId)
-    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  return ((data as { status: string; expires_at: string | null }[] | null) || []).some((r) =>
-    isRequestOpen(r)
-  )
 }
 
 /**

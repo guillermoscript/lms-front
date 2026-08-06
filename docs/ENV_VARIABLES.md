@@ -47,6 +47,9 @@ These power the school-to-platform subscription flow. Schools pay the platform f
 | Variable | Required | Description | Where to get it | Example |
 |----------|----------|-------------|-----------------|---------|
 | `STRIPE_PLATFORM_WEBHOOK_SECRET` | **Required** (if platform billing enabled) | Signing secret for the `/api/billing/webhook/stripe` endpoint. Handles `checkout.session.completed`, `customer.subscription.updated/deleted`, `invoice.payment_succeeded/failed`. | Stripe Dashboard > Developers > Webhooks > Select platform endpoint > Signing secret | `whsec_xyz789...` |
+| `BINANCE_PAY_API_KEY` / `BINANCE_PAY_API_SECRET` | Optional (required to take plan payments in USDT) | Merchant credentials for the Binance Pay platform-billing rail (#610). The webhook at `/api/billing/webhook/binance` verifies against Binance's published certificate, so it needs no signing secret of its own. | Binance Merchant dashboard | `xyz...` |
+| `SOLANA_PLATFORM_WALLET` | Optional (required to take plan payments on Solana) | The sole recipient of a school's platform-plan payment (#610) — no revenue split, the platform is the payee. Also the platform's fee wallet on the student loop. | Your own wallet | `7Np4...` (base58) |
+| `SOLANA_USDC_MINT` | Optional | Settle platform plans in USDC — a 1:1 USD stablecoin, so no price oracle is involved. Leave unset to settle in native SOL at the Pyth quote locked at checkout. | SPL mint address | `EPjF...` |
 
 > **Note:** `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are shared between both Stripe integrations (Connect and Billing). They come from the same Stripe account.
 

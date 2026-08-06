@@ -22,12 +22,35 @@ import type { PlanPriceInterval } from '@/lib/billing/plan-prices'
  *
  * Same reasoning as the student route's `SUPPORTED` list: a provider with no
  * signed webhook must never get an endpoint, because that endpoint would be an
- * unauthenticated way to activate a subscription. The list is narrower than the
- * student one — `binance` is a student-side rail and has no platform price
- * rows, and `manual` settles through `platform_payment_requests` under a
- * super-admin's eye, not through a webhook.
+ * unauthenticated way to activate a subscription. That is why `solana` is
+ * absent even though it now takes platform payments (#610) — it has no signed
+ * webhook at all, and its confirmation runs through `/api/billing/solana/verify`,
+ * where authenticity comes from the chain. `manual` settles through
+ * `platform_payment_requests` under a super-admin's eye, for the same reason.
  */
-export const PLATFORM_WEBHOOK_PROVIDERS: PaymentProvider[] = ['stripe', 'lemonsqueezy', 'paypal']
+export const PLATFORM_WEBHOOK_PROVIDERS: PaymentProvider[] = [
+  'stripe',
+  'lemonsqueezy',
+  'paypal',
+  'binance',
+]
+
+/**
+ * Providers whose platform-billing period WE own: nothing renews them, so the
+ * expiry cron reminds, grace-windows and downgrades them (#610).
+ *
+ * Derived from the capability rather than listed, because the two ways of
+ * saying it drift: platform billing shipped with `payment_provider = 'manual'`
+ * hardcoded in all four cron phases, so the first non-manual self-managed rail
+ * would have produced subscriptions that never expired and never reminded.
+ *
+ * `solana_subs` is deliberately NOT here despite having no provider webhook —
+ * its crank cron renews it, and cron-expiring a row the crank is still charging
+ * would cut a paying school off.
+ */
+export const PLATFORM_SELF_MANAGED_PROVIDERS: PaymentProvider[] = (
+  Object.keys(PROVIDER_CAPABILITIES) as PaymentProvider[]
+).filter((slug) => PROVIDER_CAPABILITIES[slug].selfManagedPeriod)
 
 /**
  * `webhook_events.provider` namespace for a platform-billing delivery.
@@ -69,7 +92,8 @@ export function getPlatformBillingProvider(provider: PaymentProvider): IPaymentP
 export interface PlatformPriceRow {
   paymentProvider: string
   interval: PlanPriceInterval
-  providerPriceId: string
+  /** NULL on catalog-less rails; the charge comes from `amount` instead. */
+  providerPriceId: string | null
   currency: string
   amount: number | null
 }
@@ -88,7 +112,7 @@ export async function getActivePlanPrices(
   return (data ?? []).map((row) => ({
     paymentProvider: row.payment_provider as string,
     interval: row.interval as PlanPriceInterval,
-    providerPriceId: row.provider_price_id as string,
+    providerPriceId: (row.provider_price_id as string | null) ?? null,
     currency: row.currency as string,
     amount: row.amount === null ? null : Number(row.amount),
   }))

@@ -113,7 +113,13 @@ export function UpgradePageClient({
         body: JSON.stringify({ planId, interval, provider, locale }),
       })
       const data = await response.json()
-      if (data.url) {
+      // Not every rail is a redirect (#610). A Solana checkout hands back a
+      // `solana:` transaction-request URL, which is a QR to be scanned and
+      // polled, not an address a desktop browser can navigate to — sending the
+      // admin there would dead-end them on an unhandled protocol.
+      if (data.kind === 'qr' && data.requestId) {
+        router.push(`/${locale}/dashboard/admin/billing/checkout/${data.requestId}`)
+      } else if (data.url) {
         window.location.href = data.url
       } else {
         toast.error(data.error || t('checkoutError'))

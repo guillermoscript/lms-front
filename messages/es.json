@@ -2363,6 +2363,24 @@
           "close": "Cerrar",
           "success": "Plan actualizado",
           "error": "Error al cambiar de plan"
+        },
+        "cryptoCheckout": {
+          "breadcrumb": "Pago cripto",
+          "title": "Paga con Solana",
+          "subtitle": "{plan}, facturado {interval}.",
+          "monthly": "mensualmente",
+          "yearly": "anualmente",
+          "scan": "Escanea este código con una billetera Solana. Tu plan se activa en cuanto la transferencia se confirme en la cadena.",
+          "qrAlt": "Código QR de Solana Pay",
+          "copyLink": "Copiar enlace de pago",
+          "copied": "Enlace de pago copiado",
+          "copyFailed": "No se pudo copiar el enlace de pago",
+          "waiting": "Esperando el pago…",
+          "confirmed": "Pago confirmado: tu plan está activo",
+          "mismatch": "La transferencia encontrada no coincide con el monto adeudado. Contacta a soporte antes de volver a pagar.",
+          "expired": "Esta solicitud de pago venció. Inicia la mejora de nuevo para obtener una nueva.",
+          "backToBilling": "Volver a facturación",
+          "usdEquivalent": "≈ ${amount} USD"
         }
       },
       "users": {
