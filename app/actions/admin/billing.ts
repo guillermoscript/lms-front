@@ -686,9 +686,16 @@ export async function cancelSubscription() {
     // Cancel at the provider first (at period end), so a failure leaves both
     // sides still renewing rather than us showing a cancellation the provider
     // never scheduled.
-    if (providerClient.cancelSubscription) {
-      await providerClient.cancelSubscription(subscription.provider_subscription_id!, false)
+    //
+    // A missing method here is a contract violation, not a rail without the
+    // concept: `selfManagedPeriod: false` says this provider drives the period,
+    // so skipping the call and writing the mirror anyway would report a
+    // cancellation while the provider kept billing — the same DB-only cancel
+    // this issue set out to remove. Fail loudly, as changePlan does.
+    if (!providerClient.cancelSubscription) {
+      throw new Error(`${provider} drives its own billing period but implements no cancelSubscription`)
     }
+    await providerClient.cancelSubscription(subscription.provider_subscription_id!, false)
   }
 
   // Mirror locally so the overview reflects the pending cancellation
@@ -756,10 +763,14 @@ export async function reactivateSubscription() {
   if (capabilities && !capabilities.selfManagedPeriod && subscription.provider_subscription_id) {
     const providerClient = getPaymentProvider(provider)
     // The provider is authoritative — clear it there first so a failure leaves
-    // both sides still cancelling rather than disagreeing.
-    if (providerClient.reactivateSubscription) {
-      await providerClient.reactivateSubscription(subscription.provider_subscription_id)
+    // both sides still cancelling rather than disagreeing. As in the cancel
+    // path, a missing method must throw: a DB-only "reactivate" is the worse
+    // direction of the same bug, since the school is told it is safe while the
+    // provider is still set to stop billing and the plan lapses anyway.
+    if (!providerClient.reactivateSubscription) {
+      throw new Error(`${provider} drives its own billing period but implements no reactivateSubscription`)
     }
+    await providerClient.reactivateSubscription(subscription.provider_subscription_id)
   }
 
   await adminClient

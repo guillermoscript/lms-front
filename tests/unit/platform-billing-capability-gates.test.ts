@@ -38,6 +38,7 @@ const state: {
   tenant: { plan: string; billing_status: string } | null
   updates: { table: string; values: Record<string, unknown> }[]
   providerCalls: string[]
+  omitMethods: string[]
   updateSub: ReturnType<typeof vi.fn>
   cancelSub: ReturnType<typeof vi.fn>
   reactivateSub: ReturnType<typeof vi.fn>
@@ -50,6 +51,7 @@ const state: {
   tenant: null,
   updates: [],
   providerCalls: [],
+  omitMethods: [],
   updateSub: vi.fn(),
   cancelSub: vi.fn(),
   reactivateSub: vi.fn(),
@@ -131,12 +133,16 @@ vi.mock('@/lib/payments', async (importActual) => {
     ...actual,
     getPaymentProvider: (slug: string) => {
       state.providerCalls.push(slug)
-      return {
+      const client: Record<string, unknown> = {
         updateSubscription: state.updateSub,
         cancelSubscription: state.cancelSub,
         reactivateSubscription: state.reactivateSub,
         previewSubscriptionChange: state.previewChange,
       }
+      // Model a provider class that declares the capability but ships no
+      // implementation — PayPal is exactly this today for `reactivateSubscription`.
+      for (const name of state.omitMethods) delete client[name]
+      return client
     },
   }
 })
@@ -158,6 +164,7 @@ beforeEach(() => {
   state.tenant = { plan: 'pro', billing_status: 'active' }
   state.updates = []
   state.providerCalls = []
+  state.omitMethods = []
   state.updateSub = vi.fn().mockResolvedValue({ id: 's', status: 'active', currentPeriodEnd: new Date(), cancelAtPeriodEnd: false })
   state.cancelSub = vi.fn().mockResolvedValue(undefined)
   state.reactivateSub = vi.fn().mockResolvedValue(undefined)
@@ -298,6 +305,19 @@ describe('cancelSubscription — provider call only where there is one to make',
     await expect(cancelSubscription()).rejects.toThrow(/stripe error/)
     expect(state.updates).toHaveLength(0)
   })
+
+  it('refuses to record a DB-only cancel when the rail implements no cancel', async () => {
+    // The gate here is `selfManagedPeriod`, not a per-method capability, so a
+    // provider that drives the period but ships no `cancelSubscription` must
+    // fail loudly. Skipping the call and writing the mirror anyway is the exact
+    // DB-only cancellation this issue removed — the school would read
+    // "cancelling at period end" while the provider kept charging.
+    state.sub = { payment_provider: 'stripe', provider_subscription_id: 'sub_1', status: 'active' }
+    state.omitMethods = ['cancelSubscription']
+
+    await expect(cancelSubscription()).rejects.toThrow(/implements no cancelSubscription/i)
+    expect(state.updates).toHaveLength(0)
+  })
 })
 
 describe('reactivateSubscription — clears both flags together', () => {
@@ -337,6 +357,25 @@ describe('reactivateSubscription — clears both flags together', () => {
       cancel_at_period_end: false,
       canceled_at: null,
     })
+  })
+
+  it('refuses a DB-only reactivate when the rail implements no reactivate', async () => {
+    // The worse direction of the same bug: the school is told its subscription
+    // is safe while the provider is still set to stop billing, so the plan
+    // lapses at period end anyway. PayPal is this provider today (it ships
+    // `cancelSubscription` but not its inverse) — unreachable only because its
+    // `supportsPlatformBillingCheckout` is still false.
+    state.sub = {
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: true,
+      current_period_end: future,
+    }
+    state.omitMethods = ['reactivateSubscription']
+
+    await expect(reactivateSubscription()).rejects.toThrow(/implements no reactivateSubscription/i)
+    expect(state.updates).toHaveLength(0)
   })
 
   it('refuses to revive a lapsed period', async () => {
