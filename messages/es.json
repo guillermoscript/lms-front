@@ -2338,7 +2338,8 @@
           "recheckCleared": "Acceso restaurado: tu escuela vuelve a estar dentro de los límites de su plan.",
           "recheckStillOverLimit": "Todavía superas el límite del plan. Reduce el uso o mejora tu plan para restaurar el acceso.",
           "recheckNoCutoff": "Límites comprobados: no hay ninguna restricción de acceso programada.",
-          "recheckError": "No se pudieron comprobar los límites"
+          "recheckError": "No se pudieron comprobar los límites",
+          "portalUnavailable": "No pudimos abrir el portal de facturación para este método de pago."
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",
@@ -2351,6 +2352,9 @@
           "previewIntro": "Revisa el prorrateo antes de confirmar. Se cobrará automáticamente a tu tarjeta registrada.",
           "loadingPreview": "Calculando prorrateo…",
           "previewUnavailable": "No pudimos cargar una vista previa del precio, pero aún puedes cambiar: tu próxima factura reflejará el cambio.",
+          "previewIntroNoProration": "Revisa el cambio antes de confirmar. Tu proveedor de pago liquida cualquier diferencia según sus propias condiciones.",
+          "noProration": "El cambio se aplica de inmediato. Tu proveedor de pago no calcula un importe a mitad del período, así que aquí no se muestra ningún prorrateo.",
+          "noProrationWithDate": "El cambio se aplica de inmediato y tu plan se renueva el {date}. Tu proveedor de pago no calcula un importe a mitad del período, así que aquí no se muestra ningún prorrateo.",
           "prorationDueNow": "Prorrateo en tu próxima factura",
           "prorationCredit": "Crédito en tu próxima factura",
           "nextInvoiceTotal": "Total de la próxima factura",

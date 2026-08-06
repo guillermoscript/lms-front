@@ -85,6 +85,8 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // no session URL we can mint for a school admin
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
   }

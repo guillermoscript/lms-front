@@ -31,6 +31,8 @@ export class ManualPaymentProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // bank transfer — nothing hosted to manage
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
   }

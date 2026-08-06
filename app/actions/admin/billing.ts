@@ -7,6 +7,8 @@ import { checkPlanLimits, countTenantUsage, formatPlanLimitError } from '@/lib/b
 import { classifyPlanChange } from '@/lib/billing/plan-change'
 import { PLAN_PRICE_PROVIDERS, type PlanPriceProvider } from '@/lib/billing/plan-prices'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
+import { getPaymentProvider } from '@/lib/payments'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import {
   OPEN_REQUEST_STATUSES,
   hasOpenPaymentRequest,
@@ -60,18 +62,34 @@ export async function getSubscriptionStatus() {
       .eq('tenant_id', tenantId)
       .single(),
     // The customer id now lives per-provider in tenant_billing_customers (#601).
+    // Read every provider's row rather than Stripe's: which one matters depends
+    // on the subscription's own provider, which is resolved below (#604).
     adminClient
       .from('tenant_billing_customers')
-      .select('provider_customer_id')
-      .eq('tenant_id', tenantId)
-      .eq('payment_provider', 'stripe')
-      .maybeSingle(),
+      .select('provider_customer_id, payment_provider')
+      .eq('tenant_id', tenantId),
     countTenantUsage(adminClient, tenantId),
   ])
 
   const tenant = tenantResult.data
   const subscription = subscriptionResult.data
   const planSlug = tenant?.plan || 'free'
+
+  // Whether to offer a "manage billing" button is a provider ABILITY, not a
+  // question of whether a Stripe customer row happens to exist (#604). A school
+  // on a provider with no hosted portal must not be shown a button that opens
+  // nothing — the in-app cancel / reactivate / change-plan controls are its
+  // management surface instead.
+  const subscriptionProvider = subscription?.payment_provider as PaymentProvider | undefined
+  const canUseCustomerPortal =
+    !!subscriptionProvider &&
+    !!PROVIDER_CAPABILITIES[subscriptionProvider]?.supportsCustomerPortal &&
+    !!(
+      subscription?.provider_customer_id ||
+      (billingCustomerResult.data ?? []).find(
+        (c) => c.payment_provider === subscriptionProvider && c.provider_customer_id
+      )
+    )
 
   // Get plan details
   const { data: planDetails } = await adminClient
@@ -92,7 +110,7 @@ export async function getSubscriptionStatus() {
     billingStatus: tenant?.billing_status || 'free',
     billingPeriodEnd: tenant?.billing_period_end,
     billingEmail: tenant?.billing_email,
-    hasStripeCustomer: !!billingCustomerResult.data?.provider_customer_id,
+    canUseCustomerPortal,
     accessCutoffAt: tenant?.access_cutoff_at ?? null,
     subscription: subscription ? {
       status: subscription.status,
@@ -412,10 +430,15 @@ export async function confirmManualPayment(requestId: string) {
 }
 
 /**
- * Load the pieces needed to modify an active Stripe platform subscription: the
- * live Stripe subscription item + the target plan's Stripe price. Throws a
- * friendly Error for every non-actionable state (no active sub, manual sub,
- * free target, unconfigured price, unreadable Stripe subscription).
+ * Load the pieces needed to modify an active platform subscription: the
+ * provider it is billed through, its capabilities, and the target plan's price
+ * on THAT provider. Throws a friendly Error for every non-actionable state (no
+ * active sub, a provider with no in-place swap, free target, unconfigured
+ * price).
+ *
+ * Deliberately no SDK here (#604): the caller drives the provider through
+ * `IPaymentProvider`, so this stays the same shape for Stripe, Lemon Squeezy
+ * and anything added later.
  */
 async function resolvePlatformPlanChange(
   adminClient: Awaited<ReturnType<typeof createAdminClient>>,
@@ -425,15 +448,24 @@ async function resolvePlatformPlanChange(
 ) {
   const { data: sub } = await adminClient
     .from('platform_subscriptions')
-    .select('provider_subscription_id, provider_customer_id, payment_provider, status')
+    .select('provider_subscription_id, provider_customer_id, payment_provider, status, current_period_end')
     .eq('tenant_id', tenantId)
     .single()
 
   if (!sub || sub.status !== 'active') {
     throw new Error('No active subscription to change')
   }
-  if (sub.payment_provider !== 'stripe' || !sub.provider_subscription_id) {
-    throw new Error('In-app plan change is only available for Stripe subscriptions.')
+
+  const provider = sub.payment_provider as PaymentProvider
+  const capabilities = PROVIDER_CAPABILITIES[provider]
+  // Branch on the ABILITY to swap a live subscription in place, never on which
+  // provider it happens to be (#604). Providers without one are not broken —
+  // they change plan by starting a new checkout, which is where the upgrade
+  // page already sends them.
+  if (!capabilities?.supportsPlanChange || !sub.provider_subscription_id) {
+    throw new Error(
+      'Changing plan in place is not available for this payment method. Choose a payment method on the upgrade page to switch plans.'
+    )
   }
 
   const { data: plan } = await adminClient
@@ -453,46 +485,46 @@ async function resolvePlatformPlanChange(
     .from('platform_plan_prices')
     .select('provider_price_id')
     .eq('plan_id', planId)
-    .eq('payment_provider', 'stripe')
+    .eq('payment_provider', provider)
     .eq('interval', interval)
     .eq('is_active', true)
     .maybeSingle()
 
   const targetPriceId = price?.provider_price_id
   if (!targetPriceId) {
-    throw new Error('Stripe price is not configured for this plan. Please contact support.')
-  }
-
-  const { getStripe } = await import('@/lib/stripe')
-  const stripe = getStripe()
-  const stripeSub = await stripe.subscriptions.retrieve(sub.provider_subscription_id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const item = (stripeSub as any).items?.data?.[0]
-  if (!item?.id) {
-    throw new Error('Could not read the current subscription from Stripe.')
+    throw new Error('A price is not configured for this plan on your payment method. Please contact support.')
   }
 
   return {
-    stripe,
+    provider,
+    capabilities,
     subId: sub.provider_subscription_id as string,
-    itemId: item.id as string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    customerId: (sub.provider_customer_id as string) || ((stripeSub as any).customer as string),
+    customerId: (sub.provider_customer_id as string) || undefined,
+    currentPeriodEnd: (sub.current_period_end as string | null) ?? null,
     targetPriceId: targetPriceId as string,
     plan,
   }
 }
 
 /**
- * Preview an in-app plan change for an active Stripe subscriber. Returns the
- * blocking limit violations (computed before any Stripe call) OR a Stripe
- * proration preview so the admin sees the credit/charge before confirming.
+ * Preview an in-app plan change for an active subscriber. Returns the blocking
+ * limit violations (computed before any provider call) OR a proration quote so
+ * the admin sees the credit/charge before confirming.
+ *
+ * Three distinct outcomes, because conflating them misleads the admin (#604):
+ *  - `proration` set        → a real quote from the provider.
+ *  - `noProration` set      → the provider cannot quote mid-period changes
+ *                             (`supportsProrationPreview: false`). The change
+ *                             is still valid; we say so honestly with the date
+ *                             it takes effect rather than inventing a number.
+ *  - both null              → the provider CAN quote but the call failed.
+ *                             Best-effort: let the change proceed unquoted.
  */
 export async function previewPlanChange(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
   const { tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
-  // Pre-flight limit check BEFORE any Stripe call.
+  // Pre-flight limit check BEFORE any provider call.
   const limitCheck = await checkPlanLimits(adminClient, tenantId, { planId })
   if (!limitCheck.ok) {
     return { ok: false as const, violations: limitCheck.violations, planName: limitCheck.planName }
@@ -500,30 +532,30 @@ export async function previewPlanChange(planId: string, interval: 'monthly' | 'y
 
   const ctx = await resolvePlatformPlanChange(adminClient, tenantId, planId, interval)
 
-  try {
-    const preview = await ctx.stripe.invoices.createPreview({
-      customer: ctx.customerId,
-      subscription: ctx.subId,
-      subscription_details: {
-        items: [{ id: ctx.itemId, price: ctx.targetPriceId }],
-        proration_behavior: 'create_prorations',
-      },
-    })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p = preview as any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const lines = (p.lines?.data || []) as any[]
-    const prorationAmount = lines
-      .filter((l) => l?.parent?.subscription_item_details?.proration)
-      .reduce((sum, l) => sum + (l.amount ?? 0), 0)
+  if (!ctx.capabilities.supportsProrationPreview) {
     return {
       ok: true as const,
-      proration: {
-        prorationAmount: prorationAmount / 100,
-        total: (p.amount_due ?? p.total ?? 0) / 100,
-        currency: (p.currency || 'usd').toUpperCase(),
+      proration: null,
+      noProration: {
+        effectiveAt: ctx.currentPeriodEnd,
         planName: ctx.plan.name,
       },
+    }
+  }
+
+  try {
+    const provider = getPaymentProvider(ctx.provider)
+    if (!provider.previewSubscriptionChange) {
+      throw new Error(`${ctx.provider} declares supportsProrationPreview but implements no preview`)
+    }
+    const preview = await provider.previewSubscriptionChange(ctx.subId, {
+      newProviderPriceId: ctx.targetPriceId,
+      providerCustomerId: ctx.customerId,
+      prorationBehavior: 'create_prorations',
+    })
+    return {
+      ok: true as const,
+      proration: { ...preview, planName: ctx.plan.name },
     }
   } catch (err) {
     console.error('Failed to preview plan change:', err)
@@ -534,19 +566,21 @@ export async function previewPlanChange(planId: string, interval: 'monthly' | 'y
 
 /**
  * Apply an in-app plan change (upgrade / downgrade / interval switch) for an
- * active Stripe subscriber, replacing the old "use the Stripe portal" punt.
+ * active subscriber on a provider that can swap the plan in place, replacing
+ * the old "use the Stripe portal" punt.
  *
- * Order matters: the pre-flight limit check and the Stripe update run BEFORE any
- * DB write, so an over-limit downgrade is blocked with actionable messaging and
- * our plan state only ever moves after Stripe confirms (the #461 invariant —
- * Stripe price and DB plan may never disagree). The subsequent optimistic DB
- * mirror lets the webhook echo (applyPortalPlanChange) hit its no-op guard.
+ * Order matters: the pre-flight limit check and the provider update run BEFORE
+ * any DB write, so an over-limit downgrade is blocked with actionable messaging
+ * and our plan state only ever moves after the provider confirms (the #461
+ * invariant — the provider's price and our DB plan may never disagree). The
+ * subsequent optimistic DB mirror lets the webhook echo (applyPortalPlanChange)
+ * hit its no-op guard.
  */
 export async function changePlan(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
   const { tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
-  // Pre-flight limit check BEFORE touching Stripe.
+  // Pre-flight limit check BEFORE touching the provider.
   const limitCheck = await checkPlanLimits(adminClient, tenantId, { planId })
   if (!limitCheck.ok) {
     throw new Error(formatPlanLimitError(limitCheck) || 'Plan limits exceeded')
@@ -554,16 +588,21 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
 
   const ctx = await resolvePlatformPlanChange(adminClient, tenantId, planId, interval)
 
-  // 1) Update Stripe first — swap the subscription item's price, prorate, and
-  //    keep tenant/plan metadata current so the webhook reconciles correctly.
-  await ctx.stripe.subscriptions.update(ctx.subId, {
-    items: [{ id: ctx.itemId, price: ctx.targetPriceId }],
-    proration_behavior: 'create_prorations',
+  // 1) Update the provider first — swap the subscription's price in place,
+  //    prorate, and keep tenant/plan metadata current so the webhook
+  //    reconciles correctly.
+  const provider = getPaymentProvider(ctx.provider)
+  if (!provider.updateSubscription) {
+    throw new Error(`${ctx.provider} declares supportsPlanChange but implements no updateSubscription`)
+  }
+  await provider.updateSubscription(ctx.subId, {
+    newProviderPriceId: ctx.targetPriceId,
+    prorationBehavior: 'create_prorations',
     // Paying for a different plan un-cancels (#546 §1). `resolvePlatformPlanChange`
     // accepts a still-`active` subscription, which a cancel-at-period-end sub is
     // right up to its last day — without this the school changes plan, is billed,
     // and is still dropped to free at period end.
-    cancel_at_period_end: false,
+    cancelAtPeriodEnd: false,
     metadata: {
       tenant_id: tenantId,
       plan_id: ctx.plan.plan_id,
@@ -632,34 +671,41 @@ export async function cancelSubscription() {
     throw new Error('No active subscription to cancel')
   }
 
-  if (subscription.payment_provider === 'stripe' && subscription.provider_subscription_id) {
-    // Cancel via Stripe (at period end).
-    const { getStripe } = await import('@/lib/stripe')
-    await getStripe().subscriptions.update(subscription.provider_subscription_id, {
-      cancel_at_period_end: true,
-    })
-    // Mirror locally so the overview reflects the pending cancellation
-    // immediately; the customer.subscription.updated webhook confirms it with
-    // Stripe's authoritative values.
-    await adminClient
-      .from('platform_subscriptions')
-      .update({
-        cancel_at_period_end: true,
-        canceled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('tenant_id', tenantId)
-  } else {
-    // Manual subscription — just mark for cancellation.
-    await adminClient
-      .from('platform_subscriptions')
-      .update({
-        cancel_at_period_end: true,
-        canceled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('tenant_id', tenantId)
+  // Only a provider that drives the billing period itself has anything to be
+  // told (#604). For a `selfManagedPeriod` rail — bank transfer, one-time
+  // crypto — cancelling means "do not extend at period end", which is purely
+  // our own state; there is no provider call to make and inventing one would
+  // fail against a provider that has no subscription object at all.
+  const provider = subscription.payment_provider as PaymentProvider
+  const capabilities = PROVIDER_CAPABILITIES[provider]
+  const cancelsAtProvider =
+    !!capabilities && !capabilities.selfManagedPeriod && !!subscription.provider_subscription_id
+
+  if (cancelsAtProvider) {
+    const providerClient = getPaymentProvider(provider)
+    // Cancel at the provider first (at period end), so a failure leaves both
+    // sides still renewing rather than us showing a cancellation the provider
+    // never scheduled.
+    if (providerClient.cancelSubscription) {
+      await providerClient.cancelSubscription(subscription.provider_subscription_id!, false)
+    }
   }
+
+  // Mirror locally so the overview reflects the pending cancellation
+  // immediately. `cancel_at_period_end` is the ONLY signal that a cancel is
+  // scheduled (#545) and `canceled_at` is informational — they are always
+  // written together, and reactivate clears both together. For a provider that
+  // emits renewal webhooks, its own event later confirms this with the
+  // provider's authoritative values.
+  const canceledAt = new Date().toISOString()
+  await adminClient
+    .from('platform_subscriptions')
+    .update({
+      cancel_at_period_end: true,
+      canceled_at: canceledAt,
+      updated_at: canceledAt,
+    })
+    .eq('tenant_id', tenantId)
 
   revalidatePath('/dashboard/admin/billing')
   return { success: true }
@@ -702,13 +748,18 @@ export async function reactivateSubscription() {
     throw new Error('Your billing period has already ended. Please start a new plan instead.')
   }
 
-  if (subscription.payment_provider === 'stripe' && subscription.provider_subscription_id) {
-    // Stripe is authoritative for Stripe subs — clear it there first so a
-    // failure leaves both sides still cancelling rather than disagreeing.
-    const { getStripe } = await import('@/lib/stripe')
-    await getStripe().subscriptions.update(subscription.provider_subscription_id, {
-      cancel_at_period_end: false,
-    })
+  // Mirror of the cancel path (#604): a provider that scheduled the cancel on
+  // its own side must clear it, or a DB-only "reactivate" would leave the
+  // provider still set to cancel and the subscription would lapse anyway.
+  const provider = subscription.payment_provider as PaymentProvider
+  const capabilities = PROVIDER_CAPABILITIES[provider]
+  if (capabilities && !capabilities.selfManagedPeriod && subscription.provider_subscription_id) {
+    const providerClient = getPaymentProvider(provider)
+    // The provider is authoritative — clear it there first so a failure leaves
+    // both sides still cancelling rather than disagreeing.
+    if (providerClient.reactivateSubscription) {
+      await providerClient.reactivateSubscription(subscription.provider_subscription_id)
+    }
   }
 
   await adminClient

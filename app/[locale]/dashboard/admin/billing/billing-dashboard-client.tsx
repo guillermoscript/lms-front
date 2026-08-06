@@ -34,7 +34,7 @@ interface BillingDashboardClientProps {
     billingStatus: string
     billingPeriodEnd: string | null
     billingEmail: string | null
-    hasStripeCustomer: boolean
+    canUseCustomerPortal: boolean
     subscription: {
       status: string
       paymentProvider: string
@@ -104,7 +104,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const handleManageBilling = async () => {
     setPortalLoading(true)
     try {
-      const response = await fetch('/api/stripe/billing-portal', {
+      const response = await fetch('/api/billing/portal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale }),
@@ -112,9 +112,14 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
       const data = await response.json()
       if (data.url) {
         window.location.href = data.url
+      } else {
+        // The button is capability-gated, so landing here means the provider
+        // has no portal after all — say so instead of leaving a dead click.
+        toast.error(data.error || t('portalUnavailable'))
       }
     } catch (error) {
       console.error('Failed to open billing portal:', error)
+      toast.error(t('portalUnavailable'))
     } finally {
       setPortalLoading(false)
     }
@@ -217,7 +222,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         usage={status.usage}
         transactionFeePercent={status.transactionFeePercent}
         accessCutoffAt={status.accessCutoffAt}
-        onManageClick={status.hasStripeCustomer ? handleManageBilling : undefined}
+        onManageClick={status.canUseCustomerPortal ? handleManageBilling : undefined}
         onCancelClick={() => setCancelOpen(true)}
         onReactivateClick={handleReactivate}
         reactivateLoading={reactivateLoading}
@@ -337,7 +342,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
       )}
 
       {/* Quick links */}
-      {status.hasStripeCustomer && (
+      {status.canUseCustomerPortal && (
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={handleManageBilling} disabled={portalLoading}>
             <IconExternalLink className="mr-2 h-4 w-4" />

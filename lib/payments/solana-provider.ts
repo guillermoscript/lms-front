@@ -56,6 +56,8 @@ export class SolanaProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // no hosted account page — the school manages the plan in-app
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false,
   }

@@ -100,6 +100,8 @@ export class BinancePersonalProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // personal Pay account — no merchant portal at all
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
   }

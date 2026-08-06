@@ -171,6 +171,8 @@ export class BinancePayProvider implements IPaymentProvider {
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // Binance Pay has no subscription-management page for us to open
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
   }

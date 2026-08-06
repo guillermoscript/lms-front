@@ -22,6 +22,9 @@ import {
   Currency,
   EnsureCustomerParams,
   SubscriptionLifecycleStatus,
+  PreviewSubscriptionChangeParams,
+  ProrationPreview,
+  CustomerPortalSessionParams,
 } from './types'
 import { SUBSCRIPTION_LIFECYCLE_STATUSES } from './types'
 
@@ -40,6 +43,8 @@ export class StripePaymentProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: true,
+    supportsCustomerPortal: true, // billingPortal.sessions.create
+    supportsProrationPreview: true, // invoices.createPreview
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false,
   }
@@ -338,12 +343,92 @@ export class StripePaymentProvider implements IPaymentProvider {
       const updated = await this.stripe.subscriptions.update(providerSubId, {
         items: [{ id: itemId, price: params.newProviderPriceId }],
         proration_behavior: params.prorationBehavior ?? 'create_prorations',
+        ...(params.cancelAtPeriodEnd === undefined
+          ? {}
+          : { cancel_at_period_end: params.cancelAtPeriodEnd }),
         ...(params.metadata ? { metadata: params.metadata } : {}),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
       return this.mapSubscription(updated)
     } catch (error) {
       throw new Error(`Stripe updateSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Quote what a plan change would cost mid-period, without committing to it.
+   *
+   * `invoices.createPreview` renders the invoice Stripe WOULD issue for the
+   * swap; the proration slice is the sum of the lines Stripe marks as
+   * prorations, and `amount_due` is what the next invoice comes to. Both are
+   * returned in MAJOR units, so no caller has to know Stripe talks in cents.
+   *
+   * Read-only: it creates nothing on Stripe's side, so a failure here is safe
+   * to swallow and proceed without a quote.
+   */
+  async previewSubscriptionChange(
+    providerSubId: string,
+    params: PreviewSubscriptionChangeParams,
+  ): Promise<ProrationPreview> {
+    try {
+      const current = await this.stripe.subscriptions.retrieve(providerSubId)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const currentAny = current as any
+      const itemId = currentAny.items?.data?.[0]?.id as string | undefined
+      if (!itemId) {
+        throw new Error(`subscription ${providerSubId} has no billable item to quote`)
+      }
+      const customer =
+        params.providerCustomerId || (currentAny.customer as string | undefined)
+      if (!customer) {
+        throw new Error(`subscription ${providerSubId} has no customer to quote against`)
+      }
+
+      const preview = await this.stripe.invoices.createPreview({
+        customer,
+        subscription: providerSubId,
+        subscription_details: {
+          items: [{ id: itemId, price: params.newProviderPriceId }],
+          proration_behavior: params.prorationBehavior ?? 'create_prorations',
+        },
+      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const p = preview as any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const lines = (p.lines?.data || []) as any[]
+      const prorationAmount = lines
+        .filter((l) => l?.parent?.subscription_item_details?.proration)
+        .reduce((sum, l) => sum + (l.amount ?? 0), 0)
+
+      return {
+        prorationAmount: prorationAmount / 100,
+        total: (p.amount_due ?? p.total ?? 0) / 100,
+        currency: (p.currency || 'usd').toUpperCase(),
+      }
+    } catch (error) {
+      throw new Error(`Stripe previewSubscriptionChange failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Mint a session URL for Stripe's hosted billing portal, where a school admin
+   * can update its card, read invoices and manage the subscription itself.
+   *
+   * The only provider we integrate that has such a page (hence
+   * `supportsCustomerPortal`) — everything else is managed by the in-app
+   * controls on the billing screen.
+   */
+  async createCustomerPortalSession(
+    params: CustomerPortalSessionParams,
+  ): Promise<{ url: string }> {
+    try {
+      const session = await this.stripe.billingPortal.sessions.create({
+        customer: params.providerCustomerId,
+        return_url: params.returnUrl,
+      })
+      return { url: session.url }
+    } catch (error) {
+      throw new Error(`Stripe createCustomerPortalSession failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

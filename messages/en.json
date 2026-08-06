@@ -2338,7 +2338,8 @@
           "recheckCleared": "Access restored — your school is back within its plan limits.",
           "recheckStillOverLimit": "Still over the plan limit. Reduce usage further or upgrade to restore access.",
           "recheckNoCutoff": "Limits re-checked — no access restriction is scheduled.",
-          "recheckError": "Failed to re-check limits"
+          "recheckError": "Failed to re-check limits",
+          "portalUnavailable": "We couldn't open the billing portal for this payment method."
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",
@@ -2351,6 +2352,9 @@
           "previewIntro": "Review the proration before confirming. Your card on file is charged automatically.",
           "loadingPreview": "Calculating proration…",
           "previewUnavailable": "We couldn't load a price preview, but you can still switch — your next invoice will reflect the change.",
+          "previewIntroNoProration": "Review the change before confirming. Your payment provider settles any difference on its own terms.",
+          "noProration": "This change takes effect immediately. Your payment provider doesn't quote a mid-period amount, so no proration is shown here.",
+          "noProrationWithDate": "This change takes effect immediately and your plan renews on {date}. Your payment provider doesn't quote a mid-period amount, so no proration is shown here.",
           "prorationDueNow": "Proration on your next invoice",
           "prorationCredit": "Credit on your next invoice",
           "nextInvoiceTotal": "Next invoice total",

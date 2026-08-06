@@ -54,6 +54,8 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // delegation is on-chain; no provider-hosted page
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false,
   }
