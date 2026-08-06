@@ -50,6 +50,8 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: true,
+    supportsCustomerPortal: false, // portal is reached from LS's dashboard, not a URL we mint
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
   }

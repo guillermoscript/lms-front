@@ -35,7 +35,19 @@ interface PlanLimitViolation {
 type PreviewState =
   | { kind: 'loading' }
   | { kind: 'blocked'; violations: PlanLimitViolation[]; planName: string | null }
-  | { kind: 'ready'; proration: { prorationAmount: number; total: number; currency: string } | null }
+  | {
+      kind: 'ready'
+      proration: { prorationAmount: number; total: number; currency: string } | null
+      /**
+       * Set when the provider cannot quote mid-period changes at all
+       * (`supportsProrationPreview: false`, e.g. Lemon Squeezy). Distinct from
+       * `proration: null` alone, which means a provider that CAN quote failed
+       * to — one is a fact about the rail, the other is a transient error, and
+       * telling the admin the same thing for both is how "we couldn't load a
+       * price preview" ended up shown for a provider that never had one (#604).
+       */
+      noProration?: { effectiveAt: string | null } | null
+    }
   | { kind: 'error' }
 
 interface PlanChangeDialogProps {
@@ -68,7 +80,11 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
         if (!res.ok) {
           setPreview({ kind: 'blocked', violations: res.violations, planName: res.planName })
         } else {
-          setPreview({ kind: 'ready', proration: res.proration })
+          setPreview({
+            kind: 'ready',
+            proration: res.proration,
+            noProration: 'noProration' in res ? res.noProration : null,
+          })
         }
       } catch {
         if (!cancelled) setPreview({ kind: 'error' })
@@ -88,6 +104,7 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
         : t('intervalTitle', { plan: target?.planName ?? '' })
 
   const blocked = preview.kind === 'blocked'
+  const unquoted = preview.kind === 'ready' && !!preview.noProration
 
   const handleConfirm = async () => {
     if (!target) return
@@ -110,7 +127,14 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
         <AlertDialogHeader>
           <AlertDialogTitle>{blocked ? t('overLimitTitle', { plan: preview.planName ?? target?.planName ?? '' }) : title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {blocked ? t('overLimitIntro') : t('previewIntro')}
+            {blocked
+              ? t('overLimitIntro')
+              : unquoted
+                ? // "Your card on file is charged automatically" is a Stripe
+                  // sentence; a provider that cannot quote the change may not
+                  // bill it that way either, so don't promise it (#604).
+                  t('previewIntroNoProration')
+                : t('previewIntro')}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -142,7 +166,15 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
           )}
 
           {preview.kind === 'ready' && (
-            preview.proration ? (
+            preview.noProration ? (
+              <p className="rounded-lg border bg-muted/25 p-3.5 text-muted-foreground">
+                {preview.noProration.effectiveAt
+                  ? t('noProrationWithDate', {
+                      date: new Date(preview.noProration.effectiveAt).toLocaleDateString(),
+                    })
+                  : t('noProration')}
+              </p>
+            ) : preview.proration ? (
               <dl className="space-y-2 rounded-lg border bg-muted/25 p-3.5">
                 <div className="flex items-center justify-between gap-4">
                   <dt className="text-muted-foreground">

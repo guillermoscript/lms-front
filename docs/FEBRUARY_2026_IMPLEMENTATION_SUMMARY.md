@@ -1373,7 +1373,7 @@ Implemented the complete business monetization system: school billing, 5-tier pr
 
 ### Two Separate Stripe Integrations
 
-- **School billing** (NEW): Stripe Checkout + Subscriptions at `/api/billing/checkout`, `/api/stripe/billing-portal`, `/api/billing/webhook/stripe`
+- **School billing** (NEW): Stripe Checkout + Subscriptions at `/api/billing/checkout`, `/api/billing/portal`, `/api/billing/webhook/stripe`
 - **Student payments** (EXISTING): Stripe Connect at `/api/stripe/create-payment-intent`, `/api/stripe/webhook`
 
 ### Files Created (23)

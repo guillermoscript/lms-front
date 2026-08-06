@@ -26,7 +26,13 @@ const DAY = 24 * 60 * 60 * 1000
 const daysFromNow = (d: number) => new Date(Date.now() + d * DAY).toISOString()
 
 let db: Db
-const stripeUpdates: { id: string; params: Record<string, unknown> }[] = []
+/**
+ * Provider calls the actions make. Since #604 these actions drive
+ * `IPaymentProvider` rather than the Stripe SDK, so the seam we record moved
+ * one level up — the invariants below (a self-managed rail makes no provider
+ * call; a plan change clears a pending cancellation) are unchanged.
+ */
+const providerCalls: { method: string; id: string; params?: Record<string, unknown> }[] = []
 
 function makeClient() {
   return createFakeSupabase(db, {
@@ -49,18 +55,32 @@ vi.mock('@/lib/supabase/tenant', () => ({
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 vi.mock('@/lib/billing/access-cutoff', () => ({ reconcileAccessCutoff: () => Promise.resolve({ action: 'none' }) }))
+// Reaching for the SDK from these actions is the bug #604 fixed — fail loudly.
 vi.mock('@/lib/stripe', () => ({
-  getStripe: () => ({
-    subscriptions: {
-      update: (id: string, params: Record<string, unknown>) => {
-        stripeUpdates.push({ id, params })
-        return Promise.resolve({ id })
-      },
-      retrieve: () =>
-        Promise.resolve({ id: 'sub_live', customer: 'cus_1', items: { data: [{ id: 'si_1' }] } }),
-    },
-  }),
+  getStripe: () => {
+    throw new Error('getStripe() must not be called from the billing actions (#604)')
+  },
 }))
+vi.mock('@/lib/payments', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/payments')>()
+  return {
+    ...actual,
+    getPaymentProvider: () => ({
+      updateSubscription: (id: string, params: Record<string, unknown>) => {
+        providerCalls.push({ method: 'updateSubscription', id, params })
+        return Promise.resolve({ id, status: 'active', currentPeriodEnd: new Date(), cancelAtPeriodEnd: false })
+      },
+      cancelSubscription: (id: string, immediate: boolean) => {
+        providerCalls.push({ method: 'cancelSubscription', id, params: { immediate } })
+        return Promise.resolve()
+      },
+      reactivateSubscription: (id: string) => {
+        providerCalls.push({ method: 'reactivateSubscription', id })
+        return Promise.resolve()
+      },
+    }),
+  }
+})
 
 import {
   confirmManualPayment,
@@ -114,7 +134,7 @@ function seedRequest(over: Row = {}) {
 }
 
 beforeEach(() => {
-  stripeUpdates.length = 0
+  providerCalls.length = 0
   db = {
     tenants: [{ id: TENANT, name: 'Test School', plan: 'pro', billing_status: 'active' }],
     tenant_users: [{ tenant_id: TENANT, user_id: USER, role: 'admin', status: 'active' }],
@@ -194,10 +214,10 @@ describe('#546 §1 — reactivateSubscription', () => {
 
     expect(sub.cancel_at_period_end).toBe(false)
     expect(sub.canceled_at).toBeNull()
-    expect(stripeUpdates).toEqual([])
+    expect(providerCalls).toEqual([])
   })
 
-  it('clears the cancellation on Stripe first for a Stripe subscription', async () => {
+  it('clears the cancellation at the provider first for a provider-backed subscription', async () => {
     const sub = seedSub({
       payment_provider: 'stripe',
       provider_subscription_id: 'sub_live',
@@ -206,7 +226,7 @@ describe('#546 §1 — reactivateSubscription', () => {
 
     await reactivateSubscription()
 
-    expect(stripeUpdates).toEqual([{ id: 'sub_live', params: { cancel_at_period_end: false } }])
+    expect(providerCalls).toEqual([{ method: 'reactivateSubscription', id: 'sub_live' }])
     expect(sub.cancel_at_period_end).toBe(false)
   })
 
@@ -222,7 +242,7 @@ describe('#546 §1 — reactivateSubscription', () => {
 })
 
 describe('#546 §1 — changePlan does not leave a cancellation behind', () => {
-  it('sends cancel_at_period_end: false to Stripe and mirrors it locally', async () => {
+  it('clears a pending cancellation as part of the swap and mirrors it locally', async () => {
     const sub = seedSub({
       payment_provider: 'stripe',
       provider_subscription_id: 'sub_live',
@@ -234,8 +254,9 @@ describe('#546 §1 — changePlan does not leave a cancellation behind', () => {
 
     await changePlan(PLAN_BUSINESS, 'yearly')
 
-    expect(stripeUpdates).toHaveLength(1)
-    expect(stripeUpdates[0].params).toMatchObject({ cancel_at_period_end: false })
+    expect(providerCalls).toHaveLength(1)
+    expect(providerCalls[0].method).toBe('updateSubscription')
+    expect(providerCalls[0].params).toMatchObject({ cancelAtPeriodEnd: false })
     expect(sub.cancel_at_period_end).toBe(false)
     expect(sub.canceled_at).toBeNull()
     expect(sub.plan_override_at).toBeNull()

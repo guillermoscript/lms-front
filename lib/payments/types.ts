@@ -85,7 +85,50 @@ export interface UpdateSubscriptionParams {
    * standard prorated behavior (`create_prorations` on Stripe).
    */
   prorationBehavior?: 'create_prorations' | 'none' | 'always_invoice'
+  /**
+   * Also clear (or set) a scheduled cancel-at-period-end as part of the swap.
+   *
+   * Paying for a different plan un-cancels (#546 §1): a subscription is still
+   * `active` right up to its last day, so a school that changes plan while a
+   * cancellation is pending would otherwise be billed for the new plan and
+   * still dropped to free at period end. Providers that cannot express this in
+   * the same call must clear it separately.
+   */
+  cancelAtPeriodEnd?: boolean
   metadata?: Record<string, string>
+}
+
+/** Params for opening a provider-hosted subscription-management page. */
+export interface CustomerPortalSessionParams {
+  /** Stored customer on the provider (tenant_billing_customers.provider_customer_id). */
+  providerCustomerId: string
+  /** Where the provider returns the admin once they are done. */
+  returnUrl: string
+}
+
+/** Params for quoting a plan change before committing to it. */
+export interface PreviewSubscriptionChangeParams {
+  /** Provider price/variant id of the TARGET plan. */
+  newProviderPriceId: string
+  /** Stored customer, when the provider needs it to scope the quote (Stripe). */
+  providerCustomerId?: string
+  prorationBehavior?: 'create_prorations' | 'none' | 'always_invoice'
+}
+
+/**
+ * A provider's quote for a mid-period plan change.
+ *
+ * Amounts are MAJOR units of `currency` (dollars, not cents) — the same
+ * convention as `NormalizedBillingEvent.amount`. Each provider converts from
+ * its own wire format in its own mapper, so no caller has to know that Stripe
+ * talks in cents.
+ */
+export interface ProrationPreview {
+  /** Mid-period delta: positive = charged now, negative = credited. */
+  prorationAmount: number
+  /** What the next invoice comes to in total. */
+  total: number
+  currency: string
 }
 
 // ---------------------------------------------------------------------------
@@ -151,6 +194,29 @@ export interface ProviderCapabilities {
    */
   supportsPlanChange: boolean
   /**
+   * Provider hosts a self-serve subscription-management page we can send a
+   * school admin to (Stripe's billing portal). When false there is no such
+   * page, so the billing screen must render its own in-app controls (cancel /
+   * reactivate / change plan / renewal request) and must NOT render a portal
+   * button at all — a button that opens nothing is worse than no button.
+   *
+   * False for Lemon Squeezy too: it has a customer portal, but it is reached
+   * from LS's own dashboard/emails rather than from a session URL we mint, so
+   * there is nothing for `createCustomerPortalSession` to return (#604).
+   */
+  supportsCustomerPortal: boolean
+  /**
+   * Provider can quote the mid-period delta of a plan change BEFORE it is
+   * committed (`previewSubscriptionChange`). Stripe only.
+   *
+   * Distinct from `supportsPlanChange` on purpose: Lemon Squeezy can perform
+   * the swap and prorates it on its own side, but exposes no "what would this
+   * cost" call, so we can change the plan and still be unable to quote it.
+   * When false, the preview must say the change is unquoted rather than invent
+   * an amount (#604).
+   */
+  supportsProrationPreview: boolean
+  /**
    * The platform takes its cut (`revenue_splits.platform_percentage`) on sales
    * through this provider.
    *
@@ -199,6 +265,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: true,
+    supportsCustomerPortal: true, // billingPortal.sessions.create
+    supportsProrationPreview: true, // invoices.createPreview
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false, // school's own Connect account
   },
@@ -212,6 +280,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: true,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // no session URL we can mint for a school admin
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global PAYPAL_CLIENT_ID/SECRET — no per-tenant merchant onboarding
   },
@@ -225,6 +295,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: false,
     createsCatalog: false,
     supportsPlanChange: true,
+    supportsCustomerPortal: false, // portal is reached from LS's dashboard, not a URL we mint
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global LS store — Merchant of Record, single platform-owned account
   },
@@ -242,6 +314,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // no hosted account page — the school manages the plan in-app
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false, // split on-chain in one tx (lib/payments/solana-split.ts)
   },
@@ -261,6 +335,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // On-chain auto-pull is a fixed-amount delegation; changing plan requires a
     // fresh subscriber-signed delegation, so there is no in-place swap.
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // delegation is on-chain; no provider-hosted page
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false, // split on-chain per pull (lib/payments/solana-subscription-pull.ts)
   },
@@ -274,6 +350,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // bank transfer — nothing hosted to manage
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // bank transfer straight to the school's own account
   },
@@ -294,6 +372,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // Binance Pay has no subscription-management page for us to open
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global BINANCE_PAY_API_KEY/SECRET merchant account — no sub-merchant split
   },
@@ -313,6 +393,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     selfManagedPeriod: true,
     createsCatalog: false,
     supportsPlanChange: false,
+    supportsCustomerPortal: false, // personal Pay account — no merchant portal at all
+    supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // per-tenant Pay ID — straight to the school's own account
   },
@@ -563,6 +645,18 @@ export interface IPaymentProvider {
   // proration (capability-gated by supportsPlanChange — Stripe/LS). Providers
   // without a native swap omit this; the plan-change flow supersedes app-side.
   updateSubscription?(providerSubId: string, params: UpdateSubscriptionParams): Promise<ProviderSubscription>
+  // Quote a plan change before committing it (capability-gated by
+  // supportsProrationPreview — Stripe only). A provider that can swap the plan
+  // but cannot quote it omits this; the caller then presents an honest
+  // "no proration quote" preview instead of inventing an amount (#604).
+  previewSubscriptionChange?(
+    providerSubId: string,
+    params: PreviewSubscriptionChangeParams,
+  ): Promise<ProrationPreview>
+
+  // Customer portal (optional — capability-gated by supportsCustomerPortal).
+  // Mints a session URL for the provider's own subscription-management page.
+  createCustomerPortalSession?(params: CustomerPortalSessionParams): Promise<{ url: string }>
 
   // Checkout (optional — the creation path that stores provider_subscription_id;
   // providers wire this in Phase 2). Capability-gated by supportsHostedCheckout

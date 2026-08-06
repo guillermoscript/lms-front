@@ -138,12 +138,12 @@ on is rejected: that is a plan change, handled in-app with proration.
 
 ---
 
-### `POST /api/stripe/billing-portal`
+### `POST /api/billing/portal`
 
 | | |
 |---|---|
 | **Auth** | Yes (`getUser()` + tenant admin check) |
-| **Description** | Creates a Stripe Billing Portal session for the school admin to manage their platform subscription. |
+| **Description** | Opens the school's subscription-management page on whichever provider bills its platform subscription. Capability-gated by `supportsCustomerPortal`: a provider without a hosted portal returns 400 `portal_unsupported` (#604). |
 
 **Request Body:** None.
 
