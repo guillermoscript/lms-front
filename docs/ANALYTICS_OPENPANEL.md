@@ -4,7 +4,8 @@
 > Phases 0–4 and the §9 P1 events are committed: 69 files, ~5,000 insertions, 8 commits. Typecheck clean, 849/849 unit tests, production build passes.
 > **Credentials are configured** (`.env.local`, gitignored) against the self-hosted instance — project "LMS Platform" on `openpanel.guille.tech`. Ingest verified end-to-end (§8).
 > **Groups are NOT supported by that instance** — per-school analysis uses the flat `tenant_id` property instead (§2.1).
-> Not yet done: §10.2 MCP server, §10.1 mobile app, §6 phase 5 (dashboards), and a real browser-side smoke test with `npm run dev`.
+> **Browser path smoke-tested against a running dev server** — both proxy legs, and `tenant_id` verified to resolve per-request (§8.4).
+> Not yet done: §10.2 MCP server, §10.1 mobile app, §6 phase 5 (dashboards), and production env vars on Dokploy.
 > Scope: adding product analytics (OpenPanel) to the multi-tenant LMS so we can see how real users behave and make informed decisions.
 
 ---
@@ -426,6 +427,40 @@ Project **"LMS Platform"** created in org `guille-tech` on 2026-08-07. Website +
 | Dashboard | `https://openpanel.guille.tech/guille-tech/lms-platform` | |
 
 That second row is the self-hosting trap the foundation work anticipated: `createRouteHandler({apiUrl})` redirects only the *ingest* leg, and this instance's own snippet still loads the script from `openpanel.dev`. So **`NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN` stays empty** — `/api/op` fetches the CDN script server-side and re-serves it first-party, which keeps the browser talking only to `preciopana.com`.
+
+### 8.4 Browser-path smoke test (2026-08-07) — PASSED
+
+Run against `npm run dev` on port 3001 (**port 3000 was another project's dev server** — probing it returns Next's own HTML 404 rather than this route's empty one, which looks exactly like "the route is broken"). Local Supabase must be up or every tenant subdomain 307s to the apex and `tenant_id` silently comes back `null`.
+
+Loading a page, with no scripted interaction, produced:
+
+```
+GET  /api/op/op1.js?v=1.5.1  → 200  text/javascript, 8.9 KB
+POST /api/op/track           → 401  (CORS — see below)
+```
+
+**Both legs reached the route with no 307**, which is the empirical proof that the `proxy.ts` matcher exclusion works — the #1 documented failure mode (§3.1), and one that presents as "no data" rather than as an error.
+
+**`tenant_id` resolves per-request.** Two subdomains in one browser session emitted the correct distinct ids, and `locale` tracked the path independently:
+
+| URL | `tenant_id` | `tenant_slug` | `locale` |
+|---|---|---|---|
+| `code-academy.lvh.me:3001/en` | `…0002` ✅ | `code-academy` | `en` |
+| `default.lvh.me:3001/es` | `…0001` ✅ | `default` | `es` |
+
+This matters more than it looks: with Groups unavailable (§2.1), that one flat property carries every per-school chart in §5.
+
+**The 401 is configuration, not code.** The collector validates its allowed-domains list against the *browser's* `Origin`, which the proxy forwards intact — so the domain restriction still protects the client id from behind a first-party proxy, which is the behaviour you want. `http://lvh.me:3001` simply isn't on the list. Replaying the identical payload proves the production path:
+
+| Origin | Result |
+|---|---|
+| `http://lvh.me:3001` | 401 `Invalid cors or secret` |
+| `https://preciopana.com` | **200** |
+| `https://code-academy.preciopana.com` | **200** |
+
+The wildcard covers tenant subdomains. To exercise ingest from localhost you would have to add a dev origin to the project's allowed domains — deliberately not done, since it loosens the production project's CORS and mixes dev events into real data.
+
+The only console error was that 401. No exception, no unhandled rejection: the client degrades silently, as designed.
 
 ### Background: cloud vs self-host
 
