@@ -11,6 +11,11 @@ import {
   PARALLEL_SUBSCRIPTION_CODE,
   PARALLEL_SUBSCRIPTION_MESSAGE,
 } from '@/lib/payments/subscription-guard'
+import {
+  isReadyToAcceptPayments,
+  READINESS_CODE,
+  READINESS_MESSAGE,
+} from '@/lib/payments/tenant-payment-readiness'
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,6 +51,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Connected-account readiness gate (#606). Above the Stripe customer call
+    // and the pending transaction on purpose: this route is only reachable for
+    // a `stripe` offering, and Stripe `requiresConnectedAccount`, so a school
+    // whose Express onboarding was abandoned must cost ZERO side effects. The
+    // old check tested `stripe_account_id` for presence — that column is
+    // written before onboarding even starts, so it passed, and the request ran
+    // on to build a PaymentIntent whose `transfer_data.destination` Stripe then
+    // rejected. The student saw a generic payment failure.
+    //
+    // Deliberately AFTER the parallel-subscription guard: a student with a
+    // conflicting subscription should still get the 409 that explains it.
+    const readiness = await isReadyToAcceptPayments(tenantId, 'stripe')
+    if (!readiness.ready) {
+      return NextResponse.json(
+        {
+          error: READINESS_MESSAGE[readiness.reason],
+          code: READINESS_CODE[readiness.reason],
+        },
+        { status: 400 },
+      )
+    }
+
     // Get or create Stripe customer
     const { data: profile } = await supabase
       .from('profiles')
@@ -70,21 +97,17 @@ export async function POST(req: NextRequest) {
         .eq('id', user.id)
     }
 
-    // Get tenant's Stripe Connect account
+    // Get tenant's Stripe Connect account — the readiness gate above already
+    // proved it exists and can charge; this reads the id itself for routing.
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('stripe_account_id')
       .eq('id', tenantId)
       .single()
 
-    if (tenantError || !tenant) {
+    const destinationAccount = tenant?.stripe_account_id
+    if (tenantError || !destinationAccount) {
       return NextResponse.json({ error: 'School not found' }, { status: 404 })
-    }
-
-    if (!tenant.stripe_account_id) {
-      return NextResponse.json({
-        error: 'School has not connected their payment account. Please contact school admin to set up payments.'
-      }, { status: 400 })
     }
 
     // Get price based on plan or product
@@ -183,7 +206,7 @@ export async function POST(req: NextRequest) {
           currency,
           reference: transaction.transaction_id.toString(),
           providerCustomerId: stripeCustomerId,
-          destinationAccount: tenant.stripe_account_id,
+          destinationAccount,
           applicationFeePercent: platformPercentage,
           metadata: {
             transactionId: transaction.transaction_id.toString(),
@@ -229,7 +252,7 @@ export async function POST(req: NextRequest) {
       customer: stripeCustomerId,
       automatic_payment_methods: { enabled: true },
       transfer_data: {
-        destination: tenant.stripe_account_id, // Money goes to school
+        destination: destinationAccount, // Money goes to school
       },
       metadata: {
         transactionId: transaction.transaction_id.toString(),

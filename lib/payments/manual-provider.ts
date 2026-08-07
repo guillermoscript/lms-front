@@ -35,6 +35,7 @@ export class ManualPaymentProvider implements IPaymentProvider {
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
+    requiresConnectedAccount: false, // bank transfer to the school's own account — no provider onboarding at all
   }
 
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number {

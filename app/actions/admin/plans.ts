@@ -5,6 +5,7 @@ import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/s
 import { getPaymentProvider, PaymentProvider, PROVIDER_CAPABILITIES } from '@/lib/payments'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
 
 interface PlanFormData {
   plan_name: string
@@ -60,6 +61,10 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
     const providerType = formData.paymentProvider || 'stripe'
     const caps = PROVIDER_CAPABILITIES[providerType]
     const adminClient = createAdminClient()
+
+    // Don't publish a paid plan on a rail that cannot be paid (#606). Same
+    // shape as the Solana wallet guard below, one level up.
+    await assertReadyToPublish(tenantId, providerType)
 
     // Resolve provider catalog ids by CAPABILITY, never by provider name:
     //  - createsCatalog (Stripe/PayPal) → auto-create product + recurring price.

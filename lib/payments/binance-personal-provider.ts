@@ -104,6 +104,7 @@ export class BinancePersonalProvider implements IPaymentProvider {
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
+    requiresConnectedAccount: false, // the school's own Pay ID, saved in Settings — no onboarding flow
   }
 
   private readonly apiKey?: string

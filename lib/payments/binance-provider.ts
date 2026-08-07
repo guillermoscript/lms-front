@@ -175,6 +175,7 @@ export class BinancePayProvider implements IPaymentProvider {
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
+    requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
   }
 
   private readonly apiKey: string

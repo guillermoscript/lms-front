@@ -60,6 +60,7 @@ export class SolanaProvider implements IPaymentProvider {
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false,
+    requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved
   }
 
   private readonly rpcUrl: string

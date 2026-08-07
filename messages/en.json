@@ -3061,7 +3061,9 @@
               "pendingDesc": "Your Stripe account was created but onboarding isn't finished. Resume where you left off — it only takes a few minutes.",
               "pendingReviewDesc": "Your details were submitted and Stripe is reviewing them. Card payments will be enabled automatically once the review completes.",
               "resumeButton": "Finish Stripe setup",
-              "payoutsPending": "Payouts are not enabled yet — Stripe may need additional information before transferring funds to your bank."
+              "payoutsPending": "Payouts are not enabled yet — Stripe may need additional information before transferring funds to your bank.",
+              "blockedNotice": "Until Stripe enables charges, students can't complete a card checkout and you can't publish a paid Stripe offering.",
+              "checkStatusButton": "Check setup status"
             }
           },
           "enrollment": {
@@ -4944,7 +4946,9 @@
       "unavailableTitle": "Card payments unavailable",
       "tryManual": "Pay another way",
       "payButton": "Pay {price}",
-      "paymentError": "Payment could not be completed. Please try again."
+      "paymentError": "Payment could not be completed. Please try again.",
+      "schoolNotConnected": "This school has not connected a payment account yet. Please contact the school admin to set up payments.",
+      "schoolSetupIncomplete": "This school is still finishing its payment setup, so card payments are not available yet. Please try again later or contact the school admin."
     },
     "empty": {
       "title": "No Product Selected",

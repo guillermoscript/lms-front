@@ -246,6 +246,26 @@ export interface ProviderCapabilities {
    * (see `lib/payments/payouts-owed.ts`) rather than arriving automatically.
    */
   settlesToPlatformAccount: boolean
+  /**
+   * Money for a sale on this rail lands in a per-tenant account the school must
+   * ONBOARD with the provider before the rail works — Stripe Connect Express and
+   * its progressive KYC. The account object exists from the admin's first click
+   * (`stripe.accounts.create` persists `tenants.stripe_account_id` before the
+   * hosted onboarding link is even handed over), so its presence proves nothing;
+   * readiness is a separate, provider-synced fact.
+   *
+   * Deliberately NOT derived from `settlesToPlatformAccount: false`, which is
+   * also true of both Solana rails: there the school's "account" is a wallet
+   * address it pastes into Settings — live the moment it is saved, with no
+   * onboarding session to abandon. The distinction is whether there is a
+   * multi-step approval the school can walk away from half-finished.
+   *
+   * When true, every entry point that starts a payment or publishes a paid
+   * offering must clear `isReadyToAcceptPayments()` first (#606); otherwise a
+   * school whose onboarding was abandoned looks payment-ready and the student
+   * only finds out when the provider rejects the charge.
+   */
+  requiresConnectedAccount: boolean
 }
 
 /**
@@ -269,6 +289,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: true, // invoices.createPreview
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false, // school's own Connect account
+    requiresConnectedAccount: true, // Connect Express — per-tenant account with progressive KYC the school can abandon
   },
   paypal: {
     supportsNativeSubscriptions: true,
@@ -284,6 +305,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global PAYPAL_CLIENT_ID/SECRET — no per-tenant merchant onboarding
+    requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
   },
   lemonsqueezy: {
     supportsNativeSubscriptions: true,
@@ -299,6 +321,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global LS store — Merchant of Record, single platform-owned account
+    requiresConnectedAccount: false, // Merchant of Record — the platform's own store sells on the school's behalf
   },
   solana: {
     supportsNativeSubscriptions: false,
@@ -318,6 +341,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false, // split on-chain in one tx (lib/payments/solana-split.ts)
+    requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved
   },
   // Native on-chain auto-pull subscriptions (solana-program/subscriptions). WE
   // drive renewal via an off-chain crank cron (no provider webhook, no on-chain
@@ -339,6 +363,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false, // split on-chain per pull (lib/payments/solana-subscription-pull.ts)
+    requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved
   },
   manual: {
     supportsNativeSubscriptions: false,
@@ -354,6 +379,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // bank transfer straight to the school's own account
+    requiresConnectedAccount: false, // bank transfer to the school's own account — no provider onboarding at all
   },
   // Binance Pay: hosted crypto checkout (USDT-denominated). No native
   // recurring billing — plan purchases are one-time payments whose period WE
@@ -376,6 +402,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global BINANCE_PAY_API_KEY/SECRET merchant account — no sub-merchant split
+    requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
   },
   // Binance Pay on a PERSONAL (non-merchant, no-KYB) account. No hosted
   // checkout and no webhooks: the buyer transfers manually to the school's
@@ -397,6 +424,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // per-tenant Pay ID — straight to the school's own account
+    requiresConnectedAccount: false, // the school's own Pay ID, saved in Settings — no onboarding flow
   },
 }
 

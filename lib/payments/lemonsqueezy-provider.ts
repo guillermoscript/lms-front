@@ -54,6 +54,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
+    requiresConnectedAccount: false, // Merchant of Record — the platform's own store sells on the school's behalf
   }
 
   private readonly apiKey: string
