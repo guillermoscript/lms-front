@@ -34,7 +34,7 @@ import { paymentPollLimiter } from '@/lib/rate-limit'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -73,64 +73,70 @@ type SettledTx = {
  * Money is NET of refunds (#547) and denominated in the sale's own currency,
  * NOT in `settlement_base`: lamports and USDC base units are what the chain is
  * verified against and are meaningless summed next to a Stripe sale.
+ *
+ * Wrapped whole: the `entitlements` count below is an analytics-only read, and
+ * both callers `await` this on the request path of a confirmed on-chain
+ * payment. An unguarded throw there would 500 a settlement that already landed.
  */
 async function trackSolanaSettlement(
   tx: SettledTx,
   provider: 'solana' | 'solana_subs',
   extra: Record<string, unknown> = {},
 ): Promise<void> {
-  const gross = Number(tx.amount ?? 0)
-  const net = netOfRefunds(gross, tx.refunded_amount)
-  const snapshot = tx.school_percentage_snapshot ?? null
-  const bearsFee = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.bearsPlatformFee
-  const ctx = { userId: tx.user_id, tenantId: tx.tenant_id }
+  return safeAnalytics(async () => {
+    const gross = Number(tx.amount ?? 0)
+    const net = netOfRefunds(gross, tx.refunded_amount)
+    const snapshot = tx.school_percentage_snapshot ?? null
+    const bearsFee = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.bearsPlatformFee
+    const ctx = { userId: tx.user_id, tenantId: tx.tenant_id }
 
-  await track(
-    ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
-    {
-      provider,
-      amount_major: net,
-      currency: tx.currency ?? 'usd',
-      is_subscription: !!tx.plan_id,
-      // WHETHER a fee is taken is the capability; the RATE is the row's own
-      // snapshot (#547). No snapshot → omit the figure rather than invent one.
-      ...(bearsFee
-        ? snapshot != null
-          ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
-          : {}
-        : { platform_fee: 0 }),
-      school_percentage_snapshot: snapshot,
-      gross_amount: gross,
-      transaction_id: tx.transaction_id,
-      settlement_currency: tx.settlement_currency ?? null,
-      ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
-      ...(tx.product_id ? { product_id: tx.product_id } : {}),
-      ...extra,
-    },
-    ctx,
-  )
-
-  const sourceType = tx.plan_id ? 'subscription' : 'product'
-  const sourceId = tx.plan_id ?? tx.product_id
-  if (tx.user_id && sourceId != null) {
-    const { count } = await getSupabaseAdmin()
-      .from('entitlements')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', tx.user_id)
-      .eq('source_type', sourceType)
-      .eq('source_id', sourceId)
-      .eq('status', 'active')
     await track(
-      ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+      ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
       {
-        source_type: sourceType,
-        course_count: count ?? 0,
         provider,
+        amount_major: net,
+        currency: tx.currency ?? 'usd',
+        is_subscription: !!tx.plan_id,
+        // WHETHER a fee is taken is the capability; the RATE is the row's own
+        // snapshot (#547). No snapshot → omit the figure rather than invent one.
+        ...(bearsFee
+          ? snapshot != null
+            ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
+            : {}
+          : { platform_fee: 0 }),
+        school_percentage_snapshot: snapshot,
+        gross_amount: gross,
         transaction_id: tx.transaction_id,
+        settlement_currency: tx.settlement_currency ?? null,
+        ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+        ...(tx.product_id ? { product_id: tx.product_id } : {}),
+        ...extra,
       },
       ctx,
     )
-  }
+
+    const sourceType = tx.plan_id ? 'subscription' : 'product'
+    const sourceId = tx.plan_id ?? tx.product_id
+    if (tx.user_id && sourceId != null) {
+      const { count } = await getSupabaseAdmin()
+        .from('entitlements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', tx.user_id)
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId)
+        .eq('status', 'active')
+      await track(
+        ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+        {
+          source_type: sourceType,
+          course_count: count ?? 0,
+          provider,
+          transaction_id: tx.transaction_id,
+        },
+        ctx,
+      )
+    }
+  }, `solana settlement analytics (${provider})`)
 }
 
 /** Derive the puller (= on-chain merchant) base58 pubkey from its secret key. */

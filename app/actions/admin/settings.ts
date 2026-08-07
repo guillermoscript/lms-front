@@ -5,7 +5,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { encryptCredential, getPaymentCredentialsKey } from '@/lib/payments/credentials'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import {
   evaluateSchoolActivation,
   isFirstConnectedProvider,
@@ -292,13 +292,20 @@ export async function setSolanaWallet(walletAddress: string): Promise<SettingsRe
     // wallet, or correcting a typo in it, is not a new connection, and
     // `payment_provider_connected` counted per save would make the activation
     // funnel's denominator meaningless.
-    const { data: existingWallet } = await supabase
-      .from('tenant_payment_wallets')
-      .select('wallet_address')
-      .eq('tenant_id', tenantId)
-      .eq('provider', 'solana')
-      .maybeSingle()
-    const isNewConnection = !existingWallet?.wallet_address
+    //
+    // Guarded: this read exists only to decide whether to emit, and it runs
+    // BEFORE the upsert — unguarded, a transient failure here would abort the
+    // wallet save itself. `null` means the read failed; unknowable is not
+    // "new", for the same reason `isFirstConnectedProvider` returns false.
+    const existingWalletRead = await Promise.resolve(
+      supabase
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', 'solana')
+        .maybeSingle()
+    ).catch(() => null)
+    const isNewConnection = !!existingWalletRead && !existingWalletRead.data?.wallet_address
     const isFirstProvider = isNewConnection
       ? await isFirstConnectedProvider(tenantId, 'solana', supabase)
       : false
@@ -316,15 +323,20 @@ export async function setSolanaWallet(walletAddress: string): Promise<SettingsRe
 
     if (error) throw error
 
+    // Wrapped: the wallet is already saved, and `getCurrentUserId()` is a real
+    // await — the enclosing catch would otherwise report "Failed to save Solana
+    // wallet" for a save that succeeded.
     if (isNewConnection) {
-      const userId = await getCurrentUserId()
-      await track(
-        ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
-        { provider: 'solana', is_first_provider: isFirstProvider },
-        { userId, tenantId, role }
-      )
-      // Connecting a rail is the other half of the activation condition.
-      await evaluateSchoolActivation({ tenantId, userId, role })
+      await safeAnalytics(async () => {
+        const userId = await getCurrentUserId()
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+          { provider: 'solana', is_first_provider: isFirstProvider },
+          { userId, tenantId, role }
+        )
+        // Connecting a rail is the other half of the activation condition.
+        await evaluateSchoolActivation({ tenantId, userId, role })
+      }, 'payment_provider_connected (solana)')
     }
 
     revalidatePath('/dashboard/admin/settings')
@@ -431,17 +443,22 @@ export async function setBinancePersonalCredentials(
 
     if (error) throw error
 
+    // Wrapped for the same reason as the Solana branch: the credentials are
+    // already saved, so a failing `getCurrentUserId()` must not surface as
+    // "Failed to save Binance settings".
     if (!wasUsable) {
-      const userId = await getCurrentUserId()
-      await track(
-        ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
-        {
-          provider: 'binance_personal',
-          is_first_provider: isFirstProviderBeforeSave,
-        },
-        { userId, tenantId, role }
-      )
-      await evaluateSchoolActivation({ tenantId, userId, role })
+      await safeAnalytics(async () => {
+        const userId = await getCurrentUserId()
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+          {
+            provider: 'binance_personal',
+            is_first_provider: isFirstProviderBeforeSave,
+          },
+          { userId, tenantId, role }
+        )
+        await evaluateSchoolActivation({ tenantId, userId, role })
+      }, 'payment_provider_connected (binance_personal)')
     }
 
     revalidatePath('/dashboard/admin/settings')

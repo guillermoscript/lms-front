@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import type { Data } from '@measured/puck'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -189,21 +189,26 @@ async function trackLandingPagePublished(input: {
 }): Promise<void> {
   if (input.wasPublished) return
 
-  const puckData = input.page.puck_data as Data | undefined
-  await track(
-    ANALYTICS_EVENTS.LANDING_PAGE_PUBLISHED,
-    {
-      page_id: input.page.page_id as string,
-      slug: input.page.slug as string,
-      block_count: Array.isArray(puckData?.content) ? puckData.content.length : 0,
-      via: input.via,
-    },
-    {
-      userId: await getCurrentUserId(),
-      tenantId: input.tenantId,
-      role: 'admin',
-    }
-  )
+  // Wrapped: `getCurrentUserId()` is evaluated as an ARGUMENT, so it runs
+  // before `track()`'s own guard could catch anything it throws — and both
+  // callers await this after the page is already live.
+  return safeAnalytics(async () => {
+    const puckData = input.page.puck_data as Data | undefined
+    await track(
+      ANALYTICS_EVENTS.LANDING_PAGE_PUBLISHED,
+      {
+        page_id: input.page.page_id as string,
+        slug: input.page.slug as string,
+        block_count: Array.isArray(puckData?.content) ? puckData.content.length : 0,
+        via: input.via,
+      },
+      {
+        userId: await getCurrentUserId(),
+        tenantId: input.tenantId,
+        role: 'admin',
+      }
+    )
+  }, 'landing_page_published')
 }
 
 // ─── Write ────────────────────────────────────────────────────────────────────
@@ -344,12 +349,20 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
 
     // Read the prior state so the shared emitter can tell a real publish from a
     // re-activation of a page that was already live.
-    const { data: existing } = await adminClient
-      .from('landing_pages')
-      .select('is_published')
-      .eq('page_id', id)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
+    //
+    // Guarded: this read serves the event alone, and it runs BEFORE the update —
+    // unguarded, a transient failure would abort the activation itself. `null`
+    // means the read failed, and the emitter below treats that as "already
+    // published" so an unknowable prior state suppresses the event rather than
+    // double-counting the Loop B numerator.
+    const existingRead = await Promise.resolve(
+      adminClient
+        .from('landing_pages')
+        .select('is_published')
+        .eq('page_id', id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+    ).catch(() => null)
 
     const { data, error } = await adminClient
       .from('landing_pages')
@@ -363,7 +376,7 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
     await trackLandingPagePublished({
       tenantId,
       page: data,
-      wasPublished: existing?.is_published ?? false,
+      wasPublished: existingRead ? (existingRead.data?.is_published ?? false) : true,
       via: 'activate',
     })
 

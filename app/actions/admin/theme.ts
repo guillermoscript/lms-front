@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { CURATED_PRESETS, RADIUS_OPTIONS, FONT_OPTIONS, type StoredPreset, type CSSVariableMap } from '@/lib/themes/presets'
 
@@ -23,11 +23,16 @@ async function trackThemeCustomized(
   tenantId: string,
   properties: { preset: string | null; custom: boolean; change: string }
 ): Promise<void> {
-  await track(ANALYTICS_EVENTS.THEME_CUSTOMIZED, properties, {
-    userId: await getCurrentUserId(),
-    tenantId,
-    role: 'admin',
-  })
+  // Wrapped: `getCurrentUserId()` is evaluated as an ARGUMENT, so it runs
+  // before `track()`'s own guard could catch anything it throws — and every
+  // caller awaits this after the theme has already been written.
+  return safeAnalytics(async () => {
+    await track(ANALYTICS_EVENTS.THEME_CUSTOMIZED, properties, {
+      userId: await getCurrentUserId(),
+      tenantId,
+      role: 'admin',
+    })
+  }, 'theme_customized')
 }
 
 /**

@@ -29,7 +29,7 @@ import {
 import { paymentPollLimiter, binancePayHistoryLimiter } from '@/lib/rate-limit'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -121,53 +121,58 @@ export async function POST(req: NextRequest) {
         // this settlement — so a client polling every few seconds cannot turn
         // one sale into fifty.
         if (!result.alreadyProcessed) {
-          const gross = Number(tx.amount ?? 0)
-          const net = netOfRefunds(gross, tx.refunded_amount)
-          const snapshot = tx.school_percentage_snapshot ?? null
-          const ctx = { userId: user.id, tenantId }
+          // Wrapped: the `entitlements` count is an analytics-only read on the
+          // request path of a payment that has already settled on Binance.
+          // Losing the event is recoverable; 500-ing the poll is not.
+          await safeAnalytics(async () => {
+            const gross = Number(tx.amount ?? 0)
+            const net = netOfRefunds(gross, tx.refunded_amount)
+            const snapshot = tx.school_percentage_snapshot ?? null
+            const ctx = { userId: user.id, tenantId }
 
-          await track(
-            ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
-            {
-              provider: 'binance_personal',
-              amount_major: net,
-              currency: tx.currency ?? 'usd',
-              is_subscription: !!tx.plan_id,
-              // `binance_personal` has `bearsPlatformFee: false` — the money
-              // never reaches a platform account — so the fee is a hard 0, not
-              // a rate applied to the snapshot.
-              platform_fee: 0,
-              school_percentage_snapshot: snapshot,
-              gross_amount: gross,
-              transaction_id: tx.transaction_id,
-              settlement_path: 'pay_history_reconcile',
-              ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
-              ...(tx.product_id ? { product_id: tx.product_id } : {}),
-            },
-            ctx,
-          )
-
-          const sourceType = tx.plan_id ? 'subscription' : 'product'
-          const sourceId = tx.plan_id ?? tx.product_id
-          if (sourceId != null) {
-            const { count } = await admin
-              .from('entitlements')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id)
-              .eq('source_type', sourceType)
-              .eq('source_id', sourceId)
-              .eq('status', 'active')
             await track(
-              ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+              ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
               {
-                source_type: sourceType,
-                course_count: count ?? 0,
                 provider: 'binance_personal',
+                amount_major: net,
+                currency: tx.currency ?? 'usd',
+                is_subscription: !!tx.plan_id,
+                // `binance_personal` has `bearsPlatformFee: false` — the money
+                // never reaches a platform account — so the fee is a hard 0, not
+                // a rate applied to the snapshot.
+                platform_fee: 0,
+                school_percentage_snapshot: snapshot,
+                gross_amount: gross,
                 transaction_id: tx.transaction_id,
+                settlement_path: 'pay_history_reconcile',
+                ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+                ...(tx.product_id ? { product_id: tx.product_id } : {}),
               },
               ctx,
             )
-          }
+
+            const sourceType = tx.plan_id ? 'subscription' : 'product'
+            const sourceId = tx.plan_id ?? tx.product_id
+            if (sourceId != null) {
+              const { count } = await admin
+                .from('entitlements')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('source_type', sourceType)
+                .eq('source_id', sourceId)
+                .eq('status', 'active')
+              await track(
+                ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+                {
+                  source_type: sourceType,
+                  course_count: count ?? 0,
+                  provider: 'binance_personal',
+                  transaction_id: tx.transaction_id,
+                },
+                ctx,
+              )
+            }
+          }, 'binance_personal settlement analytics')
         }
         return NextResponse.json(
           result.alreadyProcessed

@@ -6,7 +6,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 
 interface ActionResponse {
@@ -84,58 +84,64 @@ export async function confirmBinancePersonalTransaction(
     // they cleared their queue.
     //
     // Gated on the status-guarded flip so a double-click confirms once.
+    // Wrapped: the `entitlements` count below is an analytics-only read and the
+    // flip has already landed — a failed read must not surface to the admin as
+    // "Error confirming Binance personal transaction".
     if (flipped && tx.user_id) {
-      const gross = Number(tx.amount ?? 0)
-      const net = netOfRefunds(gross, tx.refunded_amount)
-      const snapshot = tx.school_percentage_snapshot ?? null
-      const bearsFee = !!PROVIDER_CAPABILITIES.binance_personal?.bearsPlatformFee
-      const ctx = { userId: tx.user_id, tenantId, timestamp: tx.transaction_date }
+      const buyerId = tx.user_id
+      await safeAnalytics(async () => {
+        const gross = Number(tx.amount ?? 0)
+        const net = netOfRefunds(gross, tx.refunded_amount)
+        const snapshot = tx.school_percentage_snapshot ?? null
+        const bearsFee = !!PROVIDER_CAPABILITIES.binance_personal?.bearsPlatformFee
+        const ctx = { userId: buyerId, tenantId, timestamp: tx.transaction_date }
 
-      await track(
-        ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
-        {
-          provider: 'binance_personal',
-          amount_major: net,
-          currency: tx.currency ?? 'usd',
-          is_subscription: !!tx.plan_id,
-          // `bearsPlatformFee` is false for binance_personal — the money never
-          // reaches a platform account — so this is a hard 0, not a rate.
-          ...(bearsFee
-            ? snapshot != null
-              ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
-              : {}
-            : { platform_fee: 0 }),
-          school_percentage_snapshot: snapshot,
-          gross_amount: gross,
-          transaction_id: transactionId,
-          settlement_path: 'admin_manual_confirm',
-          ...(tx.product_id ? { product_id: tx.product_id } : {}),
-          ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
-        },
-        ctx
-      )
-
-      const sourceType = tx.plan_id ? 'subscription' : 'product'
-      const sourceId = tx.plan_id ?? tx.product_id
-      if (sourceId != null) {
-        const { count } = await supabase
-          .from('entitlements')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', tx.user_id)
-          .eq('source_type', sourceType)
-          .eq('source_id', sourceId)
-          .eq('status', 'active')
         await track(
-          ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+          ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
           {
-            source_type: sourceType,
-            course_count: count ?? 0,
             provider: 'binance_personal',
+            amount_major: net,
+            currency: tx.currency ?? 'usd',
+            is_subscription: !!tx.plan_id,
+            // `bearsPlatformFee` is false for binance_personal — the money never
+            // reaches a platform account — so this is a hard 0, not a rate.
+            ...(bearsFee
+              ? snapshot != null
+                ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
+                : {}
+              : { platform_fee: 0 }),
+            school_percentage_snapshot: snapshot,
+            gross_amount: gross,
             transaction_id: transactionId,
+            settlement_path: 'admin_manual_confirm',
+            ...(tx.product_id ? { product_id: tx.product_id } : {}),
+            ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
           },
           ctx
         )
-      }
+
+        const sourceType = tx.plan_id ? 'subscription' : 'product'
+        const sourceId = tx.plan_id ?? tx.product_id
+        if (sourceId != null) {
+          const { count } = await supabase
+            .from('entitlements')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', buyerId)
+            .eq('source_type', sourceType)
+            .eq('source_id', sourceId)
+            .eq('status', 'active')
+          await track(
+            ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+            {
+              source_type: sourceType,
+              course_count: count ?? 0,
+              provider: 'binance_personal',
+              transaction_id: transactionId,
+            },
+            ctx
+          )
+        }
+      }, 'binance_personal admin-confirm settlement analytics')
     }
 
     revalidatePath('/dashboard/admin/payment-requests')

@@ -19,7 +19,7 @@ import type { NormalizedBillingEvent } from './types'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from './types'
 import { netOfRefunds } from './payouts-owed'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 /**
  * The amount a `refund.succeeded` event gave back, in major units of the
@@ -124,6 +124,10 @@ function platformFeeProps(
  * `after_transaction_update` trigger creates those rows in the same statement,
  * so a zero here is a real paid-but-no-access incident — the one number that
  * makes the event worth emitting at all.
+ *
+ * Wrapped whole: that `entitlements` read is pure analytics, and callers `void`
+ * this — so an unguarded throw would not fail the webhook, it would surface as
+ * an unhandled promise rejection instead. Losing the event is the right failure.
  */
 async function trackSettlement(
   admin: SupabaseClient,
@@ -131,55 +135,57 @@ async function trackSettlement(
   tx: SettlementRow,
   extra: Record<string, unknown> = {},
 ): Promise<void> {
-  const ctx = { userId: tx.user_id, tenantId: tx.tenant_id ?? null }
-  const gross = Number(tx.amount ?? 0)
-  // NET of refunds (#547): a partial refund leaves the row 'successful', so a
-  // gross sum would overstate revenue exactly the way the school-facing screens
-  // did before that issue. Normally a no-op on a fresh flip — it is here so the
-  // property is net by construction rather than by luck.
-  const net = netOfRefunds(gross, tx.refunded_amount)
-  const snapshot = tx.school_percentage_snapshot ?? null
+  return safeAnalytics(async () => {
+    const ctx = { userId: tx.user_id, tenantId: tx.tenant_id ?? null }
+    const gross = Number(tx.amount ?? 0)
+    // NET of refunds (#547): a partial refund leaves the row 'successful', so a
+    // gross sum would overstate revenue exactly the way the school-facing screens
+    // did before that issue. Normally a no-op on a fresh flip — it is here so the
+    // property is net by construction rather than by luck.
+    const net = netOfRefunds(gross, tx.refunded_amount)
+    const snapshot = tx.school_percentage_snapshot ?? null
 
-  await track(
-    ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
-    {
-      provider,
-      amount_major: net,
-      currency: tx.currency ?? 'usd',
-      is_subscription: !!tx.plan_id,
-      ...platformFeeProps(provider, net, snapshot),
-      school_percentage_snapshot: snapshot,
-      gross_amount: gross,
-      transaction_id: tx.transaction_id,
-      ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
-      ...(tx.product_id ? { product_id: tx.product_id } : {}),
-      ...extra,
-    },
-    ctx,
-  )
+    await track(
+      ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+      {
+        provider,
+        amount_major: net,
+        currency: tx.currency ?? 'usd',
+        is_subscription: !!tx.plan_id,
+        ...platformFeeProps(provider, net, snapshot),
+        school_percentage_snapshot: snapshot,
+        gross_amount: gross,
+        transaction_id: tx.transaction_id,
+        ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+        ...(tx.product_id ? { product_id: tx.product_id } : {}),
+        ...extra,
+      },
+      ctx,
+    )
 
-  const sourceType = tx.plan_id ? 'subscription' : 'product'
-  const sourceId = tx.plan_id ?? tx.product_id
-  if (!tx.user_id || sourceId == null) return
+    const sourceType = tx.plan_id ? 'subscription' : 'product'
+    const sourceId = tx.plan_id ?? tx.product_id
+    if (!tx.user_id || sourceId == null) return
 
-  const { count } = await admin
-    .from('entitlements')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', tx.user_id)
-    .eq('source_type', sourceType)
-    .eq('source_id', sourceId)
-    .eq('status', 'active')
+    const { count } = await admin
+      .from('entitlements')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', tx.user_id)
+      .eq('source_type', sourceType)
+      .eq('source_id', sourceId)
+      .eq('status', 'active')
 
-  await track(
-    ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
-    {
-      source_type: sourceType,
-      course_count: count ?? 0,
-      provider,
-      transaction_id: tx.transaction_id,
-    },
-    ctx,
-  )
+    await track(
+      ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+      {
+        source_type: sourceType,
+        course_count: count ?? 0,
+        provider,
+        transaction_id: tx.transaction_id,
+      },
+      ctx,
+    )
+  }, 'payment settlement analytics')
 }
 
 export interface DispatchContext {

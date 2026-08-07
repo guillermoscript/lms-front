@@ -9,7 +9,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import { evaluateSchoolActivation } from '@/lib/analytics/activation'
 
 export interface CourseFormData {
@@ -269,32 +269,37 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
   // alone, which is never a publish.
   const nextStatus = courseData.status
   if (nextStatus === 'published' && existingCourse.status !== 'published') {
-    const { count: lessonCount } = await adminClient
-      .from('lessons')
-      .select('id', { count: 'exact', head: true })
-      .eq('course_id', courseId)
-      .eq('tenant_id', tenantId)
+    // Wrapped: the `lessons` count exists only to populate `lesson_count`, and
+    // the course is already published by now — an analytics read must not throw
+    // "Failed to update course" at a save that succeeded.
+    await safeAnalytics(async () => {
+      const { count: lessonCount } = await adminClient
+        .from('lessons')
+        .select('id', { count: 'exact', head: true })
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId)
 
-    const createdAt = existingCourse.created_at
-      ? new Date(existingCourse.created_at)
-      : null
+      const createdAt = existingCourse.created_at
+        ? new Date(existingCourse.created_at)
+        : null
 
-    await track(
-      ANALYTICS_EVENTS.COURSE_PUBLISHED,
-      {
-        course_id: courseId,
-        lesson_count: lessonCount ?? 0,
-        days_since_course_created:
-          createdAt && !Number.isNaN(createdAt.getTime())
-            ? Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86_400_000))
-            : null,
-        previous_status: existingCourse.status,
-      },
-      { userId: user.id, tenantId, role }
-    )
+      await track(
+        ANALYTICS_EVENTS.COURSE_PUBLISHED,
+        {
+          course_id: courseId,
+          lesson_count: lessonCount ?? 0,
+          days_since_course_created:
+            createdAt && !Number.isNaN(createdAt.getTime())
+              ? Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86_400_000))
+              : null,
+          previous_status: existingCourse.status,
+        },
+        { userId: user.id, tenantId, role }
+      )
 
-    // Publishing is one of the two events that can complete activation.
-    await evaluateSchoolActivation({ tenantId, userId: user.id, role })
+      // Publishing is one of the two events that can complete activation.
+      await evaluateSchoolActivation({ tenantId, userId: user.id, role })
+    }, 'course_published')
   }
 
   revalidatePath('/dashboard/teacher/courses')

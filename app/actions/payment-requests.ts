@@ -9,7 +9,7 @@ import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/li
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 export interface PaymentRequestFormData {
   productId?: number
@@ -473,7 +473,11 @@ export async function completeAndEnroll(requestId: number) {
   // Same trap-3 attribution as that step: the student's id, and backdated to
   // the original request so the sale lands in its own cohort rather than in the
   // admin's paperwork day.
-  {
+  //
+  // Wrapped: the `entitlements` count is an analytics-only read, and the sale
+  // is already committed by the time we get here. A failed read must not throw
+  // the admin an error for a completion that actually succeeded.
+  await safeAnalytics(async () => {
     const provider = (transaction.payment_provider as string | null) ?? 'manual'
     const gross = Number(transaction.amount ?? 0)
     const net = netOfRefunds(gross, transaction.refunded_amount as number | null)
@@ -531,7 +535,7 @@ export async function completeAndEnroll(requestId: number) {
         ctx
       )
     }
-  }
+  }, 'manual payment settlement analytics')
 
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)

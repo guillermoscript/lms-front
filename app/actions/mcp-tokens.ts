@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { randomBytes, createHash } from 'crypto'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 export interface McpToken {
   id: number
@@ -51,11 +51,18 @@ export async function createMcpToken(name: string, expiresInDays?: number) {
   if (error) throw new Error(error.message)
 
   // §10.2 — the MCP adoption signal. Never the token or its hash.
-  await track(
-    ANALYTICS_EVENTS.MCP_TOKEN_CREATED,
-    { has_expiry: expiresAt !== null, expires_in_days: expiresInDays ?? null },
-    { userId, tenantId: await getCurrentTenantId(), role }
-  )
+  //
+  // Wrapped: `getCurrentTenantId()` is evaluated as an ARGUMENT, so it runs
+  // before `track()`'s own guard could catch anything it throws — and the token
+  // row already exists, so throwing here would lose the raw token forever (it
+  // is only ever returned once).
+  await safeAnalytics(async () => {
+    await track(
+      ANALYTICS_EVENTS.MCP_TOKEN_CREATED,
+      { has_expiry: expiresAt !== null, expires_in_days: expiresInDays ?? null },
+      { userId, tenantId: await getCurrentTenantId(), role }
+    )
+  }, 'mcp_token_created')
 
   revalidatePath('/dashboard/admin/api-tokens')
   revalidatePath('/dashboard/teacher/api-tokens')

@@ -8,7 +8,7 @@ import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 // Lazy initialize Supabase admin client
 function getSupabaseAdmin() {
@@ -221,19 +221,26 @@ export async function POST(req: NextRequest) {
           // The DB trigger created the entitlements inside the same statement,
           // so this reads the real outcome. A zero is a paid-but-no-access
           // incident, which is precisely what the count exists to surface.
+          //
+          // Wrapped: `countGrantedEntitlements` is an analytics-only read
+          // evaluated as a track() ARGUMENT, so it runs before track()'s own
+          // guard could absorb it — unguarded it would 500 a paid webhook.
           const sourceType = txBefore?.plan_id ? 'subscription' : 'product'
           const sourceId = (txBefore?.plan_id ?? txBefore?.product_id) as number | null
           if (txBefore?.user_id && sourceId != null) {
-            await track(
-              ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
-              {
-                source_type: sourceType,
-                course_count: await countGrantedEntitlements(txBefore.user_id, sourceType, sourceId),
-                provider: 'stripe',
-                transaction_id: parseInt(transactionId),
-              },
-              { userId: txBefore.user_id, tenantId: tenantId ?? (txBefore?.tenant_id as string | null) },
-            )
+            const buyerId = txBefore.user_id
+            await safeAnalytics(async () => {
+              await track(
+                ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+                {
+                  source_type: sourceType,
+                  course_count: await countGrantedEntitlements(buyerId, sourceType, sourceId),
+                  provider: 'stripe',
+                  transaction_id: parseInt(transactionId),
+                },
+                { userId: buyerId, tenantId: tenantId ?? (txBefore?.tenant_id as string | null) },
+              )
+            }, 'entitlement_granted (stripe payment_intent)')
           }
         }
 
@@ -604,17 +611,23 @@ export async function POST(req: NextRequest) {
               { userId: tx.user_id, tenantId: tx.tenant_id as string | null },
             )
 
+            // Wrapped for the same reason as the payment_intent path above: the
+            // count is an analytics-only read in track()'s ARGUMENT list.
             if (tx.user_id && tx.plan_id != null) {
-              await track(
-                ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
-                {
-                  source_type: 'subscription',
-                  course_count: await countGrantedEntitlements(tx.user_id, 'subscription', tx.plan_id),
-                  provider: 'stripe',
-                  transaction_id: tx.transaction_id,
-                },
-                { userId: tx.user_id, tenantId: tx.tenant_id as string | null },
-              )
+              const buyerId = tx.user_id
+              const planId = tx.plan_id
+              await safeAnalytics(async () => {
+                await track(
+                  ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+                  {
+                    source_type: 'subscription',
+                    course_count: await countGrantedEntitlements(buyerId, 'subscription', planId),
+                    provider: 'stripe',
+                    transaction_id: tx.transaction_id,
+                  },
+                  { userId: buyerId, tenantId: tx.tenant_id as string | null },
+                )
+              }, 'entitlement_granted (stripe subscription_create)')
             }
           }
         } else {
@@ -635,12 +648,18 @@ export async function POST(req: NextRequest) {
         // else holding them), and an idempotency reference — this endpoint has
         // no `webhook_events` ledger, so a redelivered renewal would otherwise
         // be counted as a second month of revenue.
-        const { data: renewedSub } = await getSupabaseAdmin()
-          .from('subscriptions')
-          .select('user_id, tenant_id, plan_id, current_period_end')
-          .eq('provider_subscription_id', stripeSubId)
-          .eq('payment_provider', 'stripe')
-          .maybeSingle()
+        //
+        // Guarded: nothing below the analytics gate reads it, so a failed read
+        // must cost the event and not the renewal it is describing. `.catch`
+        // rather than `safeAnalytics` only because the value is needed here.
+        const { data: renewedSub } = await Promise.resolve(
+          getSupabaseAdmin()
+            .from('subscriptions')
+            .select('user_id, tenant_id, plan_id, current_period_end')
+            .eq('provider_subscription_id', stripeSubId)
+            .eq('payment_provider', 'stripe')
+            .maybeSingle()
+        ).catch(() => ({ data: null }))
 
         await dispatchBillingEvent(
           {
