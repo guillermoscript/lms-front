@@ -377,6 +377,8 @@ export default async function LessonPage({ params }: PageProps) {
               mdx={lessonMdx}
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
+              lessonId={Number(lessonId)}
+              courseId={numericCourseId}
             />
 
             {/* Contextual tutor entry point (opens the AI chat pre-seeded) */}

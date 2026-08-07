@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { MDXClient, type SerializeResult } from 'next-mdx-remote-client'
 import { lessonMdxComponents } from '@/components/lesson/mdx-components'
 import { IconPlayerPlay } from '@tabler/icons-react'
@@ -14,11 +14,24 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useCheckpoints } from '@/components/lesson/checkpoints/checkpoints-provider'
 import { CheckpointExerciseRenderer } from '@/components/lesson/checkpoints/checkpoint-exercise-renderer'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import type { VideoProgressMilestone } from '@/components/lesson/checkpoint-video-player'
 
 interface LessonContentProps {
   mdx: SerializeResult | null
   videoUrl: string | null
   embedCode: string | null
+  /**
+   * Identifies the video for `video_progress` and resets its milestone set.
+   *
+   * Optional on purpose. This component is also rendered by the teacher preview
+   * and the public (#426) lesson preview, and neither should contribute to
+   * student video-engagement numbers — a creator scrubbing their own draft is
+   * not a learner watching. Omitted here means no `video_progress` at all.
+   */
+  lessonId?: number
+  courseId?: number
   /**
    * How to render teacher-authored embed_code HTML. 'trusted' injects it into
    * the page (enrolled-student views). 'sandboxed' isolates it in an
@@ -28,12 +41,35 @@ interface LessonContentProps {
   embedMode?: 'trusted' | 'sandboxed'
 }
 
-export function LessonContent({ mdx, videoUrl, embedCode, embedMode = 'trusted' }: LessonContentProps) {
+export function LessonContent({
+  mdx,
+  videoUrl,
+  embedCode,
+  lessonId,
+  courseId,
+  embedMode = 'trusted',
+}: LessonContentProps) {
   const t = useTranslations('components.lessons')
   const tc = useTranslations('components.checkpoints')
   const checkpointsCtx = useCheckpoints()
   const playerRef = useRef<CheckpointVideoPlayerHandle>(null)
   const [activeMarker, setActiveMarker] = useState<CheckpointVideoMarker | null>(null)
+  const analytics = useAnalytics()
+
+  // Four events per video, maximum. The player guarantees each milestone fires
+  // once per lesson and only on genuine playback — see `useProgressMilestones`.
+  const handleProgressMilestone = useCallback(
+    (percent: VideoProgressMilestone) => {
+      if (lessonId === undefined) return
+      analytics.track(ANALYTICS_EVENTS.VIDEO_PROGRESS, {
+        percent,
+        lesson_id: lessonId,
+        course_id: courseId ?? null,
+        provider: videoUrl ? getVideoProvider(videoUrl) : null,
+      })
+    },
+    [analytics, lessonId, courseId, videoUrl]
+  )
 
   const getEmbedUrl = (url: string): string | null => {
     const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/)
@@ -89,6 +125,8 @@ export function LessonContent({ mdx, videoUrl, embedCode, embedMode = 'trusted' 
           url={videoUrl}
           markers={videoMarkers}
           onMarkerReached={handleMarkerReached}
+          onProgressMilestone={handleProgressMilestone}
+          progressResetKey={lessonId}
           playerRef={playerRef}
           className="rounded-xl overflow-hidden shadow-lg ring-1 ring-border"
         />

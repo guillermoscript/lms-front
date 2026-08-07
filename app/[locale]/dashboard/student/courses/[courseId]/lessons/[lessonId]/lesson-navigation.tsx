@@ -63,6 +63,14 @@ export function LessonNavigation({
   // plain mount-time ref would accumulate across a whole course and report one
   // absurd number at the end.
   const viewStartedAtRef = useRef(0)
+  // Partial guard against `course_completed` refiring when a student
+  // uncompletes and recompletes the final lesson. There is NO durable latch to
+  // key off: `enrollments.status` is only `active`/`disabled` (no completed
+  // state) and no course-completion table exists, so inventing one for an
+  // analytics event is not the trade. This ref covers the common case — the
+  // toggle happens in one sitting, and `router.refresh()` re-renders without
+  // remounting — but a full page reload between the two still double-counts.
+  const courseCompletionTrackedRef = useRef(false)
 
   const nextBlocked = requireSequentialCompletion && !completed
   // Only gates going from incomplete → complete; un-completing is always allowed.
@@ -208,7 +216,8 @@ export function LessonNavigation({
         is_sequential: requireSequentialCompletion,
       })
 
-      if (isCourseNowComplete) {
+      if (isCourseNowComplete && !courseCompletionTrackedRef.current) {
+        courseCompletionTrackedRef.current = true
         analytics.track(ANALYTICS_EVENTS.COURSE_COMPLETED, {
           course_id: courseId,
           total_lessons: totalLessons,

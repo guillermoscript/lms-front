@@ -162,6 +162,12 @@ export const ANALYTICS_EVENTS = {
   AI_SESSION_STARTED: 'ai_session_started',
   AI_SESSION_ABANDONED: 'ai_session_abandoned',
   COMMUNITY_FEED_VIEWED: 'community_feed_viewed',
+  /**
+   * Not in the coverage map, added with the Loop D community sweep: replies are
+   * the half of community engagement that indicates a conversation rather than
+   * a broadcast, and `community_post_created` alone cannot distinguish them.
+   */
+  COMMUNITY_COMMENT_CREATED: 'community_comment_created',
   REACTION_ADDED: 'reaction_added',
   POLL_VOTED: 'poll_voted',
   PROGRESS_VIEWED: 'progress_viewed',

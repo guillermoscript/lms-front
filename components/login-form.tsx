@@ -26,6 +26,7 @@ import {
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -107,13 +108,12 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('common.error')
       setError(message)
-      // Supabase's message ("Invalid login credentials", "Email not confirmed")
-      // is the whole point of the event — it separates people who forgot their
-      // password from people stuck behind an unconfirmed address. It carries no
-      // PII; the email is deliberately not attached.
+      // The CODE, never `message`. GoTrue strings can interpolate the submitted
+      // address, and the no-such-user/wrong-password split is account
+      // enumeration — both collapse to `invalid_credentials`.
       analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, {
         method: 'password',
-        failure_reason: message,
+        failure_reason: toAuthFailureCode(error),
       })
     } finally {
       setIsLoading(false)
@@ -142,7 +142,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
       setError(message)
       analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, {
         method: 'google',
-        failure_reason: message,
+        failure_reason: toAuthFailureCode(error),
       })
       setIsSocialLoading(false)
     }

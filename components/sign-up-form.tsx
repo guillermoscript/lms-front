@@ -26,21 +26,11 @@ import {
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-
-/**
- * Stable, locale-independent reason codes for `signup_failed`.
- *
- * Deliberately NOT `localizedError()`: that returns translated copy, so the
- * same failure would split into an English bucket and a Spanish one and the
- * chart would under-count both. Same branches, untranslated output.
- */
-function signupFailureCode(err: unknown): string {
-  const m = (err instanceof Error ? err.message : '').toLowerCase()
-  if (m.includes('already registered') || m.includes('already exists')) return 'email_taken'
-  if (m.includes('rate limit') || m.includes('too many')) return 'rate_limited'
-  if (m.includes('password')) return 'weak_password'
-  return 'unknown'
-}
+// Shared with login and /auth/error so the three cannot drift, and closed-set
+// so no raw GoTrue string (which can carry the submitted address) escapes.
+// Deliberately NOT `localizedError()` below: that returns translated copy, so
+// the same failure would split into an English bucket and a Spanish one.
+import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
 
 interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -120,6 +110,17 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         },
       })
       if (error) throw error
+
+      // Stitch the anonymous session to the new profile HERE, before the
+      // navigation. Everything the visitor did up to this point — landing,
+      // pricing, product views, the whole top of Loop A — is anonymous, and if
+      // the binding waits for the dashboard to load on the next page those
+      // events may never join to the profile. `data.user` is populated even
+      // when `data.session` is null (email confirmation pending), which is the
+      // common path, so this must not be gated on the session.
+      const newUserId = data.user?.id ?? data.session?.user?.id
+      if (newUserId) analytics.identify(newUserId, { signup_method: 'password' })
+
       if (data.session) {
         // The signup token predates handle_new_user()'s app_metadata write, so
         // it lacks the tenant_id claim — refresh to get one that has it, or
@@ -131,7 +132,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       setError(localizedError(error))
       analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
         method: 'password',
-        failure_reason: signupFailureCode(error),
+        failure_reason: toAuthFailureCode(error),
       })
     } finally {
       setIsLoading(false)
@@ -161,7 +162,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       setError(localizedError(error))
       analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
         method: 'google',
-        failure_reason: signupFailureCode(error),
+        failure_reason: toAuthFailureCode(error),
       })
       setIsSocialLoading(false)
     }
