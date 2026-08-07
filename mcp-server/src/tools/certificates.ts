@@ -3,7 +3,7 @@ import type { MCPServer } from "mcp-use/server";
 import { widget, text } from "mcp-use/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LmsSession } from "../session.js";
-import { ok, okText, errorResult } from "../format.js";
+import { ok, okText, errorResult, PaginationSchema } from "../format.js";
 import { getPlatformDomain } from "../env.js";
 
 /**
@@ -253,6 +253,8 @@ export function registerCertificateTools(server: MCPServer) {
           .boolean()
           .default(false)
           .describe("Include revoked certificates (default: only live ones)"),
+        limit: PaginationSchema.limit,
+        offset: PaginationSchema.offset,
       }),
       annotations: {
         readOnlyHint: true,
@@ -277,19 +279,22 @@ export function registerCertificateTools(server: MCPServer) {
       try {
         const supabase = session.getClient();
 
+        // Was a bare `.limit(100)`: certificate 101 existed but was reachable
+        // from nowhere, and `total` counted only what the page returned.
         let query = supabase
           .from("certificates")
           .select(
-            "certificate_id, course_id, verification_code, issued_at, expires_at, revoked_at, revoke_reason, pdf_url, share_count, view_count, courses(title)"
+            "certificate_id, course_id, verification_code, issued_at, expires_at, revoked_at, revoke_reason, pdf_url, share_count, view_count, courses(title)",
+            { count: "exact" }
           )
           .eq("user_id", session.getUserId())
           .eq("tenant_id", session.getTenantId())
           .order("issued_at", { ascending: false })
-          .limit(100);
+          .range(input.offset, input.offset + input.limit - 1);
 
         if (!input.include_revoked) query = query.is("revoked_at", null);
 
-        const { data, error } = await query;
+        const { data, error, count } = await query;
         if (error) return errorResult(`Loading certificates: ${error.message}`);
 
         const base = await getVerifyBase(session);
@@ -312,14 +317,25 @@ export function registerCertificateTools(server: MCPServer) {
           };
         });
 
+        const total = count ?? certificates.length;
+        // Page-level; the widget recomputes it from the rows it has loaded.
         const valid = certificates.filter((c) => c.status === "valid").length;
 
         return widget({
-          props: { total: certificates.length, valid, certificates },
+          props: {
+            total,
+            // Echoed so "load more" keeps the same filter.
+            include_revoked: input.include_revoked,
+            offset: input.offset,
+            limit: input.limit,
+            has_more: total > input.offset + certificates.length,
+            valid,
+            certificates,
+          },
           output: text(
             certificates.length === 0
               ? "You have no certificates yet. Finish a course's lessons and exams, then check lms_get_certificate_eligibility for what's still missing."
-              : `${certificates.length} certificate(s), ${valid} currently valid.`
+              : `${total} certificate(s), ${valid} currently valid.`
           ),
         });
       } catch (err) {

@@ -7,6 +7,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 import { LessonBody } from "../shared/lesson";
 
@@ -45,9 +47,44 @@ export const widgetMetadata: WidgetMetadata = {
 
 type Props = z.infer<typeof propsSchema>;
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Opening lesson…",
+    lessonNumber: (n: string) => `Lesson ${n}`,
+    completedBadge: "✓ Completed",
+    lockedTitle: "This lesson is locked",
+    lockedBody: (previous: string | null) =>
+      `Complete ${previous ? `"${previous}"` : "the previous lesson"} first — this course requires sequential completion.`,
+    noContent: "No written content for this lesson.",
+    completeFailed: "Could not mark the lesson complete.",
+    askTutor: "I don't understand this 🙋",
+    askedTutor: "Asked the tutor ✓",
+    completedLabel: "✓ Lesson completed",
+    marking: "Marking…",
+    markComplete: "Mark lesson complete",
+  },
+  es: {
+    loading: "Abriendo la lección…",
+    lessonNumber: (n: string) => `Lección ${n}`,
+    completedBadge: "✓ Completada",
+    lockedTitle: "Esta lección está bloqueada",
+    lockedBody: (previous: string | null) =>
+      `Primero completa ${previous ? `"${previous}"` : "la lección anterior"}: este curso exige avanzar en orden.`,
+    noContent: "Esta lección no tiene contenido escrito.",
+    completeFailed: "No se pudo marcar la lección como completada.",
+    askTutor: "No entiendo esto 🙋",
+    askedTutor: "Le preguntaste al tutor ✓",
+    completedLabel: "✓ Lección completada",
+    marking: "Marcando…",
+    markComplete: "Marcar lección como completada",
+  },
+};
+
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function LessonViewer() {
+function LessonViewer() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const {
@@ -62,6 +99,8 @@ export default function LessonViewer() {
   const [askedTutor, setAskedTutor] = useState(false);
 
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -70,7 +109,7 @@ export default function LessonViewer() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Opening lesson…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -96,14 +135,14 @@ export default function LessonViewer() {
           <div className="mb-[18px]">
             <div className="mb-2.5 flex flex-wrap items-center gap-2">
               <span className="rounded-lg bg-[var(--brand-50)] px-2 py-0.5 text-[11px] font-bold text-[var(--brand-600)] dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
-                Lesson {lesson.sequence}
+                {t.lessonNumber(fmt.number(lesson.sequence))}
               </span>
               <span className="text-xs text-zinc-400 dark:text-zinc-500">
                 {course_title}
               </span>
               {completed && (
                 <span className="rounded-lg bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-600 dark:bg-green-900 dark:text-green-400">
-                  ✓ Completed
+                  {t.completedBadge}
                 </span>
               )}
             </div>
@@ -123,11 +162,10 @@ export default function LessonViewer() {
             <div className="mb-5 rounded-xl bg-amber-100 p-7 text-center dark:bg-amber-950">
               <div className="mb-2 text-[28px]">🔒</div>
               <p className="m-0 text-sm font-semibold text-amber-800 dark:text-amber-300">
-                This lesson is locked
+                {t.lockedTitle}
               </p>
               <p className="mt-1.5 mb-0 text-[13px] text-amber-800 dark:text-amber-300">
-                Complete{locked_by ? ` "${locked_by.title}"` : " the previous lesson"}{" "}
-                first — this course requires sequential completion.
+                {t.lockedBody(locked_by?.title ?? null)}
               </p>
             </div>
           ) : (
@@ -139,16 +177,14 @@ export default function LessonViewer() {
                   content={lesson.content}
                   videoUrl={lesson.video_url}
                   embedCode={lesson.embed_code}
-                  emptyMessage="No written content for this lesson."
+                  emptyMessage={t.noContent}
                 />
               </div>
 
               {/* Error from mark-complete */}
               {isError && (
                 <div className="mb-3.5 rounded-[10px] bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700 dark:bg-red-950 dark:text-red-400">
-                  {error instanceof Error
-                    ? error.message
-                    : "Could not mark the lesson complete."}
+                  {error instanceof Error ? error.message : t.completeFailed}
                 </div>
               )}
 
@@ -169,11 +205,11 @@ export default function LessonViewer() {
                       : "border-[var(--brand-600)] text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]"
                   }`}
                 >
-                  {askedTutor ? "Asked the tutor ✓" : "I don't understand this 🙋"}
+                  {askedTutor ? t.askedTutor : t.askTutor}
                 </button>
                 {completed ? (
                   <span className="rounded-[10px] bg-green-100 px-[18px] py-[9px] text-[13.5px] font-semibold text-green-600 dark:bg-green-900 dark:text-green-400">
-                    ✓ Lesson completed
+                    {t.completedLabel}
                   </span>
                 ) : (
                   <button
@@ -181,7 +217,7 @@ export default function LessonViewer() {
                     disabled={isCompleting}
                     className="cursor-pointer rounded-[10px] border-none bg-[var(--brand-600)] px-[18px] py-[9px] text-[13.5px] font-semibold text-white disabled:cursor-wait disabled:opacity-70 dark:bg-[var(--brand-400)]"
                   >
-                    {isCompleting ? "Marking…" : "Mark lesson complete"}
+                    {isCompleting ? t.marking : t.markComplete}
                   </button>
                 )}
               </div>
@@ -192,3 +228,5 @@ export default function LessonViewer() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(LessonViewer);

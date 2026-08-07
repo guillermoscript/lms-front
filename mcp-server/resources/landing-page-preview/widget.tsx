@@ -5,6 +5,7 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
 import {
   CARD_DARK,
   CARD_LIGHT,
@@ -13,6 +14,7 @@ import {
   withAlpha,
 } from "../shared/contrast";
 import type { CSSProperties } from "react";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -137,9 +139,49 @@ function CtaPills({
   );
 }
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Loading page…",
+    published: "PUBLISHED",
+    draft: "DRAFT",
+    sectionCount: (n: number, s: string) => `${s} section${n === 1 ? "" : "s"}`,
+    brandSwatch: " · brand ",
+    openPreview: "Open real preview ↗",
+    wireframeNote:
+      "Structural wireframe in the school's brand colors — images and live data render in the editor/preview.",
+    noSections: "This page has no sections yet.",
+    warnings: "Warnings",
+    footerHint: (path: string) => `${path} · refine visually in Dashboard → Landing Page`,
+    // Stand-ins for a section the author has not filled in yet. They are
+    // scaffolding, not content, so they follow the reader's language.
+    placeholderHeadline: "Hero headline",
+    placeholderItems: ["Question one", "Question two"],
+  },
+  es: {
+    loading: "Cargando la página…",
+    published: "PUBLICADA",
+    draft: "BORRADOR",
+    sectionCount: (n: number, s: string) => `${s} ${n === 1 ? "sección" : "secciones"}`,
+    brandSwatch: " · color ",
+    openPreview: "Abrir vista previa real ↗",
+    wireframeNote:
+      "Esquema estructural con los colores de la escuela — las imágenes y los datos reales se ven en el editor o la vista previa.",
+    noSections: "Esta página todavía no tiene secciones.",
+    warnings: "Avisos",
+    footerHint: (path: string) => `${path} · ajústala visualmente en Panel → Página de destino`,
+    placeholderHeadline: "Titular principal",
+    placeholderItems: ["Pregunta uno", "Pregunta dos"],
+  },
+};
+
 function SectionCard({ section, brand }: { section: Section; brand: string | null }) {
   const { layout, heading, subtitle, ctas, items, itemCount } = section;
   const accent = accentOf(section, brand);
+  // A component of its own, so it reads the string table directly rather than
+  // threading `t` down from the widget.
+  const t = useStrings(STRINGS);
 
   if (layout === "hero") {
     const ink = readableOn(accent);
@@ -150,7 +192,7 @@ function SectionCard({ section, brand }: { section: Section; brand: string | nul
       >
         <TypeBadge type={section.type} />
         <div className="text-xl leading-tight font-bold" style={{ color: ink }}>
-          {heading || "Hero headline"}
+          {heading || t.placeholderHeadline}
         </div>
         {subtitle && (
           <div
@@ -279,7 +321,7 @@ function SectionCard({ section, brand }: { section: Section; brand: string | nul
           <div className="mb-3 text-sm font-bold text-zinc-900 dark:text-zinc-100">{heading}</div>
         )}
         <div className="flex flex-col gap-1.5">
-          {(items.length > 0 ? items : ["Question one", "Question two"]).map((it, i) => (
+          {(items.length > 0 ? items : t.placeholderItems).map((it, i) => (
             <div
               key={i}
               className="flex items-center justify-between rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-700"
@@ -345,10 +387,12 @@ function SectionCard({ section, brand }: { section: Section; brand: string | nul
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function LandingPagePreview() {
+function LandingPagePreview() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   if (isPending) {
     return (
@@ -357,7 +401,7 @@ export default function LandingPagePreview() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-zinc-500 dark:border-zinc-800 dark:border-t-zinc-400" />
-            <p className="m-0 text-sm">Loading page…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -396,14 +440,14 @@ export default function LandingPagePreview() {
                       : "bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
                   }`}
                 >
-                  {is_published ? "PUBLISHED" : "DRAFT"}
+                  {is_published ? t.published : t.draft}
                 </span>
               </div>
               <div className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                {public_path} · {sections.length} sections
+                {public_path} · {t.sectionCount(sections.length, fmt.number(sections.length))}
                 {brand_color && (
                   <>
-                    {" · brand "}
+                    {t.brandSwatch}
                     <span
                       className="inline-block size-2.5 rounded-full align-[-1px]"
                       style={{ background: brand_color }}
@@ -420,7 +464,7 @@ export default function LandingPagePreview() {
                 className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold no-underline"
                 style={{ background: headerAccent, color: readableOn(headerAccent) }}
               >
-                Open real preview ↗
+                {t.openPreview}
               </a>
             ) : (
               <code className="shrink-0 rounded-md bg-zinc-100 px-2 py-1 text-[11px] text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
@@ -431,14 +475,13 @@ export default function LandingPagePreview() {
 
           {/* Wireframe note */}
           <div className="mb-3 text-[11px] text-zinc-400 dark:text-zinc-500">
-            Structural wireframe in the school's brand colors — images and live data render in the
-            editor/preview.
+            {t.wireframeNote}
           </div>
 
           {/* Section flow */}
           {sections.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-10 text-center text-sm text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-500">
-              This page has no sections yet.
+              {t.noSections}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -452,7 +495,7 @@ export default function LandingPagePreview() {
           {warnings.length > 0 && (
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950">
               <div className="mb-1 text-xs font-bold text-amber-700 dark:text-amber-400">
-                Warnings
+                {t.warnings}
               </div>
               <ul className="m-0 list-disc pl-4 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
                 {warnings.map((w, i) => (
@@ -464,10 +507,12 @@ export default function LandingPagePreview() {
 
           {/* Footer hint */}
           <div className="mt-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">
-            /{slug === "home" ? "" : `p/${slug}`} · refine visually in Dashboard → Landing Page
+            {t.footerHint(`/${slug === "home" ? "" : `p/${slug}`}`)}
           </div>
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(LandingPagePreview);

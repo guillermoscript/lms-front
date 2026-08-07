@@ -9,6 +9,7 @@ import {
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { studentDisplayName } from "../shared/student-display";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -181,7 +182,7 @@ function statusPill(status: string, t: Strings): { classes: string; label: strin
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function SubmissionGrader() {
+function SubmissionGrader() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
@@ -433,7 +434,7 @@ export default function SubmissionGrader() {
                     <div className="mb-2.5 flex flex-col gap-1">
                       {q.options.map((o, oi) => (
                         <div
-                          key={oi}
+                          key={`${q.question_id}-${oi}`}
                           className={`rounded-md px-2 py-1 text-[12.5px] ${
                             o.is_correct
                               ? "bg-green-100 font-semibold text-green-600 dark:bg-green-900 dark:text-green-400"
@@ -497,3 +498,5 @@ export default function SubmissionGrader() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(SubmissionGrader);

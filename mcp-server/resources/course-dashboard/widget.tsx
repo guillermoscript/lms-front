@@ -7,6 +7,8 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { LoadMore, usePagedItems } from "../shared/paging";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -26,6 +28,12 @@ const courseItemSchema = z.object({
 const propsSchema = z.object({
   status: z.string(),
   total: z.number(),
+  // Pagination window this payload represents. Optional so a payload from an
+  // older server still validates — it simply renders as a single full page.
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  has_more: z.boolean().optional(),
+
   courses: z.array(courseItemSchema),
 });
 
@@ -40,6 +48,7 @@ export const widgetMetadata: WidgetMetadata = {
 };
 
 type Props = z.infer<typeof propsSchema>;
+type CourseItem = z.infer<typeof courseItemSchema>;
 
 // ── Strings ──────────────────────────────────────────────────────────────────
 
@@ -184,7 +193,7 @@ function statusColor(status: string): string {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function CourseDashboard() {
+function CourseDashboard() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -192,6 +201,18 @@ export default function CourseDashboard() {
   const dark = theme === "dark";
   const t = useStrings(STRINGS);
   const fmt = useFormat();
+
+  // Before the isPending guard: hooks run unconditionally, and the seed is
+  // re-read from props on every render until a page is actually appended.
+  const paged = usePagedItems<CourseItem>({
+    toolName: "lms_list_courses",
+    itemsKey: "courses",
+    initialItems: props?.courses,
+    page: props,
+    // The tool's own status filter, distinct from the chip row below — echoed
+    // so "load more" cannot widen the query it is paging through.
+    args: props?.status && props.status !== "all" ? { status: props.status } : undefined,
+  });
 
   if (isPending) {
     return (
@@ -207,15 +228,16 @@ export default function CourseDashboard() {
     );
   }
 
-  const allStatuses = ["all", ...Array.from(new Set(props.courses.map((c) => c.status)))];
+  const loaded = paged.items;
+  const allStatuses = ["all", ...Array.from(new Set(loaded.map((c) => c.status)))];
   const filtered =
     activeFilter === "all"
-      ? props.courses
-      : props.courses.filter((c) => c.status === activeFilter);
+      ? loaded
+      : loaded.filter((c) => c.status === activeFilter);
 
   // With nothing to filter, the chip row collapses to a lone "All" that does
   // nothing — a control the empty-state copy would otherwise be pointing at.
-  const hasFilters = props.courses.length > 0 && allStatuses.length > 1;
+  const hasFilters = loaded.length > 0 && allStatuses.length > 1;
   const firstRun = props.total === 0 && props.status === "all";
 
   return (
@@ -383,8 +405,17 @@ export default function CourseDashboard() {
               );
             })}
           </div>
+
+          <LoadMore
+            shown={loaded.length}
+            total={props.total}
+            paged={paged}
+            formatNumber={fmt.number}
+          />
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(CourseDashboard);

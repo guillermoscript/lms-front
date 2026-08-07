@@ -6,6 +6,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // Props produced by lms_get_exam_readiness (Epic #348 Phase 3, #358).
@@ -122,7 +123,7 @@ const bandDial = (v: number) =>
       ? "border-amber-600 bg-amber-100 dark:border-amber-400 dark:bg-amber-950"
       : "border-red-600 bg-red-100 dark:border-red-400 dark:bg-red-950";
 
-export default function ExamReadiness() {
+function ExamReadiness() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
@@ -343,3 +344,5 @@ export default function ExamReadiness() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(ExamReadiness);

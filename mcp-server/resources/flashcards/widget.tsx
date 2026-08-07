@@ -7,6 +7,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -40,12 +42,53 @@ export const widgetMetadata: WidgetMetadata = {
 type Props = z.infer<typeof propsSchema>;
 type Rating = "again" | "hard" | "good" | "easy";
 
-const RATING_META: Array<{ rating: Rating; label: string; hint: string }> = [
-  { rating: "again", label: "Again", hint: "<10m" },
-  { rating: "hard", label: "Hard", hint: "" },
-  { rating: "good", label: "Good", hint: "" },
-  { rating: "easy", label: "Easy", hint: "" },
-];
+/** Display order of the self-rating buttons — labels live in STRINGS. */
+const RATING_ORDER: Rating[] = ["again", "hard", "good", "easy"];
+
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    emptyTitle: "Deck clear — nothing due",
+    emptyBody: "Ask the tutor to make flashcards from what you're studying.",
+    doneTitle: (n: number, s: string) => `Session done — ${s} card${n === 1 ? "" : "s"} reviewed`,
+    tricky: (fronts: string) => `Tricky: ${fronts}`,
+    failedSaves: (n: number, s: string) =>
+      `${s} rating${n === 1 ? "" : "s"} failed to save — those cards will stay due.`,
+    drillMisses: "Drill my misses",
+    whatsNext: "What's next?",
+    cardOf: (current: string, total: string) => `Card ${current} of ${total}`,
+    alsoDue: (n: string) => ` (${n} due)`,
+    newCard: "new card",
+    seen: (times: string, days: string) => `seen ${times}×, last interval ${days}d`,
+    answer: "Answer",
+    prompt: "Prompt",
+    reveal: "Click or press space to reveal",
+    ratings: { again: "Again", hard: "Hard", good: "Good", easy: "Easy" } as Record<Rating, string>,
+    /** Only the "Again" bucket carries a hint — the rest are self-evident. */
+    againHint: "<10m",
+  },
+  es: {
+    emptyTitle: "Mazo al día — nada pendiente",
+    emptyBody: "Pídele al tutor que cree tarjetas de lo que estás estudiando.",
+    doneTitle: (n: number, s: string) =>
+      `Sesión terminada — ${s} ${n === 1 ? "tarjeta repasada" : "tarjetas repasadas"}`,
+    tricky: (fronts: string) => `Difíciles: ${fronts}`,
+    failedSaves: (n: number, s: string) =>
+      `${s} ${n === 1 ? "valoración no se guardó" : "valoraciones no se guardaron"} — esas tarjetas seguirán pendientes.`,
+    drillMisses: "Repasar mis fallos",
+    whatsNext: "¿Qué sigue?",
+    cardOf: (current: string, total: string) => `Tarjeta ${current} de ${total}`,
+    alsoDue: (n: string) => ` (${n} pendientes)`,
+    newCard: "tarjeta nueva",
+    seen: (times: string, days: string) => `vista ${times} veces, último intervalo ${days} d`,
+    answer: "Respuesta",
+    prompt: "Pregunta",
+    reveal: "Haz clic o pulsa espacio para revelar",
+    ratings: { again: "Otra vez", hard: "Difícil", good: "Bien", easy: "Fácil" } as Record<Rating, string>,
+    againHint: "<10 min",
+  },
+};
 
 // Border + text classes per rating (fail / warn / pass / accent).
 const ratingColor: Record<Rating, string> = {
@@ -55,11 +98,13 @@ const ratingColor: Record<Rating, string> = {
   easy: "border-[var(--brand-600)] text-[var(--brand-600)] dark:border-[var(--brand-400)] dark:text-[var(--brand-400)]",
 };
 
-export default function Flashcards() {
+function Flashcards() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const { callTool } = useCallTool("lms_grade_review");
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -115,10 +160,10 @@ export default function Flashcards() {
             <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center dark:border-zinc-800 dark:bg-zinc-900">
               <div className="mb-2 text-[32px]">🎉</div>
               <p className="m-0 text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
-                Deck clear — nothing due
+                {t.emptyTitle}
               </p>
               <p className="mt-1.5 mb-0 text-[13px] text-zinc-400 dark:text-zinc-500">
-                Ask the tutor to make flashcards from what you're studying.
+                {t.emptyBody}
               </p>
             </div>
           </div>
@@ -128,9 +173,11 @@ export default function Flashcards() {
   }
 
   if (finished) {
+    // Addressed to the assistant, not the reader — deliberately English, like
+    // every other sendFollowUpMessage payload in these widgets.
     const summary =
       `Reviewed ${cards.length} cards: ` +
-      RATING_META.map((r) => `${counts[r.rating]} ${r.label}`).join(", ") +
+      RATING_ORDER.map((r) => `${counts[r]} ${STRINGS.en.ratings[r]}`).join(", ") +
       (againFronts.length > 0
         ? `. The ones I rated Again: ${againFronts
             .map((f) => `"${f}"`)
@@ -146,34 +193,33 @@ export default function Flashcards() {
                 {counts.again > 0 ? "💪" : "🏆"}
               </div>
               <p className="m-0 text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Session done — {cards.length} card{cards.length === 1 ? "" : "s"} reviewed
+                {t.doneTitle(cards.length, fmt.number(cards.length))}
               </p>
               <div className="mx-0 mt-3.5 mb-1 flex flex-wrap justify-center gap-2">
-                {RATING_META.map((r) => (
+                {RATING_ORDER.map((r) => (
                   <span
-                    key={r.rating}
-                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${ratingColor[r.rating]}`}
+                    key={r}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${ratingColor[r]}`}
                   >
-                    {r.label}: {counts[r.rating]}
+                    {t.ratings[r]}: {fmt.number(counts[r])}
                   </span>
                 ))}
               </div>
               {againFronts.length > 0 && (
                 <p className="mt-2.5 mb-0 text-[13px] text-zinc-500 dark:text-zinc-400">
-                  Tricky: {againFronts.join(" · ")}
+                  {t.tricky(againFronts.join(" · "))}
                 </p>
               )}
               {failedSaves > 0 && (
                 <p className="mt-2.5 mb-0 text-xs text-red-600 dark:text-red-400">
-                  {failedSaves} rating{failedSaves === 1 ? "" : "s"} failed to save —
-                  those cards will stay due.
+                  {t.failedSaves(failedSaves, fmt.number(failedSaves))}
                 </p>
               )}
               <button
                 onClick={() => sendFollowUpMessage(summary)}
                 className="mt-4.5 cursor-pointer rounded-lg border-none bg-[var(--brand-600)] px-4 py-2 text-[13px] font-semibold text-white dark:bg-[var(--brand-400)]"
               >
-                {againFronts.length > 0 ? "Drill my misses" : "What's next?"}
+                {againFronts.length > 0 ? t.drillMisses : t.whatsNext}
               </button>
             </div>
           </div>
@@ -189,13 +235,13 @@ export default function Flashcards() {
         <div className={container}>
           <div className="mb-3 flex items-baseline justify-between">
             <span className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">
-              Card {index + 1} of {cards.length}
-              {total_due > cards.length ? ` (${total_due} due)` : ""}
+              {t.cardOf(fmt.number(index + 1), fmt.number(cards.length))}
+              {total_due > cards.length ? t.alsoDue(fmt.number(total_due)) : ""}
             </span>
             <span className="text-xs text-zinc-400 dark:text-zinc-500">
               {card.repetitions === 0
-                ? "new card"
-                : `seen ${card.repetitions}×, last interval ${card.interval_days}d`}
+                ? t.newCard
+                : t.seen(fmt.number(card.repetitions), fmt.number(card.interval_days))}
             </span>
           </div>
 
@@ -229,7 +275,7 @@ export default function Flashcards() {
                   : "text-zinc-400 dark:text-zinc-500"
               }`}
             >
-              {flipped ? "Answer" : "Prompt"}
+              {flipped ? t.answer : t.prompt}
             </span>
             <div className="w-full text-left font-semibold break-words">
               <Markdown
@@ -240,29 +286,29 @@ export default function Flashcards() {
             </div>
             {!flipped && (
               <span className="mt-3.5 text-xs text-zinc-400 dark:text-zinc-500">
-                Click or press space to reveal
+                {t.reveal}
               </span>
             )}
           </div>
 
           {failedSaves > 0 && (
-            <p className="mt-2.5 mb-0 text-xs text-red-600 dark:text-red-400">
-              {failedSaves} rating{failedSaves === 1 ? "" : "s"} failed to save —
-              those cards will stay due.
+            <p className="mt-2.5 mb-0 text-xs text-red-600 dark:text-red-400" role="alert">
+              {t.failedSaves(failedSaves, fmt.number(failedSaves))}
             </p>
           )}
 
           {flipped && (
             <div className="mt-3.5 flex gap-2">
-              {RATING_META.map((r) => (
+              {RATING_ORDER.map((r) => (
                 <button
-                  key={r.rating}
-                  onClick={() => rate(r.rating)}
-                  className={`flex-1 cursor-pointer rounded-lg border bg-transparent px-0 py-2.5 text-[13px] font-bold ${ratingColor[r.rating]}`}
+                  key={r}
+                  type="button"
+                  onClick={() => rate(r)}
+                  className={`flex-1 cursor-pointer rounded-lg border bg-transparent px-0 py-2.5 text-[13px] font-bold ${ratingColor[r]}`}
                 >
-                  {r.label}
-                  {r.hint && (
-                    <span className="block text-[10px] font-medium">{r.hint}</span>
+                  {t.ratings[r]}
+                  {r === "again" && (
+                    <span className="block text-[10px] font-medium">{t.againHint}</span>
                   )}
                 </button>
               ))}
@@ -273,3 +319,5 @@ export default function Flashcards() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(Flashcards);

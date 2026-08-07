@@ -6,6 +6,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ function tierClass(tier: string | null): string {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function GamificationProfile() {
+function GamificationProfile() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
@@ -308,3 +309,5 @@ export default function GamificationProfile() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(GamificationProfile);

@@ -6,6 +6,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -70,21 +72,6 @@ type HardestItem = z.infer<typeof hardestItemSchema>;
 /** Elo baseline every item starts at, so a delta reads as "harder than new". */
 const BASELINE_RATING = 1500;
 
-const SCOPE_LABEL: Record<Hotspot["scope"], string> = {
-  practice: "Practice",
-  exercise: "Exercise",
-  exam_question: "Exam question",
-};
-
-const DIFFICULTY_LABEL: Record<
-  NonNullable<HardestItem["difficulty_level"]>,
-  string
-> = {
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-};
-
 /**
  * Severity colours are a fixed diagnostic scale, deliberately not the tenant
  * brand colour — "most of the class is failing this" must look the same in
@@ -115,12 +102,105 @@ function scopeChip(scope: Hotspot["scope"]): string {
   return "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
 }
 
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Analysing student results…",
+    subtitle: (n: number, s: string) => `Confusion hotspots · last ${s} day${n === 1 ? "" : "s"}`,
+    statHotspots: "Hotspots",
+    statSevere: "Severe",
+    statMislabelled: "Mislabelled",
+    calibrationTitle: "Difficulty calibration",
+    calibrationBody:
+      "Your label vs the rating earned from real attempts. 1500 is where a brand-new item starts; higher means students found it harder.",
+    attempts: (n: number, s: string) => `${s} attempt${n === 1 ? "" : "s"}`,
+    noLabel: "No label",
+    vsNew: (delta: string) => `${delta} vs new`,
+    harderThanLabelled: "Harder than labelled",
+    easierThanLabelled: "Easier than labelled",
+    stuckTitle: "Where students are stuck",
+    severeOnlyOn: "✓ Severe only",
+    severeOnlyOff: "Show severe only",
+    severity: "severity",
+    emptySevere: "Nothing at severity 70 or above.",
+    emptyNoActivity: (s: string) => `No student activity in the last ${s} days yet.`,
+    emptyNoHotspots:
+      "No hotspots — nobody is stuck on a drill, exercise or exam question. 🎉",
+    truncated: (s: string) => `Showing the worst ${s}; more were found.`,
+    basedOn: (
+      practice: number,
+      practiceStr: string,
+      exercise: number,
+      exerciseStr: string,
+      exam: number,
+      examStr: string
+    ) =>
+      `Based on ${practiceStr} practice attempt${practice === 1 ? "" : "s"}, ${exerciseStr} exercise attempt${exercise === 1 ? "" : "s"} and ${examStr} exam submission${exam === 1 ? "" : "s"}.`,
+    scope: {
+      practice: "Practice",
+      exercise: "Exercise",
+      exam_question: "Exam question",
+    } as Record<Hotspot["scope"], string>,
+    difficulty: { easy: "Easy", medium: "Medium", hard: "Hard" } as Record<
+      NonNullable<HardestItem["difficulty_level"]>,
+      string
+    >,
+  },
+  es: {
+    loading: "Analizando los resultados…",
+    subtitle: (n: number, s: string) =>
+      `Puntos de confusión · últimos ${s} ${n === 1 ? "día" : "días"}`,
+    statHotspots: "Puntos",
+    statSevere: "Graves",
+    statMislabelled: "Mal etiquetados",
+    calibrationTitle: "Calibración de dificultad",
+    calibrationBody:
+      "Tu etiqueta frente a la valoración ganada con intentos reales. 1500 es donde empieza un ítem nuevo; más alto significa que a los estudiantes les costó más.",
+    attempts: (n: number, s: string) => `${s} ${n === 1 ? "intento" : "intentos"}`,
+    noLabel: "Sin etiqueta",
+    vsNew: (delta: string) => `${delta} frente a nuevo`,
+    harderThanLabelled: "Más difícil de lo etiquetado",
+    easierThanLabelled: "Más fácil de lo etiquetado",
+    stuckTitle: "Dónde se atascan los estudiantes",
+    severeOnlyOn: "✓ Solo graves",
+    severeOnlyOff: "Ver solo graves",
+    severity: "gravedad",
+    emptySevere: "Nada con gravedad 70 o superior.",
+    emptyNoActivity: (s: string) =>
+      `Todavía no hay actividad de estudiantes en los últimos ${s} días.`,
+    emptyNoHotspots:
+      "Sin puntos de confusión: nadie está atascado en una práctica, un ejercicio ni una pregunta de examen. 🎉",
+    truncated: (s: string) => `Mostrando los ${s} peores; se encontraron más.`,
+    basedOn: (
+      practice: number,
+      practiceStr: string,
+      exercise: number,
+      exerciseStr: string,
+      exam: number,
+      examStr: string
+    ) =>
+      `Basado en ${practiceStr} ${practice === 1 ? "intento de práctica" : "intentos de práctica"}, ${exerciseStr} ${exercise === 1 ? "intento de ejercicio" : "intentos de ejercicio"} y ${examStr} ${exam === 1 ? "entrega de examen" : "entregas de examen"}.`,
+    scope: {
+      practice: "Práctica",
+      exercise: "Ejercicio",
+      exam_question: "Pregunta de examen",
+    } as Record<Hotspot["scope"], string>,
+    difficulty: { easy: "Fácil", medium: "Media", hard: "Difícil" } as Record<
+      NonNullable<HardestItem["difficulty_level"]>,
+      string
+    >,
+  },
+};
+
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function ConfusionHotspots() {
+function ConfusionHotspots() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
   const [worstOnly, setWorstOnly] = useState(false);
 
   if (isPending) {
@@ -130,7 +210,7 @@ export default function ConfusionHotspots() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Analysing student results…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -176,22 +256,21 @@ export default function ConfusionHotspots() {
               {course.title}
             </h2>
             <div className="mt-0.5 text-[13px] text-zinc-400 dark:text-zinc-500">
-              Confusion hotspots · last {window_days} day
-              {window_days === 1 ? "" : "s"}
+              {t.subtitle(window_days, fmt.number(window_days))}
             </div>
           </div>
 
           {/* Summary */}
           <div className="my-3.5 flex w-fit gap-6 rounded-xl border border-zinc-200 bg-white px-[18px] py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
-            {stat("Hotspots", String(hotspots.length))}
+            {stat(t.statHotspots, fmt.number(hotspots.length))}
             {stat(
-              "Severe",
-              String(severeCount),
+              t.statSevere,
+              fmt.number(severeCount),
               severeCount > 0 ? "text-red-600 dark:text-red-400" : undefined
             )}
             {stat(
-              "Mislabelled",
-              String(mislabeled.length),
+              t.statMislabelled,
+              fmt.number(mislabeled.length),
               mislabeled.length > 0
                 ? "text-amber-600 dark:text-amber-400"
                 : undefined
@@ -202,11 +281,10 @@ export default function ConfusionHotspots() {
           {hardest_items.length > 0 && (
             <div className="mb-5">
               <h3 className="m-0 mb-1 text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-                Difficulty calibration
+                {t.calibrationTitle}
               </h3>
               <p className="m-0 mb-2.5 text-[11.5px] text-zinc-400 dark:text-zinc-500">
-                Your label vs the rating earned from real attempts. 1500 is where
-                a brand-new item starts; higher means students found it harder.
+                {t.calibrationBody}
               </p>
               <div className="flex flex-col gap-1.5">
                 {hardest_items.map((item: HardestItem) => {
@@ -225,8 +303,8 @@ export default function ConfusionHotspots() {
                           {item.title}
                         </div>
                         <div className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
-                          {SCOPE_LABEL[item.item_type]} · {item.attempt_count}{" "}
-                          attempt{item.attempt_count === 1 ? "" : "s"}
+                          {t.scope[item.item_type]} ·{" "}
+                          {t.attempts(item.attempt_count, fmt.number(item.attempt_count))}
                         </div>
                       </div>
 
@@ -234,18 +312,20 @@ export default function ConfusionHotspots() {
                       <div className="shrink-0">
                         <span className="rounded-md border border-zinc-200 px-[7px] py-px text-[10.5px] font-bold text-zinc-500 uppercase dark:border-zinc-700 dark:text-zinc-400">
                           {item.difficulty_level
-                            ? DIFFICULTY_LABEL[item.difficulty_level]
-                            : "No label"}
+                            ? t.difficulty[item.difficulty_level]
+                            : t.noLabel}
                         </span>
                       </div>
 
                       {/* Measured rating */}
                       <div className="min-w-14 shrink-0 text-right">
                         <div className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-                          {item.rating}
+                          {fmt.number(item.rating)}
                         </div>
                         <div className="text-[10.5px] text-zinc-400 dark:text-zinc-500">
-                          {delta > 0 ? `+${delta}` : delta} vs new
+                          {t.vsNew(
+                            `${delta > 0 ? "+" : ""}${fmt.number(delta)}`
+                          )}
                         </div>
                       </div>
 
@@ -260,8 +340,8 @@ export default function ConfusionHotspots() {
                             }`}
                           >
                             {item.mismatch === "harder_than_labeled"
-                              ? "Harder than labelled"
-                              : "Easier than labelled"}
+                              ? t.harderThanLabelled
+                              : t.easierThanLabelled}
                           </span>
                         )}
                       </div>
@@ -274,7 +354,7 @@ export default function ConfusionHotspots() {
 
           {/* ── Hotspots ─────────────────────────────────────────────────── */}
           <h3 className="m-0 mb-2.5 text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-            Where students are stuck
+            {t.stuckTitle}
           </h3>
 
           {severeCount > 0 && (
@@ -286,7 +366,7 @@ export default function ConfusionHotspots() {
                   : "border-zinc-200 bg-transparent text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
               }`}
             >
-              {worstOnly ? "✓ Severe only" : "Show severe only"}
+              {worstOnly ? t.severeOnlyOn : t.severeOnlyOff}
             </button>
           )}
 
@@ -303,7 +383,7 @@ export default function ConfusionHotspots() {
                       <span
                         className={`shrink-0 rounded-md px-[7px] py-px text-[10.5px] font-bold uppercase ${scopeChip(h.scope)}`}
                       >
-                        {SCOPE_LABEL[h.scope]}
+                        {t.scope[h.scope]}
                       </span>
                       <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
                         {h.label}
@@ -316,7 +396,7 @@ export default function ConfusionHotspots() {
 
                   <div className="min-w-24 shrink-0 text-right">
                     <div className={`text-sm font-bold ${tone.text}`}>
-                      {h.severity}
+                      {fmt.number(h.severity)}
                     </div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-[3px] bg-zinc-100 dark:bg-zinc-800">
                       <div
@@ -325,7 +405,7 @@ export default function ConfusionHotspots() {
                       />
                     </div>
                     <div className="mt-0.5 text-[10px] text-zinc-400 uppercase dark:text-zinc-500">
-                      severity
+                      {t.severity}
                     </div>
                   </div>
                 </div>
@@ -335,30 +415,34 @@ export default function ConfusionHotspots() {
             {visible.length === 0 && (
               <p className="m-0 p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
                 {worstOnly
-                  ? "Nothing at severity 70 or above."
+                  ? t.emptySevere
                   : totalSignals === 0
-                    ? `No student activity in the last ${window_days} days yet.`
-                    : "No hotspots — nobody is stuck on a drill, exercise or exam question. 🎉"}
+                    ? t.emptyNoActivity(fmt.number(window_days))
+                    : t.emptyNoHotspots}
               </p>
             )}
           </div>
 
           {truncated && (
             <p className="m-0 mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-              Showing the worst {hotspots.length}; more were found.
+              {t.truncated(fmt.number(hotspots.length))}
             </p>
           )}
 
           <p className="m-0 mt-3.5 border-t border-zinc-200 pt-3 text-[11px] text-zinc-400 dark:border-zinc-800 dark:text-zinc-500">
-            Based on {sources.practice_attempts} practice attempt
-            {sources.practice_attempts === 1 ? "" : "s"},{" "}
-            {sources.exercise_evaluations} exercise attempt
-            {sources.exercise_evaluations === 1 ? "" : "s"} and{" "}
-            {sources.exam_submissions} exam submission
-            {sources.exam_submissions === 1 ? "" : "s"}.
+            {t.basedOn(
+              sources.practice_attempts,
+              fmt.number(sources.practice_attempts),
+              sources.exercise_evaluations,
+              fmt.number(sources.exercise_evaluations),
+              sources.exam_submissions,
+              fmt.number(sources.exam_submissions)
+            )}
           </p>
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(ConfusionHotspots);

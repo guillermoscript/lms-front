@@ -7,6 +7,7 @@ import {
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
 import { NEUTRAL_TEXT, barClass, textClass } from "../shared/severity";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -142,7 +143,7 @@ function completionOf(c: Course): number | null {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function SchoolOverview() {
+function SchoolOverview() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
@@ -329,3 +330,5 @@ export default function SchoolOverview() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(SchoolOverview);
