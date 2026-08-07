@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { toCents } from '@/lib/currency'
 import { getPaymentProvider } from '@/lib/payments'
+import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
 import {
   findConflictingSubscription,
   PARALLEL_SUBSCRIPTION_CODE,
@@ -132,8 +133,10 @@ export async function POST(req: NextRequest) {
       .eq('tenant_id', tenantId)
       .single()
 
-    // Calculate platform fee (default to 20% if not configured)
-    const platformPercentage = split?.platform_percentage || 20
+    // Calculate platform fee. `resolvePlatformPercentage`, not `|| 20`: a 0%
+    // fee is a real configuration — it is what Business and Enterprise pay for —
+    // and reading it as "unset" charged those schools 20% on every sale (#605).
+    const platformPercentage = resolvePlatformPercentage(split)
     const platformFee = Math.round((amount * platformPercentage) / 100)
 
     // Create transaction record (pending).
