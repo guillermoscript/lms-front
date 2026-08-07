@@ -101,7 +101,7 @@ export default async function RevenuePage() {
       accent: 'group-hover:ring-blue-200 dark:group-hover:ring-blue-800',
     },
     {
-      title: t('stats.yourShare', { percentage: split?.school_percentage || 80 }),
+      title: t('stats.yourShare', { percentage: split?.school_percentage ?? 80 }),
       value: `$${schoolRevenue.toFixed(2)}`,
       valueColor: 'text-emerald-600 dark:text-emerald-400',
       sub: t('stats.yourShareSub'),
@@ -201,7 +201,7 @@ export default async function RevenuePage() {
             <div className="rounded-xl bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('split.platformFee')}</span>
-                <Badge variant="secondary" className="text-[10px]">{split?.platform_percentage || 20}%</Badge>
+                <Badge variant="secondary" className="text-[10px]">{split?.platform_percentage ?? 20}%</Badge>
               </div>
               <div className="text-2xl font-bold tabular-nums text-muted-foreground">
                 ${platformFee.toFixed(2)}
@@ -214,7 +214,7 @@ export default async function RevenuePage() {
             <div className="rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 p-4 ring-1 ring-emerald-100 dark:ring-emerald-900/40 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('split.yourRevenue')}</span>
-                <Badge variant="default" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">{split?.school_percentage || 80}%</Badge>
+                <Badge variant="default" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">{split?.school_percentage ?? 80}%</Badge>
               </div>
               <div className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                 ${schoolRevenue.toFixed(2)}

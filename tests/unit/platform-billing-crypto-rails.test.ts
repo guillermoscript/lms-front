@@ -167,6 +167,10 @@ function client() {
       revenue_splits: 'tenant_id',
       tenant_billing_customers: 'tenant_id',
     },
+    // The only two columns on the table that are NOT NULL with no default. The
+    // upsert has to satisfy them on every write, including the ones that are
+    // logically updates — see the notNull docs in support/fake-supabase.ts.
+    notNull: { platform_subscriptions: ['tenant_id', 'plan_id'] },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }).client as any
 }
@@ -181,6 +185,7 @@ beforeEach(() => {
       { plan_id: PLAN_PRO, slug: 'pro', name: 'Pro', transaction_fee_percent: 2 },
       { plan_id: PLAN_BIZ, slug: 'business', name: 'Business', transaction_fee_percent: 0 },
     ],
+    platform_plan_prices: [],
     platform_subscriptions: [],
     tenant_billing_customers: [],
     revenue_splits: [],
@@ -308,6 +313,112 @@ describe('dispatchPlatformBillingEvent on a self-managed rail', () => {
     )
 
     expect(sub().plan_id).toBe(PLAN_BIZ)
+  })
+})
+
+describe('dispatchPlatformBillingEvent on a webhook-driven rail (#605)', () => {
+  // Distrusting stale metadata means `plan_id` is absent from the event on
+  // every Stripe / Lemon Squeezy delivery after the first. The row still has to
+  // carry one: the upsert is INSERT … ON CONFLICT DO UPDATE, and Postgres
+  // NOT NULL-checks the proposed insert tuple before it resolves the conflict.
+  // When these two facts were served by one variable, every subscription
+  // update and every renewal threw.
+
+  const existingStripeSub = (over: Record<string, unknown> = {}) => {
+    db.platform_subscriptions.push({
+      tenant_id: TENANT,
+      plan_id: PLAN_PRO,
+      status: 'active',
+      payment_provider: 'stripe',
+      interval: 'monthly',
+      current_period_end: new Date(Date.now() + 5 * DAY).toISOString(),
+      ...over,
+    })
+  }
+
+  it('records the period the checkout event never carried', async () => {
+    // checkout.session.completed has a subscription id and our metadata but no
+    // period — only the subscription event that follows it reports one. If that
+    // second event cannot land, current_period_end stays NULL for the life of
+    // the subscription: no next-payment date, and nothing for billing-health to
+    // read.
+    existingStripeSub({ current_period_end: null })
+    const periodEnd = new Date(Date.now() + 30 * DAY)
+
+    await dispatchPlatformBillingEvent(
+      { ...activation(), providerEventId: 'evt-period', periodStart: new Date(), periodEnd },
+      { provider: 'stripe', admin: client() },
+    )
+
+    expect(sub().current_period_end).toBe(periodEnd.toISOString())
+    expect(db.tenants[0].billing_period_end).toBe(periodEnd.toISOString())
+    // Unchanged: the event was not allowed to move the plan.
+    expect(sub().plan_id).toBe(PLAN_PRO)
+  })
+
+  it('advances the period on renewal instead of throwing', async () => {
+    // The failure mode this replaces was not a wrong value, it was a 500 — so
+    // the provider retried the same event until it disabled the endpoint.
+    existingStripeSub()
+    const renewedTo = new Date(Date.now() + 35 * DAY)
+
+    await expect(
+      dispatchPlatformBillingEvent(
+        {
+          ...activation(),
+          type: 'subscription.renewed',
+          providerEventId: 'evt-renew',
+          periodEnd: renewedTo,
+        },
+        { provider: 'stripe', admin: client() },
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(sub().current_period_end).toBe(renewedTo.toISOString())
+    expect(sub().status).toBe('active')
+  })
+
+  it('falls back to the plan the price belongs to when no row exists yet', async () => {
+    // Delivery order is not guaranteed. A subscription event that overtakes its
+    // own checkout event has no stored row and no plan in metadata, but it does
+    // name a price, and that price belongs to exactly one plan.
+    db.platform_plan_prices = [
+      { plan_id: PLAN_BIZ, payment_provider: 'stripe', provider_price_id: 'price_biz_m' },
+    ]
+
+    await dispatchPlatformBillingEvent(
+      {
+        ...activation(),
+        providerEventId: 'evt-oo',
+        metadata: { tenant_id: TENANT },
+        providerPriceId: 'price_biz_m',
+        periodEnd: new Date(Date.now() + 30 * DAY),
+      },
+      { provider: 'stripe', admin: client() },
+    )
+
+    expect(sub().plan_id).toBe(PLAN_BIZ)
+  })
+
+  it('drops an event it can resolve no plan for rather than 500ing forever', async () => {
+    // Nothing to write the row against, and a subscription row without a plan
+    // cannot exist. Throwing would just have the provider redeliver an event
+    // that can never be applied.
+    db.platform_plan_prices = []
+
+    await expect(
+      dispatchPlatformBillingEvent(
+        {
+          ...activation(),
+          providerEventId: 'evt-noplan',
+          metadata: { tenant_id: TENANT },
+          providerPriceId: 'price_unknown',
+        },
+        { provider: 'stripe', admin: client() },
+      ),
+    ).resolves.toBeUndefined()
+
+    expect(db.platform_subscriptions).toHaveLength(0)
   })
 
   it('un-cancels a subscription the school has just paid to keep', async () => {

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { computeRevenueTotals, bearsPlatformFee, FEE_BEARING_PROVIDERS } from '@/lib/payments/revenue-share'
+import {
+  computeRevenueTotals,
+  bearsPlatformFee,
+  FEE_BEARING_PROVIDERS,
+  resolvePlatformPercentage,
+  DEFAULT_PLATFORM_PERCENTAGE,
+} from '@/lib/payments/revenue-share'
 import { computeOwedBalances } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 
@@ -140,5 +146,46 @@ describe('#547: the school view and the platform view reconcile', () => {
     const owed = platformSide[0].balances.find((b) => b.currency === 'usd')!
     expect(schoolSide.netRevenue).toBe(owed.grossOwed)
     expect(schoolSide.grossRevenue).toBe(owed.grossCollected)
+  })
+})
+
+describe('resolvePlatformPercentage (#605)', () => {
+  it('keeps a configured 0% instead of falling back', () => {
+    // The bug this replaces, in one line: `split?.platform_percentage || 20`.
+    // Business and Enterprise are 0%-fee plans, PostgREST returns numeric as a
+    // JSON number, and 0 is falsy — so the schools paying us the most were
+    // charged 20% of every student sale as an application_fee_amount.
+    expect(resolvePlatformPercentage({ platform_percentage: 0 })).toBe(0)
+  })
+
+  it('keeps 0 arriving as a numeric string', () => {
+    expect(resolvePlatformPercentage({ platform_percentage: '0.00' })).toBe(0)
+  })
+
+  it('passes ordinary rates through', () => {
+    expect(resolvePlatformPercentage({ platform_percentage: 5 })).toBe(5)
+    expect(resolvePlatformPercentage({ platform_percentage: '2.50' })).toBe(2.5)
+  })
+
+  it('falls back only when there is genuinely no split on file', () => {
+    expect(resolvePlatformPercentage(null)).toBe(DEFAULT_PLATFORM_PERCENTAGE)
+    expect(resolvePlatformPercentage(undefined)).toBe(DEFAULT_PLATFORM_PERCENTAGE)
+    expect(resolvePlatformPercentage({})).toBe(DEFAULT_PLATFORM_PERCENTAGE)
+    expect(resolvePlatformPercentage({ platform_percentage: null })).toBe(DEFAULT_PLATFORM_PERCENTAGE)
+  })
+
+  it('falls back rather than producing NaN on a junk value', () => {
+    // NaN would reach Stripe as application_fee_amount: NaN and fail the charge.
+    expect(resolvePlatformPercentage({ platform_percentage: 'not-a-number' })).toBe(
+      DEFAULT_PLATFORM_PERCENTAGE,
+    )
+  })
+
+  it('produces a zero application fee for a 0%-fee school', () => {
+    // The arithmetic the checkout route runs, at $49.99.
+    const amount = 4999
+    expect(Math.round((amount * resolvePlatformPercentage({ platform_percentage: 0 })) / 100)).toBe(0)
+    // What it used to charge instead.
+    expect(Math.round((amount * (0 || 20)) / 100)).toBe(1000)
   })
 })

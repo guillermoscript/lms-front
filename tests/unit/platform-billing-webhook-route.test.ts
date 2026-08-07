@@ -27,6 +27,7 @@ const state: {
   existingEvent: { id: string; processed_at: string | null } | null
   insertErrorCode: string | null
   storedSub: Record<string, unknown> | null
+  planPriceRow: { plan_id: string } | null
   plan: { transaction_fee_percent: number } | null
   adminUsers: string[]
   failOn: ((w: Write) => { message: string } | null) | null
@@ -36,6 +37,7 @@ const state: {
   existingEvent: null,
   insertErrorCode: null,
   storedSub: null,
+  planPriceRow: null,
   plan: null,
   adminUsers: [],
   failOn: null,
@@ -46,6 +48,8 @@ const state: {
 function readRow(table: string, cols: string): unknown {
   if (table === 'webhook_events') return state.existingEvent
   if (table === 'platform_plans') return state.plan
+  // Only read when an event names a price but resolves no plan any other way.
+  if (table === 'platform_plan_prices') return state.planPriceRow
   if (table === 'platform_subscriptions') {
     // The dunning email joins the plan name off the same table.
     if (cols.includes('platform_plans')) return { platform_plans: { name: 'Pro' } }
@@ -97,6 +101,7 @@ function makeAdmin() {
         return b
       },
       eq: () => b,
+      limit: () => b,
       maybeSingle: () => Promise.resolve(settle()),
       single: () => Promise.resolve(settle()),
       then: (resolve: (v: unknown) => unknown) => Promise.resolve(settle()).then(resolve),
@@ -217,6 +222,7 @@ beforeEach(() => {
   state.existingEvent = null
   state.insertErrorCode = null
   state.storedSub = null
+  state.planPriceRow = null
   state.plan = { transaction_fee_percent: 2 }
   state.adminUsers = []
   state.failOn = null
@@ -383,7 +389,23 @@ describe('platform billing webhook — activation', () => {
 })
 
 describe('platform billing webhook — subscription updates', () => {
+  // A subscription update always follows an activation, so these start from a
+  // row that already exists. That is not decoration: `platform_subscriptions`
+  // has a NOT NULL `plan_id`, and the upsert PostgREST sends must satisfy it on
+  // every write. A test that updates a subscription no row was ever written for
+  // is testing a state the database cannot hold (#605).
+  const withStoredSub = (over: Record<string, unknown> = {}) => {
+    state.storedSub = {
+      tenant_id: TENANT,
+      plan_id: PLAN_ID,
+      status: 'active',
+      current_period_end: null,
+      ...over,
+    }
+  }
+
   it('writes status, interval and both periods off the clover item', async () => {
+    withStoredSub()
     const res = await POST(
       makeReq(makeEvent('customer.subscription.updated', cloverSubscription())),
       params(),
@@ -428,12 +450,18 @@ describe('platform billing webhook — subscription updates', () => {
     }
     await POST(makeReq(makeEvent('customer.subscription.updated', withMetadata)), params())
 
-    expect(writesTo('platform_subscriptions', 'upsert')[0].values).not.toHaveProperty('plan_id')
+    // The row keeps the plan it is ON, not the plan the metadata still claims.
+    // Asserting plan_id is merely absent would be wrong now and was always
+    // unachievable: the column is NOT NULL, so an upsert omitting it fails the
+    // whole event rather than leaving the value alone (#605).
+    expect(writesTo('platform_subscriptions', 'upsert')[0].values.plan_id).toBe('a-different-plan')
+    expect(writesTo('platform_subscriptions', 'upsert')[0].values.plan_id).not.toBe(PLAN_ID)
     expect(writesTo('tenants', 'update')[0].values).not.toHaveProperty('plan')
     expect(applyPortalPlanChange).toHaveBeenCalledTimes(1)
   })
 
   it('tracks a monthly → yearly interval switch off the item price', async () => {
+    withStoredSub()
     const yearly = cloverSubscription({ priceId: 'price_pro_y', recurringInterval: 'year' })
     await POST(makeReq(makeEvent('customer.subscription.updated', yearly)), params())
     expect(writesTo('platform_subscriptions', 'upsert')[0].values.interval).toBe('yearly')
@@ -466,6 +494,7 @@ describe('platform billing webhook — subscription updates', () => {
   })
 
   it('passes a canceled_at through as an ISO date', async () => {
+    withStoredSub()
     const canceled = {
       ...cloverSubscription(),
       canceled_at: PERIOD_START,

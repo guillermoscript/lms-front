@@ -105,3 +105,30 @@ export function computeRevenueTotals(
   platformFees = roundMoney(platformFees)
   return { grossRevenue, platformFees, netRevenue: roundMoney(grossRevenue - platformFees) }
 }
+
+/** The split fallback used when a tenant has no `revenue_splits` row at all. */
+export const DEFAULT_PLATFORM_PERCENTAGE = 20
+
+/**
+ * The platform's cut of a sale, as a percentage.
+ *
+ * Exists because the obvious spelling is wrong in a way that costs a school
+ * real money: `split?.platform_percentage || 20` reads a legitimate **0%** as
+ * missing, because PostgREST returns `numeric` as a JSON number and `0` is
+ * falsy. Business and Enterprise are 0%-fee plans, so the schools paying us the
+ * most were the ones charged a 20% platform fee on every student sale (#605).
+ *
+ * The fallback applies only when there is genuinely no split on file. Note that
+ * it is a flat 20% rather than the tenant's plan fee — a tenant whose
+ * `revenue_splits` row was never written is misconfigured either way, and every
+ * writer of that table (`downgradeTenantToFree`, `confirmManualPayment`,
+ * `dispatchPlatformBillingEvent`) sets it from the plan.
+ */
+export function resolvePlatformPercentage(
+  split: { platform_percentage?: number | string | null } | null | undefined,
+): number {
+  const raw = split?.platform_percentage
+  if (raw === null || raw === undefined || raw === '') return DEFAULT_PLATFORM_PERCENTAGE
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : DEFAULT_PLATFORM_PERCENTAGE
+}
