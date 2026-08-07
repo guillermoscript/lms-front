@@ -215,6 +215,27 @@ async function applyRevenueSplit(admin: SupabaseClient, tenantId: string, planId
   )
 }
 
+/**
+ * Last-resort plan resolution for an event that names a price but no plan, on a
+ * tenant we hold no subscription row for. Only reachable when a provider's
+ * subscription event overtakes its own checkout event.
+ */
+async function planIdForPrice(
+  admin: SupabaseClient,
+  provider: string,
+  providerPriceId: string | undefined,
+): Promise<string | undefined> {
+  if (!providerPriceId) return undefined
+  const { data } = await admin
+    .from('platform_plan_prices')
+    .select('plan_id')
+    .eq('payment_provider', provider)
+    .eq('provider_price_id', providerPriceId)
+    .limit(1)
+    .maybeSingle()
+  return (data as { plan_id: string } | null)?.plan_id ?? undefined
+}
+
 /** Email every active admin of the school that its platform payment failed. */
 async function notifyPaymentFailed(
   admin: SupabaseClient,
@@ -353,11 +374,40 @@ export async function dispatchPlatformBillingEvent(
   const effectiveStart = periodStart ?? derived?.start.toISOString()
   const effectiveEnd = periodEnd ?? derived?.end.toISOString()
 
+  // The plan the ROW must carry, which is a different question from `planId`
+  // above. That one answers "is this event moving the school to a new plan?" and
+  // is deliberately undefined on every event after the first; this one answers
+  // "what plan is this subscription on?", which on those same events is simply
+  // the plan already stored.
+  //
+  // They have to be separate because the upsert below needs a non-NULL plan_id
+  // on EVERY write. PostgREST sends `INSERT … ON CONFLICT DO UPDATE`, and
+  // Postgres NOT NULL-checks the proposed insert tuple before it ever resolves
+  // the conflict — so omitting plan_id on what is logically an update fails the
+  // whole statement, not just that column. Sharing one variable made every
+  // Stripe `customer.subscription.updated` and `invoice.paid` after the first
+  // one throw, which meant: `current_period_end` stayed NULL forever (the
+  // checkout event carries no period, only the subscription event does), the
+  // period never advanced on renewal, and the provider kept retrying a 500
+  // until it disabled the endpoint (#605).
+  const rowPlanId =
+    planId ?? stored?.plan_id ?? (await planIdForPrice(admin, provider, event.providerPriceId))
+
+  if (!rowPlanId) {
+    // Nothing to write a subscription row against, and a row without a plan
+    // cannot exist. Dropping the event beats throwing: a 500 here would have the
+    // provider redeliver an event we can never apply.
+    console.warn(
+      `[platform-webhook] ${event.type} on ${provider} for tenant ${tenantId} resolved no plan — ignoring`,
+    )
+    return
+  }
+
   const subscriptionPatch: Record<string, unknown> = {
     status,
     payment_provider: provider,
+    plan_id: rowPlanId,
     updated_at: now,
-    ...(planId ? { plan_id: planId } : {}),
     ...(event.providerSubscriptionId ? { provider_subscription_id: event.providerSubscriptionId } : {}),
     ...(event.providerCustomerId ? { provider_customer_id: event.providerCustomerId } : {}),
     ...(interval ? { interval } : {}),

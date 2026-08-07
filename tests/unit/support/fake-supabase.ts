@@ -36,6 +36,20 @@ export interface FakeSupabaseOptions {
     table: string,
     op: 'insert' | 'update' | 'upsert'
   ) => { code: string; message: string } | null
+  /**
+   * NOT NULL columns per table, enforced on `insert` and `upsert` (#605).
+   *
+   * Modelled because an upsert that omits a NOT NULL column fails even when the
+   * conflicting row already exists and already has a value for it: PostgREST
+   * sends `INSERT … ON CONFLICT DO UPDATE`, and Postgres checks the proposed
+   * insert tuple before it resolves the conflict. Without this the fake merges
+   * the omitted column away silently and a test cannot tell a working upsert
+   * from one that 500s in production.
+   *
+   * `update` is deliberately not checked — an UPDATE touches only the columns
+   * it names, so omitting one is not a violation.
+   */
+  notNull?: Record<string, string[]>
 }
 
 type Predicate = (row: Row) => boolean
@@ -124,6 +138,22 @@ export function createFakeSupabase(db: Db, opts: FakeSupabaseOptions = {}) {
           // what an RLS refusal looks like to the caller.
           pending = null
           return { data: null, error: failure }
+        }
+        if (pending.op === 'insert' || pending.op === 'upsert') {
+          const values = pending.values ?? {}
+          const missing = (opts.notNull?.[table] ?? []).find(
+            (col) => values[col] === undefined || values[col] === null
+          )
+          if (missing) {
+            pending = null
+            return {
+              data: null,
+              error: {
+                code: '23502',
+                message: `null value in column "${missing}" of relation "${table}" violates not-null constraint`,
+              },
+            }
+          }
         }
         const rows = applyWrite()
         return { data: embed(cols, rows), error: null }
