@@ -35,6 +35,8 @@ import {
 } from '@/lib/billing/solana-platform-payment'
 import { OPEN_REQUEST_STATUSES } from '@/lib/billing/payment-request-ttl'
 import { paymentPollLimiter } from '@/lib/rate-limit'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -84,7 +86,12 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, settlement_currency, settlement_base, settlement_mint, platform_plans(slug)',
+        // `request_type` is what makes `is_renewal` free here: it is already
+        // classified at checkout by `recordSolanaPlatformRequest`, so the crypto
+        // rails' "a second checkout IS a renewal" rule needs no extra query and
+        // no guess. `amount`/`currency` are the USD figure the school owes,
+        // which is the number to sum — never `settlement_base`.
+        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, request_type, amount, currency, settlement_currency, settlement_base, settlement_mint, platform_plans(slug)',
       )
       .eq('request_id', requestId)
       .eq('tenant_id', tenantId)
@@ -191,6 +198,31 @@ export async function POST(req: NextRequest) {
         raw: { requestId, signature },
       },
       { provider: 'solana', admin },
+    )
+
+    // Loop E. Downstream of the status-gated claim above, so the page's own
+    // polling cannot emit this twice — only the poll that won the claim gets
+    // here.
+    //
+    // `is_renewal` is the whole point on a crypto rail (#610): Solana has no
+    // subscription object, so a second checkout on the same rail is a renewal
+    // and counting it as a new sale would inflate platform growth.
+    await track(
+      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
+      {
+        provider: 'solana',
+        amount: Number(request.amount ?? 0),
+        interval: request.interval,
+        is_renewal: request.request_type === 'renewal',
+        currency: request.currency ?? 'usd',
+        request_type: request.request_type ?? null,
+        settlement_currency: request.settlement_currency ?? null,
+        ...(planSlug ? { plan: planSlug } : {}),
+        request_id: requestId,
+      },
+      // Attributed to the admin who completed the payment and, through
+      // `tenantId`, to the school the money is actually for.
+      { userId: user.id, tenantId: request.tenant_id, role: 'admin' },
     )
 
     console.log(`[billing/solana/verify] confirmed request ${requestId} (signature ${signature})`)

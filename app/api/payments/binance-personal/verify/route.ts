@@ -27,6 +27,9 @@ import {
   reconcileBinancePersonalTransaction,
 } from '@/lib/payments/binance-personal-reconcile'
 import { paymentPollLimiter, binancePayHistoryLimiter } from '@/lib/rate-limit'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -60,7 +63,10 @@ export async function POST(req: NextRequest) {
     // Load the transaction, scoped to the caller + tenant.
     const { data: tx, error: txError } = await supabase
       .from('transactions')
-      .select('transaction_id, status, amount, payment_provider, tenant_id, plan_id, transaction_date')
+      // `currency` / `refunded_amount` / the split snapshot / `product_id` are
+      // selected for the settlement event below (#547) — extra columns on a
+      // read that was already happening, not a second query on a poll endpoint.
+      .select('transaction_id, status, amount, currency, refunded_amount, school_percentage_snapshot, payment_provider, tenant_id, plan_id, product_id, transaction_date')
       .eq('transaction_id', transactionId)
       .eq('user_id', user.id)
       .eq('tenant_id', tenantId)
@@ -109,12 +115,66 @@ export async function POST(req: NextRequest) {
 
     const result = await reconcileBinancePersonalTransaction(admin, tx, transfers)
     switch (result.status) {
-      case 'confirmed':
+      case 'confirmed': {
+        // Loop C. Only the poll whose reconcile actually flipped the row emits
+        // — `alreadyProcessed` means the cron backstop or an earlier poll owns
+        // this settlement — so a client polling every few seconds cannot turn
+        // one sale into fifty.
+        if (!result.alreadyProcessed) {
+          const gross = Number(tx.amount ?? 0)
+          const net = netOfRefunds(gross, tx.refunded_amount)
+          const snapshot = tx.school_percentage_snapshot ?? null
+          const ctx = { userId: user.id, tenantId }
+
+          await track(
+            ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+            {
+              provider: 'binance_personal',
+              amount_major: net,
+              currency: tx.currency ?? 'usd',
+              is_subscription: !!tx.plan_id,
+              // `binance_personal` has `bearsPlatformFee: false` — the money
+              // never reaches a platform account — so the fee is a hard 0, not
+              // a rate applied to the snapshot.
+              platform_fee: 0,
+              school_percentage_snapshot: snapshot,
+              gross_amount: gross,
+              transaction_id: tx.transaction_id,
+              settlement_path: 'pay_history_reconcile',
+              ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+              ...(tx.product_id ? { product_id: tx.product_id } : {}),
+            },
+            ctx,
+          )
+
+          const sourceType = tx.plan_id ? 'subscription' : 'product'
+          const sourceId = tx.plan_id ?? tx.product_id
+          if (sourceId != null) {
+            const { count } = await admin
+              .from('entitlements')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id)
+              .eq('source_type', sourceType)
+              .eq('source_id', sourceId)
+              .eq('status', 'active')
+            await track(
+              ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+              {
+                source_type: sourceType,
+                course_count: count ?? 0,
+                provider: 'binance_personal',
+                transaction_id: tx.transaction_id,
+              },
+              ctx,
+            )
+          }
+        }
         return NextResponse.json(
           result.alreadyProcessed
             ? { confirmed: true, alreadyProcessed: true }
             : { confirmed: true, orderId: result.orderId },
         )
+      }
       case 'not_found':
         return NextResponse.json({ confirmed: false })
       case 'ambiguous':

@@ -27,6 +27,8 @@ import {
   resolveCheckoutProvider,
 } from '@/lib/billing/platform-billing'
 import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { hasOpenPaymentRequest } from '@/lib/billing/payment-request-ttl'
 import {
   getPlatformSolanaConfig,
@@ -320,6 +322,31 @@ export async function POST(req: NextRequest) {
       console.error(`[billing/checkout] ${provider} returned a ${session.kind} session with no URL`)
       return NextResponse.json({ error: 'Could not start checkout' }, { status: 502 })
     }
+
+    // Loop E, the school → platform side of the funnel. `scope` separates it
+    // from the student `checkout_started` in Loop C: the two are different
+    // businesses and summing them is meaningless.
+    //
+    // `is_existing_subscriber` is the pre-image of `is_renewal` on the eventual
+    // `platform_payment_succeeded` — on a `selfManagedPeriod` rail this same
+    // route is how a school RENEWS (see the guard above), so a checkout here is
+    // not evidence of a new customer.
+    await track(
+      ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      {
+        scope: 'platform',
+        provider,
+        amount: amountUsd,
+        currency: price.currency,
+        plan_id: plan.plan_id,
+        plan: plan.slug,
+        interval,
+        is_existing_subscriber: !!liveSub,
+        is_provider_switch: !!liveSub && liveSub.payment_provider !== provider,
+        self_managed_period: !!capabilities.selfManagedPeriod,
+      },
+      { userId: user.id, tenantId, role: 'admin', locale },
+    )
 
     // The QR's on-chain reference is minted by the provider, so the row is
     // written now that we have it. A failure here must fail the request: a
