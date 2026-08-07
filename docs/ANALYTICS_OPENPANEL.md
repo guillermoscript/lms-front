@@ -2,8 +2,9 @@
 
 > Status: **implemented on `feat/openpanel-analytics`, inert pending credentials.** Written and built 2026-08-07.
 > Phases 0–4 and the §9 P1 events are committed: 69 files, ~5,000 insertions, 8 commits. Typecheck clean, 849/849 unit tests, production build passes.
-> **Nothing is live.** With no env values set, the layout renders no script tag, `/api/op` 404s, and no outbound request is made — asserted in `tests/unit/analytics-wrapper.test.ts`, not merely intended.
-> Not yet done: §10.2 MCP server, §10.1 mobile app, §6 phase 5 (dashboards).
+> **Credentials are configured** (`.env.local`, gitignored) against the self-hosted instance — project "LMS Platform" on `openpanel.guille.tech`. Ingest verified end-to-end (§8).
+> **Groups are NOT supported by that instance** — per-school analysis uses the flat `tenant_id` property instead (§2.1).
+> Not yet done: §10.2 MCP server, §10.1 mobile app, §6 phase 5 (dashboards), and a real browser-side smoke test with `npm run dev`.
 > Scope: adding product analytics (OpenPanel) to the multi-tenant LMS so we can see how real users behave and make informed decisions.
 
 ---
@@ -67,7 +68,22 @@ That third row is the important distinction. You already compute plenty of numbe
 
 ## 2. Architecture decisions
 
-### 2.1 Groups = tenants (the decision that makes this worth doing)
+### 2.1 Groups = tenants — ⚠️ NOT AVAILABLE on this instance
+
+> **Verified 2026-08-07 against `openpanel.guille.tech`: Groups are not supported by this build.**
+> The ingest validator rejects `{"type":"group"}` and enumerates everything it *does* accept:
+> `track · identify · increment · decrement · alias · replay`. There is no Groups section in the dashboard nav either.
+> **`ANALYTICS_GROUPS_DISABLED=true` is set.** `upsertGroup()` / `setGroup()` fail soft by design, so tracking is unaffected.
+
+**What we use instead:** every event carries a flat `tenant_id` property (and `tenant_slug`), injected by the wrapper. This was always in the design as belt-and-braces; it is now the primary mechanism rather than the backup.
+
+**What still works:** filtering any chart to one school, breaking any metric down by school, and every funnel in §4 — because those operate on event properties. In practice this covers nearly all of §5's decision questions.
+
+**What is lost:** group-level *entities* — a School object with its own properties (plan, created_at) and its own aggregate profile, plus "show me schools ranked by X" as a first-class view. Those must be reconstructed by breaking down on `tenant_id`, which is clumsier and won't carry school metadata automatically. Mitigation: `school_created` and `plan_changed` stamp `plan` onto events, so plan-level segmentation survives.
+
+**To upgrade later:** update the self-hosted instance to a build with Groups, remove `ANALYTICS_GROUPS_DISABLED`, and the already-written `upsertSchoolGroup()` calls start working with no code change. The original design is preserved below for that day.
+
+#### The original design (re-enable when the instance supports it)
 
 ```ts
 // A school is a group; every event a member fires is attributed to it.
@@ -393,11 +409,23 @@ Enable **session replay** in phase 0, sampled at 100%. At 17 users that's your b
 | **Better adblocker story** | `scriptUrl` already points at your own domain, not a known-tracker host. Still route through `/api/op` so it's fully first-party to the tenant domain. |
 | **You own retention** | Nobody deletes your data at 6 months. You must set a ClickHouse TTL yourself, or disk grows forever. |
 
-### ⚠️ Verify before phase 0 — three self-hosting gotchas
+### The three self-hosting gotchas — all now RESOLVED against the live instance
 
-1. **Does your build have the Groups feature?** This is the single load-bearing assumption of the whole plan (§2.1). Groups is a *newer* addition, and self-hosted instances lag the cloud badly — people pin an image tag and forget. **Check first:** look for a Groups section in your dashboard, or `docker compose images | grep openpanel` and compare the tag against the current release. If Groups is missing, either upgrade the instance or fall back to a flat `tenant_id` property on every event (workable, but you lose account-level rollups and the "which schools are healthy" view — the main reason to do this).
-2. **The MCP server is a cloud endpoint.** `https://api.openpanel.dev/mcp` won't serve your self-hosted data. Confirm your build exposes `/mcp`; if not, the §6 phase-5 "ask Claude Code about your analytics" step doesn't apply, and you read dashboards like a normal person.
-3. **Noisy-neighbour risk.** A shared server means this project's events compete with your other projects for ClickHouse and worker capacity. A learning platform is event-heavy (§4 Loop D). **So don't fully discard volume discipline** — the reason changes from "the bill" to "the other projects on that box." Keep video at 4 milestones, not heartbeats; set a ClickHouse TTL (12–24 months is plenty); scale `OP_WORKER_REPLICAS` if ingestion lags.
+Project **"LMS Platform"** created in org `guille-tech` on 2026-08-07. Website + Backend/API clients enabled. Domain `https://preciopana.com`, allowed domains `https://preciopana.com` and `https://*.preciopana.com` (every school is a subdomain). Pipeline verified end-to-end: a `track` and an `identify` posted with the real credentials returned HTTP 200 and appeared in the dashboard with the profile correctly bound.
+
+1. **Groups: NOT supported.** ❌ Confirmed by the validator's own error (see §2.1). `ANALYTICS_GROUPS_DISABLED=true`; flat `tenant_id` carries per-school analysis. **Session replay IS supported** — `replay` appears in that same accepted-types list.
+2. **MCP: NOT exposed.** ❌ `POST https://openpanel.guille.tech/api/mcp` → `404 {"message":"Route POST:/mcp not found"}`. The §6 phase-5 "ask Claude Code about your analytics" step does not apply to this instance; read the dashboards directly.
+3. **Noisy-neighbour risk: still live.** ⚠️ Shared server, so this project's events compete with your other six for ClickHouse and worker capacity. **Volume discipline still applies** — the reason is just "the other projects on that box" rather than a bill. Keep video at 4 milestones; set a ClickHouse TTL (12–24 months); scale `OP_WORKER_REPLICAS` if ingestion lags.
+
+### Confirmed instance URLs
+
+| Setting | Value | Note |
+|---|---|---|
+| Ingest API | `https://openpanel.guille.tech/api` | `NEXT_PUBLIC_OPENPANEL_API_URL` |
+| Tracker script | `https://openpanel.dev/op1.js` | ⚠️ **the vendor CDN, not your instance** |
+| Dashboard | `https://openpanel.guille.tech/guille-tech/lms-platform` | |
+
+That second row is the self-hosting trap the foundation work anticipated: `createRouteHandler({apiUrl})` redirects only the *ingest* leg, and this instance's own snippet still loads the script from `openpanel.dev`. So **`NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN` stays empty** — `/api/op` fetches the CDN script server-side and re-serves it first-party, which keeps the browser talking only to `preciopana.com`.
 
 ### Background: cloud vs self-host
 
