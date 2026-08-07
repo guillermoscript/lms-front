@@ -5,6 +5,8 @@ import { lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -136,6 +138,15 @@ export async function POST(req: Request) {
 
         if (error || !newSession) return new Response('Failed to create session', { status: 500 })
         sessionId = newSession.session_id
+
+        // Only on the branch that actually created a row. The branch above
+        // resumes a session that is still inside the idle window, and counting
+        // that as a start would make every long conversation look like N sessions.
+        void track(
+            ANALYTICS_EVENTS.AI_SESSION_STARTED,
+            { session_id: sessionId, course_id: numericCourseId, surface: 'aristotle' },
+            { userId: user.id, tenantId, role: 'student' },
+        )
     }
 
     // Build lesson context if on a specific lesson page
@@ -222,6 +233,23 @@ export async function POST(req: Request) {
             content: messageText,
             context_page: contextPage || null,
         })
+
+        // NOT awaited, unlike every other server event in this PR. This route
+        // streams, and awaiting would put the analytics timeout (up to 1.5s if
+        // the collector is unreachable) in front of the first token on every
+        // message. `track()` swallows its own errors, so the floating promise
+        // cannot reject. No message content is sent — length only.
+        void track(
+            ANALYTICS_EVENTS.AI_TUTOR_MESSAGE_SENT,
+            {
+                session_id: sessionId,
+                course_id: numericCourseId,
+                message_index: messages.length,
+                message_length: messageText.length,
+                context_page: contextPage || null,
+            },
+            { userId: user.id, tenantId, role: 'student' },
+        )
     }
 
     // Stream response

@@ -11,6 +11,8 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { sendEmail } from '@/lib/email/send'
 import { certificateIssuedTemplate } from '@/lib/email/templates/certificate-issued'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,6 +128,19 @@ export async function POST(request: NextRequest) {
       const result = await issueCertificate(studentId, courseId)
 
       if (result.success) {
+        // Attributed to the STUDENT even on a teacher-initiated issuance —
+        // the credential is theirs, and `issued_by` carries who pressed it.
+        await track(
+          ANALYTICS_EVENTS.CERTIFICATE_ISSUED,
+          {
+            certificate_id: result.certificateId,
+            course_id: Number(courseId),
+            issued_by: isTeacherIssue ? 'teacher' : 'self',
+            issuance_path: 'signed',
+          },
+          { userId: studentId, tenantId }
+        )
+
         // Send certificate issued email (non-blocking)
         try {
           const adminClient = createAdminClient()
@@ -322,6 +337,22 @@ async function simplifiedIssuance(
     console.error('Certificate insert error:', insertError)
     return NextResponse.json({ error: 'Failed to issue certificate' }, { status: 500 })
   }
+
+  // Second of the two issuance paths. `issuance_path` separates them because a
+  // production instance quietly falling back to unsigned certificates (missing
+  // issuer key or template) is a defect this event is the only witness to.
+  await track(
+    ANALYTICS_EVENTS.CERTIFICATE_ISSUED,
+    {
+      certificate_id: certificate.certificate_id,
+      course_id: Number(courseId),
+      issued_by: issuedBy ? 'teacher' : 'self',
+      issuance_path: 'simplified',
+      has_template: Boolean(template?.template_id),
+      total_lessons: completionData.totalLessons ?? null,
+    },
+    { userId, tenantId }
+  )
 
   // Send certificate issued email (non-blocking)
   try {

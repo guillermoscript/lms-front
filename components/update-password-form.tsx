@@ -15,9 +15,12 @@ import { Label } from '@/components/ui/label'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export function UpdatePasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const t = useTranslations('auth.updatePassword')
+  const analytics = useAnalytics()
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -32,6 +35,9 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
+      // Closes the reset funnel. Fired before the redirect, since the push
+      // unmounts this component.
+      analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_COMPLETED, {})
       // Update this route to redirect to an authenticated route. The user already has an active session.
       router.push('/dashboard/student')
     } catch (error: unknown) {

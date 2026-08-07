@@ -15,6 +15,8 @@ import {
   getActiveSubscriptions,
   getPlanCourses,
 } from '@lms/core'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export default async function BrowseCoursesPage({
   searchParams,
@@ -69,6 +71,35 @@ export default async function BrowseCoursesPage({
   const enrolledCourseIds = accessibleCourseIds
 
   const hasActiveFilters = sanitizedSearch || category
+
+  // Tracked server-side because this is the one place that holds the query and
+  // the result count at the same moment — the search bar submits through the
+  // URL and never learns how many rows came back. Guarded on an active filter
+  // so an unfiltered browse does not register as a search.
+  if (hasActiveFilters) {
+    const resultCount = courses?.length ?? 0
+    await track(
+      ANALYTICS_EVENTS.CATALOG_SEARCHED,
+      {
+        // The query text itself, not just its length: `browse_zero_results` is
+        // only a content-gap detector if it says WHAT was searched for. This is
+        // a course title typed into a school's catalogue, not personal data.
+        query: sanitizedSearch || null,
+        query_length: sanitizedSearch.length,
+        has_category_filter: Boolean(category),
+        result_count: resultCount,
+      },
+      { userId, tenantId, role: 'student' }
+    )
+
+    if (resultCount === 0) {
+      await track(
+        ANALYTICS_EVENTS.BROWSE_ZERO_RESULTS,
+        { query: sanitizedSearch || null, has_category_filter: Boolean(category) },
+        { userId, tenantId, role: 'student' }
+      )
+    }
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 container" data-testid="browse-courses-page">

@@ -24,6 +24,8 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -38,6 +40,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
   const [isSocialLoading, setIsSocialLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
+  const analytics = useAnalytics()
   const searchParams = useSearchParams()
   const requestedNext = searchParams.get('next') ?? searchParams.get('redirectTo')
   const nextPath = getSafeNextPath(requestedNext, '')
@@ -83,6 +86,17 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         }
       }
 
+      // The session is already in hand here, so this is the cheapest place in
+      // the app to bind the anonymous visitor to a profile. No email, no name —
+      // the auth user id only.
+      if (session?.user?.id) analytics.identify(session.user.id, { role: userRole })
+
+      analytics.track(ANALYTICS_EVENTS.LOGIN_SUCCEEDED, {
+        method: 'password',
+        role: userRole,
+        had_next_path: Boolean(nextPath),
+      })
+
       // Return to where the user came from (e.g. the OAuth consent page) —
       // relative paths only, so the param can't redirect off-site.
       if (nextPath) {
@@ -91,7 +105,16 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         router.push(`/dashboard/${userRole}`)
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      const message = error instanceof Error ? error.message : t('common.error')
+      setError(message)
+      // Supabase's message ("Invalid login credentials", "Email not confirmed")
+      // is the whole point of the event — it separates people who forgot their
+      // password from people stuck behind an unconfirmed address. It carries no
+      // PII; the email is deliberately not attached.
+      analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, {
+        method: 'password',
+        failure_reason: message,
+      })
     } finally {
       setIsLoading(false)
     }
@@ -111,8 +134,16 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         },
       })
       if (error) throw error
+      // No success event here — OAuth leaves the page and settles at
+      // /api/auth/callback, so the browser never gets to fire one. The
+      // redirect back is a fresh page load.
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      const message = error instanceof Error ? error.message : t('common.error')
+      setError(message)
+      analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, {
+        method: 'google',
+        failure_reason: message,
+      })
       setIsSocialLoading(false)
     }
   }

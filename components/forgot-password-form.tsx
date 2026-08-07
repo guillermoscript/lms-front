@@ -15,9 +15,12 @@ import { Label } from '@/components/ui/label'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export function ForgotPasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const t = useTranslations('auth.forgotPassword')
+  const analytics = useAnalytics()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -40,6 +43,10 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
       })
       if (error) throw error
       setSuccess(true)
+      // Volume here is a leading indicator: a spike means people cannot get in,
+      // and it is the half of the reset funnel that does not require the email
+      // to have arrived. `password_reset_completed` is the other half.
+      analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_REQUESTED, {})
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : t('common.error'))
     } finally {
