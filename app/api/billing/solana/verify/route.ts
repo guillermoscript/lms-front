@@ -35,8 +35,6 @@ import {
 } from '@/lib/billing/solana-platform-payment'
 import { OPEN_REQUEST_STATUSES } from '@/lib/billing/payment-request-ttl'
 import { paymentPollLimiter } from '@/lib/rate-limit'
-import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -86,12 +84,11 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        // `request_type` is what makes `is_renewal` free here: it is already
-        // classified at checkout by `recordSolanaPlatformRequest`, so the crypto
-        // rails' "a second checkout IS a renewal" rule needs no extra query and
-        // no guess. `amount`/`currency` are the USD figure the school owes,
-        // which is the number to sum — never `settlement_base`.
-        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, request_type, amount, currency, settlement_currency, settlement_base, settlement_mint, platform_plans(slug)',
+        // `amount`/`currency` are carried onto the dispatched event so the
+        // platform dispatcher's `platform_payment_succeeded` reports the USD
+        // figure the school actually owes. Extra columns on a read that was
+        // already happening.
+        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, amount, currency, settlement_currency, settlement_base, settlement_mint, platform_plans(slug)',
       )
       .eq('request_id', requestId)
       .eq('tenant_id', tenantId)
@@ -189,6 +186,16 @@ export async function POST(req: NextRequest) {
         // Solana has no subscription object; the settling signature stands in
         // as the provider-side id, exactly as the Binance order id does.
         providerSubscriptionId: signature,
+        // The USD figure the school owes, carried so the dispatcher's
+        // `platform_payment_succeeded` reports a real amount instead of 0.
+        // Purely additive: the platform dispatcher reads `amount`/`currency`
+        // for analytics only and writes neither.
+        //
+        // Deliberately the USD price, NOT `settlement_base` — lamports and USDC
+        // base units are what the chain is verified against and are meaningless
+        // summed alongside a card payment.
+        amount: Number(request.amount ?? 0),
+        currency: request.currency ?? 'usd',
         metadata: {
           tenant_id: request.tenant_id,
           plan_id: request.plan_id,
@@ -200,31 +207,11 @@ export async function POST(req: NextRequest) {
       { provider: 'solana', admin },
     )
 
-    // Loop E. Downstream of the status-gated claim above, so the page's own
-    // polling cannot emit this twice — only the poll that won the claim gets
-    // here.
-    //
-    // `is_renewal` is the whole point on a crypto rail (#610): Solana has no
-    // subscription object, so a second checkout on the same rail is a renewal
-    // and counting it as a new sale would inflate platform growth.
-    await track(
-      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
-      {
-        provider: 'solana',
-        amount: Number(request.amount ?? 0),
-        interval: request.interval,
-        is_renewal: request.request_type === 'renewal',
-        currency: request.currency ?? 'usd',
-        request_type: request.request_type ?? null,
-        settlement_currency: request.settlement_currency ?? null,
-        ...(planSlug ? { plan: planSlug } : {}),
-        request_id: requestId,
-      },
-      // Attributed to the admin who completed the payment and, through
-      // `tenantId`, to the school the money is actually for.
-      { userId: user.id, tenantId: request.tenant_id, role: 'admin' },
-    )
-
+    // `platform_payment_succeeded` is NOT emitted here. It belongs to
+    // `dispatchPlatformBillingEvent` above, which is the only place that still
+    // holds the pre-event plan state `is_renewal` is derived from — and the
+    // single emitter for every platform rail, so Solana cannot drift from
+    // Stripe. See the trap-4 note there.
     console.log(`[billing/solana/verify] confirmed request ${requestId} (signature ${signature})`)
     return NextResponse.json({ confirmed: true, signature })
   } catch (error) {

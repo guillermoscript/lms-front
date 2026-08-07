@@ -22,8 +22,6 @@ import {
   platformWebhookNamespace,
 } from '@/lib/billing/platform-billing'
 import { dispatchPlatformBillingEvent } from '@/lib/billing/platform-webhook-dispatch'
-import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -152,28 +150,6 @@ export async function POST(
         }
       : undefined
 
-  // Read the tenant's plan state BEFORE dispatching, because the dispatcher is
-  // about to overwrite the very thing `is_renewal` is derived from.
-  //
-  // Crypto rails have no subscription object (#610), so "activated" is what a
-  // renewal looks like on them too — a school already holding a plan on this
-  // rail is renewing, not converting, and counting it as a new sale inflates
-  // platform growth. Push-renewal rails say so directly via the event type.
-  // Only done for the two event types that move money, and only when the
-  // metadata already names the tenant, so no event pays for a lookup it cannot
-  // use.
-  const movesMoney = event.type === 'subscription.activated' || event.type === 'subscription.renewed'
-  const metadataTenantId = event.metadata?.tenant_id ?? event.metadata?.tenantId ?? null
-  let priorPlanId: string | null = null
-  if (movesMoney && metadataTenantId) {
-    const { data: priorSub } = await admin
-      .from('platform_subscriptions')
-      .select('plan_id')
-      .eq('tenant_id', metadataTenantId)
-      .maybeSingle()
-    priorPlanId = (priorSub as { plan_id: string | null } | null)?.plan_id ?? null
-  }
-
   // 4. Dispatch. On failure, record the error and 500 so the provider retries.
   try {
     await dispatchPlatformBillingEvent(event, { provider, admin, revertToPrice })
@@ -184,29 +160,6 @@ export async function POST(
       .update({ error: err instanceof Error ? err.message : String(err) })
       .eq('id', rowId)
     return NextResponse.json({ error: 'Dispatch failed' }, { status: 500 })
-  }
-
-  // Loop E. Downstream of a dispatch that did not throw, and upstream of the
-  // `processed_at` stamp — but the duplicate check at step 3 already returned
-  // for anything previously processed, so this fires once per provider event.
-  if (movesMoney && metadataTenantId) {
-    await track(
-      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
-      {
-        provider,
-        // `NormalizedBillingEvent.amount` is MAJOR units by contract — each
-        // adapter converts from its own unit (Lemon Squeezy reports cents).
-        amount: event.amount ?? 0,
-        interval: event.interval ?? event.metadata?.interval ?? 'monthly',
-        is_renewal: event.type === 'subscription.renewed' || priorPlanId != null,
-        currency: event.currency ?? 'usd',
-        event_type: event.type,
-        self_managed_period: !!caps?.selfManagedPeriod,
-        amount_reported: event.amount != null,
-        ...(event.metadata?.plan_slug ? { plan: event.metadata.plan_slug } : {}),
-      },
-      { tenantId: metadataTenantId },
-    )
   }
 
   // 5. Mark processed. If this write fails the event is redelivered and
