@@ -19,10 +19,17 @@ interface FakeAdmin {
 const state: {
   admin: FakeAdmin
   walletRow: { wallet_address: string } | null
+  /**
+   * The tenant's Stripe Connect columns, read by the #606 readiness gate on the
+   * publish path. Defaults to an onboarded school so the capability-branch tests
+   * below exercise what they are about; the gate itself is pinned separately.
+   */
+  tenantRow: { stripe_account_id: string | null; stripe_charges_enabled: boolean }
   providerCalls: { createProduct: number; createPrice: number }
 } = {
   admin: makeFakeAdmin(),
   walletRow: null,
+  tenantRow: { stripe_account_id: 'acct_ready', stripe_charges_enabled: true },
   providerCalls: { createProduct: 0, createPrice: 0 },
 }
 
@@ -46,6 +53,9 @@ function makeFakeAdmin(): FakeAdmin {
         })
       },
       single() {
+        if (table === 'tenants') {
+          return Promise.resolve({ data: state.tenantRow, error: null })
+        }
         const row = (Array.isArray(pendingInsert) ? pendingInsert[0] : pendingInsert) || {}
         const idKey = table === 'plans' ? 'plan_id' : 'product_id'
         return Promise.resolve({ data: { ...row, [idKey]: 1 }, error: null })
@@ -101,6 +111,7 @@ const baseProduct = {
 beforeEach(() => {
   state.admin = makeFakeAdmin()
   state.walletRow = null
+  state.tenantRow = { stripe_account_id: 'acct_ready', stripe_charges_enabled: true }
   state.providerCalls = { createProduct: 0, createPrice: 0 }
 })
 
@@ -193,5 +204,65 @@ describe('createProduct — capability branch', () => {
     const row = state.admin._inserted.find(i => i.table === 'products')!.values
     expect(row.provider_product_id).toBeNull()
     expect(row.provider_price_id).toBeNull()
+  })
+})
+
+/**
+ * The publish path must not put a paid offering on a rail that cannot be paid
+ * (#606). A school whose Stripe Express onboarding was abandoned still has
+ * `stripe_account_id` set — that column is written before onboarding starts —
+ * so the gate reads `stripe_charges_enabled`, and it fires BEFORE any catalog
+ * object is created on the provider or any row is inserted.
+ *
+ * Capability-driven: rails with no per-tenant account to onboard are untouched
+ * by this, which the last two cases pin.
+ */
+describe('publish gate — connected-account readiness', () => {
+  const ABANDONED = { stripe_account_id: 'acct_unfinished', stripe_charges_enabled: false }
+  const NEVER_CONNECTED = { stripe_account_id: null, stripe_charges_enabled: false }
+
+  it('createProduct — refuses a paid Stripe offering while onboarding is incomplete', async () => {
+    state.tenantRow = ABANDONED
+    const r = await createProduct({ ...baseProduct, paymentProvider: 'stripe' })
+    expect(r.success).toBe(false)
+    // Actionable: names the screen to fix it on, not just the problem.
+    expect(r.success ? '' : r.error).toMatch(/Settings/)
+    expect(r.success ? '' : r.error).toMatch(/finish your stripe setup/i)
+    // Nothing created on Stripe, nothing written to the database.
+    expect(state.providerCalls).toEqual({ createProduct: 0, createPrice: 0 })
+    expect(state.admin._inserted).toEqual([])
+  })
+
+  it('createPlan — refuses a paid Stripe plan while onboarding is incomplete', async () => {
+    state.tenantRow = ABANDONED
+    const r = await createPlan({ ...basePlan, paymentProvider: 'stripe' })
+    expect(r.success).toBe(false)
+    expect(r.success ? '' : r.error).toMatch(/Settings/)
+    expect(state.providerCalls).toEqual({ createProduct: 0, createPrice: 0 })
+    expect(state.admin._inserted).toEqual([])
+  })
+
+  it('distinguishes a school that never connected from one mid-onboarding', async () => {
+    state.tenantRow = NEVER_CONNECTED
+    const r = await createProduct({ ...baseProduct, paymentProvider: 'stripe' })
+    expect(r.success).toBe(false)
+    expect(r.success ? '' : r.error).toMatch(/connect your stripe account/i)
+  })
+
+  it('leaves rails without a connected account alone', async () => {
+    // Same unusable Stripe state — irrelevant to a rail that has nothing to
+    // onboard, so these must still publish.
+    state.tenantRow = ABANDONED
+    state.walletRow = { wallet_address: 'So1aNaWa11et1111111111111111111111111111111' }
+
+    const solana = await createProduct({ ...baseProduct, paymentProvider: 'solana' })
+    expect(solana.success).toBe(true)
+
+    const lemon = await createProduct({
+      ...baseProduct,
+      paymentProvider: 'lemonsqueezy',
+      providerPriceId: 'variant_1',
+    })
+    expect(lemon.success).toBe(true)
   })
 })

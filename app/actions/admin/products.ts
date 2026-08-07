@@ -5,6 +5,7 @@ import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/s
 import { getPaymentProvider, PROVIDER_CAPABILITIES, type Currency, type PaymentProvider } from '@/lib/payments'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
+import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
 import type {
@@ -113,6 +114,12 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
     const providerType = formData.paymentProvider || 'stripe'
     const caps = PROVIDER_CAPABILITIES[providerType]
     const adminClient = createAdminClient()
+
+    // Don't publish a paid offering on a rail that cannot be paid (#606). Same
+    // shape as the Solana wallet guard below, one level up: where Solana needs a
+    // receiving address, a `requiresConnectedAccount` rail needs an onboarded
+    // account, and `stripe_account_id` being set is not that.
+    await assertReadyToPublish(tenantId, providerType)
 
     // Resolve provider catalog ids by CAPABILITY, never by provider name:
     //  - createsCatalog (Stripe/PayPal) → auto-create product + one-time price.
@@ -513,6 +520,16 @@ export async function saveProductCreationWizard(
     // constructor may require env credentials.
     const providerType: PaymentProvider = input.pricing.paymentProvider || 'manual'
     const caps = PROVIDER_CAPABILITIES[providerType]
+
+    // Don't PUBLISH a paid offering on a rail that cannot be paid (#606). Only
+    // on `publish`: a draft is not on sale, so a school can keep building one
+    // while its Stripe onboarding is still in review. `getProductCreationReadiness`
+    // is a pure, client-shared validator, so this per-tenant, async check lives
+    // here rather than inside it.
+    if (input.intent === 'publish') {
+      await assertReadyToPublish(tenantId, providerType)
+    }
+
     const nextPrice = input.pricing.price!
     const nextCurrency = input.pricing.currency! as Currency
 

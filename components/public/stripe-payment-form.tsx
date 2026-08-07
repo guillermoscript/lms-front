@@ -17,6 +17,16 @@ import {
     IconBuildingBank,
 } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
+import {
+    PAYMENTS_NOT_CONNECTED_CODE,
+    PAYMENTS_ONBOARDING_INCOMPLETE_CODE,
+} from '@/lib/payments/payment-readiness-codes';
+
+/** Readiness codes (#606) → translation keys under the `checkout` namespace. */
+const READINESS_MESSAGE_KEY: Record<string, string> = {
+    [PAYMENTS_NOT_CONNECTED_CODE]: 'stripe.schoolNotConnected',
+    [PAYMENTS_ONBOARDING_INCOMPLETE_CODE]: 'stripe.schoolSetupIncomplete',
+};
 
 interface StripePaymentFormProps {
     productId?: number | string;
@@ -66,7 +76,14 @@ export function StripePaymentForm({
                 });
                 const data = await res.json();
                 if (!res.ok || !data.clientSecret) {
-                    throw new Error(data.error || t('stripe.initError'));
+                    // The readiness gate (#606) returns a machine-readable code so
+                    // the two "this school can't take card payments" cases get
+                    // translated copy instead of an English server string — and so
+                    // "still finishing setup" never reads as "contact the admin".
+                    const localized = READINESS_MESSAGE_KEY[data.code as string];
+                    throw new Error(
+                        localized ? t(localized) : data.error || t('stripe.initError'),
+                    );
                 }
                 if (cancelled) return;
                 setClientSecret(data.clientSecret);

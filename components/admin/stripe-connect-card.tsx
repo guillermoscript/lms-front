@@ -26,7 +26,11 @@ export default async function StripeConnectCard({
 
   if (accountId && chargesEnabled) {
     return (
-      <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-5 ring-1 ring-emerald-200 dark:ring-emerald-800">
+      <div
+        className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-5 ring-1 ring-emerald-200 dark:ring-emerald-800"
+        data-testid="stripe-connect-card"
+        data-connect-state="ready"
+      >
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
             <IconCheck className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" />
@@ -53,10 +57,21 @@ export default async function StripeConnectCard({
   }
 
   if (accountId) {
-    // Account exists but onboarding is incomplete — the Account Link resumes
-    // where the admin left off (Express progressive KYC).
+    // Account exists but Stripe will not let it charge yet — the Account Link
+    // resumes where the admin left off (Express progressive KYC).
+    //
+    // Two things this state must say out loud (#606): what is BLOCKED, and what
+    // to do about it. The account id alone used to look like success, and when
+    // `details_submitted` was true the card offered no action at all — stranding
+    // exactly the admins whose account is blocked on outstanding requirements.
+    // `/api/stripe/connect` mints a FRESH account link for an existing account,
+    // so the button is safe (and useful) in both sub-states.
     return (
-      <div className="rounded-xl bg-sky-50 dark:bg-sky-950/30 p-5 ring-1 ring-sky-200 dark:ring-sky-800">
+      <div
+        className="rounded-xl bg-sky-50 dark:bg-sky-950/30 p-5 ring-1 ring-sky-200 dark:ring-sky-800"
+        data-testid="stripe-connect-card"
+        data-connect-state="incomplete"
+      >
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-900/50">
             <IconProgress className="h-[18px] w-[18px] text-sky-600 dark:text-sky-400" />
@@ -68,16 +83,18 @@ export default async function StripeConnectCard({
             <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">
               {detailsSubmitted ? t('pendingReviewDesc') : t('pendingDesc')}
             </p>
-            {!detailsSubmitted && (
-              /* Plain <a>: this is an API redirect endpoint, not a page — Link would client-navigate */
-              /* eslint-disable-next-line @next/next/no-html-link-for-pages */
-              <a
-                href="/api/stripe/connect"
-                className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-sky-600 text-white hover:bg-sky-700 h-8 px-4 transition-colors"
-              >
-                {t('resumeButton')}
-              </a>
-            )}
+            <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-100/70 px-2.5 py-2 text-xs font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <IconAlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
+              {t('blockedNotice')}
+            </p>
+            {/* Plain <a>: this is an API redirect endpoint, not a page — Link would client-navigate */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
+              href="/api/stripe/connect"
+              className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-sky-600 text-white hover:bg-sky-700 h-8 px-4 transition-colors"
+            >
+              {detailsSubmitted ? t('checkStatusButton') : t('resumeButton')}
+            </a>
           </div>
         </div>
       </div>
@@ -85,7 +102,11 @@ export default async function StripeConnectCard({
   }
 
   return (
-    <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-5 ring-1 ring-amber-200 dark:ring-amber-800">
+    <div
+      className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-5 ring-1 ring-amber-200 dark:ring-amber-800"
+      data-testid="stripe-connect-card"
+      data-connect-state="not-connected"
+    >
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
           <IconAlertCircle className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" />

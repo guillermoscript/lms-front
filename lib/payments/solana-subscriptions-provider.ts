@@ -58,6 +58,7 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
     supportsProrationPreview: false, // no mid-period quote API
     bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false,
+    requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved
   }
 
   /**

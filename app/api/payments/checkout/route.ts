@@ -33,6 +33,11 @@ import {
   PARALLEL_SUBSCRIPTION_CODE,
   PARALLEL_SUBSCRIPTION_MESSAGE,
 } from '@/lib/payments/subscription-guard'
+import {
+  isReadyToAcceptPayments,
+  READINESS_CODE,
+  READINESS_MESSAGE,
+} from '@/lib/payments/tenant-payment-readiness'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
 const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs', 'paypal', 'binance', 'binance_personal']
@@ -116,6 +121,23 @@ export async function POST(req: NextRequest) {
       itemName = product.name
       providerSlug = product.payment_provider || 'stripe'
       providerPriceId = product.provider_price_id || ''
+    }
+
+    // Connected-account readiness gate (#606). A no-op for every rail this
+    // route currently handles — none of them `requiresConnectedAccount`, so the
+    // helper short-circuits without a query. It lives here anyway so the rule
+    // is a property of "starting a payment" rather than of whichever route
+    // happened to remember it: the next marketplace rail we add inherits the
+    // gate instead of repeating the #606 bug.
+    const readiness = await isReadyToAcceptPayments(tenantId, providerSlug as PaymentProvider)
+    if (!readiness.ready) {
+      return NextResponse.json(
+        {
+          error: READINESS_MESSAGE[readiness.reason],
+          code: READINESS_CODE[readiness.reason],
+        },
+        { status: 400 },
+      )
     }
 
     if (!HANDLED.includes(providerSlug as PaymentProvider)) {

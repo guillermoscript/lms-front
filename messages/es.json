@@ -3057,7 +3057,9 @@
               "pendingDesc": "Tu cuenta de Stripe fue creada pero la configuración no está terminada. Retómala donde la dejaste — solo toma unos minutos.",
               "pendingReviewDesc": "Tus datos fueron enviados y Stripe los está revisando. Los pagos con tarjeta se habilitarán automáticamente cuando termine la revisión.",
               "resumeButton": "Terminar configuración de Stripe",
-              "payoutsPending": "Los retiros aún no están habilitados — Stripe podría necesitar información adicional antes de transferir fondos a tu banco."
+              "payoutsPending": "Los retiros aún no están habilitados — Stripe podría necesitar información adicional antes de transferir fondos a tu banco.",
+              "blockedNotice": "Hasta que Stripe habilite los cobros, los estudiantes no pueden completar un pago con tarjeta y no puedes publicar una oferta de pago con Stripe.",
+              "checkStatusButton": "Ver estado de la configuración"
             }
           },
           "enrollment": {
@@ -4937,7 +4939,9 @@
       "unavailableTitle": "Pagos con tarjeta no disponibles",
       "tryManual": "Pagar de otra forma",
       "payButton": "Pagar {price}",
-      "paymentError": "No se pudo completar el pago. Inténtalo de nuevo."
+      "paymentError": "No se pudo completar el pago. Inténtalo de nuevo.",
+      "schoolNotConnected": "Esta escuela aún no ha conectado una cuenta de pago. Contacta al administrador de la escuela para configurar los pagos.",
+      "schoolSetupIncomplete": "Esta escuela todavía está terminando la configuración de pagos, por eso los pagos con tarjeta aún no están disponibles. Intenta más tarde o contacta al administrador de la escuela."
     },
     "empty": {
       "title": "No hay producto seleccionado",

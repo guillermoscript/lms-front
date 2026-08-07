@@ -47,6 +47,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     supportsProrationPreview: true, // invoices.createPreview
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false,
+    requiresConnectedAccount: true, // Connect Express — per-tenant account with progressive KYC the school can abandon
   }
   private stripe: Stripe
   /**
@@ -77,9 +78,16 @@ export class StripePaymentProvider implements IPaymentProvider {
    */
   async createProduct(params: CreateProductParams): Promise<PaymentProduct> {
     try {
+      // Omit `description` when blank rather than sending ''. Stripe reads an
+      // empty string as "unset this parameter" and rejects it outright
+      // ("'description' cannot be unset"), so every caller that passes
+      // `description ?? ''` — both product create paths do — failed to publish a
+      // paid Stripe offering whose course had no description yet. Surfaced while
+      // verifying #606; the two callers keep their `|| ''` and this maps it.
+      const description = params.description?.trim()
       const stripeProduct = await this.stripe.products.create({
         name: params.name,
-        description: params.description,
+        ...(description ? { description } : {}),
         images: params.images || [],
         metadata: params.metadata || {},
       })
