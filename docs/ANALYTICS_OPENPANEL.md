@@ -1,6 +1,9 @@
 # Product Analytics with OpenPanel — Analysis & Integration Plan
 
-> Status: **proposal / not implemented**. Written 2026-08-07.
+> Status: **implemented on `feat/openpanel-analytics`, inert pending credentials.** Written and built 2026-08-07.
+> Phases 0–4 and the §9 P1 events are committed: 69 files, ~5,000 insertions, 8 commits. Typecheck clean, 849/849 unit tests, production build passes.
+> **Nothing is live.** With no env values set, the layout renders no script tag, `/api/op` 404s, and no outbound request is made — asserted in `tests/unit/analytics-wrapper.test.ts`, not merely intended.
+> Not yet done: §10.2 MCP server, §10.1 mobile app, §6 phase 5 (dashboards).
 > Scope: adding product analytics (OpenPanel) to the multi-tenant LMS so we can see how real users behave and make informed decisions.
 
 ---
@@ -147,7 +150,33 @@ export async function track(name: string, props: Record<string, unknown>, ctx: C
 }
 ```
 
-Three non-negotiables encoded above:
+### ⚠️ The guard must wrap the BLOCK, not just the call — learned the hard way
+
+`track()` being self-guarding is **not sufficient**, and assuming it was produced a real bug during implementation. The danger isn't the `track()` call anyone is thinking about; it's the innocuous line next to it:
+
+```ts
+// BROKEN — shipped, and failed product creation when the read failed
+const { count } = await adminClient.from('lessons').select(…)   // ← unguarded
+await track('course_published', { lesson_count: count ?? 0 }, ctx)
+
+// ALSO BROKEN — arguments evaluate BEFORE track() runs, so its catch can't help
+await track('product_created', props, { userId: await getCurrentUserId(), … })
+```
+
+Two hazards, both invisible at a glance: **analytics-only reads** used to populate properties, and **awaits in the argument list**. Four independent agents each wrote one, despite "analytics must never break a request" being the first stated constraint — because the rule points at the wrong line.
+
+Hence `safeAnalytics(fn, label)` in `lib/analytics/server.ts`. **Wrap the whole block, every time:**
+
+```ts
+await safeAnalytics(async () => {
+  const { count } = await adminClient.from('lessons').select(…)
+  await track('course_published', { lesson_count: count ?? 0 }, ctx)
+}, 'course_published')
+```
+
+The generalisable lesson: a safety guarantee has to live in a wrapper people are forced to use, not in a rule they're asked to remember.
+
+Three further non-negotiables encoded above:
 
 1. **Fails open.** A `try/catch` around every call. A webhook that 500s because the analytics vendor is down will cost you real money and real enrollments.
 2. **No-ops without credentials.** Dev, CI, and Playwright must not emit events — otherwise your funnels fill with `student@e2etest.com` running the same purchase 300 times.
@@ -244,7 +273,7 @@ A school that never publishes a course and never connects payments will never ge
 | `checkout_started` | **server** — `app/api/payments/checkout`, `app/api/stripe/create-payment-intent` | `provider`, `amount`, `currency`, `product_id` \| `plan_id` |
 | `course_self_enrolled` | **client** — `lib/hooks/use-enrollment.ts` (`self_enroll_subscription_course` RPC) | `course_id`, `source: 'subscription'` |
 | `checkout_abandoned` | **derived** (nightly job: `checkout_started` with no terminal event in 24h) | `provider`, `amount` |
-| `payment_succeeded` | **server** — webhooks + `app/api/billing/solana/verify` + `app/actions/payment-requests.ts:262` | `provider`, `amount_major`, `currency`, `is_subscription`, `platform_fee`, `school_percentage_snapshot` |
+| `payment_succeeded` | **server** — `lib/payments/webhook-dispatch.ts` (`dispatchBillingEvent`, :60), `app/api/billing/solana/verify`, and `app/actions/payment-requests.ts:324 completeAndEnroll` | `provider`, `amount_major`, `currency`, `is_subscription`, `platform_fee`, `school_percentage_snapshot` |
 | `payment_failed` | **server** — webhook failure branches | `provider`, `failure_reason` |
 | `entitlement_granted` | **server** — after `enroll_user()` RPC | `source_type`, `course_count` |
 | `refund_issued` | **server** — refund handlers | `is_partial`, `refunded_amount`, `net_amount` |
@@ -252,11 +281,15 @@ A school that never publishes a course and never connects payments will never ge
 
 > ⚠️ **`course_self_enrolled` is a genuine hole in the money loop.** Subscription holders self-enroll from `components/student/browse-course-card.tsx:32` → `useEnrollment()` → the `self_enroll_subscription_course` SECURITY DEFINER RPC. **This never touches checkout, any server action, or any API route.** Without this event, subscription-driven course access is invisible and Loop C undercounts value delivered — you'd conclude plans aren't being used when they are.
 
-**Three correctness traps, straight from `CLAUDE.md`:**
+**Five correctness traps — the first three from `CLAUDE.md`, the last two found during implementation:**
 
 1. **Partial refunds keep `status = 'successful'`** (since #547). Any revenue property must use `amount - refunded_amount` (`netOfRefunds()` in `lib/payments/payouts-owed.ts`). Sending gross `amount` will overstate revenue in OpenPanel exactly the way it did on the school-facing screens before #547 — the same bug, in a new place.
 2. **Platform fee comes from `ProviderCapabilities.bearsPlatformFee` + the transaction's own `school_percentage_snapshot`** — *never* `revenue_splits.applies_to_providers` (retired in #547). Getting this wrong makes your analytics disagree with your payouts.
-3. **Manual payments break session attribution.** `confirmPaymentReceived` fires hours after the student's session ended, from an *admin's* request context. Two mandatory precautions: attribute to the **student's** `profileId` (not the admin's), and pass an explicit `timestamp` of the original request — otherwise the sale lands in the wrong day's cohort and looks like the admin bought it.
+3. **Manual payments break session attribution.** The confirmation runs hours after the student's session ended, from an *admin's* request context. Two mandatory precautions: attribute to the **student's** `profileId` (not the admin's), and pass an explicit `timestamp` of the original request — otherwise the sale lands in the wrong day's cohort and looks like the admin bought it. (`track()` supports this via `AnalyticsContext.timestamp` → `__timestamp`, `lib/analytics/server.ts:57`.) Carry `original_requested_at` as a property too — the confirmation lag is the operational cost of the manual rail, and nothing measures it today.
+
+4. **Instrument the dispatcher, not the routes.** `app/api/payments/paypal/capture/route.ts:117` and `app/api/payments/webhook/paypal` *both* call `dispatchBillingEvent` for the same capture. The dispatcher is idempotent (`.eq('status','pending')` — only one flip wins); a `track()` at either route is not, so route-level instrumentation emits `payment_succeeded` **twice per PayPal sale**, and the same for Binance. The status-flip guard is the correctness boundary — put the event inside it. Bonus: it also catches a capture whose webhook never arrives.
+
+5. **Manual `payment_succeeded` belongs at `completeAndEnroll` (`app/actions/payment-requests.ts:324`), not `confirmPaymentReceived` (:262).** The latter only flips the request to `payment_received` and grants nothing; the transaction row and entitlement are created at :324. `manual_payment_confirmed` is the correct event for :262.
 
 Also: `transactions` has **no `created_at`** — it's `transaction_date`. Relevant if you ever backfill history into OpenPanel.
 
