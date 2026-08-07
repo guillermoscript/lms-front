@@ -4589,6 +4589,7 @@ export type Database = {
       }
       platform_payment_requests: {
         Row: {
+          admin_notes: string | null
           amount: number
           bank_reference: string | null
           confirmed_at: string | null
@@ -4615,6 +4616,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          admin_notes?: string | null
           amount: number
           bank_reference?: string | null
           confirmed_at?: string | null
@@ -4641,6 +4643,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          admin_notes?: string | null
           amount?: number
           bank_reference?: string | null
           confirmed_at?: string | null

@@ -83,6 +83,8 @@ async function createPendingRequest(
     requestType?: 'upgrade' | 'downgrade' | 'renewal'
     status?: string
     expiresAt?: Date
+    /** The note the SCHOOL attaches when it files the request (#615). */
+    notes?: string
   },
 ) {
   const { data, error } = await admin
@@ -94,6 +96,7 @@ async function createPendingRequest(
       interval: 'monthly',
       amount: opts.amount,
       currency: 'usd',
+      notes: opts.notes ?? null,
       status: opts.status ?? 'pending',
       request_type: opts.requestType ?? 'upgrade',
       payment_provider: 'manual',
@@ -109,7 +112,7 @@ async function createPendingRequest(
 async function getRequest(admin: SupabaseClient, requestId: string) {
   const { data } = await admin
     .from('platform_payment_requests')
-    .select('status, notes, confirmed_by, confirmed_at')
+    .select('status, notes, admin_notes, confirmed_by, confirmed_at')
     .eq('request_id', requestId)
     .single()
   return data
@@ -340,6 +343,7 @@ test.describe('platform billing — manual provider lifecycle (#605)', () => {
     const requestId = await createPendingRequest(admin, {
       planId: pro.plan_id,
       amount: pro.price_monthly,
+      notes: 'Wire sent from our BAC account on the 3rd',
     })
 
     await login(page, ACCOUNTS.superAdmin.email, ACCOUNTS.superAdmin.password, BASE)
@@ -347,13 +351,51 @@ test.describe('platform billing — manual provider lifecycle (#605)', () => {
 
     const request = await getRequest(admin, requestId)
     expect(request?.status).toBe('rejected')
-    expect(request?.notes).toContain('No transfer received')
+    // The super admin's reason and the school's own note are different columns
+    // (#615). Reject used to write the reason over `notes`, destroying the
+    // school's side of the record on the row reconciliation reads.
+    expect(request?.admin_notes).toContain('No transfer received')
+    expect(request?.notes).toBe('Wire sent from our BAC account on the 3rd')
 
     // Nothing was granted.
     expect(await getSubscription(admin)).toBeNull()
     const tenant = await getTenant(admin)
     expect(tenant?.plan).toBe('free')
     expect(tenant?.billing_status).toBe('free')
+  })
+
+  test('a confirmed transfer can no longer be rejected', async ({ page }) => {
+    const admin = getAdmin()
+    const starter = await planBySlug(admin, 'starter')
+    const requestId = await createPendingRequest(admin, {
+      planId: starter.plan_id,
+      amount: starter.price_monthly,
+      notes: "The school's own note",
+    })
+
+    await login(page, ACCOUNTS.superAdmin.email, ACCOUNTS.superAdmin.password, BASE)
+    await confirmInUi(page, requestId)
+
+    // The page stops offering a decision once the row is terminal — no Reject
+    // button to press on a confirmed row. (The server refuses it too, even
+    // called directly from a stale tab; that half is pinned in
+    // tests/unit/reject-manual-payment.test.ts, which can invoke the action
+    // without a button.)
+    const rowSelector = `[data-testid="billing-request-row"][data-request-id="${requestId}"]`
+    await expect(page.locator(rowSelector)).toHaveAttribute('data-status', 'confirmed')
+    await expect(page.locator(`${rowSelector} [data-testid="reject-payment-btn"]`)).toHaveCount(0)
+    await expect(page.locator(`${rowSelector} [data-testid="confirm-payment-btn"]`)).toHaveCount(0)
+
+    // The grant the confirm produced is intact and uncontradicted.
+    const request = await getRequest(admin, requestId)
+    expect(request?.status).toBe('confirmed')
+    expect(request?.admin_notes).toBeNull()
+    expect(request?.notes).toBe("The school's own note")
+
+    const subscription = await getSubscription(admin)
+    expect(subscription?.status).toBe('active')
+    const tenant = await getTenant(admin)
+    expect(tenant?.plan).toBe('starter')
   })
 
   test('a confirmed renewal extends the paid period instead of restarting it', async ({ page }) => {

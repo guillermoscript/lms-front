@@ -89,7 +89,7 @@ export default async function PlatformBillingPage({
                 </tr>
               </thead>
               <tbody>
-                {(requests || []).map((req: any) => {
+                {(requests ?? []).map((req) => {
                   // Item 5: `amount` is the price snapshotted at request time.
                   // Surface the plan's *current* price so a super admin can see
                   // if it drifted (e.g. the plan was re-priced before confirm).
@@ -125,6 +125,17 @@ export default async function PlatformBillingPage({
                       <Badge variant={STATUS_BADGE[req.status] || 'outline'} className="text-[10px] capitalize">
                         {req.status.replace(/_/g, ' ')}
                       </Badge>
+                      {/* The super admin's reason for the decision (#615). Without it
+                          rendered somewhere, `admin_notes` is a write-only column and
+                          the row stops being an audit record. */}
+                      {req.admin_notes && (
+                        <span
+                          className="mt-1 block max-w-[18rem] text-[10px] leading-snug text-muted-foreground"
+                          data-testid="request-admin-note"
+                        >
+                          {req.admin_notes}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">
                       {format(new Date(req.created_at), 'MMM d, yyyy')}
