@@ -20,6 +20,15 @@ interface Props {
   status: string
 }
 
+/**
+ * Server actions here throw `Error` with a message written for this toast —
+ * `rejectManualPayment`'s refusal of an already-decided request among them
+ * (#615). Anything that isn't an Error carries no message worth showing.
+ */
+function errorMessage(e: unknown) {
+  return e instanceof Error ? e.message : 'Something went wrong. Please try again.'
+}
+
 export function BillingActions({ requestId, status }: Props) {
   const router = useRouter()
   const [loadingConfirm, setLoadingConfirm] = useState(false)
@@ -34,8 +43,8 @@ export function BillingActions({ requestId, status }: Props) {
       await sendPaymentInstructions(requestId)
       toast.success('Instructions marked as sent — school notified')
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(errorMessage(e))
     } finally {
       setLoadingInstructions(false)
     }
@@ -47,8 +56,8 @@ export function BillingActions({ requestId, status }: Props) {
       await confirmManualPayment(requestId)
       toast.success('Payment confirmed — tenant plan updated')
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(errorMessage(e))
     } finally {
       setLoadingConfirm(false)
     }
@@ -65,8 +74,8 @@ export function BillingActions({ requestId, status }: Props) {
       toast.success('Request rejected')
       setShowRejectModal(false)
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(errorMessage(e))
     } finally {
       setLoadingReject(false)
     }
@@ -111,7 +120,7 @@ export function BillingActions({ requestId, status }: Props) {
           </DialogHeader>
           <div className="py-2">
             <Textarea
-              placeholder="Reason for rejection (will be stored in admin_notes)…"
+              placeholder="Reason for rejection — shown on the request, kept separate from the school's own note…"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
