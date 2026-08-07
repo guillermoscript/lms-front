@@ -10,6 +10,8 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { aiGenerationLimiter } from '@/lib/rate-limit'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 
 /** Hard cap on generated lessons (issue #441). */
 const MAX_LESSONS = 8
@@ -70,6 +72,13 @@ export interface StarterCourseResult {
 export async function generateStarterCourse(
   description: string
 ): Promise<ActionResult<StarterCourseResult>> {
+  // Hoisted so the catch below can report the failed generation with the same
+  // attribution as the success path. `generationStartedAt` stays 0 until we
+  // actually call the model, which is what keeps a rejected request (bad role,
+  // rate limit, plan limit) from being counted as a failed generation.
+  let analyticsCtx: { userId?: string; tenantId?: string; role?: string } = {}
+  let generationStartedAt = 0
+
   try {
     const role = await getUserRole()
     if (role !== 'teacher' && role !== 'admin') {
@@ -107,6 +116,14 @@ export async function generateStarterCourse(
           `You currently have ${limitCheck.currentCount} courses.`
       )
     }
+
+    analyticsCtx = { userId, tenantId, role }
+    generationStartedAt = Date.now()
+    await track(
+      ANALYTICS_EVENTS.COURSE_AI_GENERATION_STARTED,
+      { prompt_length: prompt.length, max_lessons: MAX_LESSONS },
+      analyticsCtx
+    )
 
     const { object: outline } = await propagateAttributes(
       { userId, metadata: { tenantId } },
@@ -168,6 +185,25 @@ export async function generateStarterCourse(
       throw lessonsError
     }
 
+    await track(
+      ANALYTICS_EVENTS.COURSE_AI_GENERATION_COMPLETED,
+      {
+        success: true,
+        duration_ms: Date.now() - generationStartedAt,
+        lesson_count: lessonRows.length,
+        course_id: course.course_id,
+      },
+      analyticsCtx
+    )
+    // The generator persists a real course, so Loop B's `course_created` fires
+    // here too — with `via: 'ai'`, which is how we compare the blank-page killer
+    // against manual authoring. Nothing auto-publishes, so no `course_published`.
+    await track(
+      ANALYTICS_EVENTS.COURSE_CREATED,
+      { course_id: course.course_id, via: 'ai', status: 'draft', lesson_count: lessonRows.length },
+      analyticsCtx
+    )
+
     revalidatePath('/dashboard/admin')
     revalidatePath('/dashboard/admin/products')
     revalidatePath('/dashboard/teacher/courses')
@@ -182,6 +218,17 @@ export async function generateStarterCourse(
     }
   } catch (error) {
     console.error('generateStarterCourse failed:', error)
+    if (generationStartedAt) {
+      await track(
+        ANALYTICS_EVENTS.COURSE_AI_GENERATION_COMPLETED,
+        {
+          success: false,
+          duration_ms: Date.now() - generationStartedAt,
+          failure_reason: error instanceof Error ? error.message : 'unknown',
+        },
+        analyticsCtx
+      )
+    }
     return {
       success: false,
       error:

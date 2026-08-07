@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { randomBytes, createHash } from 'crypto'
-import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 
 export interface McpToken {
   id: number
@@ -47,6 +49,13 @@ export async function createMcpToken(name: string, expiresInDays?: number) {
     })
 
   if (error) throw new Error(error.message)
+
+  // §10.2 — the MCP adoption signal. Never the token or its hash.
+  await track(
+    ANALYTICS_EVENTS.MCP_TOKEN_CREATED,
+    { has_expiry: expiresAt !== null, expires_in_days: expiresInDays ?? null },
+    { userId, tenantId: await getCurrentTenantId(), role }
+  )
 
   revalidatePath('/dashboard/admin/api-tokens')
   revalidatePath('/dashboard/teacher/api-tokens')

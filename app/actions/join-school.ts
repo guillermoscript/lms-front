@@ -7,6 +7,8 @@ import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { joinedSchoolTemplate } from '@/lib/email/templates/joined-school'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 
 /**
  * Join the current tenant as a student
@@ -80,6 +82,7 @@ export async function joinCurrentSchool() {
   // Check for pending invitation to determine role. A reinstated member keeps
   // the role they held unless a fresh invitation reassigns it.
   const userEmail = user.email?.toLowerCase()
+  let viaInvite = false
   let assignedRole: 'student' | 'teacher' =
     (existingMembership?.role as 'student' | 'teacher' | undefined) === 'teacher'
       ? 'teacher'
@@ -95,6 +98,7 @@ export async function joinCurrentSchool() {
       .single()
 
     if (invitation) {
+      viaInvite = true
       assignedRole = invitation.role as 'student' | 'teacher'
       // Mark invitation as accepted
       const { error: invitationError } = await adminClient
@@ -175,6 +179,19 @@ export async function joinCurrentSchool() {
 
   // Refresh session to get updated JWT claims
   await supabase.auth.refreshSession()
+
+  // Loop A tail. Fired after the membership is real and the JWT claim is set —
+  // the earlier `return`s (already a member, seat limit, metadata failure) are
+  // all genuine non-joins and must not count.
+  await track(
+    ANALYTICS_EVENTS.JOIN_SCHOOL_REQUESTED,
+    {
+      via_invite: viaInvite,
+      assigned_role: assignedRole,
+      is_reinstatement: isReinstatement,
+    },
+    { userId: user.id, tenantId, role: assignedRole }
+  )
 
   revalidatePath('/dashboard/student')
   revalidatePath('/join-school')

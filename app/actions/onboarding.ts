@@ -3,7 +3,10 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, upsertSchoolGroup } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import { getLocale } from 'next-intl/server'
 
 interface OnboardingData {
   schoolName: string
@@ -16,7 +19,26 @@ interface CreateSchoolData {
   slug: string
 }
 
+/**
+ * Best-effort request locale. `getLocale()` throws outside a request scope, and
+ * an unknown locale is a missing analytics dimension, never a failed action.
+ */
+async function analyticsLocale(): Promise<string | undefined> {
+  try {
+    return await getLocale()
+  } catch {
+    return undefined
+  }
+}
+
 export async function createSchoolForUser(data: CreateSchoolData) {
+  // Loop A denominator. `/create-school` submits straight into this action, so
+  // firing here — before the first write — is what makes the drop-off between
+  // "tried to create a school" and `school_created` visible; the common failure
+  // (slug already taken) returns below without ever reaching the success event.
+  const startedAt = Date.now()
+  await track(ANALYTICS_EVENTS.SCHOOL_SIGNUP_STARTED, { source: 'create_school' })
+
   try {
     const supabase = await createClient()
     const userId = await getCurrentUserId()
@@ -34,7 +56,7 @@ export async function createSchoolForUser(data: CreateSchoolData) {
         slug: data.slug,
         status: 'active',
       })
-      .select('id')
+      .select('id, plan, created_at')
       .single()
 
     if (tenantError) {
@@ -65,6 +87,31 @@ export async function createSchoolForUser(data: CreateSchoolData) {
       .upsert([
         { tenant_id: tenant.id, setting_key: 'site_name', setting_value: { value: data.schoolName } },
       ], { onConflict: 'tenant_id,setting_key' })
+
+    // §2.1 — register the school as an OpenPanel group so every later event
+    // rolls up to it. The helper fails soft on instances without the Groups
+    // feature; the flat `tenant_id` property keeps carrying the data.
+    const locale = await analyticsLocale()
+    await upsertSchoolGroup({
+      tenantId: tenant.id,
+      name: data.schoolName,
+      properties: {
+        plan: tenant.plan ?? 'free',
+        locale: locale ?? null,
+        created_at: tenant.created_at ?? null,
+      },
+    })
+
+    await track(
+      ANALYTICS_EVENTS.SCHOOL_CREATED,
+      {
+        plan: tenant.plan ?? 'free',
+        // PRODUCT.md targets sub-5-minute setup (#432); this is what makes that
+        // claim measurable instead of aspirational.
+        time_to_create_ms: Date.now() - startedAt,
+      },
+      { userId, tenantId: tenant.id, role: 'admin', locale }
+    )
 
     return { success: true as const, tenantId: tenant.id, slug: data.slug }
   } catch (error) {
@@ -109,6 +156,20 @@ export async function completeOnboarding(data: OnboardingData) {
       .from('profiles')
       .update({ onboarding_completed: true })
       .eq('id', userId)
+
+    // No `duration_ms`: this action only sees its own commit, not the wizard.
+    // Real per-step timings and `steps_skipped` live in the client, which owns
+    // `onboarding_step_completed` — emitting a server-side `duration_ms` here
+    // would be a field that looks like wizard duration and isn't. What the
+    // server can say truthfully is which optional fields the owner filled in.
+    await track(
+      ANALYTICS_EVENTS.ONBOARDING_COMPLETED,
+      {
+        has_logo: Boolean(data.logoUrl),
+        has_description: Boolean(data.schoolDescription?.trim()),
+      },
+      { userId, tenantId, role: 'admin', locale: await analyticsLocale() }
+    )
 
     revalidatePath('/dashboard/admin/settings')
     revalidatePath('/dashboard/teacher')

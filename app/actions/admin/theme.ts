@@ -2,7 +2,9 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { CURATED_PRESETS, RADIUS_OPTIONS, FONT_OPTIONS, type StoredPreset, type CSSVariableMap } from '@/lib/themes/presets'
 
@@ -10,6 +12,22 @@ interface ThemeActionResult {
   success: boolean
   error?: string
   data?: StoredPreset
+}
+
+/**
+ * §9.5 — an owner who brands their school is invested, which makes this a
+ * strong activation proxy. One emitter for all four writers so the four ways to
+ * change the theme land in one chart, with `change` telling them apart.
+ */
+async function trackThemeCustomized(
+  tenantId: string,
+  properties: { preset: string | null; custom: boolean; change: string }
+): Promise<void> {
+  await track(ANALYTICS_EVENTS.THEME_CUSTOMIZED, properties, {
+    userId: await getCurrentUserId(),
+    tenantId,
+    role: 'admin',
+  })
 }
 
 /**
@@ -35,6 +53,8 @@ export async function applyCuratedPreset(presetId: string): Promise<ThemeActionR
     )
 
   if (error) return { success: false, error: error.message }
+
+  await trackThemeCustomized(tenantId, { preset: presetId, custom: false, change: 'preset' })
 
   revalidatePath('/', 'layout')
 
@@ -109,6 +129,8 @@ export async function applyCustomPreset(presetCode: string): Promise<ThemeAction
 
   if (error) return { success: false, error: error.message }
 
+  await trackThemeCustomized(tenantId, { preset: presetCode, custom: true, change: 'preset' })
+
   revalidatePath('/', 'layout')
 
   return { success: true, data: stored }
@@ -170,6 +192,12 @@ export async function updateRadius(radius: string): Promise<ThemeActionResult> {
 
   if (error) return { success: false, error: error.message }
 
+  await trackThemeCustomized(tenantId, {
+    preset: stored.id ?? null,
+    custom: stored.type === 'custom',
+    change: 'radius',
+  })
+
   revalidatePath('/', 'layout')
 
   return { success: true, data: stored }
@@ -203,6 +231,12 @@ export async function updateFont(fontFamily: string): Promise<ThemeActionResult>
     )
 
   if (error) return { success: false, error: error.message }
+
+  await trackThemeCustomized(tenantId, {
+    preset: stored.id ?? null,
+    custom: stored.type === 'custom',
+    change: 'font',
+  })
 
   revalidatePath('/', 'layout')
 

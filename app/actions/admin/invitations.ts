@@ -7,6 +7,8 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { isEmailVerified, EMAIL_NOT_VERIFIED_ERROR } from '@/lib/auth/require-verified-email'
 import { sendEmail } from '@/lib/email/send'
 import { invitationTemplate } from '@/lib/email/templates/invitation'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -98,6 +100,14 @@ export async function createInvitation({
       // Invitation was created, email just failed — don't return error
     }
   }
+
+  // §9.5 — how schools actually grow their roster. No email, ever: the address
+  // is PII and the event only needs the shape of the invite.
+  await track(
+    ANALYTICS_EVENTS.STUDENT_INVITED,
+    { invited_role: role, email_sent: sendEmailInvite },
+    { userId, tenantId, role: 'admin' }
+  )
 
   revalidatePath('/dashboard/admin/users')
   return { success: true }

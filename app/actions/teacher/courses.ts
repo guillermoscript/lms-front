@@ -8,6 +8,9 @@ import { sendEmail } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
+import { evaluateSchoolActivation } from '@/lib/analytics/activation'
 
 export interface CourseFormData {
   title: string
@@ -177,6 +180,27 @@ export async function createCourse(courseData: CourseFormData) {
   // the same way.
   await reconcileAccessCutoffSafely(adminClient, tenantId)
 
+  await track(
+    ANALYTICS_EVENTS.COURSE_CREATED,
+    {
+      course_id: course.course_id,
+      via: 'manual',
+      status: courseData.status || 'draft',
+    },
+    { userId: user.id, tenantId, role }
+  )
+
+  // A course created straight into `published` is the one case where creation
+  // can complete the activation condition on its own.
+  if ((courseData.status || 'draft') === 'published') {
+    await track(
+      ANALYTICS_EVENTS.COURSE_PUBLISHED,
+      { course_id: course.course_id, lesson_count: 0, days_since_course_created: 0 },
+      { userId: user.id, tenantId, role }
+    )
+    await evaluateSchoolActivation({ tenantId, userId: user.id, role })
+  }
+
   revalidatePath('/dashboard/teacher/courses')
   return course
 }
@@ -198,10 +222,12 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
     throw new Error('Unauthorized: Only teachers and admins can update courses')
   }
 
-  // Verify course belongs to user or user is admin
+  // Verify course belongs to user or user is admin. `status` and `created_at`
+  // ride along for the `course_published` transition check below — this select
+  // already happens, so detecting the transition costs no extra round trip.
   const { data: existingCourse } = await supabase
     .from('courses')
-    .select('author_id, tenant_id')
+    .select('author_id, tenant_id, status, created_at')
     .eq('course_id', courseId)
     .eq('tenant_id', tenantId)
     .single()
@@ -233,6 +259,42 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
   if (error) {
     console.error('Failed to update course:', error)
     throw new Error(`Failed to update course: ${error.message}`)
+  }
+
+  // TRANSITION DETECTION, not "did this save write `status`". `updateCourse` is
+  // a generic save that happens to carry `status`, so firing on every call would
+  // emit `course_published` each time an already-live course is edited —
+  // inflating the one metric Loop B exists to produce. Only not-published →
+  // published counts, and `status: undefined` above means the field was left
+  // alone, which is never a publish.
+  const nextStatus = courseData.status
+  if (nextStatus === 'published' && existingCourse.status !== 'published') {
+    const { count: lessonCount } = await adminClient
+      .from('lessons')
+      .select('id', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .eq('tenant_id', tenantId)
+
+    const createdAt = existingCourse.created_at
+      ? new Date(existingCourse.created_at)
+      : null
+
+    await track(
+      ANALYTICS_EVENTS.COURSE_PUBLISHED,
+      {
+        course_id: courseId,
+        lesson_count: lessonCount ?? 0,
+        days_since_course_created:
+          createdAt && !Number.isNaN(createdAt.getTime())
+            ? Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86_400_000))
+            : null,
+        previous_status: existingCourse.status,
+      },
+      { userId: user.id, tenantId, role }
+    )
+
+    // Publishing is one of the two events that can complete activation.
+    await evaluateSchoolActivation({ tenantId, userId: user.id, role })
   }
 
   revalidatePath('/dashboard/teacher/courses')
