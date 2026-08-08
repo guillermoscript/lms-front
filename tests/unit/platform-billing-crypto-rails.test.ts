@@ -160,7 +160,7 @@ vi.mock('@/lib/email/send', () => ({ sendEmail: () => Promise.resolve() }))
 import { dispatchPlatformBillingEvent, selfManagedPeriod } from '@/lib/billing/platform-webhook-dispatch'
 
 function client() {
-  return createFakeSupabase(db, {
+  const fake = createFakeSupabase(db, {
     embeds: { platform_plans: { table: 'platform_plans', localKey: 'plan_id', foreignKey: 'plan_id' } },
     conflictKeys: {
       platform_subscriptions: 'tenant_id',
@@ -171,8 +171,47 @@ function client() {
     // upsert has to satisfy them on every write, including the ones that are
     // logically updates — see the notNull docs in support/fake-supabase.ts.
     notNull: { platform_subscriptions: ['tenant_id', 'plan_id'] },
+  })
+  return {
+    ...fake.client,
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name !== 'apply_self_managed_platform_period') {
+        return Promise.resolve({ data: null, error: null })
+      }
+      const effectKey = `${args._provider}:${args._provider_event_id}:${args._tenant_id}`
+      db.webhook_business_effects ||= []
+      const existingEffect = db.webhook_business_effects.find((row) => row.key === effectKey)
+      let stored = db.platform_subscriptions.find((row) => row.tenant_id === args._tenant_id)
+      if (!existingEffect) {
+        db.webhook_business_effects.push({ key: effectKey })
+        const period = selfManagedPeriod(
+          stored?.current_period_end as string | null | undefined,
+          args._interval === 'yearly' ? 'yearly' : 'monthly',
+          new Date(),
+        )
+        stored ||= { tenant_id: args._tenant_id }
+        Object.assign(stored, {
+          plan_id: args._plan_id,
+          status: 'active',
+          payment_provider: args._provider,
+          interval: args._interval,
+          provider_subscription_id: args._provider_subscription_id,
+          current_period_start: period.start.toISOString(),
+          current_period_end: period.end.toISOString(),
+        })
+        if (!db.platform_subscriptions.includes(stored)) db.platform_subscriptions.push(stored)
+      }
+      return Promise.resolve({
+        data: [{
+          applied: !existingEffect,
+          period_start: stored?.current_period_start,
+          period_end: stored?.current_period_end,
+        }],
+        error: null,
+      })
+    },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }).client as any
+  } as any
 }
 
 const sub = () => db.platform_subscriptions[0]
@@ -189,6 +228,7 @@ beforeEach(() => {
     platform_subscriptions: [],
     tenant_billing_customers: [],
     revenue_splits: [],
+    webhook_business_effects: [],
   }
 })
 
@@ -265,6 +305,35 @@ describe('dispatchPlatformBillingEvent on a self-managed rail', () => {
 
     const extended = new Date(sub().current_period_end as string).getTime()
     expect(extended).toBeGreaterThan(new Date(end).getTime() + 27 * DAY)
+  })
+
+  it('does not extend the period twice when the same provider event is replayed', async () => {
+    await dispatchPlatformBillingEvent(activation(), { provider: 'binance', admin: client() })
+    const firstEnd = sub().current_period_end
+
+    await dispatchPlatformBillingEvent(activation(), { provider: 'binance', admin: client() })
+
+    expect(sub().current_period_end).toBe(firstEnd)
+    expect(db.tenants[0].billing_period_end).toBe(firstEnd)
+  })
+
+  it('does not extend event A twice when replay order is A, B, A', async () => {
+    await dispatchPlatformBillingEvent(activation({ providerEventId: 'evt-A' }), {
+      provider: 'binance',
+      admin: client(),
+    })
+    await dispatchPlatformBillingEvent(activation({ providerEventId: 'evt-B' }), {
+      provider: 'binance',
+      admin: client(),
+    })
+    const afterB = sub().current_period_end
+
+    await dispatchPlatformBillingEvent(activation({ providerEventId: 'evt-A' }), {
+      provider: 'binance',
+      admin: client(),
+    })
+
+    expect(sub().current_period_end).toBe(afterB)
   })
 
   it('moves the school to the plan it just paid for', async () => {

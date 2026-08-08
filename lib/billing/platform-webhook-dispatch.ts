@@ -362,18 +362,6 @@ export async function dispatchPlatformBillingEvent(
     : undefined
   const interval = event.interval ?? mapInterval(event.metadata?.interval)
 
-  // Providers that bill on a schedule report the period they just charged for.
-  // The ones WE own report nothing, and a subscription with a NULL
-  // current_period_end never lapses, never reminds and shows no next-payment
-  // date — it is the whole difference between a paid month and a free one.
-  const derived =
-    selfManaged && !event.periodEnd && status === 'active'
-      ? selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
-      : null
-
-  const effectiveStart = periodStart ?? derived?.start.toISOString()
-  const effectiveEnd = periodEnd ?? derived?.end.toISOString()
-
   // The plan the ROW must carry, which is a different question from `planId`
   // above. That one answers "is this event moving the school to a new plan?" and
   // is deliberately undefined on every event after the first; this one answers
@@ -403,6 +391,37 @@ export async function dispatchPlatformBillingEvent(
     return
   }
 
+  // Providers that bill on a schedule report the period they just charged for.
+  // Self-managed rails do not, so period extension and provider-event dedupe
+  // happen together in PostgreSQL. This remains correct for A,B,A replay order
+  // and for concurrent different payments on the same tenant.
+  let effectiveStart = periodStart
+  let effectiveEnd = periodEnd
+  let derivedPeriod = false
+  if (selfManaged && !event.periodEnd && status === 'active') {
+    derivedPeriod = true
+    if (event.providerEventId) {
+      const rows = (await unwrap(
+        'self-managed platform period apply',
+        admin.rpc('apply_self_managed_platform_period', {
+          _provider: provider,
+          _provider_event_id: event.providerEventId,
+          _tenant_id: tenantId,
+          _plan_id: rowPlanId,
+          _interval: interval ?? 'monthly',
+          _provider_subscription_id: event.providerSubscriptionId ?? null,
+          _provider_customer_id: event.providerCustomerId ?? null,
+        }),
+      )) as { period_start: string | null; period_end: string | null }[]
+      effectiveStart = rows[0]?.period_start ?? undefined
+      effectiveEnd = rows[0]?.period_end ?? undefined
+    } else {
+      const derived = selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
+      effectiveStart = derived.start.toISOString()
+      effectiveEnd = derived.end.toISOString()
+    }
+  }
+
   const subscriptionPatch: Record<string, unknown> = {
     status,
     payment_provider: provider,
@@ -420,7 +439,7 @@ export async function dispatchPlatformBillingEvent(
         // confirmManualPayment treats a confirmed transfer (#546 §1). Without
         // this the school pays for a month and the cron's cancel phase still
         // drops it to free at the end of it.
-        derived
+        derivedPeriod
         ? { cancel_at_period_end: false, canceled_at: null }
         : {}),
     // Paid means out of dunning. The cron reopens a window if the new period

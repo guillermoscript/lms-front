@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
 import type { NormalizedBillingEvent, BillingEventType } from '@/lib/payments/types'
 
@@ -21,6 +22,8 @@ interface Recorder {
  */
 function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, unknown> = {}) {
   const calls: Recorder = { from: [], selects: [], updates: [], rpc: [] }
+  let rpcRefundedAmount = Number(txExtra.refunded_amount ?? 0)
+  const appliedRefundEvents = new Set<string>()
 
   function makeBuilder(table: string) {
     const builder: Record<string, unknown> = {
@@ -57,12 +60,40 @@ function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, u
     },
     rpc(fn: string, args: Record<string, unknown>) {
       calls.rpc.push({ fn, args })
+      if (fn === 'apply_webhook_refund') {
+        const eventId = String(args._provider_event_id)
+        const applied = !appliedRefundEvents.has(eventId)
+        if (applied) {
+          appliedRefundEvents.add(eventId)
+          rpcRefundedAmount = Math.min(
+            Number(txExtra.amount ?? 0),
+            rpcRefundedAmount + Number(args._refund_amount ?? 0),
+          )
+        }
+        return Promise.resolve({
+          data: [{
+            applied,
+            refunded_amount: rpcRefundedAmount,
+            is_full_refund: rpcRefundedAmount >= Number(txExtra.amount ?? 0) - 0.005,
+            user_id: txExtra.user_id,
+            product_id: txExtra.product_id,
+            plan_id: txExtra.plan_id,
+          }],
+          error: null,
+        })
+      }
       return Promise.resolve({ data: null, error: null })
     },
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return { admin: admin as any, calls }
+  return {
+    admin: admin as unknown as SupabaseClient,
+    calls,
+    refundState: {
+      get amount() { return rpcRefundedAmount },
+      appliedRefundEvents,
+    },
+  }
 }
 
 function event(type: BillingEventType, extra: Partial<NormalizedBillingEvent> = {}): NormalizedBillingEvent {
@@ -483,5 +514,31 @@ describe('dispatchBillingEvent', () => {
       { provider: PROVIDER, admin },
     )
     expect(calls.updates).toHaveLength(0)
+  })
+
+  it('#625: A,B,A partial-refund replay applies each provider event once', async () => {
+    const { admin, calls, refundState } = makeFakeAdmin('successful', {
+      ...SALE,
+      refunded_amount: 0,
+    })
+    const refund = (providerEventId: string) =>
+      dispatchBillingEvent(
+        event('refund.succeeded', {
+          providerEventId,
+          reference: '42',
+          providerPaymentId: 'pi_1',
+          amount: 10,
+          currency: 'usd',
+        }),
+        { provider: PROVIDER, admin },
+      )
+
+    await refund('refund-A')
+    await refund('refund-B')
+    await refund('refund-A')
+
+    expect(calls.updates.filter((update) => update.table === 'transactions')).toHaveLength(0)
+    expect(refundState.amount).toBe(20)
+    expect(refundState.appliedRefundEvents.size).toBe(2)
   })
 })

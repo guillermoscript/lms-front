@@ -285,12 +285,21 @@ export async function dispatchBillingEvent(
 
       const { data: tx } = await admin
         .from('transactions')
-        .select('transaction_id, status, user_id, plan_id, product_id, amount, currency, refunded_amount')
+        .select(
+          'transaction_id, status, user_id, plan_id, product_id, amount, currency, refunded_amount',
+        )
         .eq('transaction_id', txnId)
         .maybeSingle()
 
-      // Only act on a completed purchase of one of the two kinds.
-      if (!tx || tx.status !== 'successful') break
+      // Durable provider-event refunds can revisit a fully refunded row to
+      // repair downstream entitlement state. Legacy callers without an event
+      // id keep the historical successful-only guard.
+      if (
+        !tx ||
+        (event.providerEventId
+          ? !['successful', 'refunded'].includes(tx.status)
+          : tx.status !== 'successful')
+      ) break
       if (!tx.product_id && !tx.plan_id) break
 
       // How much of the sale this refund actually gave back (#547). All three
@@ -299,38 +308,60 @@ export async function dispatchBillingEvent(
       // school for money it was still owed — and revoked course access from a
       // student who had only been refunded a slice.
       const saleAmount = Number(tx.amount ?? 0)
-      const priorRefunded = Number(tx.refunded_amount ?? 0)
       const slice = refundedSlice(event, tx.currency, saleAmount, txnId)
-      // Clamped: a provider that over-reports (or a second event replaying a
-      // cumulative total) can only ever reach a full refund, never a negative
-      // balance owed.
-      const newRefunded = Math.min(priorRefunded + slice, saleAmount)
-      // A cent of tolerance: NUMERIC(10,2) money compared with float arithmetic.
-      const isFullRefund = newRefunded >= saleAmount - 0.005
+      let isFullRefund: boolean
+      let refundedUserId = tx.user_id
+      let refundedProductId = tx.product_id
 
-      const { error: refErr } = await admin
-        .from('transactions')
-        .update({
-          // A partial refund keeps the row 'successful' and records the slice —
-          // the same shape the legacy Stripe route has always used
-          // (app/api/stripe/webhook/route.ts, `isFullRefund`). Readers subtract
-          // `refunded_amount` from `amount`.
-          status: isFullRefund ? 'refunded' : 'successful',
-          refunded_amount: newRefunded,
+      if (event.providerEventId) {
+        // Row lock + effect insert + accounting update are one DB transaction.
+        // Different refunds serialize; A,B,A replay cannot add A twice.
+        const { data, error } = await admin.rpc('apply_webhook_refund', {
+          _provider: provider,
+          _provider_event_id: event.providerEventId,
+          _transaction_id: txnId,
+          _refund_amount: slice,
         })
-        .eq('transaction_id', txnId)
-        .eq('status', 'successful')
-      if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
+        if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
+        const result = (data as {
+          is_full_refund: boolean
+          user_id: string
+          product_id: number | null
+        }[] | null)?.[0]
+        if (!result) break
+        isFullRefund = result.is_full_refund
+        refundedUserId = result.user_id
+        refundedProductId = result.product_id
+      } else {
+        const priorRefunded = Number(tx.refunded_amount ?? 0)
+        // Legacy paths without a stable event id retain the status-guarded
+        // update. Unified webhooks always take the atomic RPC above.
+        const newRefunded = Math.min(priorRefunded + slice, saleAmount)
+        isFullRefund = newRefunded >= saleAmount - 0.005
+        const { error: refErr } = await admin
+          .from('transactions')
+          .update({
+            // A partial refund keeps the row 'successful' and records the slice —
+            // the same shape the legacy Stripe route has always used
+            // (app/api/stripe/webhook/route.ts, `isFullRefund`). Readers subtract
+            // `refunded_amount` from `amount`.
+            status: isFullRefund ? 'refunded' : 'successful',
+            refunded_amount: newRefunded,
+          })
+          .eq('transaction_id', txnId)
+          .eq('status', 'successful')
+        if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
+      }
 
       // Access follows the FULL refund only. A student refunded $10 of a $100
       // course keeps the course.
-      if (tx.product_id && isFullRefund) {
+      if (refundedProductId && isFullRefund) {
         const { error: entErr } = await admin
           .from('entitlements')
           .update({ status: 'revoked', revoked_at: new Date().toISOString() })
-          .eq('user_id', tx.user_id)
+          .eq('user_id', refundedUserId)
           .eq('source_type', 'product')
-          .eq('source_id', tx.product_id)
+          .eq('source_id', refundedProductId)
         if (entErr) throw new Error(`dispatch ${event.type} entitlement revoke failed: ${entErr.message}`)
       }
       break

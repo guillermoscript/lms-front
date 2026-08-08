@@ -25,7 +25,7 @@ interface Write {
 
 const state: {
   existingEvent: { id: string; processed_at: string | null } | null
-  insertErrorCode: string | null
+  claimStatus: 'claimed' | 'processing' | 'completed' | null
   storedSub: Record<string, unknown> | null
   planPriceRow: { plan_id: string } | null
   plan: { transaction_fee_percent: number } | null
@@ -35,7 +35,7 @@ const state: {
   emails: { to: string; subject: string }[]
 } = {
   existingEvent: null,
-  insertErrorCode: null,
+  claimStatus: null,
   storedSub: null,
   planPriceRow: null,
   plan: null,
@@ -69,12 +69,6 @@ function makeAdmin() {
       if (pending) {
         const err = state.failOn?.(pending) ?? null
         if (err) return { data: null, error: err }
-        if (table === 'webhook_events' && pending.op === 'insert') {
-          if (state.insertErrorCode) {
-            return { data: null, error: { message: 'duplicate key', code: state.insertErrorCode } }
-          }
-          return { data: { id: 'wh-row-1' }, error: null }
-        }
         return { data: null, error: null }
       }
       return { data: readRow(table, cols), error: null }
@@ -111,6 +105,50 @@ function makeAdmin() {
 
   return {
     from: (table: string) => builder(table),
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name === 'claim_webhook_event') {
+        const status =
+          state.claimStatus ??
+          (state.existingEvent
+            ? state.existingEvent.processed_at
+              ? 'completed'
+              : 'processing'
+            : 'claimed')
+        if (status === 'claimed') {
+          state.writes.push({
+            table: 'webhook_events',
+            op: state.existingEvent ? 'update' : 'insert',
+            values: {
+              provider: args._provider,
+              provider_event_id: args._provider_event_id,
+              event_type: args._event_type,
+              payload: args._payload,
+            },
+          })
+        }
+        return Promise.resolve({
+          data: [{ event_id: 'wh-row-1', claim_status: status, current_attempt_count: 1 }],
+          error: null,
+        })
+      }
+      if (name === 'complete_webhook_event') {
+        state.writes.push({
+          table: 'webhook_events',
+          op: 'update',
+          values: { processed_at: '2026-08-08T00:00:00.000Z' },
+        })
+        return Promise.resolve({ data: true, error: null })
+      }
+      if (name === 'fail_webhook_event') {
+        state.writes.push({
+          table: 'webhook_events',
+          op: 'update',
+          values: { error: args._last_error, last_error: args._last_error },
+        })
+        return Promise.resolve({ data: true, error: null })
+      }
+      return Promise.resolve({ data: null, error: null })
+    },
     auth: {
       admin: {
         getUserById: (id: string) =>
@@ -220,7 +258,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321'
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key-for-tests'
   state.existingEvent = null
-  state.insertErrorCode = null
+  state.claimStatus = null
   state.storedSub = null
   state.planPriceRow = null
   state.plan = { transaction_fee_percent: 2 }
@@ -299,16 +337,29 @@ describe('platform billing webhook — idempotency', () => {
     expect(state.writes).toHaveLength(0)
   })
 
-  it('treats a concurrent duplicate insert (23505) as a duplicate, not an error', async () => {
-    state.insertErrorCode = '23505'
+  it('acknowledges an active concurrent claim without dispatching or calling it completed', async () => {
+    state.claimStatus = 'processing'
     const res = await POST(makeReq(makeEvent('checkout.session.completed', session)), params())
-    expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ duplicate: true })
+    expect(res.status).toBe(409)
+    expect(res.headers.get('retry-after')).toBe('30')
+    expect(await res.json()).toMatchObject({
+      processing: true,
+      eventStatus: 'already_processing',
+    })
     expect(businessWrites()).toHaveLength(0)
   })
 
-  it('retries a half-finished attempt on the existing row rather than inserting a second', async () => {
+  it('does not reuse an unfinished event while its lease is active', async () => {
     state.existingEvent = { id: 'wh-row-1', processed_at: null }
+    const res = await POST(makeReq(makeEvent('checkout.session.completed', session)), params())
+    expect(res.status).toBe(409)
+    expect(writesTo('webhook_events', 'insert')).toHaveLength(0)
+    expect(businessWrites()).toHaveLength(0)
+  })
+
+  it('dispatches a half-finished event only after the database reclaims its expired lease', async () => {
+    state.existingEvent = { id: 'wh-row-1', processed_at: null }
+    state.claimStatus = 'claimed'
     const res = await POST(makeReq(makeEvent('checkout.session.completed', session)), params())
     expect(res.status).toBe(200)
     expect(writesTo('webhook_events', 'insert')).toHaveLength(0)
