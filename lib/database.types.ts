@@ -6355,32 +6355,74 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_business_effects: {
+        Row: {
+          applied_at: string
+          effect_type: string
+          id: string
+          provider: string
+          provider_event_id: string
+          target_id: string
+        }
+        Insert: {
+          applied_at?: string
+          effect_type: string
+          id?: string
+          provider: string
+          provider_event_id: string
+          target_id: string
+        }
+        Update: {
+          applied_at?: string
+          effect_type?: string
+          id?: string
+          provider?: string
+          provider_event_id?: string
+          target_id?: string
+        }
+        Relationships: []
+      }
       webhook_events: {
         Row: {
+          attempt_count: number
           error: string | null
           event_type: string | null
           id: string
+          last_error: string | null
           payload: Json
+          processing_lease_expires_at: string | null
+          processing_started_at: string | null
+          processing_token: string | null
           processed_at: string | null
           provider: string
           provider_event_id: string
           received_at: string
         }
         Insert: {
+          attempt_count?: number
           error?: string | null
           event_type?: string | null
           id?: string
+          last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
+          processing_started_at?: string | null
+          processing_token?: string | null
           processed_at?: string | null
           provider: string
           provider_event_id: string
           received_at?: string
         }
         Update: {
+          attempt_count?: number
           error?: string | null
           event_type?: string | null
           id?: string
+          last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
+          processing_started_at?: string | null
+          processing_token?: string | null
           processed_at?: string | null
           provider?: string
           provider_event_id?: string
@@ -6515,6 +6557,77 @@ export type Database = {
       }
     }
     Functions: {
+      apply_self_managed_platform_period: {
+        Args: {
+          _interval: string
+          _plan_id: string
+          _plan_slug: string | null
+          _provider: string
+          _provider_customer_id?: string
+          _provider_event_id: string
+          _provider_subscription_id?: string
+          _tenant_id: string
+        }
+        Returns: {
+          applied: boolean
+          period_end: string
+          period_start: string
+        }[]
+      }
+      apply_webhook_subscription_period: {
+        Args: {
+          _allow_period_realign?: boolean
+          _new_period_end: string
+          _provider: string
+          _provider_event_id: string
+          _provider_subscription_id: string
+        }
+        Returns: boolean
+      }
+      claim_webhook_business_effect: {
+        Args: {
+          _effect_type: string
+          _provider: string
+          _provider_event_id: string
+          _target_id: string
+        }
+        Returns: boolean
+      }
+      apply_webhook_refund: {
+        Args: {
+          _provider: string
+          _provider_event_id: string
+          _refund_amount: number
+          _transaction_id: number
+        }
+        Returns: {
+          applied: boolean
+          is_full_refund: boolean
+          plan_id: number
+          product_id: number
+          refunded_amount: number
+          user_id: string
+        }[]
+      }
+      claim_webhook_event: {
+        Args: {
+          _claim_token: string
+          _event_type: string
+          _lease_seconds?: number
+          _payload: Json
+          _provider: string
+          _provider_event_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_attempt_count: number
+          event_id: string
+        }[]
+      }
+      complete_webhook_event: {
+        Args: { _claim_token: string; _event_id: string }
+        Returns: boolean
+      }
       downgrade_platform_subscription_if_current: {
         Args: {
           _payment_provider: string
@@ -6635,6 +6748,10 @@ export type Database = {
       create_student_question_notification: {
         Args: { _context?: string; _course_id: number; _message: string }
         Returns: number
+      }
+      fail_webhook_event: {
+        Args: { _claim_token: string; _event_id: string; _last_error: string }
+        Returns: boolean
       }
       create_transaction_for_renewal: {
         Args: { pln_id: number; sub_id: number; usr_id: string }

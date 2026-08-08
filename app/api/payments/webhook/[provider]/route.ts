@@ -16,15 +16,19 @@ import { createClient } from '@supabase/supabase-js'
 import { getPaymentProvider } from '@/lib/payments'
 import type { PaymentProvider } from '@/lib/payments/types'
 import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
+import {
+  claimWebhookEvent,
+  completeWebhookEvent,
+  failWebhookEvent,
+  UNIFIED_STUDENT_WEBHOOK_PROVIDERS,
+} from '@/lib/payments/webhook-event-claim'
 
 export const runtime = 'nodejs'
 
-// Providers exposed on this endpoint. getPaymentProvider() still gates on
-// configured credentials; providers without verify/normalize return 501.
-// `manual` and `solana` are intentionally excluded: neither has a signed
-// webhook (Solana confirms on-chain via /api/payments/solana/verify), so
-// exposing a route for them would be an unauthenticated mutation surface.
-const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal', 'lemonsqueezy', 'binance']
+// Providers exposed on this endpoint (shared with the redelivery cron; see the
+// definition for why manual/solana are excluded). getPaymentProvider() still
+// gates on configured credentials; providers without verify/normalize get 501.
+const SUPPORTED: PaymentProvider[] = UNIFIED_STUDENT_WEBHOOK_PROVIDERS
 
 /**
  * Provider-specific ACK body. Binance Pay treats anything other than
@@ -105,40 +109,38 @@ export async function POST(
 
   const admin = getSupabaseAdmin()
 
-  // 3. Idempotency: skip if this event was already processed.
-  const { data: existing } = await admin
-    .from('webhook_events')
-    .select('id, processed_at')
-    .eq('provider', provider)
-    .eq('provider_event_id', providerEventId)
-    .maybeSingle()
-
-  if (existing?.processed_at) {
-    return NextResponse.json(ackBody(provider, { duplicate: true }))
+  // 3. Atomically insert-or-claim before dispatch. Both student and platform
+  // webhook routes use this exact lease contract.
+  let claim
+  try {
+    claim = await claimWebhookEvent(admin, {
+      provider,
+      providerEventId,
+      eventType: event.type,
+      payload: event.raw as Record<string, unknown>,
+    })
+  } catch (err) {
+    console.error(`[webhook/${provider}] event claim failed:`, err)
+    return NextResponse.json({ error: 'Event claim failed' }, { status: 500 })
   }
 
-  let rowId = existing?.id as string | undefined
-  if (!rowId) {
-    const { data: inserted, error: insertErr } = await admin
-      .from('webhook_events')
-      .insert({
-        provider,
-        provider_event_id: providerEventId,
-        event_type: event.type,
-        payload: event.raw as Record<string, unknown>,
-      })
-      .select('id')
-      .single()
-
-    if (insertErr) {
-      // 23505 = unique violation: a concurrent delivery beat us to it.
-      if ((insertErr as { code?: string }).code === '23505') {
-        return NextResponse.json(ackBody(provider, { duplicate: true }))
-      }
-      console.error(`[webhook/${provider}] failed to persist event:`, insertErr)
-      return NextResponse.json({ error: 'Failed to persist event' }, { status: 500 })
-    }
-    rowId = inserted.id
+  if (claim.status === 'completed') {
+    return NextResponse.json(
+      ackBody(provider, { duplicate: true, eventStatus: 'already_completed' }),
+    )
+  }
+  if (claim.status === 'processing') {
+    return NextResponse.json(
+      provider === 'binance'
+        ? {
+            returnCode: 'FAIL',
+            returnMessage: 'Event is already processing',
+            processing: true,
+            eventStatus: 'already_processing',
+          }
+        : ackBody(provider, { processing: true, eventStatus: 'already_processing' }),
+      { status: 409, headers: { 'Retry-After': '30' } },
+    )
   }
 
   // 4. Dispatch. On failure, record the error and 500 so the provider retries.
@@ -146,23 +148,26 @@ export async function POST(
     await dispatchBillingEvent(event, { provider, admin })
   } catch (err) {
     console.error(`[webhook/${provider}] dispatch failed:`, err)
-    await admin
-      .from('webhook_events')
-      .update({ error: err instanceof Error ? err.message : String(err) })
-      .eq('id', rowId)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[webhook/${provider}] failed to release claim:`, releaseErr)
+    }
     return NextResponse.json({ error: 'Dispatch failed' }, { status: 500 })
   }
 
-  // 5. Mark processed. If this write fails the event will be redelivered and
-  //    re-dispatched; the dispatcher is idempotent (status writes converge,
-  //    period end comes from the event, not now()), so log rather than fail.
-  const { error: markErr } = await admin
-    .from('webhook_events')
-    .update({ processed_at: new Date().toISOString() })
-    .eq('id', rowId)
-  if (markErr) {
-    console.error(`[webhook/${provider}] failed to mark event ${providerEventId} processed:`, markErr)
+  // 5. Fence completion by token and fail closed if it is not durable.
+  try {
+    await completeWebhookEvent(admin, claim)
+  } catch (err) {
+    console.error(`[webhook/${provider}] failed to complete event ${providerEventId}:`, err)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[webhook/${provider}] failed to release claim after completion error:`, releaseErr)
+    }
+    return NextResponse.json({ error: 'Event completion failed' }, { status: 500 })
   }
 
-  return NextResponse.json(ackBody(provider))
+  return NextResponse.json(ackBody(provider, { eventStatus: 'accepted' }))
 }
