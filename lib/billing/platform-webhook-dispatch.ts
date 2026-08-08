@@ -331,8 +331,20 @@ export async function dispatchPlatformBillingEvent(
     // mail failure must not undo the writes above by 500-ing, which would have
     // the provider redeliver an event we had already applied.
     if (stored?.status !== 'past_due') {
+      if (!event.providerEventId) {
+        throw new Error(`platform dispatch ${event.type}: provider event id is required for notification dedupe`)
+      }
       try {
-        await notifyPaymentFailed(admin, tenantId, sendEmailFn)
+        const shouldNotify = await unwrap(
+          'payment-failed notification claim',
+          admin.rpc('claim_webhook_business_effect', {
+            _provider: `platform:${provider}`,
+            _provider_event_id: event.providerEventId,
+            _effect_type: 'platform_payment_failed_email',
+            _target_id: tenantId,
+          }),
+        )
+        if (shouldNotify) await notifyPaymentFailed(admin, tenantId, sendEmailFn)
       } catch (emailErr) {
         console.error('[platform-webhook] failed to send payment-failed email:', emailErr)
       }
@@ -361,18 +373,6 @@ export async function dispatchPlatformBillingEvent(
     ? (event.metadata?.plan_slug ?? event.metadata?.planSlug)
     : undefined
   const interval = event.interval ?? mapInterval(event.metadata?.interval)
-
-  // Providers that bill on a schedule report the period they just charged for.
-  // The ones WE own report nothing, and a subscription with a NULL
-  // current_period_end never lapses, never reminds and shows no next-payment
-  // date — it is the whole difference between a paid month and a free one.
-  const derived =
-    selfManaged && !event.periodEnd && status === 'active'
-      ? selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
-      : null
-
-  const effectiveStart = periodStart ?? derived?.start.toISOString()
-  const effectiveEnd = periodEnd ?? derived?.end.toISOString()
 
   // The plan the ROW must carry, which is a different question from `planId`
   // above. That one answers "is this event moving the school to a new plan?" and
@@ -403,6 +403,58 @@ export async function dispatchPlatformBillingEvent(
     return
   }
 
+  // Providers that bill on a schedule report the period they just charged for.
+  // Self-managed rails do not, so period extension and provider-event dedupe
+  // happen together in PostgreSQL. This remains correct for A,B,A replay order
+  // and for concurrent different payments on the same tenant.
+  let effectiveStart = periodStart
+  let effectiveEnd = periodEnd
+  let derivedPeriod = false
+  if (selfManaged && !event.periodEnd && status === 'active') {
+    derivedPeriod = true
+    if (!event.providerEventId) {
+      throw new Error(`platform dispatch ${event.type}: provider event id is required for period accounting`)
+    }
+    const rows = (await unwrap(
+      'self-managed platform period apply',
+      admin.rpc('apply_self_managed_platform_period', {
+        _provider: provider,
+        _provider_event_id: event.providerEventId,
+        _tenant_id: tenantId,
+        _plan_id: rowPlanId,
+        _plan_slug: planSlug ?? null,
+        _interval: interval ?? 'monthly',
+        _provider_subscription_id: event.providerSubscriptionId ?? null,
+        _provider_customer_id: event.providerCustomerId ?? null,
+      }),
+    )) as { applied: boolean; period_start: string | null; period_end: string | null }[]
+    const result = rows[0]
+    if (!result?.period_start || !result.period_end) {
+      throw new Error(`self-managed platform period apply returned no durable period for ${tenantId}`)
+    }
+    effectiveStart = result.period_start
+    effectiveEnd = result.period_end
+
+    // The RPC is the sole writer for self-managed subscription, tenant period,
+    // plan, cancellation reset and revenue split. Re-running the generic
+    // upserts below would let an older worker rewind a newer serialized result.
+    if (event.providerCustomerId) {
+      await unwrap(
+        'tenant_billing_customers upsert',
+        admin.from('tenant_billing_customers').upsert(
+          {
+            tenant_id: tenantId,
+            payment_provider: provider,
+            provider_customer_id: event.providerCustomerId,
+          },
+          { onConflict: 'tenant_id,payment_provider' },
+        ),
+      )
+    }
+    if (result.applied) await reconcileAccessCutoffSafely(admin, tenantId)
+    return
+  }
+
   const subscriptionPatch: Record<string, unknown> = {
     status,
     payment_provider: provider,
@@ -420,7 +472,7 @@ export async function dispatchPlatformBillingEvent(
         // confirmManualPayment treats a confirmed transfer (#546 §1). Without
         // this the school pays for a month and the cron's cancel phase still
         // drops it to free at the end of it.
-        derived
+        derivedPeriod
         ? { cancel_at_period_end: false, canceled_at: null }
         : {}),
     // Paid means out of dunning. The cron reopens a window if the new period
