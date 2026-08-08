@@ -22,7 +22,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
 import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
-import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
@@ -31,6 +31,13 @@ import type {
   PaymentProvider,
   SubscriptionLifecycleStatus,
 } from '@/lib/payments/types'
+import {
+  isCurrentPlatformSubscriptionIdentity,
+  promotePlatformSubscriptionSwitch,
+  reconcilePlatformSubscriptionSwitch,
+  recordSupersededTerminalEvent,
+  switchIdFromMetadata,
+} from '@/lib/billing/platform-subscription-switch'
 
 /**
  * `platform_subscriptions.status` is CHECK-constrained
@@ -50,6 +57,8 @@ const ALLOWED_SUB_STATUS = new Set<string>([
   'incomplete_expired',
   'unpaid',
 ])
+
+const TERMINAL_STORED_STATUS = new Set<string>(['canceled', 'incomplete_expired'])
 
 function storedStatus(status: SubscriptionLifecycleStatus | undefined, fallback: string): string {
   if (!status) return fallback
@@ -117,13 +126,29 @@ async function resolveTenantId(
       .eq('provider_subscription_id', event.providerSubscriptionId)
       .maybeSingle(),
   )
-  return (row as { tenant_id: string } | null)?.tenant_id ?? null
+  const currentTenant = (row as { tenant_id: string } | null)?.tenant_id
+  if (currentTenant) return currentTenant
+
+  const sourceSwitch = await unwrap(
+    'platform_subscription_switches lookup by source identity',
+    admin
+      .from('platform_subscription_switches')
+      .select('tenant_id')
+      .eq('source_payment_provider', provider)
+      .eq('source_provider_subscription_id', event.providerSubscriptionId)
+      .in('state', ['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled'])
+      .limit(1)
+      .maybeSingle(),
+  )
+  return (sourceSwitch as { tenant_id: string } | null)?.tenant_id ?? null
 }
 
 interface StoredSubscription {
   plan_id: string | null
   status: string | null
   current_period_end: string | null
+  payment_provider: string | null
+  provider_subscription_id: string | null
 }
 
 /**
@@ -292,7 +317,35 @@ export async function dispatchPlatformBillingEvent(
   // canceled + tenant reset + free-plan split + access-cutoff reconcile), and
   // duplicating any of it here is how the two paths drift.
   if (event.type === 'subscription.canceled' || event.type === 'subscription.expired') {
-    const platformFee = await downgradeTenantToFree(admin, tenantId)
+    if (!event.providerSubscriptionId) {
+      console.warn(`[platform-webhook] ${event.type} on ${provider} has no subscription identity — ignoring`)
+      return
+    }
+    const current = await isCurrentPlatformSubscriptionIdentity(
+      admin,
+      tenantId,
+      provider,
+      event.providerSubscriptionId,
+    )
+    if (!current) {
+      const superseded = await recordSupersededTerminalEvent(
+        admin,
+        provider,
+        event.providerSubscriptionId,
+      )
+      console.log(
+        `[platform-webhook] ${event.type} for non-current ${provider}/${event.providerSubscriptionId} ` +
+          (superseded ? 'completed switch cleanup' : 'was ignored'),
+      )
+      return
+    }
+    const platformFee = await downgradeTenantToFreeIfCurrent(
+      admin,
+      tenantId,
+      provider,
+      event.providerSubscriptionId,
+    )
+    if (platformFee == null) return
     console.log(
       `[platform-webhook] subscription ${event.type} on ${provider}, tenant ${tenantId} downgraded to free (fee=${platformFee}%)`,
     )
@@ -303,12 +356,43 @@ export async function dispatchPlatformBillingEvent(
     'platform_subscriptions lookup',
     admin
       .from('platform_subscriptions')
-      .select('plan_id, status, current_period_end')
+      .select('plan_id, status, current_period_end, payment_provider, provider_subscription_id')
       .eq('tenant_id', tenantId)
       .maybeSingle(),
   )) as StoredSubscription | null
 
-  if (isStalePeriod(stored, tenantId, event.periodEnd)) return
+  const switchId = switchIdFromMetadata(event.metadata)
+  const isSwitchActivation = event.type === 'subscription.activated' && !!switchId
+  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
+  const isSameRailSelfManagedRenewal =
+    event.type === 'subscription.activated' &&
+    selfManaged &&
+    stored?.payment_provider === provider &&
+    !!event.providerSubscriptionId
+  const isFreshActivation =
+    event.type === 'subscription.activated' &&
+    (!stored?.provider_subscription_id ||
+      (stored.payment_provider === provider && TERMINAL_STORED_STATUS.has(stored.status ?? ''))) &&
+    !!(event.metadata?.plan_id ?? event.metadata?.planId)
+  if (
+    !isSwitchActivation &&
+    !isSameRailSelfManagedRenewal &&
+    !isFreshActivation &&
+    stored?.provider_subscription_id
+  ) {
+    const currentIdentity =
+      stored.payment_provider === provider &&
+      !!event.providerSubscriptionId &&
+      stored.provider_subscription_id === event.providerSubscriptionId
+    if (!currentIdentity) {
+      console.log(
+        `[platform-webhook] ${event.type} for non-current ${provider}/${event.providerSubscriptionId ?? 'missing'} ignored`,
+      )
+      return
+    }
+  }
+
+  if (!isSwitchActivation && isStalePeriod(stored, tenantId, event.periodEnd)) return
 
   const status = storedStatus(event.subscriptionStatus, STATUS_BY_TYPE[event.type] ?? 'active')
   const periodStart = event.periodStart?.toISOString()
@@ -353,9 +437,8 @@ export async function dispatchPlatformBillingEvent(
   // is minted for one specific purchase and carries that purchase's plan, so a
   // school moving from Starter to Pro would otherwise have its Pro payment
   // extend its Starter period.
-  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
   const isFirstActivation = !stored?.plan_id
-  const trustMetadataPlan = isFirstActivation || selfManaged
+  const trustMetadataPlan = isFirstActivation || selfManaged || isSwitchActivation
   const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
   const planSlug = trustMetadataPlan
     ? (event.metadata?.plan_slug ?? event.metadata?.planSlug)
@@ -368,7 +451,7 @@ export async function dispatchPlatformBillingEvent(
   // date — it is the whole difference between a paid month and a free one.
   const derived =
     selfManaged && !event.periodEnd && status === 'active'
-      ? selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
+      ? selfManagedPeriod(isSwitchActivation ? null : stored?.current_period_end, interval, new Date(now))
       : null
 
   const effectiveStart = periodStart ?? derived?.start.toISOString()
@@ -430,6 +513,48 @@ export async function dispatchPlatformBillingEvent(
     // A paid period resets the reminder stamp so the next cycle can remind
     // again — the same un-cancel semantics confirmManualPayment applies (#546).
     ...(status === 'active' ? { renewal_reminder_sent_at: null } : {}),
+  }
+
+  if (isSwitchActivation) {
+    if (
+      PROVIDER_CAPABILITIES[provider as PaymentProvider]?.supportsNativeSubscriptions &&
+      !event.providerSubscriptionId
+    ) {
+      throw new Error(`Replacement activation on ${provider} has no subscription identity`)
+    }
+    const promoted = await promotePlatformSubscriptionSwitch({
+      admin,
+      switchId: switchId!,
+      tenantId,
+      targetProvider: provider as PaymentProvider,
+      targetProviderSubscriptionId: event.providerSubscriptionId ?? null,
+      targetProviderCustomerId: event.providerCustomerId ?? null,
+      targetPlanId: rowPlanId,
+      targetStatus: status,
+      targetInterval: interval ?? 'monthly',
+      targetPeriodStart: effectiveStart ?? null,
+      targetPeriodEnd: effectiveEnd ?? null,
+    })
+    if (!promoted) {
+      throw new Error(`Subscription switch ${switchId} no longer matches current billing state`)
+    }
+
+    if (event.providerCustomerId) {
+      await unwrap(
+        'tenant_billing_customers upsert',
+        admin.from('tenant_billing_customers').upsert(
+          {
+            tenant_id: tenantId,
+            payment_provider: provider,
+            provider_customer_id: event.providerCustomerId,
+          },
+          { onConflict: 'tenant_id,payment_provider' },
+        ),
+      )
+    }
+    if (status === 'active') await reconcileAccessCutoffSafely(admin, tenantId)
+    await reconcilePlatformSubscriptionSwitch(admin, switchId!)
+    return
   }
 
   // upsert, not update: a hosted-checkout activation is the first time this

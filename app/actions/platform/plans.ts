@@ -13,6 +13,7 @@ import {
   type PlanPriceProvider,
 } from '@/lib/billing/plan-prices'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { failPlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -258,7 +259,7 @@ export async function rejectManualPayment(requestId: string, reason: string) {
 
   const { data: request } = await adminClient
     .from('platform_payment_requests')
-    .select('request_id, status')
+    .select('request_id, status, switch_id')
     .eq('request_id', requestId)
     .maybeSingle()
 
@@ -291,6 +292,12 @@ export async function rejectManualPayment(requestId: string, reason: string) {
   if (!updated || updated.length === 0) {
     throw new Error('This request was decided by someone else just now — reload the page.')
   }
+
+  await failPlatformSubscriptionSwitch(
+    adminClient,
+    request.switch_id,
+    `Manual payment request rejected: ${reason}`,
+  )
 
   revalidatePath('/platform/billing')
   return { success: true }

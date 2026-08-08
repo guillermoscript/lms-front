@@ -254,6 +254,7 @@ describe('dispatchPlatformBillingEvent on a self-managed rail', () => {
       plan_id: PLAN_PRO,
       status: 'active',
       payment_provider: 'binance',
+      provider_subscription_id: 'order_previous',
       interval: 'monthly',
       current_period_end: end,
     })
@@ -265,6 +266,7 @@ describe('dispatchPlatformBillingEvent on a self-managed rail', () => {
 
     const extended = new Date(sub().current_period_end as string).getTime()
     expect(extended).toBeGreaterThan(new Date(end).getTime() + 27 * DAY)
+    expect(sub().provider_subscription_id).toBe('order_9001')
   })
 
   it('moves the school to the plan it just paid for', async () => {

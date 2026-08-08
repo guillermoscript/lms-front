@@ -27,6 +27,7 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   RefundParams,
+  CancellationResult,
 } from './types'
 
 const LS_BASE_URL = 'https://api.lemonsqueezy.com'
@@ -347,18 +348,26 @@ export class LemonSqueezyProvider implements IPaymentProvider {
    * endpoint. The `immediate` flag is accepted for interface compatibility but
    * has no effect; the subscription remains accessible until `renews_at`.
    */
-  async cancelSubscription(providerSubId: string, _immediate: boolean): Promise<void> {
+  async cancelSubscription(providerSubId: string, _immediate: boolean): Promise<CancellationResult> {
     // NOTE: `immediate` is ignored — LS only supports cancel-at-period-end via API.
     const response = await fetch(`${LS_BASE_URL}/v1/subscriptions/${providerSubId}`, {
       method: 'DELETE',
       headers: this.headers,
     })
 
+    if (response.status === 404) return { mode: 'immediate' }
+
     if (!response.ok) {
       const text = await response.text()
       throw new Error(
         `LemonSqueezy cancelSubscription failed: HTTP ${response.status} — ${text}`,
       )
+    }
+    const payload = await response.json().catch(() => null)
+    const endsAt = payload?.data?.attributes?.ends_at ?? payload?.data?.attributes?.renews_at
+    return {
+      mode: 'period_end',
+      ...(endsAt ? { effectiveAt: new Date(endsAt) } : {}),
     }
   }
 
