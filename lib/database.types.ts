@@ -4589,6 +4589,15 @@ export type Database = {
       }
       platform_payment_requests: {
         Row: {
+          activated_at: string | null
+          activation_alerted_at: string | null
+          activation_attempt_count: number
+          activation_last_error: string | null
+          activation_lease_expires_at: string | null
+          activation_next_retry_at: string | null
+          activation_started_at: string | null
+          activation_state: string | null
+          activation_token: string | null
           admin_notes: string | null
           amount: number
           bank_reference: string | null
@@ -4600,6 +4609,7 @@ export type Database = {
           interval: string
           notes: string | null
           payment_provider: string
+          payment_observed_at: string | null
           plan_id: string
           proof_url: string | null
           provider_charge_id: string | null
@@ -4617,6 +4627,15 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          activated_at?: string | null
+          activation_alerted_at?: string | null
+          activation_attempt_count?: number
+          activation_last_error?: string | null
+          activation_lease_expires_at?: string | null
+          activation_next_retry_at?: string | null
+          activation_started_at?: string | null
+          activation_state?: string | null
+          activation_token?: string | null
           admin_notes?: string | null
           amount: number
           bank_reference?: string | null
@@ -4628,6 +4647,7 @@ export type Database = {
           interval?: string
           notes?: string | null
           payment_provider?: string
+          payment_observed_at?: string | null
           plan_id: string
           proof_url?: string | null
           provider_charge_id?: string | null
@@ -4645,6 +4665,15 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          activated_at?: string | null
+          activation_alerted_at?: string | null
+          activation_attempt_count?: number
+          activation_last_error?: string | null
+          activation_lease_expires_at?: string | null
+          activation_next_retry_at?: string | null
+          activation_started_at?: string | null
+          activation_state?: string | null
+          activation_token?: string | null
           admin_notes?: string | null
           amount?: number
           bank_reference?: string | null
@@ -4656,6 +4685,7 @@ export type Database = {
           interval?: string
           notes?: string | null
           payment_provider?: string
+          payment_observed_at?: string | null
           plan_id?: string
           proof_url?: string | null
           provider_charge_id?: string | null
@@ -6624,8 +6654,25 @@ export type Database = {
           event_id: string
         }[]
       }
+      claim_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _lease_seconds?: number
+          _max_attempts?: number
+          _request_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_activation_state: string
+          current_attempt_count: number
+        }[]
+      }
       complete_webhook_event: {
         Args: { _claim_token: string; _event_id: string }
+        Returns: boolean
+      }
+      complete_solana_platform_activation: {
+        Args: { _claim_token: string; _request_id: string }
         Returns: boolean
       }
       downgrade_platform_subscription_if_current: {
@@ -6635,6 +6682,24 @@ export type Database = {
           _tenant_id: string
         }
         Returns: number
+      }
+      fail_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _last_error: string
+          _max_attempts?: number
+          _request_id: string
+          _retry_delay_seconds?: number
+        }
+        Returns: string
+      }
+      observe_solana_platform_payment: {
+        Args: { _request_id: string; _signature: string; _tenant_id: string }
+        Returns: {
+          current_activation_state: string
+          current_signature: string
+          observation_status: string
+        }[]
       }
       promote_platform_subscription_switch: {
         Args: {
