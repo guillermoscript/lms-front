@@ -331,8 +331,20 @@ export async function dispatchPlatformBillingEvent(
     // mail failure must not undo the writes above by 500-ing, which would have
     // the provider redeliver an event we had already applied.
     if (stored?.status !== 'past_due') {
+      if (!event.providerEventId) {
+        throw new Error(`platform dispatch ${event.type}: provider event id is required for notification dedupe`)
+      }
       try {
-        await notifyPaymentFailed(admin, tenantId, sendEmailFn)
+        const shouldNotify = await unwrap(
+          'payment-failed notification claim',
+          admin.rpc('claim_webhook_business_effect', {
+            _provider: `platform:${provider}`,
+            _provider_event_id: event.providerEventId,
+            _effect_type: 'platform_payment_failed_email',
+            _target_id: tenantId,
+          }),
+        )
+        if (shouldNotify) await notifyPaymentFailed(admin, tenantId, sendEmailFn)
       } catch (emailErr) {
         console.error('[platform-webhook] failed to send payment-failed email:', emailErr)
       }
@@ -400,26 +412,47 @@ export async function dispatchPlatformBillingEvent(
   let derivedPeriod = false
   if (selfManaged && !event.periodEnd && status === 'active') {
     derivedPeriod = true
-    if (event.providerEventId) {
-      const rows = (await unwrap(
-        'self-managed platform period apply',
-        admin.rpc('apply_self_managed_platform_period', {
-          _provider: provider,
-          _provider_event_id: event.providerEventId,
-          _tenant_id: tenantId,
-          _plan_id: rowPlanId,
-          _interval: interval ?? 'monthly',
-          _provider_subscription_id: event.providerSubscriptionId ?? null,
-          _provider_customer_id: event.providerCustomerId ?? null,
-        }),
-      )) as { period_start: string | null; period_end: string | null }[]
-      effectiveStart = rows[0]?.period_start ?? undefined
-      effectiveEnd = rows[0]?.period_end ?? undefined
-    } else {
-      const derived = selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
-      effectiveStart = derived.start.toISOString()
-      effectiveEnd = derived.end.toISOString()
+    if (!event.providerEventId) {
+      throw new Error(`platform dispatch ${event.type}: provider event id is required for period accounting`)
     }
+    const rows = (await unwrap(
+      'self-managed platform period apply',
+      admin.rpc('apply_self_managed_platform_period', {
+        _provider: provider,
+        _provider_event_id: event.providerEventId,
+        _tenant_id: tenantId,
+        _plan_id: rowPlanId,
+        _plan_slug: planSlug ?? null,
+        _interval: interval ?? 'monthly',
+        _provider_subscription_id: event.providerSubscriptionId ?? null,
+        _provider_customer_id: event.providerCustomerId ?? null,
+      }),
+    )) as { applied: boolean; period_start: string | null; period_end: string | null }[]
+    const result = rows[0]
+    if (!result?.period_start || !result.period_end) {
+      throw new Error(`self-managed platform period apply returned no durable period for ${tenantId}`)
+    }
+    effectiveStart = result.period_start
+    effectiveEnd = result.period_end
+
+    // The RPC is the sole writer for self-managed subscription, tenant period,
+    // plan, cancellation reset and revenue split. Re-running the generic
+    // upserts below would let an older worker rewind a newer serialized result.
+    if (event.providerCustomerId) {
+      await unwrap(
+        'tenant_billing_customers upsert',
+        admin.from('tenant_billing_customers').upsert(
+          {
+            tenant_id: tenantId,
+            payment_provider: provider,
+            provider_customer_id: event.providerCustomerId,
+          },
+          { onConflict: 'tenant_id,payment_provider' },
+        ),
+      )
+    }
+    if (result.applied) await reconcileAccessCutoffSafely(admin, tenantId)
+    return
   }
 
   const subscriptionPatch: Record<string, unknown> = {

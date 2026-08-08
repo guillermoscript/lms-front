@@ -62,13 +62,21 @@ function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, u
       calls.rpc.push({ fn, args })
       if (fn === 'apply_webhook_refund') {
         const eventId = String(args._provider_event_id)
-        const applied = !appliedRefundEvents.has(eventId)
+        const applied = txStatus === 'successful' && !appliedRefundEvents.has(eventId)
         if (applied) {
           appliedRefundEvents.add(eventId)
           rpcRefundedAmount = Math.min(
             Number(txExtra.amount ?? 0),
             rpcRefundedAmount + Number(args._refund_amount ?? 0),
           )
+          const full = rpcRefundedAmount >= Number(txExtra.amount ?? 0) - 0.005
+          calls.updates.push({
+            table: 'transactions',
+            values: { status: full ? 'refunded' : 'successful', refunded_amount: rpcRefundedAmount },
+          })
+          if (full && txExtra.product_id) {
+            calls.updates.push({ table: 'entitlements', values: { status: 'revoked' } })
+          }
         }
         return Promise.resolve({
           data: [{
@@ -97,7 +105,7 @@ function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, u
 }
 
 function event(type: BillingEventType, extra: Partial<NormalizedBillingEvent> = {}): NormalizedBillingEvent {
-  return { type, raw: {}, ...extra }
+  return { type, providerEventId: 'evt-default', raw: {}, ...extra }
 }
 
 const PROVIDER = 'lemonsqueezy'
@@ -159,7 +167,7 @@ describe('dispatchBillingEvent', () => {
       { provider: PROVIDER, admin },
     )
     expect(calls.rpc).toHaveLength(1)
-    expect(calls.rpc[0].fn).toBe('extend_subscription_period')
+    expect(calls.rpc[0].fn).toBe('apply_webhook_subscription_period')
     expect(calls.rpc[0].args).toMatchObject({
       _provider_subscription_id: 'sub_1',
       _provider: PROVIDER,
@@ -209,7 +217,7 @@ describe('dispatchBillingEvent', () => {
       payment_provider: PROVIDER,
     })
     // Period aligned via the RPC.
-    expect(calls.rpc[0]?.fn).toBe('extend_subscription_period')
+    expect(calls.rpc[0]?.fn).toBe('apply_webhook_subscription_period')
   })
 
   it('activated: metadata owner MATCHES the transaction → flips (M1)', async () => {
@@ -349,6 +357,26 @@ describe('dispatchBillingEvent', () => {
     expect(calls.updates).toHaveLength(0)
   })
 
+  it('refund replay on a refunded product cannot revoke a later re-purchase entitlement', async () => {
+    const { admin, calls } = makeFakeAdmin('refunded', {
+      user_id: 'u1', product_id: 7, plan_id: null, amount: 100, refunded_amount: 100,
+    })
+    await dispatchBillingEvent(event('refund.succeeded', {
+      providerEventId: 'late-refund-delivery', reference: '42', amount: 100,
+    }), { provider: PROVIDER, admin })
+
+    expect(calls.updates).toHaveLength(0)
+  })
+
+  it('refund on a pending transaction fails so the webhook claim can retry', async () => {
+    const { admin } = makeFakeAdmin('pending', {
+      user_id: 'u1', product_id: 7, plan_id: null, amount: 100, refunded_amount: 0,
+    })
+    await expect(dispatchBillingEvent(event('refund.succeeded', {
+      providerEventId: 'early-refund', reference: '42', amount: 10,
+    }), { provider: PROVIDER, admin })).rejects.toThrow(/still pending/i)
+  })
+
   it('refund.succeeded on a tx with neither product_id nor plan_id → no writes', async () => {
     const { admin, calls } = makeFakeAdmin('successful', { user_id: 'u1', product_id: null, plan_id: null })
     await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
@@ -358,12 +386,11 @@ describe('dispatchBillingEvent', () => {
     expect(calls.updates).toHaveLength(0)
   })
 
-  it('refund.succeeded with no matching transaction row → no writes', async () => {
+  it('refund.succeeded with no matching transaction row → fails for retry', async () => {
     const { admin, calls } = makeFakeAdmin(null)
-    await dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
-      provider: PROVIDER,
-      admin,
-    })
+    await expect(dispatchBillingEvent(event('refund.succeeded', { reference: '42', providerPaymentId: 'pi_1' }), {
+      provider: PROVIDER, admin,
+    })).rejects.toThrow(/not found/i)
     expect(calls.updates).toHaveLength(0)
   })
 
@@ -537,7 +564,7 @@ describe('dispatchBillingEvent', () => {
     await refund('refund-B')
     await refund('refund-A')
 
-    expect(calls.updates.filter((update) => update.table === 'transactions')).toHaveLength(0)
+    expect(calls.updates.filter((update) => update.table === 'transactions')).toHaveLength(2)
     expect(refundState.amount).toBe(20)
     expect(refundState.appliedRefundEvents.size).toBe(2)
   })

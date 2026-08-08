@@ -33,6 +33,7 @@ const state: {
   failOn: ((w: Write) => { message: string } | null) | null
   writes: Write[]
   emails: { to: string; subject: string }[]
+  businessEffects: Set<string>
 } = {
   existingEvent: null,
   claimStatus: null,
@@ -43,6 +44,7 @@ const state: {
   failOn: null,
   writes: [],
   emails: [],
+  businessEffects: new Set(),
 }
 
 function readRow(table: string, cols: string): unknown {
@@ -146,6 +148,12 @@ function makeAdmin() {
           values: { error: args._last_error, last_error: args._last_error },
         })
         return Promise.resolve({ data: true, error: null })
+      }
+      if (name === 'claim_webhook_business_effect') {
+        const key = `${args._provider}:${args._provider_event_id}:${args._effect_type}:${args._target_id}`
+        const claimed = !state.businessEffects.has(key)
+        state.businessEffects.add(key)
+        return Promise.resolve({ data: claimed, error: null })
       }
       return Promise.resolve({ data: null, error: null })
     },
@@ -266,6 +274,7 @@ beforeEach(() => {
   state.failOn = null
   state.writes = []
   state.emails = []
+  state.businessEffects = new Set()
   vi.mocked(applyPortalPlanChange).mockClear()
   vi.mocked(downgradeTenantToFree).mockClear()
 })
@@ -636,6 +645,16 @@ describe('platform billing webhook — invoices', () => {
       'admin-a@example.com',
       'admin-b@example.com',
     ])
+  })
+
+  it('does not send dunning twice when the same event is re-dispatched after completion loss', async () => {
+    state.storedSub = { tenant_id: TENANT, plan_id: PLAN_ID, status: 'active', current_period_end: null }
+    state.adminUsers = ['admin-a']
+
+    await POST(makeReq(makeEvent('invoice.payment_failed', cloverInvoice)), params())
+    await POST(makeReq(makeEvent('invoice.payment_failed', cloverInvoice)), params())
+
+    expect(state.emails.map((email) => email.to)).toEqual(['admin-a@example.com'])
   })
 
   it('invoice.payment_failed resolves the id from an expanded subscription object', async () => {

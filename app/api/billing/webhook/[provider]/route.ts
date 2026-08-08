@@ -156,6 +156,11 @@ export async function POST(
     await completeWebhookEvent(admin, claim)
   } catch (err) {
     console.error(`[billing/webhook/${provider}] failed to complete event ${providerEventId}:`, err)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[billing/webhook/${provider}] failed to release claim after completion error:`, releaseErr)
+    }
     return NextResponse.json({ error: 'Event completion failed' }, { status: 500 })
   }
 

@@ -6270,6 +6270,7 @@ export type Database = {
           id: string
           last_error: string | null
           payload: Json
+          processing_lease_expires_at: string | null
           processing_started_at: string | null
           processing_token: string | null
           processed_at: string | null
@@ -6284,6 +6285,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
           processing_started_at?: string | null
           processing_token?: string | null
           processed_at?: string | null
@@ -6298,6 +6300,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
           processing_started_at?: string | null
           processing_token?: string | null
           processed_at?: string | null
@@ -6438,6 +6441,7 @@ export type Database = {
         Args: {
           _interval: string
           _plan_id: string
+          _plan_slug: string | null
           _provider: string
           _provider_customer_id?: string
           _provider_event_id: string
@@ -6449,6 +6453,25 @@ export type Database = {
           period_end: string
           period_start: string
         }[]
+      }
+      apply_webhook_subscription_period: {
+        Args: {
+          _allow_period_realign?: boolean
+          _new_period_end: string
+          _provider: string
+          _provider_event_id: string
+          _provider_subscription_id: string
+        }
+        Returns: boolean
+      }
+      claim_webhook_business_effect: {
+        Args: {
+          _effect_type: string
+          _provider: string
+          _provider_event_id: string
+          _target_id: string
+        }
+        Returns: boolean
       }
       apply_webhook_refund: {
         Args: {

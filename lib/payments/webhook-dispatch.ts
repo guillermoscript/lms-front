@@ -120,10 +120,15 @@ export async function dispatchBillingEvent(
             // handle_new_subscription set end_date from the plan duration; the
             // provider's schedule is authoritative, so align to renews_at.
             if (event.periodEnd) {
-              const { error: extErr } = await admin.rpc('extend_subscription_period', {
+              if (!event.providerEventId) {
+                throw new Error(`dispatch ${event.type}: provider event id is required for period alignment`)
+              }
+              const { error: extErr } = await admin.rpc('apply_webhook_subscription_period', {
+                _provider_event_id: event.providerEventId,
                 _provider_subscription_id: subId,
                 _provider: provider,
                 _new_period_end: event.periodEnd.toISOString(),
+                _allow_period_realign: true,
               })
               if (extErr) throw new Error(`dispatch ${event.type} period-align failed: ${extErr.message}`)
             }
@@ -157,10 +162,15 @@ export async function dispatchBillingEvent(
         console.warn(`[webhook] renewed for ${provider} sub ${subId} without periodEnd — cannot extend access`)
         break
       }
-      const { error } = await admin.rpc('extend_subscription_period', {
+      if (!event.providerEventId) {
+        throw new Error(`dispatch ${event.type}: provider event id is required for period extension`)
+      }
+      const { error } = await admin.rpc('apply_webhook_subscription_period', {
+        _provider_event_id: event.providerEventId,
         _provider_subscription_id: subId,
         _provider: provider,
         _new_period_end: event.periodEnd.toISOString(),
+        _allow_period_realign: false,
       })
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       break
@@ -282,6 +292,9 @@ export async function dispatchBillingEvent(
       if (!event.reference) break
       const txnId = Number.parseInt(event.reference, 10)
       if (Number.isNaN(txnId)) break
+      if (!event.providerEventId) {
+        throw new Error(`dispatch ${event.type}: provider event id is required for refund accounting`)
+      }
 
       const { data: tx } = await admin
         .from('transactions')
@@ -291,15 +304,11 @@ export async function dispatchBillingEvent(
         .eq('transaction_id', txnId)
         .maybeSingle()
 
-      // Durable provider-event refunds can revisit a fully refunded row to
-      // repair downstream entitlement state. Legacy callers without an event
-      // id keep the historical successful-only guard.
-      if (
-        !tx ||
-        (event.providerEventId
-          ? !['successful', 'refunded'].includes(tx.status)
-          : tx.status !== 'successful')
-      ) break
+      if (!tx) throw new Error(`dispatch ${event.type}: transaction ${txnId} not found`)
+      if (tx.status === 'pending') {
+        throw new Error(`dispatch ${event.type}: transaction ${txnId} is still pending`)
+      }
+      if (!['successful', 'refunded'].includes(tx.status)) break
       if (!tx.product_id && !tx.plan_id) break
 
       // How much of the sale this refund actually gave back (#547). All three
@@ -309,60 +318,18 @@ export async function dispatchBillingEvent(
       // student who had only been refunded a slice.
       const saleAmount = Number(tx.amount ?? 0)
       const slice = refundedSlice(event, tx.currency, saleAmount, txnId)
-      let isFullRefund: boolean
-      let refundedUserId = tx.user_id
-      let refundedProductId = tx.product_id
-
-      if (event.providerEventId) {
-        // Row lock + effect insert + accounting update are one DB transaction.
-        // Different refunds serialize; A,B,A replay cannot add A twice.
-        const { data, error } = await admin.rpc('apply_webhook_refund', {
-          _provider: provider,
-          _provider_event_id: event.providerEventId,
-          _transaction_id: txnId,
-          _refund_amount: slice,
-        })
-        if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
-        const result = (data as {
-          is_full_refund: boolean
-          user_id: string
-          product_id: number | null
-        }[] | null)?.[0]
-        if (!result) break
-        isFullRefund = result.is_full_refund
-        refundedUserId = result.user_id
-        refundedProductId = result.product_id
-      } else {
-        const priorRefunded = Number(tx.refunded_amount ?? 0)
-        // Legacy paths without a stable event id retain the status-guarded
-        // update. Unified webhooks always take the atomic RPC above.
-        const newRefunded = Math.min(priorRefunded + slice, saleAmount)
-        isFullRefund = newRefunded >= saleAmount - 0.005
-        const { error: refErr } = await admin
-          .from('transactions')
-          .update({
-            // A partial refund keeps the row 'successful' and records the slice —
-            // the same shape the legacy Stripe route has always used
-            // (app/api/stripe/webhook/route.ts, `isFullRefund`). Readers subtract
-            // `refunded_amount` from `amount`.
-            status: isFullRefund ? 'refunded' : 'successful',
-            refunded_amount: newRefunded,
-          })
-          .eq('transaction_id', txnId)
-          .eq('status', 'successful')
-        if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
-      }
-
-      // Access follows the FULL refund only. A student refunded $10 of a $100
-      // course keeps the course.
-      if (refundedProductId && isFullRefund) {
-        const { error: entErr } = await admin
-          .from('entitlements')
-          .update({ status: 'revoked', revoked_at: new Date().toISOString() })
-          .eq('user_id', refundedUserId)
-          .eq('source_type', 'product')
-          .eq('source_id', refundedProductId)
-        if (entErr) throw new Error(`dispatch ${event.type} entitlement revoke failed: ${entErr.message}`)
+      // Dedupe, accounting and full-refund entitlement revocation share one
+      // transaction. A replay cannot revoke an entitlement reactivated by a
+      // later purchase, and a crash cannot split money from access state.
+      const { data, error } = await admin.rpc('apply_webhook_refund', {
+        _provider: provider,
+        _provider_event_id: event.providerEventId,
+        _transaction_id: txnId,
+        _refund_amount: slice,
+      })
+      if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
+      if (!(data as { applied: boolean }[] | null)?.[0]) {
+        throw new Error(`dispatch ${event.type}: refund transaction ${txnId} was not applicable`)
       }
       break
     }

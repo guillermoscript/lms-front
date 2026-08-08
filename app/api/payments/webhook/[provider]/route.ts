@@ -132,7 +132,14 @@ export async function POST(
   }
   if (claim.status === 'processing') {
     return NextResponse.json(
-      ackBody(provider, { processing: true, eventStatus: 'already_processing' }),
+      provider === 'binance'
+        ? {
+            returnCode: 'FAIL',
+            returnMessage: 'Event is already processing',
+            processing: true,
+            eventStatus: 'already_processing',
+          }
+        : ackBody(provider, { processing: true, eventStatus: 'already_processing' }),
       { status: 409, headers: { 'Retry-After': '30' } },
     )
   }
@@ -155,6 +162,11 @@ export async function POST(
     await completeWebhookEvent(admin, claim)
   } catch (err) {
     console.error(`[webhook/${provider}] failed to complete event ${providerEventId}:`, err)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[webhook/${provider}] failed to release claim after completion error:`, releaseErr)
+    }
     return NextResponse.json({ error: 'Event completion failed' }, { status: 500 })
   }
 

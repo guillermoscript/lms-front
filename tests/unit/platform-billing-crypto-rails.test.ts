@@ -198,8 +198,28 @@ function client() {
           provider_subscription_id: args._provider_subscription_id,
           current_period_start: period.start.toISOString(),
           current_period_end: period.end.toISOString(),
+          cancel_at_period_end: false,
+          canceled_at: null,
+          grace_period_end: null,
+          renewal_reminder_sent_at: null,
         })
         if (!db.platform_subscriptions.includes(stored)) db.platform_subscriptions.push(stored)
+        const tenant = db.tenants.find((row) => row.id === args._tenant_id)
+        if (tenant) Object.assign(tenant, {
+          billing_status: 'active',
+          plan: args._plan_slug ?? tenant.plan,
+          billing_period_end: period.end.toISOString(),
+        })
+        const plan = db.platform_plans.find((row) => row.plan_id === args._plan_id)
+        if (plan) {
+          const split = db.revenue_splits.find((row) => row.tenant_id === args._tenant_id)
+            ?? { tenant_id: args._tenant_id }
+          Object.assign(split, {
+            platform_percentage: plan.transaction_fee_percent,
+            school_percentage: 100 - Number(plan.transaction_fee_percent),
+          })
+          if (!db.revenue_splits.includes(split)) db.revenue_splits.push(split)
+        }
       }
       return Promise.resolve({
         data: [{
@@ -334,6 +354,25 @@ describe('dispatchPlatformBillingEvent on a self-managed rail', () => {
     })
 
     expect(sub().current_period_end).toBe(afterB)
+  })
+
+  it('does not restore stale plan metadata when replay order is A, B, A', async () => {
+    const pro = { tenant_id: TENANT, plan_id: PLAN_PRO, plan_slug: 'pro', interval: 'monthly' }
+    const business = { tenant_id: TENANT, plan_id: PLAN_BIZ, plan_slug: 'business', interval: 'monthly' }
+
+    await dispatchPlatformBillingEvent(activation({ providerEventId: 'plan-A', metadata: pro }), {
+      provider: 'binance', admin: client(),
+    })
+    await dispatchPlatformBillingEvent(activation({ providerEventId: 'plan-B', metadata: business }), {
+      provider: 'binance', admin: client(),
+    })
+    await dispatchPlatformBillingEvent(activation({ providerEventId: 'plan-A', metadata: pro }), {
+      provider: 'binance', admin: client(),
+    })
+
+    expect(sub().plan_id).toBe(PLAN_BIZ)
+    expect(db.tenants[0].plan).toBe('business')
+    expect(db.revenue_splits[0]).toMatchObject({ platform_percentage: 0, school_percentage: 100 })
   })
 
   it('moves the school to the plan it just paid for', async () => {

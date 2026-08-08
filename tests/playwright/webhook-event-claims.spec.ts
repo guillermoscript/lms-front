@@ -57,11 +57,12 @@ test.describe('atomic webhook event claims', () => {
 
     const { data: row } = await admin
       .from('webhook_events')
-      .select('attempt_count, processing_token, processing_started_at, processed_at')
+      .select('attempt_count, processing_token, processing_started_at, processing_lease_expires_at, processed_at')
       .eq('id', eventId)
       .single()
     expect(row).toMatchObject({ attempt_count: 1, processing_token: winner, processed_at: null })
     expect(row?.processing_started_at).not.toBeNull()
+    expect(row?.processing_lease_expires_at).not.toBeNull()
 
     const staleComplete = await admin.rpc('complete_webhook_event', {
       _event_id: eventId,
@@ -80,7 +81,7 @@ test.describe('atomic webhook event claims', () => {
     const retry = await claim(retryToken)
     expect(retry.data?.[0]).toMatchObject({ claim_status: 'claimed', current_attempt_count: 2 })
 
-    const activeDuplicate = await claim(randomUUID())
+    const activeDuplicate = await claim(randomUUID(), 1)
     expect(activeDuplicate.data?.[0]).toMatchObject({
       claim_status: 'processing',
       current_attempt_count: 2,
@@ -88,7 +89,10 @@ test.describe('atomic webhook event claims', () => {
 
     await admin
       .from('webhook_events')
-      .update({ processing_started_at: '2000-01-01T00:00:00.000Z' })
+      .update({
+        processing_started_at: '2000-01-01T00:00:00.000Z',
+        processing_lease_expires_at: '2000-01-01T00:05:00.000Z',
+      })
       .eq('id', eventId)
     const recoveredToken = randomUUID()
     const recovered = await claim(recoveredToken, 1)
