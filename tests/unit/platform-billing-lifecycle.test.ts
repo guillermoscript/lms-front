@@ -33,6 +33,8 @@ let db: Db
  * call; a plan change clears a pending cancellation) are unchanged.
  */
 const providerCalls: { method: string; id: string; params?: Record<string, unknown> }[] = []
+const confirmationRpcCalls: Record<string, unknown>[] = []
+let confirmationRpcError: string | null = null
 
 function makeClient() {
   const fake = createFakeSupabase(db, {
@@ -48,36 +50,141 @@ function makeClient() {
   return {
     ...fake.client,
     rpc: (name: string, args: Record<string, unknown>) => {
-      if (name !== 'promote_platform_subscription_switch') {
+      const promoteSwitch = () => {
+        const row = db.platform_subscription_switches.find((s) => s.switch_id === args._switch_id)
+        const sub = db.platform_subscriptions.find((s) => s.tenant_id === args._tenant_id)
+        if (!row || !sub) return false
+        const state = String(row.state ?? 'pending_activation')
+        if (['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled', 'completed'].includes(state)) {
+          return true
+        }
+        if (!['pending_activation', 'abandoned'].includes(state)) return false
+        Object.assign(sub, {
+          plan_id: args._target_plan_id,
+          payment_provider: args._target_payment_provider,
+          provider_subscription_id: args._target_provider_subscription_id,
+          status: args._target_status,
+          interval: args._target_interval,
+          current_period_start: args._target_period_start,
+          current_period_end: args._target_period_end,
+          cancel_at_period_end: false,
+          canceled_at: null,
+        })
+        Object.assign(row, {
+          state: 'cancellation_pending',
+          target_provider_subscription_id: args._target_provider_subscription_id,
+          cancel_attempts: row.cancel_attempts ?? 0,
+        })
+        return true
+      }
+
+      if (name === 'promote_platform_subscription_switch') {
+        return Promise.resolve({ data: promoteSwitch(), error: null })
+      }
+
+      if (name !== 'confirm_platform_payment_request') {
         return Promise.resolve({ data: null, error: { message: `unexpected rpc ${name}` } })
       }
-      const row = db.platform_subscription_switches.find((s) => s.switch_id === args._switch_id)
-      const sub = db.platform_subscriptions.find((s) => s.tenant_id === args._tenant_id)
-      if (!row || !sub) return Promise.resolve({ data: false, error: null })
-      const state = String(row.state ?? 'pending_activation')
-      if (['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled', 'completed'].includes(state)) {
-        return Promise.resolve({ data: true, error: null })
+
+      confirmationRpcCalls.push(args)
+      if (confirmationRpcError) {
+        return Promise.resolve({ data: null, error: { message: confirmationRpcError } })
       }
-      if (!['pending_activation', 'abandoned'].includes(state)) {
-        return Promise.resolve({ data: false, error: null })
+
+      const request = db.platform_payment_requests.find((r) => r.request_id === args._request_id)
+      if (!request) return Promise.resolve({ data: null, error: { message: 'Payment request not found' } })
+      if (request.status === 'confirmed') {
+        const stored = db.platform_subscriptions.find((s) => s.tenant_id === request.tenant_id)
+        return Promise.resolve({
+          data: [{
+            applied: false,
+            tenant_id: request.tenant_id,
+            switch_id: request.switch_id ?? null,
+            period_start: stored?.current_period_start ?? null,
+            period_end: stored?.current_period_end ?? null,
+            confirmed_by: request.confirmed_by,
+            confirmed_at: request.confirmed_at,
+          }],
+          error: null,
+        })
       }
-      Object.assign(sub, {
-        plan_id: args._target_plan_id,
-        payment_provider: args._target_payment_provider,
-        provider_subscription_id: args._target_provider_subscription_id,
-        status: args._target_status,
-        interval: args._target_interval,
-        current_period_start: args._target_period_start,
-        current_period_end: args._target_period_end,
-        cancel_at_period_end: false,
-        canceled_at: null,
+      if (request.status === 'rejected') {
+        return Promise.resolve({ data: null, error: { message: 'Rejected payments cannot be confirmed' } })
+      }
+      if (request.status === 'expired') {
+        return Promise.resolve({ data: null, error: { message: 'Expired payments cannot be confirmed' } })
+      }
+
+      const plan = db.platform_plans.find((p) => p.plan_id === request.plan_id)
+      const existing = db.platform_subscriptions.find((s) => s.tenant_id === request.tenant_id)
+      const now = new Date()
+      const storedEnd = existing?.current_period_end ? new Date(existing.current_period_end as string) : null
+      const start = request.request_type === 'renewal' && storedEnd && storedEnd > now ? storedEnd : now
+      const end = new Date(start)
+      if (request.interval === 'yearly') end.setUTCFullYear(end.getUTCFullYear() + 1)
+      else end.setUTCMonth(end.getUTCMonth() + 1)
+
+      if (request.switch_id) {
+        Object.assign(args, {
+          _switch_id: request.switch_id,
+          _tenant_id: request.tenant_id,
+          _target_plan_id: request.plan_id,
+          _target_payment_provider: request.payment_provider ?? 'manual',
+          _target_provider_subscription_id: null,
+          _target_status: 'active',
+          _target_interval: request.interval,
+          _target_period_start: start.toISOString(),
+          _target_period_end: end.toISOString(),
+        })
+        if (!promoteSwitch()) {
+          return Promise.resolve({ data: null, error: { message: 'Subscription switch no longer matches the payment request' } })
+        }
+      } else {
+        const values = {
+          tenant_id: request.tenant_id,
+          plan_id: request.plan_id,
+          status: 'active',
+          payment_provider: request.payment_provider ?? 'manual',
+          interval: request.interval,
+          current_period_start: start.toISOString(),
+          current_period_end: end.toISOString(),
+          grace_period_end: null,
+          renewal_reminder_sent_at: null,
+          cancel_at_period_end: false,
+          canceled_at: null,
+          plan_override_by: null,
+          plan_override_at: null,
+        }
+        if (existing) Object.assign(existing, values)
+        else db.platform_subscriptions.push({ subscription_id: 'sub-confirmed', ...values })
+
+        const tenant = db.tenants.find((t) => t.id === request.tenant_id)
+        if (tenant) Object.assign(tenant, { plan: plan?.slug, billing_status: 'active', billing_period_end: end.toISOString() })
+        const split = db.revenue_splits.find((s) => s.tenant_id === request.tenant_id)
+        const splitValues = {
+          tenant_id: request.tenant_id,
+          platform_percentage: plan?.transaction_fee_percent,
+          school_percentage: 100 - Number(plan?.transaction_fee_percent),
+        }
+        if (split) Object.assign(split, splitValues)
+        else db.revenue_splits.push(splitValues)
+      }
+
+      const confirmedAt = now.toISOString()
+      Object.assign(request, { status: 'confirmed', confirmed_by: args._confirmed_by, confirmed_at: confirmedAt })
+      const subscription = db.platform_subscriptions.find((s) => s.tenant_id === request.tenant_id)
+      return Promise.resolve({
+        data: [{
+          applied: true,
+          tenant_id: request.tenant_id,
+          switch_id: request.switch_id ?? null,
+          period_start: subscription?.current_period_start,
+          period_end: subscription?.current_period_end,
+          confirmed_by: args._confirmed_by,
+          confirmed_at: confirmedAt,
+        }],
+        error: null,
       })
-      Object.assign(row, {
-        state: 'cancellation_pending',
-        target_provider_subscription_id: args._target_provider_subscription_id,
-        cancel_attempts: row.cancel_attempts ?? 0,
-      })
-      return Promise.resolve({ data: true, error: null })
     },
   }
 }
@@ -89,7 +196,10 @@ vi.mock('@/lib/supabase/tenant', () => ({
   getCurrentUserId: () => Promise.resolve(USER),
 }))
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
-vi.mock('@/lib/billing/access-cutoff', () => ({ reconcileAccessCutoff: () => Promise.resolve({ action: 'none' }) }))
+vi.mock('@/lib/billing/access-cutoff', () => ({
+  reconcileAccessCutoff: () => Promise.resolve({ action: 'none' }),
+  reconcileAccessCutoffSafely: () => Promise.resolve(),
+}))
 // Reaching for the SDK from these actions is the bug #604 fixed — fail loudly.
 vi.mock('@/lib/stripe', () => ({
   getStripe: () => {
@@ -182,6 +292,8 @@ function seedRequest(over: Row = {}) {
 
 beforeEach(() => {
   providerCalls.length = 0
+  confirmationRpcCalls.length = 0
+  confirmationRpcError = null
   db = {
     tenants: [{ id: TENANT, name: 'Test School', plan: 'pro', billing_status: 'active' }],
     tenant_users: [{ tenant_id: TENANT, user_id: USER, role: 'admin', status: 'active' }],
@@ -295,7 +407,7 @@ describe('#621 — manual provider switches', () => {
     ])
   })
 
-  it('credits a validated late manual payment after its switch was abandoned', async () => {
+  it('keeps an expired manual request and its abandoned switch terminal', async () => {
     seedSub({ payment_provider: 'stripe', provider_subscription_id: 'sub-stripe-live' })
     await requestManualPlanUpgrade(PLAN_BUSINESS, 'yearly')
     const request = db.platform_payment_requests[0]
@@ -303,15 +415,62 @@ describe('#621 — manual provider switches', () => {
     request.status = 'expired'
     db.platform_subscription_switches[0].state = 'abandoned'
 
-    await confirmManualPayment(request.request_id as string)
+    await expect(confirmManualPayment(request.request_id as string)).rejects.toThrow(
+      /Expired payments cannot be confirmed/,
+    )
 
-    expect(request.status).toBe('confirmed')
+    expect(request.status).toBe('expired')
     expect(db.platform_subscriptions[0]).toMatchObject({
-      payment_provider: 'manual',
-      plan_id: PLAN_BUSINESS,
+      payment_provider: 'stripe',
+      plan_id: PLAN_PRO,
       status: 'active',
     })
-    expect(db.platform_subscription_switches[0].state).toBe('completed')
+    expect(db.platform_subscription_switches[0].state).toBe('abandoned')
+    expect(providerCalls).toHaveLength(0)
+  })
+})
+
+describe('#623 — transactional manual confirmation seam', () => {
+  it('delegates request and actor to the confirmation RPC exactly once', async () => {
+    const request = seedRequest({ status: 'payment_received' })
+
+    await expect(confirmManualPayment(request.request_id as string)).resolves.toMatchObject({
+      success: true,
+      applied: true,
+    })
+
+    expect(confirmationRpcCalls).toEqual([{
+      _request_id: request.request_id,
+      _confirmed_by: USER,
+    }])
+  })
+
+  it('surfaces the transactional RPC error without applying local writes', async () => {
+    const request = seedRequest({ status: 'payment_received' })
+    confirmationRpcError = 'Injected subscription write failure'
+
+    await expect(confirmManualPayment(request.request_id as string)).rejects.toThrow(
+      /Injected subscription write failure/,
+    )
+
+    expect(request.status).toBe('payment_received')
+    expect(db.platform_subscriptions).toHaveLength(0)
+    expect(db.revenue_splits).toHaveLength(0)
+  })
+
+  it('returns idempotent success without extending an already confirmed request', async () => {
+    const subscription = seedSub()
+    const confirmedAt = daysFromNow(-1)
+    const request = seedRequest({ status: 'confirmed', confirmed_by: USER, confirmed_at: confirmedAt })
+    const periodEnd = subscription.current_period_end
+
+    await expect(confirmManualPayment(request.request_id as string)).resolves.toMatchObject({
+      success: true,
+      applied: false,
+    })
+
+    expect(subscription.current_period_end).toBe(periodEnd)
+    expect(request.confirmed_at).toBe(confirmedAt)
   })
 })
 

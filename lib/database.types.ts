@@ -4594,6 +4594,8 @@ export type Database = {
           bank_reference: string | null
           confirmed_at: string | null
           confirmed_by: string | null
+          confirmed_period_end: string | null
+          confirmed_period_start: string | null
           created_at: string | null
           currency: string
           expires_at: string
@@ -4622,6 +4624,8 @@ export type Database = {
           bank_reference?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
+          confirmed_period_end?: string | null
+          confirmed_period_start?: string | null
           created_at?: string | null
           currency?: string
           expires_at?: string
@@ -4650,6 +4654,8 @@ export type Database = {
           bank_reference?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
+          confirmed_period_end?: string | null
+          confirmed_period_start?: string | null
           created_at?: string | null
           currency?: string
           expires_at?: string
@@ -6584,6 +6590,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      calculate_platform_billing_period: {
+        Args: {
+          _current_period_end: string | null
+          _interval: string
+          _is_renewal?: boolean
+          _now?: string
+        }
+        Returns: {
+          period_end: string
+          period_start: string
+        }[]
+      }
       claim_webhook_business_effect: {
         Args: {
           _effect_type: string
@@ -6627,6 +6645,18 @@ export type Database = {
       complete_webhook_event: {
         Args: { _claim_token: string; _event_id: string }
         Returns: boolean
+      }
+      confirm_platform_payment_request: {
+        Args: { _confirmed_by: string; _request_id: string }
+        Returns: {
+          applied: boolean
+          confirmed_at: string
+          confirmed_by: string
+          period_end: string
+          period_start: string
+          switch_id: string
+          tenant_id: string
+        }[]
       }
       downgrade_platform_subscription_if_current: {
         Args: {
