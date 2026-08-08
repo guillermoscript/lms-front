@@ -130,7 +130,7 @@ vi.mock('@/lib/email/send', () => ({
 }))
 
 vi.mock('@/lib/billing/downgrade-tenant', () => ({
-  downgradeTenantToFree: vi.fn(() => Promise.resolve(10)),
+  downgradeTenantToFreeIfCurrent: vi.fn(() => Promise.resolve(10)),
 }))
 
 // The reconciler has its own suite (platform-plan-change.test.ts). What matters
@@ -160,7 +160,7 @@ vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
 
 import { POST } from '@/app/api/billing/webhook/[provider]/route'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
-import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const PLAN_ID = 'f9318c3a-815d-448d-802e-cf356c2791a4'
@@ -229,7 +229,7 @@ beforeEach(() => {
   state.writes = []
   state.emails = []
   vi.mocked(applyPortalPlanChange).mockClear()
-  vi.mocked(downgradeTenantToFree).mockClear()
+  vi.mocked(downgradeTenantToFreeIfCurrent).mockClear()
 })
 
 describe('platform billing webhook — route gates', () => {
@@ -549,13 +549,25 @@ describe('platform billing webhook — subscription updates', () => {
 
 describe('platform billing webhook — cancellation', () => {
   it('downgrades the tenant to free on subscription deletion', async () => {
+    state.storedSub = {
+      tenant_id: TENANT,
+      plan_id: PLAN_ID,
+      status: 'active',
+      current_period_end: END_ISO,
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub_123',
+    }
     const res = await POST(
       makeReq(makeEvent('customer.subscription.deleted', cloverSubscription())),
       params(),
     )
     expect(res.status).toBe(200)
-    expect(downgradeTenantToFree).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(downgradeTenantToFree).mock.calls[0][1]).toBe(TENANT)
+    expect(downgradeTenantToFreeIfCurrent).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(downgradeTenantToFreeIfCurrent).mock.calls[0].slice(1)).toEqual([
+      TENANT,
+      'stripe',
+      'sub_123',
+    ])
     // The whole transition belongs to that helper — duplicating any of it here
     // is how the cron path and the webhook path drift.
     expect(writesTo('platform_subscriptions', 'upsert')).toHaveLength(0)

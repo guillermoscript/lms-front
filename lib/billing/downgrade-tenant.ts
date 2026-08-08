@@ -65,3 +65,26 @@ export async function downgradeTenantToFree(
 
   return platformFee
 }
+
+/**
+ * Webhook-only exact identity downgrade. The database function locks the
+ * current row and changes tenant/subscription/split atomically only when the
+ * provider tuple still matches, so a delayed superseded event is a no-op.
+ */
+export async function downgradeTenantToFreeIfCurrent(
+  adminClient: AdminClient,
+  tenantId: string,
+  paymentProvider: string,
+  providerSubscriptionId: string,
+): Promise<number | null> {
+  const { data, error } = await adminClient.rpc('downgrade_platform_subscription_if_current', {
+    _tenant_id: tenantId,
+    _payment_provider: paymentProvider,
+    _provider_subscription_id: providerSubscriptionId,
+  })
+  if (error) throw new Error(`Exact subscription downgrade failed: ${error.message}`)
+  if (data == null) return null
+
+  await reconcileAccessCutoff(adminClient, tenantId)
+  return Number(data)
+}

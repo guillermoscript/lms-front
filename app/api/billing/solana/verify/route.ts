@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, settlement_currency, settlement_base, settlement_mint, platform_plans(slug)',
+        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, settlement_currency, settlement_base, settlement_mint, switch_id, platform_plans(slug)',
       )
       .eq('request_id', requestId)
       .eq('tenant_id', tenantId)
@@ -187,6 +187,7 @@ export async function POST(req: NextRequest) {
           plan_id: request.plan_id,
           ...(planSlug ? { plan_slug: planSlug } : {}),
           interval: request.interval,
+          ...(request.switch_id ? { billing_switch_id: request.switch_id } : {}),
         },
         raw: { requestId, signature },
       },

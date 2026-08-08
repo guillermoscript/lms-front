@@ -12,6 +12,7 @@ import {
   isRequestOpen,
 } from '@/lib/billing/payment-request-ttl'
 import { PLATFORM_SELF_MANAGED_PROVIDERS } from '@/lib/billing/platform-billing'
+import { reconcilePlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
 
 export const runtime = 'nodejs'
 
@@ -115,6 +116,38 @@ export async function GET(req: NextRequest) {
     downgraded: 0,
     canceled: 0,
     skippedPendingRenewal: 0,
+    switchesAbandoned: 0,
+    switchCancellationsCompleted: 0,
+    switchCancellationsScheduled: 0,
+    switchCancellationRetries: 0,
+  }
+
+  // ---- Switch recovery (#621) ----
+  // A replacement checkout that never activates expires without touching the
+  // source entitlement. Activated replacements whose source cancellation
+  // failed are retried with bounded exponential backoff.
+  const { data: abandonedSwitches } = await supabase
+    .from('platform_subscription_switches')
+    .update({ state: 'abandoned', updated_at: nowIso })
+    .eq('state', 'pending_activation')
+    .lt('expires_at', nowIso)
+    .select('switch_id')
+    .limit(100)
+  result.switchesAbandoned = abandonedSwitches?.length ?? 0
+
+  const { data: cleanupSwitches } = await supabase
+    .from('platform_subscription_switches')
+    .select('switch_id')
+    .in('state', ['cancellation_pending', 'cancellation_retry'])
+    .lte('next_retry_at', nowIso)
+    .order('next_retry_at', { ascending: true })
+    .limit(100)
+
+  for (const row of cleanupSwitches || []) {
+    const outcome = await reconcilePlatformSubscriptionSwitch(supabase, row.switch_id)
+    if (outcome === 'completed') result.switchCancellationsCompleted++
+    else if (outcome === 'scheduled') result.switchCancellationsScheduled++
+    else if (outcome === 'retry') result.switchCancellationRetries++
   }
 
   // ---- Phase 0: expire lapsed payment requests (#546 §2) ----

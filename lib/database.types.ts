@@ -4612,6 +4612,7 @@ export type Database = {
           settlement_mint: string | null
           settlement_sol_usd: number | null
           status: string
+          switch_id: string | null
           tenant_id: string
           updated_at: string | null
         }
@@ -4639,6 +4640,7 @@ export type Database = {
           settlement_mint?: string | null
           settlement_sol_usd?: number | null
           status?: string
+          switch_id?: string | null
           tenant_id: string
           updated_at?: string | null
         }
@@ -4666,6 +4668,7 @@ export type Database = {
           settlement_mint?: string | null
           settlement_sol_usd?: number | null
           status?: string
+          switch_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
@@ -4676,6 +4679,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_plans"
             referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_payment_requests_switch_id_fkey"
+            columns: ["switch_id"]
+            isOneToOne: false
+            referencedRelation: "platform_subscription_switches"
+            referencedColumns: ["switch_id"]
           },
           {
             foreignKeyName: "platform_payment_requests_tenant_id_fkey"
@@ -4780,6 +4790,116 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      platform_subscription_switches: {
+        Row: {
+          activated_at: string | null
+          cancel_attempts: number
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          initiated_by: string | null
+          last_error: string | null
+          next_retry_at: string | null
+          source_cancel_effective_at: string | null
+          source_cancel_mode: string | null
+          source_payment_provider: string
+          source_period_end: string | null
+          source_plan_id: string
+          source_provider_subscription_id: string | null
+          source_subscription_id: string
+          state: string
+          switch_id: string
+          target_checkout_reference: string | null
+          target_interval: string
+          target_payment_provider: string
+          target_plan_id: string
+          target_provider_subscription_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          cancel_attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          last_error?: string | null
+          next_retry_at?: string | null
+          source_cancel_effective_at?: string | null
+          source_cancel_mode?: string | null
+          source_payment_provider: string
+          source_period_end?: string | null
+          source_plan_id: string
+          source_provider_subscription_id?: string | null
+          source_subscription_id: string
+          state?: string
+          switch_id?: string
+          target_checkout_reference?: string | null
+          target_interval: string
+          target_payment_provider: string
+          target_plan_id: string
+          target_provider_subscription_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          cancel_attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          last_error?: string | null
+          next_retry_at?: string | null
+          source_cancel_effective_at?: string | null
+          source_cancel_mode?: string | null
+          source_payment_provider?: string
+          source_period_end?: string | null
+          source_plan_id?: string
+          source_provider_subscription_id?: string | null
+          source_subscription_id?: string
+          state?: string
+          switch_id?: string
+          target_checkout_reference?: string | null
+          target_interval?: string
+          target_payment_provider?: string
+          target_plan_id?: string
+          target_provider_subscription_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_subscription_switches_source_plan_id_fkey"
+            columns: ["source_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_source_subscription_id_fkey"
+            columns: ["source_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "platform_subscriptions"
+            referencedColumns: ["subscription_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_target_plan_id_fkey"
+            columns: ["target_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_subscriptions: {
         Row: {
@@ -6395,6 +6515,29 @@ export type Database = {
       }
     }
     Functions: {
+      downgrade_platform_subscription_if_current: {
+        Args: {
+          _payment_provider: string
+          _provider_subscription_id: string
+          _tenant_id: string
+        }
+        Returns: number
+      }
+      promote_platform_subscription_switch: {
+        Args: {
+          _switch_id: string
+          _target_interval: string
+          _target_payment_provider: string
+          _target_period_end: string | null
+          _target_period_start: string | null
+          _target_plan_id: string
+          _target_provider_customer_id: string | null
+          _target_provider_subscription_id: string | null
+          _target_status: string
+          _tenant_id: string
+        }
+        Returns: boolean
+      }
       award_xp:
         | {
             Args: {

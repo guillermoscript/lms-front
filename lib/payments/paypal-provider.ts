@@ -37,6 +37,7 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   RefundParams,
+  CancellationResult,
 } from './types'
 
 /**
@@ -722,7 +723,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * (Same access semantics as Lemon Squeezy: the CANCELLED webhook drives the
    * app-side status change.)
    */
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<CancellationResult> {
     await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
       method: 'POST',
       label: 'cancelSubscription',
@@ -730,6 +731,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
         reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
       }),
     })
+    return { mode: 'immediate' }
   }
 
   async getSubscription(providerSubId: string): Promise<ProviderSubscription> {
