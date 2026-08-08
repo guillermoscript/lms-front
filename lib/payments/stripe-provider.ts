@@ -25,6 +25,7 @@ import {
   PreviewSubscriptionChangeParams,
   ProrationPreview,
   CustomerPortalSessionParams,
+  CancellationResult,
 } from './types'
 import { SUBSCRIPTION_LIFECYCLE_STATUSES } from './types'
 
@@ -287,16 +288,34 @@ export class StripePaymentProvider implements IPaymentProvider {
   /**
    * Cancel a Stripe subscription — immediately or at the end of the period.
    */
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<CancellationResult> {
     try {
       if (immediate) {
         await this.stripe.subscriptions.cancel(providerSubId)
+        return { mode: 'immediate' }
       } else {
-        await this.stripe.subscriptions.update(providerSubId, {
+        const subscription = await this.stripe.subscriptions.update(providerSubId, {
           cancel_at_period_end: true,
         })
+        const periodEnd = subscription.items.data[0]?.current_period_end
+        return {
+          mode: 'period_end',
+          ...(periodEnd ? { effectiveAt: new Date(periodEnd * 1000) } : {}),
+        }
       }
     } catch (error) {
+      const stripeError = error as {
+        code?: string
+        statusCode?: number
+        raw?: { code?: string }
+      }
+      if (
+        stripeError.code === 'resource_missing' ||
+        stripeError.raw?.code === 'resource_missing' ||
+        stripeError.statusCode === 404
+      ) {
+        return { mode: 'immediate' }
+      }
       throw new Error(`Stripe cancelSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
