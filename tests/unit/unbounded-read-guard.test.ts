@@ -94,6 +94,12 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'app/api/cron/expire-subscriptions/route.ts::subscriptions': 'gap #540 — platform-wide cron queue',
   'app/api/cron/expire-platform-subscriptions/route.ts::platform_subscriptions': 'gap #540 — platform-wide cron queue',
   'app/api/stripe/webhook/route.ts::transactions': 'gap #540 — platform-wide pending scan',
+
+  // scoped: tenant_id is the table's unique key, so the transition-guarded
+  // past_due update returns at most one row — its .select() is the proof the
+  // WHERE actually flipped the row, not a listing.
+  'lib/billing/platform-webhook-dispatch.ts::platform_subscriptions':
+    'scoped — one tenant’s single row (unique tenant_id)',
 }
 
 /** Every source file under the scanned roots. */

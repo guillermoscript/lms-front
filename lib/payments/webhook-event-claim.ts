@@ -1,7 +1,26 @@
 import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { PaymentProvider } from '@/lib/payments/types'
 
 export const WEBHOOK_CLAIM_LEASE_SECONDS = 5 * 60
+
+/**
+ * Providers exposed on the unified STUDENT webhook endpoint
+ * (`/api/payments/webhook/[provider]`), which writes un-namespaced rows to
+ * `webhook_events`. Lives here (not in the route file — Next.js route modules
+ * may only export handlers) because the redelivery cron needs the same list to
+ * know which stalled ledger rows it is allowed to re-dispatch.
+ *
+ * `manual` and `solana` are intentionally excluded: neither has a signed
+ * webhook (Solana confirms on-chain via /api/payments/solana/verify), so
+ * exposing a route for them would be an unauthenticated mutation surface.
+ */
+export const UNIFIED_STUDENT_WEBHOOK_PROVIDERS: PaymentProvider[] = [
+  'stripe',
+  'paypal',
+  'lemonsqueezy',
+  'binance',
+]
 
 export type WebhookClaimResult =
   | { status: 'claimed'; eventId: string; claimToken: string; attemptCount: number }

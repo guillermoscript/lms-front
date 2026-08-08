@@ -315,22 +315,33 @@ export async function dispatchPlatformBillingEvent(
   const periodEnd = event.periodEnd?.toISOString()
 
   if (event.type === 'subscription.past_due') {
-    await unwrap(
+    // The transition test lives in the WHERE clause, not in a read of `stored`:
+    // a single failed charge produces more than one past_due event (the failed
+    // invoice and the subscription's own status change), and two of them
+    // dispatching concurrently would BOTH pass a read-then-check against the
+    // same 'active' snapshot. Only the update that actually flips the row wins
+    // the right to notify.
+    const transitioned = (await unwrap(
       'platform_subscriptions past_due',
-      admin.from('platform_subscriptions').update({ status, updated_at: now }).eq('tenant_id', tenantId),
-    )
+      admin
+        .from('platform_subscriptions')
+        .update({ status, updated_at: now })
+        .eq('tenant_id', tenantId)
+        .neq('status', 'past_due')
+        .select('tenant_id'),
+    )) as { tenant_id: string }[] | null
     await unwrap(
       'tenants past_due',
       admin.from('tenants').update({ billing_status: status, updated_at: now }).eq('id', tenantId),
     )
 
-    // Only on the TRANSITION into dunning. A single failed charge produces more
-    // than one past_due event (the failed invoice and the subscription's own
-    // status change), and a redelivery produces another — mailing on each would
-    // send a school three copies of the same bad news. Best-effort besides: a
-    // mail failure must not undo the writes above by 500-ing, which would have
-    // the provider redeliver an event we had already applied.
-    if (stored?.status !== 'past_due') {
+    // Only on the TRANSITION into dunning — mailing on each event would send a
+    // school three copies of the same bad news. `!stored` keeps the pre-#625
+    // behavior of still warning a tenant that has no subscription row at all.
+    // Best-effort besides: a mail failure must not undo the writes above by
+    // 500-ing, which would have the provider redeliver an event we had already
+    // applied.
+    if ((transitioned?.length ?? 0) > 0 || !stored) {
       if (!event.providerEventId) {
         throw new Error(`platform dispatch ${event.type}: provider event id is required for notification dedupe`)
       }

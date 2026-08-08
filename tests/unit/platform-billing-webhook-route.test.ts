@@ -71,6 +71,18 @@ function makeAdmin() {
       if (pending) {
         const err = state.failOn?.(pending) ?? null
         if (err) return { data: null, error: err }
+        // The past_due write is transition-guarded (`.neq('status','past_due')
+        // .select()`): it returns the flipped row only when the stored status
+        // was not already past_due, the way Postgres re-evaluates the WHERE
+        // under the row lock.
+        if (
+          pending.table === 'platform_subscriptions' &&
+          pending.op === 'update' &&
+          pending.values.status === 'past_due'
+        ) {
+          const flipped = state.storedSub && state.storedSub.status !== 'past_due'
+          return { data: flipped ? [{ tenant_id: state.storedSub!.tenant_id }] : [], error: null }
+        }
         return { data: null, error: null }
       }
       return { data: readRow(table, cols), error: null }
@@ -97,6 +109,7 @@ function makeAdmin() {
         return b
       },
       eq: () => b,
+      neq: () => b,
       limit: () => b,
       maybeSingle: () => Promise.resolve(settle()),
       single: () => Promise.resolve(settle()),

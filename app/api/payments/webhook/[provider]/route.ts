@@ -20,16 +20,15 @@ import {
   claimWebhookEvent,
   completeWebhookEvent,
   failWebhookEvent,
+  UNIFIED_STUDENT_WEBHOOK_PROVIDERS,
 } from '@/lib/payments/webhook-event-claim'
 
 export const runtime = 'nodejs'
 
-// Providers exposed on this endpoint. getPaymentProvider() still gates on
-// configured credentials; providers without verify/normalize return 501.
-// `manual` and `solana` are intentionally excluded: neither has a signed
-// webhook (Solana confirms on-chain via /api/payments/solana/verify), so
-// exposing a route for them would be an unauthenticated mutation surface.
-const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal', 'lemonsqueezy', 'binance']
+// Providers exposed on this endpoint (shared with the redelivery cron; see the
+// definition for why manual/solana are excluded). getPaymentProvider() still
+// gates on configured credentials; providers without verify/normalize get 501.
+const SUPPORTED: PaymentProvider[] = UNIFIED_STUDENT_WEBHOOK_PROVIDERS
 
 /**
  * Provider-specific ACK body. Binance Pay treats anything other than
