@@ -16,6 +16,13 @@ import {
   requestExpiresAt,
 } from '@/lib/billing/payment-request-ttl'
 import { revalidatePath } from 'next/cache'
+import {
+  SwitchAlreadyPendingError,
+  beginPlatformSubscriptionSwitch,
+  failPlatformSubscriptionSwitch,
+  promotePlatformSubscriptionSwitch,
+  reconcilePlatformSubscriptionSwitch,
+} from '@/lib/billing/platform-subscription-switch'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
@@ -246,6 +253,23 @@ export async function requestManualPlanUpgrade(
     throw new Error('You already have a pending plan change request. Please wait for it to be processed.')
   }
 
+  const expiresAt = requestExpiresAt()
+  let switchId: string | null
+  try {
+    switchId = await beginPlatformSubscriptionSwitch({
+      admin: adminClient,
+      tenantId,
+      targetPlanId: planId,
+      targetProvider: paymentProvider as PaymentProvider,
+      targetInterval: interval,
+      initiatedBy: userId,
+      expiresAt,
+    })
+  } catch (switchError) {
+    if (switchError instanceof SwitchAlreadyPendingError) throw switchError
+    throw new Error('Failed to prepare payment-method switch')
+  }
+
   const { data: request, error } = await adminClient
     .from('platform_payment_requests')
     .insert({
@@ -260,12 +284,14 @@ export async function requestManualPlanUpgrade(
       payment_provider: paymentProvider,
       bank_reference: bankReference || null,
       notes: notes || null,
-      expires_at: requestExpiresAt(),
+      expires_at: expiresAt,
+      switch_id: switchId,
     })
     .select('request_id')
     .single()
 
   if (error) {
+    await failPlatformSubscriptionSwitch(adminClient, switchId, error)
     console.error('Failed to create payment request:', error)
     throw new Error('Failed to create upgrade request')
   }
@@ -329,7 +355,8 @@ export async function confirmManualPayment(requestId: string) {
     .single()
 
   if (!request) throw new Error('Request not found')
-  if (request.status === 'confirmed') throw new Error('Already confirmed')
+  if (request.status === 'rejected') throw new Error('Rejected payments cannot be confirmed')
+  if (request.status === 'confirmed' && !request.switch_id) throw new Error('Already confirmed')
 
   const plan = request.platform_plans as { slug: string; transaction_fee_percent: number }
 
@@ -369,15 +396,28 @@ export async function confirmManualPayment(requestId: string) {
 
   const periodEnd = new Date(periodStart)
   if (request.interval === 'yearly') {
-    periodEnd.setFullYear(periodEnd.getFullYear() + 1)
+    periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1)
   } else {
-    periodEnd.setMonth(periodEnd.getMonth() + 1)
+    periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1)
   }
 
-  // Upsert subscription
-  await adminClient
-    .from('platform_subscriptions')
-    .upsert({
+  if (request.switch_id) {
+    const promoted = await promotePlatformSubscriptionSwitch({
+      admin: adminClient,
+      switchId: request.switch_id,
+      tenantId: request.tenant_id,
+      targetProvider: (request.payment_provider || 'manual') as PaymentProvider,
+      targetProviderSubscriptionId: null,
+      targetProviderCustomerId: null,
+      targetPlanId: request.plan_id,
+      targetStatus: 'active',
+      targetInterval: request.interval,
+      targetPeriodStart: periodStart.toISOString(),
+      targetPeriodEnd: periodEnd.toISOString(),
+    })
+    if (!promoted) throw new Error('Subscription switch no longer matches the current subscription')
+  } else {
+    const subscriptionValues = {
       tenant_id: request.tenant_id,
       plan_id: request.plan_id,
       status: 'active',
@@ -404,32 +444,41 @@ export async function confirmManualPayment(requestId: string) {
       plan_override_by: null,
       plan_override_at: null,
       updated_at: now.toISOString(),
-    }, { onConflict: 'tenant_id' })
+    }
 
-  // Update tenant plan
-  await adminClient
-    .from('tenants')
-    .update({
-      plan: plan.slug,
-      billing_status: 'active',
-      billing_period_end: periodEnd.toISOString(),
-      updated_at: now.toISOString(),
-    })
-    .eq('id', request.tenant_id)
+    await adminClient
+      .from('platform_subscriptions')
+      .upsert(subscriptionValues, { onConflict: 'tenant_id' })
 
-  // Update revenue splits
-  await adminClient
-    .from('revenue_splits')
-    .upsert({
-      tenant_id: request.tenant_id,
-      platform_percentage: plan.transaction_fee_percent,
-      school_percentage: 100 - plan.transaction_fee_percent,
-      updated_at: now.toISOString(),
-    }, { onConflict: 'tenant_id' })
+    // Update tenant plan
+    await adminClient
+      .from('tenants')
+      .update({
+        plan: plan.slug,
+        billing_status: 'active',
+        billing_period_end: periodEnd.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq('id', request.tenant_id)
+
+    // Update revenue splits
+    await adminClient
+      .from('revenue_splits')
+      .upsert({
+        tenant_id: request.tenant_id,
+        platform_percentage: plan.transaction_fee_percent,
+        school_percentage: 100 - plan.transaction_fee_percent,
+        updated_at: now.toISOString(),
+      }, { onConflict: 'tenant_id' })
+  }
 
   // Activation already passed the pre-flight limit check above, so this
   // clears any cutoff scheduled from a prior over-limit period.
   await reconcileAccessCutoff(adminClient, request.tenant_id)
+
+  if (request.switch_id) {
+    await reconcilePlatformSubscriptionSwitch(adminClient, request.switch_id)
+  }
 
   return { success: true }
 }

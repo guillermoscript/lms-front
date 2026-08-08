@@ -22,24 +22,39 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  */
 
 const state: {
-  row: { request_id: string; status: string } | null
+  row: { request_id: string; status: string; switch_id?: string | null } | null
   /** Rows the conditional UPDATE matched — [] means the status filter excluded it. */
   updateMatches: { request_id: string }[]
   updateError: { message: string } | null
   /** What the action actually sent, and what it filtered on. */
   lastUpdate: Record<string, unknown> | null
   lastNotFilter: { column: string; operator: string; value: unknown } | null
+  lastSwitchUpdate: Record<string, unknown> | null
 } = {
   row: null,
   updateMatches: [],
   updateError: null,
   lastUpdate: null,
   lastNotFilter: null,
+  lastSwitchUpdate: null,
 }
 
 function makeFakeAdmin() {
   return {
-    from() {
+    from(table: string) {
+      if (table === 'platform_subscription_switches') {
+        const switchBuilder: Record<string, unknown> = {
+          update(values: Record<string, unknown>) {
+            state.lastSwitchUpdate = values
+            return switchBuilder
+          },
+          eq() { return switchBuilder },
+          then(resolve: (value: unknown) => unknown) {
+            return Promise.resolve({ data: [], error: null }).then(resolve)
+          },
+        }
+        return switchBuilder
+      }
       const b: Record<string, unknown> = {
         select() { return b },
         eq() { return b },
@@ -96,6 +111,7 @@ beforeEach(() => {
   state.updateError = null
   state.lastUpdate = null
   state.lastNotFilter = null
+  state.lastSwitchUpdate = null
 })
 
 describe('rejectManualPayment — terminal statuses are refused', () => {
@@ -133,6 +149,18 @@ describe('rejectManualPayment — open statuses still reject', () => {
       success: true,
     })
     expect(state.lastUpdate?.status).toBe('rejected')
+  })
+
+  it('fails the linked pending switch so the school can submit again', async () => {
+    state.row = { request_id: REQUEST_ID, status: 'pending', switch_id: 'switch-1' }
+    state.updateMatches = [{ request_id: REQUEST_ID }]
+
+    await rejectManualPayment(REQUEST_ID, 'No transfer received')
+
+    expect(state.lastSwitchUpdate).toMatchObject({
+      state: 'failed',
+      last_error: 'Manual payment request rejected: No transfer received',
+    })
   })
 })
 

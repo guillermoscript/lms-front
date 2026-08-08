@@ -35,7 +35,7 @@ let db: Db
 const providerCalls: { method: string; id: string; params?: Record<string, unknown> }[] = []
 
 function makeClient() {
-  return createFakeSupabase(db, {
+  const fake = createFakeSupabase(db, {
     embeds: {
       platform_plans: { table: 'platform_plans', localKey: 'plan_id', foreignKey: 'plan_id' },
       tenants: { table: 'tenants', localKey: 'tenant_id', foreignKey: 'id' },
@@ -44,7 +44,42 @@ function makeClient() {
       platform_subscriptions: 'tenant_id',
       revenue_splits: 'tenant_id',
     },
-  }).client
+  })
+  return {
+    ...fake.client,
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name !== 'promote_platform_subscription_switch') {
+        return Promise.resolve({ data: null, error: { message: `unexpected rpc ${name}` } })
+      }
+      const row = db.platform_subscription_switches.find((s) => s.switch_id === args._switch_id)
+      const sub = db.platform_subscriptions.find((s) => s.tenant_id === args._tenant_id)
+      if (!row || !sub) return Promise.resolve({ data: false, error: null })
+      const state = String(row.state ?? 'pending_activation')
+      if (['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled', 'completed'].includes(state)) {
+        return Promise.resolve({ data: true, error: null })
+      }
+      if (!['pending_activation', 'abandoned'].includes(state)) {
+        return Promise.resolve({ data: false, error: null })
+      }
+      Object.assign(sub, {
+        plan_id: args._target_plan_id,
+        payment_provider: args._target_payment_provider,
+        provider_subscription_id: args._target_provider_subscription_id,
+        status: args._target_status,
+        interval: args._target_interval,
+        current_period_start: args._target_period_start,
+        current_period_end: args._target_period_end,
+        cancel_at_period_end: false,
+        canceled_at: null,
+      })
+      Object.assign(row, {
+        state: 'cancellation_pending',
+        target_provider_subscription_id: args._target_provider_subscription_id,
+        cancel_attempts: row.cancel_attempts ?? 0,
+      })
+      return Promise.resolve({ data: true, error: null })
+    },
+  }
 }
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: () => Promise.resolve(makeClient()) }))
@@ -72,11 +107,23 @@ vi.mock('@/lib/payments', async (importActual) => {
       },
       cancelSubscription: (id: string, immediate: boolean) => {
         providerCalls.push({ method: 'cancelSubscription', id, params: { immediate } })
-        return Promise.resolve()
+        return Promise.resolve({ mode: 'immediate' as const })
       },
       reactivateSubscription: (id: string) => {
         providerCalls.push({ method: 'reactivateSubscription', id })
         return Promise.resolve()
+      },
+    }),
+  }
+})
+vi.mock('@/lib/billing/platform-billing', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/billing/platform-billing')>()
+  return {
+    ...actual,
+    getPlatformBillingProvider: () => ({
+      cancelSubscription: (id: string, immediate: boolean) => {
+        providerCalls.push({ method: 'cancelSourceSubscription', id, params: { immediate } })
+        return Promise.resolve({ mode: 'immediate' as const })
       },
     }),
   }
@@ -173,9 +220,99 @@ beforeEach(() => {
     tenant_billing_customers: [],
     platform_subscriptions: [],
     platform_payment_requests: [],
+    platform_subscription_switches: [],
     revenue_splits: [],
     courses: [],
   }
+})
+
+describe('#621 — manual provider switches', () => {
+  it('does not revive a payment request that was explicitly rejected', async () => {
+    const request = seedRequest({ status: 'rejected' })
+    await expect(confirmManualPayment(request.request_id as string)).rejects.toThrow(
+      /Rejected payments cannot be confirmed/,
+    )
+  })
+
+  it('links the pending manual request to a source snapshot without canceling source', async () => {
+    const source = seedSub({
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub-stripe-live',
+      plan_id: PLAN_PRO,
+    })
+
+    await requestManualPlanUpgrade(PLAN_BUSINESS, 'yearly')
+    const request = db.platform_payment_requests[0]
+    const ledger = db.platform_subscription_switches[0]
+
+    expect(source).toMatchObject({ status: 'active', provider_subscription_id: 'sub-stripe-live' })
+    expect(providerCalls).toHaveLength(0)
+    expect(ledger).toMatchObject({
+      source_payment_provider: 'stripe',
+      source_provider_subscription_id: 'sub-stripe-live',
+      target_payment_provider: 'manual',
+      target_plan_id: PLAN_BUSINESS,
+    })
+    expect(request.switch_id).toBe(ledger.switch_id)
+  })
+
+  it('promotes confirmed manual payment before canceling the old provider', async () => {
+    seedSub({ payment_provider: 'stripe', provider_subscription_id: 'sub-stripe-live' })
+    await requestManualPlanUpgrade(PLAN_BUSINESS, 'yearly')
+    const request = db.platform_payment_requests[0]
+    request.request_id = 'req-switch-manual'
+
+    await confirmManualPayment(request.request_id as string)
+
+    expect(db.platform_subscriptions[0]).toMatchObject({
+      status: 'active',
+      payment_provider: 'manual',
+      provider_subscription_id: null,
+      plan_id: PLAN_BUSINESS,
+    })
+    expect(providerCalls).toEqual([
+      { method: 'cancelSourceSubscription', id: 'sub-stripe-live', params: { immediate: true } },
+    ])
+    expect(db.platform_subscription_switches[0]).toMatchObject({
+      state: 'completed',
+      source_cancel_mode: 'immediate',
+    })
+  })
+
+  it('replaying confirmed switch activation does not extend the period or cancel twice', async () => {
+    seedSub({ payment_provider: 'stripe', provider_subscription_id: 'sub-stripe-live' })
+    await requestManualPlanUpgrade(PLAN_BUSINESS, 'yearly')
+    const request = db.platform_payment_requests[0]
+    request.request_id = 'req-switch-replay'
+
+    await confirmManualPayment(request.request_id as string)
+    const periodEnd = db.platform_subscriptions[0].current_period_end
+    await confirmManualPayment(request.request_id as string)
+
+    expect(db.platform_subscriptions[0].current_period_end).toBe(periodEnd)
+    expect(providerCalls).toEqual([
+      { method: 'cancelSourceSubscription', id: 'sub-stripe-live', params: { immediate: true } },
+    ])
+  })
+
+  it('credits a validated late manual payment after its switch was abandoned', async () => {
+    seedSub({ payment_provider: 'stripe', provider_subscription_id: 'sub-stripe-live' })
+    await requestManualPlanUpgrade(PLAN_BUSINESS, 'yearly')
+    const request = db.platform_payment_requests[0]
+    request.request_id = 'req-switch-late'
+    request.status = 'expired'
+    db.platform_subscription_switches[0].state = 'abandoned'
+
+    await confirmManualPayment(request.request_id as string)
+
+    expect(request.status).toBe('confirmed')
+    expect(db.platform_subscriptions[0]).toMatchObject({
+      payment_provider: 'manual',
+      plan_id: PLAN_BUSINESS,
+      status: 'active',
+    })
+    expect(db.platform_subscription_switches[0].state).toBe('completed')
+  })
 })
 
 describe('#546 §1 — confirming a payment un-cancels', () => {

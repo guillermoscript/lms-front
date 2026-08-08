@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import crypto from 'crypto'
 import {
   PayPalPaymentProvider,
@@ -7,6 +7,8 @@ import {
 } from '@/lib/payments/paypal-provider'
 import { BinancePayProvider } from '@/lib/payments/binance-provider'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+
+afterEach(() => vi.unstubAllGlobals())
 
 /**
  * Pins the pure/offline parts of the two new providers (issue #466): the
@@ -258,5 +260,35 @@ describe('PROVIDER_CAPABILITIES sync', () => {
   it('binance static entry matches the class capabilities', () => {
     const b = new BinancePayProvider('k', 's')
     expect(b.capabilities).toEqual(PROVIDER_CAPABILITIES.binance)
+  })
+})
+
+describe('PayPalPaymentProvider.cancelSubscription', () => {
+  function stubPayPal(cancelStatus: number) {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'token', expires_in: 3600 }),
+      })
+      .mockResolvedValueOnce({
+        ok: cancelStatus >= 200 && cancelStatus < 300,
+        status: cancelStatus,
+        text: async () => (cancelStatus === 404 ? 'missing' : 'provider failure'),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+  }
+
+  it('treats a structured HTTP 404 as already canceled', async () => {
+    stubPayPal(404)
+    const provider = new PayPalPaymentProvider('client', 'secret')
+    await expect(provider.cancelSubscription('sub-gone', true)).resolves.toEqual({ mode: 'immediate' })
+  })
+
+  it('does not swallow other provider failures', async () => {
+    stubPayPal(422)
+    const provider = new PayPalPaymentProvider('client', 'secret')
+    await expect(provider.cancelSubscription('sub-live', true)).rejects.toThrow(/HTTP 422/)
   })
 })

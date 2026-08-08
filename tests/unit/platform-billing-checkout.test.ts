@@ -158,7 +158,7 @@ describe('platform billing capability', () => {
 
 interface Write {
   table: string
-  op: 'update' | 'upsert'
+  op: 'insert' | 'update' | 'upsert'
   values: Record<string, unknown>
 }
 
@@ -173,6 +173,7 @@ const state: {
   checkoutCalls: Record<string, unknown>[]
   cancelCalls: { id: string; immediate: boolean }[]
   cancelThrows: boolean
+  checkoutThrows: boolean
   overLimit: boolean
   openRequest: boolean
   recordedRequests: Record<string, unknown>[]
@@ -187,6 +188,7 @@ const state: {
   checkoutCalls: [],
   cancelCalls: [],
   cancelThrows: false,
+  checkoutThrows: false,
   overLimit: false,
   openRequest: false,
   recordedRequests: [],
@@ -200,6 +202,11 @@ function makeBuilder(table: string, writes: Write[]) {
   const b: Record<string, unknown> = {
     select: () => b,
     eq: () => b,
+    insert(values: Record<string, unknown>) {
+      pending = { table, op: 'insert', values }
+      writes.push(pending)
+      return b
+    },
     update(values: Record<string, unknown>) {
       pending = { table, op: 'update', values }
       writes.push(pending)
@@ -215,7 +222,12 @@ function makeBuilder(table: string, writes: Write[]) {
     then: (resolve: (v: unknown) => unknown) => Promise.resolve(settle()).then(resolve),
   }
   function settle() {
-    if (pending) return { data: null, error: null }
+    if (pending) {
+      if (pending.table === 'platform_subscription_switches' && pending.op === 'insert') {
+        return { data: { switch_id: 'switch-1' }, error: null }
+      }
+      return { data: null, error: null }
+    }
     if (table === 'tenant_users') return { data: state.role ? { role: state.role } : null, error: null }
     if (table === 'platform_plans') {
       return state.plan ? { data: state.plan, error: null } : { data: null, error: { message: 'not found' } }
@@ -257,9 +269,10 @@ vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
       cancelSubscription: (id: string, immediate: boolean) => {
         if (state.cancelThrows) return Promise.reject(new Error('provider down'))
         state.cancelCalls.push({ id, immediate })
-        return Promise.resolve()
+        return Promise.resolve({ mode: 'immediate' as const })
       },
       createCheckoutSession: (params: Record<string, unknown>) => {
+        if (state.checkoutThrows) return Promise.reject(new Error('checkout down'))
         state.checkoutCalls.push(params)
         // Solana hands back a QR and an on-chain reference, not a redirect.
         return Promise.resolve(
@@ -317,6 +330,7 @@ beforeEach(() => {
   state.checkoutCalls = []
   state.cancelCalls = []
   state.cancelThrows = false
+  state.checkoutThrows = false
   state.overLimit = false
   state.openRequest = false
   state.recordedRequests = []
@@ -392,7 +406,7 @@ describe('POST /api/billing/checkout — happy path', () => {
 })
 
 describe('POST /api/billing/checkout — switching payment method', () => {
-  it('supersedes a live subscription on ANOTHER provider instead of double-billing', async () => {
+  it('keeps source active while a replacement checkout is pending', async () => {
     state.existingSub = {
       subscription_id: 'ps-1',
       provider_subscription_id: 'sub_old',
@@ -403,27 +417,33 @@ describe('POST /api/billing/checkout — switching payment method', () => {
 
     const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
     expect(res.status).toBe(200)
-    // Cancelled at the old provider, immediately — a lingering subscription
-    // would auto-renew into a second charge.
-    expect(state.cancelCalls).toEqual([{ id: 'sub_old', immediate: true }])
-    expect(state.writes.find((w) => w.table === 'platform_subscriptions')?.values).toMatchObject({
-      status: 'canceled',
+    expect(state.cancelCalls).toHaveLength(0)
+    expect(state.writes.some((w) => w.table === 'platform_subscriptions')).toBe(false)
+    expect(state.writes.find((w) => w.table === 'platform_subscription_switches' && w.op === 'insert')?.values).toMatchObject({
+      source_payment_provider: 'lemonsqueezy',
+      source_provider_subscription_id: 'sub_old',
+      target_payment_provider: 'stripe',
     })
+    expect(state.checkoutCalls[0].metadata).toMatchObject({ billing_switch_id: 'switch-1' })
     expect(state.checkoutCalls).toHaveLength(1)
   })
 
-  it('refuses to start the new subscription if the old one cannot be cancelled', async () => {
+  it('a failed replacement checkout leaves source untouched and closes the switch intent', async () => {
     state.existingSub = {
       subscription_id: 'ps-1',
       provider_subscription_id: 'sub_old',
       status: 'active',
       payment_provider: 'lemonsqueezy',
     }
-    state.cancelThrows = true
+    state.checkoutThrows = true
 
     const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
-    expect(res.status).toBe(502)
-    expect(state.checkoutCalls).toHaveLength(0)
+    expect(res.status).toBe(500)
+    expect(state.cancelCalls).toHaveLength(0)
+    expect(state.writes.some((w) => w.table === 'platform_subscriptions')).toBe(false)
+    expect(state.writes.find((w) => w.table === 'platform_subscription_switches' && w.op === 'update')?.values).toMatchObject({
+      state: 'failed',
+    })
   })
 
   it('sends a same-provider plan change back to the in-app flow', async () => {
@@ -553,6 +573,24 @@ describe('POST /api/billing/checkout — crypto rails (#610)', () => {
     }
     const res = await POST(makeReq({ planId: PLAN_ID, provider: 'binance' }))
     expect(res.status).toBe(200)
-    expect(state.cancelCalls).toEqual([{ id: 'sub_live', immediate: true }])
+    expect(state.cancelCalls).toHaveLength(0)
+    expect(state.checkoutCalls[0].metadata).toMatchObject({ billing_switch_id: 'switch-1' })
+  })
+
+  it('links a Stripe → Solana payment request to the pending switch', async () => {
+    state.prices = solanaPrice()
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      plan_id: 'plan-old',
+      current_period_end: '2026-09-01T00:00:00.000Z',
+      provider_subscription_id: 'sub-live',
+      status: 'active',
+      payment_provider: 'stripe',
+    }
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'solana' }))
+    expect(res.status).toBe(200)
+    expect(state.recordedRequests[0]).toMatchObject({ switchId: 'switch-1' })
+    expect(state.cancelCalls).toHaveLength(0)
   })
 })

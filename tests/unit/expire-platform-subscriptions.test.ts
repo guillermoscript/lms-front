@@ -26,6 +26,7 @@ type Row = Record<string, unknown>
 const db: Record<string, Row[]> = {
   platform_subscriptions: [],
   platform_payment_requests: [],
+  platform_subscription_switches: [],
   platform_plans: [],
   tenants: [],
   tenant_users: [],
@@ -63,8 +64,9 @@ function makeSupabase() {
 
     function settle() {
       if (pending) {
-        for (const row of rows()) Object.assign(row, pending.values)
-        return { data: null, error: null }
+        const changed = rows()
+        for (const row of changed) Object.assign(row, pending.values)
+        return { data: embed(table, cols, changed), error: null }
       }
       return { data: embed(table, cols, rows()), error: null }
     }
@@ -113,6 +115,14 @@ function makeSupabase() {
       limit(n: number) {
         take = n
         return b
+      },
+      maybeSingle() {
+        const result = settle()
+        const resultRows = (result.data as Row[] | null) || []
+        return Promise.resolve({
+          data: resultRows.length === 1 ? resultRows[0] : null,
+          error: resultRows.length > 1 ? { message: 'more than one row' } : null,
+        })
       },
       then: (resolve: (v: unknown) => unknown) => Promise.resolve(settle()).then(resolve),
     }
@@ -279,6 +289,23 @@ describe('expire-platform-subscriptions: §2 renewal-request TTL', () => {
     )
   })
 
+  it('abandons the linked pending switch when its payment request expires', async () => {
+    db.platform_subscription_switches.push({
+      switch_id: 'switch-1',
+      tenant_id: TENANT,
+      state: 'pending_activation',
+      expires_at: daysFromNow(5),
+    })
+    seedRequest({ switch_id: 'switch-1', expires_at: daysFromNow(-1) })
+
+    await GET(req())
+
+    expect(db.platform_subscription_switches[0]).toMatchObject({
+      state: 'abandoned',
+      last_error: 'Linked payment request expired',
+    })
+  })
+
   it('leaves confirmed and rejected requests alone', async () => {
     const confirmed = seedRequest({ status: 'confirmed', expires_at: daysFromNow(-30) })
     const rejected = seedRequest({ status: 'rejected', expires_at: daysFromNow(-30) })
@@ -323,6 +350,31 @@ describe('expire-platform-subscriptions: §1 cancel-then-repay', () => {
 
     expect(body).toMatchObject({ canceled: 0, graceStarted: 1, downgraded: 0 })
     expect(downgraded).toEqual([])
+  })
+})
+
+describe('expire-platform-subscriptions: bounded switch cleanup', () => {
+  it('finishes critical downgrades and processes at most ten cleanup rows', async () => {
+    seedSub({ status: 'past_due', grace_period_end: daysFromNow(-1) })
+    for (let i = 0; i < 12; i++) {
+      db.platform_subscription_switches.push({
+        switch_id: `switch-${i}`,
+        tenant_id: TENANT,
+        source_payment_provider: 'manual',
+        source_provider_subscription_id: null,
+        source_period_end: null,
+        state: 'cancellation_pending',
+        cancel_attempts: 0,
+        next_retry_at: daysFromNow(-1),
+      })
+    }
+
+    const body = await (await GET(req())).json()
+
+    expect(body.downgraded).toBe(1)
+    expect(body.switchCancellationsCompleted).toBe(10)
+    expect(db.platform_subscription_switches.filter((row) => row.state === 'completed')).toHaveLength(10)
+    expect(db.platform_subscription_switches.filter((row) => row.state === 'cancellation_pending')).toHaveLength(2)
   })
 })
 

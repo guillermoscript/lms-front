@@ -620,6 +620,12 @@ export interface NormalizedBillingEvent {
   raw: unknown
 }
 
+/** Provider-reported effect of a cancellation request. */
+export interface CancellationResult {
+  mode: 'none' | 'immediate' | 'period_end'
+  effectiveAt?: Date
+}
+
 export interface RefundParams {
   providerPaymentId: string
   amount?: number // omit for full refund
@@ -662,7 +668,7 @@ export interface IPaymentProvider {
   // Subscription operations (optional — providers without recurring billing,
   // e.g. manual/offline, implement these as no-ops)
   createSubscription?(params: CreateSubscriptionParams): Promise<ProviderSubscription>
-  cancelSubscription?(providerSubId: string, immediate: boolean): Promise<void>
+  cancelSubscription?(providerSubId: string, immediate: boolean): Promise<CancellationResult>
   // Reverse a scheduled cancel-at-period-end before the period ends. Providers
   // that scheduled the cancel on their side (Stripe, Lemon Squeezy) must clear it
   // here — a DB-only "reactivate" would leave the provider still set to cancel and
