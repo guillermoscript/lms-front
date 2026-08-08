@@ -355,6 +355,7 @@ export async function confirmManualPayment(requestId: string) {
     .single()
 
   if (!request) throw new Error('Request not found')
+  if (request.status === 'rejected') throw new Error('Rejected payments cannot be confirmed')
   if (request.status === 'confirmed' && !request.switch_id) throw new Error('Already confirmed')
 
   const plan = request.platform_plans as { slug: string; transaction_fee_percent: number }
@@ -400,35 +401,6 @@ export async function confirmManualPayment(requestId: string) {
     periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1)
   }
 
-  const subscriptionValues = {
-    tenant_id: request.tenant_id,
-    plan_id: request.plan_id,
-    status: 'active',
-    // The rail the school actually settled on (#603). Hardcoding 'manual'
-    // here made every out-of-band payment look like a bank wire on the
-    // billing screens, whatever the school had really used.
-    payment_provider: request.payment_provider || 'manual',
-    interval: request.interval,
-    current_period_start: periodStart.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-    grace_period_end: null,
-    // Reset the reminder stamp so the next cycle can remind again.
-    renewal_reminder_sent_at: null,
-    // A confirmed payment is an un-cancel (#546 §1). PostgREST's ON CONFLICT
-    // DO UPDATE only touches the columns supplied here, so omitting these two
-    // left a stale `cancel_at_period_end = true` on the row: the school paid
-    // for a full period and was then silently dropped to free at the end of
-    // it by the cron's cancel phase, with no reminder and no grace window
-    // (phases 1 and 2 both filter on `cancel_at_period_end = false`).
-    cancel_at_period_end: false,
-    canceled_at: null,
-    // A real payment supersedes any super-admin comp (#546 §3) — this is one
-    // of the override's exits, so portal changes start syncing again.
-    plan_override_by: null,
-    plan_override_at: null,
-    updated_at: now.toISOString(),
-  }
-
   if (request.switch_id) {
     const promoted = await promotePlatformSubscriptionSwitch({
       admin: adminClient,
@@ -445,12 +417,39 @@ export async function confirmManualPayment(requestId: string) {
     })
     if (!promoted) throw new Error('Subscription switch no longer matches the current subscription')
   } else {
+    const subscriptionValues = {
+      tenant_id: request.tenant_id,
+      plan_id: request.plan_id,
+      status: 'active',
+      // The rail the school actually settled on (#603). Hardcoding 'manual'
+      // here made every out-of-band payment look like a bank wire on the
+      // billing screens, whatever the school had really used.
+      payment_provider: request.payment_provider || 'manual',
+      interval: request.interval,
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      grace_period_end: null,
+      // Reset the reminder stamp so the next cycle can remind again.
+      renewal_reminder_sent_at: null,
+      // A confirmed payment is an un-cancel (#546 §1). PostgREST's ON CONFLICT
+      // DO UPDATE only touches the columns supplied here, so omitting these two
+      // left a stale `cancel_at_period_end = true` on the row: the school paid
+      // for a full period and was then silently dropped to free at the end of
+      // it by the cron's cancel phase, with no reminder and no grace window
+      // (phases 1 and 2 both filter on `cancel_at_period_end = false`).
+      cancel_at_period_end: false,
+      canceled_at: null,
+      // A real payment supersedes any super-admin comp (#546 §3) — this is one
+      // of the override's exits, so portal changes start syncing again.
+      plan_override_by: null,
+      plan_override_at: null,
+      updated_at: now.toISOString(),
+    }
+
     await adminClient
       .from('platform_subscriptions')
       .upsert(subscriptionValues, { onConflict: 'tenant_id' })
-  }
 
-  if (!request.switch_id) {
     // Update tenant plan
     await adminClient
       .from('tenants')

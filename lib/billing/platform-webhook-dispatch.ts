@@ -58,6 +58,8 @@ const ALLOWED_SUB_STATUS = new Set<string>([
   'unpaid',
 ])
 
+const TERMINAL_STORED_STATUS = new Set<string>(['canceled', 'incomplete_expired'])
+
 function storedStatus(status: SubscriptionLifecycleStatus | undefined, fallback: string): string {
   if (!status) return fallback
   if (ALLOWED_SUB_STATUS.has(status)) return status
@@ -361,11 +363,23 @@ export async function dispatchPlatformBillingEvent(
 
   const switchId = switchIdFromMetadata(event.metadata)
   const isSwitchActivation = event.type === 'subscription.activated' && !!switchId
+  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
+  const isSameRailSelfManagedRenewal =
+    event.type === 'subscription.activated' &&
+    selfManaged &&
+    stored?.payment_provider === provider &&
+    !!event.providerSubscriptionId
   const isFreshActivation =
     event.type === 'subscription.activated' &&
-    stored?.status !== 'active' &&
+    (!stored?.provider_subscription_id ||
+      (stored.payment_provider === provider && TERMINAL_STORED_STATUS.has(stored.status ?? ''))) &&
     !!(event.metadata?.plan_id ?? event.metadata?.planId)
-  if (!isSwitchActivation && !isFreshActivation && stored?.provider_subscription_id) {
+  if (
+    !isSwitchActivation &&
+    !isSameRailSelfManagedRenewal &&
+    !isFreshActivation &&
+    stored?.provider_subscription_id
+  ) {
     const currentIdentity =
       stored.payment_provider === provider &&
       !!event.providerSubscriptionId &&
@@ -423,7 +437,6 @@ export async function dispatchPlatformBillingEvent(
   // is minted for one specific purchase and carries that purchase's plan, so a
   // school moving from Starter to Pro would otherwise have its Pro payment
   // extend its Starter period.
-  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
   const isFirstActivation = !stored?.plan_id
   const trustMetadataPlan = isFirstActivation || selfManaged || isSwitchActivation
   const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined

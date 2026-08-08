@@ -40,6 +40,15 @@ import {
   CancellationResult,
 } from './types'
 
+class PayPalApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+  }
+}
+
 /**
  * One-time prices have no PayPal catalog object (Orders v2 charges a raw
  * amount), so createPrice synthesises a deterministic id with this prefix.
@@ -167,8 +176,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(
+      throw new PayPalApiError(
         `PayPal ${init?.label ?? path} failed: HTTP ${response.status} — ${text}`,
+        response.status,
       )
     }
 
@@ -724,13 +734,17 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * app-side status change.)
    */
   async cancelSubscription(providerSubId: string, immediate: boolean): Promise<CancellationResult> {
-    await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
-      method: 'POST',
-      label: 'cancelSubscription',
-      body: JSON.stringify({
-        reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
-      }),
-    })
+    try {
+      await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
+        method: 'POST',
+        label: 'cancelSubscription',
+        body: JSON.stringify({
+          reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
+        }),
+      })
+    } catch (error) {
+      if (!(error instanceof PayPalApiError) || error.status !== 404) throw error
+    }
     return { mode: 'immediate' }
   }
 

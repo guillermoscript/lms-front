@@ -113,6 +113,17 @@ describe('source cancellation reconciliation', () => {
       last_error: 'provider unavailable',
     })
   })
+
+  it('does not infer already-canceled from provider error message text', async () => {
+    providerState.error = new Error('HTTP 422 — Store not found for this API key')
+    const { db, admin } = setup({ switch: switchRow({ source_payment_provider: 'lemonsqueezy' }) })
+
+    await expect(reconcilePlatformSubscriptionSwitch(admin, 'switch-1')).resolves.toBe('retry')
+    expect(db.platform_subscription_switches[0]).toMatchObject({
+      state: 'cancellation_retry',
+      last_error: 'HTTP 422 — Store not found for this API key',
+    })
+  })
 })
 
 describe('webhook identity scoping', () => {
@@ -179,6 +190,28 @@ describe('webhook identity scoping', () => {
         type: 'subscription.past_due',
         providerSubscriptionId: 'sub-old',
         metadata: { tenant_id: TENANT },
+        raw: {},
+      },
+      { provider: 'stripe', admin },
+    )
+    expect(db.platform_subscriptions[0]).toEqual(current)
+  })
+
+  it('does not treat a stale cross-provider activation as fresh while current is past due', async () => {
+    const current = {
+      tenant_id: TENANT,
+      plan_id: 'plan-new',
+      payment_provider: 'lemonsqueezy',
+      provider_subscription_id: 'sub-new',
+      current_period_end: '2026-10-01T00:00:00.000Z',
+      status: 'past_due',
+    }
+    const { db, admin } = setup({ current })
+    await dispatchPlatformBillingEvent(
+      {
+        type: 'subscription.activated',
+        providerSubscriptionId: 'sub-old',
+        metadata: { tenant_id: TENANT, plan_id: 'plan-old', interval: 'monthly' },
         raw: {},
       },
       { provider: 'stripe', admin },

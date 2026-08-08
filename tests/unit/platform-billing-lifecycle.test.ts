@@ -54,8 +54,12 @@ function makeClient() {
       const row = db.platform_subscription_switches.find((s) => s.switch_id === args._switch_id)
       const sub = db.platform_subscriptions.find((s) => s.tenant_id === args._tenant_id)
       if (!row || !sub) return Promise.resolve({ data: false, error: null })
-      if (['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled', 'completed'].includes(String(row.state))) {
+      const state = String(row.state ?? 'pending_activation')
+      if (['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled', 'completed'].includes(state)) {
         return Promise.resolve({ data: true, error: null })
+      }
+      if (!['pending_activation', 'abandoned'].includes(state)) {
+        return Promise.resolve({ data: false, error: null })
       }
       Object.assign(sub, {
         plan_id: args._target_plan_id,
@@ -223,6 +227,13 @@ beforeEach(() => {
 })
 
 describe('#621 — manual provider switches', () => {
+  it('does not revive a payment request that was explicitly rejected', async () => {
+    const request = seedRequest({ status: 'rejected' })
+    await expect(confirmManualPayment(request.request_id as string)).rejects.toThrow(
+      /Rejected payments cannot be confirmed/,
+    )
+  })
+
   it('links the pending manual request to a source snapshot without canceling source', async () => {
     const source = seedSub({
       payment_provider: 'stripe',
@@ -282,6 +293,25 @@ describe('#621 — manual provider switches', () => {
     expect(providerCalls).toEqual([
       { method: 'cancelSourceSubscription', id: 'sub-stripe-live', params: { immediate: true } },
     ])
+  })
+
+  it('credits a validated late manual payment after its switch was abandoned', async () => {
+    seedSub({ payment_provider: 'stripe', provider_subscription_id: 'sub-stripe-live' })
+    await requestManualPlanUpgrade(PLAN_BUSINESS, 'yearly')
+    const request = db.platform_payment_requests[0]
+    request.request_id = 'req-switch-late'
+    request.status = 'expired'
+    db.platform_subscription_switches[0].state = 'abandoned'
+
+    await confirmManualPayment(request.request_id as string)
+
+    expect(request.status).toBe('confirmed')
+    expect(db.platform_subscriptions[0]).toMatchObject({
+      payment_provider: 'manual',
+      plan_id: PLAN_BUSINESS,
+      status: 'active',
+    })
+    expect(db.platform_subscription_switches[0].state).toBe('completed')
   })
 })
 

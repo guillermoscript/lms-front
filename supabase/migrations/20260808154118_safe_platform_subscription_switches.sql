@@ -33,7 +33,7 @@ CREATE TABLE public.platform_subscription_switches (
   cancel_attempts INTEGER NOT NULL DEFAULT 0 CHECK (cancel_attempts >= 0),
   last_error TEXT,
   next_retry_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '7 days'),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '1 hour'),
   initiated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   activated_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
@@ -45,8 +45,7 @@ CREATE TABLE public.platform_subscription_switches (
 CREATE UNIQUE INDEX platform_subscription_switches_one_open_per_tenant
   ON public.platform_subscription_switches(tenant_id)
   WHERE state IN (
-    'pending_activation', 'cancellation_pending', 'cancellation_retry',
-    'cancellation_scheduled'
+    'pending_activation', 'cancellation_pending', 'cancellation_retry'
   );
 
 CREATE UNIQUE INDEX platform_subscription_switches_target_identity
@@ -115,6 +114,16 @@ DECLARE
   _platform_fee NUMERIC;
   _now TIMESTAMPTZ := now();
 BEGIN
+  -- Lock the tenant's current entitlement first. Every promotion and exact
+  -- terminal downgrade uses this lock order, avoiding a revival/new-checkout
+  -- deadlock when both payments arrive together.
+  SELECT * INTO _current
+  FROM public.platform_subscriptions
+  WHERE tenant_id = _tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN RETURN FALSE; END IF;
+
   SELECT * INTO _switch
   FROM public.platform_subscription_switches
   WHERE switch_id = _switch_id AND tenant_id = _tenant_id
@@ -130,20 +139,25 @@ BEGIN
   IF _switch.state IN ('cancellation_pending', 'cancellation_retry', 'cancellation_scheduled', 'completed') THEN
     RETURN _switch.target_provider_subscription_id IS NOT DISTINCT FROM _target_provider_subscription_id;
   END IF;
-  IF _switch.state <> 'pending_activation' THEN
+  IF _switch.state NOT IN ('pending_activation', 'abandoned') THEN
     RETURN FALSE;
   END IF;
 
-  SELECT * INTO _current
-  FROM public.platform_subscriptions
-  WHERE tenant_id = _tenant_id
-  FOR UPDATE;
-
-  IF NOT FOUND
-     OR _current.subscription_id <> _switch.source_subscription_id
+  IF _current.subscription_id <> _switch.source_subscription_id
      OR _current.payment_provider <> _switch.source_payment_provider
      OR _current.provider_subscription_id IS DISTINCT FROM _switch.source_provider_subscription_id THEN
     RETURN FALSE;
+  END IF;
+
+  -- A provider may settle after its checkout intent expired. The validated
+  -- payment wins while the original source is still current; release any newer
+  -- unpaid intent so reviving this switch cannot violate the open-switch index.
+  IF _switch.state = 'abandoned' THEN
+    UPDATE public.platform_subscription_switches
+    SET state = 'abandoned', updated_at = _now
+    WHERE tenant_id = _tenant_id
+      AND switch_id <> _switch_id
+      AND state = 'pending_activation';
   END IF;
 
   SELECT slug, transaction_fee_percent INTO _plan_slug, _platform_fee

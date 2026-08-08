@@ -355,6 +355,8 @@ export class LemonSqueezyProvider implements IPaymentProvider {
       headers: this.headers,
     })
 
+    if (response.status === 404) return { mode: 'immediate' }
+
     if (!response.ok) {
       const text = await response.text()
       throw new Error(

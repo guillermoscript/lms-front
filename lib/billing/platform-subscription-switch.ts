@@ -85,21 +85,39 @@ export async function attachSwitchCheckoutReference(
   if (error) throw new Error(`Failed to attach replacement checkout: ${error.message}`)
 }
 
-export async function failPlatformSubscriptionSwitch(
+async function closePendingPlatformSubscriptionSwitch(
   admin: SupabaseClient,
   switchId: string | null,
+  state: 'failed' | 'abandoned',
   reason: unknown,
 ): Promise<void> {
   if (!switchId) return
-  await admin
+  const { error } = await admin
     .from('platform_subscription_switches')
     .update({
-      state: 'failed',
+      state,
       last_error: reason instanceof Error ? reason.message : String(reason),
       updated_at: new Date().toISOString(),
     })
     .eq('switch_id', switchId)
     .eq('state', 'pending_activation')
+  if (error) throw new Error(`Failed to close subscription switch: ${error.message}`)
+}
+
+export function failPlatformSubscriptionSwitch(
+  admin: SupabaseClient,
+  switchId: string | null,
+  reason: unknown,
+): Promise<void> {
+  return closePendingPlatformSubscriptionSwitch(admin, switchId, 'failed', reason)
+}
+
+export function abandonPlatformSubscriptionSwitch(
+  admin: SupabaseClient,
+  switchId: string | null,
+  reason: unknown,
+): Promise<void> {
+  return closePendingPlatformSubscriptionSwitch(admin, switchId, 'abandoned', reason)
 }
 
 export interface PromoteSwitchParams {
@@ -160,11 +178,6 @@ async function updateCleanupFailure(admin: SupabaseClient, row: SwitchCleanupRow
   if (writeError) throw new Error(`Failed to persist cancellation retry: ${writeError.message}`)
 }
 
-function alreadyCanceled(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error)
-  return /already (?:been )?cancel|resource_missing|not found|HTTP 404/i.test(message)
-}
-
 /**
  * Cancel source only after replacement promotion. Failure never rolls back the
  * paid target; it leaves a durable retry record for the reconciler.
@@ -207,13 +220,10 @@ export async function reconcilePlatformSubscriptionSwitch(
     if (!paymentProvider.cancelSubscription) {
       throw new Error(`${provider} does not expose subscription cancellation`)
     }
-    let result: CancellationResult
-    try {
-      result = await paymentProvider.cancelSubscription(row.source_provider_subscription_id, true)
-    } catch (cancelError) {
-      if (!alreadyCanceled(cancelError)) throw cancelError
-      result = { mode: 'immediate' as const }
-    }
+    const result: CancellationResult = await paymentProvider.cancelSubscription(
+      row.source_provider_subscription_id,
+      true,
+    )
     const scheduled = result.mode === 'period_end'
     const { error: resultError } = await admin
       .from('platform_subscription_switches')

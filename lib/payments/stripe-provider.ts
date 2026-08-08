@@ -304,6 +304,18 @@ export class StripePaymentProvider implements IPaymentProvider {
         }
       }
     } catch (error) {
+      const stripeError = error as {
+        code?: string
+        statusCode?: number
+        raw?: { code?: string }
+      }
+      if (
+        stripeError.code === 'resource_missing' ||
+        stripeError.raw?.code === 'resource_missing' ||
+        stripeError.statusCode === 404
+      ) {
+        return { mode: 'immediate' }
+      }
       throw new Error(`Stripe cancelSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
