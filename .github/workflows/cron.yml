@@ -1,12 +1,12 @@
 # Scheduled invocation of the app's /api/cron/* routes (issue #513).
 #
-# Production runs on Dokploy, which does not read `vercel.json` — so the seven
+# Production runs on Dokploy, which does not read `vercel.json` — so these
 # cron routes declared there had no scheduler at all and every non-payment
 # lifecycle job (access-cutoff enforcement, platform-subscription expiry, daily
 # digest, league rollover, payment reconciliation) was inert in production.
 #
 # Each route authenticates with the same `Authorization: Bearer $CRON_SECRET`
-# header it already implements, so no application code changed to support this.
+# header, including newly added reconciliation workers.
 #
 # Required repository settings (Settings → Secrets and variables → Actions):
 #   secret   CRON_SECRET    — must match the CRON_SECRET env var on the Dokploy app
@@ -28,7 +28,7 @@ name: Scheduled cron routes
 on:
   schedule:
     # Keep these in sync with vercel.json and with the case block below.
-    - cron: '*/10 * * * *' # solana-reconcile + binance-personal-reconcile
+    - cron: '*/10 * * * *' # payment + webhook + activation reconcilers
     - cron: '0 * * * *' # daily-digest — hourly by design (each tenant sends at its own local hour)
     - cron: '0 0 * * *' # expire-subscriptions
     - cron: '0 1 * * 1' # league-rollover (pg_cron also runs it Mondays 00:05; this is the fallback)
@@ -48,6 +48,8 @@ on:
           - league-rollover
           - solana-reconcile
           - binance-personal-reconcile
+          - redeliver-webhook-events
+          - reconcile-solana-platform-activations
           # Never scheduled: solana-pull submits on-chain USDC transfers and has
           # never had a scheduler in vercel.json either. Available here for
           # manual runs only — putting it on a timer needs its own review.
@@ -78,7 +80,7 @@ jobs:
             routes="$DISPATCH_ROUTE"
           else
             case "${SCHEDULE:-}" in
-              '*/10 * * * *') routes='solana-reconcile binance-personal-reconcile' ;;
+              '*/10 * * * *') routes='solana-reconcile binance-personal-reconcile redeliver-webhook-events reconcile-solana-platform-activations' ;;
               '0 * * * *')    routes='daily-digest' ;;
               '0 0 * * *')    routes='expire-subscriptions' ;;
               '0 1 * * 1')    routes='league-rollover' ;;

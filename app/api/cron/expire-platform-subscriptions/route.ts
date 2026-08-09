@@ -7,6 +7,7 @@ import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
 import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
 import { paymentRequestExpiredTemplate } from '@/lib/email/templates/payment-request-expired'
 import {
+  EXPIRABLE_REQUEST_STATUSES,
   OPEN_REQUEST_STATUSES,
   REQUEST_TTL_DAYS,
   isRequestOpen,
@@ -148,7 +149,7 @@ export async function GET(req: NextRequest) {
   const { data: lapsedRequests } = await supabase
     .from('platform_payment_requests')
     .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, tenants(name), platform_plans(name)')
-    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
     .not('expires_at', 'is', null)
     .lt('expires_at', nowIso)
 
@@ -158,7 +159,7 @@ export async function GET(req: NextRequest) {
       .update({ status: 'expired', updated_at: nowIso })
       .eq('request_id', req.request_id)
       // Status-gated so a super admin confirming in the same instant wins.
-      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+      .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
       .select('request_id')
       .maybeSingle()
 
