@@ -2,8 +2,10 @@ import { getAvailablePlans, getSubscriptionStatus } from '@/app/actions/admin/bi
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
-import { isPlatformCheckoutProvider } from '@/lib/billing/platform-billing'
+import { evaluatePlatformCheckoutAvailability } from '@/lib/billing/platform-checkout-availability'
+import { getTenantPlatformProviderStatuses } from '@/lib/billing/platform-checkout-runtime'
 import { UpgradePageClient } from './upgrade-page-client'
 
 export default async function UpgradePage({
@@ -11,7 +13,6 @@ export default async function UpgradePage({
 }: {
   searchParams: Promise<{ plan?: string; interval?: string }>
 }) {
-  const t = await getTranslations('dashboard.admin')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const [plans, status, { plan: planParam, interval: intervalParam }] = await Promise.all([
     getAvailablePlans(),
@@ -33,19 +34,35 @@ export default async function UpgradePage({
   // the same read the pricing page does — so an admin never sees a payment
   // method a super admin has not priced (#603).
   const supabase = await createClient()
-  const { data: priceRows } = await supabase
-    .from('platform_plan_prices')
-    .select('plan_id, payment_provider, interval')
-    .eq('is_active', true)
+  const tenantId = await getCurrentTenantId()
+  const [providerStatuses, { data: priceRows }] = await Promise.all([
+    getTenantPlatformProviderStatuses(supabase, tenantId),
+    supabase
+      .from('platform_plan_prices')
+      .select('plan_id, payment_provider, interval, provider_price_id, currency, amount')
+      .eq('is_active', true),
+  ])
 
   const planProviders: Record<string, { monthly: string[]; yearly: string[] }> = {}
   for (const row of priceRows ?? []) {
-    // A priced row for a provider that cannot run a platform checkout would be a
-    // dead button, so it is filtered on the capability, never on the slug.
-    if (!isPlatformCheckoutProvider(row.payment_provider)) continue
+    const plan = plans.find((candidate) => candidate.plan_id === row.plan_id)
+    if (!plan) continue
+    const interval = row.interval === 'yearly' ? 'yearly' : 'monthly'
+    const availability = evaluatePlatformCheckoutAvailability({
+      provider: row.payment_provider,
+      interval,
+      price: {
+        interval: row.interval,
+        currency: row.currency,
+        providerPriceId: row.provider_price_id,
+        amount: row.amount === null ? null : Number(row.amount),
+      },
+      fallbackAmount: interval === 'yearly' ? Number(plan.price_yearly) : Number(plan.price_monthly),
+      runtime: providerStatuses[row.payment_provider],
+    })
+    if (!availability.available) continue
     const bucket = (planProviders[row.plan_id] ??= { monthly: [], yearly: [] })
-    const key = row.interval === 'yearly' ? 'yearly' : 'monthly'
-    if (!bucket[key].includes(row.payment_provider)) bucket[key].push(row.payment_provider)
+    if (!bucket[interval].includes(row.payment_provider)) bucket[interval].push(row.payment_provider)
   }
 
   const sub = status.subscription
