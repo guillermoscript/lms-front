@@ -13,7 +13,6 @@ export default async function UpgradePage({
 }: {
   searchParams: Promise<{ plan?: string; interval?: string }>
 }) {
-  const t = await getTranslations('dashboard.admin')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const [plans, status, { plan: planParam, interval: intervalParam }] = await Promise.all([
     getAvailablePlans(),
@@ -36,11 +35,13 @@ export default async function UpgradePage({
   // method a super admin has not priced (#603).
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
-  const providerStatuses = await getTenantPlatformProviderStatuses(supabase, tenantId)
-  const { data: priceRows } = await supabase
-    .from('platform_plan_prices')
-    .select('plan_id, payment_provider, interval, provider_price_id, currency, amount')
-    .eq('is_active', true)
+  const [providerStatuses, { data: priceRows }] = await Promise.all([
+    getTenantPlatformProviderStatuses(supabase, tenantId),
+    supabase
+      .from('platform_plan_prices')
+      .select('plan_id, payment_provider, interval, provider_price_id, currency, amount')
+      .eq('is_active', true),
+  ])
 
   const planProviders: Record<string, { monthly: string[]; yearly: string[] }> = {}
   for (const row of priceRows ?? []) {

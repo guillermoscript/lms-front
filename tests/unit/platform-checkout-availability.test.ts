@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   evaluatePlatformCheckoutAvailability,
   type PlatformProviderRuntimeStatus,
 } from '@/lib/billing/platform-checkout-availability'
 import { summarizePlanPurchasability, type PlatformPlanInput, type PlatformPlanPriceInput } from '@/lib/billing/plan-prices'
+import { getPlatformProviderRuntimeStatuses } from '@/lib/billing/platform-checkout-runtime'
 
 const runtime: PlatformProviderRuntimeStatus = { enabled: true, configured: true, ready: true }
 const price = (overrides: Partial<NonNullable<Parameters<typeof evaluatePlatformCheckoutAvailability>[0]['price']>> = {}) => ({
@@ -78,6 +80,17 @@ describe('evaluatePlatformCheckoutAvailability', () => {
       }).reason,
     ).toBe('missing_price')
   })
+
+  it('requires the platform webhook secret for Stripe readiness', () => {
+    expect(
+      evaluatePlatformCheckoutAvailability({
+        provider: 'stripe',
+        interval: 'monthly',
+        price: price(),
+        runtime: { enabled: true, configured: false, ready: false },
+      }),
+    ).toMatchObject({ available: false, reason: 'missing_credentials' })
+  })
 })
 
 describe('plan purchasability uses executable methods', () => {
@@ -118,5 +131,59 @@ describe('plan purchasability uses executable methods', () => {
     expect(summary.isPurchasable).toBe(true)
     expect(summary.automatedProviders.map((provider) => provider.provider)).toEqual(['stripe'])
     expect(summary.providerDiagnostics.find((item) => item.provider === 'lemonsqueezy')?.unavailable[0].reason).toBe('disabled')
+  })
+})
+
+describe('platform provider runtime status', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  const settingsClient = (result: { data: unknown[] | null; error: { message: string } | null }) =>
+    ({
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            in: () => Promise.resolve(result),
+          }),
+        }),
+      }),
+    }) as unknown as SupabaseClient
+
+  it('does not mark Stripe ready without its platform webhook secret', () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_platform')
+    vi.stubEnv('STRIPE_PLATFORM_WEBHOOK_SECRET', '')
+
+    expect(getPlatformProviderRuntimeStatuses().stripe).toMatchObject({
+      configured: false,
+      ready: false,
+    })
+  })
+
+  it('applies tenant toggles and preserves safe defaults for missing rows', async () => {
+    const { getTenantPlatformProviderStatuses } = await import('@/lib/billing/platform-checkout-runtime')
+    const statuses = await getTenantPlatformProviderStatuses(
+      settingsClient({
+        data: [
+          { setting_key: 'stripe_enabled', setting_value: { enabled: false } },
+          { setting_key: 'paypal_enabled', setting_value: { enabled: true } },
+        ],
+        error: null,
+      }),
+      'tenant-1',
+    )
+
+    expect(statuses.stripe.enabled).toBe(false)
+    expect(statuses.paypal.enabled).toBe(true)
+    expect(statuses.lemonsqueezy.enabled).toBe(false)
+  })
+
+  it('fails closed when tenant settings cannot be read', async () => {
+    const { getTenantPlatformProviderStatuses } = await import('@/lib/billing/platform-checkout-runtime')
+
+    await expect(
+      getTenantPlatformProviderStatuses(
+        settingsClient({ data: null, error: { message: 'database unavailable' } }),
+        'tenant-1',
+      ),
+    ).rejects.toThrow('database unavailable')
   })
 })

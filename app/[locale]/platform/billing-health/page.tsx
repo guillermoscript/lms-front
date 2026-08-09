@@ -151,9 +151,9 @@ export default async function PlatformBillingHealthPage() {
                         data-testid="unpurchasable-plan-row"
                         data-plan-slug={plan.slug}
                       >
-                        <span className="font-medium text-red-800 dark:text-red-300">{plan.name}</span>
-                        <Badge variant="outline" className="font-mono text-[10px]">{plan.slug}</Badge>
-                        <span className="text-xs text-red-700/80 dark:text-red-400/80">
+                        <span className="min-w-0 font-medium text-red-800 dark:text-red-300">{plan.name}</span>
+                        <Badge variant="outline" className="shrink-0 font-mono text-[10px]">{plan.slug}</Badge>
+                        <span className="min-w-0 break-words text-xs text-red-700/80 dark:text-red-400/80">
                           {plan.providerDiagnostics.length > 0
                             ? plan.providerDiagnostics
                                 .flatMap((diagnostic) =>
@@ -222,7 +222,7 @@ export default async function PlatformBillingHealthPage() {
                   <p className="mt-1 text-[11px] text-muted-foreground/70">{card.sub}</p>
                 </div>
                 <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.bg}`}>
-                  <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} strokeWidth={1.75} />
+                  <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} strokeWidth={1.75} aria-hidden="true" />
                 </div>
               </div>
             </CardContent>

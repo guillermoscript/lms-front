@@ -157,7 +157,7 @@ export interface PlanPurchasability {
   isActive: boolean
   /** True when the plan charges for at least one interval. */
   isPaid: boolean
-  /** True when at least one active price row exists, on any provider. */
+  /** True when at least one active price row can execute automated checkout. */
   isPurchasable: boolean
   /** Providers with at least one active price row. */
   providers: ProviderCoverage[]
@@ -168,8 +168,8 @@ export interface PlanPurchasability {
   /** Manual transfer is a separate fallback and never counts as automation. */
   manualAvailable: boolean
   /**
-   * Intervals the plan charges for but no provider covers with an active row.
-   * A plan with a monthly *and* a yearly price but only a monthly price row is
+   * Intervals the plan charges for but no provider can execute checkout on.
+   * A plan with a monthly *and* a yearly price but only a monthly executable method is
    * purchasable, yet half its pricing page is a dead button — that is a
    * weaker problem than "no price at all", so it is reported separately rather
    * than collapsed into `isPurchasable`.
@@ -287,7 +287,7 @@ export function summarizePlanPurchasability(
 
 /**
  * The check `/platform/billing-health` renders: active plans that charge money
- * and have no active price row on any provider. These are advertised on the
+ * and have no executable automated checkout method. These are advertised on the
  * pricing page at `$9/mo` and 400 on every card upgrade — the exact state #602
  * was filed for.
  *
@@ -310,7 +310,7 @@ export function findUnpurchasablePlans(
 
 /**
  * The softer half: plans that *are* buyable, but not on every interval they
- * quote a price for. Reported apart from `findUnpurchasablePlans` so the hard
+ * quote an executable price for. Reported apart from `findUnpurchasablePlans` so the hard
  * failure is never diluted by the partial one.
  */
 export function findPartiallyPricedPlans(

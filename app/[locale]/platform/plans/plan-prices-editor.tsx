@@ -202,7 +202,7 @@ export function PlanPricesEditor({
 
           <div className="space-y-5 py-2">
             <p className="text-xs text-muted-foreground">
-              A plan is only purchasable through a provider that has an active price here.
+              A plan is only purchasable through a provider with an active, executable price here.
               Paste the id the provider generated (Stripe <code className="font-mono">price_…</code>,
               Lemon Squeezy variant id); this app never creates it for you.
             </p>
@@ -294,7 +294,7 @@ export function PlanPricesEditor({
                               aria-label={`Remove ${providerLabel(price.paymentProvider)} ${price.interval} price`}
                               data-testid="plan-price-delete-btn"
                             >
-                              <IconTrash className="h-4 w-4" strokeWidth={1.75} />
+                              <IconTrash className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
                             </Button>
                           </td>
                         </tr>
@@ -356,12 +356,15 @@ export function PlanPricesEditor({
                 </Label>
                 <Input
                   id={`price-id-${planId}`}
+                  name={`provider-price-id-${planId}`}
                   className="font-mono text-xs"
                   placeholder={catalogLess ? "No catalog — leave blank" : "price_1234…"}
                   value={form.providerPriceId}
                   onChange={(e) => setForm((p) => ({ ...p, providerPriceId: e.target.value }))}
                   disabled={catalogLess}
                   data-testid="plan-price-id-input"
+                  autoComplete="off"
+                  spellCheck={false}
                 />
                 {catalogLess && (
                   <p className="text-xs text-muted-foreground">
@@ -395,13 +398,16 @@ export function PlanPricesEditor({
                   <Label htmlFor={`amount-${planId}`}>Amount</Label>
                   <Input
                     id={`amount-${planId}`}
+                    name={`amount-${planId}`}
                     type="number"
                     step="0.01"
                     min="0"
-                    placeholder="Optional"
+                    inputMode="decimal"
+                    placeholder="Optional…"
                     value={form.amount}
                     onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
                     data-testid="plan-price-amount-input"
+                    autoComplete="off"
                   />
                 </div>
 

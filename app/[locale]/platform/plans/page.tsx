@@ -75,14 +75,15 @@ export default async function PlatformPlansPage() {
           <IconAlertTriangle
             className="mt-0.5 h-[18px] w-[18px] shrink-0 text-red-700 dark:text-red-400"
             strokeWidth={1.75}
+            aria-hidden="true"
           />
           <div className="text-sm">
             <p className="font-medium text-red-800 dark:text-red-300">
               {unpurchasableCount} active paid {unpurchasableCount === 1 ? 'plan is' : 'plans are'} not purchasable
             </p>
             <p className="mt-0.5 text-red-700/80 dark:text-red-400/80">
-              They are advertised on the pricing page but have no active provider price, so card
-              checkout fails with &ldquo;price not configured&rdquo;. Add one under <strong>Prices</strong>.
+              They are advertised on the pricing page but have no executable automated provider.
+              Check the status under <strong>Prices</strong>.
             </p>
           </div>
         </div>

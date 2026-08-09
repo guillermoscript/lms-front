@@ -177,6 +177,7 @@ const state: {
   overLimit: boolean
   openRequest: boolean
   recordedRequests: Record<string, unknown>[]
+  providerStatuses: Record<string, { enabled: boolean; configured: boolean; ready: boolean }>
 } = {
   user: null,
   role: null,
@@ -192,6 +193,7 @@ const state: {
   overLimit: false,
   openRequest: false,
   recordedRequests: [],
+  providerStatuses: {},
 }
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
@@ -261,12 +263,7 @@ vi.mock('@/lib/i18n/request-locale', () => ({ resolveRequestLocale: () => 'es' }
 // Route tests mock provider sessions and database rows; keep the runtime
 // configuration truth table in platform-checkout-availability.test.ts.
 vi.mock('@/lib/billing/platform-checkout-runtime', () => ({
-  getTenantPlatformProviderStatuses: () =>
-    Promise.resolve({
-      stripe: { enabled: true, configured: true, ready: true },
-      binance: { enabled: true, configured: true, ready: true },
-      solana: { enabled: true, configured: true, ready: true },
-    }),
+  getTenantPlatformProviderStatuses: () => Promise.resolve(state.providerStatuses),
 }))
 
 vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
@@ -345,6 +342,11 @@ beforeEach(() => {
   state.overLimit = false
   state.openRequest = false
   state.recordedRequests = []
+  state.providerStatuses = {
+    stripe: { enabled: true, configured: true, ready: true },
+    binance: { enabled: true, configured: true, ready: true },
+    solana: { enabled: true, configured: true, ready: true },
+  }
 })
 
 describe('POST /api/billing/checkout — guards', () => {
@@ -379,6 +381,17 @@ describe('POST /api/billing/checkout — guards', () => {
     const res = await POST(makeReq({ planId: PLAN_ID, provider: 'lemonsqueezy' }))
     expect(res.status).toBe(400)
     expect((await res.json()).error).toContain('stripe')
+  })
+
+  it('rejects a disabled provider before creating a customer or checkout session', async () => {
+    state.providerStatuses.stripe.enabled = false
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'stripe' }))
+
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('disabled')
+    expect(state.checkoutCalls).toHaveLength(0)
+    expect(state.writes.some((write) => write.table === 'tenant_billing_customers')).toBe(false)
   })
 })
 
