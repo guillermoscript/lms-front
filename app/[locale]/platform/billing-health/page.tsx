@@ -4,7 +4,7 @@ import {
   getPlanConfigurationHealth,
 } from '@/app/actions/platform/billing-health'
 import type { AtRiskReason } from '@/lib/billing/billing-health'
-import { providerLabel } from '@/lib/billing/plan-prices'
+import { platformCheckoutReasonLabel, providerLabel } from '@/lib/billing/plan-prices'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
@@ -126,8 +126,8 @@ export default async function PlatformBillingHealthPage() {
         <CardContent className="space-y-4">
           {planHealth.unpurchasable.length === 0 && planHealth.partiallyPriced.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Every active paid plan has an active provider price. Card checkout can reach a
-              hosted page for all of them.
+              Every active paid plan has at least one executable automated checkout method.
+              Manual transfer is tracked separately as an offline fallback.
             </p>
           ) : (
             <>
@@ -137,12 +137,11 @@ export default async function PlatformBillingHealthPage() {
                   data-testid="unpurchasable-plans"
                 >
                   <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                    Not purchasable — no active provider price
+                    Not purchasable — no executable automated provider
                   </p>
                   <p className="mt-0.5 text-xs text-red-700/80 dark:text-red-400/80">
-                    These plans are advertised with a price but every card upgrade fails with
-                    &ldquo;price not configured&rdquo;. The only way to pay for them is an offline
-                    transfer.
+                    These plans are advertised with a price, but every configured automated
+                    provider is blocked. Manual transfer remains available separately.
                   </p>
                   <ul className="mt-3 space-y-1.5 text-sm">
                     {planHealth.unpurchasable.map((plan) => (
@@ -154,6 +153,18 @@ export default async function PlatformBillingHealthPage() {
                       >
                         <span className="font-medium text-red-800 dark:text-red-300">{plan.name}</span>
                         <Badge variant="outline" className="font-mono text-[10px]">{plan.slug}</Badge>
+                        <span className="text-xs text-red-700/80 dark:text-red-400/80">
+                          {plan.providerDiagnostics.length > 0
+                            ? plan.providerDiagnostics
+                                .flatMap((diagnostic) =>
+                                  diagnostic.unavailable.map(
+                                    ({ interval, reason }) =>
+                                      `${providerLabel(diagnostic.provider)} ${interval}: ${platformCheckoutReasonLabel(reason)}`,
+                                  ),
+                                )
+                                .join(' · ')
+                            : 'No provider price configured'}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -177,8 +188,8 @@ export default async function PlatformBillingHealthPage() {
                       >
                         <span className="font-medium text-amber-800 dark:text-amber-300">{plan.name}</span>{' '}
                         <span className="text-amber-700/80 dark:text-amber-400/80">
-                          — no price for {plan.missingIntervals.join(' or ')}; buyable via{' '}
-                          {plan.providers.map((p) => providerLabel(p.provider)).join(', ')}
+                          — no executable checkout for {plan.missingIntervals.join(' or ')}; ready via{' '}
+                          {plan.automatedProviders.map((p) => providerLabel(p.provider)).join(', ')}
                         </span>
                       </li>
                     ))}

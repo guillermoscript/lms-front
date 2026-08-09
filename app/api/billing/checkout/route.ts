@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { resolveRequestLocale } from '@/lib/i18n/request-locale'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { getTenantPlatformProviderStatuses } from '@/lib/billing/platform-checkout-runtime'
 import {
   describeResolutionError,
   getActivePlanPrices,
@@ -92,6 +93,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot subscribe to free plan via checkout' }, { status: 400 })
     }
 
+    const providerStatuses = await getTenantPlatformProviderStatuses(adminClient, tenantId)
+    const fallbackAmount = Number(interval === 'yearly' ? plan.price_yearly : plan.price_monthly) || 0
+
     const { data: existingSub } = await adminClient
       .from('platform_subscriptions')
       .select('subscription_id, provider_subscription_id, status, payment_provider')
@@ -111,6 +115,9 @@ export async function POST(req: NextRequest) {
     const resolved = resolveCheckoutProvider(prices, interval, {
       requested: typeof requestedProvider === 'string' ? requestedProvider : undefined,
       tenantProvider: existingSub?.payment_provider ?? null,
+      providerStatuses,
+      expectedCurrency: 'usd',
+      fallbackAmount,
     })
 
     if (!resolved.ok) {

@@ -6,6 +6,7 @@ import {
   summarizePlanPurchasability,
   type PlatformPlanPriceInput,
 } from '@/lib/billing/plan-prices'
+import { getPlatformProviderRuntimeStatuses } from '@/lib/billing/platform-checkout-runtime'
 import { PlanEditor } from './plan-editor'
 import {
   PlanPricesEditor,
@@ -37,6 +38,7 @@ export default async function PlatformPlansPage() {
     amount: row.amount,
     isActive: row.is_active,
   }))
+  const providerStatuses = getPlatformProviderRuntimeStatuses()
 
   const purchasability = summarizePlanPurchasability(
     (plans || []).map((plan) => ({
@@ -48,6 +50,7 @@ export default async function PlatformPlansPage() {
       isActive: plan.is_active,
     })),
     prices,
+    { providerStatuses },
   )
   const purchasabilityByPlan = new Map(purchasability.map((p) => [p.planId, p]))
   const unpurchasableCount = purchasability.filter(
@@ -146,11 +149,12 @@ export default async function PlatformPlansPage() {
               <div className="border-t pt-4">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Checkout</p>
                 {summary && (
-                  <PlanPurchasabilityBadge
+              <PlanPurchasabilityBadge
                     isPaid={summary.isPaid}
                     isPurchasable={summary.isPurchasable}
-                    providers={summary.providers}
+                    providers={summary.automatedProviders}
                     missingIntervals={summary.missingIntervals}
+                    diagnostics={summary.providerDiagnostics}
                   />
                 )}
               </div>
@@ -160,6 +164,8 @@ export default async function PlatformPlansPage() {
                   planId={plan.plan_id}
                   planSlug={plan.slug}
                   prices={planPrices}
+                  providerDiagnostics={summary?.providerDiagnostics}
+                  providerStatuses={providerStatuses}
                 />
               </div>
 

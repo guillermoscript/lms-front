@@ -22,6 +22,15 @@
  * modules and nothing tested the callers (#540).
  */
 
+import {
+  evaluatePlatformCheckoutAvailability,
+  platformCheckoutReasonLabel,
+  type PlatformCheckoutUnavailableReason,
+  type PlatformProviderRuntimeStatus,
+} from '@/lib/billing/platform-checkout-availability'
+
+export { platformCheckoutReasonLabel }
+
 export type PlanPriceInterval = 'monthly' | 'yearly'
 
 export const PLAN_PRICE_INTERVALS: readonly PlanPriceInterval[] = ['monthly', 'yearly']
@@ -135,6 +144,12 @@ export interface ProviderCoverage {
   intervals: PlanPriceInterval[]
 }
 
+export interface ProviderDiagnostic {
+  provider: string
+  availableIntervals: PlanPriceInterval[]
+  unavailable: Array<{ interval: PlanPriceInterval; reason: PlatformCheckoutUnavailableReason }>
+}
+
 export interface PlanPurchasability {
   planId: string
   slug: string
@@ -146,6 +161,12 @@ export interface PlanPurchasability {
   isPurchasable: boolean
   /** Providers with at least one active price row. */
   providers: ProviderCoverage[]
+  /** Providers with at least one executable automated checkout method. */
+  automatedProviders: ProviderCoverage[]
+  /** Per-provider reason for every charged interval that is not executable. */
+  providerDiagnostics: ProviderDiagnostic[]
+  /** Manual transfer is a separate fallback and never counts as automation. */
+  manualAvailable: boolean
   /**
    * Intervals the plan charges for but no provider covers with an active row.
    * A plan with a monthly *and* a yearly price but only a monthly price row is
@@ -172,6 +193,10 @@ function chargedIntervals(plan: PlatformPlanInput): PlanPriceInterval[] {
 export function summarizePlanPurchasability(
   plans: PlatformPlanInput[],
   prices: PlatformPlanPriceInput[],
+  options: {
+    providerStatuses?: Record<string, PlatformProviderRuntimeStatus>
+    expectedCurrency?: string
+  } = {},
 ): PlanPurchasability[] {
   const activePricesByPlan = new Map<string, PlatformPlanPriceInput[]>()
   for (const price of prices) {
@@ -198,8 +223,51 @@ export function summarizePlanPurchasability(
       }))
       .sort((a, b) => a.provider.localeCompare(b.provider))
 
-    const covered = new Set(active.map((p) => p.interval))
     const charged = chargedIntervals(plan)
+
+    const providerDiagnostics: ProviderDiagnostic[] = [...intervalsByProvider.keys()]
+      .sort((a, b) => a.localeCompare(b))
+      .map((provider) => {
+        const rows = active.filter((price) => price.paymentProvider === provider)
+        const runtime = options.providerStatuses?.[provider]
+        const availableIntervals: PlanPriceInterval[] = []
+        const unavailable: ProviderDiagnostic['unavailable'] = []
+
+        for (const interval of charged) {
+          const exact = rows.find((price) => price.interval === interval)
+          const fallback = exact ?? rows[0] ?? null
+          const availability = evaluatePlatformCheckoutAvailability({
+            provider,
+            interval,
+            price: fallback
+              ? {
+                  interval: fallback.interval,
+                  currency: fallback.currency,
+                  providerPriceId: fallback.providerPriceId,
+                  amount: fallback.amount,
+                }
+              : null,
+            expectedCurrency: options.expectedCurrency,
+            fallbackAmount: interval === 'yearly' ? plan.priceYearly : plan.priceMonthly,
+            runtime,
+          })
+
+          if (availability.available && exact) availableIntervals.push(interval)
+          else unavailable.push({ interval, reason: availability.reason })
+        }
+
+        return { provider, availableIntervals, unavailable }
+      })
+
+    const automatedProviders = providers.filter((provider) =>
+      providerDiagnostics.some(
+        (diagnostic) =>
+          diagnostic.provider === provider.provider && diagnostic.availableIntervals.length > 0,
+      ),
+    )
+    const covered = new Set(
+      providerDiagnostics.flatMap((diagnostic) => diagnostic.availableIntervals),
+    )
 
     return {
       planId: plan.planId,
@@ -207,8 +275,11 @@ export function summarizePlanPurchasability(
       name: plan.name,
       isActive: plan.isActive,
       isPaid: charged.length > 0,
-      isPurchasable: active.length > 0,
+      isPurchasable: automatedProviders.length > 0,
       providers,
+      automatedProviders,
+      providerDiagnostics,
+      manualAvailable: charged.length > 0,
       missingIntervals: charged.filter((i) => !covered.has(i)),
     }
   })
@@ -227,8 +298,12 @@ export function summarizePlanPurchasability(
 export function findUnpurchasablePlans(
   plans: PlatformPlanInput[],
   prices: PlatformPlanPriceInput[],
+  options: {
+    providerStatuses?: Record<string, PlatformProviderRuntimeStatus>
+    expectedCurrency?: string
+  } = {},
 ): PlanPurchasability[] {
-  return summarizePlanPurchasability(plans, prices).filter(
+  return summarizePlanPurchasability(plans, prices, options).filter(
     (plan) => plan.isActive && plan.isPaid && !plan.isPurchasable,
   )
 }
@@ -241,8 +316,12 @@ export function findUnpurchasablePlans(
 export function findPartiallyPricedPlans(
   plans: PlatformPlanInput[],
   prices: PlatformPlanPriceInput[],
+  options: {
+    providerStatuses?: Record<string, PlatformProviderRuntimeStatus>
+    expectedCurrency?: string
+  } = {},
 ): PlanPurchasability[] {
-  return summarizePlanPurchasability(plans, prices).filter(
+  return summarizePlanPurchasability(plans, prices, options).filter(
     (plan) =>
       plan.isActive && plan.isPaid && plan.isPurchasable && plan.missingIntervals.length > 0,
   )

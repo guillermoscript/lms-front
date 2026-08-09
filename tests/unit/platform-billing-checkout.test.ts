@@ -258,6 +258,17 @@ vi.mock('@/lib/supabase/tenant', () => ({ getCurrentTenantId: () => Promise.reso
 
 vi.mock('@/lib/i18n/request-locale', () => ({ resolveRequestLocale: () => 'es' }))
 
+// Route tests mock provider sessions and database rows; keep the runtime
+// configuration truth table in platform-checkout-availability.test.ts.
+vi.mock('@/lib/billing/platform-checkout-runtime', () => ({
+  getTenantPlatformProviderStatuses: () =>
+    Promise.resolve({
+      stripe: { enabled: true, configured: true, ready: true },
+      binance: { enabled: true, configured: true, ready: true },
+      solana: { enabled: true, configured: true, ready: true },
+    }),
+}))
+
 vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/billing/platform-billing')>()
   return {

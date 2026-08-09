@@ -32,15 +32,24 @@ import {
   PLAN_PRICE_INTERVALS,
   PLATFORM_BILLING_UI_PROVIDERS,
   providerLabel,
+  platformCheckoutReasonLabel,
+  type ProviderDiagnostic,
   type PlatformPlanPriceInput,
 } from "@/lib/billing/plan-prices"
-import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/types"
+import {
+  PROVIDER_CAPABILITIES,
+  type PaymentProvider,
+} from "@/lib/payments/types"
+import type { PlatformProviderRuntimeStatus } from "@/lib/billing/platform-checkout-availability"
+import { evaluatePlatformCheckoutAvailability } from "@/lib/billing/platform-checkout-availability"
 
 interface Props {
   planId: string
   planSlug: string
   /** Every price row for this plan, active or not. */
   prices: PlatformPlanPriceInput[]
+  providerDiagnostics?: ProviderDiagnostic[]
+  providerStatuses?: Record<string, PlatformProviderRuntimeStatus>
 }
 
 const EMPTY_FORM = {
@@ -61,7 +70,13 @@ const EMPTY_FORM = {
  * telling a human to run SQL, which is why every plan 400s on card checkout on
  * any environment where nobody did.
  */
-export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
+export function PlanPricesEditor({
+  planId,
+  planSlug,
+  prices,
+  providerDiagnostics = [],
+  providerStatuses = {},
+}: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -82,6 +97,33 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
   // demands a value nobody can supply is how placeholder ids get typed in.
   const catalogLess =
     PROVIDER_CAPABILITIES[form.paymentProvider as PaymentProvider]?.createsCatalog === false
+
+  const runtime = providerStatuses[form.paymentProvider]
+  const runtimeReason = !runtime?.enabled
+    ? "disabled"
+    : !runtime?.configured
+      ? "missing_credentials"
+      : !runtime.ready
+        ? "provider_not_ready"
+        : null
+  const formAvailability = evaluatePlatformCheckoutAvailability({
+    provider: form.paymentProvider,
+    interval: form.interval,
+    price: editingExisting
+      ? {
+          interval: editingExisting.interval,
+          currency: editingExisting.currency,
+          providerPriceId: editingExisting.providerPriceId,
+          amount: editingExisting.amount,
+        }
+      : null,
+    fallbackAmount: form.amount.trim() === "" ? null : Number(form.amount),
+    runtime,
+  })
+  const formReason =
+    formAvailability.reason === "ready" || formAvailability.reason === "missing_price"
+      ? runtimeReason
+      : formAvailability.reason
 
   async function handleSave() {
     setSaving(true)
@@ -185,6 +227,7 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
                         <th className="pb-2 font-medium">Interval</th>
                         <th className="pb-2 font-medium">Price ID</th>
                         <th className="pb-2 font-medium">Amount</th>
+                        <th className="pb-2 font-medium">Status</th>
                         <th className="pb-2 font-medium">Active</th>
                         <th className="pb-2" aria-label="Actions" />
                       </tr>
@@ -213,6 +256,25 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
                             {price.amount === null
                               ? "—"
                               : `${price.amount} ${price.currency.toUpperCase()}`}
+                          </td>
+                          <td className="py-2.5">
+                            {(() => {
+                              const diagnostic = providerDiagnostics.find(
+                                (item) => item.provider === price.paymentProvider,
+                              )
+                              const unavailable = diagnostic?.unavailable.find(
+                                (item) => item.interval === price.interval,
+                              )
+                              return unavailable ? (
+                                <Badge variant="destructive" className="text-[10px]">
+                                  {platformCheckoutReasonLabel(unavailable.reason)}
+                                </Badge>
+                              ) : diagnostic?.availableIntervals.includes(price.interval as "monthly" | "yearly") ? (
+                                <Badge variant="secondary" className="text-[10px]">Ready</Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Not evaluated</span>
+                              )
+                            })()}
                           </td>
                           <td className="py-2.5">
                             <Switch
@@ -360,6 +422,18 @@ export function PlanPricesEditor({ planId, planSlug, prices }: Props) {
                   ? `Saving overwrites the existing ${providerLabel(form.paymentProvider)} ${form.interval} price.`
                   : "Leave the amount blank when the provider charges the plan's listed price."}
               </p>
+              {runtimeReason && (
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {platformCheckoutReasonLabel(runtimeReason)}. This price will not make the plan
+                  purchasable until the provider is ready.
+                </p>
+              )}
+              {formReason && formReason !== runtimeReason && (
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {platformCheckoutReasonLabel(formReason)}. The saved row will remain visible for
+                  diagnosis but cannot satisfy platform purchasability.
+                </p>
+              )}
             </div>
           </div>
 
@@ -387,11 +461,13 @@ export function PlanPurchasabilityBadge({
   isPurchasable,
   providers,
   missingIntervals,
+  diagnostics,
 }: {
   isPaid: boolean
   isPurchasable: boolean
   providers: { provider: string; intervals: string[] }[]
   missingIntervals: string[]
+  diagnostics?: ProviderDiagnostic[]
 }) {
   if (!isPaid) {
     return (
@@ -408,7 +484,20 @@ export function PlanPurchasabilityBadge({
         data-testid="plan-purchasability"
         data-purchasable="false"
       >
-        Not purchasable — no active provider price. Card checkout will fail.
+        Not purchasable — no executable automated provider. Manual transfer remains a separate
+        fallback.
+        {diagnostics && diagnostics.length > 0 && (
+          <span className="mt-1 block font-normal">
+            {diagnostics
+              .flatMap((diagnostic) =>
+                diagnostic.unavailable.map(
+                  ({ interval, reason }) =>
+                    `${providerLabel(diagnostic.provider)} ${interval}: ${platformCheckoutReasonLabel(reason)}`,
+                ),
+              )
+              .join(" · ")}
+          </span>
+        )}
       </p>
     )
   }
@@ -433,7 +522,7 @@ export function PlanPurchasabilityBadge({
 export function PlanPurchasabilityChip({ isPurchasable }: { isPurchasable: boolean }) {
   return isPurchasable ? null : (
     <Badge variant="destructive" className="text-[10px]" data-testid="plan-unpurchasable-chip">
-      No price
+      Unavailable
     </Badge>
   )
 }
