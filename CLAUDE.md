@@ -198,7 +198,7 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 
 ## Security Notes
 
-- **Sentry DSN** is hardcoded in `sentry.server.config.ts` — intentional (public DSN), consider moving to env var for consistency.
+- **Sentry DSN comes from `NEXT_PUBLIC_SENTRY_DSN`, never a literal.** It was hardcoded in the three `Sentry.init` files until a third-party Vercel fork of this repo (deployed without Supabase env vars) filled our issue stream with its own crashes. Unset = `Sentry.init` no-ops, so the var must be set in the deploy environment; `NEXT_PUBLIC_*` is inlined at build time, so it needs a rebuild, not a restart.
 - **Test account passwords** (`password123`) are for local development only, seeded by `supabase db reset`. Never use in a deployed environment.
 
 ## Key Documentation
