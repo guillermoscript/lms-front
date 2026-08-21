@@ -23,7 +23,14 @@ import {
   PromptInputTools
 } from '@/components/ai-elements'
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion"
-import { DefaultChatTransport } from 'ai'
+import { DefaultChatTransport, type FileUIPart } from 'ai'
+import {
+  ChatAttachButton,
+  ChatAttachmentsPreview,
+  MessageImageParts,
+  chatAttachmentInputProps,
+  prepareChatFiles,
+} from '@/components/ai/chat-attachments'
 
 interface AIPreviewModalProps {
   type: 'lesson' | 'exercise'
@@ -63,12 +70,14 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
     setOpen(true)
   }
 
-  const handleSubmit = (message: { text?: string }) => {
-    if (!message.text?.trim()) return
-    sendMessage({
-      text: message.text,
-    })
+  const handleSubmit = async (message: { text?: string; files?: FileUIPart[] }) => {
+    if (!message.text?.trim() && !message.files?.length) return
     textInput.clear()
+    const files = await prepareChatFiles(message.files)
+    sendMessage({
+      text: message.text ?? '',
+      files,
+    })
   }
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -125,6 +134,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 {messages.map((message) => (
                   <Message key={message.id} from={message.role as ComponentProps<typeof Message>['from']}>
                     <MessageContent>
+                      <MessageImageParts parts={message.parts} />
                       {message.parts.map((part, index) => {
                         if (part.type === 'text') {
                           return <MessageResponse key={index}>{part.text}</MessageResponse>
@@ -152,7 +162,8 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 </Suggestions>
               )}
 
-              <PromptInput onSubmit={handleSubmit}>
+              <PromptInput onSubmit={handleSubmit} {...chatAttachmentInputProps}>
+                <ChatAttachmentsPreview />
                 <PromptInputBody>
                   <PromptInputTextarea
                     placeholder={t('placeholder')}
@@ -160,7 +171,9 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                   />
                 </PromptInputBody>
                 <PromptInputFooter>
-                  <PromptInputTools />
+                  <PromptInputTools>
+                    <ChatAttachButton />
+                  </PromptInputTools>
                   <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
                 </PromptInputFooter>
               </PromptInput>

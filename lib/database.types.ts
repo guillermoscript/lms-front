@@ -2321,6 +2321,7 @@ export type Database = {
       }
       exercise_messages: {
         Row: {
+          attachments: Json | null
           created_at: string | null
           exercise_id: number
           id: number
@@ -2329,6 +2330,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json | null
           created_at?: string | null
           exercise_id: number
           id?: never
@@ -2337,6 +2339,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json | null
           created_at?: string | null
           exercise_id?: number
           id?: never
@@ -3883,6 +3886,7 @@ export type Database = {
       }
       lessons_ai_task_messages: {
         Row: {
+          attachments: Json | null
           created_at: string
           id: number
           lesson_id: number | null
@@ -3891,6 +3895,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          attachments?: Json | null
           created_at?: string
           id?: number
           lesson_id?: number | null
@@ -3899,6 +3904,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          attachments?: Json | null
           created_at?: string
           id?: number
           lesson_id?: number | null

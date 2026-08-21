@@ -3,6 +3,7 @@
 import { useAristotle, useAristotleOptional } from './aristotle-provider'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import type { ComponentProps } from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { IconX, IconRotateClockwise2 } from '@tabler/icons-react'
@@ -26,8 +27,16 @@ import {
     PromptInputTextarea,
     type PromptInputMessage,
     PromptInputProvider,
+    PromptInputTools,
     usePromptInputController,
 } from '@/components/ai-elements/prompt-input'
+import {
+    ChatAttachButton,
+    ChatAttachmentsPreview,
+    MessageImageParts,
+    chatAttachmentInputProps,
+    prepareChatFiles,
+} from '@/components/ai/chat-attachments'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { useTranslations } from 'next-intl'
@@ -83,10 +92,11 @@ function InnerAristotlePanel() {
     const isLoading = status === 'submitted' || status === 'streaming'
     const displayName = personaName || t('name')
 
-    const onSubmit = (message: PromptInputMessage) => {
-        if (!message.text) return
-        sendMessage({ text: message.text })
+    const onSubmit = async (message: PromptInputMessage) => {
+        if (!message.text && (!message.files || message.files.length === 0)) return
         textInput.clear()
+        const files = await prepareChatFiles(message.files)
+        sendMessage({ text: message.text, files })
     }
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -186,8 +196,9 @@ function InnerAristotlePanel() {
                         )}
 
                         {messages.map((message) => (
-                            <Message key={message.id} from={message.role as any}>
+                            <Message key={message.id} from={message.role as ComponentProps<typeof Message>['from']}>
                                 <MessageContent>
+                                    <MessageImageParts parts={message.parts} />
                                     {message.parts.map((part, index) => {
                                         if (part.type === 'text') {
                                             return <MessageResponse key={index}>{part.text}</MessageResponse>
@@ -224,7 +235,8 @@ function InnerAristotlePanel() {
                     )}
 
                     <div className="w-full px-4 pb-4">
-                        <PromptInput onSubmit={onSubmit}>
+                        <PromptInput onSubmit={onSubmit} {...chatAttachmentInputProps}>
+                            <ChatAttachmentsPreview />
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     placeholder={t('placeholder')}
@@ -232,7 +244,10 @@ function InnerAristotlePanel() {
                                 />
                             </PromptInputBody>
                             <PromptInputFooter>
-                                <PromptInputSubmit status={status as any} />
+                                <PromptInputTools>
+                                    <ChatAttachButton />
+                                </PromptInputTools>
+                                <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
                             </PromptInputFooter>
                         </PromptInput>
                     </div>

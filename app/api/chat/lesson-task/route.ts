@@ -3,6 +3,7 @@ import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
 import { fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
@@ -30,7 +31,9 @@ export async function POST(req: Request) {
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
-    const { messages, lessonId } = parsed.data
+    const { messages: rawMessages, lessonId } = parsed.data
+    // Body is user-controlled: drop non-image / oversized file parts before they reach the model.
+    const messages = sanitizeLastUserAttachments(rawMessages)
 
     // 1. Fetch lesson details and validate tenant
     const lesson = await fetchTenantLesson<LessonRow>(
@@ -49,13 +52,17 @@ export async function POST(req: Request) {
 
     // 2. Save user message
     const messageText = lastUserMessageText(messages)
-    if (messageText) {
+    const attachments = await persistLastUserAttachments(messages, {
+        tenantId, userId: user.id, kind: 'lesson', referenceId: lessonId,
+    })
+    if (messageText || attachments.length > 0) {
         // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
         await supabase.from('lessons_ai_task_messages').insert({
             lesson_id: lessonId,
             user_id: user.id,
             sender: 'user',
-            message: messageText,
+            message: messageText ?? '',
+            attachments: attachments.length > 0 ? attachments : null,
         })
     }
 

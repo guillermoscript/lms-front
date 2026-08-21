@@ -3,6 +3,7 @@ import { AI_CONFIG, AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
 import { lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { lastUserMessageHasAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { propagateAttributes } from '@langfuse/tracing'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { track } from '@/lib/analytics/server'
@@ -26,7 +27,9 @@ export async function POST(req: Request) {
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
-    const { messages, courseId, contextPage } = parsed.data
+    const { messages: rawMessages, courseId, contextPage } = parsed.data
+    // Body is user-controlled: drop non-image / oversized file parts before they reach the model.
+    const messages = sanitizeLastUserAttachments(rawMessages)
 
     const numericCourseId = courseId
 
@@ -184,7 +187,6 @@ export async function POST(req: Request) {
 
     // Build exam results with pass/fail
     const examResults = (examSubmissions || []).map(s => {
-        const exam = exams?.find(e => e.exam_id === s.exam_id)
         return {
             exam_id: s.exam_id,
             score: s.score,
@@ -225,7 +227,9 @@ export async function POST(req: Request) {
     })
 
     // Save user message
-    const messageText = lastUserMessageText(messages)
+    // Aristotle history is not re-hydrated in the UI, so images are not stored —
+    // an image-only turn still gets a placeholder so the session summary sees it.
+    const messageText = lastUserMessageText(messages) || (lastUserMessageHasAttachments(messages) ? '[image]' : null)
     if (messageText) {
         await supabase.from('aristotle_messages').insert({
             session_id: sessionId,

@@ -4121,7 +4121,8 @@
         "typeAnswer": "Escribe tu respuesta aquí..."
       },
       "tooltips": {
-        "restart": "Reiniciar Conversación"
+        "restart": "Reiniciar Conversación",
+        "attachImage": "Adjuntar imagen"
       },
       "mobile": {
         "title": "Tutor IA",

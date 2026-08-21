@@ -24,19 +24,28 @@ import {
     PromptInputFooter,
     PromptInputTextarea,
     PromptInputSubmit,
+    PromptInputTools,
     type PromptInputMessage,
     PromptInputProvider,
     usePromptInputController,
 } from "@/components/ai-elements/prompt-input";
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
-import { DefaultChatTransport } from "ai";
+import {
+    ChatAttachButton,
+    ChatAttachmentsPreview,
+    MessageImageParts,
+    chatAttachmentInputProps,
+    prepareChatFiles,
+} from "@/components/ai/chat-attachments";
+import { DefaultChatTransport, type UIMessage } from "ai";
+import type { ComponentProps } from "react";
 
 interface ExerciseChatProps {
     apiEndpoint: string;
     exerciseId: string;
-    initialMessages: any[];
+    initialMessages: UIMessage[];
     isExerciseCompleted: boolean;
-    profile: any;
+    profile: { full_name?: string | null } | null;
 }
 
 const suggestions = [
@@ -81,12 +90,14 @@ function InnerExerciseChat({
         const lastMessage = messages[messages.length - 1];
         if (lastMessage?.role === 'assistant') {
             const completionPart = lastMessage.parts.find(
-                (part: any) => part.type === 'tool-markExerciseCompleted' && part.state === 'output-available'
-            );
-            
+                (part) => part.type === 'tool-markExerciseCompleted' && part.state === 'output-available'
+            ) as { output?: { feedback?: string } } | undefined;
+
             if (completionPart && !isCompleted) {
+                // Reacting to an external stream event (the tool result), not deriving state.
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setIsCompleted(true);
-                const feedback = (completionPart as any).output?.feedback || "Great job!";
+                const feedback = completionPart.output?.feedback || "Great job!";
 
                 confetti({
                     particleCount: 150,
@@ -102,14 +113,16 @@ function InnerExerciseChat({
                 router.refresh();
             }
         }
-    }, [messages, isCompleted, router]);
+    }, [messages, isCompleted, router, tGamification]);
 
-    const onSubmit = (message: PromptInputMessage) => {
-        if (!message.text) return;
+    const onSubmit = async (message: PromptInputMessage) => {
+        if (!message.text && (!message.files || message.files.length === 0)) return;
+        textInput.clear();
+        const files = await prepareChatFiles(message.files);
         sendMessage({
             text: message.text,
+            files,
         });
-        textInput.clear();
     };
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -133,7 +146,7 @@ function InnerExerciseChat({
             } else {
                 toast.error("Failed to restart chat");
             }
-        } catch (error) {
+        } catch {
             toast.error("Error restarting chat");
         } finally {
             setIsRestarting(false);
@@ -199,9 +212,10 @@ function InnerExerciseChat({
                     {messages.filter((m) => m.role !== 'system').map((message) => (
                         <Message
                             key={message.id}
-                            from={message.role as any}
+                            from={message.role as ComponentProps<typeof Message>['from']}
                         >
                             <MessageContent>
+                                <MessageImageParts parts={message.parts} />
                                 {message.parts.map((part, index) => {
                                     if (part.type === 'text') {
                                         return <MessageResponse key={index}>{part.text}</MessageResponse>;
@@ -217,7 +231,7 @@ function InnerExerciseChat({
                                                         </div>
                                                         <div className="space-y-0.5 sm:space-y-1 min-w-0">
                                                             <p className="font-bold text-emerald-900 dark:text-emerald-300 text-sm sm:text-base">Exercise Mastered!</p>
-                                                            <p className="opacity-90 leading-relaxed">{(part.output as any).feedback}</p>
+                                                            <p className="opacity-90 leading-relaxed">{(part.output as { feedback?: string } | undefined)?.feedback}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -248,14 +262,18 @@ function InnerExerciseChat({
                 )}
 
                 <div className="w-full px-3 sm:px-4 pb-3 sm:pb-4">
-                    <PromptInput onSubmit={onSubmit}>
+                    <PromptInput onSubmit={onSubmit} {...chatAttachmentInputProps}>
+                        <ChatAttachmentsPreview />
                         <PromptInputBody>
                             <PromptInputTextarea
                                 placeholder="Type your response..."
                             />
                         </PromptInputBody>
                         <PromptInputFooter>
-                            <PromptInputSubmit status={status as any} />
+                            <PromptInputTools>
+                                <ChatAttachButton disabled={isLoading} />
+                            </PromptInputTools>
+                            <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
                         </PromptInputFooter>
                     </PromptInput>
                 </div>

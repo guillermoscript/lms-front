@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
+import { AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
-import { convertToModelMessages, streamText } from 'ai'
+import { convertToModelMessages, streamText, type UIMessage } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
+import { sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 
 export const maxDuration = 120
 
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   const { instructions: task_description, system_prompt, messages } = await req.json()
 
   // Stream Response (Preview mode: no tools, no database saves)
-  const modelMessages = await convertToModelMessages(messages)
+  const modelMessages = await convertToModelMessages(sanitizeLastUserAttachments(messages as UIMessage[]))
   const result = propagateAttributes(
     { userId: user.id },
     () => streamText({

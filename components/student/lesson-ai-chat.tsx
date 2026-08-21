@@ -1,11 +1,12 @@
 "use client";
 
 import {
-    Attachment,
-    AttachmentPreview,
-    AttachmentRemove,
-    Attachments,
-} from "@/components/ai-elements/attachments";
+    ChatAttachButton,
+    ChatAttachmentsPreview,
+    MessageImageParts,
+    chatAttachmentInputProps,
+    prepareChatFiles,
+} from "@/components/ai/chat-attachments";
 import {
     Conversation,
     ConversationContent,
@@ -24,7 +25,6 @@ import {
     PromptInputSubmit,
     PromptInputTextarea,
     PromptInputTools,
-    usePromptInputAttachments,
     PromptInputProvider,
     usePromptInputController,
 } from "@/components/ai-elements/prompt-input";
@@ -66,29 +66,6 @@ import {
 } from "@/components/ai-elements/tool";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-
-const PromptInputAttachmentsDisplay = () => {
-    const attachments = usePromptInputAttachments();
-
-    if (attachments.files.length === 0) {
-        return null;
-    }
-
-    return (
-        <Attachments variant="inline">
-            {attachments.files.map((attachment) => (
-                <Attachment
-                    data={attachment}
-                    key={attachment.id}
-                    onRemove={() => attachments.remove(attachment.id)}
-                >
-                    <AttachmentPreview />
-                    <AttachmentRemove />
-                </Attachment>
-            ))}
-        </Attachments>
-    );
-};
 
 /**
  * Tracks the visual viewport height while the mobile chat overlay is open so
@@ -219,13 +196,15 @@ function InnerLessonAIChat({
         return () => window.removeEventListener("lesson-tutor:ask", onAsk);
     }, [isCompleted, sendMessage]);
 
-    const onSubmit = (message: PromptInputMessage) => {
+    const onSubmit = async (message: PromptInputMessage) => {
         if (!message.text && (!message.files || message.files.length === 0)) return;
 
+        textInput.clear();
+        const files = await prepareChatFiles(message.files);
         sendMessage({
             text: message.text,
+            files,
         });
-        textInput.clear();
     }
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -415,6 +394,7 @@ function InnerLessonAIChat({
                         {messages.map((message) => (
                             <Message key={message.id} from={message.role}>
                                 <MessageContent>
+                                    <MessageImageParts parts={message.parts} />
                                     {message.parts.map((part, index) => {
                                         if (part.type === 'text') {
                                             return <MessageResponse key={index}>{part.text}</MessageResponse>;
@@ -500,10 +480,9 @@ function InnerLessonAIChat({
                         <PromptInput
                             onSubmit={onSubmit}
                             className="w-full"
+                            {...chatAttachmentInputProps}
                         >
-                            <div className="px-3 pt-2 sm:pt-3">
-                                <PromptInputAttachmentsDisplay />
-                            </div>
+                            <ChatAttachmentsPreview className="sm:pt-3" />
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     className="text-base sm:text-sm"
@@ -527,6 +506,9 @@ function InnerLessonAIChat({
                                             >
                                                 <IconRotateClockwise2 className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
                                             </Button>
+                                        )}
+                                        {!isCompleted && (
+                                            <ChatAttachButton label={t('tooltips.attachImage')} disabled={isLoading} />
                                         )}
 
                                         {isCompleted && (

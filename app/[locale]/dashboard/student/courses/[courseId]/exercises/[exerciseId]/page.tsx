@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { signStoredAttachments } from '@/lib/ai/attachments'
 import { notFound, redirect } from 'next/navigation'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-access-guard'
@@ -91,7 +92,7 @@ export default async function ExercisePage({ params }: PageProps) {
       *,
       courses(title),
       exercise_completions(*),
-      exercise_messages(id, message, role, created_at)
+      exercise_messages(id, message, role, created_at, attachments)
     `)
         .eq('id', parseInt(exerciseId))
         .eq('tenant_id', tenantId)
@@ -244,13 +245,18 @@ export default async function ExercisePage({ params }: PageProps) {
 
     const isExerciseCompleted = exercise.exercise_completions?.length > 0
 
-    const initialMessages = [
-        ...(exercise.exercise_messages || []).map((m: { id: number; message: string; role: string }) => ({
+    // useChat (ai v5+) renders `parts`, not `content` — a legacy {content} row has
+    // no parts and crashes the transcript on reload.
+    const initialMessages = await Promise.all(
+        (exercise.exercise_messages || []).map(async (m: { id: number; message: string; role: string; attachments?: unknown }) => ({
             id: m.id.toString(),
             role: m.role,
-            content: m.message,
+            parts: [
+                ...(await signStoredAttachments(m.attachments)),
+                ...(m.message ? [{ type: 'text', text: m.message }] : []),
+            ],
         }))
-    ]
+    )
 
     const courseTitle = Array.isArray(exercise.courses)
         ? exercise.courses[0]?.title

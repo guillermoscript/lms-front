@@ -4276,7 +4276,8 @@
         "typeAnswer": "Type your answer here..."
       },
       "tooltips": {
-        "restart": "Restart Conversation"
+        "restart": "Restart Conversation",
+        "attachImage": "Attach image"
       },
       "mobile": {
         "title": "AI Tutor",
