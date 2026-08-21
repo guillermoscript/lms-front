@@ -25,7 +25,6 @@ import {
     PromptInputTextarea,
     PromptInputSubmit,
     PromptInputTools,
-    type PromptInputMessage,
     PromptInputProvider,
     usePromptInputController,
 } from "@/components/ai-elements/prompt-input";
@@ -35,8 +34,8 @@ import {
     ChatAttachmentsPreview,
     MessageImageParts,
     chatAttachmentInputProps,
-    prepareChatFiles,
 } from "@/components/ai/chat-attachments";
+import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import type { ComponentProps } from "react";
 
@@ -115,15 +114,7 @@ function InnerExerciseChat({
         }
     }, [messages, isCompleted, router, tGamification]);
 
-    const onSubmit = async (message: PromptInputMessage) => {
-        if (!message.text && (!message.files || message.files.length === 0)) return;
-        textInput.clear();
-        const files = await prepareChatFiles(message.files);
-        sendMessage({
-            text: message.text,
-            files,
-        });
-    };
+    const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear });
 
     const handleSuggestionClick = (suggestion: string) => {
         sendMessage({ text: suggestion });

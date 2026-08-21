@@ -11,6 +11,7 @@ import {
 } from "@/components/ai-elements/attachments";
 import {
     PromptInputButton,
+    PromptInputHeader,
     usePromptInputAttachments,
     type PromptInputProps,
 } from "@/components/ai-elements/prompt-input";
@@ -23,11 +24,13 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Shared attachment wiring for every AI chat (exercise coach, lesson tutor,
- * Aristotle, teacher preview). Spread `chatAttachmentInputProps` onto
- * `<PromptInput>`, drop `<ChatAttachmentsPreview />` above the textarea and
- * `<ChatAttachButton />` in the tools row, then pass `message.files` through
- * `prepareChatFiles` to `sendMessage`.
+ * Presentational attachment pieces for the AI chats. The behaviour lives in
+ * `hooks/use-ai-chat-submit` and `lib/ai/attachments-client`; this file only
+ * knows how to draw the button, the pending-file chips and the sent images.
+ *
+ * Usage: spread `chatAttachmentInputProps` onto `<PromptInput>`, put
+ * `<ChatAttachmentsPreview />` first inside it, `<ChatAttachButton />` in the
+ * tools row, and `<MessageImageParts parts={message.parts} />` in each bubble.
  */
 export const chatAttachmentInputProps: Pick<
     PromptInputProps,
@@ -48,12 +51,13 @@ export const chatAttachmentInputProps: Pick<
     },
 };
 
+/** Chips for files picked but not yet sent; renders nothing when empty. */
 export function ChatAttachmentsPreview({ className }: { className?: string }) {
     const attachments = usePromptInputAttachments();
     if (attachments.files.length === 0) return null;
 
     return (
-        <div className={cn("px-3 pt-2", className)}>
+        <PromptInputHeader className={className}>
             <Attachments variant="inline">
                 {attachments.files.map((attachment) => (
                     <Attachment
@@ -66,7 +70,7 @@ export function ChatAttachmentsPreview({ className }: { className?: string }) {
                     </Attachment>
                 ))}
             </Attachments>
-        </div>
+        </PromptInputHeader>
     );
 }
 
@@ -94,7 +98,11 @@ export function ChatAttachButton({
     );
 }
 
-/** Renders the image parts of a message (user uploads or hydrated history). */
+/**
+ * Images inside a sent message (fresh data URLs or re-hydrated signed URLs).
+ * Deliberately not the library's 96px `object-cover` thumbnail: students ask
+ * "what is wrong in my screenshot", so the whole image has to stay legible.
+ */
 export function MessageImageParts({
     parts,
     className,
@@ -109,7 +117,7 @@ export function MessageImageParts({
     if (images.length === 0) return null;
 
     return (
-        <div className={cn("flex flex-wrap gap-2 mb-2", className)}>
+        <div className={cn("mb-2 flex flex-wrap gap-2", className)}>
             {images.map((image, index) => (
                 // eslint-disable-next-line @next/next/no-img-element -- data/signed URLs, not optimisable
                 <img
@@ -121,45 +129,5 @@ export function MessageImageParts({
                 />
             ))}
         </div>
-    );
-}
-
-const MAX_EDGE_PX = 1600;
-const JPEG_QUALITY = 0.85;
-
-/**
- * Downscale large photos before they go on the wire. `useChat` resends the
- * whole history as inline data URLs every turn, so a 5 MB phone photo would
- * ride along with every later message; ~1600px is plenty for the model.
- * GIFs are left alone (canvas would flatten the animation) and anything that
- * fails to decode is sent as-is.
- */
-export async function prepareChatFiles(files: FileUIPart[] | undefined): Promise<FileUIPart[]> {
-    if (!files?.length) return [];
-    return Promise.all(
-        files.map(async (file) => {
-            if (!file.url.startsWith("data:") || file.mediaType === "image/gif") return file;
-            if (!isAllowedAttachmentMediaType(file.mediaType)) return file;
-            try {
-                const bitmap = await createImageBitmap(await (await fetch(file.url)).blob());
-                const scale = Math.min(1, MAX_EDGE_PX / Math.max(bitmap.width, bitmap.height));
-                // Small images are only re-encoded when they are heavy (e.g. uncompressed PNG screenshots).
-                if (scale === 1 && file.url.length < 512 * 1024) return file;
-                const canvas = document.createElement("canvas");
-                canvas.width = Math.round(bitmap.width * scale);
-                canvas.height = Math.round(bitmap.height * scale);
-                const ctx = canvas.getContext("2d");
-                if (!ctx) return file;
-                ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-                bitmap.close();
-                const keepPng = file.mediaType === "image/png" && scale === 1;
-                const mediaType = keepPng ? "image/png" : "image/jpeg";
-                const url = canvas.toDataURL(mediaType, keepPng ? undefined : JPEG_QUALITY);
-                // Re-encoding is not guaranteed to shrink; keep whichever is smaller.
-                return url.length < file.url.length ? { ...file, url, mediaType } : file;
-            } catch {
-                return file;
-            }
-        })
     );
 }

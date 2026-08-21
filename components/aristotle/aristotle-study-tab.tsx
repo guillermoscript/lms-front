@@ -24,7 +24,6 @@ import {
     PromptInputFooter,
     PromptInputSubmit,
     PromptInputTextarea,
-    type PromptInputMessage,
     PromptInputProvider,
     PromptInputTools,
     usePromptInputController,
@@ -34,8 +33,8 @@ import {
     ChatAttachmentsPreview,
     MessageImageParts,
     chatAttachmentInputProps,
-    prepareChatFiles,
 } from '@/components/ai/chat-attachments'
+import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { SessionList } from './session-list'
@@ -75,12 +74,7 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
 
     const isLoading = status === 'submitted' || status === 'streaming'
 
-    const onSubmit = async (message: PromptInputMessage) => {
-        if (!message.text && (!message.files || message.files.length === 0)) return
-        textInput.clear()
-        const files = await prepareChatFiles(message.files)
-        sendMessage({ text: message.text, files })
-    }
+    const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
 
     const handleSuggestionClick = (suggestion: string) => {
         sendMessage({ text: suggestion })

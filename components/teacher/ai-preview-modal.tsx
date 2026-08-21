@@ -23,14 +23,14 @@ import {
   PromptInputTools
 } from '@/components/ai-elements'
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion"
-import { DefaultChatTransport, type FileUIPart } from 'ai'
+import { DefaultChatTransport } from 'ai'
 import {
   ChatAttachButton,
   ChatAttachmentsPreview,
   MessageImageParts,
   chatAttachmentInputProps,
-  prepareChatFiles,
 } from '@/components/ai/chat-attachments'
+import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
 
 interface AIPreviewModalProps {
   type: 'lesson' | 'exercise'
@@ -70,15 +70,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
     setOpen(true)
   }
 
-  const handleSubmit = async (message: { text?: string; files?: FileUIPart[] }) => {
-    if (!message.text?.trim() && !message.files?.length) return
-    textInput.clear()
-    const files = await prepareChatFiles(message.files)
-    sendMessage({
-      text: message.text ?? '',
-      files,
-    })
-  }
+  const handleSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
 
   const handleSuggestionClick = (suggestion: string) => {
     sendMessage({ text: suggestion });

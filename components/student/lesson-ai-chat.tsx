@@ -5,8 +5,8 @@ import {
     ChatAttachmentsPreview,
     MessageImageParts,
     chatAttachmentInputProps,
-    prepareChatFiles,
 } from "@/components/ai/chat-attachments";
+import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
 import {
     Conversation,
     ConversationContent,
@@ -21,7 +21,6 @@ import {
     PromptInput,
     PromptInputBody,
     PromptInputFooter,
-    type PromptInputMessage,
     PromptInputSubmit,
     PromptInputTextarea,
     PromptInputTools,
@@ -196,16 +195,7 @@ function InnerLessonAIChat({
         return () => window.removeEventListener("lesson-tutor:ask", onAsk);
     }, [isCompleted, sendMessage]);
 
-    const onSubmit = async (message: PromptInputMessage) => {
-        if (!message.text && (!message.files || message.files.length === 0)) return;
-
-        textInput.clear();
-        const files = await prepareChatFiles(message.files);
-        sendMessage({
-            text: message.text,
-            files,
-        });
-    }
+    const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear, disabled: isCompleted });
 
     const handleSuggestionClick = (suggestion: string) => {
         sendMessage({ text: suggestion });
@@ -482,7 +472,7 @@ function InnerLessonAIChat({
                             className="w-full"
                             {...chatAttachmentInputProps}
                         >
-                            <ChatAttachmentsPreview className="sm:pt-3" />
+                            <ChatAttachmentsPreview />
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     className="text-base sm:text-sm"
