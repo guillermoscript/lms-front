@@ -125,38 +125,32 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                     {(headerSettings?.showLanguageSwitcher !== false) && <LanguageSwitcher />}
 
                     {userId ? (
-                        <Link href="/dashboard/student">
-                            <Button variant="outline">
-                                {t('dashboard')}
-                            </Button>
-                        </Link>
+                        <Button variant="outline" render={<Link href="/dashboard/student" />}>
+                            {t('dashboard')}
+                        </Button>
                     ) : (
                         <>
                             {(headerSettings?.showLoginButton !== false) && (
-                                <Link href="/auth/login" className="hidden sm:inline-block">
-                                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                                        {t('login')}
-                                    </Button>
-                                </Link>
+                                <Button
+                                    variant="ghost"
+                                    className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
+                                    render={<Link href="/auth/login" />}
+                                >
+                                    {t('login')}
+                                </Button>
                             )}
                             {headerSettings?.ctaText && headerSettings?.ctaLink ? (
-                                <Link href={headerSettings.ctaLink}>
-                                    <Button className="font-medium">
-                                        {headerSettings.ctaText}
-                                    </Button>
-                                </Link>
+                                <Button className="font-medium" render={<Link href={headerSettings.ctaLink} />}>
+                                    {headerSettings.ctaText}
+                                </Button>
                             ) : isMainPlatform ? (
-                                <Link href="/create-school">
-                                    <Button className="font-medium">
-                                        {t('startFree')} →
-                                    </Button>
-                                </Link>
+                                <Button className="font-medium" render={<Link href="/create-school" />}>
+                                    {t('startFree')} →
+                                </Button>
                             ) : (
-                                <Link href="/auth/sign-up?next=/join-school">
-                                    <Button className="font-medium">
-                                        {t('join')} {tenant?.name}
-                                    </Button>
-                                </Link>
+                                <Button className="font-medium" render={<Link href="/auth/sign-up?next=/join-school" />}>
+                                    {t('join')} {tenant?.name}
+                                </Button>
                             )}
                         </>
                     )}
