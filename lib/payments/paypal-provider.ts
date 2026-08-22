@@ -37,7 +37,17 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   RefundParams,
+  CancellationResult,
 } from './types'
+
+class PayPalApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+  }
+}
 
 /**
  * One-time prices have no PayPal catalog object (Orders v2 charges a raw
@@ -166,8 +176,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(
+      throw new PayPalApiError(
         `PayPal ${init?.label ?? path} failed: HTTP ${response.status} — ${text}`,
+        response.status,
       )
     }
 
@@ -722,14 +733,19 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * (Same access semantics as Lemon Squeezy: the CANCELLED webhook drives the
    * app-side status change.)
    */
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
-    await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
-      method: 'POST',
-      label: 'cancelSubscription',
-      body: JSON.stringify({
-        reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
-      }),
-    })
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<CancellationResult> {
+    try {
+      await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
+        method: 'POST',
+        label: 'cancelSubscription',
+        body: JSON.stringify({
+          reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
+        }),
+      })
+    } catch (error) {
+      if (!(error instanceof PayPalApiError) || error.status !== 404) throw error
+    }
+    return { mode: 'immediate' }
   }
 
   async getSubscription(providerSubId: string): Promise<ProviderSubscription> {

@@ -15,6 +15,7 @@ import {
   CreateSubscriptionParams,
   ProviderSubscription,
   ProviderCapabilities,
+  CancellationResult,
 } from './types'
 
 export class ManualPaymentProvider implements IPaymentProvider {
@@ -139,8 +140,9 @@ export class ManualPaymentProvider implements IPaymentProvider {
     }
   }
 
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+  async cancelSubscription(_providerSubId: string, _immediate: boolean): Promise<CancellationResult> {
     // Nothing to cancel externally — the DB row carries the real state.
+    return { mode: 'none' }
   }
 
   async reactivateSubscription(providerSubId: string): Promise<void> {

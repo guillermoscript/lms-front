@@ -270,10 +270,15 @@ export async function dispatchBillingEvent(
             // handle_new_subscription set end_date from the plan duration; the
             // provider's schedule is authoritative, so align to renews_at.
             if (event.periodEnd) {
-              const { error: extErr } = await admin.rpc('extend_subscription_period', {
+              if (!event.providerEventId) {
+                throw new Error(`dispatch ${event.type}: provider event id is required for period alignment`)
+              }
+              const { error: extErr } = await admin.rpc('apply_webhook_subscription_period', {
+                _provider_event_id: event.providerEventId,
                 _provider_subscription_id: subId,
                 _provider: provider,
                 _new_period_end: event.periodEnd.toISOString(),
+                _allow_period_realign: true,
               })
               if (extErr) throw new Error(`dispatch ${event.type} period-align failed: ${extErr.message}`)
             }
@@ -307,10 +312,15 @@ export async function dispatchBillingEvent(
         console.warn(`[webhook] renewed for ${provider} sub ${subId} without periodEnd — cannot extend access`)
         break
       }
-      const { error } = await admin.rpc('extend_subscription_period', {
+      if (!event.providerEventId) {
+        throw new Error(`dispatch ${event.type}: provider event id is required for period extension`)
+      }
+      const { error } = await admin.rpc('apply_webhook_subscription_period', {
+        _provider_event_id: event.providerEventId,
         _provider_subscription_id: subId,
         _provider: provider,
         _new_period_end: event.periodEnd.toISOString(),
+        _allow_period_realign: false,
       })
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       break
@@ -439,15 +449,23 @@ export async function dispatchBillingEvent(
       if (!event.reference) break
       const txnId = Number.parseInt(event.reference, 10)
       if (Number.isNaN(txnId)) break
+      if (!event.providerEventId) {
+        throw new Error(`dispatch ${event.type}: provider event id is required for refund accounting`)
+      }
 
       const { data: tx } = await admin
         .from('transactions')
-        .select('transaction_id, status, user_id, tenant_id, plan_id, product_id, amount, currency, refunded_amount')
+        .select(
+          'transaction_id, status, user_id, tenant_id, plan_id, product_id, amount, currency, refunded_amount',
+        )
         .eq('transaction_id', txnId)
         .maybeSingle()
 
-      // Only act on a completed purchase of one of the two kinds.
-      if (!tx || tx.status !== 'successful') break
+      if (!tx) throw new Error(`dispatch ${event.type}: transaction ${txnId} not found`)
+      if (tx.status === 'pending') {
+        throw new Error(`dispatch ${event.type}: transaction ${txnId} is still pending`)
+      }
+      if (!['successful', 'refunded'].includes(tx.status)) break
       if (!tx.product_id && !tx.plan_id) break
 
       // How much of the sale this refund actually gave back (#547). All three
@@ -456,67 +474,57 @@ export async function dispatchBillingEvent(
       // school for money it was still owed — and revoked course access from a
       // student who had only been refunded a slice.
       const saleAmount = Number(tx.amount ?? 0)
-      const priorRefunded = Number(tx.refunded_amount ?? 0)
       const slice = refundedSlice(event, tx.currency, saleAmount, txnId)
-      // Clamped: a provider that over-reports (or a second event replaying a
-      // cumulative total) can only ever reach a full refund, never a negative
-      // balance owed.
-      const newRefunded = Math.min(priorRefunded + slice, saleAmount)
-      // A cent of tolerance: NUMERIC(10,2) money compared with float arithmetic.
-      const isFullRefund = newRefunded >= saleAmount - 0.005
+      // Dedupe, accounting and full-refund entitlement revocation share one
+      // transaction. A replay cannot revoke an entitlement reactivated by a
+      // later purchase, and a crash cannot split money from access state.
+      const priorRefunded = Number(tx.refunded_amount ?? 0)
+      const { data, error } = await admin.rpc('apply_webhook_refund', {
+        _provider: provider,
+        _provider_event_id: event.providerEventId,
+        _transaction_id: txnId,
+        _refund_amount: slice,
+      })
+      if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
+      const refund = (data as {
+        applied: boolean
+        refunded_amount: number | string | null
+        is_full_refund: boolean
+      }[] | null)?.[0]
+      if (!refund) {
+        throw new Error(`dispatch ${event.type}: refund transaction ${txnId} was not applicable`)
+      }
 
-      const { error: refErr } = await admin
-        .from('transactions')
-        .update({
-          // A partial refund keeps the row 'successful' and records the slice —
-          // the same shape the legacy Stripe route has always used
-          // (app/api/stripe/webhook/route.ts, `isFullRefund`). Readers subtract
-          // `refunded_amount` from `amount`.
-          status: isFullRefund ? 'refunded' : 'successful',
-          refunded_amount: newRefunded,
-        })
-        .eq('transaction_id', txnId)
-        .eq('status', 'successful')
-      if (refErr) throw new Error(`dispatch ${event.type} failed: ${refErr.message}`)
-
-      // The `status === 'successful'` guard above is what keeps a redelivered
-      // refund from being counted twice — and `refunded_amount` has just been
-      // overwritten, so this is the last point at which the slice is knowable.
-      void track(
-        ANALYTICS_EVENTS.REFUND_ISSUED,
-        {
-          // A PARTIAL refund keeps the row 'successful' and only records the
-          // slice (#547); only a FULL one flips the status and revokes access.
-          // Every revenue sum depends on the distinction.
-          is_partial: !isFullRefund,
-          /** This event's own slice, clamped the same way the write above is. */
-          refunded_amount: newRefunded - priorRefunded,
-          cumulative_refunded_amount: newRefunded,
-          /** What the sale is still worth. */
-          net_amount: netOfRefunds(saleAmount, newRefunded),
-          gross_amount: saleAmount,
-          currency: tx.currency ?? 'usd',
-          provider,
-          is_subscription: !!tx.plan_id,
-          transaction_id: tx.transaction_id,
-          // False means the provider sent no usable figure and `refundedSlice`
-          // degraded to a FULL refund — worth being able to filter out of a
-          // partial-vs-full breakdown.
-          amount_reported_by_provider: event.amount != null,
-        },
-        { userId: tx.user_id, tenantId: tx.tenant_id },
-      )
-
-      // Access follows the FULL refund only. A student refunded $10 of a $100
-      // course keeps the course.
-      if (tx.product_id && isFullRefund) {
-        const { error: entErr } = await admin
-          .from('entitlements')
-          .update({ status: 'revoked', revoked_at: new Date().toISOString() })
-          .eq('user_id', tx.user_id)
-          .eq('source_type', 'product')
-          .eq('source_id', tx.product_id)
-        if (entErr) throw new Error(`dispatch ${event.type} entitlement revoke failed: ${entErr.message}`)
+      // Only on the call that actually moved money — the RPC reports
+      // `applied: false` for a redelivery it declined, which must not be
+      // counted a second time. Every figure comes from the RPC's own return,
+      // so the event can never disagree with the row it describes.
+      if (refund.applied) {
+        const cumulative = Number(refund.refunded_amount ?? 0)
+        void track(
+          ANALYTICS_EVENTS.REFUND_ISSUED,
+          {
+            // A PARTIAL refund keeps the row 'successful' and only records the
+            // slice (#547); only a FULL one flips the status and revokes access.
+            // Every revenue sum depends on the distinction.
+            is_partial: !refund.is_full_refund,
+            /** This event's own slice. */
+            refunded_amount: cumulative - priorRefunded,
+            cumulative_refunded_amount: cumulative,
+            /** What the sale is still worth. */
+            net_amount: netOfRefunds(saleAmount, cumulative),
+            gross_amount: saleAmount,
+            currency: tx.currency ?? 'usd',
+            provider,
+            is_subscription: !!tx.plan_id,
+            transaction_id: tx.transaction_id,
+            // False means the provider sent no usable figure and `refundedSlice`
+            // degraded to a FULL refund — worth being able to filter out of a
+            // partial-vs-full breakdown.
+            amount_reported_by_provider: event.amount != null,
+          },
+          { userId: tx.user_id, tenantId: tx.tenant_id },
+        )
       }
       break
     }

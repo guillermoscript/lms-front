@@ -25,7 +25,7 @@ interface Write {
 
 const state: {
   existingEvent: { id: string; processed_at: string | null } | null
-  insertErrorCode: string | null
+  claimStatus: 'claimed' | 'processing' | 'completed' | null
   storedSub: Record<string, unknown> | null
   planPriceRow: { plan_id: string } | null
   plan: { transaction_fee_percent: number } | null
@@ -33,9 +33,10 @@ const state: {
   failOn: ((w: Write) => { message: string } | null) | null
   writes: Write[]
   emails: { to: string; subject: string }[]
+  businessEffects: Set<string>
 } = {
   existingEvent: null,
-  insertErrorCode: null,
+  claimStatus: null,
   storedSub: null,
   planPriceRow: null,
   plan: null,
@@ -43,6 +44,7 @@ const state: {
   failOn: null,
   writes: [],
   emails: [],
+  businessEffects: new Set(),
 }
 
 function readRow(table: string, cols: string): unknown {
@@ -69,11 +71,17 @@ function makeAdmin() {
       if (pending) {
         const err = state.failOn?.(pending) ?? null
         if (err) return { data: null, error: err }
-        if (table === 'webhook_events' && pending.op === 'insert') {
-          if (state.insertErrorCode) {
-            return { data: null, error: { message: 'duplicate key', code: state.insertErrorCode } }
-          }
-          return { data: { id: 'wh-row-1' }, error: null }
+        // The past_due write is transition-guarded (`.neq('status','past_due')
+        // .select()`): it returns the flipped row only when the stored status
+        // was not already past_due, the way Postgres re-evaluates the WHERE
+        // under the row lock.
+        if (
+          pending.table === 'platform_subscriptions' &&
+          pending.op === 'update' &&
+          pending.values.status === 'past_due'
+        ) {
+          const flipped = state.storedSub && state.storedSub.status !== 'past_due'
+          return { data: flipped ? [{ tenant_id: state.storedSub!.tenant_id }] : [], error: null }
         }
         return { data: null, error: null }
       }
@@ -101,6 +109,7 @@ function makeAdmin() {
         return b
       },
       eq: () => b,
+      neq: () => b,
       limit: () => b,
       maybeSingle: () => Promise.resolve(settle()),
       single: () => Promise.resolve(settle()),
@@ -111,6 +120,56 @@ function makeAdmin() {
 
   return {
     from: (table: string) => builder(table),
+    rpc: (name: string, args: Record<string, unknown>) => {
+      if (name === 'claim_webhook_event') {
+        const status =
+          state.claimStatus ??
+          (state.existingEvent
+            ? state.existingEvent.processed_at
+              ? 'completed'
+              : 'processing'
+            : 'claimed')
+        if (status === 'claimed') {
+          state.writes.push({
+            table: 'webhook_events',
+            op: state.existingEvent ? 'update' : 'insert',
+            values: {
+              provider: args._provider,
+              provider_event_id: args._provider_event_id,
+              event_type: args._event_type,
+              payload: args._payload,
+            },
+          })
+        }
+        return Promise.resolve({
+          data: [{ event_id: 'wh-row-1', claim_status: status, current_attempt_count: 1 }],
+          error: null,
+        })
+      }
+      if (name === 'complete_webhook_event') {
+        state.writes.push({
+          table: 'webhook_events',
+          op: 'update',
+          values: { processed_at: '2026-08-08T00:00:00.000Z' },
+        })
+        return Promise.resolve({ data: true, error: null })
+      }
+      if (name === 'fail_webhook_event') {
+        state.writes.push({
+          table: 'webhook_events',
+          op: 'update',
+          values: { error: args._last_error, last_error: args._last_error },
+        })
+        return Promise.resolve({ data: true, error: null })
+      }
+      if (name === 'claim_webhook_business_effect') {
+        const key = `${args._provider}:${args._provider_event_id}:${args._effect_type}:${args._target_id}`
+        const claimed = !state.businessEffects.has(key)
+        state.businessEffects.add(key)
+        return Promise.resolve({ data: claimed, error: null })
+      }
+      return Promise.resolve({ data: null, error: null })
+    },
     auth: {
       admin: {
         getUserById: (id: string) =>
@@ -130,7 +189,7 @@ vi.mock('@/lib/email/send', () => ({
 }))
 
 vi.mock('@/lib/billing/downgrade-tenant', () => ({
-  downgradeTenantToFree: vi.fn(() => Promise.resolve(10)),
+  downgradeTenantToFreeIfCurrent: vi.fn(() => Promise.resolve(10)),
 }))
 
 // The reconciler has its own suite (platform-plan-change.test.ts). What matters
@@ -160,7 +219,7 @@ vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
 
 import { POST } from '@/app/api/billing/webhook/[provider]/route'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
-import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const PLAN_ID = 'f9318c3a-815d-448d-802e-cf356c2791a4'
@@ -220,7 +279,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321'
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key-for-tests'
   state.existingEvent = null
-  state.insertErrorCode = null
+  state.claimStatus = null
   state.storedSub = null
   state.planPriceRow = null
   state.plan = { transaction_fee_percent: 2 }
@@ -228,8 +287,9 @@ beforeEach(() => {
   state.failOn = null
   state.writes = []
   state.emails = []
+  state.businessEffects = new Set()
   vi.mocked(applyPortalPlanChange).mockClear()
-  vi.mocked(downgradeTenantToFree).mockClear()
+  vi.mocked(downgradeTenantToFreeIfCurrent).mockClear()
 })
 
 describe('platform billing webhook — route gates', () => {
@@ -299,16 +359,29 @@ describe('platform billing webhook — idempotency', () => {
     expect(state.writes).toHaveLength(0)
   })
 
-  it('treats a concurrent duplicate insert (23505) as a duplicate, not an error', async () => {
-    state.insertErrorCode = '23505'
+  it('acknowledges an active concurrent claim without dispatching or calling it completed', async () => {
+    state.claimStatus = 'processing'
     const res = await POST(makeReq(makeEvent('checkout.session.completed', session)), params())
-    expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ duplicate: true })
+    expect(res.status).toBe(409)
+    expect(res.headers.get('retry-after')).toBe('30')
+    expect(await res.json()).toMatchObject({
+      processing: true,
+      eventStatus: 'already_processing',
+    })
     expect(businessWrites()).toHaveLength(0)
   })
 
-  it('retries a half-finished attempt on the existing row rather than inserting a second', async () => {
+  it('does not reuse an unfinished event while its lease is active', async () => {
     state.existingEvent = { id: 'wh-row-1', processed_at: null }
+    const res = await POST(makeReq(makeEvent('checkout.session.completed', session)), params())
+    expect(res.status).toBe(409)
+    expect(writesTo('webhook_events', 'insert')).toHaveLength(0)
+    expect(businessWrites()).toHaveLength(0)
+  })
+
+  it('dispatches a half-finished event only after the database reclaims its expired lease', async () => {
+    state.existingEvent = { id: 'wh-row-1', processed_at: null }
+    state.claimStatus = 'claimed'
     const res = await POST(makeReq(makeEvent('checkout.session.completed', session)), params())
     expect(res.status).toBe(200)
     expect(writesTo('webhook_events', 'insert')).toHaveLength(0)
@@ -549,13 +622,25 @@ describe('platform billing webhook — subscription updates', () => {
 
 describe('platform billing webhook — cancellation', () => {
   it('downgrades the tenant to free on subscription deletion', async () => {
+    state.storedSub = {
+      tenant_id: TENANT,
+      plan_id: PLAN_ID,
+      status: 'active',
+      current_period_end: END_ISO,
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub_123',
+    }
     const res = await POST(
       makeReq(makeEvent('customer.subscription.deleted', cloverSubscription())),
       params(),
     )
     expect(res.status).toBe(200)
-    expect(downgradeTenantToFree).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(downgradeTenantToFree).mock.calls[0][1]).toBe(TENANT)
+    expect(downgradeTenantToFreeIfCurrent).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(downgradeTenantToFreeIfCurrent).mock.calls[0].slice(1)).toEqual([
+      TENANT,
+      'stripe',
+      'sub_123',
+    ])
     // The whole transition belongs to that helper — duplicating any of it here
     // is how the cron path and the webhook path drift.
     expect(writesTo('platform_subscriptions', 'upsert')).toHaveLength(0)
@@ -585,6 +670,16 @@ describe('platform billing webhook — invoices', () => {
       'admin-a@example.com',
       'admin-b@example.com',
     ])
+  })
+
+  it('does not send dunning twice when the same event is re-dispatched after completion loss', async () => {
+    state.storedSub = { tenant_id: TENANT, plan_id: PLAN_ID, status: 'active', current_period_end: null }
+    state.adminUsers = ['admin-a']
+
+    await POST(makeReq(makeEvent('invoice.payment_failed', cloverInvoice)), params())
+    await POST(makeReq(makeEvent('invoice.payment_failed', cloverInvoice)), params())
+
+    expect(state.emails.map((email) => email.to)).toEqual(['admin-a@example.com'])
   })
 
   it('invoice.payment_failed resolves the id from an expanded subscription object', async () => {

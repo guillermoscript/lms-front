@@ -22,6 +22,11 @@ import {
   platformWebhookNamespace,
 } from '@/lib/billing/platform-billing'
 import { dispatchPlatformBillingEvent } from '@/lib/billing/platform-webhook-dispatch'
+import {
+  claimWebhookEvent,
+  completeWebhookEvent,
+  failWebhookEvent,
+} from '@/lib/payments/webhook-event-claim'
 
 export const runtime = 'nodejs'
 
@@ -93,47 +98,29 @@ export async function POST(
   const admin = getSupabaseAdmin()
   const ledgerProvider = platformWebhookNamespace(provider)
 
-  // 3. Idempotency: skip if this event was already processed.
-  const { data: existing, error: lookupErr } = await admin
-    .from('webhook_events')
-    .select('id, processed_at')
-    .eq('provider', ledgerProvider)
-    .eq('provider_event_id', providerEventId)
-    .maybeSingle()
-
-  if (lookupErr) {
-    console.error(`[billing/webhook/${provider}] event lookup failed:`, lookupErr)
-    return NextResponse.json({ error: 'Event lookup failed' }, { status: 500 })
+  // 3. Atomically insert-or-claim before dispatch. An active lease is not a
+  // completed duplicate: respond distinctly and retryably while its owner works.
+  let claim
+  try {
+    claim = await claimWebhookEvent(admin, {
+      provider: ledgerProvider,
+      providerEventId,
+      eventType: event.type,
+      payload: event.raw as Record<string, unknown>,
+    })
+  } catch (err) {
+    console.error(`[billing/webhook/${provider}] event claim failed:`, err)
+    return NextResponse.json({ error: 'Event claim failed' }, { status: 500 })
   }
 
-  if (existing?.processed_at) {
-    return NextResponse.json({ received: true, duplicate: true })
+  if (claim.status === 'completed') {
+    return NextResponse.json({ received: true, duplicate: true, eventStatus: 'already_completed' })
   }
-
-  // A row without processed_at is a previous attempt that failed mid-flight;
-  // reuse it and try again rather than inserting a second one.
-  let rowId = existing?.id as string | undefined
-  if (!rowId) {
-    const { data: inserted, error: insertErr } = await admin
-      .from('webhook_events')
-      .insert({
-        provider: ledgerProvider,
-        provider_event_id: providerEventId,
-        event_type: event.type,
-        payload: event.raw as Record<string, unknown>,
-      })
-      .select('id')
-      .single()
-
-    if (insertErr) {
-      // 23505 = unique violation: a concurrent delivery beat us to it.
-      if ((insertErr as { code?: string }).code === '23505') {
-        return NextResponse.json({ received: true, duplicate: true })
-      }
-      console.error(`[billing/webhook/${provider}] failed to persist event:`, insertErr)
-      return NextResponse.json({ error: 'Failed to persist event' }, { status: 500 })
-    }
-    rowId = inserted.id
+  if (claim.status === 'processing') {
+    return NextResponse.json(
+      { received: true, processing: true, eventStatus: 'already_processing' },
+      { status: 409, headers: { 'Retry-After': '30' } },
+    )
   }
 
   // The revert half of the over-limit downgrade guard, expressed as an ability
@@ -155,23 +142,27 @@ export async function POST(
     await dispatchPlatformBillingEvent(event, { provider, admin, revertToPrice })
   } catch (err) {
     console.error(`[billing/webhook/${provider}] dispatch failed:`, err)
-    await admin
-      .from('webhook_events')
-      .update({ error: err instanceof Error ? err.message : String(err) })
-      .eq('id', rowId)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[billing/webhook/${provider}] failed to release claim:`, releaseErr)
+    }
     return NextResponse.json({ error: 'Dispatch failed' }, { status: 500 })
   }
 
-  // 5. Mark processed. If this write fails the event is redelivered and
-  //    re-dispatched; the dispatcher converges (status writes are absolute,
-  //    periods come from the event, not now()), so log rather than fail.
-  const { error: markErr } = await admin
-    .from('webhook_events')
-    .update({ processed_at: new Date().toISOString() })
-    .eq('id', rowId)
-  if (markErr) {
-    console.error(`[billing/webhook/${provider}] failed to mark event ${providerEventId} processed:`, markErr)
+  // 5. Complete only while this request still owns the claim. Never return a
+  // success ACK for side effects whose ledger completion was not durable.
+  try {
+    await completeWebhookEvent(admin, claim)
+  } catch (err) {
+    console.error(`[billing/webhook/${provider}] failed to complete event ${providerEventId}:`, err)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[billing/webhook/${provider}] failed to release claim after completion error:`, releaseErr)
+    }
+    return NextResponse.json({ error: 'Event completion failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ received: true })
+  return NextResponse.json({ received: true, eventStatus: 'accepted' })
 }

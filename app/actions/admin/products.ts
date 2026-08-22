@@ -9,7 +9,7 @@ import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
-import { track } from '@/lib/analytics/server'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import { evaluateSchoolActivation } from '@/lib/analytics/activation'
 import type {
   ProductCreationWizardInput,
@@ -210,19 +210,23 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
 
     if (linkError) throw linkError
 
-    await track(
-      ANALYTICS_EVENTS.PRODUCT_CREATED,
-      {
-        product_id: product.product_id,
-        price: formData.price,
-        currency: formData.currency,
-        provider: providerType,
-        is_free: false,
-        course_count: formData.courseIds.length,
-        via: 'products_form',
-      },
-      { userId: await getCurrentUserId(), tenantId, role: 'admin' }
-    )
+    // Wrapped: `getCurrentUserId()` is evaluated as an ARGUMENT, so it runs
+    // before `track()`'s own guard can catch anything it throws.
+    await safeAnalytics(async () => {
+      await track(
+        ANALYTICS_EVENTS.PRODUCT_CREATED,
+        {
+          product_id: product.product_id,
+          price: formData.price,
+          currency: formData.currency,
+          provider: providerType,
+          is_free: false,
+          course_count: formData.courseIds.length,
+          via: 'products_form',
+        },
+        { userId: await getCurrentUserId(), tenantId, role: 'admin' }
+      )
+    }, 'product_created')
 
     revalidatePath('/dashboard/admin/products')
     revalidatePath('/dashboard/student')
@@ -473,16 +477,24 @@ export async function saveProductCreationWizard(
     // offering does — must not count as a new publication.
     let priorCourseStatus: string | null = null
     if (input.course.sourceMode === 'existing' && input.course.existingCourseId) {
-      const { data: priorCourse } = await adminClient
-        .from('courses')
-        .select('status')
-        .eq('course_id', input.course.existingCourseId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle()
-      priorCourseStatus = priorCourse?.status ?? null
+      await safeAnalytics(async () => {
+        const { data: priorCourse } = await adminClient
+          .from('courses')
+          .select('status')
+          .eq('course_id', input.course.existingCourseId!)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        priorCourseStatus = priorCourse?.status ?? null
+      }, 'wizard prior course status')
     }
 
-    /** Post-commit Loop B events, shared by the free and paid branches. */
+    /**
+     * Post-commit Loop B events, shared by the free and paid branches.
+     *
+     * Wrapped whole: this reads `lessons` purely to populate an event property,
+     * and an analytics read must never fail the product creation that triggered
+     * it. Losing the event is the correct failure mode; losing the product is not.
+     */
     const trackWizardOutcome = async (result: {
       courseId: number
       productId: number
@@ -490,7 +502,7 @@ export async function saveProductCreationWizard(
       currency: string
       provider: string
       isFree: boolean
-    }) => {
+    }) => safeAnalytics(async () => {
       const ctx = { userId, tenantId, role: 'admin' }
       const published = input.intent === 'publish'
 
@@ -542,7 +554,7 @@ export async function saveProductCreationWizard(
         )
         await evaluateSchoolActivation({ tenantId, userId, role: 'admin' })
       }
-    }
+    })
 
     // ---- FREE: a real $0 product, no payment provider work -------------------
     // A free offering still persists course + product + product_courses, so it

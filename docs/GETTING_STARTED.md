@@ -296,7 +296,7 @@ Each `stripe listen` prints its own signing secret; they are different values, d
 
 ### Cron endpoints
 
-`/api/cron/*` (subscription expiry, plan-limit enforcement, daily digest, league rollover, Solana pull/reconcile) are protected by `CRON_SECRET`. Trigger one manually:
+`/api/cron/*` (subscription expiry, plan-limit enforcement, daily digest, league rollover, webhook redelivery, and payment/activation reconciliation) are protected by `CRON_SECRET`. Trigger one manually:
 
 ```bash
 curl -H "Authorization: Bearer $CRON_SECRET" http://lvh.me:3000/api/cron/expire-subscriptions

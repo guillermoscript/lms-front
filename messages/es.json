@@ -4066,6 +4066,12 @@
         "username": "usuario_unico",
         "website": "https://tusitio.com",
         "bio": "Cuéntanos un poco sobre ti..."
+      },
+      "errors": {
+        "unauthorized": "Tu sesión expiró. Inicia sesión de nuevo para guardar tu perfil.",
+        "username_too_short": "El usuario debe tener al menos 3 caracteres.",
+        "username_taken": "Ese usuario ya está en uso. Prueba con otro.",
+        "unknown": "No pudimos guardar los cambios. Inténtalo de nuevo."
       }
     },
     "lessons": {

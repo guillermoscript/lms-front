@@ -7,6 +7,7 @@ import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
 import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
 import { paymentRequestExpiredTemplate } from '@/lib/email/templates/payment-request-expired'
 import {
+  EXPIRABLE_REQUEST_STATUSES,
   OPEN_REQUEST_STATUSES,
   REQUEST_TTL_DAYS,
   isRequestOpen,
@@ -14,6 +15,10 @@ import {
 import { PLATFORM_SELF_MANAGED_PROVIDERS } from '@/lib/billing/platform-billing'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
+import {
+  abandonPlatformSubscriptionSwitch,
+  reconcilePlatformSubscriptionSwitch,
+} from '@/lib/billing/platform-subscription-switch'
 
 export const runtime = 'nodejs'
 
@@ -45,6 +50,7 @@ export const runtime = 'nodejs'
  *   3. Downgrade   — past_due sub, grace window passed → downgrade to free + email,
  *                    UNLESS an OPEN renewal payment request pauses it.
  *   4. Cancel      — cancel_at_period_end sub, period end passed → downgrade to free + email (no renewal pause).
+ *   5. Cleanup     — retry a small bounded batch of superseded-provider cancels.
  *
  * Secured by CRON_SECRET env var (set the same value in the cron scheduler).
  */
@@ -93,6 +99,7 @@ type LapsedRequestRow = {
   currency: string | null
   expires_at: string | null
   status: string
+  switch_id: string | null
   tenants: { name: string | null } | null
   platform_plans: { name: string | null } | null
 }
@@ -124,7 +131,24 @@ export async function GET(req: NextRequest) {
     downgraded: 0,
     canceled: 0,
     skippedPendingRenewal: 0,
+    switchesAbandoned: 0,
+    switchCancellationsCompleted: 0,
+    switchCancellationsScheduled: 0,
+    switchCancellationRetries: 0,
   }
+
+  // ---- Switch abandonment (#621) ----
+  // A replacement checkout that never activates expires without touching the
+  // source entitlement. Validated late payments may revive these rows through
+  // the source-snapshot-guarded promotion RPC.
+  const { data: abandonedSwitches } = await supabase
+    .from('platform_subscription_switches')
+    .update({ state: 'abandoned', updated_at: nowIso })
+    .eq('state', 'pending_activation')
+    .lt('expires_at', nowIso)
+    .select('switch_id')
+    .limit(100)
+  result.switchesAbandoned = abandonedSwitches?.length ?? 0
 
   // ---- Phase 0: expire lapsed payment requests (#546 §2) ----
   // Nothing else in the codebase ever moved a request out of an open state, so
@@ -133,23 +157,32 @@ export async function GET(req: NextRequest) {
   // Closing them here first means phase 3 below sees the swept state.
   const { data: lapsedRequests } = await supabase
     .from('platform_payment_requests')
-    .select('request_id, tenant_id, amount, currency, expires_at, status, tenants(name), platform_plans(name)')
-    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, tenants(name), platform_plans(name)')
+    .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
     .not('expires_at', 'is', null)
     .lt('expires_at', nowIso)
 
   for (const req of (lapsedRequests as LapsedRequestRow[] | null) || []) {
-    const { error } = await supabase
+    const { data: expiredRequest, error } = await supabase
       .from('platform_payment_requests')
       .update({ status: 'expired', updated_at: nowIso })
       .eq('request_id', req.request_id)
       // Status-gated so a super admin confirming in the same instant wins.
-      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+      .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
+      .select('request_id')
+      .maybeSingle()
 
     if (error) {
       console.error('expire-platform-subscriptions: failed to expire request', req.request_id, error)
       continue
     }
+    if (!expiredRequest) continue
+
+    await abandonPlatformSubscriptionSwitch(
+      supabase,
+      req.switch_id,
+      'Linked payment request expired',
+    )
 
     const emails = await getTenantAdminEmails(supabase, req.tenant_id)
     await safeEmail(emails, paymentRequestExpiredTemplate({
@@ -306,6 +339,25 @@ export async function GET(req: NextRequest) {
     // `subscription_cancel_scheduled`, and the period has now run out.
     await trackPlatformExpiry(sub, false)
     result.canceled++
+  }
+
+  // ---- Phase 5: bounded source-provider cleanup (#621) ----
+  // External provider calls run last so a degraded API cannot starve request
+  // expiry, reminders, grace transitions, or tenant downgrades. Ten per daily
+  // run is enough to drain normal volume without consuming the route budget.
+  const { data: cleanupSwitches } = await supabase
+    .from('platform_subscription_switches')
+    .select('switch_id')
+    .in('state', ['cancellation_pending', 'cancellation_retry'])
+    .lte('next_retry_at', nowIso)
+    .order('next_retry_at', { ascending: true })
+    .limit(10)
+
+  for (const row of cleanupSwitches || []) {
+    const outcome = await reconcilePlatformSubscriptionSwitch(supabase, row.switch_id)
+    if (outcome === 'completed') result.switchCancellationsCompleted++
+    else if (outcome === 'scheduled') result.switchCancellationsScheduled++
+    else if (outcome === 'retry') result.switchCancellationRetries++
   }
 
   return NextResponse.json({ success: true, ...result })

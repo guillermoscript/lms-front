@@ -32,6 +32,7 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   NormalizedBillingEvent,
+  CancellationResult,
 } from './types'
 import { generateReference } from './solana-split'
 
@@ -145,7 +146,7 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
    * revokes the delegation itself from the billing page (`/api/payments/solana/
    * cancel-tx` → wallet sign → `/api/payments/solana/cancel-verify`).
    */
-  async cancelSubscription(_providerSubId: string, _immediate: boolean): Promise<void> {
+  async cancelSubscription(_providerSubId: string, _immediate: boolean): Promise<CancellationResult> {
     throw new Error(
       'solana_subs: the on-chain auto-pull delegation cannot be revoked server-side — it requires the subscriber\'s wallet signature. The subscription has been canceled in our records (the crank will not charge it), but the student must revoke the delegation from their wallet on the billing page.',
     )

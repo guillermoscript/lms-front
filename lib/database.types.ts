@@ -4595,6 +4595,16 @@ export type Database = {
       }
       platform_payment_requests: {
         Row: {
+          activated_at: string | null
+          activation_alerted_at: string | null
+          activation_attempt_count: number
+          activation_last_error: string | null
+          activation_lease_expires_at: string | null
+          activation_next_retry_at: string | null
+          activation_started_at: string | null
+          activation_state: string | null
+          activation_token: string | null
+          admin_notes: string | null
           amount: number
           bank_reference: string | null
           confirmed_at: string | null
@@ -4605,6 +4615,7 @@ export type Database = {
           interval: string
           notes: string | null
           payment_provider: string
+          payment_observed_at: string | null
           plan_id: string
           proof_url: string | null
           provider_charge_id: string | null
@@ -4617,10 +4628,21 @@ export type Database = {
           settlement_mint: string | null
           settlement_sol_usd: number | null
           status: string
+          switch_id: string | null
           tenant_id: string
           updated_at: string | null
         }
         Insert: {
+          activated_at?: string | null
+          activation_alerted_at?: string | null
+          activation_attempt_count?: number
+          activation_last_error?: string | null
+          activation_lease_expires_at?: string | null
+          activation_next_retry_at?: string | null
+          activation_started_at?: string | null
+          activation_state?: string | null
+          activation_token?: string | null
+          admin_notes?: string | null
           amount: number
           bank_reference?: string | null
           confirmed_at?: string | null
@@ -4631,6 +4653,7 @@ export type Database = {
           interval?: string
           notes?: string | null
           payment_provider?: string
+          payment_observed_at?: string | null
           plan_id: string
           proof_url?: string | null
           provider_charge_id?: string | null
@@ -4643,10 +4666,21 @@ export type Database = {
           settlement_mint?: string | null
           settlement_sol_usd?: number | null
           status?: string
+          switch_id?: string | null
           tenant_id: string
           updated_at?: string | null
         }
         Update: {
+          activated_at?: string | null
+          activation_alerted_at?: string | null
+          activation_attempt_count?: number
+          activation_last_error?: string | null
+          activation_lease_expires_at?: string | null
+          activation_next_retry_at?: string | null
+          activation_started_at?: string | null
+          activation_state?: string | null
+          activation_token?: string | null
+          admin_notes?: string | null
           amount?: number
           bank_reference?: string | null
           confirmed_at?: string | null
@@ -4657,6 +4691,7 @@ export type Database = {
           interval?: string
           notes?: string | null
           payment_provider?: string
+          payment_observed_at?: string | null
           plan_id?: string
           proof_url?: string | null
           provider_charge_id?: string | null
@@ -4669,6 +4704,7 @@ export type Database = {
           settlement_mint?: string | null
           settlement_sol_usd?: number | null
           status?: string
+          switch_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
@@ -4679,6 +4715,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_plans"
             referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_payment_requests_switch_id_fkey"
+            columns: ["switch_id"]
+            isOneToOne: false
+            referencedRelation: "platform_subscription_switches"
+            referencedColumns: ["switch_id"]
           },
           {
             foreignKeyName: "platform_payment_requests_tenant_id_fkey"
@@ -4783,6 +4826,116 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      platform_subscription_switches: {
+        Row: {
+          activated_at: string | null
+          cancel_attempts: number
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          initiated_by: string | null
+          last_error: string | null
+          next_retry_at: string | null
+          source_cancel_effective_at: string | null
+          source_cancel_mode: string | null
+          source_payment_provider: string
+          source_period_end: string | null
+          source_plan_id: string
+          source_provider_subscription_id: string | null
+          source_subscription_id: string
+          state: string
+          switch_id: string
+          target_checkout_reference: string | null
+          target_interval: string
+          target_payment_provider: string
+          target_plan_id: string
+          target_provider_subscription_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          cancel_attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          last_error?: string | null
+          next_retry_at?: string | null
+          source_cancel_effective_at?: string | null
+          source_cancel_mode?: string | null
+          source_payment_provider: string
+          source_period_end?: string | null
+          source_plan_id: string
+          source_provider_subscription_id?: string | null
+          source_subscription_id: string
+          state?: string
+          switch_id?: string
+          target_checkout_reference?: string | null
+          target_interval: string
+          target_payment_provider: string
+          target_plan_id: string
+          target_provider_subscription_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          cancel_attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          last_error?: string | null
+          next_retry_at?: string | null
+          source_cancel_effective_at?: string | null
+          source_cancel_mode?: string | null
+          source_payment_provider?: string
+          source_period_end?: string | null
+          source_plan_id?: string
+          source_provider_subscription_id?: string | null
+          source_subscription_id?: string
+          state?: string
+          switch_id?: string
+          target_checkout_reference?: string | null
+          target_interval?: string
+          target_payment_provider?: string
+          target_plan_id?: string
+          target_provider_subscription_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_subscription_switches_source_plan_id_fkey"
+            columns: ["source_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_source_subscription_id_fkey"
+            columns: ["source_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "platform_subscriptions"
+            referencedColumns: ["subscription_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_target_plan_id_fkey"
+            columns: ["target_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_subscriptions: {
         Row: {
@@ -6238,32 +6391,74 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_business_effects: {
+        Row: {
+          applied_at: string
+          effect_type: string
+          id: string
+          provider: string
+          provider_event_id: string
+          target_id: string
+        }
+        Insert: {
+          applied_at?: string
+          effect_type: string
+          id?: string
+          provider: string
+          provider_event_id: string
+          target_id: string
+        }
+        Update: {
+          applied_at?: string
+          effect_type?: string
+          id?: string
+          provider?: string
+          provider_event_id?: string
+          target_id?: string
+        }
+        Relationships: []
+      }
       webhook_events: {
         Row: {
+          attempt_count: number
           error: string | null
           event_type: string | null
           id: string
+          last_error: string | null
           payload: Json
+          processing_lease_expires_at: string | null
+          processing_started_at: string | null
+          processing_token: string | null
           processed_at: string | null
           provider: string
           provider_event_id: string
           received_at: string
         }
         Insert: {
+          attempt_count?: number
           error?: string | null
           event_type?: string | null
           id?: string
+          last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
+          processing_started_at?: string | null
+          processing_token?: string | null
           processed_at?: string | null
           provider: string
           provider_event_id: string
           received_at?: string
         }
         Update: {
+          attempt_count?: number
           error?: string | null
           event_type?: string | null
           id?: string
+          last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
+          processing_started_at?: string | null
+          processing_token?: string | null
           processed_at?: string | null
           provider?: string
           provider_event_id?: string
@@ -6398,6 +6593,135 @@ export type Database = {
       }
     }
     Functions: {
+      apply_self_managed_platform_period: {
+        Args: {
+          _interval: string
+          _plan_id: string
+          _plan_slug: string | null
+          _provider: string
+          _provider_customer_id?: string
+          _provider_event_id: string
+          _provider_subscription_id?: string
+          _tenant_id: string
+        }
+        Returns: {
+          applied: boolean
+          period_end: string
+          period_start: string
+        }[]
+      }
+      apply_webhook_subscription_period: {
+        Args: {
+          _allow_period_realign?: boolean
+          _new_period_end: string
+          _provider: string
+          _provider_event_id: string
+          _provider_subscription_id: string
+        }
+        Returns: boolean
+      }
+      claim_webhook_business_effect: {
+        Args: {
+          _effect_type: string
+          _provider: string
+          _provider_event_id: string
+          _target_id: string
+        }
+        Returns: boolean
+      }
+      apply_webhook_refund: {
+        Args: {
+          _provider: string
+          _provider_event_id: string
+          _refund_amount: number
+          _transaction_id: number
+        }
+        Returns: {
+          applied: boolean
+          is_full_refund: boolean
+          plan_id: number
+          product_id: number
+          refunded_amount: number
+          user_id: string
+        }[]
+      }
+      claim_webhook_event: {
+        Args: {
+          _claim_token: string
+          _event_type: string
+          _lease_seconds?: number
+          _payload: Json
+          _provider: string
+          _provider_event_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_attempt_count: number
+          event_id: string
+        }[]
+      }
+      claim_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _lease_seconds?: number
+          _max_attempts?: number
+          _request_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_activation_state: string
+          current_attempt_count: number
+        }[]
+      }
+      complete_webhook_event: {
+        Args: { _claim_token: string; _event_id: string }
+        Returns: boolean
+      }
+      complete_solana_platform_activation: {
+        Args: { _claim_token: string; _request_id: string }
+        Returns: boolean
+      }
+      downgrade_platform_subscription_if_current: {
+        Args: {
+          _payment_provider: string
+          _provider_subscription_id: string
+          _tenant_id: string
+        }
+        Returns: number
+      }
+      fail_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _last_error: string
+          _max_attempts?: number
+          _request_id: string
+          _retry_delay_seconds?: number
+        }
+        Returns: string
+      }
+      observe_solana_platform_payment: {
+        Args: { _request_id: string; _signature: string; _tenant_id: string }
+        Returns: {
+          current_activation_state: string
+          current_signature: string
+          observation_status: string
+        }[]
+      }
+      promote_platform_subscription_switch: {
+        Args: {
+          _switch_id: string
+          _target_interval: string
+          _target_payment_provider: string
+          _target_period_end: string | null
+          _target_period_start: string | null
+          _target_plan_id: string
+          _target_provider_customer_id: string | null
+          _target_provider_subscription_id: string | null
+          _target_status: string
+          _tenant_id: string
+        }
+        Returns: boolean
+      }
       award_xp:
         | {
             Args: {
@@ -6495,6 +6819,10 @@ export type Database = {
       create_student_question_notification: {
         Args: { _context?: string; _course_id: number; _message: string }
         Returns: number
+      }
+      fail_webhook_event: {
+        Args: { _claim_token: string; _event_id: string; _last_error: string }
+        Returns: boolean
       }
       create_transaction_for_renewal: {
         Args: { pln_id: number; sub_id: number; usr_id: string }

@@ -198,7 +198,10 @@ export default async function TenantDetailPage({
                   {(recentTransactions || []).map((t) => (
                     <tr key={t.transaction_id} className="border-b last:border-0">
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {t.transaction_id.slice(0, 8)}…
+                        {/* `transaction_id` is a bigint PK, not a uuid — `.slice()` on it
+                            threw `TypeError: t.transaction_id.slice is not a function`
+                            and took the whole tenant page down (LMS-FRONT-94). */}
+                        #{t.transaction_id}
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(t.amount)}

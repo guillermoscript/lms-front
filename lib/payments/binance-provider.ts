@@ -61,6 +61,7 @@ interface BinancePassThrough {
   plan_id?: string
   plan_slug?: string
   interval?: string
+  billing_switch_id?: string
   /** Our own reference, when it did not fit `merchantTradeNo`. See below. */
   ref?: string
 }
@@ -75,6 +76,7 @@ const PASS_THROUGH_KEYS: (keyof BinancePassThrough)[] = [
   'plan_id',
   'plan_slug',
   'interval',
+  'billing_switch_id',
   'ref',
 ]
 

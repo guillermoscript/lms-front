@@ -13,6 +13,7 @@ import {
   type PlanPriceProvider,
 } from '@/lib/billing/plan-prices'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { failPlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -221,20 +222,83 @@ export async function togglePlanActive(planId: string, isActive: boolean) {
   return { success: true }
 }
 
+/**
+ * A request that has already reached its end state. Rejecting one of these is
+ * never a status change — it is a contradiction of whatever the previous
+ * decision already caused.
+ */
+const TERMINAL_REQUEST_STATUSES = ['confirmed', 'rejected', 'expired'] as const
+
+/**
+ * Super admin: refuse a manual payment request.
+ *
+ * Refusal only — a *reversal* is a different action (#615). Rejecting an
+ * already-confirmed request used to flip the row to `rejected` while
+ * `confirmManualPayment`'s effects stood: the tenant kept the plan, the
+ * platform subscription stayed `active`, and `revenue_splits` kept the paid
+ * plan's fee. The plan surviving is the safe direction, but the record then
+ * said the school's payment was refused while the school was still being
+ * served on it — a contradiction on the row money reconciliation reads.
+ *
+ * The page only renders Confirm/Reject for non-terminal rows
+ * (`platform/billing/page.tsx`), so this is not reachable by clicking through a
+ * fresh render. It is reachable from a stale one — two tabs on the same pending
+ * row, confirm in the first, reject in the second — and a server action is a
+ * POST endpoint regardless of what the UI chooses to draw. `confirmManualPayment`
+ * and `sendPaymentInstructions` both read-then-check for the same reason; this
+ * was the one write that didn't.
+ *
+ * The reason goes to `admin_notes`, not `notes`: `notes` carries the note the
+ * school attached when it filed the request, and overwriting it destroyed the
+ * school's side of the record.
+ */
 export async function rejectManualPayment(requestId: string, reason: string) {
   await verifySuperAdmin()
 
   const adminClient = createAdminClient()
-  const { error } = await adminClient
+
+  const { data: request } = await adminClient
+    .from('platform_payment_requests')
+    .select('request_id, status, switch_id')
+    .eq('request_id', requestId)
+    .maybeSingle()
+
+  if (!request) throw new Error('Request not found')
+  if (TERMINAL_REQUEST_STATUSES.includes(request.status as (typeof TERMINAL_REQUEST_STATUSES)[number])) {
+    throw new Error(
+      request.status === 'confirmed'
+        ? 'This payment was already confirmed and the plan is active — it cannot be rejected. Change the plan directly if the payment needs undoing.'
+        : `Request is already ${request.status}`
+    )
+  }
+
+  // The status filter repeats the check inside the write. The read above exists
+  // for the error message; this is what actually makes the guard hold when a
+  // confirm lands between the two — which is precisely the two-tab race that
+  // makes this reachable at all. `select` lets us tell "nothing matched" apart
+  // from a real failure.
+  const { data: updated, error } = await adminClient
     .from('platform_payment_requests')
     .update({
       status: 'rejected',
-      notes: reason,
+      admin_notes: reason,
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
+    .not('status', 'in', `(${TERMINAL_REQUEST_STATUSES.join(',')})`)
+    .select('request_id')
 
   if (error) throw new Error(`Failed to reject request: ${error.message}`)
+  if (!updated || updated.length === 0) {
+    throw new Error('This request was decided by someone else just now — reload the page.')
+  }
+
+  await failPlatformSubscriptionSwitch(
+    adminClient,
+    request.switch_id,
+    `Manual payment request rejected: ${reason}`,
+  )
+
   revalidatePath('/platform/billing')
   return { success: true }
 }

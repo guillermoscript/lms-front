@@ -8,13 +8,11 @@
  * a real transfer of the LOCKED amount to the platform wallet carrying this
  * request's unguessable reference.
  *
- * Confirmation is a two-step claim:
- *   1. write the signature onto the request (UNIQUE), which is what stops one
- *      settled transfer from buying two plan periods;
- *   2. hand a `subscription.activated` event to `dispatchPlatformBillingEvent`,
- *      the same function the Stripe/Binance webhooks dispatch through, so the
- *      subscription row, the tenant mirror, the revenue split and the period all
- *      come from one implementation.
+ * Confirmation is a durable two-stage workflow:
+ *   1. atomically observe the signature (UNIQUE), which stops one settled
+ *      transfer from buying two plan periods;
+ *   2. lease replay-safe entitlement activation. A failed or crashed worker is
+ *      retried here or by the reconciliation cron until the request is activated.
  *
  * Deliberately NOT re-checking plan limits here, unlike `confirmManualPayment`:
  * by this point the school's money is on chain and irreversible, and refusing to
@@ -27,7 +25,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminSupabase } from '@supabase/supabase-js'
 import { PublicKey } from '@solana/web3.js'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { dispatchPlatformBillingEvent } from '@/lib/billing/platform-webhook-dispatch'
+import {
+  observeSolanaPlatformPayment,
+  processSolanaPlatformActivation,
+} from '@/lib/billing/solana-platform-activation'
 import {
   getPlatformSolanaConfig,
   resolveStoredSettlement,
@@ -84,11 +85,7 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        // `amount`/`currency` are carried onto the dispatched event so the
-        // platform dispatcher's `platform_payment_succeeded` reports the USD
-        // figure the school actually owes. Extra columns on a read that was
-        // already happening.
-        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, amount, currency, settlement_currency, settlement_base, settlement_mint, platform_plans(slug)',
+        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, provider_charge_id, settlement_currency, settlement_base, settlement_mint, switch_id, activation_state, activation_attempt_count, platform_plans(slug)',
       )
       .eq('request_id', requestId)
       .eq('tenant_id', tenantId)
@@ -97,10 +94,36 @@ export async function POST(req: NextRequest) {
     if (!request || request.payment_provider !== 'solana') {
       return NextResponse.json({ error: 'Payment request not found' }, { status: 404 })
     }
-    // Idempotent under the page's own polling: the first poll to land the claim
-    // activates, every later one reports the same answer.
-    if (request.status === 'confirmed') {
-      return NextResponse.json({ confirmed: true, alreadyProcessed: true })
+    if (request.activation_state === 'activated' || request.status === 'confirmed') {
+      return NextResponse.json({
+        confirmed: true,
+        state: 'activated',
+        signature: request.provider_charge_id,
+        alreadyProcessed: true,
+      })
+    }
+    if (
+      request.activation_state === 'terminal_invalid' ||
+      request.status === 'rejected' ||
+      request.status === 'expired'
+    ) {
+      return NextResponse.json({ confirmed: false, state: 'terminal_invalid' })
+    }
+
+    // Once a signature is durable, never depend on the chain lookup again.
+    // Retry the leased, idempotent activation directly.
+    if (request.provider_charge_id) {
+      const activation = await processSolanaPlatformActivation(admin, requestId)
+      return NextResponse.json({
+        confirmed: activation.state === 'activated',
+        state: activation.state,
+        signature: request.provider_charge_id,
+        attemptCount: activation.attemptCount,
+        ...(activation.state === 'activated' && !activation.claimed
+          ? { alreadyProcessed: true }
+          : {}),
+        ...(activation.alertRequired ? { alertRequired: true } : {}),
+      })
     }
     if (!(OPEN_REQUEST_STATUSES as readonly string[]).includes(request.status)) {
       return NextResponse.json({ confirmed: false, status: request.status })
@@ -134,86 +157,59 @@ export async function POST(req: NextRequest) {
       // A transaction WAS found and it did not pay what was owed. Never a
       // confirmation, and never silent.
       console.error(`[billing/solana/verify] on-chain validation failed for ${requestId}:`, err)
-      return NextResponse.json({ error: 'On-chain validation failed' }, { status: 422 })
+      return NextResponse.json(
+        { error: 'On-chain validation failed', confirmed: false, state: 'terminal_invalid' },
+        { status: 422 },
+      )
     }
 
     if (!signature) {
       return NextResponse.json({ error: 'On-chain validation failed' }, { status: 422 })
     }
 
-    // Claim the payment. Status-gated so two concurrent polls cannot both
-    // activate; UNIQUE on provider_charge_id so one signature cannot settle two
-    // requests even if a reference were reused.
-    const nowIso = new Date().toISOString()
-    const { data: claimed, error: claimErr } = await admin
-      .from('platform_payment_requests')
-      .update({
-        status: 'confirmed',
-        provider_charge_id: signature,
-        confirmed_at: nowIso,
-        updated_at: nowIso,
-      })
-      .eq('request_id', requestId)
-      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
-      .select('request_id')
-      .maybeSingle()
-
-    if (claimErr) {
-      if ((claimErr as { code?: string }).code === '23505') {
-        return NextResponse.json(
-          { error: 'This on-chain payment was already used for another request' },
-          { status: 409 },
-        )
-      }
-      console.error(`[billing/solana/verify] failed to claim ${requestId}:`, claimErr)
-      return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 })
-    }
-    if (!claimed) {
-      // A concurrent poll won the claim and is activating; report its outcome.
-      return NextResponse.json({ confirmed: true, alreadyProcessed: true })
-    }
-
-    // PostgREST types an embedded one-to-one as an array; the FK makes it a
-    // single row.
-    const plan = request.platform_plans as unknown as { slug: string } | { slug: string }[] | null
-    const planSlug = (Array.isArray(plan) ? plan[0] : plan)?.slug
-
-    await dispatchPlatformBillingEvent(
-      {
-        type: 'subscription.activated',
-        providerEventId: signature,
-        providerPaymentId: signature,
-        // Solana has no subscription object; the settling signature stands in
-        // as the provider-side id, exactly as the Binance order id does.
-        providerSubscriptionId: signature,
-        // The USD figure the school owes, carried so the dispatcher's
-        // `platform_payment_succeeded` reports a real amount instead of 0.
-        // Purely additive: the platform dispatcher reads `amount`/`currency`
-        // for analytics only and writes neither.
-        //
-        // Deliberately the USD price, NOT `settlement_base` — lamports and USDC
-        // base units are what the chain is verified against and are meaningless
-        // summed alongside a card payment.
-        amount: Number(request.amount ?? 0),
-        currency: request.currency ?? 'usd',
-        metadata: {
-          tenant_id: request.tenant_id,
-          plan_id: request.plan_id,
-          ...(planSlug ? { plan_slug: planSlug } : {}),
-          interval: request.interval,
+    const observed = await observeSolanaPlatformPayment(admin, requestId, tenantId, signature)
+    if (observed.status === 'signature_conflict') {
+      return NextResponse.json(
+        {
+          error: 'This on-chain payment was already used for another request',
+          confirmed: false,
+          state: 'terminal_invalid',
         },
-        raw: { requestId, signature },
-      },
-      { provider: 'solana', admin },
-    )
+        { status: 409 },
+      )
+    }
+    if (observed.status === 'signature_mismatch') {
+      return NextResponse.json(
+        { error: 'Payment request has a different signature', confirmed: false, state: 'terminal_invalid' },
+        { status: 409 },
+      )
+    }
+    if (observed.status === 'not_found') {
+      return NextResponse.json({ error: 'Payment request not found' }, { status: 404 })
+    }
+    if (observed.status === 'terminal_invalid') {
+      return NextResponse.json({ confirmed: false, state: 'terminal_invalid' })
+    }
+    if (observed.status === 'activated') {
+      return NextResponse.json({
+        confirmed: true,
+        state: 'activated',
+        signature: observed.signature,
+        alreadyProcessed: true,
+      })
+    }
 
-    // `platform_payment_succeeded` is NOT emitted here. It belongs to
-    // `dispatchPlatformBillingEvent` above, which is the only place that still
-    // holds the pre-event plan state `is_renewal` is derived from — and the
-    // single emitter for every platform rail, so Solana cannot drift from
-    // Stripe. See the trap-4 note there.
-    console.log(`[billing/solana/verify] confirmed request ${requestId} (signature ${signature})`)
-    return NextResponse.json({ confirmed: true, signature })
+    const activation = await processSolanaPlatformActivation(admin, requestId)
+    if (activation.state === 'activated') {
+      console.log(`[billing/solana/verify] activated request ${requestId} (signature ${signature})`)
+    }
+    return NextResponse.json({
+      confirmed: activation.state === 'activated',
+      state: activation.state,
+      signature,
+      attemptCount: activation.attemptCount,
+      ...(activation.alertRequired ? { alertRequired: true } : {}),
+    })
   } catch (error) {
     console.error('[billing/solana/verify] error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

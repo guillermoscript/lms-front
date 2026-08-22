@@ -4221,6 +4221,12 @@
         "username": "unique_username",
         "website": "https://example.com",
         "bio": "A short bio visible to others..."
+      },
+      "errors": {
+        "unauthorized": "Your session expired. Sign in again to save your profile.",
+        "username_too_short": "Usernames need at least 3 characters.",
+        "username_taken": "That username is already taken. Try another one.",
+        "unknown": "Could not save your changes. Please try again."
       }
     },
     "lessons": {

@@ -16,6 +16,12 @@ import {
   type PaymentProvider,
 } from '@/lib/payments/types'
 import type { PlanPriceInterval } from '@/lib/billing/plan-prices'
+import {
+  evaluatePlatformCheckoutAvailability,
+  platformCheckoutReasonLabel,
+  type PlatformCheckoutUnavailableReason,
+  type PlatformProviderRuntimeStatus,
+} from '@/lib/billing/platform-checkout-availability'
 
 /**
  * Providers exposed on `POST /api/billing/webhook/[provider]`.
@@ -128,6 +134,7 @@ export type ProviderResolutionError =
   | { kind: 'provider_unpriced'; requested: string; providers: string[] }
   | { kind: 'ambiguous'; providers: string[] }
   | { kind: 'unsupported'; requested: string }
+  | { kind: 'unavailable'; providers: string[]; reasons: Record<string, PlatformCheckoutUnavailableReason> }
 
 /**
  * Decide which provider a checkout runs through, given the plan's active price
@@ -149,10 +156,30 @@ export type ProviderResolutionError =
 export function resolveCheckoutProvider(
   prices: PlatformPriceRow[],
   interval: PlanPriceInterval,
-  opts: { requested?: string; tenantProvider?: string | null } = {},
+  opts: {
+    requested?: string
+    tenantProvider?: string | null
+    providerStatuses?: Record<string, PlatformProviderRuntimeStatus>
+    expectedCurrency?: string
+    fallbackAmount?: number | null
+  } = {},
 ): { ok: true; value: ProviderResolution } | { ok: false; error: ProviderResolutionError } {
   const forInterval = prices.filter((p) => p.interval === interval)
-  const available = [...new Set(forInterval.map((p) => p.paymentProvider))].sort()
+  const configured = [...new Set(forInterval.map((p) => p.paymentProvider))].sort()
+  const availabilityByProvider = new Map<string, PlatformCheckoutUnavailableReason>()
+  for (const provider of configured) {
+    const row = forInterval.find((price) => price.paymentProvider === provider) ?? null
+    const availability = evaluatePlatformCheckoutAvailability({
+      provider,
+      interval,
+      price: row,
+      expectedCurrency: opts.expectedCurrency,
+      fallbackAmount: opts.fallbackAmount,
+      runtime: opts.providerStatuses?.[provider],
+    })
+    availabilityByProvider.set(provider, availability.reason)
+  }
+  const available = configured.filter((provider) => availabilityByProvider.get(provider) === 'ready')
 
   if (opts.requested) {
     if (!isPlatformCheckoutProvider(opts.requested)) {
@@ -162,26 +189,46 @@ export function resolveCheckoutProvider(
     if (!match) {
       return {
         ok: false,
-        error: { kind: 'provider_unpriced', requested: opts.requested, providers: available },
+        error: { kind: 'provider_unpriced', requested: opts.requested, providers: configured },
+      }
+    }
+    const reason = availabilityByProvider.get(opts.requested)
+    if (reason !== 'ready') {
+      return {
+        ok: false,
+        error: {
+          kind: 'unavailable',
+          providers: [opts.requested],
+          reasons: { [opts.requested]: reason ?? 'missing_price' },
+        },
       }
     }
     return { ok: true, value: { provider: opts.requested as PaymentProvider, price: match } }
   }
 
-  if (available.length === 0) return { ok: false, error: { kind: 'no_prices', providers: [] } }
+  if (available.length === 0) {
+    if (configured.length === 0) return { ok: false, error: { kind: 'no_prices', providers: [] } }
+    return {
+      ok: false,
+      error: {
+        kind: 'unavailable',
+        providers: configured,
+        reasons: Object.fromEntries(
+          configured.map((provider) => [provider, availabilityByProvider.get(provider) ?? 'missing_price']),
+        ),
+      },
+    }
+  }
 
   if (opts.tenantProvider) {
     const match = forInterval.find((p) => p.paymentProvider === opts.tenantProvider)
-    if (match && isPlatformCheckoutProvider(match.paymentProvider)) {
+    if (match && available.includes(match.paymentProvider)) {
       return { ok: true, value: { provider: match.paymentProvider as PaymentProvider, price: match } }
     }
   }
 
   if (available.length === 1) {
     const match = forInterval.find((p) => p.paymentProvider === available[0])!
-    if (!isPlatformCheckoutProvider(match.paymentProvider)) {
-      return { ok: false, error: { kind: 'unsupported', requested: match.paymentProvider } }
-    }
     return { ok: true, value: { provider: match.paymentProvider as PaymentProvider, price: match } }
   }
 
@@ -212,5 +259,9 @@ export function describeResolutionError(error: ProviderResolutionError, interval
       return `Several payment providers are configured for this plan (${error.providers.join(', ')}). Choose one.`
     case 'unsupported':
       return `${error.requested} cannot be used to pay for a platform plan.`
+    case 'unavailable':
+      return `No configured provider can execute ${interval} platform checkout: ${Object.entries(error.reasons)
+        .map(([provider, reason]) => `${provider} (${platformCheckoutReasonLabel(reason)})`)
+        .join(', ')}.`
   }
 }
