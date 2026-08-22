@@ -299,6 +299,38 @@ export async function upsertSchoolGroup(input: {
   }
 }
 
+/**
+ * Run an analytics-only block that cannot be allowed to fail its caller.
+ *
+ * `track()` is self-guarding, but the code AROUND it usually is not: gathering
+ * an event's properties often means an extra `select` (a prior status, a lesson
+ * count, the buyer's id). Those reads are pure analytics — nothing downstream
+ * depends on them — yet an unguarded one propagates and fails the business
+ * write that triggered it.
+ *
+ * That is not hypothetical. It shipped: `trackWizardOutcome` in
+ * `app/actions/admin/products.ts` did an unguarded `select` and turned a
+ * transient read failure into a failed product creation, caught by
+ * `tests/unit/free-offering-creates-product.test.ts`. Wrap every such block.
+ *
+ * ```ts
+ * await safeAnalytics(async () => {
+ *   const { count } = await adminClient.from('lessons').select(…)
+ *   await track('course_published', { lesson_count: count ?? 0 }, ctx)
+ * })
+ * ```
+ */
+export async function safeAnalytics(
+  fn: () => Promise<void>,
+  label = 'analytics block'
+): Promise<void> {
+  try {
+    await fn()
+  } catch (error) {
+    breadcrumb(`${label} failed`, error)
+  }
+}
+
 /** Test seam. Not for application code. */
 export function __resetAnalyticsForTests(): void {
   client = undefined
