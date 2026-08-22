@@ -36,8 +36,26 @@ const feedbackText = isSpanish
       errorEmptyMessageText: "Add a description before sending.",
     };
 
+// The DSN comes from the environment, never a literal. It used to be hardcoded,
+// which meant every fork of this repo deployed elsewhere reported its crashes into
+// our Sentry project (a Vercel fork with no Supabase env vars produced the top
+// issues LMS-FRONT-9B/9C/87/8X/8W). With no DSN set, `Sentry.init` is a no-op.
 Sentry.init({
-  dsn: "https://e40fdc0a3e5965c1862e6594a8c2631f@o4507789962706944.ingest.us.sentry.io/4507789965721600",
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // Browser-extension and bundler noise we cannot act on. MetaMask injects itself
+  // into every page and rejects when it is locked (LMS-FRONT-9D); Sandpack's
+  // bundler iframe rejects with a `digest` TypeError when its CDN is unreachable
+  // (LMS-FRONT-7S) — both from third-party code, neither reaching our own.
+  ignoreErrors: [
+    "Failed to connect to MetaMask",
+    "MetaMask",
+  ],
+  denyUrls: [
+    /sandpack-react/i,
+    /extensions\//i,
+    /^chrome-extension:\/\//i,
+    /^moz-extension:\/\//i,
+  ],
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
