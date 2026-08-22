@@ -4,7 +4,7 @@ import {
     ChatAttachButton,
     ChatAttachmentsPreview,
     MessageImageParts,
-    chatAttachmentInputProps,
+    useChatAttachmentInputProps,
 } from "@/components/ai/chat-attachments";
 import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
 import {
@@ -195,6 +195,7 @@ function InnerLessonAIChat({
         return () => window.removeEventListener("lesson-tutor:ask", onAsk);
     }, [isCompleted, sendMessage]);
 
+    const attachmentInputProps = useChatAttachmentInputProps();
     const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear, disabled: isCompleted });
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -470,7 +471,7 @@ function InnerLessonAIChat({
                         <PromptInput
                             onSubmit={onSubmit}
                             className="w-full"
-                            {...chatAttachmentInputProps}
+                            {...attachmentInputProps}
                         >
                             <ChatAttachmentsPreview />
                             <PromptInputBody>
@@ -498,7 +499,7 @@ function InnerLessonAIChat({
                                             </Button>
                                         )}
                                         {!isCompleted && (
-                                            <ChatAttachButton label={t('tooltips.attachImage')} disabled={isLoading} />
+                                            <ChatAttachButton disabled={isLoading} />
                                         )}
 
                                         {isCompleted && (

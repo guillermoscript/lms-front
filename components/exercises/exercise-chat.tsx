@@ -33,7 +33,7 @@ import {
     ChatAttachButton,
     ChatAttachmentsPreview,
     MessageImageParts,
-    chatAttachmentInputProps,
+    useChatAttachmentInputProps,
 } from "@/components/ai/chat-attachments";
 import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
 import { DefaultChatTransport, type UIMessage } from "ai";
@@ -114,6 +114,7 @@ function InnerExerciseChat({
         }
     }, [messages, isCompleted, router, tGamification]);
 
+    const attachmentInputProps = useChatAttachmentInputProps();
     const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear });
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -253,7 +254,7 @@ function InnerExerciseChat({
                 )}
 
                 <div className="w-full px-3 sm:px-4 pb-3 sm:pb-4">
-                    <PromptInput onSubmit={onSubmit} {...chatAttachmentInputProps}>
+                    <PromptInput onSubmit={onSubmit} {...attachmentInputProps}>
                         <ChatAttachmentsPreview />
                         <PromptInputBody>
                             <PromptInputTextarea

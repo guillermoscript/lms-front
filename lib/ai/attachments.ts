@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
     AI_ATTACHMENT_MAX_BYTES,
     AI_ATTACHMENT_MAX_FILES,
+    approxDataUrlBytes,
     isAllowedAttachmentMediaType,
 } from '@/lib/ai/attachment-limits'
 
@@ -43,15 +44,6 @@ function decodeDataUrl(url: string): { mediaType: string; bytes: Uint8Array } | 
     } catch {
         return null
     }
-}
-
-/**
- * Approximate decoded size of a data URL without materialising it — base64 is
- * 4 chars per 3 bytes. Good enough to reject oversized uploads cheaply.
- */
-function approxDataUrlBytes(url: string): number {
-    const comma = url.indexOf(',')
-    return comma === -1 ? 0 : Math.floor(((url.length - comma - 1) * 3) / 4)
 }
 
 /**

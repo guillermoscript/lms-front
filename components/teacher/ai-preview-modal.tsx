@@ -28,7 +28,7 @@ import {
   ChatAttachButton,
   ChatAttachmentsPreview,
   MessageImageParts,
-  chatAttachmentInputProps,
+  useChatAttachmentInputProps,
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
 
@@ -70,6 +70,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
     setOpen(true)
   }
 
+  const attachmentInputProps = useChatAttachmentInputProps()
   const handleSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -154,7 +155,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 </Suggestions>
               )}
 
-              <PromptInput onSubmit={handleSubmit} {...chatAttachmentInputProps}>
+              <PromptInput onSubmit={handleSubmit} {...attachmentInputProps}>
                 <ChatAttachmentsPreview />
                 <PromptInputBody>
                   <PromptInputTextarea

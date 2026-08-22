@@ -33,7 +33,7 @@ import {
     ChatAttachButton,
     ChatAttachmentsPreview,
     MessageImageParts,
-    chatAttachmentInputProps,
+    useChatAttachmentInputProps,
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
@@ -91,6 +91,7 @@ function InnerAristotlePanel() {
     const isLoading = status === 'submitted' || status === 'streaming'
     const displayName = personaName || t('name')
 
+    const attachmentInputProps = useChatAttachmentInputProps()
     const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -229,7 +230,7 @@ function InnerAristotlePanel() {
                     )}
 
                     <div className="w-full px-4 pb-4">
-                        <PromptInput onSubmit={onSubmit} {...chatAttachmentInputProps}>
+                        <PromptInput onSubmit={onSubmit} {...attachmentInputProps}>
                             <ChatAttachmentsPreview />
                             <PromptInputBody>
                                 <PromptInputTextarea

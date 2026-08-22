@@ -4276,8 +4276,7 @@
         "typeAnswer": "Type your answer here..."
       },
       "tooltips": {
-        "restart": "Restart Conversation",
-        "attachImage": "Attach image"
+        "restart": "Restart Conversation"
       },
       "mobile": {
         "title": "AI Tutor",
@@ -4581,6 +4580,18 @@
     "feedbackButton": {
       "label": "Report a problem",
       "dragHint": "drag to move"
+    },
+    "aiAttachments": {
+      "attach": "Attach image",
+      "imageAlt": "Attached image",
+      "thisImage": "that image",
+      "errors": {
+        "imagesOnly": "Only images can be attached.",
+        "pickTooLarge": "Each image must be under {mb} MB.",
+        "tooMany": "You can attach up to {count} images per message.",
+        "unsupported": "{name} could not be read as an image, so it was not sent.",
+        "tooLarge": "{name} is still too large to send after resizing."
+      }
     }
   },
   "courseDetails": {
