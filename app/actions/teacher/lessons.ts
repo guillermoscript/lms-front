@@ -1,6 +1,8 @@
 'use server'
 
 import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 
 export interface LessonFormData {
@@ -56,6 +58,24 @@ export async function createLesson(courseId: number, data: LessonFormData) {
         )
       if (taskError) throw taskError
     }
+
+    // `block_count` from the doc lives in the BlockEditor (client); what the
+    // server can measure is the size of what was actually persisted.
+    await track(
+      ANALYTICS_EVENTS.LESSON_CREATED,
+      {
+        lesson_id: newLesson.id,
+        course_id: courseId,
+        content_length: (data.content || '').length,
+        has_video: Boolean(data.video_url),
+        has_ai_task: Boolean(
+          data.ai_task_description?.trim() || data.ai_task_instructions?.trim()
+        ),
+        is_preview: data.is_preview ?? false,
+        published: Boolean(data.publish),
+      },
+      { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role }
+    )
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}`)
 

@@ -26,6 +26,8 @@ import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import type {
   NormalizedBillingEvent,
   PaymentProvider,
@@ -349,6 +351,32 @@ export async function dispatchPlatformBillingEvent(
     console.log(
       `[platform-webhook] subscription ${event.type} on ${provider}, tenant ${tenantId} downgraded to free (fee=${platformFee}%)`,
     )
+
+    // Loop E, terminal school churn on a PUSH-RENEWAL rail. The
+    // `expire-platform-subscriptions` cron emits the same event for rails whose
+    // period WE own (`PLATFORM_SELF_MANAGED_PROVIDERS`); it never sees Stripe,
+    // Lemon Squeezy or PayPal, whose expiry is decided here. Between the two,
+    // every rail is covered exactly once.
+    //
+    // `plan` is null on purpose rather than fetched: this branch deliberately
+    // returns before the `platform_subscriptions` lookup below, and a churn
+    // event is not worth adding a query to a webhook for. `tenant_id` joins it
+    // to whatever plan the tenant last paid for.
+    void track(
+      ANALYTICS_EVENTS.SUBSCRIPTION_EXPIRED,
+      {
+        scope: 'platform',
+        plan: null,
+        provider,
+        // No grace window on a push-renewal rail — the provider ran its own
+        // dunning before telling us. Stated rather than omitted so the property
+        // is comparable with the cron's.
+        was_grace: false,
+        churn_type: event.type === 'subscription.canceled' ? 'voluntary' : 'involuntary',
+        event_type: event.type,
+      },
+      { tenantId },
+    )
     return
   }
 
@@ -669,6 +697,77 @@ export async function dispatchPlatformBillingEvent(
 
   if (planId) {
     await applyRevenueSplit(admin, tenantId, planId, now)
+  }
+
+  // Loop E, the money event. Emitted after the subscription + tenant writes
+  // land, so it only ever reports a period the school actually holds.
+  //
+  // THE EMISSION KEY IS THE PERIOD, NOT THE EVENT TYPE, and that is load-
+  // bearing: ONE Stripe payment produces THREE dispatchable events with three
+  // distinct `providerEventId`s, so the `webhook_events` ledger does not
+  // collapse them. A first platform subscription fires
+  // `checkout.session.completed` → activated, `customer.subscription.created`
+  // → activated, and `invoice.paid` → renewed; each renewal after that fires
+  // `invoice.paid` → renewed AND `customer.subscription.updated` → activated.
+  // Emitting per event would have reported 3× the first payment and 2× every
+  // renewal — the single worst way to be wrong about revenue.
+  //
+  // A payment buys a PERIOD, so a period that moves forward is exactly one
+  // payment. The near-duplicates all carry the same period end, so the first to
+  // land emits and the rest are no-ops. `isStalePeriod` above already dropped
+  // strictly-older events; this is the equal case. On the self-managed rails
+  // `derived` always extends past the stored end, so a Binance/Solana renewal
+  // reads as a new period, which is what it is.
+  //
+  // `is_renewal` (trap 4) is computed HERE because this is the only place that
+  // still holds `stored` — the pre-event plan state the upsert above has now
+  // overwritten. It matters most on the crypto rails: Binance Pay and Solana
+  // have no subscription object, so their SECOND purchase arrives as another
+  // `subscription.activated`, identical in shape to the first. Reading that as
+  // a new sale would inflate platform growth by every renewal.
+  //
+  // Three-way, not two: the same plan again is a RENEWAL, a different plan is
+  // EXPANSION (or contraction), and no prior plan is genuinely NEW. Collapsing
+  // the middle case into "renewal" would hide upgrade revenue, which is the
+  // number the whole `plan_limit_hit → plan_changed` funnel exists to move.
+  const opensNewPeriod =
+    !!effectiveEnd &&
+    (!stored?.current_period_end ||
+      new Date(effectiveEnd).getTime() > new Date(stored.current_period_end).getTime())
+
+  if (
+    opensNewPeriod &&
+    (event.type === 'subscription.activated' || event.type === 'subscription.renewed')
+  ) {
+    const hadPlan = stored?.plan_id != null
+    const samePlan = hadPlan && stored?.plan_id === rowPlanId
+    void track(
+      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
+      {
+        provider,
+        // MAJOR units by the `NormalizedBillingEvent` contract — each adapter
+        // converts from its own unit (Lemon Squeezy reports cents).
+        amount: event.amount ?? 0,
+        interval: interval ?? 'monthly',
+        is_renewal: event.type === 'subscription.renewed' || samePlan,
+        is_plan_change: hadPlan && !samePlan,
+        is_new_subscription: !hadPlan,
+        currency: event.currency ?? 'usd',
+        event_type: event.type,
+        // True for the rails with no subscription object, where "activated"
+        // is also what a renewal looks like.
+        self_managed_period: selfManaged,
+        // False means the provider told us nothing about the amount, so the 0
+        // above is an absence rather than a free plan. Stripe's platform mapper
+        // reports no amount on any of these events today, so Stripe rows will
+        // carry `false` — count them, do not sum them.
+        amount_reported: event.amount != null,
+        period_end: effectiveEnd,
+        ...(planSlug ? { plan: planSlug } : {}),
+      },
+      // No user: a webhook has no actor, and the money is the school's.
+      { tenantId },
+    )
   }
 
   // A paid period clears any cutoff scheduled while the school was over its

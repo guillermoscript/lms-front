@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAnalytics } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 interface PointStoreItemProps {
     item: StoreItem;
@@ -19,6 +21,7 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
     const { purchase } = usePointStore({ onPurchase: () => { refreshSummary(); onPurchaseComplete?.(); } });
     const [isPurchasing, setIsPurchasing] = useState(false);
     const t = useTranslations('components.gamification');
+    const analytics = useAnalytics();
 
     const canAfford = summary ? summary.coins >= item.price_coins : false;
 
@@ -30,11 +33,29 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
         setIsPurchasing(false);
 
         if (result.success) {
+            // The coin SINK. XP accrual is already visible everywhere; if this
+            // event never fires the economy is one-directional and the whole
+            // gamification loop is decorative.
+            analytics.track(ANALYTICS_EVENTS.STORE_ITEM_PURCHASED, {
+                item_slug: item.slug,
+                item_category: item.category,
+                coin_cost: item.price_coins,
+                balance_before: summary?.coins ?? null,
+            });
             toast.success(t('store.success'), {
                 description: item.name,
                 icon: <IconCheck className="text-green-500" />
             });
         } else {
+            // Reachable despite the disabled button: `canAfford` is computed
+            // from a cached summary, so the edge-function can still reject a
+            // purchase whose balance moved underneath it.
+            analytics.track(ANALYTICS_EVENTS.STORE_PURCHASE_BLOCKED, {
+                item_slug: item.slug,
+                coin_cost: item.price_coins,
+                shortfall: summary ? Math.max(0, item.price_coins - summary.coins) : null,
+                failure_reason: result.error || 'unknown',
+            });
             toast.error(t('store.error'), {
                 description: result.error || ""
             });

@@ -6,6 +6,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { AI_MODELS } from '@/lib/ai/config'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import {
   CLOSED_EXERCISE_TYPES,
   EXTERNAL_EXERCISE_TYPES,
@@ -306,6 +308,26 @@ export async function POST(
     console.error('Checkpoint attempt insert failed:', insertError)
     return Response.json({ error: 'Failed to record attempt' }, { status: 500 })
   }
+
+  // After the attempt row lands. `evaluator_type` is the interesting cut here:
+  // a 'fallback' attempt means the student hit an AI quota and got no grading,
+  // which looks like engagement in every other metric.
+  await track(
+    ANALYTICS_EVENTS.CHECKPOINT_ATTEMPTED,
+    {
+      checkpoint_id: checkpointId,
+      exercise_id: exercise.id,
+      lesson_id: checkpoint.lesson_id,
+      course_id: exercise.course_id,
+      exercise_type: exerciseType,
+      attempt_number: attempt.attempt_number,
+      is_correct: passed,
+      score,
+      evaluator_type: evaluatorType,
+      ai_unavailable: aiUnavailable,
+    },
+    { userId: user.id, tenantId, role: 'student' }
+  )
 
   const result: CheckpointAttemptResult = {
     attemptId: attempt.id,

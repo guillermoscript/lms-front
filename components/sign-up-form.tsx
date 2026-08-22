@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import {
   InputGroup,
@@ -24,6 +24,13 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+// Shared with login and /auth/error so the three cannot drift, and closed-set
+// so no raw GoTrue string (which can carry the submitted address) escapes.
+// Deliberately NOT `localizedError()` below: that returns translated copy, so
+// the same failure would split into an English bucket and a Spanish one.
+import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
 
 interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -41,6 +48,17 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextPath = getSafeNextPath(searchParams.get('next'), '')
+  const analytics = useAnalytics()
+  // `signup_started` means "began filling the form", not "loaded the page" —
+  // the page load is already a screen view, and a second event for it would
+  // make the funnel's first step meaningless.
+  const startedRef = useRef(false)
+
+  const markSignupStarted = () => {
+    if (startedRef.current) return
+    startedRef.current = true
+    analytics.track(ANALYTICS_EVENTS.SIGNUP_STARTED, { has_tenant: Boolean(tenantId) })
+  }
 
   // Supabase returns raw English strings; map the ones users actually hit to
   // translated copy and keep the rest as a last resort.
@@ -57,10 +75,20 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
     e.preventDefault()
     const supabase = createClient()
     const name = fullName.trim()
+    markSignupStarted()
     if (!name) {
       setError(t('errors.nameRequired'))
+      analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
+        method: 'password',
+        failure_reason: 'name_required',
+        is_client_validation: true,
+      })
       return
     }
+    analytics.track(ANALYTICS_EVENTS.SIGNUP_SUBMITTED, {
+      method: 'password',
+      has_tenant: Boolean(tenantId),
+    })
     setIsLoading(true)
     setError(null)
 
@@ -82,6 +110,17 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         },
       })
       if (error) throw error
+
+      // Stitch the anonymous session to the new profile HERE, before the
+      // navigation. Everything the visitor did up to this point — landing,
+      // pricing, product views, the whole top of Loop A — is anonymous, and if
+      // the binding waits for the dashboard to load on the next page those
+      // events may never join to the profile. `data.user` is populated even
+      // when `data.session` is null (email confirmation pending), which is the
+      // common path, so this must not be gated on the session.
+      const newUserId = data.user?.id ?? data.session?.user?.id
+      if (newUserId) analytics.identify(newUserId, { signup_method: 'password' })
+
       if (data.session) {
         // The signup token predates handle_new_user()'s app_metadata write, so
         // it lacks the tenant_id claim — refresh to get one that has it, or
@@ -91,6 +130,10 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       router.push(data.session && nextPath ? nextPath : '/auth/sign-up-success')
     } catch (error: unknown) {
       setError(localizedError(error))
+      analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
+        method: 'password',
+        failure_reason: toAuthFailureCode(error),
+      })
     } finally {
       setIsLoading(false)
     }
@@ -98,6 +141,11 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
 
   const handleGoogleSignUp = async () => {
     const supabase = createClient()
+    markSignupStarted()
+    analytics.track(ANALYTICS_EVENTS.SIGNUP_SUBMITTED, {
+      method: 'google',
+      has_tenant: Boolean(tenantId),
+    })
     setIsSocialLoading(true)
     setError(null)
 
@@ -112,6 +160,10 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       if (error) throw error
     } catch (error: unknown) {
       setError(localizedError(error))
+      analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
+        method: 'google',
+        failure_reason: toAuthFailureCode(error),
+      })
       setIsSocialLoading(false)
     }
   }
@@ -173,7 +225,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                   placeholder={t('fullNamePlaceholder')}
                   required
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => { markSignupStarted(); setFullName(e.target.value) }}
                 />
               </div>
               <div className="grid gap-2">
@@ -186,7 +238,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                   placeholder="m@example.com"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { markSignupStarted(); setEmail(e.target.value) }}
                 />
               </div>
               <div className="grid gap-2">
@@ -203,7 +255,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                     required
                     minLength={6}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { markSignupStarted(); setPassword(e.target.value) }}
                   />
                   <InputGroupAddon align="inline-end">
                     <InputGroupButton

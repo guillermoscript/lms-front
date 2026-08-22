@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { signStoredAttachments } from '@/lib/ai/attachments'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
@@ -67,7 +68,7 @@ export default async function LessonPage({ params }: PageProps) {
         comment_reactions(*)
       ),
       lessons_ai_tasks(task_instructions),
-      lessons_ai_task_messages(id, message, sender, created_at),
+      lessons_ai_task_messages(id, message, sender, created_at, attachments),
       lesson_completions(lesson_id, user_id)
     `)
     .eq('id', parseInt(lessonId))
@@ -98,14 +99,15 @@ export default async function LessonPage({ params }: PageProps) {
     : lessonData.lessons_ai_tasks;
 
   const dbMessages = lessonData.lessons_ai_task_messages || [];
-  const initialMessages = dbMessages.map((msg: {
+  const initialMessages = (await Promise.all(dbMessages.map(async (msg: {
     id: number
     message: string | null
     sender: string
     created_at: string
+    attachments?: unknown
     tool_invocations?: unknown
   }) => {
-    const parts = [];
+    const parts: unknown[] = [...(await signStoredAttachments(msg.attachments))];
 
     if (msg.message) {
       parts.push({
@@ -134,7 +136,7 @@ export default async function LessonPage({ params }: PageProps) {
       createdAt: msg.created_at
     };
     // DB rows use a legacy part shape; the chat renders them via ToolInvocationPart
-  }) as unknown as UIMessage[];
+  }))) as unknown as UIMessage[];
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
 
@@ -377,6 +379,8 @@ export default async function LessonPage({ params }: PageProps) {
               mdx={lessonMdx}
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
+              lessonId={Number(lessonId)}
+              courseId={numericCourseId}
             />
 
             {/* Contextual tutor entry point (opens the AI chat pre-seeded) */}

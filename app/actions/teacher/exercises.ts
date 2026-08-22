@@ -1,6 +1,8 @@
 'use server'
 
 import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 
 export interface ExerciseFormData {
@@ -79,6 +81,19 @@ export async function createExercise(courseId: number, data: ExerciseFormData) {
       .single()
 
     if (error) throw error
+
+    await track(
+      ANALYTICS_EVENTS.EXERCISE_CREATED,
+      {
+        exercise_id: newExercise.id,
+        course_id: courseId,
+        lesson_id: data.lesson_id || null,
+        type: data.exercise_type,
+        difficulty_level: data.difficulty_level,
+        published: data.publish ? true : data.status === 'published',
+      },
+      { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role }
+    )
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}/exercises`)
 

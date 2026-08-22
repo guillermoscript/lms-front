@@ -8,6 +8,9 @@ import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
+import { evaluateSchoolActivation } from '@/lib/analytics/activation'
 import type {
   ProductCreationWizardInput,
   ProductCreationWizardResult,
@@ -206,6 +209,24 @@ export async function createProduct(formData: ProductFormData): Promise<ActionRe
       .insert(courseLinks)
 
     if (linkError) throw linkError
+
+    // Wrapped: `getCurrentUserId()` is evaluated as an ARGUMENT, so it runs
+    // before `track()`'s own guard can catch anything it throws.
+    await safeAnalytics(async () => {
+      await track(
+        ANALYTICS_EVENTS.PRODUCT_CREATED,
+        {
+          product_id: product.product_id,
+          price: formData.price,
+          currency: formData.currency,
+          provider: providerType,
+          is_free: false,
+          course_count: formData.courseIds.length,
+          via: 'products_form',
+        },
+        { userId: await getCurrentUserId(), tenantId, role: 'admin' }
+      )
+    }, 'product_created')
 
     revalidatePath('/dashboard/admin/products')
     revalidatePath('/dashboard/student')
@@ -449,6 +470,92 @@ export async function saveProductCreationWizard(
 
     const productId = input.productId ?? null
 
+    // The wizard is a THIRD writer of `courses.status` (the RPC sets
+    // 'published' whenever `_intent = 'publish'`), so `course_published` needs
+    // the same transition detection here as in `updateCourse`. Re-publishing an
+    // existing live course through the wizard — which is what editing an
+    // offering does — must not count as a new publication.
+    let priorCourseStatus: string | null = null
+    if (input.course.sourceMode === 'existing' && input.course.existingCourseId) {
+      await safeAnalytics(async () => {
+        const { data: priorCourse } = await adminClient
+          .from('courses')
+          .select('status')
+          .eq('course_id', input.course.existingCourseId!)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        priorCourseStatus = priorCourse?.status ?? null
+      }, 'wizard prior course status')
+    }
+
+    /**
+     * Post-commit Loop B events, shared by the free and paid branches.
+     *
+     * Wrapped whole: this reads `lessons` purely to populate an event property,
+     * and an analytics read must never fail the product creation that triggered
+     * it. Losing the event is the correct failure mode; losing the product is not.
+     */
+    const trackWizardOutcome = async (result: {
+      courseId: number
+      productId: number
+      price: number
+      currency: string
+      provider: string
+      isFree: boolean
+    }) => safeAnalytics(async () => {
+      const ctx = { userId, tenantId, role: 'admin' }
+      const published = input.intent === 'publish'
+
+      if (input.course.sourceMode === 'new') {
+        await track(
+          ANALYTICS_EVENTS.COURSE_CREATED,
+          { course_id: result.courseId, via: 'wizard', status: published ? 'published' : 'draft' },
+          ctx
+        )
+      }
+
+      // Only a brand-new product is a `product_created`; re-saving the wizard on
+      // an existing offering carries `input.productId`.
+      if (!productId) {
+        await track(
+          ANALYTICS_EVENTS.PRODUCT_CREATED,
+          {
+            product_id: result.productId,
+            course_id: result.courseId,
+            price: result.price,
+            currency: result.currency,
+            provider: result.provider,
+            is_free: result.isFree,
+            course_count: 1,
+            published,
+            via: 'wizard',
+          },
+          ctx
+        )
+      }
+
+      if (published && priorCourseStatus !== 'published') {
+        const { count: lessonCount } = await adminClient
+          .from('lessons')
+          .select('id', { count: 'exact', head: true })
+          .eq('course_id', result.courseId)
+          .eq('tenant_id', tenantId)
+
+        await track(
+          ANALYTICS_EVENTS.COURSE_PUBLISHED,
+          {
+            course_id: result.courseId,
+            lesson_count: lessonCount ?? 0,
+            days_since_course_created: input.course.sourceMode === 'new' ? 0 : null,
+            previous_status: priorCourseStatus,
+            via: 'wizard',
+          },
+          ctx
+        )
+        await evaluateSchoolActivation({ tenantId, userId, role: 'admin' })
+      }
+    })
+
     // ---- FREE: a real $0 product, no payment provider work -------------------
     // A free offering still persists course + product + product_courses, so it
     // is listable and editable like any other. The RPC pins price 0 and the
@@ -500,6 +607,15 @@ export async function saveProductCreationWizard(
       if (rpcError) throw new Error(rpcError.message)
 
       const freeResult = rpcResult as { course_id: number; product_id: number }
+
+      await trackWizardOutcome({
+        courseId: freeResult.course_id,
+        productId: freeResult.product_id,
+        price: 0,
+        currency: input.pricing.currency ?? 'usd',
+        provider: 'manual',
+        isFree: true,
+      })
 
       revalidateOfferingPaths()
 
@@ -704,6 +820,15 @@ export async function saveProductCreationWizard(
         console.error('Failed to archive superseded provider object:', cleanupError)
       }
     }
+
+    await trackWizardOutcome({
+      courseId: (rpcResult as { course_id: number }).course_id,
+      productId: (rpcResult as { product_id: number }).product_id,
+      price: nextPrice,
+      currency: nextCurrency,
+      provider: providerType,
+      isFree: false,
+    })
 
     revalidateOfferingPaths()
 

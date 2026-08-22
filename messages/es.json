@@ -4431,6 +4431,18 @@
     "feedbackButton": {
       "label": "Reportar un problema",
       "dragHint": "arrastra para mover"
+    },
+    "aiAttachments": {
+      "attach": "Adjuntar imagen",
+      "imageAlt": "Imagen adjunta",
+      "thisImage": "esa imagen",
+      "errors": {
+        "imagesOnly": "Solo se pueden adjuntar imágenes.",
+        "pickTooLarge": "Cada imagen debe pesar menos de {mb} MB.",
+        "tooMany": "Puedes adjuntar hasta {count} imágenes por mensaje.",
+        "unsupported": "No se pudo leer {name} como imagen, así que no se envió.",
+        "tooLarge": "{name} sigue siendo demasiado grande para enviarla incluso tras redimensionarla."
+      }
     }
   },
   "landing": {

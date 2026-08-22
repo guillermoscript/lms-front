@@ -13,11 +13,14 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export function useEnrollment() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const analytics = useAnalytics()
 
   /**
    * Self-enroll the current user in a course covered by their subscription.
@@ -36,6 +39,15 @@ export function useEnrollment() {
       if (rpcError) {
         throw new Error(rpcError.message)
       }
+
+      // The only visibility there is on subscription-driven access. This RPC
+      // bypasses checkout, every server action and every API route, so without
+      // this event a subscriber who works through ten courses is indistinguishable
+      // from one who never logged in. Fires on RPC success only.
+      analytics.track(ANALYTICS_EVENTS.COURSE_SELF_ENROLLED, {
+        course_id: courseId,
+        source: 'subscription',
+      })
 
       toast.success('Successfully enrolled in course!')
       router.refresh()

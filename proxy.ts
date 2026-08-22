@@ -534,7 +534,18 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // `api/op/` is the OpenPanel first-party proxy (app/api/op/[...path]).
+    // Two things about the spelling, both load-bearing:
+    //   - The alternatives are anchored right after the leading slash, so the
+    //     exclusion must be the full prefix `api/op/`; a bare `op` would only
+    //     exclude paths literally starting with `/op`.
+    //   - The trailing slash is the word boundary. Without it the prefix also
+    //     swallows `/api/openai*`, silently exempting unrelated routes from
+    //     tenant and auth checks.
+    // Omitting the entry entirely means every analytics beacon gets
+    // tenant/auth-checked and 307s to /join-school — which presents as
+    // "no data", not as an error.
+    '/((?!_next/static|_next/image|favicon.ico|monitoring|api/op/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     '/.well-known/:path*',
   ],
 }

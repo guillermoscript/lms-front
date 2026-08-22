@@ -5,6 +5,14 @@ import { PROMPTS } from '@/lib/ai/prompts'
 import { generateText, Output } from 'ai'
 import { NextRequest } from 'next/server'
 import z from 'zod'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+
+/**
+ * `exams` has no `passing_score` column (see CLAUDE.md) — 70 is the documented
+ * platform default and the only threshold `passed` can honestly mean.
+ */
+const DEFAULT_PASS_THRESHOLD = 70
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ examId: string }> }) {
   const supabase = await createClient()
@@ -46,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ exa
     return Response.json({ error: 'Submission not found' }, { status: 404 })
   }
 
+  const gradingStartedAt = Date.now()
   let totalScore = 0
   let totalQuestions = submission.answers.length
   const feedbackItems = []
@@ -109,6 +118,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ exa
       ai_data: { feedbackItems }
     })
     .eq('submission_id', submission_id)
+
+  // Attributed to the STUDENT, not the teacher who triggered the run — the
+  // grade is an event in the learner's history, and a teacher batch-grading
+  // thirty submissions would otherwise read as thirty events by one person.
+  await track(
+    ANALYTICS_EVENTS.EXAM_GRADED,
+    {
+      exam_id: submission.exam_id,
+      submission_id,
+      score: averageScore,
+      passed: averageScore >= DEFAULT_PASS_THRESHOLD,
+      graded_by: 'ai',
+      question_count: totalQuestions,
+      duration_ms: Date.now() - gradingStartedAt,
+    },
+    { userId: submission.student_id, tenantId }
+  )
 
   return Response.json({ success: true, score: averageScore, feedback: feedbackItems })
 }

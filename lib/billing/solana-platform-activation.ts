@@ -45,6 +45,8 @@ interface ActivationRequestRow {
   interval: string
   provider_charge_id: string
   switch_id: string | null
+  amount: number | string | null
+  currency: string | null
   platform_plans: { slug: string } | { slug: string }[] | null
 }
 
@@ -138,7 +140,7 @@ export async function processSolanaPlatformActivation(
   const { data: request, error: requestError } = await admin
     .from('platform_payment_requests')
     .select(
-      'request_id, tenant_id, plan_id, interval, provider_charge_id, switch_id, platform_plans(slug)',
+      'request_id, tenant_id, plan_id, interval, provider_charge_id, switch_id, amount, currency, platform_plans(slug)',
     )
     .eq('request_id', requestId)
     .eq('payment_provider', 'solana')
@@ -158,6 +160,13 @@ export async function processSolanaPlatformActivation(
         providerEventId: row.provider_charge_id,
         providerPaymentId: row.provider_charge_id,
         providerSubscriptionId: row.provider_charge_id,
+        // The USD figure the school owes, so the dispatcher's
+        // `platform_payment_succeeded` reports a real amount instead of 0.
+        // Deliberately the USD price, NOT `settlement_base` — lamports and USDC
+        // base units are what the chain is verified against and are meaningless
+        // summed alongside a card payment. Read-only for the dispatcher.
+        amount: Number(row.amount ?? 0),
+        currency: row.currency ?? 'usd',
         metadata: {
           tenant_id: row.tenant_id,
           plan_id: row.plan_id,

@@ -23,6 +23,8 @@ import {
 } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 interface Question {
   id: number
@@ -56,6 +58,7 @@ export function ExamTaker({
   const [timeLeft, setTimeLeft] = useState(duration ? duration * 60 : null) // in seconds
   const router = useRouter()
   const supabase = createClient()
+  const analytics = useAnalytics()
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -125,6 +128,18 @@ export function ExamTaker({
         setSubmitting(false)
         return
       }
+
+      // After both inserts land. `was_auto_submitted` matters: the timer calls
+      // this same handler at zero, and an exam the student never chose to hand
+      // in is a different event from one they did.
+      analytics.track(ANALYTICS_EVENTS.EXAM_SUBMITTED, {
+        exam_id: examId,
+        course_id: courseId,
+        submission_id: submission.submission_id,
+        question_count: questions.length,
+        answered_count: Object.keys(answers).length,
+        was_auto_submitted: timeLeft !== null && timeLeft <= 0,
+      })
 
       // Trigger AI grading
       try {

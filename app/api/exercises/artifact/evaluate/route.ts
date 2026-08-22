@@ -4,6 +4,8 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { generateText } from 'ai'
 import { AI_MODELS } from '@/lib/ai/config'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export const maxDuration = 120
 
@@ -161,7 +163,25 @@ End "feedback" with one short reflective question tied to the most important imp
       // unique index (exercise_id, user_id) prevents duplicates — error is expected on re-pass
     }
 
-    // 12. Return result (never include evaluation_criteria or system_prompt)
+    // 12. Track the submission. No `attempt_number`: the only count this route
+    // has is the 1-hour rate-limit window, and passing that off as an absolute
+    // attempt ordinal would quietly reset every hour. Ordinality is recoverable
+    // in OpenPanel by counting this event per user+exercise.
+    await track(
+      ANALYTICS_EVENTS.EXERCISE_SUBMITTED,
+      {
+        exercise_id: exerciseId,
+        course_id: exercise.course_id,
+        exercise_type: exercise.exercise_type,
+        score: evaluation.score,
+        passed,
+        passing_score: passingScore,
+        attempts_last_hour: (recentCount ?? 0) + 1,
+      },
+      { userId: user.id, tenantId, role: 'student' }
+    )
+
+    // 13. Return result (never include evaluation_criteria or system_prompt)
     return Response.json({
       score: evaluation.score,
       feedback: evaluation.feedback,

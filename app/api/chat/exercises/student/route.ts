@@ -3,6 +3,7 @@ import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createExerciseTools } from '@/lib/ai/tools'
 import { fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
@@ -31,7 +32,9 @@ export async function POST(req: Request) {
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
-    const { messages, exerciseId } = parsed.data
+    const { messages: rawMessages, exerciseId } = parsed.data
+    // Body is user-controlled: drop non-image / oversized file parts before they reach the model.
+    const messages = sanitizeLastUserAttachments(rawMessages)
 
     // 1. Fetch exercise details and validate tenant
     const exercise = await fetchTenantExercise<ExerciseRow>(
@@ -45,13 +48,17 @@ export async function POST(req: Request) {
 
     // 2. Save user message
     const messageText = lastUserMessageText(messages)
-    if (messageText) {
+    const attachments = await persistLastUserAttachments(messages, {
+        tenantId, userId: user.id, kind: 'exercise', referenceId: exerciseId,
+    })
+    if (messageText || attachments.length > 0) {
         // exercise_messages has NO tenant_id column — sending it silently fails the insert.
         await supabase.from('exercise_messages').insert({
             exercise_id: exerciseId,
             user_id: user.id,
             role: 'user',
-            message: messageText,
+            message: messageText ?? '',
+            attachments: attachments.length > 0 ? attachments : null,
         })
     }
 

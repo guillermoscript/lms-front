@@ -17,6 +17,8 @@ import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
 import type { StoredPreset } from '@/lib/themes/presets';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
+import { OpenPanelComponent } from '@openpanel/nextjs';
+import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
 
 const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
 
@@ -143,6 +145,14 @@ export default async function RootLayout({
     theme_preset: (tenantSettings.theme_preset as unknown as StoredPreset | undefined) ?? null,
   } : null;
 
+  // Product analytics. Renders nothing at all — no script tag, no network —
+  // unless a client id is configured AND the environment is one we track
+  // (production, or an explicit non-production opt-in). Tenant and locale are
+  // already resolved above; this adds no data fetching.
+  const analyticsClientId = isAnalyticsEnvironmentEnabled()
+    ? process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID
+    : undefined;
+
   return (
     <html lang={locale} className={notoSans.variable} suppressHydrationWarning>
       <head>
@@ -164,6 +174,24 @@ export default async function RootLayout({
           >
             <TenantProvider tenant={tenantInfo}>
               <TenantCssVars />
+              {analyticsClientId ? (
+                <OpenPanelComponent
+                  clientId={analyticsClientId}
+                  // Both point at our own origin (app/api/op/[...path]) so the
+                  // tracker is first-party and adblockers leave it alone. The
+                  // matching `api/op/` exclusion lives in proxy.ts — without it
+                  // every beacon 307s to /join-school.
+                  apiUrl="/api/op"
+                  scriptUrl="/api/op/op1.js"
+                  trackScreenViews
+                  trackOutgoingLinks
+                  globalProperties={{
+                    tenant_id: tenantInfo?.id ?? null,
+                    tenant_slug: tenantInfo?.slug ?? null,
+                    locale,
+                  }}
+                />
+              ) : null}
               <RouteProgress />
               {children}
               <FeedbackButton />
