@@ -22,6 +22,13 @@
 #     activity. Re-enable from the Actions tab if that happens.
 #   * Run ONE mechanism. If a Dokploy schedule is added later, remove the
 #     corresponding schedule here so routes don't fire twice.
+#
+# Runs report to Sentry cron monitors (slug `cron-<route>`) so a run that never
+# happens is visible — a disabled workflow or a dropped tick fails nothing and
+# logs nothing, so job failure alone cannot catch it.
+#
+# Operating this: docs/CRON_RUNBOOK.md (scheduler of record, replay, secret
+# rotation, partial failure, and why solana-pull is dispatch-only).
 
 name: Scheduled cron routes
 
@@ -99,7 +106,9 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           CRON_BASE_URL: ${{ vars.CRON_BASE_URL }}
+          SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
           ROUTES: ${{ steps.resolve.outputs.routes }}
+          MONITOR_SCHEDULE: ${{ github.event.schedule }}
         run: |
           set -euo pipefail
 
@@ -112,12 +121,65 @@ jobs:
             exit 1
           fi
 
+          # ---- Sentry Crons monitoring (issue #620) ----
+          #
+          # A failed run already fails this job, and GitHub emails on that. What
+          # that cannot catch is the run that never happened: a workflow
+          # disabled by hand, a dropped */10 tick, or the 60-day inactivity
+          # shutdown that silently turned this file off once already. Sentry
+          # cron monitors close that gap — one monitor per route, and a check-in
+          # that never arrives raises an issue by itself.
+          #
+          # Ingest host, project id and public key are derived from the DSN
+          # (https://<key>@<host>/<project_id>) rather than written out, for the
+          # same reason Sentry.init reads it from the environment.
+          #
+          # One terminal check-in per route, no in_progress: the ingest endpoint
+          # answers 202 with an EMPTY body, so there is no check-in id to close
+          # a started run with. Verified against the live project — opening one
+          # and never closing it just leaves every run hanging.
+          #
+          # Monitoring is strictly additive. Every call swallows its own errors,
+          # because an unreachable Sentry must never fail a billing job.
+          checkin_url_base=''
+          checkin_margin=120
+          if [ -z "${MONITOR_SCHEDULE:-}" ]; then
+            echo "Manual run — no schedule to check in against, skipping Sentry monitors."
+          elif [ -z "${SENTRY_DSN:-}" ]; then
+            echo "::warning::NEXT_PUBLIC_SENTRY_DSN is not set — this run is unmonitored."
+          else
+            sentry_key="${SENTRY_DSN#*//}"; sentry_key="${sentry_key%%@*}"
+            sentry_rest="${SENTRY_DSN##*@}"
+            checkin_url_base="https://${sentry_rest%%/*}/api/${sentry_rest##*/}/cron"
+            # GitHub delays scheduled runs under load and drops high-frequency
+            # ones first, so the */10 group needs a wider margin than the daily
+            # jobs or every busy hour pages us. Misses that persist here are the
+            # signal to move to a Dokploy schedule — see docs/CRON_RUNBOOK.md.
+            case "$MONITOR_SCHEDULE" in
+              '*/10 * * * *') checkin_margin=30 ;;
+            esac
+          fi
+
+          # $1 route, $2 ok|error. Upserts the monitor so its schedule in Sentry
+          # can never drift from the schedule that actually invoked it.
+          checkin() {
+            [ -n "$checkin_url_base" ] || return 0
+            curl -sS --max-time 15 -o /dev/null -X POST \
+              -H 'Content-Type: application/json' \
+              -d "{\"status\":\"$2\",\"monitor_config\":{\"schedule\":{\"type\":\"crontab\",\"value\":\"$MONITOR_SCHEDULE\"},\"checkin_margin\":$checkin_margin,\"max_runtime\":20,\"timezone\":\"Etc/UTC\"}}" \
+              "$checkin_url_base/cron-$1/$sentry_key/" 2>/dev/null || true
+          }
+
           base="${CRON_BASE_URL%/}"
           failed=0
 
           for route in $ROUTES; do
             url="$base/api/cron/$route"
             echo "--- GET $url"
+            # Cleared per route: curl writes no body when it cannot connect, so
+            # a leftover file would print the PREVIOUS route's response under
+            # this route's failure — exactly the wrong thing during an incident.
+            rm -f /tmp/cron-body.txt
             # The secret is passed via env into the header and never printed;
             # GitHub also masks it in logs. Body is capped so a large digest
             # response can't flood the log.
@@ -127,10 +189,13 @@ jobs:
               "$url")" || code='000'
 
             echo "HTTP $code"
-            head -c 2000 /tmp/cron-body.txt || true
+            head -c 2000 /tmp/cron-body.txt 2>/dev/null || true
             echo
 
-            if [ "$code" != '200' ]; then
+            if [ "$code" = '200' ]; then
+              checkin "$route" ok
+            else
+              checkin "$route" error
               echo "::error::$route returned HTTP $code"
               failed=1
             fi
