@@ -66,7 +66,16 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
 
   return (
     <div className="mb-4 space-y-2">
-      <form ref={formRef} onSubmit={onSubmit} className="flex flex-wrap items-center gap-2" data-testid="tenants-filter-form">
+      {/* Keyed on the URL state: the component stays mounted across search-param
+          navigations, so without this a chip-cleared filter would linger in the
+          uncontrolled select and be re-applied on the next auto-submit. */}
+      <form
+        key={`${q ?? ''}|${plan ?? ''}|${status ?? ''}`}
+        ref={formRef}
+        onSubmit={onSubmit}
+        className="flex flex-wrap items-center gap-2"
+        data-testid="tenants-filter-form"
+      >
         <label className="relative">
           <span className="sr-only">Search schools by name</span>
           <IconSearch

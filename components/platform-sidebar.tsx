@@ -128,9 +128,11 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
               <SidebarMenu>
                 {group.items.map((item) => {
                   const href = `${localePrefix}${item.href}`
+                  // Segment match, not prefix match — `/platform/billing` must not
+                  // light up on `/platform/billing-health`.
                   const isActive = item.href === '/platform'
                     ? pathname === href
-                    : pathname.startsWith(href)
+                    : pathname === href || pathname.startsWith(`${href}/`)
                   const showBadge = item.badge !== undefined && item.badge > 0
                   return (
                     <SidebarMenuItem key={item.title}>

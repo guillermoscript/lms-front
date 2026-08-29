@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { IconAlertTriangle, IconArrowLeft, IconExternalLink, IconReceipt, IconUsers } from '@tabler/icons-react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { formatByCurrency, formatMoney, sumByCurrency } from '@/lib/payments/format-money'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
 import { PlatformPageHeader } from '@/components/platform/page-header'
 import { StatStrip } from '@/components/platform/stat-strip'
@@ -13,9 +14,6 @@ import { RelativeTime } from '@/components/platform/relative-time'
 import { PlanBadge, StatusDot, billingStatusTone, tenantStatusTone } from '@/components/platform/badges'
 import { TenantActionsMenu } from '../tenant-actions-menu'
 import { cn } from '@/lib/utils'
-
-const usd = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n ?? 0)
 
 const TX_TONE: Record<string, 'ok' | 'warn' | 'bad' | 'muted'> = {
   successful: 'ok',
@@ -63,7 +61,7 @@ export default async function TenantDetailPage({
       .eq('tenant_id', tenantId),
     adminClient
       .from('transactions')
-      .select('transaction_id, amount, refunded_amount, status, transaction_date, payment_provider')
+      .select('transaction_id, amount, refunded_amount, currency, status, transaction_date, payment_provider')
       .eq('tenant_id', tenantId)
       .order('transaction_date', { ascending: false })
       .limit(20),
@@ -81,10 +79,14 @@ export default async function TenantDetailPage({
     getTenantSiteUrl(tenant.slug),
   ])
 
-  const recentRevenue = (recentTransactions || [])
-    .filter(t => t.status === 'successful')
-    // Net of refunds (#547) — a partially refunded sale is still 'successful'.
-    .reduce((sum, t) => sum + netOfRefunds(t.amount || 0, t.refunded_amount), 0)
+  // Net of refunds (#547) — a partially refunded sale is still 'successful'.
+  // Grouped per currency, never summed across them (#497/#531): a school selling
+  // in MXN and USD gets two figures, not one meaningless total.
+  const recentRevenueByCurrency = sumByCurrency(
+    (recentTransactions || [])
+      .filter((t) => t.status === 'successful')
+      .map((t) => ({ amount: netOfRefunds(t.amount || 0, t.refunded_amount), currency: t.currency })),
+  )
 
   // Fetch profiles for admin users separately (more reliable than FK embedding)
   const adminUserIds = (adminUsers || []).map(u => u.user_id)
@@ -101,6 +103,10 @@ export default async function TenantDetailPage({
   // landed) the operator needs to see it here, not discover it from a support ticket.
   const planMismatch =
     subscriptionPlan && subscription?.status === 'active' && subscriptionPlan.slug !== (tenant.plan ?? 'free')
+  const subscriptionRenews =
+    !!subscription &&
+    ['active', 'renewed', 'trialing'].includes(subscription.status) &&
+    !subscription.cancel_at_period_end
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="tenant-detail-page">
@@ -165,7 +171,7 @@ export default async function TenantDetailPage({
           { label: 'Courses', value: courseCount ?? 0 },
           {
             label: 'Net revenue',
-            value: usd(recentRevenue),
+            value: formatByCurrency(recentRevenueByCurrency, locale),
             detail:
               (recentTransactions?.length ?? 0) === 1
                 ? 'Net of refunds · last transaction'
@@ -178,7 +184,9 @@ export default async function TenantDetailPage({
             detail: tenant.access_cutoff_at
               ? `Access cutoff ${format(new Date(tenant.access_cutoff_at), 'MMM d, yyyy')}`
               : subscription?.current_period_end
-                ? `Renews ${format(new Date(subscription.current_period_end), 'MMM d, yyyy')}`
+                ? // `cancel_at_period_end` is the only cancel-scheduled signal (#545);
+                  // a non-live status keeps its period end but will not renew either.
+                  `${subscriptionRenews ? 'Renews' : 'Ends'} ${format(new Date(subscription.current_period_end), 'MMM d, yyyy')}`
                 : 'No paid subscription',
           },
         ]}
@@ -213,7 +221,9 @@ export default async function TenantDetailPage({
                 <dd className="capitalize">{subscription.interval}</dd>
                 {subscription.current_period_end && (
                   <>
-                    <dt className="text-muted-foreground">Current period ends</dt>
+                    <dt className="text-muted-foreground">
+                      {subscriptionRenews ? 'Renews' : 'Ends'}
+                    </dt>
                     <dd>
                       {format(new Date(subscription.current_period_end), 'MMM d, yyyy')}{' '}
                       <span className="text-muted-foreground">(<RelativeTime value={subscription.current_period_end} />)</span>
@@ -306,9 +316,11 @@ export default async function TenantDetailPage({
                         <td className={TD}>
                           <StatusDot tone={TX_TONE[t.status ?? ''] ?? 'muted'} label={t.status ?? 'unknown'} />
                         </td>
-                        <td className={cn(TD, 'text-right font-medium tabular-nums')}>{usd(t.amount)}</td>
+                        <td className={cn(TD, 'text-right font-medium tabular-nums')}>
+                          {formatMoney(t.amount, t.currency, locale)}
+                        </td>
                         <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>
-                          {t.refunded_amount ? usd(t.refunded_amount) : '—'}
+                          {t.refunded_amount ? formatMoney(t.refunded_amount, t.currency, locale) : '—'}
                         </td>
                         <td className={cn(TD, 'text-right text-xs text-muted-foreground tabular-nums')}>
                           {format(new Date(t.transaction_date), 'MMM d, yyyy')}

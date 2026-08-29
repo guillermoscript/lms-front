@@ -89,25 +89,22 @@ export default async function PlatformOverviewPage() {
   const totalTenants = stats.total_tenants ?? 0
   const planDistribution = stats.tenants_by_plan ?? {}
 
-  const recentIds = (recentTenants || []).map((t) => t.id)
-  const { data: recentStudents } = recentIds.length
-    ? await adminClient
-        .from('tenant_users')
-        .select('tenant_id')
-        .in('tenant_id', recentIds)
-        .eq('role', 'student')
-        .eq('status', 'active')
-    : { data: [] as { tenant_id: string }[] }
-  const studentCounts = (recentStudents || []).reduce<Record<string, number>>((acc, r) => {
-    acc[r.tenant_id] = (acc[r.tenant_id] || 0) + 1
-    return acc
-  }, {})
+  // One head-count per school rather than pulling every student row into JS —
+  // a row fetch is silently capped at the PostgREST row limit (#548), and six
+  // `count: 'exact', head: true` requests are cheaper than one truncated list.
   const recentRows = await Promise.all(
-    (recentTenants || []).map(async (t) => ({
-      ...t,
-      students: studentCounts[t.id] || 0,
-      siteUrl: await getTenantSiteUrl(t.slug),
-    })),
+    (recentTenants || []).map(async (t) => {
+      const [{ count }, siteUrl] = await Promise.all([
+        adminClient
+          .from('tenant_users')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', t.id)
+          .eq('role', 'student')
+          .eq('status', 'active'),
+        getTenantSiteUrl(t.slug),
+      ])
+      return { ...t, students: count ?? 0, siteUrl }
+    }),
   )
 
   // ── Needs attention ──────────────────────────────────────────────────────
