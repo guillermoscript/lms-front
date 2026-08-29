@@ -78,13 +78,18 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        'request_id, tenant_id, status, expires_at, payment_provider, settlement_currency, settlement_base, settlement_mint',
+        'request_id, tenant_id, status, expires_at, payment_provider, provider_charge_id, activation_state, settlement_currency, settlement_base, settlement_mint',
       )
       .eq('provider_reference', reference)
       .maybeSingle()
 
     if (!request || request.payment_provider !== 'solana') {
       return NextResponse.json({ error: 'Payment request not found' }, { status: 404 })
+    }
+    // Once a transfer is observed, the durable activation worker owns recovery.
+    // Never build a second wallet transaction for the same request/reference.
+    if (request.provider_charge_id || request.activation_state) {
+      return NextResponse.json({ error: 'This payment has already been observed' }, { status: 409 })
     }
     // A lapsed request stops being payable the moment its TTL passes, whether
     // or not the expiry cron has swept it yet (#546) — otherwise a stale QR

@@ -4,6 +4,8 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { type NextRequest } from 'next/server'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -35,6 +37,17 @@ export async function GET(request: NextRequest) {
 
       // Smart redirect for new signups based on context
       if (type === 'signup' && user) {
+        // This — not /auth/sign-up-success — is the email-verification landing
+        // the coverage map means. sign-up-success is the "check your inbox"
+        // screen and is reached before the email is ever opened, so an event
+        // there would count intent, not confirmation.
+        // Must precede every `redirect()` below: those throw NEXT_REDIRECT.
+        await track(
+          ANALYTICS_EVENTS.SIGNUP_CONFIRMED,
+          { method: 'email' },
+          { userId: user.id, tenantId }
+        )
+
         if (requestedNext && next !== '/') {
           redirect(next)
         }

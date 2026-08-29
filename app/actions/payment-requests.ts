@@ -6,6 +6,10 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/lib/payments/subscription-guard'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 export interface PaymentRequestFormData {
   productId?: number
@@ -184,6 +188,23 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
     throw new Error('Failed to create payment request')
   }
 
+  // Loop C. The student IS the actor here, so no backdating is needed — unlike
+  // every later step in this flow, which runs in an admin's request context
+  // hours or days from now.
+  await track(
+    ANALYTICS_EVENTS.MANUAL_PAYMENT_REQUESTED,
+    {
+      provider: 'manual',
+      amount: paymentAmount,
+      currency: paymentCurrency,
+      is_subscription: !!data.planId,
+      request_id: request.request_id,
+      ...(data.productId ? { product_id: data.productId } : {}),
+      ...(data.planId ? { plan_id: data.planId } : {}),
+    },
+    { userId, tenantId }
+  )
+
   revalidatePath('/dashboard/student/payments')
   return request
 }
@@ -270,10 +291,11 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
     throw new Error('Unauthorized')
   }
 
-  // Verify request belongs to tenant
+  // Verify request belongs to tenant. `created_at` and the amount columns are
+  // selected for the analytics event below — see the attribution note there.
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, status, tenant_id, user_id, product:products(name), plan:plans(plan_name)')
+    .select('request_id, status, tenant_id, user_id, created_at, payment_amount, payment_currency, product_id, plan_id, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
@@ -286,11 +308,12 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
   }
 
   // Update request status
+  const confirmedAt = new Date().toISOString()
   const { error } = await supabase
     .from('payment_requests')
     .update({
       status: 'payment_received',
-      payment_confirmed_at: new Date().toISOString(),
+      payment_confirmed_at: confirmedAt,
       admin_notes: adminNotes || null,
       processed_by: userId,
       updated_at: new Date().toISOString(),
@@ -312,10 +335,53 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
     status: 'payment received',
   })
 
+  // Loop C, trap 3. This runs in the ADMIN's request context, hours or days
+  // after the student's session ended, so two things are deliberate:
+  //
+  //   - `userId` is the STUDENT's, never `userId` (the admin's). Attributing it
+  //     to the admin would make it look like the admin bought the course, and
+  //     would fold every school's manual sales onto one or two profiles.
+  //   - `timestamp` backdates the event to the original request, so the sale
+  //     lands in the cohort that generated it rather than in whichever day the
+  //     admin happened to do their paperwork. `hours_to_confirm` and the two
+  //     explicit stamps keep the admin-workload reading recoverable, since
+  //     backdating alone would erase it.
+  await track(
+    ANALYTICS_EVENTS.MANUAL_PAYMENT_CONFIRMED,
+    {
+      provider: 'manual',
+      amount: Number(request.payment_amount ?? 0),
+      currency: request.payment_currency ?? 'usd',
+      is_subscription: !!request.plan_id,
+      request_id: requestId,
+      original_requested_at: request.created_at,
+      confirmed_at: confirmedAt,
+      hours_to_confirm: hoursBetween(request.created_at, confirmedAt),
+      ...(request.product_id ? { product_id: request.product_id } : {}),
+      ...(request.plan_id ? { plan_id: request.plan_id } : {}),
+    },
+    {
+      userId: request.user_id,
+      tenantId: request.tenant_id,
+      timestamp: request.created_at,
+    }
+  )
+
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
 
   return { success: true }
+}
+
+/**
+ * Whole hours between two ISO stamps, or `null` when either is missing.
+ * `payment_requests.created_at` is nullable, and a fabricated 0 would read as
+ * "confirmed instantly" — the opposite of the truth this number exists to tell.
+ */
+function hoursBetween(from: string | null | undefined, to: string): number | null {
+  if (!from) return null
+  const ms = new Date(to).getTime() - new Date(from).getTime()
+  return Number.isFinite(ms) ? Math.round((ms / 3_600_000) * 10) / 10 : null
 }
 
 /**
@@ -398,6 +464,78 @@ export async function completeAndEnroll(requestId: number) {
     itemName: itemNameFromRequest(request),
     status: 'completed — you now have access',
   })
+
+  // Loop C. THIS is where a manual sale becomes real — the transaction row and,
+  // through `after_transaction_insert`, the entitlements. `confirmPaymentReceived`
+  // above only records that the admin saw the money arrive; it grants nothing,
+  // so `payment_succeeded` there would count sales that never completed.
+  //
+  // Same trap-3 attribution as that step: the student's id, and backdated to
+  // the original request so the sale lands in its own cohort rather than in the
+  // admin's paperwork day.
+  //
+  // Wrapped: the `entitlements` count is an analytics-only read, and the sale
+  // is already committed by the time we get here. A failed read must not throw
+  // the admin an error for a completion that actually succeeded.
+  await safeAnalytics(async () => {
+    const provider = (transaction.payment_provider as string | null) ?? 'manual'
+    const gross = Number(transaction.amount ?? 0)
+    const net = netOfRefunds(gross, transaction.refunded_amount as number | null)
+    const snapshot = (transaction.school_percentage_snapshot as number | null) ?? null
+    const bearsFee = !!PROVIDER_CAPABILITIES[provider as keyof typeof PROVIDER_CAPABILITIES]?.bearsPlatformFee
+    const ctx = {
+      userId: request.user_id as string,
+      tenantId: request.tenant_id as string,
+      timestamp: request.created_at as string | null,
+    }
+
+    await track(
+      ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+      {
+        provider,
+        amount_major: net,
+        currency: (transaction.currency as string | null) ?? 'usd',
+        is_subscription: !!request.plan_id,
+        ...(bearsFee
+          ? snapshot != null
+            ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
+            : {}
+          : { platform_fee: 0 }),
+        school_percentage_snapshot: snapshot,
+        gross_amount: gross,
+        transaction_id: transaction.transaction_id,
+        request_id: requestId,
+        settlement_path: 'manual',
+        original_requested_at: request.created_at,
+        hours_to_confirm: hoursBetween(request.created_at, new Date().toISOString()),
+        ...(request.product_id ? { product_id: request.product_id } : {}),
+        ...(request.plan_id ? { plan_id: request.plan_id } : {}),
+      },
+      ctx
+    )
+
+    const sourceType = request.plan_id ? 'subscription' : 'product'
+    const sourceId = request.plan_id ?? request.product_id
+    if (sourceId != null) {
+      const { count } = await adminClient
+        .from('entitlements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', request.user_id)
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId)
+        .eq('status', 'active')
+      await track(
+        ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+        {
+          source_type: sourceType,
+          course_count: count ?? 0,
+          provider,
+          transaction_id: transaction.transaction_id,
+        },
+        ctx
+      )
+    }
+  }, 'manual payment settlement analytics')
 
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)

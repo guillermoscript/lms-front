@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  EXPIRABLE_REQUEST_STATUSES,
   OPEN_REQUEST_STATUSES,
   REQUEST_TTL_DAYS,
   isRequestOpen,
@@ -32,6 +33,11 @@ describe('payment-request TTL', () => {
     // Deliberate: tying "does it still count" to the sweep would hand the
     // downgrade-pause leak back during any cron outage.
     expect(isRequestOpen({ status: 'pending', expires_at: at(-0.001) }, NOW)).toBe(false)
+  })
+
+  it('never expires a request after money has been observed', () => {
+    expect(EXPIRABLE_REQUEST_STATUSES).not.toContain('payment_received')
+    expect(isRequestOpen({ status: 'payment_received', expires_at: at(-30) }, NOW)).toBe(true)
   })
 
   it('never counts a terminal status', () => {

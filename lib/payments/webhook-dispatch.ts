@@ -16,6 +16,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { NormalizedBillingEvent } from './types'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from './types'
+import { netOfRefunds } from './payouts-owed'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 /**
  * The amount a `refund.succeeded` event gave back, in major units of the
@@ -50,6 +54,140 @@ function refundedSlice(
   return event.amount
 }
 
+// ---------------------------------------------------------------------------
+// Loop C analytics.
+//
+// WHY HERE AND NOT IN THE ROUTES: two callers dispatch the SAME
+// `payment.succeeded` for one PayPal capture — `app/api/payments/paypal/capture`
+// on the buyer's return and `app/api/payments/webhook/paypal` on the provider's
+// webhook — and only one of them wins the `.eq('status','pending')` guard below.
+// That guard IS the correctness boundary for "did this delivery settle the
+// sale", so an event fired above it would double-count every PayPal (and
+// Binance) purchase. Emitting from inside the guarded branches makes one
+// settled sale produce exactly one event, whichever caller got there first.
+//
+// EVERY CALL IS FIRE-AND-FORGET (`void`). `track()` cannot throw and is
+// deadline-capped, but the settlement path must not wait on it at all — a
+// webhook that answers slowly gets retried, and a retried payment webhook is a
+// far worse outcome than a missing chart point. This deployment runs a
+// long-lived Node process (not a freezing serverless invocation), so a floating
+// promise here does complete.
+//
+// DELIBERATELY NOT INSTRUMENTED: `subscription.renewed`. The legacy Stripe route
+// emits its own renewal event (it already reads the subscription row for
+// attribution and out-of-order detection), and adding one here would double it.
+// ---------------------------------------------------------------------------
+
+/** The transaction row the money events are derived from. */
+interface SettlementRow {
+  transaction_id: number
+  user_id: string | null
+  tenant_id?: string | null
+  amount: number | null
+  currency: string | null
+  refunded_amount?: number | null
+  school_percentage_snapshot?: number | null
+  plan_id: number | null
+  product_id?: number | null
+}
+
+/**
+ * The platform's cut, for analytics only.
+ *
+ * WHETHER a fee is taken is the provider's `bearsPlatformFee` capability —
+ * never `revenue_splits.applies_to_providers`, retired in #547 because it held
+ * the labels `stripe`/`manual` rather than provider slugs, which reported 0% on
+ * every PayPal/LS/Binance sale while `getPayoutsOwed` applied the full split.
+ * The RATE is the transaction's OWN `school_percentage_snapshot`, so this figure
+ * and the payout reconcile row by row.
+ *
+ * Omits the property entirely rather than guessing when the row has no
+ * snapshot; the companion `school_percentage_snapshot: null` says why.
+ */
+function platformFeeProps(
+  provider: string,
+  netAmount: number,
+  snapshot: number | null | undefined,
+): { platform_fee: number } | Record<string, never> {
+  if (!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.bearsPlatformFee) {
+    return { platform_fee: 0 }
+  }
+  if (snapshot == null) return {}
+  return { platform_fee: Math.round(netAmount * (100 - Number(snapshot))) / 100 }
+}
+
+/**
+ * `payment_succeeded` + `entitlement_granted` for a transaction that just
+ * flipped to successful. Callers `void` this.
+ *
+ * The entitlement count is read rather than assumed: the
+ * `after_transaction_update` trigger creates those rows in the same statement,
+ * so a zero here is a real paid-but-no-access incident — the one number that
+ * makes the event worth emitting at all.
+ *
+ * Wrapped whole: that `entitlements` read is pure analytics, and callers `void`
+ * this — so an unguarded throw would not fail the webhook, it would surface as
+ * an unhandled promise rejection instead. Losing the event is the right failure.
+ */
+async function trackSettlement(
+  admin: SupabaseClient,
+  provider: string,
+  tx: SettlementRow,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  return safeAnalytics(async () => {
+    const ctx = { userId: tx.user_id, tenantId: tx.tenant_id ?? null }
+    const gross = Number(tx.amount ?? 0)
+    // NET of refunds (#547): a partial refund leaves the row 'successful', so a
+    // gross sum would overstate revenue exactly the way the school-facing screens
+    // did before that issue. Normally a no-op on a fresh flip — it is here so the
+    // property is net by construction rather than by luck.
+    const net = netOfRefunds(gross, tx.refunded_amount)
+    const snapshot = tx.school_percentage_snapshot ?? null
+
+    await track(
+      ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+      {
+        provider,
+        amount_major: net,
+        currency: tx.currency ?? 'usd',
+        is_subscription: !!tx.plan_id,
+        ...platformFeeProps(provider, net, snapshot),
+        school_percentage_snapshot: snapshot,
+        gross_amount: gross,
+        transaction_id: tx.transaction_id,
+        ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+        ...(tx.product_id ? { product_id: tx.product_id } : {}),
+        ...extra,
+      },
+      ctx,
+    )
+
+    const sourceType = tx.plan_id ? 'subscription' : 'product'
+    const sourceId = tx.plan_id ?? tx.product_id
+    if (!tx.user_id || sourceId == null) return
+
+    const { count } = await admin
+      .from('entitlements')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', tx.user_id)
+      .eq('source_type', sourceType)
+      .eq('source_id', sourceId)
+      .eq('status', 'active')
+
+    await track(
+      ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+      {
+        source_type: sourceType,
+        course_count: count ?? 0,
+        provider,
+        transaction_id: tx.transaction_id,
+      },
+      ctx,
+    )
+  }, 'payment settlement analytics')
+}
+
 export interface DispatchContext {
   /** Provider slug — used as the payment_provider match key. */
   provider: string
@@ -81,9 +219,13 @@ export async function dispatchBillingEvent(
       if (event.reference && subId) {
         const txnId = Number.parseInt(event.reference, 10)
         if (!Number.isNaN(txnId)) {
+          // The money columns are for the settlement event below — extra
+          // columns on a read that was already happening, not a second query.
           const { data: tx } = await admin
             .from('transactions')
-            .select('transaction_id, status, user_id, tenant_id')
+            .select(
+              'transaction_id, status, user_id, tenant_id, amount, currency, refunded_amount, school_percentage_snapshot, plan_id, product_id',
+            )
             .eq('transaction_id', txnId)
             .maybeSingle()
 
@@ -116,6 +258,14 @@ export async function dispatchBillingEvent(
               .eq('transaction_id', txnId)
               .eq('status', 'pending')
             if (flipErr) throw new Error(`dispatch ${event.type} activation failed: ${flipErr.message}`)
+
+            // The first charge of a subscription on a hosted-checkout rail.
+            // `is_renewal: false` by construction — this branch only runs on a
+            // still-`pending` transaction, which exists once per subscription.
+            void trackSettlement(admin, provider, tx, {
+              is_renewal: false,
+              event_type: event.type,
+            })
 
             // handle_new_subscription set end_date from the plan duration; the
             // provider's schedule is authoritative, so align to renews_at.
@@ -228,7 +378,9 @@ export async function dispatchBillingEvent(
 
       const { data: tx } = await admin
         .from('transactions')
-        .select('transaction_id, status, user_id, tenant_id, plan_id, product_id')
+        .select(
+          'transaction_id, status, user_id, tenant_id, plan_id, product_id, amount, currency, refunded_amount, school_percentage_snapshot',
+        )
         .eq('transaction_id', txnId)
         .maybeSingle()
 
@@ -259,6 +411,11 @@ export async function dispatchBillingEvent(
           .eq('status', 'pending')
         if (error) throw new Error(`dispatch ${event.type} activation failed: ${error.message}`)
         // after_transaction_update trigger → enroll_user(user, product_id).
+
+        // Inside the `status === 'pending'` guard, so the losing caller of the
+        // two that dispatch this event (the PayPal capture route and the
+        // webhook) emits nothing.
+        void trackSettlement(admin, provider, tx, { event_type: event.type })
       }
       break
     }
@@ -299,7 +456,7 @@ export async function dispatchBillingEvent(
       const { data: tx } = await admin
         .from('transactions')
         .select(
-          'transaction_id, status, user_id, plan_id, product_id, amount, currency, refunded_amount',
+          'transaction_id, status, user_id, tenant_id, plan_id, product_id, amount, currency, refunded_amount',
         )
         .eq('transaction_id', txnId)
         .maybeSingle()
@@ -321,6 +478,7 @@ export async function dispatchBillingEvent(
       // Dedupe, accounting and full-refund entitlement revocation share one
       // transaction. A replay cannot revoke an entitlement reactivated by a
       // later purchase, and a crash cannot split money from access state.
+      const priorRefunded = Number(tx.refunded_amount ?? 0)
       const { data, error } = await admin.rpc('apply_webhook_refund', {
         _provider: provider,
         _provider_event_id: event.providerEventId,
@@ -328,8 +486,45 @@ export async function dispatchBillingEvent(
         _refund_amount: slice,
       })
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
-      if (!(data as { applied: boolean }[] | null)?.[0]) {
+      const refund = (data as {
+        applied: boolean
+        refunded_amount: number | string | null
+        is_full_refund: boolean
+      }[] | null)?.[0]
+      if (!refund) {
         throw new Error(`dispatch ${event.type}: refund transaction ${txnId} was not applicable`)
+      }
+
+      // Only on the call that actually moved money — the RPC reports
+      // `applied: false` for a redelivery it declined, which must not be
+      // counted a second time. Every figure comes from the RPC's own return,
+      // so the event can never disagree with the row it describes.
+      if (refund.applied) {
+        const cumulative = Number(refund.refunded_amount ?? 0)
+        void track(
+          ANALYTICS_EVENTS.REFUND_ISSUED,
+          {
+            // A PARTIAL refund keeps the row 'successful' and only records the
+            // slice (#547); only a FULL one flips the status and revokes access.
+            // Every revenue sum depends on the distinction.
+            is_partial: !refund.is_full_refund,
+            /** This event's own slice. */
+            refunded_amount: cumulative - priorRefunded,
+            cumulative_refunded_amount: cumulative,
+            /** What the sale is still worth. */
+            net_amount: netOfRefunds(saleAmount, cumulative),
+            gross_amount: saleAmount,
+            currency: tx.currency ?? 'usd',
+            provider,
+            is_subscription: !!tx.plan_id,
+            transaction_id: tx.transaction_id,
+            // False means the provider sent no usable figure and `refundedSlice`
+            // degraded to a FULL refund — worth being able to filter out of a
+            // partial-vs-full breakdown.
+            amount_reported_by_provider: event.amount != null,
+          },
+          { userId: tx.user_id, tenantId: tx.tenant_id },
+        )
       }
       break
     }
@@ -354,12 +549,36 @@ export async function dispatchBillingEvent(
       const txnId = Number.parseInt(event.reference, 10)
       if (Number.isNaN(txnId)) break
 
-      const { error } = await admin
+      // `.select()` added for attribution only: the returned row tells us both
+      // that the guard actually matched (so a late PAY_CLOSED racing a
+      // PAY_SUCCESS emits nothing) and who to attribute the failure to, without
+      // a second read.
+      const { data: failed, error } = await admin
         .from('transactions')
         .update({ status: 'failed' })
         .eq('transaction_id', txnId)
         .eq('status', 'pending')
+        .select('transaction_id, user_id, tenant_id, amount, currency, plan_id, product_id')
+        .maybeSingle()
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
+
+      if (failed) {
+        void track(
+          ANALYTICS_EVENTS.PAYMENT_FAILED,
+          {
+            provider,
+            // Hosted rails report a terminal ORDER state (Binance `PAY_CLOSED`
+            // on expiry) rather than a decline reason, so the normalized event
+            // type is the most specific thing there is to say.
+            failure_reason: event.type,
+            amount: Number(failed.amount ?? 0),
+            currency: failed.currency ?? 'usd',
+            is_subscription: !!failed.plan_id,
+            transaction_id: failed.transaction_id,
+          },
+          { userId: failed.user_id, tenantId: failed.tenant_id },
+        )
+      }
       break
     }
   }

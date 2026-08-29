@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 import type { Data } from '@measured/puck'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -168,6 +170,47 @@ export async function getTemplates(): Promise<ActionResult<LandingPageTemplate[]
   }
 }
 
+// ─── Analytics ───────────────────────────────────────────────────────────────
+
+/**
+ * `landing_page_published`, emitted from ONE place because two actions write
+ * `is_published: true` — `publishLandingPage` and `activateLandingPage`.
+ *
+ * Both callers pass the page's prior `is_published`, and this fires only on
+ * false → true. Re-publishing an already-live page (the Puck editor's save →
+ * publish path does exactly that) is not a new publish, and counting it twice
+ * would double the Loop B numerator for the schools that iterate most.
+ */
+async function trackLandingPagePublished(input: {
+  tenantId: string
+  page: Record<string, unknown>
+  wasPublished: boolean
+  via: 'publish' | 'activate'
+}): Promise<void> {
+  if (input.wasPublished) return
+
+  // Wrapped: `getCurrentUserId()` is evaluated as an ARGUMENT, so it runs
+  // before `track()`'s own guard could catch anything it throws — and both
+  // callers await this after the page is already live.
+  return safeAnalytics(async () => {
+    const puckData = input.page.puck_data as Data | undefined
+    await track(
+      ANALYTICS_EVENTS.LANDING_PAGE_PUBLISHED,
+      {
+        page_id: input.page.page_id as string,
+        slug: input.page.slug as string,
+        block_count: Array.isArray(puckData?.content) ? puckData.content.length : 0,
+        via: input.via,
+      },
+      {
+        userId: await getCurrentUserId(),
+        tenantId: input.tenantId,
+        role: 'admin',
+      }
+    )
+  }, 'landing_page_published')
+}
+
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 export async function createLandingPage(
@@ -267,7 +310,7 @@ export async function publishLandingPage(id: string): Promise<ActionResult<Landi
 
     const { data: existing } = await adminClient
       .from('landing_pages')
-      .select('tenant_id, slug')
+      .select('tenant_id, slug, is_published')
       .eq('page_id', id)
       .single()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
@@ -279,6 +322,13 @@ export async function publishLandingPage(id: string): Promise<ActionResult<Landi
       .select()
       .single()
     if (error) throw error
+
+    await trackLandingPagePublished({
+      tenantId,
+      page: data,
+      wasPublished: existing.is_published,
+      via: 'publish',
+    })
 
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     revalidatePath('/[locale]', 'page')
@@ -297,6 +347,23 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
+    // Read the prior state so the shared emitter can tell a real publish from a
+    // re-activation of a page that was already live.
+    //
+    // Guarded: this read serves the event alone, and it runs BEFORE the update —
+    // unguarded, a transient failure would abort the activation itself. `null`
+    // means the read failed, and the emitter below treats that as "already
+    // published" so an unknowable prior state suppresses the event rather than
+    // double-counting the Loop B numerator.
+    const existingRead = await Promise.resolve(
+      adminClient
+        .from('landing_pages')
+        .select('is_published')
+        .eq('page_id', id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+    ).catch(() => null)
+
     const { data, error } = await adminClient
       .from('landing_pages')
       .update({ is_published: true, updated_at: new Date().toISOString() })
@@ -305,6 +372,13 @@ export async function activateLandingPage(id: string): Promise<ActionResult<Land
       .select()
       .single()
     if (error) throw error
+
+    await trackLandingPagePublished({
+      tenantId,
+      page: data,
+      wasPublished: existingRead ? (existingRead.data?.is_published ?? false) : true,
+      via: 'activate',
+    })
 
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     revalidatePath('/[locale]', 'page')

@@ -1,6 +1,8 @@
 'use server'
 
 import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 
 export interface ExamQuestionData {
@@ -110,6 +112,19 @@ export async function createExam(courseId: number, data: ExamFormData) {
     if (insertError) throw insertError
 
     await insertQuestionsAndOptions(ctx.supabase, newExam.exam_id, data.questions)
+
+    await track(
+      ANALYTICS_EVENTS.EXAM_CREATED,
+      {
+        exam_id: newExam.exam_id,
+        course_id: courseId,
+        question_count: data.questions.length,
+        question_types: Array.from(new Set(data.questions.map((q) => q.question_type))),
+        duration_minutes: data.duration,
+        published: Boolean(data.publish),
+      },
+      { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role }
+    )
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}`)
 

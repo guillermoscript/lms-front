@@ -5,6 +5,10 @@ import Stripe from 'stripe'
 import { sendEmail } from '@/lib/email/send'
 import { enrollmentConfirmedTemplate } from '@/lib/email/templates/enrollment-confirmed'
 import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 // Lazy initialize Supabase admin client
 function getSupabaseAdmin() {
@@ -31,6 +35,54 @@ function getInvoiceSubscription(invoice: Stripe.Invoice): {
   const sub = details?.subscription ?? inv.subscription
   const id = (typeof sub === 'string' ? sub : sub?.id) ?? null
   return { id, metadata: details?.metadata ?? {} }
+}
+
+/**
+ * The platform's cut of a sale, for analytics only.
+ *
+ * Two inputs, both mandated by #547 and neither interchangeable with the other:
+ * WHETHER a fee is taken is the provider's `bearsPlatformFee` capability (never
+ * `revenue_splits.applies_to_providers`, retired in #547 because it stored the
+ * labels `stripe`/`manual` rather than provider slugs), and the RATE is the
+ * transaction's OWN `school_percentage_snapshot` — the same number
+ * `getPayoutsOwed` will use — so the chart and the payout reconcile row by row.
+ *
+ * Returns a spreadable fragment that OMITS `platform_fee` entirely — never a
+ * guess — when the row carries no snapshot: a fabricated default is how the
+ * school-facing and platform-facing figures drift apart. The companion
+ * `school_percentage_snapshot: null` on the event says why it is missing.
+ */
+function platformFeeFor(
+  provider: string,
+  netAmount: number,
+  schoolPercentageSnapshot: number | null | undefined,
+): { platform_fee: number } | Record<string, never> {
+  if (!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.bearsPlatformFee) {
+    return { platform_fee: 0 }
+  }
+  if (schoolPercentageSnapshot == null) return {}
+  return { platform_fee: Math.round(netAmount * (100 - Number(schoolPercentageSnapshot))) / 100 }
+}
+
+/**
+ * How many entitlement rows the flip actually produced. The
+ * `after_transaction_update` trigger runs in the same statement, so by the time
+ * the UPDATE has returned they exist — a zero here is a real "paid but got
+ * nothing" incident, which is the whole reason the event carries a count.
+ */
+async function countGrantedEntitlements(
+  userId: string,
+  sourceType: 'product' | 'subscription',
+  sourceId: number,
+): Promise<number> {
+  const { count } = await getSupabaseAdmin()
+    .from('entitlements')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('source_type', sourceType)
+    .eq('source_id', sourceId)
+    .eq('status', 'active')
+  return count ?? 0
 }
 
 /**
@@ -100,9 +152,15 @@ export async function POST(req: NextRequest) {
         // This triggers the database function `trigger_manage_transactions`
         // which automatically calls `enroll_user` or `handle_new_subscription`
         // Idempotency: only update if still pending
+        // The analytics columns ride on the idempotency read that was already
+        // happening — no extra round trip on the payment path. NOTE:
+        // `transaction_date`, never `created_at`; that column does not exist and
+        // selecting it 42703s the whole request.
         const { data: txBefore } = await getSupabaseAdmin()
           .from('transactions')
-          .select('status, user_id')
+          .select(
+            'status, user_id, tenant_id, amount, refunded_amount, currency, product_id, plan_id, school_percentage_snapshot, transaction_date',
+          )
           .eq('transaction_id', parseInt(transactionId))
           .single()
 
@@ -129,6 +187,61 @@ export async function POST(req: NextRequest) {
           // the enrollment email or re-run side effects. The first delivery owns them.
           console.log(`Transaction ${transactionId} already flipped by a concurrent delivery — skipping side effects`)
           break
+        }
+
+        // Loop C. Inside the `flipped` guard on purpose: a concurrent delivery
+        // that lost the race already returned above, so exactly one settlement
+        // event is emitted per sale however many times Stripe delivers it.
+        //
+        // NET of refunds (#547): a partial refund keeps the row 'successful',
+        // so summing gross `amount` would recreate the overstatement that issue
+        // fixed. On a fresh flip `refunded_amount` is 0 and this is a no-op —
+        // it is here so the property is net *by construction*, not by luck.
+        {
+          const gross = Number(txBefore?.amount ?? 0)
+          const net = netOfRefunds(gross, txBefore?.refunded_amount as number | null)
+          const snapshot = txBefore?.school_percentage_snapshot as number | null
+          await track(
+            ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+            {
+              provider: 'stripe',
+              amount_major: net,
+              currency: (txBefore?.currency as string | null) ?? 'usd',
+              is_subscription: !!txBefore?.plan_id,
+              ...platformFeeFor('stripe', net, snapshot),
+              school_percentage_snapshot: snapshot,
+              gross_amount: gross,
+              transaction_id: parseInt(transactionId),
+              ...(txBefore?.product_id ? { product_id: txBefore.product_id } : {}),
+              ...(txBefore?.plan_id ? { plan_id: txBefore.plan_id } : {}),
+            },
+            { userId: txBefore?.user_id, tenantId: tenantId ?? (txBefore?.tenant_id as string | null) },
+          )
+
+          // The DB trigger created the entitlements inside the same statement,
+          // so this reads the real outcome. A zero is a paid-but-no-access
+          // incident, which is precisely what the count exists to surface.
+          //
+          // Wrapped: `countGrantedEntitlements` is an analytics-only read
+          // evaluated as a track() ARGUMENT, so it runs before track()'s own
+          // guard could absorb it — unguarded it would 500 a paid webhook.
+          const sourceType = txBefore?.plan_id ? 'subscription' : 'product'
+          const sourceId = (txBefore?.plan_id ?? txBefore?.product_id) as number | null
+          if (txBefore?.user_id && sourceId != null) {
+            const buyerId = txBefore.user_id
+            await safeAnalytics(async () => {
+              await track(
+                ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+                {
+                  source_type: sourceType,
+                  course_count: await countGrantedEntitlements(buyerId, sourceType, sourceId),
+                  provider: 'stripe',
+                  transaction_id: parseInt(transactionId),
+                },
+                { userId: buyerId, tenantId: tenantId ?? (txBefore?.tenant_id as string | null) },
+              )
+            }, 'entitlement_granted (stripe payment_intent)')
+          }
         }
 
         // Send enrollment confirmation email
@@ -188,10 +301,35 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        await getSupabaseAdmin()
+        // Status-guarded so a redelivery cannot emit a second failure, and the
+        // returned row supplies the buyer/tenant the event is attributed to
+        // without a separate read.
+        const { data: failed } = await getSupabaseAdmin()
           .from('transactions')
           .update({ status: 'failed' })
           .eq('transaction_id', parseInt(transactionId))
+          .neq('status', 'failed')
+          .select('user_id, tenant_id, amount, currency, plan_id, product_id')
+          .maybeSingle()
+
+        if (failed) {
+          await track(
+            ANALYTICS_EVENTS.PAYMENT_FAILED,
+            {
+              provider: 'stripe',
+              failure_reason:
+                paymentIntent.last_payment_error?.code ||
+                paymentIntent.last_payment_error?.message ||
+                'unknown',
+              decline_code: paymentIntent.last_payment_error?.decline_code ?? null,
+              amount: Number(failed.amount ?? 0),
+              currency: (failed.currency as string | null) ?? 'usd',
+              is_subscription: !!failed.plan_id,
+              transaction_id: parseInt(transactionId),
+            },
+            { userId: failed.user_id, tenantId: tenantId ?? (failed.tenant_id as string | null) },
+          )
+        }
 
         console.log(`Transaction ${transactionId} marked as failed`)
       }
@@ -206,7 +344,7 @@ export async function POST(req: NextRequest) {
         // Find transaction by Stripe payment intent ID
         const { data: transaction } = await getSupabaseAdmin()
           .from('transactions')
-          .select('transaction_id, tenant_id, product_id, plan_id, user_id, status')
+          .select('transaction_id, tenant_id, product_id, plan_id, user_id, status, amount, currency, refunded_amount')
           .eq('stripe_payment_intent_id', paymentIntentId)
           .single()
 
@@ -240,6 +378,34 @@ export async function POST(req: NextRequest) {
             })
             .eq('transaction_id', transaction.transaction_id)
             .eq('status', 'successful')
+
+          // Loop C. Emitted only when the cumulative refunded total actually
+          // MOVED. `charge.amount_refunded` is cumulative and a partial refund
+          // leaves the row 'successful', so the idempotency guard above lets a
+          // redelivery back in — without this comparison the same $10 slice
+          // would be counted twice.
+          const priorRefunded = Number(transaction.refunded_amount ?? 0)
+          const cumulativeRefunded = charge.amount_refunded / 100
+          if (cumulativeRefunded > priorRefunded + 0.005) {
+            const gross = Number(transaction.amount ?? 0)
+            await track(
+              ANALYTICS_EVENTS.REFUND_ISSUED,
+              {
+                is_partial: !isFullRefund,
+                // This event's own slice, not the running total.
+                refunded_amount: cumulativeRefunded - priorRefunded,
+                cumulative_refunded_amount: cumulativeRefunded,
+                // What the sale is still worth after the refund (#547).
+                net_amount: netOfRefunds(gross, cumulativeRefunded),
+                gross_amount: gross,
+                currency: (transaction.currency as string | null) ?? 'usd',
+                provider: 'stripe',
+                is_subscription: !!transaction.plan_id,
+                transaction_id: transaction.transaction_id,
+              },
+              { userId: transaction.user_id, tenantId: transaction.tenant_id },
+            )
+          }
 
           if (!isFullRefund) {
             console.log(`Partial refund of ${charge.amount_refunded / 100} for transaction ${transaction.transaction_id}`)
@@ -398,7 +564,9 @@ export async function POST(req: NextRequest) {
 
         let lookup = getSupabaseAdmin()
           .from('transactions')
-          .select('transaction_id')
+          .select(
+            'transaction_id, user_id, tenant_id, amount, refunded_amount, currency, plan_id, school_percentage_snapshot',
+          )
           .eq('status', 'pending')
         lookup = txnIdMeta
           ? lookup.eq('transaction_id', txnIdMeta)
@@ -406,7 +574,7 @@ export async function POST(req: NextRequest) {
         const { data: tx } = await lookup.maybeSingle()
 
         if (tx) {
-          await getSupabaseAdmin()
+          const { data: activated } = await getSupabaseAdmin()
             .from('transactions')
             .update({
               status: 'successful',
@@ -415,7 +583,53 @@ export async function POST(req: NextRequest) {
             })
             .eq('transaction_id', tx.transaction_id)
             .eq('status', 'pending')
+            .select('transaction_id')
+            .maybeSingle()
           console.log(`Activated subscription transaction ${tx.transaction_id} (Stripe sub ${stripeSubId})`)
+
+          // Loop C, native-subscription first charge. Gated on the flip having
+          // landed so a redelivery — or the payment_intent.succeeded path racing
+          // this one — cannot bill the funnel twice.
+          if (activated) {
+            const gross = Number(tx.amount ?? 0)
+            const net = netOfRefunds(gross, tx.refunded_amount as number | null)
+            const snapshot = tx.school_percentage_snapshot as number | null
+            await track(
+              ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+              {
+                provider: 'stripe',
+                amount_major: net,
+                currency: (tx.currency as string | null) ?? 'usd',
+                is_subscription: true,
+                is_renewal: false,
+                ...platformFeeFor('stripe', net, snapshot),
+                school_percentage_snapshot: snapshot,
+                gross_amount: gross,
+                transaction_id: tx.transaction_id,
+                ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+              },
+              { userId: tx.user_id, tenantId: tx.tenant_id as string | null },
+            )
+
+            // Wrapped for the same reason as the payment_intent path above: the
+            // count is an analytics-only read in track()'s ARGUMENT list.
+            if (tx.user_id && tx.plan_id != null) {
+              const buyerId = tx.user_id
+              const planId = tx.plan_id
+              await safeAnalytics(async () => {
+                await track(
+                  ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+                  {
+                    source_type: 'subscription',
+                    course_count: await countGrantedEntitlements(buyerId, 'subscription', planId),
+                    provider: 'stripe',
+                    transaction_id: tx.transaction_id,
+                  },
+                  { userId: buyerId, tenantId: tx.tenant_id as string | null },
+                )
+              }, 'entitlement_granted (stripe subscription_create)')
+            }
+          }
         } else {
           console.warn(`No pending transaction for subscription_create (Stripe sub ${stripeSubId}, txn meta ${subMeta.transactionId ?? 'none'})`)
         }
@@ -426,6 +640,27 @@ export async function POST(req: NextRequest) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const inv = invoice as any
         const periodEndUnix = inv.lines?.data?.[0]?.period?.end ?? inv.period_end
+
+        // Read the subscription BEFORE the dispatcher extends it. This is the
+        // one deliberate extra query on this route, and it buys two things a
+        // renewal event cannot do without: the buyer + tenant to attribute the
+        // money to (a renewal creates no transaction row, so there is nothing
+        // else holding them), and an idempotency reference — this endpoint has
+        // no `webhook_events` ledger, so a redelivered renewal would otherwise
+        // be counted as a second month of revenue.
+        //
+        // Guarded: nothing below the analytics gate reads it, so a failed read
+        // must cost the event and not the renewal it is describing. `.catch`
+        // rather than `safeAnalytics` only because the value is needed here.
+        const { data: renewedSub } = await Promise.resolve(
+          getSupabaseAdmin()
+            .from('subscriptions')
+            .select('user_id, tenant_id, plan_id, current_period_end')
+            .eq('provider_subscription_id', stripeSubId)
+            .eq('payment_provider', 'stripe')
+            .maybeSingle()
+        ).catch(() => ({ data: null }))
+
         await dispatchBillingEvent(
           {
             type: 'subscription.renewed',
@@ -436,6 +671,37 @@ export async function POST(req: NextRequest) {
           },
           { provider: 'stripe', admin: getSupabaseAdmin() }
         )
+        // Only when the invoice genuinely moves the period forward. Equal or
+        // earlier means a redelivery (or an out-of-order event the dispatcher
+        // itself ignores), and neither is a new month of revenue.
+        const movedForward =
+          !!periodEndUnix &&
+          (!renewedSub?.current_period_end ||
+            periodEndUnix * 1000 > new Date(renewedSub.current_period_end).getTime())
+
+        if (renewedSub && movedForward) {
+          // Stripe reports invoice money in MINOR units; the contract is MAJOR.
+          const amountMajor = Number(inv.amount_paid ?? 0) / 100
+          await track(
+            ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+            {
+              provider: 'stripe',
+              amount_major: amountMajor,
+              currency: (inv.currency as string | undefined) ?? 'usd',
+              is_subscription: true,
+              is_renewal: true,
+              // A renewal has no transaction row and therefore no
+              // `school_percentage_snapshot` of its own. Reporting `null` is
+              // honest; inventing today's split rate would make this event
+              // disagree with whatever the payouts computation later does.
+              school_percentage_snapshot: null,
+              ...(renewedSub.plan_id ? { plan_id: renewedSub.plan_id } : {}),
+              period_end: periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null,
+            },
+            { userId: renewedSub.user_id, tenantId: renewedSub.tenant_id as string | null },
+          )
+        }
+
         console.log(`Processed subscription renewal for Stripe sub ${stripeSubId}`)
       }
       break

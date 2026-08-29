@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentTenantId } from '@/lib/supabase/tenant';
+import { track } from '@/lib/analytics/server';
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,6 +92,19 @@ export async function POST(request: NextRequest) {
             .from('certificates')
             .update({ share_count: certificate.share_count + 1 })
             .eq('certificate_id', certificateId);
+
+        // Sharing is the organic acquisition loop — a credential posted to
+        // LinkedIn is a free top-of-funnel touch, and `share_count` alone does
+        // not say which channel earns them.
+        await track(
+            ANALYTICS_EVENTS.CERTIFICATE_SHARED,
+            {
+                certificate_id: certificateId,
+                channel: platform,
+                share_number: (certificate.share_count ?? 0) + 1,
+            },
+            { userId: user.id, tenantId, role: 'student' }
+        );
 
         return NextResponse.json({ success: true });
     } catch (error) {

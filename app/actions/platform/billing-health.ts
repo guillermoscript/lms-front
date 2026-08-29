@@ -19,6 +19,7 @@ import {
   type PlatformPlanInput,
   type PlatformPlanPriceInput,
 } from '@/lib/billing/plan-prices'
+import { getPlatformProviderRuntimeStatuses } from '@/lib/billing/platform-checkout-runtime'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -231,9 +232,10 @@ export async function getPlanConfigurationHealth(): Promise<PlanConfigurationHea
     amount: row.amount,
     isActive: row.is_active,
   }))
+  const providerStatuses = getPlatformProviderRuntimeStatuses()
 
   return {
-    unpurchasable: findUnpurchasablePlans(plans, prices),
-    partiallyPriced: findPartiallyPricedPlans(plans, prices),
+    unpurchasable: findUnpurchasablePlans(plans, prices, { providerStatuses }),
+    partiallyPriced: findPartiallyPricedPlans(plans, prices, { providerStatuses }),
   }
 }

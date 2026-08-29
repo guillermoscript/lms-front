@@ -23,6 +23,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getPaymentProvider } from '@/lib/payments'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types'
 import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
@@ -298,6 +300,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
     }
 
+    // Loop C. `amountMajor` is the USD-denominated price, NOT `settlement_base`
+    // — the lamport/USDC figure is what the chain is checked against and is
+    // meaningless summed across rails. `school_percentage_snapshot` rides along
+    // because it is the rate the payouts computation will later use for this
+    // exact sale, so the two can be reconciled row by row.
+    await track(
+      ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      {
+        provider: providerSlug,
+        amount: amountMajor,
+        currency,
+        ...(productId ? { product_id: productId } : {}),
+        ...(planId ? { plan_id: planId } : {}),
+        transaction_id: transaction.transaction_id,
+        is_subscription: mode === 'subscription',
+        school_percentage_snapshot: schoolPercentageSnapshot,
+        ...(settlement ? { settlement_currency: settlement.currency } : {}),
+      },
+      { userId: user.id, tenantId },
+    )
+
     const reference = transaction.transaction_id.toString()
     // Derive the tenant's own origin from the request rather than the single
     // global NEXT_PUBLIC_APP_URL — this route is hit on the school's subdomain,
@@ -377,6 +400,16 @@ export async function POST(req: NextRequest) {
         .from('transactions')
         .update({ status: 'failed' })
         .eq('transaction_id', transaction.transaction_id)
+      await track(
+        ANALYTICS_EVENTS.PAYMENT_FAILED,
+        {
+          provider: providerSlug,
+          failure_reason: providerErr instanceof Error ? providerErr.message : String(providerErr),
+          stage: 'checkout_session_create',
+          transaction_id: transaction.transaction_id,
+        },
+        { userId: user.id, tenantId },
+      )
       return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 })
     }
   } catch (error) {

@@ -4221,6 +4221,12 @@
         "username": "unique_username",
         "website": "https://example.com",
         "bio": "A short bio visible to others..."
+      },
+      "errors": {
+        "unauthorized": "Your session expired. Sign in again to save your profile.",
+        "username_too_short": "Usernames need at least 3 characters.",
+        "username_taken": "That username is already taken. Try another one.",
+        "unknown": "Could not save your changes. Please try again."
       }
     },
     "lessons": {
@@ -4580,6 +4586,18 @@
     "feedbackButton": {
       "label": "Report a problem",
       "dragHint": "drag to move"
+    },
+    "aiAttachments": {
+      "attach": "Attach image",
+      "imageAlt": "Attached image",
+      "thisImage": "that image",
+      "errors": {
+        "imagesOnly": "Only images can be attached.",
+        "pickTooLarge": "Each image must be under {mb} MB.",
+        "tooMany": "You can attach up to {count} images per message.",
+        "unsupported": "{name} could not be read as an image, so it was not sent.",
+        "tooLarge": "{name} is still too large to send after resizing."
+      }
     }
   },
   "courseDetails": {

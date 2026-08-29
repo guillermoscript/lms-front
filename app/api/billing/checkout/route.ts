@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { resolveRequestLocale } from '@/lib/i18n/request-locale'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { getTenantPlatformProviderStatuses } from '@/lib/billing/platform-checkout-runtime'
 import {
   describeResolutionError,
   getActivePlanPrices,
@@ -26,6 +27,8 @@ import {
   resolveCheckoutProvider,
 } from '@/lib/billing/platform-billing'
 import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { hasOpenPaymentRequest, requestExpiresAt } from '@/lib/billing/payment-request-ttl'
 import {
   getPlatformSolanaConfig,
@@ -92,6 +95,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot subscribe to free plan via checkout' }, { status: 400 })
     }
 
+    const providerStatuses = await getTenantPlatformProviderStatuses(adminClient, tenantId)
+    const fallbackAmount = Number(interval === 'yearly' ? plan.price_yearly : plan.price_monthly) || 0
+
     const { data: existingSub } = await adminClient
       .from('platform_subscriptions')
       .select('subscription_id, provider_subscription_id, status, payment_provider')
@@ -111,6 +117,9 @@ export async function POST(req: NextRequest) {
     const resolved = resolveCheckoutProvider(prices, interval, {
       requested: typeof requestedProvider === 'string' ? requestedProvider : undefined,
       tenantProvider: existingSub?.payment_provider ?? null,
+      providerStatuses,
+      expectedCurrency: 'usd',
+      fallbackAmount,
     })
 
     if (!resolved.ok) {
@@ -319,6 +328,31 @@ export async function POST(req: NextRequest) {
       switchId,
       session.providerRef ?? session.reference,
       session.expiresAt,
+    )
+
+    // Loop E, the school → platform side of the funnel. `scope` separates it
+    // from the student `checkout_started` in Loop C: the two are different
+    // businesses and summing them is meaningless.
+    //
+    // `is_existing_subscriber` is the pre-image of `is_renewal` on the eventual
+    // `platform_payment_succeeded` — on a `selfManagedPeriod` rail this same
+    // route is how a school RENEWS (see the guard above), so a checkout here is
+    // not evidence of a new customer.
+    await track(
+      ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      {
+        scope: 'platform',
+        provider,
+        amount: amountUsd,
+        currency: price.currency,
+        plan_id: plan.plan_id,
+        plan: plan.slug,
+        interval,
+        is_existing_subscriber: !!liveSub,
+        is_provider_switch: !!liveSub && liveSub.payment_provider !== provider,
+        self_managed_period: !!capabilities.selfManagedPeriod,
+      },
+      { userId: user.id, tenantId, role: 'admin', locale },
     )
 
     // The QR's on-chain reference is minted by the provider, so the row is

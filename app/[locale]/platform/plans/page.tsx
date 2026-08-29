@@ -6,6 +6,7 @@ import {
   summarizePlanPurchasability,
   type PlatformPlanPriceInput,
 } from '@/lib/billing/plan-prices'
+import { getPlatformProviderRuntimeStatuses } from '@/lib/billing/platform-checkout-runtime'
 import { PlanEditor } from './plan-editor'
 import {
   PlanPricesEditor,
@@ -37,6 +38,7 @@ export default async function PlatformPlansPage() {
     amount: row.amount,
     isActive: row.is_active,
   }))
+  const providerStatuses = getPlatformProviderRuntimeStatuses()
 
   const purchasability = summarizePlanPurchasability(
     (plans || []).map((plan) => ({
@@ -48,6 +50,7 @@ export default async function PlatformPlansPage() {
       isActive: plan.is_active,
     })),
     prices,
+    { providerStatuses },
   )
   const purchasabilityByPlan = new Map(purchasability.map((p) => [p.planId, p]))
   const unpurchasableCount = purchasability.filter(
@@ -72,14 +75,15 @@ export default async function PlatformPlansPage() {
           <IconAlertTriangle
             className="mt-0.5 h-[18px] w-[18px] shrink-0 text-red-700 dark:text-red-400"
             strokeWidth={1.75}
+            aria-hidden="true"
           />
           <div className="text-sm">
             <p className="font-medium text-red-800 dark:text-red-300">
               {unpurchasableCount} active paid {unpurchasableCount === 1 ? 'plan is' : 'plans are'} not purchasable
             </p>
             <p className="mt-0.5 text-red-700/80 dark:text-red-400/80">
-              They are advertised on the pricing page but have no active provider price, so card
-              checkout fails with &ldquo;price not configured&rdquo;. Add one under <strong>Prices</strong>.
+              They are advertised on the pricing page but have no executable automated provider.
+              Check the status under <strong>Prices</strong>.
             </p>
           </div>
         </div>
@@ -146,11 +150,12 @@ export default async function PlatformPlansPage() {
               <div className="border-t pt-4">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Checkout</p>
                 {summary && (
-                  <PlanPurchasabilityBadge
+              <PlanPurchasabilityBadge
                     isPaid={summary.isPaid}
                     isPurchasable={summary.isPurchasable}
-                    providers={summary.providers}
+                    providers={summary.automatedProviders}
                     missingIntervals={summary.missingIntervals}
+                    diagnostics={summary.providerDiagnostics}
                   />
                 )}
               </div>
@@ -160,6 +165,8 @@ export default async function PlatformPlansPage() {
                   planId={plan.plan_id}
                   planSlug={plan.slug}
                   prices={planPrices}
+                  providerDiagnostics={summary?.providerDiagnostics}
+                  providerStatuses={providerStatuses}
                 />
               </div>
 

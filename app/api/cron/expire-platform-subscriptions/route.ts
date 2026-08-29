@@ -7,11 +7,14 @@ import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
 import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
 import { paymentRequestExpiredTemplate } from '@/lib/email/templates/payment-request-expired'
 import {
+  EXPIRABLE_REQUEST_STATUSES,
   OPEN_REQUEST_STATUSES,
   REQUEST_TTL_DAYS,
   isRequestOpen,
 } from '@/lib/billing/payment-request-ttl'
 import { PLATFORM_SELF_MANAGED_PROVIDERS } from '@/lib/billing/platform-billing'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import {
   abandonPlatformSubscriptionSwitch,
   reconcilePlatformSubscriptionSwitch,
@@ -76,11 +79,18 @@ async function safeEmail(emails: string[], template: { subject: string; html: st
 type SubRow = {
   tenant_id: string
   current_period_end: string | null
+  payment_provider: string | null
+  interval: string | null
   tenants: { name: string | null } | null
-  platform_plans: { name: string | null } | null
+  platform_plans: { name: string | null; slug: string | null } | null
 }
 
-const SUB_SELECT = 'tenant_id, current_period_end, tenants(name), platform_plans(name)'
+// `payment_provider`, `interval` and the plan SLUG are for the churn events
+// below: `plan` has to be the stable slug the rest of the funnel keys on, not
+// the display name, or `subscription_expired` cannot be joined to
+// `plan_changed` / `platform_payment_succeeded`.
+const SUB_SELECT =
+  'tenant_id, current_period_end, payment_provider, interval, tenants(name), platform_plans(name, slug)'
 
 type LapsedRequestRow = {
   request_id: string
@@ -148,7 +158,7 @@ export async function GET(req: NextRequest) {
   const { data: lapsedRequests } = await supabase
     .from('platform_payment_requests')
     .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, tenants(name), platform_plans(name)')
-    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
     .not('expires_at', 'is', null)
     .lt('expires_at', nowIso)
 
@@ -158,7 +168,7 @@ export async function GET(req: NextRequest) {
       .update({ status: 'expired', updated_at: nowIso })
       .eq('request_id', req.request_id)
       // Status-gated so a super admin confirming in the same instant wins.
-      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+      .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
       .select('request_id')
       .maybeSingle()
 
@@ -298,6 +308,12 @@ export async function GET(req: NextRequest) {
       planName: sub.platform_plans?.name || 'your plan',
       billingUrl,
     }))
+    // Loop E, terminal school churn. `was_grace: true` — this school stopped
+    // paying and rode out the 7-day window; phase 4 below is the school that
+    // chose to leave on schedule. Charting them together hides the difference
+    // between involuntary and voluntary churn, which are fixed by completely
+    // different work (dunning vs product).
+    await trackPlatformExpiry(sub, true)
     result.downgraded++
   }
 
@@ -319,6 +335,9 @@ export async function GET(req: NextRequest) {
       planName: sub.platform_plans?.name || 'your plan',
       billingUrl,
     }))
+    // Voluntary churn: the school scheduled this itself via
+    // `subscription_cancel_scheduled`, and the period has now run out.
+    await trackPlatformExpiry(sub, false)
     result.canceled++
   }
 
@@ -342,4 +361,29 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, ...result })
+}
+
+/**
+ * Loop E terminal churn for a school. `scope: 'platform'` distinguishes it from
+ * the learner subscriptions the sibling `expire-subscriptions` cron expires
+ * under the same event name.
+ *
+ * Idempotent by construction: every phase above is status-gated, so a re-run of
+ * the cron finds no matching rows and emits nothing.
+ */
+async function trackPlatformExpiry(sub: SubRow, wasGrace: boolean): Promise<void> {
+  await track(
+    ANALYTICS_EVENTS.SUBSCRIPTION_EXPIRED,
+    {
+      scope: 'platform',
+      plan: sub.platform_plans?.slug ?? 'unknown',
+      was_grace: wasGrace,
+      provider: sub.payment_provider ?? 'unknown',
+      interval: sub.interval,
+      period_end: sub.current_period_end,
+      churn_type: wasGrace ? 'involuntary' : 'voluntary',
+    },
+    // No user: a cron has no actor, and the loss belongs to the school.
+    { tenantId: sub.tenant_id },
+  )
 }

@@ -3,9 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider, PROVIDER_CAPABILITIES } from '@/lib/payments'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 interface PlanFormData {
   plan_name: string
@@ -155,6 +157,28 @@ export async function createPlan(formData: PlanFormData): Promise<ActionResult<P
 
       if (linkError) throw linkError
     }
+
+    // Loop B counts "the school has something to sell". A subscription plan is
+    // that, so it reuses `product_created` rather than inventing a name outside
+    // the contract — `offering_type` keeps the two separable in a chart.
+    // Wrapped: `getCurrentUserId()` is evaluated as an ARGUMENT, so it runs
+    // before `track()`'s own guard could catch anything it throws.
+    await safeAnalytics(async () => {
+      await track(
+        ANALYTICS_EVENTS.PRODUCT_CREATED,
+        {
+          offering_type: 'plan',
+          plan_id: plan.plan_id,
+          price: formData.price,
+          currency: formData.currency,
+          provider: providerType,
+          is_free: false,
+          duration_in_days: formData.duration_in_days,
+          course_count: formData.courseIds?.length ?? 0,
+        },
+        { userId: await getCurrentUserId(), tenantId, role: 'admin' }
+      )
+    }, 'product_created (plan)')
 
     revalidatePath('/dashboard/admin/plans')
     revalidatePath('/dashboard/student')

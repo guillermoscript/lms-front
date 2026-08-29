@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next-nprogress-bar'
 import Link from 'next/link'
 import { useHotkey } from '@tanstack/react-hotkeys'
@@ -19,6 +19,8 @@ import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
 import { toast } from 'sonner'
 import { useCheckpoints } from '@/components/lesson/checkpoints/checkpoints-provider'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 interface LessonNavigationProps {
   lessonId: number
@@ -53,10 +55,42 @@ export function LessonNavigation({
   const supabase = createClient()
   const buttonRef = useRef<HTMLButtonElement>(null)
   const checkpointsCtx = useCheckpoints()
+  const analytics = useAnalytics()
+  // Wall-clock start of this lesson view, for `time_on_lesson_ms`. Armed in the
+  // effect below rather than during render — `Date.now()` is impure and the
+  // render path must stay so. Re-armed on every lessonId change because App
+  // Router reuses this instance when the student moves to the next lesson; a
+  // plain mount-time ref would accumulate across a whole course and report one
+  // absurd number at the end.
+  const viewStartedAtRef = useRef(0)
+  // Partial guard against `course_completed` refiring when a student
+  // uncompletes and recompletes the final lesson. There is NO durable latch to
+  // key off: `enrollments.status` is only `active`/`disabled` (no completed
+  // state) and no course-completion table exists, so inventing one for an
+  // analytics event is not the trade. This ref covers the common case — the
+  // toggle happens in one sitting, and `router.refresh()` re-renders without
+  // remounting — but a full page reload between the two still double-counts.
+  const courseCompletionTrackedRef = useRef(false)
 
   const nextBlocked = requireSequentialCompletion && !completed
   // Only gates going from incomplete → complete; un-completing is always allowed.
   const checkpointsBlocked = !completed && !!checkpointsCtx && checkpointsCtx.missingRequired > 0
+
+  // One view per lesson. Deliberately NOT in the server component: completing a
+  // lesson calls `router.refresh()`, which re-runs the server render and would
+  // bill a second view for the same visit. The dep list is the lesson id alone,
+  // so a refresh re-renders this without re-firing.
+  useEffect(() => {
+    viewStartedAtRef.current = Date.now()
+    analytics.track(ANALYTICS_EVENTS.LESSON_VIEWED, {
+      lesson_id: lessonId,
+      course_id: courseId,
+      total_lessons: totalLessons,
+    })
+    // `analytics` is a stable useMemo from the hook; listing it would not change
+    // when the lesson does, and re-firing on identity churn is the bug here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId])
 
   useHotkey('ArrowLeft', () => {
     if (prevLessonId) {
@@ -104,6 +138,12 @@ export function LessonNavigation({
         setLoading(false)
         return
       }
+
+      // After the delete lands, never on the optimistic flip above.
+      analytics.track(ANALYTICS_EVENTS.LESSON_UNCOMPLETED, {
+        lesson_id: lessonId,
+        course_id: courseId,
+      })
 
       setLoading(false)
       startTransition(() => { router.refresh() })
@@ -162,6 +202,27 @@ export function LessonNavigation({
         setCompleted(false)
         setLoading(false)
         return
+      }
+
+      // The insert is the only proof the completion is real — the UI flipped
+      // optimistically several lines ago and reverts on the branch above, so
+      // tracking any earlier would count completions that errored.
+      analytics.track(ANALYTICS_EVENTS.LESSON_COMPLETED, {
+        lesson_id: lessonId,
+        course_id: courseId,
+        time_on_lesson_ms: viewStartedAtRef.current
+          ? Date.now() - viewStartedAtRef.current
+          : null,
+        is_sequential: requireSequentialCompletion,
+      })
+
+      if (isCourseNowComplete && !courseCompletionTrackedRef.current) {
+        courseCompletionTrackedRef.current = true
+        analytics.track(ANALYTICS_EVENTS.COURSE_COMPLETED, {
+          course_id: courseId,
+          total_lessons: totalLessons,
+          completion_path: 'lesson_navigation',
+        })
       }
 
       setLoading(false)

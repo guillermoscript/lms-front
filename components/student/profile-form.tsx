@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { updateProfile } from "@/app/[locale]/dashboard/student/profile/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,15 +16,28 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile }: ProfileFormProps) {
     const [isPending, startTransition] = useTransition();
+    // Constraint failures on `username` (too short, already taken) are expected
+    // input errors, so they render next to the field instead of being thrown out
+    // of the action as an unhandled Server Action error (LMS-FRONT-9E).
+    const [usernameError, setUsernameError] = useState<string | null>(null);
     const t = useTranslations('components.profileForm');
 
     async function handleSubmit(formData: FormData) {
         startTransition(async () => {
+            setUsernameError(null);
             try {
-                await updateProfile(formData);
-                toast.success(t('success'));
-            } catch (error: any) {
-                toast.error(error.message || t('error'));
+                const result = await updateProfile(formData);
+                if (result.success) {
+                    toast.success(t('success'));
+                    return;
+                }
+                const message = t(`errors.${result.code}`);
+                if (result.field === 'username') setUsernameError(message);
+                toast.error(message);
+            } catch {
+                // Network/deployment-skew failures only — constraint errors come
+                // back as a result above.
+                toast.error(t('error'));
             }
         });
     }
@@ -51,10 +64,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                     <Input
                         id="username"
                         name="username"
-                        defaultValue={profile?.username}
+                        defaultValue={profile?.username ?? ''}
                         placeholder={t('placeholders.username')}
+                        minLength={3}
+                        aria-invalid={usernameError ? true : undefined}
+                        aria-describedby={usernameError ? 'username-error' : undefined}
                         className="rounded-xl border-muted/30 focus:border-primary/50"
                     />
+                    {usernameError && (
+                        <p id="username-error" role="alert" className="text-xs text-destructive">
+                            {usernameError}
+                        </p>
+                    )}
                 </div>
             </div>
 

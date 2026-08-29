@@ -4066,6 +4066,12 @@
         "username": "usuario_unico",
         "website": "https://tusitio.com",
         "bio": "Cuéntanos un poco sobre ti..."
+      },
+      "errors": {
+        "unauthorized": "Tu sesión expiró. Inicia sesión de nuevo para guardar tu perfil.",
+        "username_too_short": "El usuario debe tener al menos 3 caracteres.",
+        "username_taken": "Ese usuario ya está en uso. Prueba con otro.",
+        "unknown": "No pudimos guardar los cambios. Inténtalo de nuevo."
       }
     },
     "lessons": {
@@ -4425,6 +4431,18 @@
     "feedbackButton": {
       "label": "Reportar un problema",
       "dragHint": "arrastra para mover"
+    },
+    "aiAttachments": {
+      "attach": "Adjuntar imagen",
+      "imageAlt": "Imagen adjunta",
+      "thisImage": "esa imagen",
+      "errors": {
+        "imagesOnly": "Solo se pueden adjuntar imágenes.",
+        "pickTooLarge": "Cada imagen debe pesar menos de {mb} MB.",
+        "tooMany": "Puedes adjuntar hasta {count} imágenes por mensaje.",
+        "unsupported": "No se pudo leer {name} como imagen, así que no se envió.",
+        "tooLarge": "{name} sigue siendo demasiado grande para enviarla incluso tras redimensionarla."
+      }
     }
   },
   "landing": {

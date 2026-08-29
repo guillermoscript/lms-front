@@ -18,6 +18,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 type ActionResult = { success: true; providerWarning?: string } | { success: false; error: string }
@@ -104,6 +106,28 @@ export async function cancelMySubscription(subscriptionId: number): Promise<Acti
       return { success: false, error: 'update_failed' }
     }
 
+    // LEARNER churn, which is a different question from school churn — hence
+    // the dedicated `student_subscription_*` name rather than Loop E's
+    // `subscription_cancel_scheduled`. Access continues to period end, so this
+    // is intent-to-leave, not the loss itself; the expiry cron emits the
+    // terminal `subscription_expired`.
+    //
+    // `status_before` is worth carrying: cancelling must never IMPROVE a status
+    // (#545), and a spike of cancels from `past_due` means students are leaving
+    // because their payment method broke, not because the course disappointed.
+    await track(
+      ANALYTICS_EVENTS.STUDENT_SUBSCRIPTION_CANCEL_CONFIRMED,
+      {
+        provider: subscription.payment_provider ?? 'unknown',
+        plan_id: subscription.plan_id,
+        status_before: subscription.subscription_status,
+        access_ends_at: subscription.current_period_end || subscription.end_date,
+        days_subscribed: daysSince(subscription.created),
+        provider_cancel_failed: !!providerWarning,
+      },
+      { userId, tenantId, role: 'student' }
+    )
+
     // Let the school know a student canceled (best-effort — never fails the cancel).
     await notifySchoolAdminsOfCancel(supabase, {
       tenantId,
@@ -185,12 +209,38 @@ export async function reactivateMySubscription(subscriptionId: number): Promise<
       return { success: false, error: 'update_failed' }
     }
 
+    // `scope: 'student'` separates learner win-backs from the school-side
+    // reactivations in `app/actions/admin/billing.ts`, which share this event
+    // name. `canceled_at` is read off the row loaded before the update above
+    // nulled it.
+    await track(
+      ANALYTICS_EVENTS.SUBSCRIPTION_REACTIVATED,
+      {
+        scope: 'student',
+        provider: subscription.payment_provider ?? 'unknown',
+        plan_id: subscription.plan_id,
+        days_since_cancel: daysSince(subscription.canceled_at),
+        provider_reactivate_failed: !!providerWarning,
+      },
+      { userId, tenantId, role: 'student' }
+    )
+
     revalidatePath('/dashboard/student/billing')
     return { success: true, providerWarning }
   } catch (error) {
     console.error('reactivateMySubscription error:', error)
     return { success: false, error: 'unexpected' }
   }
+}
+
+/**
+ * Whole days from an ISO stamp to now, or `null` when it is missing. Note the
+ * caller reads `subscriptions.created` — this table has no `created_at`.
+ */
+function daysSince(from: string | null | undefined): number | null {
+  if (!from) return null
+  const ms = Date.now() - new Date(from).getTime()
+  return Number.isFinite(ms) ? Math.max(Math.round(ms / 86_400_000), 0) : null
 }
 
 /**

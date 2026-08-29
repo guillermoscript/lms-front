@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -103,6 +105,32 @@ export async function GET(req: NextRequest) {
   }
 
   console.log(`expire-subscriptions cron: expired ${toExpire.length} subscriptions`, ids)
+
+  // Loop E, LEARNER side — `scope` separates it from the platform subscriptions
+  // expired by the sibling cron, which are a different business entirely.
+  // This is the terminal churn event: `student_subscription_cancel_confirmed`
+  // records the intent, this records the day access actually stopped.
+  //
+  // Emitted after the batch UPDATE succeeded, so nothing is reported as expired
+  // that the DB refused. The status filter above makes the whole pass
+  // idempotent: a re-run finds no `active` rows and emits nothing.
+  for (const sub of toExpire) {
+    await track(
+      ANALYTICS_EVENTS.SUBSCRIPTION_EXPIRED,
+      {
+        scope: 'student',
+        provider: sub.payment_provider ?? 'unknown',
+        subscription_id: sub.subscription_id,
+        period_end: sub.current_period_end,
+        end_date: sub.end_date,
+        // Learner subscriptions have no grace window — that is a platform
+        // billing concept — so this is always false here, and stated rather
+        // than omitted so the property is comparable across both scopes.
+        was_grace: false,
+      },
+      { userId: sub.user_id, tenantId: sub.tenant_id },
+    )
+  }
 
   return NextResponse.json({ expired: toExpire.length, ids })
 }

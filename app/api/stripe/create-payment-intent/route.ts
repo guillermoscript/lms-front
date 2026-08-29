@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { toCents } from '@/lib/currency'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { getPaymentProvider } from '@/lib/payments'
 import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
 import {
@@ -112,6 +114,14 @@ export async function POST(req: NextRequest) {
 
     // Get price based on plan or product
     let amount: number
+    /**
+     * The same price in MAJOR units. Kept alongside `amount` (minor units, what
+     * Stripe is charged) purely so the analytics event below never has to
+     * re-derive it from the zero-decimal branch — money reported in two units
+     * across two call sites is how a revenue chart quietly disagrees with the
+     * ledger.
+     */
+    let amountMajor: number
     let itemName: string
     let currency = 'usd'
     let planProviderPriceId: string | null = null
@@ -129,7 +139,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
       }
       currency = plan.currency || 'usd'
-      amount = toCents(Number(plan.price), currency)
+      amountMajor = Number(plan.price)
+      amount = toCents(amountMajor, currency)
       itemName = plan.plan_name
       planProviderPriceId = plan.provider_price_id
       planPaymentProvider = plan.payment_provider || 'stripe'
@@ -145,7 +156,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Product not found' }, { status: 404 })
       }
       currency = product.currency || 'usd'
-      amount = toCents(Number(product.price), currency)
+      amountMajor = Number(product.price)
+      amount = toCents(amountMajor, currency)
       itemName = product.name
     }
 
@@ -190,6 +202,28 @@ export async function POST(req: NextRequest) {
       console.error('Transaction creation error:', txError)
       return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
     }
+
+    // Loop C. Fired once the pending row exists and BEFORE the Stripe call, so
+    // the funnel separates "student committed to buying" from "Stripe accepted
+    // it" — the two subscription/PaymentIntent failure branches below both
+    // return without a terminal event, which is exactly the drop-off worth
+    // seeing. `track()` cannot throw and is deadline-capped, so it never gates
+    // the payment.
+    await track(
+      ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      {
+        provider: 'stripe',
+        amount: amountMajor,
+        currency,
+        ...(productId ? { product_id: productId } : {}),
+        ...(planId ? { plan_id: planId } : {}),
+        transaction_id: transaction.transaction_id,
+        is_subscription: !!planId,
+      },
+      // No `role`: the buyer is whoever is authenticated, and guessing
+      // 'student' would mislabel a teacher or admin buying a course.
+      { userId: user.id, tenantId },
+    )
 
     // Native subscription path (#280 Phase 2): a Stripe plan with a recurring
     // price becomes a real Stripe Subscription, so provider_subscription_id is
@@ -238,6 +272,17 @@ export async function POST(req: NextRequest) {
           .from('transactions')
           .update({ status: 'failed' })
           .eq('transaction_id', transaction.transaction_id)
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_FAILED,
+          {
+            provider: 'stripe',
+            failure_reason: subErr instanceof Error ? subErr.message : String(subErr),
+            stage: 'subscription_create',
+            transaction_id: transaction.transaction_id,
+            plan_id: planId,
+          },
+          { userId: user.id, tenantId },
+        )
         return NextResponse.json({ error: 'Failed to create subscription' }, { status: 500 })
       }
     }

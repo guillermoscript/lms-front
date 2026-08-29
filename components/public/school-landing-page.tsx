@@ -62,25 +62,23 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
             </p>
 
             <div className="flex flex-wrap gap-4 justify-center pt-2">
-              <Link href="/auth/sign-up?next=/join-school">
-                <Button
-                  size="lg"
-                  className="h-14 px-10 text-white font-bold rounded-xl text-lg transition-all duration-200 active:scale-95 border-0"
-                  style={{ backgroundColor: accentColor }}
-                >
-                  {t('join', { name: tenant.name })}
-                  <ArrowRight className="ml-2 w-5 h-5" aria-hidden="true" />
-                </Button>
-              </Link>
-              <Link href="/auth/login">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-14 px-10 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 rounded-xl text-lg backdrop-blur-sm transition-all duration-200"
-                >
-                  {t('alreadyMember')}
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                className="h-14 px-10 text-white font-bold rounded-xl text-lg transition-all duration-200 active:scale-95 border-0"
+                style={{ backgroundColor: accentColor }}
+                render={<Link href="/auth/sign-up?next=/join-school" />}
+              >
+                {t('join', { name: tenant.name })}
+                <ArrowRight className="ml-2 w-5 h-5" aria-hidden="true" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-14 px-10 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 rounded-xl text-lg backdrop-blur-sm transition-all duration-200"
+                render={<Link href="/auth/login" />}
+              >
+                {t('alreadyMember')}
+              </Button>
             </div>
           </div>
         </div>
@@ -169,16 +167,15 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
               >
                 {t('ctaTitle', { name: tenant.name })}
               </h2>
-              <Link href="/auth/sign-up?next=/join-school">
-                <Button
-                  size="lg"
-                  className="h-14 px-10 bg-white font-bold rounded-xl text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"
-                  style={{ color: accentColor }}
-                >
-                  {t('ctaButton', { name: tenant.name })}
-                  <ArrowRight className="ml-2 w-5 h-5" aria-hidden="true" />
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                className="h-14 px-10 bg-white font-bold rounded-xl text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"
+                style={{ color: accentColor }}
+                render={<Link href="/auth/sign-up?next=/join-school" />}
+              >
+                {t('ctaButton', { name: tenant.name })}
+                <ArrowRight className="ml-2 w-5 h-5" aria-hidden="true" />
+              </Button>
             </div>
           </div>
         </div>

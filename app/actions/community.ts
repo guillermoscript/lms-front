@@ -7,6 +7,8 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 const MAX_CONTENT_LENGTH = 5000
 const MAX_COMMENT_LENGTH = 2000
@@ -143,6 +145,23 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
       .single()
 
     if (error) throw error
+
+    // The server action, not the composer: this is the accurate chokepoint and
+    // the only one that survives an adblocker. `course_scoped` separates a
+    // course conversation from school-feed chatter — the two behave nothing
+    // alike and a school cares about the first.
+    await track(
+      ANALYTICS_EVENTS.COMMUNITY_POST_CREATED,
+      {
+        post_type: postType,
+        has_poll: false,
+        course_scoped: Boolean(courseId),
+        lesson_scoped: Boolean(lessonId),
+        is_graded: isGraded,
+        content_length: content.trim().length,
+      },
+      { userId, tenantId, role }
+    )
 
     revalidatePath('/dashboard')
     if (courseId) {
@@ -357,6 +376,18 @@ export async function createComment(
 
     if (error) throw error
 
+    // `is_reply` is the interesting cut: a top-level comment is a response to
+    // the school, a threaded reply is students talking to each other.
+    await track(
+      ANALYTICS_EVENTS.COMMUNITY_COMMENT_CREATED,
+      {
+        post_id: postId,
+        is_reply: Boolean(parentCommentId),
+        content_length: content.trim().length,
+      },
+      { userId, tenantId }
+    )
+
     revalidatePath('/dashboard')
     return { success: true, data: { id: data.id } }
   } catch (err) {
@@ -483,6 +514,15 @@ export async function toggleReaction(
 
       if (error) throw error
 
+      // Only the ADD branch. The remove branch above is an un-react, and
+      // counting both would make a user toggling a reaction on and off look
+      // like rising engagement.
+      await track(
+        ANALYTICS_EVENTS.REACTION_ADDED,
+        { target_type: targetType, reaction_type: reactionType },
+        { userId, tenantId }
+      )
+
       revalidatePath('/dashboard')
       return { success: true, data: { added: true } }
     }
@@ -604,6 +644,25 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
       throw optionsError
     }
 
+    // Same event as `createPost`, with `has_poll: true` — a poll IS a post
+    // (`post_type: 'poll'`) written by a second action, and splitting it into
+    // its own event name would silently under-count every post total.
+    // Deliberately after the options insert: the branch above deletes the post
+    // when options fail, so tracking earlier would count a post that no longer
+    // exists.
+    await track(
+      ANALYTICS_EVENTS.COMMUNITY_POST_CREATED,
+      {
+        post_type: 'poll',
+        has_poll: true,
+        course_scoped: Boolean(courseId),
+        lesson_scoped: false,
+        option_count: options.length,
+        content_length: content.trim().length,
+      },
+      { userId, tenantId, role }
+    )
+
     revalidatePath('/dashboard')
     if (courseId) {
       revalidatePath(`/dashboard/student/courses/${courseId}`)
@@ -708,6 +767,13 @@ export async function castVote(postId: string, optionId: string): Promise<Action
         .update({ vote_count: (currentOption.vote_count || 0) + 1 })
         .eq('id', optionId)
     }
+
+    // One vote per user per poll is enforced above, so this cannot double-count.
+    await track(
+      ANALYTICS_EVENTS.POLL_VOTED,
+      { post_id: postId },
+      { userId, tenantId }
+    )
 
     revalidatePath('/dashboard')
     return { success: true }

@@ -1,6 +1,8 @@
 'use server'
 
 import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 
 export interface CertificateTemplateFormData {
@@ -59,6 +61,21 @@ export async function upsertCertificateTemplate(courseId: number, data: Certific
       }, { onConflict: 'course_id,tenant_id' })
 
     if (error) throw error
+
+    // Auto-issue is template-gated (§9.4): without an active row here a student
+    // hits 100% and gets no certificate. This event is what lets us tell those
+    // schools apart from the ones whose learners simply never finish.
+    await track(
+      ANALYTICS_EVENTS.CERTIFICATE_TEMPLATE_CONFIGURED,
+      {
+        course_id: courseId,
+        min_lesson_completion_pct: data.min_lesson_completion_pct,
+        min_exam_pass_score: data.min_exam_pass_score,
+        requires_all_exams: data.requires_all_exams,
+        has_expiration: data.expiration_days !== null,
+      },
+      { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role }
+    )
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}/certificates`)
 

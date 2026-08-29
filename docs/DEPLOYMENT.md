@@ -284,7 +284,7 @@ makes logs hard to read.
 
 #### Option A — GitHub Actions (default, and what the repo ships)
 
-`.github/workflows/cron.yml` runs all seven schedules. It needs two repository
+`.github/workflows/cron.yml` runs all declared schedules. It needs two repository
 settings under **Settings → Secrets and variables → Actions**:
 
 | Kind | Name | Value |
@@ -336,6 +336,10 @@ If you choose this, disable the schedules in `.github/workflows/cron.yml`.
 */10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/solana-reconcile
 # Confirm Binance personal-wallet payments
 */10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/binance-personal-reconcile
+# Replay stalled signed webhook deliveries
+*/10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/redeliver-webhook-events
+# Retry paid Solana platform requests whose entitlement activation stalled
+*/10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/reconcile-solana-platform-activations
 ```
 
 > `/api/cron/solana-pull` exists but is deliberately not on any schedule here or

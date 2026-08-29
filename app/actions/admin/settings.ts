@@ -2,8 +2,14 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { encryptCredential, getPaymentCredentialsKey } from '@/lib/payments/credentials'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
+import {
+  evaluateSchoolActivation,
+  isFirstConnectedProvider,
+} from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
 
 interface SettingsResponse {
@@ -282,6 +288,28 @@ export async function setSolanaWallet(walletAddress: string): Promise<SettingsRe
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
+    // Was Solana already configured? Read BEFORE the upsert: re-saving the same
+    // wallet, or correcting a typo in it, is not a new connection, and
+    // `payment_provider_connected` counted per save would make the activation
+    // funnel's denominator meaningless.
+    //
+    // Guarded: this read exists only to decide whether to emit, and it runs
+    // BEFORE the upsert — unguarded, a transient failure here would abort the
+    // wallet save itself. `null` means the read failed; unknowable is not
+    // "new", for the same reason `isFirstConnectedProvider` returns false.
+    const existingWalletRead = await Promise.resolve(
+      supabase
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', 'solana')
+        .maybeSingle()
+    ).catch(() => null)
+    const isNewConnection = !!existingWalletRead && !existingWalletRead.data?.wallet_address
+    const isFirstProvider = isNewConnection
+      ? await isFirstConnectedProvider(tenantId, 'solana', supabase)
+      : false
+
     const rows = ['solana', 'solana_subs'].map(provider => ({
       tenant_id: tenantId,
       provider,
@@ -294,6 +322,22 @@ export async function setSolanaWallet(walletAddress: string): Promise<SettingsRe
       .upsert(rows, { onConflict: 'tenant_id,provider' })
 
     if (error) throw error
+
+    // Wrapped: the wallet is already saved, and `getCurrentUserId()` is a real
+    // await — the enclosing catch would otherwise report "Failed to save Solana
+    // wallet" for a save that succeeded.
+    if (isNewConnection) {
+      await safeAnalytics(async () => {
+        const userId = await getCurrentUserId()
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+          { provider: 'solana', is_first_provider: isFirstProvider },
+          { userId, tenantId, role }
+        )
+        // Connecting a rail is the other half of the activation condition.
+        await evaluateSchoolActivation({ tenantId, userId, role })
+      }, 'payment_provider_connected (solana)')
+    }
 
     revalidatePath('/dashboard/admin/settings')
 
@@ -342,7 +386,7 @@ export async function setBinancePersonalCredentials(
     // and (b) preserve them when the admin updates only the Pay ID.
     const { data: existing } = await supabase
       .from('tenant_payment_wallets')
-      .select('credentials')
+      .select('wallet_address, credentials')
       .eq('tenant_id', tenantId)
       .eq('provider', 'binance_personal')
       .maybeSingle()
@@ -359,6 +403,14 @@ export async function setBinancePersonalCredentials(
     if (!hasExistingCredentials && (!key || !secret)) {
       return { success: false, error: 'Enter your Binance API key and secret.' }
     }
+
+    // Only the save that first makes the rail usable counts as a connection —
+    // Pay ID *and* credentials. Later Pay-ID-only edits go through this same
+    // action and must not re-fire, so they don't pay for the query either.
+    const wasUsable = Boolean(existing?.wallet_address && hasExistingCredentials)
+    const isFirstProviderBeforeSave = wasUsable
+      ? false
+      : await isFirstConnectedProvider(tenantId, 'binance_personal', supabase)
 
     let credentials = existingCredentials
     if (key || secret) {
@@ -390,6 +442,24 @@ export async function setBinancePersonalCredentials(
     )
 
     if (error) throw error
+
+    // Wrapped for the same reason as the Solana branch: the credentials are
+    // already saved, so a failing `getCurrentUserId()` must not surface as
+    // "Failed to save Binance settings".
+    if (!wasUsable) {
+      await safeAnalytics(async () => {
+        const userId = await getCurrentUserId()
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+          {
+            provider: 'binance_personal',
+            is_first_provider: isFirstProviderBeforeSave,
+          },
+          { userId, tenantId, role }
+        )
+        await evaluateSchoolActivation({ tenantId, userId, role })
+      }, 'payment_provider_connected (binance_personal)')
+    }
 
     revalidatePath('/dashboard/admin/settings')
 
