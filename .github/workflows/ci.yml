@@ -29,3 +29,38 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test:unit
+
+  # The production image, built exactly as deploy.yml builds it — but never
+  # pushed. `verify` above cannot catch a broken deploy: it installs from
+  # package-lock.json on the runner, while the image builds from the Dockerfile
+  # in a Linux container. When those two disagreed, master stayed green through
+  # six days of failed deploys (stripe floated to a minor whose types demand a
+  # different apiVersion literal, #638). This job is the check that would have
+  # caught it on the PR.
+  #
+  # Same build-args as deploy.yml so the Next.js build inlines the same
+  # NEXT_PUBLIC_* values and exercises the same code paths. Repo `vars` are
+  # readable from pull_request runs; SENTRY_AUTH_TOKEN is a secret and resolves
+  # empty here, which only skips source-map upload.
+  image:
+    name: Production image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          # Layer cache keyed to this workflow, so an unchanged package-lock.json
+          # reuses the install layer and only the source layers rebuild.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY }}
+            NEXT_PUBLIC_PLATFORM_DOMAIN=${{ vars.NEXT_PUBLIC_PLATFORM_DOMAIN }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}

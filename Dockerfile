@@ -12,10 +12,27 @@ COPY package.json package-lock.json ./
 # Workspace package manifests must exist at install time so npm links
 # @lms/core into node_modules (source-only package via transpilePackages).
 COPY packages/core/package.json ./packages/core/package.json
-# Remove the lockfile so npm freshly resolves platform-specific optional
-# native binaries (lightningcss/Tailwind v4) for this Linux image — npm has a
-# long-standing bug that skips optional native deps when a lockfile is present.
-RUN rm -f package-lock.json && npm install --include=optional --legacy-peer-deps
+# `npm ci`, NOT `npm install` with the lockfile deleted.
+#
+# This used to be `rm -f package-lock.json && npm install`, to work around an
+# old npm bug that skipped platform-specific optional native deps
+# (lightningcss / Tailwind v4 oxide / sharp) when a lockfile was present. That
+# workaround cost six days of production deploys: discarding the lockfile makes
+# every caret range re-resolve at image-build time, so a dependency's new MINOR
+# lands in production without any commit and without CI ever seeing it. stripe
+# 22.6.0 did exactly that — it moved the `apiVersion` literal its own types
+# demand, and `npm run build` failed here while master stayed green.
+#
+# The workaround is also no longer needed: this is a lockfileVersion 3 lockfile,
+# which records EVERY platform variant regardless of where it was generated
+# (`lightningcss-linux-x64-gnu`, `@tailwindcss/oxide-linux-x64-gnu`, the sharp
+# linux set are all in there), and npm installs the ones matching os/cpu.
+# `--include=optional` is kept explicit so a future `--omit=optional` default
+# cannot quietly strip them again.
+#
+# The image build now runs in CI too (.github/workflows/ci.yml), so a break here
+# fails the PR rather than the deploy.
+RUN npm ci --include=optional --legacy-peer-deps
 
 # Build
 FROM base AS builder
