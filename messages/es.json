@@ -3127,15 +3127,15 @@
           "payment": {
             "processors": "Procesadores de Pago",
             "stripe": "Stripe",
-            "stripeHint": "Activar el procesamiento de pagos con Stripe",
+            "stripeHint": "Tarjetas de crédito y débito, además de Apple Pay y Google Pay — el checkout que la mayoría de estudiantes ya reconoce.",
             "paypal": "PayPal",
-            "paypalHint": "Activar el procesamiento de pagos con PayPal",
+            "paypalHint": "Un saldo de PayPal o una tarjeta, a través del checkout propio de PayPal.",
             "lemonsqueezy": "Lemon Squeezy",
-            "lemonsqueezyHint": "Acepta pagos con Lemon Squeezy (comerciante registrado). Pega un ID de variante en cada plan o producto.",
+            "lemonsqueezyHint": "Tarjetas a través del checkout de Lemon Squeezy. Cada plan y producto necesita un ID de variante pegado, o su checkout no abrirá.",
             "binance": "Binance Pay",
-            "binanceHint": "Activar pagos cripto con Binance Pay (USDT)",
+            "binanceHint": "Cripto a través del checkout de Binance Pay, cotizado en USDT.",
             "solana": "Solana (cripto)",
-            "solanaHint": "Acepta pagos cripto con Solana. Configura tu billetera receptora abajo. Cubre pago único y suscripción.",
+            "solanaHint": "Cripto en Solana. Los estudiantes escanean un código QR y pagan en USDC — una stablecoin 1:1 con el dólar — y el pago se comprueba on-chain. Cubre tanto compras únicas como suscripciones.",
             "solanaAcceptSol": "Aceptar también SOL nativo",
             "solanaAcceptSolHint": "Por defecto recibes USDC (una stablecoin 1:1 con el dólar). Activa esto para permitir también pagos en SOL — el precio en USD se convierte a SOL al tipo de cambio en vivo al momento del pago. Quedarás con SOL, cuyo valor puede variar después del pago.",
             "currency": "Moneda por Defecto",
@@ -3152,7 +3152,51 @@
             "manualInstructionsPlaceholder": "ej. Transferencia bancaria a la cuenta 1234-5678 (Banco XYZ). Incluye tu correo como referencia y sube el comprobante.",
             "manualInstructionsHint": "Se muestra a los estudiantes por adelantado cuando solicitan un pago offline (transferencia, efectivo, etc.). Déjalo en blanco para ocultarlo.",
             "binancePersonal": "Binance Pay (cuenta personal)",
-            "binancePersonalHint": "Acepta Binance Pay en tu propia cuenta personal usando tu Pay ID y una clave API de solo lectura."
+            "binancePersonalHint": "Cripto enviada directo a tu propio Pay ID de Binance. Los estudiantes transfieren manualmente y lo confirmamos con tu clave API de solo lectura.",
+            "manual": "Transferencia bancaria y pago offline",
+            "manualHint": "Transferencia bancaria, efectivo o cualquier arreglo offline. El estudiante sube el comprobante de pago y tú lo confirmas a mano.",
+            "alwaysAvailable": "Siempre disponible",
+            "alwaysAvailableHint": "El pago offline no se puede desactivar — es el respaldo cuando ningún otro método funciona.",
+            "howStudentsPay": "Cómo pagan los estudiantes",
+            "howStudentsPayDesc": "Activa los métodos que acepta tu escuela. Cada uno muestra adónde va el dinero y qué cubre.",
+            "payoutNote": "Los métodos marcados como \"Pago vía plataforma\" se liquidan primero en una cuenta de la plataforma — se te paga según el calendario de pagos, no al momento de la venta.",
+            "facts": {
+              "settlesDirect": "Directo a ti",
+              "settlesPlatform": "Pago vía plataforma",
+              "subscriptions": "Únicos y suscripciones",
+              "oneTimeOnly": "Solo pago único",
+              "refundsInApp": "Reembolsos desde tu panel",
+              "refundsManual": "Reembolsos manuales",
+              "merchantOfRecord": "Gestiona el IVA por ti",
+              "noPlatformFee": "Sin comisión de plataforma"
+            },
+            "status": {
+              "ready": "Listo",
+              "blocked": "Acción requerida",
+              "off": "Desactivado",
+              "notConfigured": "Sin configurar"
+            },
+            "setup": {
+              "connect": "Completa la activación de Stripe antes de que los estudiantes puedan pagar con tarjeta.",
+              "wallet": "Agrega tus datos de recepción abajo — los estudiantes no podrán pagar por este medio hasta que lo hagas.",
+              "catalog": "Pega un ID de variante de Lemon Squeezy en cada plan y producto antes de publicarlos."
+            },
+            "groups": {
+              "cards": "Tarjetas y billeteras",
+              "cardsDesc": "Checkouts conocidos que la mayoría de estudiantes puede usar de inmediato.",
+              "crypto": "Cripto",
+              "cryptoDesc": "Se liquida en stablecoins. Útil donde conseguir tarjetas es difícil.",
+              "offline": "Offline",
+              "offlineDesc": "Transferencia bancaria, efectivo o cualquier arreglo que confirmes tú a mano."
+            },
+            "wallet": {
+              "add": "Agregar datos",
+              "edit": "Editar datos",
+              "solanaTitle": "Billetera receptora de Solana",
+              "solanaDesc": "La dirección a la que pagan los estudiantes. Una sola dirección cubre pagos únicos y suscripciones.",
+              "binanceTitle": "Credenciales de Binance Pay",
+              "binanceDesc": "Tu Pay ID y una clave API de solo lectura. Usamos la clave solo para confirmar transferencias entrantes — no puede mover fondos."
+            }
           },
           "branding": {
             "logoUrl": "URL del Logo",

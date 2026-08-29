@@ -3131,15 +3131,15 @@
           "payment": {
             "processors": "Payment Processors",
             "stripe": "Stripe",
-            "stripeHint": "Enable Stripe payment processing",
+            "stripeHint": "Credit and debit cards, plus Apple Pay and Google Pay — the checkout most students already recognize.",
             "paypal": "PayPal",
-            "paypalHint": "Enable PayPal payment processing",
+            "paypalHint": "A PayPal balance or a card, through PayPal's own hosted checkout.",
             "lemonsqueezy": "Lemon Squeezy",
-            "lemonsqueezyHint": "Accept payments via Lemon Squeezy (merchant of record). Paste a variant ID on each plan or product.",
+            "lemonsqueezyHint": "Cards through Lemon Squeezy's hosted checkout. Every plan and product needs a variant ID pasted on it, or its checkout won't open.",
             "binance": "Binance Pay",
-            "binanceHint": "Enable Binance Pay crypto payments (USDT)",
+            "binanceHint": "Crypto through Binance Pay's hosted checkout, priced in USDT.",
             "solana": "Solana (crypto)",
-            "solanaHint": "Accept Solana crypto payments. Set your receiving wallet below. Covers one-time and subscription.",
+            "solanaHint": "Crypto on Solana. Students scan a QR code and pay in USDC — a 1:1 US-dollar stablecoin — and the payment is proven on-chain. Covers both one-time purchases and subscriptions.",
             "solanaAcceptSol": "Also accept native SOL",
             "solanaAcceptSolHint": "By default you receive USDC (a 1:1 US-dollar stablecoin). Turn this on to also let students pay in SOL — the USD price is converted to SOL at the live rate at checkout. You then hold SOL, whose value can move after payment.",
             "currency": "Default Currency",
@@ -3156,7 +3156,51 @@
             "manualInstructionsPlaceholder": "e.g. Bank transfer to account 1234-5678 (Bank XYZ). Include your email as the reference and upload the receipt.",
             "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide.",
             "binancePersonal": "Binance Pay (personal account)",
-            "binancePersonalHint": "Accept Binance Pay on your own personal account using your Pay ID and a read-only API key."
+            "binancePersonalHint": "Crypto sent straight to your own Binance Pay ID. Students transfer manually and we confirm it using your read-only API key.",
+            "manual": "Bank transfer & offline payment",
+            "manualHint": "Bank transfer, cash, or any offline arrangement. The student uploads proof of payment and you confirm it by hand.",
+            "alwaysAvailable": "Always available",
+            "alwaysAvailableHint": "Offline payment can't be switched off — it's the fallback when no other method works.",
+            "howStudentsPay": "How students pay",
+            "howStudentsPayDesc": "Switch on the methods your school accepts. Each one shows where the money lands and what it supports.",
+            "payoutNote": "Methods marked \"Paid out by the platform\" settle into a platform account first — you're paid on the payouts schedule, not at the moment of sale.",
+            "facts": {
+              "settlesDirect": "Paid straight to you",
+              "settlesPlatform": "Paid out by the platform",
+              "subscriptions": "One-time & subscriptions",
+              "oneTimeOnly": "One-time payments only",
+              "refundsInApp": "Refunds from your dashboard",
+              "refundsManual": "Refunds are manual",
+              "merchantOfRecord": "Handles VAT for you",
+              "noPlatformFee": "No platform fee"
+            },
+            "status": {
+              "ready": "Ready",
+              "blocked": "Action needed",
+              "off": "Off",
+              "notConfigured": "Not set up"
+            },
+            "setup": {
+              "connect": "Finish Stripe onboarding before students can pay by card.",
+              "wallet": "Add your receiving details below — students can't pay on this rail until you do.",
+              "catalog": "Paste a Lemon Squeezy variant ID on each plan and product before you publish them."
+            },
+            "groups": {
+              "cards": "Cards & wallets",
+              "cardsDesc": "Familiar checkouts most students can use straight away.",
+              "crypto": "Crypto",
+              "cryptoDesc": "Settles in stablecoins. Useful where cards are hard to come by.",
+              "offline": "Offline",
+              "offlineDesc": "Bank transfer, cash, or any arrangement you settle by hand."
+            },
+            "wallet": {
+              "add": "Add details",
+              "edit": "Edit details",
+              "solanaTitle": "Solana receiving wallet",
+              "solanaDesc": "The address students pay into. One address covers both one-time purchases and subscriptions.",
+              "binanceTitle": "Binance Pay credentials",
+              "binanceDesc": "Your Pay ID and a read-only API key. We use the key only to confirm incoming transfers — it can't move funds."
+            }
           },
           "branding": {
             "logoUrl": "Logo URL",

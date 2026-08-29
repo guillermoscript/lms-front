@@ -9,12 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
 import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
-import StripeConnectCard from '@/components/admin/stripe-connect-card'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
-import SolanaWalletForm from '@/components/admin/solana-wallet-form'
-import BinancePersonalForm from '@/components/admin/binance-personal-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
@@ -157,15 +154,14 @@ export default async function SettingsPage({
 
             {/* Payment Settings */}
             <TabsContent value="payment">
-              {/* Stripe Connect status lives here so payment setup is one page (#434) */}
-              <div className="mb-6">
-                <StripeConnectCard
-                  accountId={stripeAccountId}
-                  chargesEnabled={connectStatus.chargesEnabled}
-                  payoutsEnabled={connectStatus.payoutsEnabled}
-                  detailsSubmitted={connectStatus.detailsSubmitted}
-                />
-              </div>
+              {/*
+                Connect status, the Solana wallet and the Binance credentials
+                used to be a page-level banner plus two trailing cards, each
+                with its own save button. The banner alarmed about Stripe even
+                when the school had Stripe switched off, and the credential
+                cards sat below the form's own Save, far from the toggles that
+                required them. All three now live in their provider's own row.
+              */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('sections.payment.title')}</CardTitle>
@@ -174,37 +170,19 @@ export default async function SettingsPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PaymentSettingsForm settings={settings.payment || {}} />
-                </CardContent>
-              </Card>
-
-              {/* Solana receiving wallet — one address backs both the one-time
-                  `solana` and auto-pull `solana_subs` providers. */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>{t('sections.solanaWallet.title')}</CardTitle>
-                  <CardDescription>
-                    {t('sections.solanaWallet.description')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SolanaWalletForm initialAddress={solanaWalletAddress} />
-                </CardContent>
-              </Card>
-
-              {/* Binance Pay (personal account) — school's own Pay ID + a
-                  read-only API key/secret, encrypted at rest (#482). */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>{t('sections.binancePersonal.title')}</CardTitle>
-                  <CardDescription>
-                    {t('sections.binancePersonal.description')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <BinancePersonalForm
-                    initialPayId={binancePersonal?.payId ?? null}
-                    hasCredentials={binancePersonal?.hasCredentials ?? false}
+                  <PaymentSettingsForm
+                    settings={settings.payment || {}}
+                    connect={{
+                      accountId: stripeAccountId,
+                      chargesEnabled: connectStatus.chargesEnabled,
+                      payoutsEnabled: connectStatus.payoutsEnabled,
+                      detailsSubmitted: connectStatus.detailsSubmitted,
+                    }}
+                    solanaWalletAddress={solanaWalletAddress}
+                    binancePersonal={{
+                      payId: binancePersonal?.payId ?? null,
+                      hasCredentials: binancePersonal?.hasCredentials ?? false,
+                    }}
                   />
                 </CardContent>
               </Card>
