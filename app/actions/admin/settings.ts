@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { encryptCredential, getPaymentCredentialsKey } from '@/lib/payments/credentials'
+import { evaluateConnectedAccountReadiness } from '@/lib/payments/tenant-payment-readiness'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
 import {
@@ -12,9 +13,58 @@ import {
 } from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
 
+/**
+ * A `tenant_settings.setting_value` JSONB payload. Every setting is stored as
+ * one of two shapes — a boolean flag or a scalar — which is why readers
+ * throughout the app index it as `.value?.enabled` or `.value?.value`.
+ */
+export type SettingValue = {
+  enabled?: boolean
+  value?: string | number | null
+  message?: string
+}
+
+/** One setting as `getAllSettingsByCategory()` hands it to a settings form. */
+export type SettingEntry = {
+  value: SettingValue
+  description: string | null
+}
+
+/**
+ * `settingKey → entry`, the shape each of the four settings forms receives.
+ * A type alias rather than an interface so it keeps an implicit index
+ * signature and stays assignable to the looser props of the older forms.
+ */
+export type SettingsGroup = Record<string, SettingEntry | undefined>
+
+/** A `tenant_settings` row as these actions select it. */
+type SettingRow = { setting_key: string; setting_value: SettingValue }
+
 interface SettingsResponse {
   success: boolean
-  data?: Record<string, any>
+  data?: Record<string, SettingValue>
+  error?: string
+}
+
+/**
+ * `getAllSettingsByCategory()` returns a different shape from the flat
+ * accessors — `category → settingKey → entry` — so it gets its own response
+ * type rather than a union that every caller would have to narrow.
+ */
+interface CategorySettingsResponse {
+  success: boolean
+  data?: Record<string, SettingsGroup>
+  error?: string
+}
+
+/**
+ * The wallet accessors live in this module for historical reasons but return a
+ * `tenant_payment_wallets` row, not a setting — they were sharing
+ * `SettingsResponse` and quietly typing a wallet address as a setting value.
+ */
+interface WalletResponse {
+  success: boolean
+  data?: { wallet_address: string | null }
   error?: string
 }
 
@@ -55,7 +105,7 @@ export async function getSettings(category?: string): Promise<SettingsResponse> 
 
     if (error) throw error
 
-    const settings = (data || []).reduce((acc: Record<string, any>, s: any) => {
+    const settings = (data || []).reduce((acc: Record<string, SettingValue>, s: SettingRow) => {
       acc[s.setting_key] = s.setting_value
       return acc
     }, {})
@@ -101,7 +151,7 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
  */
 export async function updateSetting(
   key: string,
-  value: any
+  value: SettingValue
 ): Promise<SettingsResponse> {
   try {
     const role = await getUserRole()
@@ -141,7 +191,7 @@ export async function updateSetting(
  * Update multiple settings at once (bulk upsert)
  */
 export async function updateSettings(
-  settings: Record<string, any>
+  settings: Record<string, SettingValue>
 ): Promise<SettingsResponse> {
   try {
     const role = await getUserRole()
@@ -184,7 +234,7 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const defaults: Record<string, any> = {
+    const defaults: Record<string, SettingValue> = {
       site_name: { value: 'My School' },
       site_description: { value: 'An online learning platform' },
       contact_email: { value: 'contact@example.com' },
@@ -237,7 +287,7 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
  * One wallet backs both the one-time `solana` provider and the auto-pull
  * `solana_subs` provider, so we read the `solana` row as the source of truth.
  */
-export async function getSolanaWallet(): Promise<SettingsResponse> {
+export async function getSolanaWallet(): Promise<WalletResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -272,7 +322,7 @@ export async function getSolanaWallet(): Promise<SettingsResponse> {
  * Uses the service-role client (bypasses RLS), so admin role + tenant scope are
  * validated above and the rows are written with this tenant's id only.
  */
-export async function setSolanaWallet(walletAddress: string): Promise<SettingsResponse> {
+export async function setSolanaWallet(walletAddress: string): Promise<WalletResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -364,7 +414,7 @@ export async function setBinancePersonalCredentials(
   payId: string,
   apiKey: string,
   apiSecret: string
-): Promise<SettingsResponse> {
+): Promise<WalletResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -516,9 +566,15 @@ export async function getBinancePersonalStatus(): Promise<{
  * Resolve which payment providers an admin has enabled for this tenant.
  *
  * The `*_enabled` toggles in `tenant_settings` are the single source of truth
- * for which providers appear in the plan/product forms. `manual` (offline) is
- * always available. The one Solana toggle enables BOTH the one-time `solana`
- * and the auto-pull `solana_subs` providers, since they share one wallet.
+ * for WANTING a provider on, but a flag alone is not enough to offer a rail —
+ * a flag flipped on before the rail is actually configured (Stripe Connect
+ * abandoned mid-onboarding, no Solana receiving wallet saved) used to reach
+ * checkout and then fail at payment time, with the student staring at a
+ * generic error and the school never told why. Stripe and Solana are gated on
+ * their real readiness below, same as `binance_personal` already was.
+ * `manual` (offline) is always available. The one Solana toggle enables BOTH
+ * the one-time `solana` and the auto-pull `solana_subs` providers, since they
+ * share one wallet.
  *
  * Defaults match the seed defaults: Stripe on, everything else off.
  */
@@ -552,24 +608,77 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
     const isOn = (key: string, fallback: boolean) =>
       key in flags ? flags[key] : fallback
 
+    const stripeOn = isOn('stripe_enabled', true)
+    const solanaOn = isOn('solana_enabled', false)
+    const binancePersonalOn = isOn('binance_personal_enabled', false)
+
+    // Stripe: a flag alone used to offer a rail that fails at payment time — an
+    // admin could flip `stripe_enabled` without ever finishing Connect
+    // onboarding, and the card form would appear at checkout only for Stripe to
+    // reject the PaymentIntent (`charges_enabled: false`). This reads the same
+    // persisted columns `isReadyToAcceptPayments()` reads for checkout/publish
+    // (`evaluateConnectedAccountReadiness`) rather than calling Stripe's API on
+    // this hot path — `syncConnectAccountStatus()` and the `account.updated`
+    // webhook keep those columns fresh.
+    let stripeReady = false
+    if (stripeOn) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('stripe_account_id, stripe_charges_enabled')
+        .eq('id', tenantId)
+        .single()
+      stripeReady = evaluateConnectedAccountReadiness(tenant).ready
+    }
+
+    // Solana and binance_personal both gate on a `tenant_payment_wallets` row —
+    // fetch both providers in ONE query instead of one round trip per provider.
+    const walletProviders = [solanaOn && 'solana', binancePersonalOn && 'binance_personal'].filter(
+      (p): p is 'solana' | 'binance_personal' => Boolean(p)
+    )
+    const walletsByProvider = new Map<string, { wallet_address: string | null; credentials: unknown }>()
+    if (walletProviders.length > 0) {
+      const { data: wallets } = await supabase
+        .from('tenant_payment_wallets')
+        .select('provider, wallet_address, credentials')
+        .eq('tenant_id', tenantId)
+        .in('provider', walletProviders)
+      for (const wallet of wallets || []) {
+        walletsByProvider.set(wallet.provider, wallet)
+      }
+    }
+
     const providers: string[] = ['manual']
-    if (isOn('stripe_enabled', true)) providers.push('stripe')
+    if (stripeOn && stripeReady) providers.push('stripe')
     if (isOn('paypal_enabled', false)) providers.push('paypal')
     if (isOn('lemonsqueezy_enabled', false)) providers.push('lemonsqueezy')
-    if (isOn('solana_enabled', false)) providers.push('solana', 'solana_subs')
+
+    // Solana: a flag alone used to offer a rail with no receiving wallet — the
+    // one-time and subscription checkout routes have nowhere to point a
+    // payment without a `tenant_payment_wallets` row.
+    if (solanaOn) {
+      const wallet = walletsByProvider.get('solana')
+      if (wallet?.wallet_address) {
+        providers.push('solana', 'solana_subs')
+      }
+    }
+
     if (isOn('binance_enabled', false)) providers.push('binance')
 
     // binance_personal is only usable once the school has actually configured
     // its Pay ID + API credentials — no dead providers in the checkout forms.
-    if (isOn('binance_personal_enabled', false)) {
-      const { data: wallet } = await supabase
-        .from('tenant_payment_wallets')
-        .select('wallet_address, credentials')
-        .eq('tenant_id', tenantId)
-        .eq('provider', 'binance_personal')
-        .maybeSingle()
-      const credentials = (wallet?.credentials || {}) as { api_key?: string }
-      if (wallet?.wallet_address && credentials.api_key) {
+    if (binancePersonalOn) {
+      const wallet = walletsByProvider.get('binance_personal')
+      // Both halves of the pair, not just the key: confirming a transfer signs
+      // the SAPI query with the SECRET (`signSapiQuery`), so a row holding only
+      // an api_key offered a rail that could take a payment and then never
+      // confirm it. `getBinancePersonalStatus()` — which drives the settings
+      // screen's readiness pill — has always required both; this is the same
+      // check, so the screen and checkout can no longer disagree.
+      const credentials = (wallet?.credentials || {}) as {
+        api_key?: string
+        api_secret?: string
+      }
+      if (wallet?.wallet_address && credentials.api_key && credentials.api_secret) {
         providers.push('binance_personal')
       }
     }
@@ -638,7 +747,7 @@ export async function getManualPaymentInstructions(): Promise<string> {
 /**
  * Get all settings grouped by category (for the settings page)
  */
-export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
+export async function getAllSettingsByCategory(): Promise<CategorySettingsResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -672,7 +781,7 @@ export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
       enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',
     }
 
-    const grouped = (data || []).reduce((acc: Record<string, Record<string, any>>, s: any) => {
+    const grouped = (data || []).reduce((acc: Record<string, SettingsGroup>, s: SettingRow) => {
       const category = categoryMap[s.setting_key] || 'general'
       if (!acc[category]) acc[category] = {}
       acc[category][s.setting_key] = {

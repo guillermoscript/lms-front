@@ -13,51 +13,102 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
 import { updateSettings } from '@/app/actions/admin/settings'
+import type { SettingsGroup } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { IconInfoCircle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
+import PaymentProviderRow from '@/components/admin/payment-provider-row'
+import SolanaWalletForm from '@/components/admin/solana-wallet-form'
+import BinancePersonalForm from '@/components/admin/binance-personal-form'
 
 interface PaymentSettingsFormProps {
-  settings: Record<string, any>
+  settings: SettingsGroup
+  /** Stripe Connect state — was a page-level banner, now the Stripe row's own. */
+  connect: {
+    accountId: string | null
+    chargesEnabled: boolean
+    detailsSubmitted: boolean
+    payoutsEnabled: boolean
+  }
+  solanaWalletAddress: string
+  binancePersonal: { payId: string | null; hasCredentials: boolean }
 }
 
-export default function PaymentSettingsForm({ settings }: PaymentSettingsFormProps) {
+export default function PaymentSettingsForm({
+  settings,
+  connect,
+  solanaWalletAddress,
+  binancePersonal,
+}: PaymentSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
+  const tConnect = useTranslations('dashboard.admin.settings.sections.payment.connect')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Extract current values
-  const stripeEnabled = settings.stripe_enabled?.value?.enabled ?? true
-  const paypalEnabled = settings.paypal_enabled?.value?.enabled ?? false
-  const lemonsqueezyEnabled = settings.lemonsqueezy_enabled?.value?.enabled ?? false
-  const binanceEnabled = settings.binance_enabled?.value?.enabled ?? false
-  const binancePersonalEnabled = settings.binance_personal_enabled?.value?.enabled ?? false
-  const solanaEnabled = settings.solana_enabled?.value?.enabled ?? false
-  const solanaAcceptSol = settings.solana_accept_sol?.value?.enabled ?? false
-  const [solanaOn, setSolanaOn] = useState(solanaEnabled)
-  const currency = settings.currency?.value?.value || 'USD'
-  const taxRate = settings.tax_rate?.value?.value || 0
-  const invoicePrefix = settings.invoice_prefix?.value?.value || 'INV'
-  const requirePaymentApproval = settings.require_payment_approval?.value?.enabled ?? false
-  const manualPaymentInstructions = settings.manual_payment_instructions?.value?.value || ''
+  // Toggles are controlled rather than read off FormData at submit time: the
+  // status pill, the warning state and the expand-on-enable config all have to
+  // react the moment the switch moves, not when the form is posted.
+  const [flags, setFlags] = useState({
+    stripe: settings.stripe_enabled?.value?.enabled ?? true,
+    paypal: settings.paypal_enabled?.value?.enabled ?? false,
+    lemonsqueezy: settings.lemonsqueezy_enabled?.value?.enabled ?? false,
+    binance: settings.binance_enabled?.value?.enabled ?? false,
+    binancePersonal: settings.binance_personal_enabled?.value?.enabled ?? false,
+    solana: settings.solana_enabled?.value?.enabled ?? false,
+    solanaAcceptSol: settings.solana_accept_sol?.value?.enabled ?? false,
+    requireApproval: settings.require_payment_approval?.value?.enabled ?? false,
+  })
+  const setFlag = (key: keyof typeof flags) => (value: boolean) =>
+    setFlags((prev) => ({ ...prev, [key]: value }))
+
+  // Credential sheets. The two credential editors are real <form> elements, so
+  // they cannot be nested inside this one — a Sheet portals them out of the DOM
+  // tree while keeping their trigger inside the provider row that needs them.
+  const [walletSheet, setWalletSheet] = useState<null | 'solana' | 'binance_personal'>(null)
+
+  // Settings values are JSONB scalars (string | number | null), so each one is
+  // coerced to the shape its input actually wants rather than trusted as-is.
+  const currency = String(settings.currency?.value?.value ?? 'USD')
+  const taxRate = Number(settings.tax_rate?.value?.value ?? 0)
+  const invoicePrefix = String(settings.invoice_prefix?.value?.value ?? 'INV')
+  const manualPaymentInstructions = String(
+    settings.manual_payment_instructions?.value?.value ?? ''
+  )
+
+  // Readiness per rail, mirroring what getEnabledProviders() will actually
+  // offer at checkout — a row must never claim "Ready" for a rail the server
+  // would refuse. Rails on a global platform account need no tenant setup.
+  const stripeReady = Boolean(connect.accountId && connect.chargesEnabled)
+  const solanaReady = Boolean(solanaWalletAddress)
+  const binancePersonalReady = Boolean(binancePersonal.payId && binancePersonal.hasCredentials)
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
 
     try {
       const updatedSettings = {
-        stripe_enabled: { enabled: formData.get('stripe_enabled') === 'on' },
-        paypal_enabled: { enabled: formData.get('paypal_enabled') === 'on' },
-        lemonsqueezy_enabled: { enabled: formData.get('lemonsqueezy_enabled') === 'on' },
-        binance_enabled: { enabled: formData.get('binance_enabled') === 'on' },
-        binance_personal_enabled: { enabled: formData.get('binance_personal_enabled') === 'on' },
-        solana_enabled: { enabled: formData.get('solana_enabled') === 'on' },
-        solana_accept_sol: { enabled: formData.get('solana_accept_sol') === 'on' },
+        stripe_enabled: { enabled: flags.stripe },
+        paypal_enabled: { enabled: flags.paypal },
+        lemonsqueezy_enabled: { enabled: flags.lemonsqueezy },
+        binance_enabled: { enabled: flags.binance },
+        binance_personal_enabled: { enabled: flags.binancePersonal },
+        solana_enabled: { enabled: flags.solana },
+        solana_accept_sol: { enabled: flags.solanaAcceptSol },
         currency: { value: formData.get('currency') as string },
         tax_rate: { value: parseFloat(formData.get('tax_rate') as string) },
         invoice_prefix: { value: formData.get('invoice_prefix') as string },
-        require_payment_approval: { enabled: formData.get('require_payment_approval') === 'on' },
-        manual_payment_instructions: { value: (formData.get('manual_payment_instructions') as string) || '' },
+        require_payment_approval: { enabled: flags.requireApproval },
+        manual_payment_instructions: {
+          value: (formData.get('manual_payment_instructions') as string) || '',
+        },
       }
 
       const result = await updateSettings(updatedSettings)
@@ -74,220 +125,350 @@ export default function PaymentSettingsForm({ settings }: PaymentSettingsFormPro
     }
   }
 
+  /* Stripe is the one rail with an external onboarding flow, so it is the one
+     row that can offer a link instead of an in-app editor. All three Connect
+     states now live in the row; none of them can shout at a school that has
+     Stripe switched off. */
+  const stripeAction = stripeReady ? null : (
+    /* eslint-disable-next-line @next/next/no-html-link-for-pages */
+    <a
+      href="/api/stripe/connect"
+      className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      data-testid="stripe-connect-action"
+    >
+      {!connect.accountId
+        ? tConnect('connectButton')
+        : connect.detailsSubmitted
+          ? tConnect('checkStatusButton')
+          : tConnect('resumeButton')}
+    </a>
+  )
+
   return (
-    <form action={handleSubmit} className="space-y-6">
-      {/* Payment Processors */}
-      <div className="space-y-4 rounded-lg border p-4">
-        <h3 className="font-semibold">{t('payment.processors')}</h3>
-
-        {/* Stripe */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="stripe_enabled">{t('payment.stripe')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('payment.stripeHint')}
-            </p>
-          </div>
-          <Switch
-            id="stripe_enabled"
-            name="stripe_enabled"
-            defaultChecked={stripeEnabled}
-          />
+    <form action={handleSubmit} className="space-y-8">
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-semibold">{t('payment.howStudentsPay')}</h3>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {t('payment.howStudentsPayDesc')}
+          </p>
         </div>
 
-        {/* PayPal */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="paypal_enabled">{t('payment.paypal')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('payment.paypalHint')}
-            </p>
-          </div>
-          <Switch
-            id="paypal_enabled"
-            name="paypal_enabled"
-            defaultChecked={paypalEnabled}
-          />
-        </div>
+        {/* ── Cards & wallets ─────────────────────────────────────────── */}
+        <ProviderGroup
+          title={t('payment.groups.cards')}
+          description={t('payment.groups.cardsDesc')}
+        >
+          <PaymentProviderRow
+            provider="stripe"
+            name={t('payment.stripe')}
+            description={t('payment.stripeHint')}
+            enabled={flags.stripe}
+            onEnabledChange={setFlag('stripe')}
+            configured={stripeReady}
+            action={stripeAction}
+            setupHint={
+              !connect.accountId
+                ? t('payment.setup.connect')
+                : connect.detailsSubmitted
+                  ? tConnect('pendingReviewDesc')
+                  : tConnect('pendingDesc')
+            }
+          >
+            {stripeReady && !connect.payoutsEnabled && (
+              <p className="text-xs text-muted-foreground">{tConnect('payoutsPending')}</p>
+            )}
+          </PaymentProviderRow>
 
-        {/* Lemon Squeezy */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="lemonsqueezy_enabled">{t('payment.lemonsqueezy')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('payment.lemonsqueezyHint')}
-            </p>
-          </div>
-          <Switch
-            id="lemonsqueezy_enabled"
-            name="lemonsqueezy_enabled"
-            defaultChecked={lemonsqueezyEnabled}
+          <PaymentProviderRow
+            provider="paypal"
+            name={t('payment.paypal')}
+            description={t('payment.paypalHint')}
+            enabled={flags.paypal}
+            onEnabledChange={setFlag('paypal')}
+            configured
           />
-        </div>
 
-        {/* Binance Pay (hosted crypto checkout, USDT-denominated) */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="binance_enabled">{t('payment.binance')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('payment.binanceHint')}
-            </p>
-          </div>
-          <Switch
-            id="binance_enabled"
-            name="binance_enabled"
-            defaultChecked={binanceEnabled}
-          />
-        </div>
-
-        {/* Binance Pay — personal account (school's own Pay ID + read-only API key) */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="binance_personal_enabled">{t('payment.binancePersonal')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('payment.binancePersonalHint')}
-            </p>
-          </div>
-          <Switch
-            id="binance_personal_enabled"
-            name="binance_personal_enabled"
-            defaultChecked={binancePersonalEnabled}
-          />
-        </div>
-
-        {/* Solana (one address backs both one-time and subscription crypto) */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="solana_enabled">{t('payment.solana')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('payment.solanaHint')}
-            </p>
-          </div>
-          <Switch
-            id="solana_enabled"
-            name="solana_enabled"
-            checked={solanaOn}
-            onCheckedChange={setSolanaOn}
-          />
-        </div>
-
-        {/* Native SOL is opt-in (volatile; converted from the USD price at the
-            live rate). USDC is always used otherwise — it tracks the dollar. */}
-        {solanaOn && (
-          <div className="flex items-center justify-between rounded-lg border border-dashed bg-muted/30 px-4 py-3 ml-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="solana_accept_sol">{t('payment.solanaAcceptSol')}</Label>
-              <p className="text-sm text-muted-foreground">
-                {t('payment.solanaAcceptSolHint')}
+          <PaymentProviderRow
+            provider="lemonsqueezy"
+            name={t('payment.lemonsqueezy')}
+            description={t('payment.lemonsqueezyHint')}
+            enabled={flags.lemonsqueezy}
+            onEnabledChange={setFlag('lemonsqueezy')}
+            configured
+          >
+            {/* Per-offering setup we cannot verify from here, so it is stated as
+                a standing requirement rather than a blocked status. */}
+            {flags.lemonsqueezy && (
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <IconInfoCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                {t('payment.setup.catalog')}
               </p>
-            </div>
-            <Switch
-              id="solana_accept_sol"
-              name="solana_accept_sol"
-              defaultChecked={solanaAcceptSol}
-            />
-          </div>
-        )}
-      </div>
+            )}
+          </PaymentProviderRow>
+        </ProviderGroup>
 
-      {/* Manual / offline payment instructions — shown to students up front */}
-      <div className="space-y-2 rounded-lg border p-4">
-        <Label htmlFor="manual_payment_instructions">{t('payment.manualInstructions')}</Label>
-        <Textarea
-          id="manual_payment_instructions"
-          name="manual_payment_instructions"
-          defaultValue={manualPaymentInstructions}
-          rows={4}
-          placeholder={t('payment.manualInstructionsPlaceholder')}
-        />
-        <p className="text-sm text-muted-foreground">
-          {t('payment.manualInstructionsHint')}
-        </p>
-      </div>
+        {/* ── Crypto ──────────────────────────────────────────────────── */}
+        <ProviderGroup
+          title={t('payment.groups.crypto')}
+          description={t('payment.groups.cryptoDesc')}
+        >
+          <PaymentProviderRow
+            provider="solana"
+            name={t('payment.solana')}
+            description={t('payment.solanaHint')}
+            enabled={flags.solana}
+            onEnabledChange={setFlag('solana')}
+            configured={solanaReady}
+            setupHint={t('payment.setup.wallet')}
+            action={
+              <WalletButton onClick={() => setWalletSheet('solana')}>
+                {solanaReady
+                  ? t('payment.wallet.edit')
+                  : t('payment.wallet.add')}
+              </WalletButton>
+            }
+          >
+            {flags.solana && (
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="solana_accept_sol" className="text-sm">
+                    {t('payment.solanaAcceptSol')}
+                  </Label>
+                  <p className="max-w-xl text-xs text-muted-foreground">
+                    {t('payment.solanaAcceptSolHint')}
+                  </p>
+                </div>
+                <Switch
+                  id="solana_accept_sol"
+                  checked={flags.solanaAcceptSol}
+                  onCheckedChange={setFlag('solanaAcceptSol')}
+                />
+              </div>
+            )}
+          </PaymentProviderRow>
 
-      {/* Currency Settings */}
-      <div className="space-y-2">
-        <Label htmlFor="currency">{t('payment.currency')}</Label>
-        <Select name="currency" defaultValue={currency}>
-          <SelectTrigger>
-            <SelectValue placeholder={t('payment.currencyPlaceholder')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="USD">USD - US Dollar</SelectItem>
-            <SelectItem value="EUR">EUR - Euro</SelectItem>
-            <SelectItem value="GBP">GBP - British Pound</SelectItem>
-            <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-            <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
-            <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
-            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-            <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-sm text-muted-foreground">
-          {t('payment.currencyHint')}
-        </p>
-      </div>
-
-      {/* Tax Rate */}
-      <div className="space-y-2">
-        <Label htmlFor="tax_rate">{t('payment.taxRate')}</Label>
-        <Input
-          id="tax_rate"
-          name="tax_rate"
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          defaultValue={taxRate}
-          placeholder="0"
-        />
-        <p className="text-sm text-muted-foreground">
-          {t('payment.taxRateHint')}
-        </p>
-      </div>
-
-      {/* Invoice Settings */}
-      <div className="space-y-4 rounded-lg border p-4">
-        <h3 className="font-semibold">{t('payment.invoiceSettings')}</h3>
-
-        {/* Invoice Prefix */}
-        <div className="space-y-2">
-          <Label htmlFor="invoice_prefix">{t('payment.invoicePrefix')}</Label>
-          <Input
-            id="invoice_prefix"
-            name="invoice_prefix"
-            defaultValue={invoicePrefix}
-            placeholder="INV"
-            required
+          <PaymentProviderRow
+            provider="binance"
+            name={t('payment.binance')}
+            description={t('payment.binanceHint')}
+            enabled={flags.binance}
+            onEnabledChange={setFlag('binance')}
+            configured
           />
-          <p className="text-sm text-muted-foreground">
-            {t('payment.invoicePrefixHint')}
-          </p>
-        </div>
-      </div>
 
-      {/* Payment Approval */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="require_payment_approval">{t('payment.approval')}</Label>
-          <p className="text-sm text-muted-foreground">
-            {t('payment.approvalHint')}
-          </p>
-        </div>
-        <Switch
-          id="require_payment_approval"
-          name="require_payment_approval"
-          defaultChecked={requirePaymentApproval}
-        />
-      </div>
+          <PaymentProviderRow
+            provider="binance_personal"
+            name={t('payment.binancePersonal')}
+            description={t('payment.binancePersonalHint')}
+            enabled={flags.binancePersonal}
+            onEnabledChange={setFlag('binancePersonal')}
+            configured={binancePersonalReady}
+            setupHint={t('payment.setup.wallet')}
+            action={
+              <WalletButton onClick={() => setWalletSheet('binance_personal')}>
+                {binancePersonalReady ? t('payment.wallet.edit') : t('payment.wallet.add')}
+              </WalletButton>
+            }
+          />
+        </ProviderGroup>
 
-      {/* Submit Button */}
-      <div className="flex justify-end">
+        {/* ── Offline ─────────────────────────────────────────────────── */}
+        <ProviderGroup
+          title={t('payment.groups.offline')}
+          description={t('payment.groups.offlineDesc')}
+        >
+          {/* Offline was always live in getEnabledProviders() and had no row at
+              all, while its two controls sat in two unrelated places. */}
+          <PaymentProviderRow
+            provider="manual"
+            name={t('payment.manual')}
+            description={t('payment.manualHint')}
+            enabled
+            onEnabledChange={() => {}}
+            configured
+            locked
+          >
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="manual_payment_instructions" className="text-sm">
+                  {t('payment.manualInstructions')}
+                </Label>
+                <Textarea
+                  id="manual_payment_instructions"
+                  name="manual_payment_instructions"
+                  defaultValue={manualPaymentInstructions}
+                  rows={4}
+                  placeholder={t('payment.manualInstructionsPlaceholder')}
+                  className="max-w-2xl"
+                />
+                <p className="max-w-2xl text-xs text-muted-foreground">
+                  {t('payment.manualInstructionsHint')}
+                </p>
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="require_payment_approval" className="text-sm">
+                    {t('payment.approval')}
+                  </Label>
+                  <p className="max-w-xl text-xs text-muted-foreground">
+                    {t('payment.approvalHint')}
+                  </p>
+                </div>
+                <Switch
+                  id="require_payment_approval"
+                  checked={flags.requireApproval}
+                  onCheckedChange={setFlag('requireApproval')}
+                />
+              </div>
+            </div>
+          </PaymentProviderRow>
+        </ProviderGroup>
+
+        <p className="flex max-w-2xl items-start gap-1.5 text-xs text-muted-foreground">
+          <IconInfoCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+          {t('payment.payoutNote')}
+        </p>
+      </section>
+
+      {/* ── Billing details ───────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold">{t('payment.invoiceSettings')}</h3>
+
+        <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="currency">{t('payment.currency')}</Label>
+            <Select name="currency" defaultValue={currency}>
+              <SelectTrigger id="currency">
+                <SelectValue placeholder={t('payment.currencyPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USD">USD - US Dollar</SelectItem>
+                <SelectItem value="EUR">EUR - Euro</SelectItem>
+                <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t('payment.currencyHint')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tax_rate">{t('payment.taxRate')}</Label>
+            <Input
+              id="tax_rate"
+              name="tax_rate"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              defaultValue={taxRate}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">{t('payment.taxRateHint')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="invoice_prefix">{t('payment.invoicePrefix')}</Label>
+            <Input
+              id="invoice_prefix"
+              name="invoice_prefix"
+              defaultValue={invoicePrefix}
+              placeholder="INV"
+              required
+            />
+            <p className="text-xs text-muted-foreground">{t('payment.invoicePrefixHint')}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* One save for everything this form owns. The two credential editors
+          save themselves from inside their sheets, which is why they are not
+          competing save buttons on the page any more. */}
+      <div className="sticky bottom-0 -mx-4 flex justify-end border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSubmitting ? t('saving') : t('saveChanges')}
         </Button>
       </div>
+
+      <Sheet
+        open={walletSheet === 'solana'}
+        onOpenChange={(open) => !open && setWalletSheet(null)}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{t('payment.wallet.solanaTitle')}</SheetTitle>
+            <SheetDescription>{t('payment.wallet.solanaDesc')}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <SolanaWalletForm initialAddress={solanaWalletAddress} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet
+        open={walletSheet === 'binance_personal'}
+        onOpenChange={(open) => !open && setWalletSheet(null)}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>{t('payment.wallet.binanceTitle')}</SheetTitle>
+            <SheetDescription>{t('payment.wallet.binanceDesc')}</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <BinancePersonalForm
+              initialPayId={binancePersonal.payId}
+              hasCredentials={binancePersonal.hasCredentials}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </form>
+  )
+}
+
+function ProviderGroup({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline gap-2">
+        <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          {title}
+        </h4>
+        <span className="text-xs text-muted-foreground/70">{description}</span>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  )
+}
+
+/** type="button" matters: this lives inside the settings <form>. */
+function WalletButton({
+  onClick,
+  children,
+}: {
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex h-8 items-center justify-center rounded-lg border bg-background px-3 text-xs font-medium transition-colors hover:bg-muted"
+    >
+      {children}
+    </button>
   )
 }
