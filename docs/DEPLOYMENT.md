@@ -282,7 +282,11 @@ something on this side has to call the routes or they never run at all. Every
 fires twice; the routes are written to tolerate that, but it doubles the load and
 makes logs hard to read.
 
-#### Option A — GitHub Actions (default, and what the repo ships)
+> **Day-to-day operation of these jobs — replay, secret rotation, partial
+> failure, monitoring — lives in [`CRON_RUNBOOK.md`](./CRON_RUNBOOK.md).** This
+> section is the one-time setup; that one is the runbook.
+
+#### Option A — GitHub Actions (default, what the repo ships, and the scheduler of record for `preciopana.com`)
 
 `.github/workflows/cron.yml` runs all declared schedules. It needs two repository
 settings under **Settings → Secrets and variables → Actions**:
