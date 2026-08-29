@@ -8,7 +8,7 @@ import { PlatformEmptyState } from '@/components/platform/empty-state'
 import { RelativeTime } from '@/components/platform/relative-time'
 import { PlanBadge, StatusDot, billingStatusTone, tenantStatusTone } from '@/components/platform/badges'
 import { TenantActionsMenu } from './tenant-actions-menu'
-import { TenantFilters } from './tenant-filters'
+import { ClearFiltersLink, TenantFilters } from './tenant-filters'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 100
@@ -170,9 +170,9 @@ export default async function TenantsPage({
                       }
                       action={
                         hasFilters ? (
-                          <Link href="?" className="text-primary hover:underline underline-offset-4">
+                          <ClearFiltersLink className="text-primary hover:underline underline-offset-4">
                             Clear filters
-                          </Link>
+                          </ClearFiltersLink>
                         ) : undefined
                       }
                     />

@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { IconSearch, IconX } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,8 +23,19 @@ const selectClass =
  * without JS). With JS, changing a select submits immediately — the operator
  * shouldn't have to reach for a button to narrow a list.
  */
+/** The list with no filters. A bare `?` href is not a reliable Next navigation, so always use the full path. */
+export function ClearFiltersLink({ className, children, ...props }: Omit<React.ComponentProps<typeof Link>, 'href'>) {
+  const pathname = usePathname()
+  return (
+    <Link href={pathname} className={className} {...props}>
+      {children}
+    </Link>
+  )
+}
+
 export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; status?: string }) {
   const router = useRouter()
+  const pathname = usePathname()
   const formRef = useRef<HTMLFormElement>(null)
   const submit = () => formRef.current?.requestSubmit()
 
@@ -37,7 +48,7 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
       if (typeof v === 'string' && v.trim()) p.set(k, v.trim())
     }
     const s = p.toString()
-    router.push(s ? `?${s}` : '?')
+    router.push(s ? `${pathname}?${s}` : pathname)
   }
 
   const active: { key: string; label: string; href: string; capitalize?: boolean }[] = []
@@ -47,7 +58,7 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
     if (plan && omit !== 'plan') p.set('plan', plan)
     if (status && omit !== 'status') p.set('status', status)
     const s = p.toString()
-    return s ? `?${s}` : '?'
+    return s ? `${pathname}?${s}` : pathname
   }
   if (q) active.push({ key: 'q', label: `“${q}”`, href: params('q') })
   if (plan) active.push({ key: 'plan', label: `Plan: ${plan}`, href: params('plan'), capitalize: true })
@@ -120,7 +131,7 @@ export function TenantFilters({ q, plan, status }: { q?: string; plan?: string; 
               <IconX className="size-3 text-muted-foreground" aria-hidden="true" />
             </Link>
           ))}
-          <Link href="?" className="ml-1 text-primary hover:underline underline-offset-4" data-testid="tenants-clear-filters">
+          <Link href={pathname} className="ml-1 text-primary hover:underline underline-offset-4" data-testid="tenants-clear-filters">
             Clear all
           </Link>
         </div>
