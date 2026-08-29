@@ -1,12 +1,10 @@
+import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  IconReportMoney,
-  IconCoin,
-  IconBuildingBank,
-  IconReceipt,
-} from '@tabler/icons-react'
+import { PlatformPageHeader } from '@/components/platform/page-header'
+import { StatStrip, type StatItem } from '@/components/platform/stat-strip'
+import { PlatformPanel, PlatformSection, TD, TH, TH_RIGHT } from '@/components/platform/section'
+import { PlanBadge } from '@/components/platform/badges'
+import { cn } from '@/lib/utils'
 
 interface ProviderRow {
   provider: string
@@ -46,15 +44,8 @@ const PROVIDER_LABEL: Record<string, string> = {
   lemonsqueezy: 'Lemon Squeezy',
   solana: 'Solana',
   solana_subs: 'Solana subscriptions',
+  binance: 'Binance Pay',
   manual: 'Manual / offline',
-}
-
-const PLAN_COLORS: Record<string, string> = {
-  free: 'secondary',
-  starter: 'outline',
-  pro: 'default',
-  business: 'default',
-  enterprise: 'default',
 }
 
 function monthLabel(ym: string) {
@@ -78,193 +69,131 @@ export default async function PlatformRevenuePage() {
   const monthly = rev.monthly ?? []
   const maxMonthlyFees = Math.max(...monthly.map((m) => m.fees), 0.0001)
 
-  const metricCards = [
+  const metrics: StatItem[] = [
     {
-      title: 'Platform Fees Earned',
+      label: 'Platform fees earned',
       value: usd(platformFees),
-      sub: 'Your cut of student sales (all time)',
-      icon: IconReportMoney,
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      detail: 'Your cut of student sales, all time',
     },
-    {
-      title: 'Gross Merchandise Value',
-      value: usd(gmv),
-      sub: 'Total student purchase volume',
-      icon: IconCoin,
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-    },
-    {
-      title: 'SaaS MRR',
-      value: usd(saasMrr),
-      sub: 'Recurring from school plans',
-      icon: IconBuildingBank,
-      bg: 'bg-violet-50 dark:bg-violet-950/40',
-      iconColor: 'text-violet-600 dark:text-violet-400',
-    },
-    {
-      title: 'Transactions',
-      value: txCount.toLocaleString('en-US'),
-      sub: 'Successful student payments',
-      icon: IconReceipt,
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-    },
+    { label: 'Gross merchandise value', value: usd(gmv), detail: 'Total student purchase volume' },
+    { label: 'SaaS MRR', value: usd(saasMrr), detail: 'School subscriptions, normalised to monthly' },
+    { label: 'Transactions', value: txCount.toLocaleString('en-US'), detail: 'Successful student payments' },
   ]
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-revenue">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">Revenue</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          What the platform earns across all schools — fees on student sales plus school subscriptions.
-        </p>
-      </div>
+      <PlatformPageHeader
+        title="Revenue"
+        description="What the platform earns across all schools — fees on student sales plus school subscriptions."
+      />
 
-      {/* Metric Cards */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="revenue-metrics">
-        {metricCards.map((card) => (
-          <Card key={card.title} className="relative overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums" data-testid="metric-value">
-                    {card.value}
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">{card.sub}</p>
-                </div>
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.bg}`}>
-                  <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} strokeWidth={1.75} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <StatStrip stats={metrics} className="mb-8" data-testid="revenue-metrics" />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Monthly platform fees trend */}
-        <Card data-testid="revenue-monthly">
-          <CardHeader>
-            <CardTitle>Platform fees over time</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <PlatformSection title="Platform fees by month" data-testid="revenue-monthly">
+          <PlatformPanel className="px-5 py-4">
             {monthly.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No transactions yet.</p>
+              <p className="text-sm text-muted-foreground">No fee-bearing sales yet.</p>
             ) : (
-              <div className="space-y-3">
+              <ol className="space-y-3">
                 {monthly.map((m) => {
                   const pct = Math.round((m.fees / maxMonthlyFees) * 100)
                   return (
-                    <div key={m.month} className="flex items-center gap-4">
-                      <span className="w-14 shrink-0 text-xs font-medium text-muted-foreground">
-                        {monthLabel(m.month)}
-                      </span>
-                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <li key={m.month} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-3 text-xs">
+                      <span className="text-muted-foreground tabular-nums">{monthLabel(m.month)}</span>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
                         <div
-                          className="h-full rounded-full bg-emerald-500 transition-all"
-                          style={{ width: `${Math.max(pct, m.fees > 0 ? 4 : 0)}%` }}
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${Math.max(pct, m.fees > 0 ? 2 : 0)}%` }}
                         />
                       </div>
-                      <span className="w-20 shrink-0 text-right text-xs font-medium tabular-nums">
-                        {usd(m.fees)}
-                      </span>
-                    </div>
+                      <span className="w-20 text-right font-medium tabular-nums">{usd(m.fees)}</span>
+                    </li>
                   )
                 })}
-              </div>
+              </ol>
             )}
-          </CardContent>
-        </Card>
+          </PlatformPanel>
+        </PlatformSection>
 
-        {/* By provider */}
-        <Card data-testid="revenue-by-provider">
-          <CardHeader>
-            <CardTitle>By payment provider</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <PlatformSection title="By payment provider" data-testid="revenue-by-provider">
+          <PlatformPanel>
             {byProvider.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No transactions yet.</p>
+              <p className="px-5 py-4 text-sm text-muted-foreground">No transactions yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                      <th className="pb-2 font-medium">Provider</th>
-                      <th className="pb-2 text-right font-medium">GMV</th>
-                      <th className="pb-2 text-right font-medium">Fees</th>
-                      <th className="pb-2 text-right font-medium">Txns</th>
+                  <thead className="border-b border-border">
+                    <tr>
+                      <th className={TH}>Provider</th>
+                      <th className={TH_RIGHT}>GMV</th>
+                      <th className={TH_RIGHT}>Fees</th>
+                      <th className={TH_RIGHT}>Txns</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-border">
                     {byProvider.map((p) => (
-                      <tr key={p.provider} className="border-b last:border-0">
-                        <td className="py-2.5">{PROVIDER_LABEL[p.provider] ?? p.provider}</td>
-                        <td className="py-2.5 text-right tabular-nums">{usd(p.gmv)}</td>
-                        <td className="py-2.5 text-right tabular-nums font-medium">{usd(p.fees)}</td>
-                        <td className="py-2.5 text-right tabular-nums text-muted-foreground">{p.count}</td>
+                      <tr key={p.provider}>
+                        <td className={TD}>{PROVIDER_LABEL[p.provider] ?? p.provider}</td>
+                        <td className={cn(TD, 'text-right tabular-nums')}>{usd(p.gmv)}</td>
+                        <td className={cn(TD, 'text-right font-medium tabular-nums')}>{usd(p.fees)}</td>
+                        <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>{p.count}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </PlatformPanel>
+        </PlatformSection>
       </div>
 
-      {/* By tenant */}
-      <Card className="mt-6" data-testid="revenue-by-tenant">
-        <CardHeader>
-          <CardTitle>By school</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <PlatformSection
+        title="By school"
+        description="Platform fees are each school's revenue-split percentage applied to sales through fee-bearing providers (e.g. Stripe Connect). Manual/offline sales settle directly to schools and carry no fee."
+        className="mt-8"
+        data-testid="revenue-by-tenant"
+      >
+        <PlatformPanel>
           {byTenant.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No school sales yet.</p>
+            <p className="px-5 py-4 text-sm text-muted-foreground">No school sales yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <th className="pb-2 font-medium">School</th>
-                    <th className="pb-2 font-medium">Plan</th>
-                    <th className="pb-2 text-right font-medium">GMV</th>
-                    <th className="pb-2 text-right font-medium">Platform fees</th>
-                    <th className="pb-2 text-right font-medium">Txns</th>
+                <thead className="border-b border-border">
+                  <tr>
+                    <th className={TH}>School</th>
+                    <th className={TH}>Plan</th>
+                    <th className={TH_RIGHT}>GMV</th>
+                    <th className={TH_RIGHT}>Platform fees</th>
+                    <th className={TH_RIGHT}>Txns</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border">
                   {byTenant.map((t) => (
-                    <tr key={t.tenant_id} className="border-b last:border-0">
-                      <td className="py-2.5 font-medium">{t.name}</td>
-                      <td className="py-2.5">
-                        <Badge variant={(PLAN_COLORS[t.plan] || 'outline') as any} className="capitalize text-[11px]">
-                          {t.plan}
-                        </Badge>
+                    <tr key={t.tenant_id}>
+                      <td className={cn(TD, 'font-medium')}>
+                        <Link
+                          href={`/platform/tenants/${t.tenant_id}`}
+                          className="hover:text-primary hover:underline underline-offset-4"
+                        >
+                          {t.name}
+                        </Link>
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">{usd(t.gmv)}</td>
-                      <td className="py-2.5 text-right tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
-                        {usd(t.fees)}
+                      <td className={TD}>
+                        <PlanBadge plan={t.plan} />
                       </td>
-                      <td className="py-2.5 text-right tabular-nums text-muted-foreground">{t.count}</td>
+                      <td className={cn(TD, 'text-right tabular-nums')}>{usd(t.gmv)}</td>
+                      <td className={cn(TD, 'text-right font-medium tabular-nums')}>{usd(t.fees)}</td>
+                      <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>{t.count}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <p className="mt-6 text-[11px] text-muted-foreground/70">
-        Platform fees are the configured revenue-split percentage applied to sales through fee-bearing
-        providers (e.g. Stripe Connect). Manual/offline sales settle directly to schools and carry no
-        platform fee.
-      </p>
+        </PlatformPanel>
+      </PlatformSection>
     </main>
   )
 }

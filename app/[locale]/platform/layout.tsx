@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { PlatformSidebar } from "@/components/platform-sidebar"
+import { PlatformHeaderTitle } from "@/components/platform/header-title"
 import { ModeToggle } from "@/components/mode-toggle"
 import { UserNav } from "@/components/user-nav"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -20,7 +21,7 @@ async function PlatformSidebarWithCount() {
     adminClient
       .from('platform_payment_requests')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending'),
+      .in('status', ['pending', 'instructions_sent', 'payment_received']),
     adminClient
       .from('tenants')
       .select('*', { count: 'exact', head: true })
@@ -50,13 +51,11 @@ export default async function PlatformLayout({
         <PlatformSidebarWithCount />
       </Suspense>
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Platform Admin</span>
-          </div>
-          <div className="ml-auto flex items-center gap-4">
+          <PlatformHeaderTitle />
+          <div className="ml-auto flex items-center gap-3">
             <ModeToggle />
             <UserNav user={user} />
           </div>

@@ -1,18 +1,17 @@
-import { createAdminClient } from '@/lib/supabase/admin'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { IconExternalLink, IconSchool } from '@tabler/icons-react'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
+import { PlatformPageHeader } from '@/components/platform/page-header'
+import { PlatformPanel, TD, TH, TH_RIGHT } from '@/components/platform/section'
+import { PlatformEmptyState } from '@/components/platform/empty-state'
+import { RelativeTime } from '@/components/platform/relative-time'
+import { PlanBadge, StatusDot, billingStatusTone, tenantStatusTone } from '@/components/platform/badges'
 import { TenantActionsMenu } from './tenant-actions-menu'
-import { format } from 'date-fns'
+import { TenantFilters } from './tenant-filters'
+import { cn } from '@/lib/utils'
 
-const PLAN_BADGE: Record<string, 'secondary' | 'outline' | 'default' | 'destructive'> = {
-  free: 'secondary',
-  starter: 'outline',
-  pro: 'default',
-  business: 'default',
-  enterprise: 'default',
-}
+const PAGE_SIZE = 100
 
 export default async function TenantsPage({
   searchParams,
@@ -24,15 +23,16 @@ export default async function TenantsPage({
 
   let query = adminClient
     .from('tenants')
-    .select('id, name, slug, plan, status, created_at')
+    .select('id, name, slug, plan, status, billing_status, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(PAGE_SIZE)
 
   if (plan) query = query.eq('plan', plan)
   if (status) query = query.eq('status', status)
   if (q) query = query.ilike('name', `%${q}%`)
 
-  const { data: tenants } = await query
+  const { data: tenants, count } = await query
+  const total = count ?? tenants?.length ?? 0
 
   // Get student + course counts per tenant
   const tenantIds = (tenants || []).map(t => t.id)
@@ -59,110 +59,130 @@ export default async function TenantsPage({
     return acc
   }, {} as Record<string, number>)
 
-  const rows = (tenants || []).map(t => ({
-    ...t,
-    students: studentCounts[t.id] || 0,
-    courses: courseCounts[t.id] || 0,
-  }))
+  const rows = await Promise.all(
+    (tenants || []).map(async (t) => ({
+      ...t,
+      students: studentCounts[t.id] || 0,
+      courses: courseCounts[t.id] || 0,
+      siteUrl: await getTenantSiteUrl(t.slug),
+    })),
+  )
+
+  const hasFilters = Boolean(q || plan || status)
+  const countCopy =
+    total > rows.length
+      ? `Showing the newest ${rows.length} of ${total} schools`
+      : `${total} ${total === 1 ? 'school' : 'schools'}${hasFilters ? ' match' : ''}`
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-tenants-page">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tenants</h1>
-          <p className="text-sm text-muted-foreground mt-1" data-testid="tenants-count">{rows.length} school(s) found</p>
-        </div>
-      </div>
+      <PlatformPageHeader
+        title="Schools"
+        description={<span data-testid="tenants-count">{countCopy}</span>}
+      />
 
-      {/* Filters */}
-      <form className="mb-6 flex flex-wrap items-center gap-2" data-testid="tenants-filter-form">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name…"
-          className="h-8 rounded-lg border border-border/60 bg-background px-3 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          data-testid="tenants-search"
-        />
-        <select name="plan" defaultValue={plan || ''} className="h-8 rounded-lg border border-border/60 bg-background px-3 text-sm capitalize" data-testid="tenants-plan-filter">
-          <option value="">All plans</option>
-          {['free', 'starter', 'pro', 'business', 'enterprise'].map(p => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-        <select name="status" defaultValue={status || ''} className="h-8 rounded-lg border border-border/60 bg-background px-3 text-sm" data-testid="tenants-status-filter">
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-          <option value="inactive">Inactive</option>
-        </select>
-        <Button type="submit" size="sm" variant="outline" data-testid="tenants-filter-submit">Filter</Button>
-      </form>
+      <TenantFilters q={q} plan={plan} status={status} />
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="tenants-table">
-              <thead className="border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Name</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Slug</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Plan</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Students</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Courses</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Created</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((tenant) => (
-                  <tr key={tenant.id} className="border-b last:border-0 transition-colors hover:bg-muted/40" data-testid="tenant-row" data-tenant-id={tenant.id}>
-                    <td className="px-4 py-3 font-medium">
-                      <Link href={`./tenants/${tenant.id}`} className="hover:text-primary transition-colors">
+      <PlatformPanel>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="tenants-table">
+            <thead className="border-b border-border">
+              <tr>
+                <th className={TH}>School</th>
+                <th className={TH}>Plan</th>
+                <th className={TH}>Status</th>
+                <th className={TH}>Billing</th>
+                <th className={TH_RIGHT}>Students</th>
+                <th className={TH_RIGHT}>Courses</th>
+                <th className={TH_RIGHT}>Joined</th>
+                <th className={TH_RIGHT}>
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {rows.map((tenant) => (
+                <tr
+                  key={tenant.id}
+                  className="transition-colors hover:bg-muted/40"
+                  data-testid="tenant-row"
+                  data-tenant-id={tenant.id}
+                >
+                  <td className={cn(TD, 'min-w-0')}>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Link
+                        href={`./tenants/${tenant.id}`}
+                        className="truncate font-medium hover:text-primary hover:underline underline-offset-4"
+                      >
                         {tenant.name}
                       </Link>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{tenant.slug}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={PLAN_BADGE[tenant.plan] || 'outline'} className="capitalize text-[10px]">
-                        {tenant.plan}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={tenant.status === 'active' ? 'default' : 'destructive'}
-                        className={`text-[10px] ${tenant.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                      <a
+                        href={tenant.siteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-foreground"
+                        title={`Open ${tenant.slug} in a new tab`}
+                        aria-label={`Open ${tenant.name} in a new tab`}
+                        data-testid="tenant-open-site"
                       >
-                        {tenant.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{tenant.students}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{tenant.courses}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                      {format(new Date(tenant.created_at), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <TenantActionsMenu
-                        tenantId={tenant.id}
-                        tenantName={tenant.name}
-                        currentPlan={tenant.plan}
-                        isActive={tenant.status === 'active'}
-                      />
-                    </td>
-                  </tr>
-                ))}
-                {rows.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                      No tenants found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                        <IconExternalLink className="size-3.5" aria-hidden="true" />
+                      </a>
+                    </div>
+                    <p className="truncate font-mono text-[11px] text-muted-foreground">{tenant.slug}</p>
+                  </td>
+                  <td className={TD}>
+                    <PlanBadge plan={tenant.plan} />
+                  </td>
+                  <td className={TD}>
+                    <StatusDot tone={tenantStatusTone(tenant.status)} label={tenant.status ?? 'unknown'} />
+                  </td>
+                  <td className={TD}>
+                    <StatusDot
+                      tone={billingStatusTone(tenant.billing_status)}
+                      label={(tenant.billing_status ?? 'active').replace(/_/g, ' ')}
+                    />
+                  </td>
+                  <td className={cn(TD, 'text-right tabular-nums')}>{tenant.students}</td>
+                  <td className={cn(TD, 'text-right tabular-nums')}>{tenant.courses}</td>
+                  <td className={cn(TD, 'text-right text-xs text-muted-foreground')}>
+                    <RelativeTime value={tenant.created_at} />
+                  </td>
+                  <td className={cn(TD, 'text-right')}>
+                    <TenantActionsMenu
+                      tenantId={tenant.id}
+                      tenantName={tenant.name}
+                      currentPlan={tenant.plan ?? 'free'}
+                      isActive={tenant.status === 'active'}
+                    />
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-0">
+                    <PlatformEmptyState
+                      icon={IconSchool}
+                      title={hasFilters ? 'No schools match these filters' : 'No schools yet'}
+                      description={
+                        hasFilters
+                          ? 'Try a shorter name, or widen the plan and status filters.'
+                          : 'Schools appear here as soon as someone creates one.'
+                      }
+                      action={
+                        hasFilters ? (
+                          <Link href="?" className="text-primary hover:underline underline-offset-4">
+                            Clear filters
+                          </Link>
+                        ) : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </PlatformPanel>
     </main>
   )
 }

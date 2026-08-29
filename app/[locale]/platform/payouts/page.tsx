@@ -1,16 +1,13 @@
 import type { ComponentType } from 'react'
 import { getTranslations } from 'next-intl/server'
 import { getPayoutsOwed } from '@/app/actions/platform/payouts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarkPayoutPaidDialog } from '@/components/platform/mark-payout-paid-dialog'
+import { PlatformPageHeader } from '@/components/platform/page-header'
+import { StatStrip, type StatItem } from '@/components/platform/stat-strip'
+import { PlatformPanel, PlatformSection, TD, TH, TH_RIGHT } from '@/components/platform/section'
 import { formatByCurrency, formatMoney } from '@/lib/payments/format-money'
-import {
-  IconArrowBackUp,
-  IconCoin,
-  IconReceiptRefund,
-  IconReportMoney,
-  IconWalletOff,
-} from '@tabler/icons-react'
+import { cn } from '@/lib/utils'
+import { IconArrowBackUp, IconReceiptRefund } from '@tabler/icons-react'
 
 // `formatMoney` / `formatByCurrency` live in lib/payments/format-money.ts — the
 // no-cross-currency-sums rule this page established in #497 is shared with the
@@ -51,7 +48,7 @@ function ReportedAmountCell({
   testId: string
 }) {
   return (
-    <td className="py-2.5 text-right tabular-nums" data-testid={testId}>
+    <td className={cn(TD, 'text-right tabular-nums')} data-testid={testId}>
       {amount > 0 ? (
         <span
           className={`inline-flex items-center justify-end gap-1 font-medium ${className}`}
@@ -162,62 +159,30 @@ export default async function PlatformPayoutsPage({
   const hasClawbacks = Object.values(totalClawbackByCurrency).some((amount) => amount > 0)
   const hasOverpayments = Object.values(totalOverpaidByCurrency).some((amount) => amount > 0)
 
-  const metricCards = [
+  const metrics: StatItem[] = [
     {
-      title: t('metrics.owed'),
+      label: t('metrics.owed'),
       value: formatByCurrency(totalOwedByCurrency, locale),
-      sub: t('metrics.owedSub', { count: schoolsOwed }),
-      icon: IconWalletOff,
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
+      detail: t('metrics.owedSub', { count: schoolsOwed }),
+      tone: schoolsOwed > 0 ? 'warning' : 'default',
     },
     {
-      title: t('metrics.collected'),
+      label: t('metrics.collected'),
       value: formatByCurrency(totalCollectedByCurrency, locale),
-      sub: t('metrics.collectedSub'),
-      icon: IconCoin,
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      iconColor: 'text-blue-600 dark:text-blue-400',
+      detail: t('metrics.collectedSub'),
     },
     {
-      title: t('metrics.paidOut'),
+      label: t('metrics.paidOut'),
       value: formatByCurrency(totalPaidOutByCurrency, locale),
-      sub: t('metrics.paidOutSub'),
-      icon: IconReportMoney,
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      detail: t('metrics.paidOutSub'),
     },
   ]
 
   return (
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-payouts">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{t('description')}</p>
-      </div>
+      <PlatformPageHeader title={t('title')} description={t('description')} />
 
-      <div className="mb-8 grid gap-3 sm:grid-cols-3" data-testid="payouts-metrics">
-        {metricCards.map((card) => (
-          <Card key={card.title} className="relative overflow-hidden">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums" data-testid="metric-value">
-                    {card.value}
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">{card.sub}</p>
-                </div>
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.bg}`}>
-                  <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} strokeWidth={1.75} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <StatStrip stats={metrics} className="mb-8" data-testid="payouts-metrics" />
 
       {hasClawbacks && (
         <div
@@ -248,45 +213,44 @@ export default async function PlatformPayoutsPage({
         </div>
       )}
 
-      <Card data-testid="payouts-by-tenant">
-        <CardHeader>
-          <CardTitle>{t('table.title')}</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <PlatformSection title={t('table.title')} description={t('footnote')} data-testid="payouts-by-tenant">
+        <PlatformPanel>
           {rows.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t('table.empty')}</p>
+            <p className="px-5 py-4 text-sm text-muted-foreground">{t('table.empty')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <th className="pb-2 font-medium">{t('table.headers.school')}</th>
-                    <th className="pb-2 font-medium">{t('table.headers.currency')}</th>
-                    <th className="pb-2 font-medium">{t('table.headers.providers')}</th>
-                    <th className="pb-2 text-right font-medium">{t('table.headers.collected')}</th>
-                    <th className="pb-2 text-right font-medium">{t('table.headers.schoolShare')}</th>
-                    <th className="pb-2 text-right font-medium">{t('table.headers.paidSoFar')}</th>
-                    <th className="pb-2 text-right font-medium">{t('table.headers.refunded')}</th>
-                    <th className="pb-2 text-right font-medium">{t('table.headers.owed')}</th>
-                    <th className="pb-2 text-right font-medium">{t('table.headers.overpaid')}</th>
-                    <th className="pb-2 text-right font-medium"></th>
+                <thead className="border-b border-border">
+                  <tr>
+                    <th className={TH}>{t('table.headers.school')}</th>
+                    <th className={TH}>{t('table.headers.currency')}</th>
+                    <th className={TH}>{t('table.headers.providers')}</th>
+                    <th className={TH_RIGHT}>{t('table.headers.collected')}</th>
+                    <th className={TH_RIGHT}>{t('table.headers.schoolShare')}</th>
+                    <th className={TH_RIGHT}>{t('table.headers.paidSoFar')}</th>
+                    <th className={TH_RIGHT}>{t('table.headers.refunded')}</th>
+                    <th className={TH_RIGHT}>{t('table.headers.owed')}</th>
+                    <th className={TH_RIGHT}>{t('table.headers.overpaid')}</th>
+                    <th className={TH_RIGHT}>
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border">
                   {rows.map((r) => (
-                    <tr key={`${r.tenantId}-${r.currency}`} className="border-b last:border-0">
-                      <td className="py-2.5 font-medium">{r.tenantName}</td>
-                      <td className="py-2.5 uppercase text-muted-foreground">{r.currency}</td>
-                      <td className="py-2.5 text-muted-foreground">
+                    <tr key={`${r.tenantId}-${r.currency}`}>
+                      <td className={cn(TD, 'font-medium')}>{r.tenantName}</td>
+                      <td className={cn(TD, 'uppercase text-muted-foreground')}>{r.currency}</td>
+                      <td className={cn(TD, 'text-muted-foreground')}>
                         {Object.keys(r.byProvider).length === 0
                           ? '—'
                           : Object.keys(r.byProvider).map((p) => PROVIDER_LABEL[p] ?? p).join(', ')}
                       </td>
-                      <td className="py-2.5 text-right tabular-nums">{formatMoney(r.grossCollected, r.currency, locale)}</td>
-                      <td className="py-2.5 text-right tabular-nums text-muted-foreground">
+                      <td className={cn(TD, 'text-right tabular-nums')}>{formatMoney(r.grossCollected, r.currency, locale)}</td>
+                      <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>
                         {r.schoolPercentage}%
                       </td>
-                      <td className="py-2.5 text-right tabular-nums text-muted-foreground">
+                      <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>
                         {formatMoney(r.alreadyPaid, r.currency, locale)}
                       </td>
                       <ClawbackCell
@@ -294,7 +258,13 @@ export default async function PlatformPayoutsPage({
                         formatted={formatMoney(r.clawback, r.currency, locale)}
                         hint={t('table.clawbackHint')}
                       />
-                      <td className="py-2.5 text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
+                      <td
+                        className={cn(
+                          TD,
+                          'text-right font-medium tabular-nums',
+                          r.netOwed > 0 && 'text-amber-700 dark:text-amber-400',
+                        )}
+                      >
                         {formatMoney(r.netOwed, r.currency, locale)}
                       </td>
                       <OverpaidCell
@@ -302,7 +272,7 @@ export default async function PlatformPayoutsPage({
                         formatted={formatMoney(r.overpaid, r.currency, locale)}
                         hint={t('table.overpaidHint')}
                       />
-                      <td className="py-2.5 text-right">
+                      <td className={cn(TD, 'text-right')}>
                         <MarkPayoutPaidDialog
                           tenantId={r.tenantId}
                           tenantName={r.tenantName}
@@ -316,10 +286,8 @@ export default async function PlatformPayoutsPage({
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <p className="mt-6 text-[11px] text-muted-foreground/70">{t('footnote')}</p>
+        </PlatformPanel>
+      </PlatformSection>
     </main>
   )
 }
