@@ -6,13 +6,12 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { checkPlanLimits, countTenantUsage, formatPlanLimitError } from '@/lib/billing/plan-limits'
 import { classifyPlanChange } from '@/lib/billing/plan-change'
 import { PLAN_PRICE_PROVIDERS, type PlanPriceProvider } from '@/lib/billing/plan-prices'
-import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
+import { reconcileAccessCutoff, reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { getPaymentProvider } from '@/lib/payments'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import {
   OPEN_REQUEST_STATUSES,
   hasOpenPaymentRequest,
-  isRequestOpen,
   requestExpiresAt,
 } from '@/lib/billing/payment-request-ttl'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -22,7 +21,6 @@ import {
   SwitchAlreadyPendingError,
   beginPlatformSubscriptionSwitch,
   failPlatformSubscriptionSwitch,
-  promotePlatformSubscriptionSwitch,
   reconcilePlatformSubscriptionSwitch,
 } from '@/lib/billing/platform-subscription-switch'
 
@@ -335,7 +333,6 @@ async function checkDowngradeLimits(
  * Super admin: confirm a manual bank transfer and activate the plan
  */
 export async function confirmManualPayment(requestId: string) {
-  const supabase = await createClient()
   const adminClient = await createAdminClient()
   const userId = await getCurrentUserId()
   if (!userId) throw new Error('Not authenticated')
@@ -349,173 +346,95 @@ export async function confirmManualPayment(requestId: string) {
 
   if (!superAdmin) throw new Error('Only super admins can confirm payments')
 
-  // Get the request
-  const { data: request } = await adminClient
+  // Keep the user-friendly limit preflight outside the transaction. The RPC
+  // repeats all security/state checks and owns every money-to-entitlement write.
+  const { data: request, error: requestError } = await adminClient
     .from('platform_payment_requests')
-    .select('*, platform_plans(slug, transaction_fee_percent)')
+    .select(
+      'tenant_id, plan_id, status, payment_provider, amount, currency, interval, request_type, created_at, platform_plans(slug)'
+    )
     .eq('request_id', requestId)
     .single()
 
-  if (!request) throw new Error('Request not found')
-  if (request.status === 'rejected') throw new Error('Rejected payments cannot be confirmed')
-  if (request.status === 'confirmed' && !request.switch_id) throw new Error('Already confirmed')
+  if (requestError || !request) throw new Error('Request not found')
 
-  const plan = request.platform_plans as { slug: string; transaction_fee_percent: number }
+  // Only the analytics event below reads this; every write is the RPC's.
+  // PostgREST types a narrowed embed as an array even though the FK is to-one.
+  const plan = (Array.isArray(request.platform_plans)
+    ? request.platform_plans[0]
+    : request.platform_plans) as { slug: string } | null
 
   // Check downgrade limits before activating
-  const limitError = await checkDowngradeLimits(adminClient, request.tenant_id, request.plan_id)
-  if (limitError) throw new Error(limitError)
-
-  // Update request status
-  await adminClient
-    .from('platform_payment_requests')
-    .update({
-      status: 'confirmed',
-      confirmed_by: userId,
-      confirmed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('request_id', requestId)
-
-  // Calculate period: for renewals, extend from old period end (no gap)
-  const now = new Date()
-  let periodStart: Date
-
-  if (request.request_type === 'renewal') {
-    // Get existing subscription to extend from its end date
-    const { data: existingSub } = await adminClient
-      .from('platform_subscriptions')
-      .select('current_period_end')
-      .eq('tenant_id', request.tenant_id)
-      .single()
-
-    const oldEnd = existingSub?.current_period_end ? new Date(existingSub.current_period_end) : now
-    // If old period hasn't ended yet, start from old end; otherwise start from now
-    periodStart = oldEnd > now ? oldEnd : now
-  } else {
-    periodStart = now
+  if ((OPEN_REQUEST_STATUSES as readonly string[]).includes(request.status)) {
+    const limitError = await checkDowngradeLimits(adminClient, request.tenant_id, request.plan_id)
+    if (limitError) throw new Error(limitError)
   }
 
-  const periodEnd = new Date(periodStart)
-  if (request.interval === 'yearly') {
-    periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1)
-  } else {
-    periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1)
-  }
+  const { data, error } = await adminClient.rpc('confirm_platform_payment_request', {
+    _request_id: requestId,
+    _confirmed_by: userId,
+  })
+  const confirmation = data?.[0]
 
-  if (request.switch_id) {
-    const promoted = await promotePlatformSubscriptionSwitch({
-      admin: adminClient,
-      switchId: request.switch_id,
-      tenantId: request.tenant_id,
-      targetProvider: (request.payment_provider || 'manual') as PaymentProvider,
-      targetProviderSubscriptionId: null,
-      targetProviderCustomerId: null,
-      targetPlanId: request.plan_id,
-      targetStatus: 'active',
-      targetInterval: request.interval,
-      targetPeriodStart: periodStart.toISOString(),
-      targetPeriodEnd: periodEnd.toISOString(),
-    })
-    if (!promoted) throw new Error('Subscription switch no longer matches the current subscription')
-  } else {
-    const subscriptionValues = {
-      tenant_id: request.tenant_id,
-      plan_id: request.plan_id,
-      status: 'active',
-      // The rail the school actually settled on (#603). Hardcoding 'manual'
-      // here made every out-of-band payment look like a bank wire on the
-      // billing screens, whatever the school had really used.
-      payment_provider: request.payment_provider || 'manual',
-      interval: request.interval,
-      current_period_start: periodStart.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      grace_period_end: null,
-      // Reset the reminder stamp so the next cycle can remind again.
-      renewal_reminder_sent_at: null,
-      // A confirmed payment is an un-cancel (#546 §1). PostgREST's ON CONFLICT
-      // DO UPDATE only touches the columns supplied here, so omitting these two
-      // left a stale `cancel_at_period_end = true` on the row: the school paid
-      // for a full period and was then silently dropped to free at the end of
-      // it by the cron's cancel phase, with no reminder and no grace window
-      // (phases 1 and 2 both filter on `cancel_at_period_end = false`).
-      cancel_at_period_end: false,
-      canceled_at: null,
-      // A real payment supersedes any super-admin comp (#546 §3) — this is one
-      // of the override's exits, so portal changes start syncing again.
-      plan_override_by: null,
-      plan_override_at: null,
-      updated_at: now.toISOString(),
-    }
-
-    await adminClient
-      .from('platform_subscriptions')
-      .upsert(subscriptionValues, { onConflict: 'tenant_id' })
-
-    // Update tenant plan
-    await adminClient
-      .from('tenants')
-      .update({
-        plan: plan.slug,
-        billing_status: 'active',
-        billing_period_end: periodEnd.toISOString(),
-        updated_at: now.toISOString(),
-      })
-      .eq('id', request.tenant_id)
-
-    // Update revenue splits
-    await adminClient
-      .from('revenue_splits')
-      .upsert({
-        tenant_id: request.tenant_id,
-        platform_percentage: plan.transaction_fee_percent,
-        school_percentage: 100 - plan.transaction_fee_percent,
-        updated_at: now.toISOString(),
-      }, { onConflict: 'tenant_id' })
-  }
+  if (error) throw new Error(error.message || 'Failed to confirm payment')
+  if (!confirmation) throw new Error('Failed to confirm payment')
 
   // Activation already passed the pre-flight limit check above, so this
   // clears any cutoff scheduled from a prior over-limit period.
-  await reconcileAccessCutoff(adminClient, request.tenant_id)
+  await reconcileAccessCutoffSafely(adminClient, confirmation.tenant_id)
 
-  if (request.switch_id) {
-    await reconcilePlatformSubscriptionSwitch(adminClient, request.switch_id)
+  if (confirmation.switch_id) {
+    try {
+      await reconcilePlatformSubscriptionSwitch(adminClient, confirmation.switch_id)
+    } catch (cleanupError) {
+      // Promotion already committed. The durable switch ledger lets the cron
+      // retry source cleanup; never report the paid activation itself as failed.
+      console.error('[billing/switch] post-confirmation reconciliation failed:', cleanupError)
+    }
   }
 
-  // Loop E. Two deliberate attribution choices, both the same shape as the
-  // student-side manual flow (Loop C trap 3):
-  //
-  //   - NO `userId` and NO `isSuperAdmin` in the context. This runs in a SUPER
-  //     ADMIN's request, and `shouldDropEvent` drops anything flagged
-  //     super-admin (§9.6) — passing it would silently delete every
-  //     bank-transfer activation from the revenue funnel. The event belongs to
-  //     the SCHOOL, so `tenantId` carries it and no profile is attached.
-  //   - Backdated to when the school asked to pay, not to when a human got
-  //     round to confirming it, so the revenue lands in the right period.
-  //
-  // `is_renewal` comes from the request's own `request_type`, which was
-  // classified at request time — the same column the expiry cron's renewal
-  // pause reads, so the two can never disagree.
-  await track(
-    ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
-    {
-      provider: request.payment_provider || 'manual',
-      amount: Number(request.amount ?? 0),
-      interval: request.interval,
-      is_renewal: request.request_type === 'renewal',
-      currency: request.currency ?? 'usd',
-      plan: plan.slug,
-      request_type: request.request_type ?? null,
-      settlement_path: 'super_admin_confirm',
-      requested_at: request.created_at,
-      hours_to_confirm: request.created_at
-        ? Math.round(((now.getTime() - new Date(request.created_at).getTime()) / 3_600_000) * 10) / 10
-        : null,
-    },
-    { tenantId: request.tenant_id, timestamp: request.created_at }
-  )
+  revalidatePath('/[locale]/platform/billing', 'page')
 
-  return { success: true }
+  // Gated on `applied`, which the analytics side never had to think about:
+  // before the RPC, a second confirmation threw "Already confirmed" and could
+  // not reach this line. Replay is now an audited no-op, so an ungated event
+  // would book the same platform payment into the revenue funnel twice.
+  if (confirmation.applied) {
+    // Loop E. Two deliberate attribution choices, both the same shape as the
+    // student-side manual flow (Loop C trap 3):
+    //
+    //   - NO `userId` and NO `isSuperAdmin` in the context. This runs in a SUPER
+    //     ADMIN's request, and `shouldDropEvent` drops anything flagged
+    //     super-admin (§9.6) — passing it would silently delete every
+    //     bank-transfer activation from the revenue funnel. The event belongs to
+    //     the SCHOOL, so `tenantId` carries it and no profile is attached.
+    //   - Backdated to when the school asked to pay, not to when a human got
+    //     round to confirming it, so the revenue lands in the right period.
+    //
+    // `is_renewal` comes from the request's own `request_type`, which was
+    // classified at request time — the same column the expiry cron's renewal
+    // pause reads, so the two can never disagree.
+    await track(
+      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
+      {
+        provider: request.payment_provider || 'manual',
+        amount: Number(request.amount ?? 0),
+        interval: request.interval,
+        is_renewal: request.request_type === 'renewal',
+        currency: request.currency ?? 'usd',
+        plan: plan?.slug ?? null,
+        request_type: request.request_type ?? null,
+        settlement_path: 'super_admin_confirm',
+        requested_at: request.created_at,
+        hours_to_confirm: request.created_at
+          ? Math.round(((Date.now() - new Date(request.created_at).getTime()) / 3_600_000) * 10) / 10
+          : null,
+      },
+      { tenantId: request.tenant_id, timestamp: request.created_at }
+    )
+  }
+
+  return { success: true, applied: confirmation.applied }
 }
 
 /**
