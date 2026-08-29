@@ -68,6 +68,19 @@ ARG SENTRY_RELEASE
 # log.
 ENV CI=true
 
+# sentry-cli reported only "failed with exit code 1" for both `releases new`
+# and `sourcemaps upload`, and told us to set this to see why. Keep it: the
+# upload runs once per deploy, so the extra output costs nothing and is the
+# difference between a diagnosable failure and a silent one.
+ENV SENTRY_LOG_LEVEL=debug
+
+# The plugin passes -p to `sourcemaps upload` but NOT to `releases new`, which
+# leaves the org/project for that call to come from the environment. An org
+# auth token embeds the org, but nothing supplies the project — so state both
+# explicitly rather than relying on which sub-command infers what.
+ENV SENTRY_ORG=guillermoscript
+ENV SENTRY_PROJECT=lms-front
+
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY
 ENV NEXT_PUBLIC_PLATFORM_DOMAIN=$NEXT_PUBLIC_PLATFORM_DOMAIN
