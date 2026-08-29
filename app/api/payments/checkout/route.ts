@@ -30,6 +30,7 @@ import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
 import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
+import { checkoutExpiresAt, isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
 import {
   findConflictingSubscription,
   PARALLEL_SUBSCRIPTION_CODE,
@@ -283,6 +284,11 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: providerSlug,
         school_percentage_snapshot: schoolPercentageSnapshot,
+        // Local TTL for hosted rails only (#624). Without it an abandoned
+        // redirect leaves this pending row inside transactions_unique_product /
+        // transactions_unique_plan forever, and the buyer can never retry.
+        // Null for in-band rails, which keeps them out of the reconciler queue.
+        checkout_expires_at: checkoutExpiresAt(providerSlug),
         ...(settlement
           ? {
               settlement_currency: settlement.currency,
@@ -379,9 +385,26 @@ export async function POST(req: NextRequest) {
           providerSlug === 'binance') &&
         session.providerRef
       ) {
-        await supabase
+        // `provider_checkout_id` is the same value on hosted rails, stored under
+        // its own name (#624) because that is what the stale-checkout reconciler
+        // asks the provider about. It cannot read `provider_subscription_id`:
+        // for solana_subs that column marks the on-chain SUBSCRIBE reference,
+        // and handle_new_subscription copies it onto the subscription row on
+        // activation — two different meanings in one column. Splitting them
+        // keeps the reconciler from ever querying a non-checkout identifier.
+        //
+        // The admin client, not the user-scoped one: since #538 `authenticated`
+        // holds an UPDATE grant on only status / provider_subscription_id /
+        // stripe_payment_intent_id, so a user-scoped write of the new column is
+        // refused outright.
+        await adminClient
           .from('transactions')
-          .update({ provider_subscription_id: session.providerRef })
+          .update({
+            provider_subscription_id: session.providerRef,
+            ...(isHostedCheckoutProvider(providerSlug)
+              ? { provider_checkout_id: session.providerRef }
+              : {}),
+          })
           .eq('transaction_id', transaction.transaction_id)
       }
 

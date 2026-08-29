@@ -188,6 +188,82 @@ async function trackSettlement(
   }, 'payment settlement analytics')
 }
 
+/**
+ * A provider success for a checkout WE already expired (#624).
+ *
+ * The stale-checkout reconciler cancels an abandoned hosted checkout so the
+ * buyer can retry. That opens a window: the original payment can still land
+ * afterwards — PayPal captures an approved order for up to three days, and a
+ * Lemon Squeezy webhook can be retried for far longer than our TTL. Without
+ * this the settlement would hit the `status === 'pending'` guard, no-op, and
+ * the buyer would be charged with nothing to show for it.
+ *
+ * The decision is the RPC's, under a row lock, because it depends on whether a
+ * REPLACEMENT purchase settled in the meantime — a race the dispatcher cannot
+ * resolve from application code. The outcome is returned rather than a boolean
+ * because only 'revived' produced a live subscription for the caller to align a
+ * period against; 'duplicate' produced a refund liability and nothing else.
+ */
+type LateSettlementOutcome = 'revived' | 'duplicate' | 'ineligible'
+
+async function settleLateHostedCheckout(
+  admin: SupabaseClient,
+  provider: string,
+  tx: SettlementRow,
+  eventType: string,
+): Promise<LateSettlementOutcome> {
+  const { data: outcome, error } = await admin.rpc('settle_expired_checkout', {
+    _transaction_id: tx.transaction_id,
+  })
+  if (error) {
+    throw new Error(`dispatch ${eventType} late settlement failed: ${error.message}`)
+  }
+
+  if (outcome === 'revived') {
+    // The row is 'successful' now and after_transaction_update has already run
+    // enroll_user / handle_new_subscription, exactly as a normal flip would.
+    void trackSettlement(admin, provider, tx, {
+      event_type: eventType,
+      // Distinguishable in the funnel: this sale was counted as abandoned by
+      // the nightly checkout_abandoned metric before it settled.
+      late_settlement: true,
+    })
+    return 'revived'
+  }
+
+  if (outcome === 'duplicate') {
+    // The buyer paid twice — once on the expired checkout, once on the
+    // replacement that settled first. Deliberately NOT tracked as a settlement:
+    // this row stays non-revenue so `amount - refunded_amount` sums stay honest,
+    // and it must not enroll a second time. It needs a human refund, so it is
+    // loud rather than silent.
+    console.error(
+      `[webhook] ${provider} ${eventType}: duplicate settlement on expired checkout ${tx.transaction_id} — a replacement purchase already settled; this payment needs a refund`,
+    )
+    void safeAnalytics(
+      () =>
+        track(
+          ANALYTICS_EVENTS.PAYMENT_FAILED,
+          {
+            provider,
+            failure_reason: 'duplicate_settlement_after_checkout_expiry',
+            stage: 'late_settlement',
+            transaction_id: tx.transaction_id,
+            amount: Number(tx.amount ?? 0),
+            currency: tx.currency ?? 'usd',
+            is_subscription: !!tx.plan_id,
+            needs_refund: true,
+          },
+          { userId: tx.user_id, tenantId: tx.tenant_id ?? null },
+        ),
+      'duplicate settlement analytics',
+    )
+    return 'duplicate'
+  }
+
+  return 'ineligible'
+}
+
 export interface DispatchContext {
   /** Provider slug — used as the payment_provider match key. */
   provider: string
@@ -270,6 +346,47 @@ export async function dispatchBillingEvent(
             // handle_new_subscription set end_date from the plan duration; the
             // provider's schedule is authoritative, so align to renews_at.
             if (event.periodEnd) {
+              if (!event.providerEventId) {
+                throw new Error(`dispatch ${event.type}: provider event id is required for period alignment`)
+              }
+              const { error: extErr } = await admin.rpc('apply_webhook_subscription_period', {
+                _provider_event_id: event.providerEventId,
+                _provider_subscription_id: subId,
+                _provider: provider,
+                _new_period_end: event.periodEnd.toISOString(),
+                _allow_period_realign: true,
+              })
+              if (extErr) throw new Error(`dispatch ${event.type} period-align failed: ${extErr.message}`)
+            }
+            break
+          }
+
+          if (tx?.status === 'canceled') {
+            // Same late-settlement window as payment.succeeded (#624): the
+            // stale-checkout reconciler expired this subscription checkout
+            // before the provider activated it.
+            //
+            // The identity columns go on FIRST, while the row is still
+            // 'canceled'. after_transaction_update fires on every update but
+            // only acts when NEW.status = 'successful', so this write is inert
+            // — and it has to happen before the revive, because the flip is
+            // what runs handle_new_subscription, which copies
+            // provider_subscription_id and payment_provider OFF this row onto
+            // the subscription it creates. Reviving first would build the
+            // subscription with a null provider id.
+            const { error: idErr } = await admin
+              .from('transactions')
+              .update({ provider_subscription_id: subId, payment_provider: provider })
+              .eq('transaction_id', txnId)
+              .eq('status', 'canceled')
+            if (idErr) throw new Error(`dispatch ${event.type} late-settlement identity write failed: ${idErr.message}`)
+
+            // Only 'revived' created a subscription row to align. A 'duplicate'
+            // is a refund liability with no subscription behind it, so aligning
+            // a period there would rewrite the REPLACEMENT subscription's window
+            // from a payment that must not count.
+            const outcome = await settleLateHostedCheckout(admin, provider, tx, event.type)
+            if (outcome === 'revived' && event.periodEnd) {
               if (!event.providerEventId) {
                 throw new Error(`dispatch ${event.type}: provider event id is required for period alignment`)
               }
@@ -416,6 +533,11 @@ export async function dispatchBillingEvent(
         // two that dispatch this event (the PayPal capture route and the
         // webhook) emits nothing.
         void trackSettlement(admin, provider, tx, { event_type: event.type })
+      } else if (tx.status === 'canceled') {
+        // The stale-checkout reconciler may have expired this row before the
+        // provider's success landed (#624). Reviving it here is what keeps an
+        // abandoned-then-paid PayPal order from charging the buyer for nothing.
+        await settleLateHostedCheckout(admin, provider, tx, event.type)
       }
       break
     }
