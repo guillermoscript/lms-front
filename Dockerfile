@@ -55,6 +55,19 @@ ARG NEXT_PUBLIC_SENTRY_DSN
 # reaches the `runner` stage, so it is not present in the shipped image.
 ARG SENTRY_AUTH_TOKEN
 
+# The release name the uploaded source maps are keyed to. It has to be passed
+# in: `.dockerignore` excludes `.git`, so the Sentry plugin cannot infer a
+# release from the repo the way it does on a dev machine, and without one the
+# upload is skipped. deploy.yml passes github.sha.
+ARG SENTRY_RELEASE
+
+# next.config.ts sets `silent: !process.env.CI`, and CI is a GitHub Actions
+# runner variable that does NOT cross into this container — so the plugin ran
+# completely silently here and a skipped upload looked identical to a
+# successful one. Set it so the upload (or its failure) shows up in the build
+# log.
+ENV CI=true
+
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY
 ENV NEXT_PUBLIC_PLATFORM_DOMAIN=$NEXT_PUBLIC_PLATFORM_DOMAIN
@@ -62,6 +75,7 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 
 RUN npm run build
 
