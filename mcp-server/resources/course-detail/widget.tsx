@@ -8,6 +8,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -71,6 +72,8 @@ const STRINGS = {
     sequential: "Sequential",
     loadStats: "Load stats",
     loadingStats: "Loading stats…",
+    retryStats: "Retry",
+    statsFailed: "Could not load live stats for this course.",
     statActiveEnrollments: "Active enrollments",
     statPublishedLessons: "Published lessons",
     statCompletionRate: "Completion rate",
@@ -95,6 +98,8 @@ const STRINGS = {
     sequential: "Secuencial",
     loadStats: "Cargar estadísticas",
     loadingStats: "Cargando estadísticas…",
+    retryStats: "Reintentar",
+    statsFailed: "No se pudieron cargar las estadísticas del curso.",
     statActiveEnrollments: "Inscripciones activas",
     statPublishedLessons: "Lecciones publicadas",
     statCompletionRate: "Tasa de finalización",
@@ -141,7 +146,7 @@ function parseCourseStats(raw: unknown): CourseStats | null {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function CourseDetail() {
+function CourseDetail() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const [statsVisible, setStatsVisible] = useState(false);
@@ -149,6 +154,7 @@ export default function CourseDetail() {
   const {
     callTool: loadStats,
     isPending: statsLoading,
+    isError: statsFailed,
     data: statsData,
   } = useCallTool<{ course_id: number }>("lms_get_course_stats");
 
@@ -172,6 +178,8 @@ export default function CourseDetail() {
 
   const { course, lessons, exams } = props;
   const stats = parseCourseStats(statsData?.structuredContent);
+  // Asked for and not delivered — a thrown error or a payload we cannot read.
+  const statsMissing = statsVisible && !statsLoading && (statsFailed || !stats);
   const statusLabel = (status: string) => t.status[status.toLowerCase()] ?? status;
 
   const handleLoadStats = () => {
@@ -227,8 +235,27 @@ export default function CourseDetail() {
                   : "bg-transparent"
               }`}
             >
-              {statsLoading ? t.loadingStats : t.loadStats}
+              {statsLoading
+                ? t.loadingStats
+                : statsMissing
+                  ? t.retryStats
+                  : t.loadStats}
             </button>
+
+            {/*
+              A failed call used to leave the button back at "Load stats" with
+              nothing else on screen — the teacher clicked, waited, and got no
+              answer either way. An unreadable payload lands here too: both are
+              "you asked and got nothing", and both are worth saying out loud.
+            */}
+            {statsMissing && (
+              <p
+                role="alert"
+                className="mt-3 mb-0 rounded-[10px] bg-red-50 px-[13px] py-[9px] text-[13px] text-red-700 dark:bg-red-950 dark:text-red-400"
+              >
+                {t.statsFailed}
+              </p>
+            )}
 
             {/* Stats row */}
             {statsVisible && stats && (
@@ -373,3 +400,5 @@ export default function CourseDetail() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(CourseDetail);

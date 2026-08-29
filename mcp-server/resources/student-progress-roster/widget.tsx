@@ -7,8 +7,10 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { LoadMore, usePagedItems } from "../shared/paging";
 import { NEUTRAL_TEXT, barClass, textClass } from "../shared/severity";
 import { isNamedStudent, studentDisplayName, studentInitials } from "../shared/student-display";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -33,6 +35,13 @@ const propsSchema = z.object({
     published_lessons: z.number(),
   }),
   students: z.array(studentSchema),
+  // Pagination window this payload represents. Optional so a payload from an
+  // older server still validates — it simply renders as a single full page.
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  has_more: z.boolean().optional(),
+  /** Repeated on every page so "load more" keeps the same filter. */
+  status: z.string().nullable().optional(),
   summary: z.object({
     total: z.number(),
     at_risk: z.number(),
@@ -123,13 +132,26 @@ function examCell(
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function StudentProgressRoster() {
+function StudentProgressRoster() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
   const t = useStrings(STRINGS);
   const fmt = useFormat();
   const [atRiskOnly, setAtRiskOnly] = useState(false);
+
+  // Before the isPending guard: hooks run unconditionally, and the seed is
+  // re-read from props on every render until a page is actually appended.
+  const paged = usePagedItems<Student>({
+    toolName: "lms_get_student_progress",
+    itemsKey: "students",
+    initialItems: props?.students,
+    page: props,
+    args: {
+      course_id: props?.course?.id,
+      ...(props?.status ? { status: props.status } : {}),
+    },
+  });
 
   if (isPending) {
     return (
@@ -145,8 +167,28 @@ export default function StudentProgressRoster() {
     );
   }
 
-  const { course, students, summary } = props;
+  const { course } = props;
+  const students = paged.items;
   const visible = atRiskOnly ? students.filter((s) => s.at_risk) : students;
+
+  /*
+    `summary.at_risk` and `summary.avg_progress` arrive computed over one page,
+    while `summary.total` is the exact course-wide count — so a 20-row page of a
+    60-student course reported "3 at risk" as if it spanned the course. Both are
+    recomputed from the rows actually on screen, which is what the reader can
+    check against. `total` stays the server's, and the "N of M" line under the
+    roster is what says the two are measuring different sets.
+  */
+  const summary = {
+    total: props.summary.total,
+    at_risk: students.filter((s) => s.at_risk).length,
+    avg_progress:
+      students.length > 0
+        ? Math.round(
+            students.reduce((acc, s) => acc + (s.progress_pct ?? 0), 0) / students.length
+          )
+        : 0,
+  };
 
   const stat = (label: string, value: string, accentClass?: string) => (
     <div className="text-center">
@@ -213,14 +255,16 @@ export default function StudentProgressRoster() {
           )}
 
           {/* Rows */}
-          <div className="flex flex-col gap-2">
+          {/* A roster of people is a list — <ul> gives the count and position
+              announcements a bare stack of divs never had. */}
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
             {visible.map((s: Student) => {
               const pct = s.progress_pct;
               const named = isNamedStudent(s.student_name);
               const name = studentDisplayName(s.student_name, t.unnamedStudent);
               const exam = examCell(s.exam_avg, s.exam_count, t.ungraded, fmt.percent);
               return (
-                <div
+                <li
                   key={s.student_id}
                   className={`flex flex-wrap items-center gap-3.5 rounded-xl border bg-white px-3.5 py-3 dark:bg-zinc-900 ${
                     s.at_risk
@@ -228,8 +272,11 @@ export default function StudentProgressRoster() {
                       : "border-zinc-200 dark:border-zinc-800"
                   }`}
                 >
-                  {/* Avatar */}
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-50)] text-[13px] font-bold text-[var(--brand-600)] uppercase dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]">
+                  {/* Avatar — initials of a name that is already read out. */}
+                  <div
+                    aria-hidden="true"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-50)] text-[13px] font-bold text-[var(--brand-600)] uppercase dark:bg-[var(--brand-950)] dark:text-[var(--brand-400)]"
+                  >
                     {studentInitials(s.student_name)}
                   </div>
 
@@ -292,18 +339,27 @@ export default function StudentProgressRoster() {
                       {t.lastActive}
                     </div>
                   </div>
-                </div>
+                </li>
               );
             })}
+          </ul>
 
-            {visible.length === 0 && (
-              <p className="m-0 p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
-                {atRiskOnly ? t.noAtRisk : t.noStudents}
-              </p>
-            )}
-          </div>
+          {visible.length === 0 && (
+            <p className="m-0 p-6 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
+              {atRiskOnly ? t.noAtRisk : t.noStudents}
+            </p>
+          )}
+
+          <LoadMore
+            shown={students.length}
+            total={summary.total}
+            paged={paged}
+            formatNumber={fmt.number}
+          />
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(StudentProgressRoster);

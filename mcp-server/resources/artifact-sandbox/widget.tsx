@@ -7,6 +7,8 @@ import {
   type WidgetMetadata,
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
+import { useFormat, useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -76,10 +78,57 @@ function artifactEmoji(type: string): string {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function ArtifactSandbox() {
+// ── Strings ──────────────────────────────────────────────────────────────────
+
+const STRINGS = {
+  en: {
+    loading: "Rendering artifact…",
+    difficulty: { easy: "Easy", medium: "Medium", hard: "Hard" } as Record<string, string>,
+    passAt: (score: string) => `🎯 Pass ≥ ${score}`,
+    tabPreview: "Preview",
+    tabHtml: "HTML",
+    tabEvaluation: "Evaluation",
+    previewTitle: "Artifact preview",
+    noHtml: "No HTML content to preview.",
+    saving: "Saving…",
+    saveChanges: "Save changes",
+    savedButton: "Saved",
+    revert: "Revert",
+    savedNotice: "✓ Saved",
+    saveFailed: "Save failed",
+    serverOnly: "🔒 Server-side only — students never receive this.",
+    criteriaHeading: "Evaluation criteria",
+    criteriaNone: "(none set)",
+    promptHeading: "Evaluator system prompt",
+  },
+  es: {
+    loading: "Renderizando el artefacto…",
+    difficulty: { easy: "Fácil", medium: "Media", hard: "Difícil" } as Record<string, string>,
+    passAt: (score: string) => `🎯 Aprobado ≥ ${score}`,
+    tabPreview: "Vista previa",
+    tabHtml: "HTML",
+    tabEvaluation: "Evaluación",
+    previewTitle: "Vista previa del artefacto",
+    noHtml: "No hay HTML que previsualizar.",
+    saving: "Guardando…",
+    saveChanges: "Guardar cambios",
+    savedButton: "Guardado",
+    revert: "Descartar",
+    savedNotice: "✓ Guardado",
+    saveFailed: "Error al guardar",
+    serverOnly: "🔒 Solo en el servidor: los estudiantes nunca ven esto.",
+    criteriaHeading: "Criterios de evaluación",
+    criteriaNone: "(sin definir)",
+    promptHeading: "Prompt de sistema del evaluador",
+  },
+};
+
+function ArtifactSandbox() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const dark = theme === "dark";
+  const t = useStrings(STRINGS);
+  const fmt = useFormat();
 
   const [tab, setTab] = useState<Tab>("preview");
   // Local editable copy of the HTML; seeded once props arrive.
@@ -102,7 +151,7 @@ export default function ArtifactSandbox() {
         <div className={dark ? "dark" : ""}>
           <div className="bg-zinc-50 p-10 text-center font-sans text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
             <div className="mx-auto mb-3 size-9 animate-spin rounded-full border-[3px] border-zinc-200 border-t-[var(--brand-600)] dark:border-zinc-800 dark:border-t-[var(--brand-400)]" />
-            <p className="m-0 text-sm">Rendering artifact…</p>
+            <p className="m-0 text-sm">{t.loading}</p>
           </div>
         </div>
       </McpUseProvider>
@@ -119,6 +168,7 @@ export default function ArtifactSandbox() {
 
   const tabButton = (id: Tab, label: string) => (
     <button
+      type="button"
       onClick={() => setTab(id)}
       className={`cursor-pointer rounded-lg border-none px-3.5 py-1.5 text-[13px] transition-all duration-150 ${
         tab === id
@@ -143,7 +193,7 @@ export default function ArtifactSandbox() {
             <span
               className={`shrink-0 rounded-[10px] px-2.5 py-[3px] text-xs font-semibold whitespace-nowrap ${difficultyPill(exercise.difficulty)}`}
             >
-              {exercise.difficulty}
+              {t.difficulty[exercise.difficulty.toLowerCase()] ?? exercise.difficulty}
             </span>
           </div>
 
@@ -152,7 +202,7 @@ export default function ArtifactSandbox() {
               {artifact.type.replace("_", " ")}
             </span>
             <span className="text-[13px] text-zinc-400 dark:text-zinc-500">
-              🎯 Pass ≥ {artifact.passing_score}%
+              {t.passAt(fmt.percent(artifact.passing_score))}
             </span>
           </div>
 
@@ -164,9 +214,9 @@ export default function ArtifactSandbox() {
 
           {/* Tabs */}
           <div className="mb-3 flex w-fit gap-1 rounded-[10px] bg-zinc-100 p-1 dark:bg-zinc-900">
-            {tabButton("preview", "Preview")}
-            {tabButton("html", `HTML${dirty ? " •" : ""}`)}
-            {tabButton("evaluation", "Evaluation")}
+            {tabButton("preview", t.tabPreview)}
+            {tabButton("html", `${t.tabHtml}${dirty ? " •" : ""}`)}
+            {tabButton("evaluation", t.tabEvaluation)}
           </div>
 
           {/* Preview */}
@@ -176,14 +226,14 @@ export default function ArtifactSandbox() {
                 // sandbox WITHOUT allow-same-origin: the artifact can run scripts
                 // but cannot reach the parent — exactly how students run it.
                 <iframe
-                  title="Artifact preview"
+                  title={t.previewTitle}
                   srcDoc={currentHtml}
                   sandbox="allow-scripts allow-forms"
                   className="block h-[460px] w-full border-none"
                 />
               ) : (
                 <div className="p-10 text-center text-[13px] text-zinc-400 dark:text-zinc-500">
-                  No HTML content to preview.
+                  {t.noHtml}
                 </div>
               )}
             </div>
@@ -200,6 +250,7 @@ export default function ArtifactSandbox() {
               />
               <div className="mt-2.5 flex items-center gap-3">
                 <button
+                  type="button"
                   onClick={handleSave}
                   disabled={saving || !dirty}
                   className={`rounded-lg border-none px-[18px] py-2 text-[13px] font-semibold transition-all duration-150 ${
@@ -208,25 +259,26 @@ export default function ArtifactSandbox() {
                       : "cursor-not-allowed bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
                   } ${saving ? "cursor-not-allowed opacity-70" : ""}`}
                 >
-                  {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}
+                  {saving ? t.saving : dirty ? t.saveChanges : t.savedButton}
                 </button>
                 {dirty && (
                   <button
+                    type="button"
                     onClick={() => setHtml(null)}
                     disabled={saving}
                     className="cursor-pointer rounded-lg border border-zinc-200 bg-transparent px-3.5 py-2 text-[13px] font-medium text-zinc-500 dark:border-zinc-800 dark:text-zinc-400"
                   >
-                    Revert
+                    {t.revert}
                   </button>
                 )}
                 {saved && !dirty && (
                   <span className="text-[13px] text-green-600 dark:text-green-400">
-                    ✓ Saved
+                    {t.savedNotice}
                   </span>
                 )}
                 {saveFailed && (
                   <span className="text-[13px] text-red-600 dark:text-red-400">
-                    {saveError instanceof Error ? saveError.message : "Save failed"}
+                    {saveError instanceof Error ? saveError.message : t.saveFailed}
                   </span>
                 )}
               </div>
@@ -237,20 +289,20 @@ export default function ArtifactSandbox() {
           {tab === "evaluation" && (
             <div>
               <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12.5px] font-medium text-amber-600 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-400">
-                🔒 Server-side only — students never receive this.
+                {t.serverOnly}
               </div>
 
               <h4 className="mt-0 mb-1.5 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                Evaluation criteria
+                {t.criteriaHeading}
               </h4>
               <pre className="mt-0 mb-4 rounded-[10px] border border-zinc-200 bg-zinc-50 p-3 font-mono text-[12.5px] leading-relaxed break-words whitespace-pre-wrap text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
-                {artifact.evaluation_criteria || "(none set)"}
+                {artifact.evaluation_criteria || t.criteriaNone}
               </pre>
 
               {artifact.system_prompt && (
                 <>
                   <h4 className="mt-0 mb-1.5 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                    Evaluator system prompt
+                    {t.promptHeading}
                   </h4>
                   <pre className="m-0 rounded-[10px] border border-zinc-200 bg-zinc-50 p-3 font-mono text-[12.5px] leading-relaxed break-words whitespace-pre-wrap text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
                     {artifact.system_prompt}
@@ -264,3 +316,5 @@ export default function ArtifactSandbox() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(ArtifactSandbox);

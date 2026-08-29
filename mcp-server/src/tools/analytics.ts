@@ -220,7 +220,14 @@ export function registerAnalyticsTools(server: MCPServer) {
         if (error) return errorResult(`Listing submissions: ${error.message}`);
         if (!data || data.length === 0) {
           return widget({
-            props: { exam_id, total: 0, submissions: [] },
+            props: {
+              exam_id,
+              total: 0,
+              offset,
+              limit,
+              has_more: false,
+              submissions: [],
+            },
             output: text("No submissions found for this exam."),
           });
         }
@@ -240,7 +247,14 @@ export function registerAnalyticsTools(server: MCPServer) {
         }));
 
         return widget({
-          props: { exam_id, total, submissions },
+          props: {
+            exam_id,
+            total,
+            offset,
+            limit,
+            has_more: total > offset + submissions.length,
+            submissions,
+          },
           output: text(`${total} submission(s).`),
         });
       } catch (err) {
@@ -669,7 +683,11 @@ export function registerAnalyticsTools(server: MCPServer) {
             props: {
               course: { id: course_id, title: course?.title ?? `Course ${course_id}`, published_lessons: publishedLessons },
               students: [],
-              summary: { total: 0, at_risk: 0, avg_progress: 0 },
+              status: status ?? null,
+              offset,
+              limit,
+              has_more: false,
+              summary: { total: count ?? 0, at_risk: 0, avg_progress: 0 },
             },
             output: text("No students enrolled in this course."),
           });
@@ -763,8 +781,15 @@ export function registerAnalyticsTools(server: MCPServer) {
             published_lessons: publishedLessons,
           },
           students,
+          // Echoed so "load more" keeps the same filter.
+          status: status ?? null,
+          offset,
+          limit,
+          has_more: (count ?? students.length) > offset + students.length,
           summary: {
             total: count ?? students.length,
+            // Page-level, and the widget recomputes both from the rows it has
+            // actually loaded — `total` is the only course-wide figure here.
             at_risk: atRiskCount,
             avg_progress: avgProgress,
           },

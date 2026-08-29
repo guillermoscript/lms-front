@@ -8,6 +8,7 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useStrings } from "../shared/i18n";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 
 // ── Schema ──────────────────────────────────────────────────────────────────
@@ -94,6 +95,8 @@ const STRINGS = {
       " — your free-text answers went to the tutor for grading.",
     recordingSuffix: " — recording your attempt…",
     recordedSuffix: " — attempt recorded. The tutor will pick it up from here.",
+    recordFailedSuffix:
+      " — your attempt could not be saved. The tutor has been asked to record it.",
     yourAnswer: "Your answer: ",
     correctLabel: " · Correct: ",
     awaitingGrading: " · Awaiting tutor grading",
@@ -125,6 +128,8 @@ const STRINGS = {
       " — tus respuestas de texto libre se enviaron al tutor para su calificación.",
     recordingSuffix: " — registrando tu intento…",
     recordedSuffix: " — intento registrado. El tutor lo retomará desde aquí.",
+    recordFailedSuffix:
+      " — no se pudo guardar tu intento. Se le pidió al tutor que lo registre.",
     yourAnswer: "Tu respuesta: ",
     correctLabel: " · Correcta: ",
     awaitingGrading: " · Esperando la calificación del tutor",
@@ -236,7 +241,7 @@ const inputClass =
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function PracticePlayer() {
+function PracticePlayer() {
   const { props, isPending, sendFollowUpMessage } = useWidget<Props>();
   const theme = useWidgetTheme();
   const t = useStrings(STRINGS);
@@ -248,6 +253,9 @@ export default function PracticePlayer() {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [phase, setPhase] = useState<"quiz" | "results">("quiz");
   const [handedOff, setHandedOff] = useState(false);
+  // `lms_record_practice_attempt` can fail. The results screen used to say
+  // "attempt recorded" regardless, because the hand-off ran from `onSettled`.
+  const [recordFailed, setRecordFailed] = useState(false);
   // match: which left item is awaiting a right-side pick
   const [pendingLeft, setPendingLeft] = useState<string | null>(null);
 
@@ -368,6 +376,23 @@ export default function PracticePlayer() {
       : 0;
     const missed = results.filter((r) => r.correct === false);
 
+    // One hand-off either way, but it must tell the tutor the truth about
+    // whether the attempt actually landed — if it did not, the tutor is the
+    // only one left who can call `lms_record_practice_attempt` again.
+    const handOff = (saved: boolean) => {
+      if (handedOff) return;
+      setHandedOff(true);
+      const unsavedNote = saved
+        ? ""
+        : `\n\n(My attempt could not be saved automatically — please record it with lms_record_practice_attempt: score ${score}, ${correctCount}/${closed.length} correct${isMixed ? ", mode 'mixed'" : ""}.)`;
+      sendFollowUpMessage(
+        (missed.length === 0
+          ? `I scored ${correctCount}/${closed.length} on the "${topic}" practice quiz — all correct! Suggest what to practice next${props.source_exercise_id ? `, or whether I'm ready to complete the real exercise (id ${props.source_exercise_id})` : ""}.`
+          : `I scored ${correctCount}/${closed.length} on the "${topic}" practice quiz. I missed:\n${missed.map((m) => `- ${m.prompt} (I answered: ${m.answer})`).join("\n")}\n\nReteach me what I got wrong, then quiz me again${props.source_exercise_id ? ` (keep source_exercise_id ${props.source_exercise_id})` : ""}.`) +
+          unsavedNote
+      );
+    };
+
     recordAttempt(
       {
         topic,
@@ -384,14 +409,13 @@ export default function PracticePlayer() {
         correct_count: correctCount,
       },
       {
-        onSettled: () => {
-          if (handedOff) return;
-          setHandedOff(true);
-          sendFollowUpMessage(
-            missed.length === 0
-              ? `I scored ${correctCount}/${closed.length} on the "${topic}" practice quiz — all correct! Suggest what to practice next${props.source_exercise_id ? `, or whether I'm ready to complete the real exercise (id ${props.source_exercise_id})` : ""}.`
-              : `I scored ${correctCount}/${closed.length} on the "${topic}" practice quiz. I missed:\n${missed.map((m) => `- ${m.prompt} (I answered: ${m.answer})`).join("\n")}\n\nReteach me what I got wrong, then quiz me again${props.source_exercise_id ? ` (keep source_exercise_id ${props.source_exercise_id})` : ""}.`
-          );
+        onSuccess: () => {
+          setRecordFailed(false);
+          handOff(true);
+        },
+        onError: () => {
+          setRecordFailed(true);
+          handOff(false);
         },
       }
     );
@@ -414,13 +438,22 @@ export default function PracticePlayer() {
             <h2 className="m-0 mb-1 text-xl text-zinc-900 dark:text-zinc-100">
               {hasFreeText ? t.answersSent : t.scoreCorrect(correctCount, closedTotal)}
             </h2>
-            <p className="m-0 mb-4 text-[13px] text-zinc-500 dark:text-zinc-400">
+            <p
+              className={`m-0 mb-4 text-[13px] ${
+                recordFailed
+                  ? "font-medium text-amber-700 dark:text-amber-400"
+                  : "text-zinc-500 dark:text-zinc-400"
+              }`}
+              {...(recordFailed ? { role: "alert" as const } : {})}
+            >
               {topic}
               {hasFreeText
                 ? t.freeTextSentSuffix
                 : isRecording
                   ? t.recordingSuffix
-                  : t.recordedSuffix}
+                  : recordFailed
+                    ? t.recordFailedSuffix
+                    : t.recordedSuffix}
             </p>
             {results.map(({ q: rq, correct }) => (
               <div
@@ -502,7 +535,19 @@ export default function PracticePlayer() {
           {/* Per-type input */}
           {q.type === "multiple_choice" &&
             (q.options ?? []).map((opt, i) => (
-              <button key={i} onClick={() => setAnswer(i)} className={choiceClass(answer === i)}>
+              /*
+                Keyed by question *and* position: within one question the
+                options never reorder, so the index is the right identity — but
+                across questions a bare index makes React reuse Q1's button as
+                Q2's, carrying focus and transition state onto a different
+                option. Duplicate option text rules out keying on the string.
+              */
+              <button
+                key={`${q.id}-${i}`}
+                type="button"
+                onClick={() => setAnswer(i)}
+                className={choiceClass(answer === i)}
+              >
                 {opt}
               </button>
             ))}
@@ -666,3 +711,5 @@ export default function PracticePlayer() {
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(PracticePlayer);

@@ -73,6 +73,9 @@ export function registerCourseTools(server: MCPServer) {
               // rows while courses still exist, and the widget reads total === 0
               // as "this teacher has never created a course".
               total,
+              offset,
+              limit,
+              has_more: false,
               courses: [],
             },
             output: text("No courses found."),
@@ -95,6 +98,9 @@ export function registerCourseTools(server: MCPServer) {
           props: {
             status: status ?? "all",
             total,
+            offset,
+            limit,
+            has_more: total > offset + courses.length,
             courses,
           },
           output: text(`Found ${total} course(s).`),

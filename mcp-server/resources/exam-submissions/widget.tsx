@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import {
   McpUseProvider,
   useWidget,
@@ -8,7 +8,9 @@ import {
 } from "mcp-use/react";
 import { Brand } from "../shared/branding";
 import { useFormat, useStrings } from "../shared/i18n";
+import { LoadMore, usePagedItems } from "../shared/paging";
 import { isNamedStudent, studentDisplayName } from "../shared/student-display";
+import { withWidgetBoundary } from "../shared/error-boundary";
 import { z } from "zod";
 import { Markdown } from "../shared/markdown";
 
@@ -26,6 +28,12 @@ const submissionSchema = z.object({
 const propsSchema = z.object({
   exam_id: z.number(),
   total: z.number(),
+  // Pagination window this payload represents. Optional so a payload from an
+  // older server still validates — it simply renders as a single full page.
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  has_more: z.boolean().optional(),
+
   submissions: z.array(submissionSchema),
 });
 
@@ -40,6 +48,7 @@ export const widgetMetadata: WidgetMetadata = {
 };
 
 type Props = z.infer<typeof propsSchema>;
+type Submission = z.infer<typeof submissionSchema>;
 
 // ── Strings ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +62,7 @@ const STRINGS = {
     colScore: "Score",
     colDate: "Date",
     colStatus: "Status",
+    tableCaption: (id: number) => `Submissions for exam ${id}`,
     empty: "No submissions yet",
     unnamedStudent: "Unnamed student",
     loadingDetails: "Loading details…",
@@ -60,6 +70,8 @@ const STRINGS = {
     detailReviewStatus: "Review status",
     detailFeedback: "Feedback",
     noDetail: "No additional detail available.",
+    detailFailed: "Could not load the details for this submission.",
+    retry: "Retry",
     reviewStatus: {
       approved: "Approved",
       graded: "Graded",
@@ -77,6 +89,7 @@ const STRINGS = {
     colScore: "Nota",
     colDate: "Fecha",
     colStatus: "Estado",
+    tableCaption: (id: number) => `Entregas del examen ${id}`,
     empty: "Todavía no hay entregas",
     unnamedStudent: "Estudiante sin nombre",
     loadingDetails: "Cargando detalles…",
@@ -84,6 +97,8 @@ const STRINGS = {
     detailReviewStatus: "Estado de revisión",
     detailFeedback: "Comentarios",
     noDetail: "No hay más detalles disponibles.",
+    detailFailed: "No se pudieron cargar los detalles de esta entrega.",
+    retry: "Reintentar",
     reviewStatus: {
       approved: "Aprobada",
       graded: "Calificada",
@@ -133,12 +148,15 @@ function parseDetail(raw: unknown): SubmissionDetail | null {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function ExamSubmissions() {
+function ExamSubmissions() {
   const { props, isPending } = useWidget<Props>();
   const theme = useWidgetTheme();
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [detailMap, setDetailMap] = useState<Record<number, SubmissionDetail>>({});
+  // A failed fetch used to leave the panel showing "No additional detail
+  // available." — indistinguishable from a submission that genuinely has none.
+  const [failedIds, setFailedIds] = useState<Set<number>>(new Set());
 
   const { callToolAsync } = useCallTool<{ submission_id: number }>(
     "lms_get_submission_details"
@@ -147,6 +165,16 @@ export default function ExamSubmissions() {
   const dark = theme === "dark";
   const t = useStrings(STRINGS);
   const fmt = useFormat();
+
+  // Before the isPending guard: hooks run unconditionally, and the seed is
+  // re-read from props on every render until a page is actually appended.
+  const paged = usePagedItems<Submission>({
+    toolName: "lms_list_exam_submissions",
+    itemsKey: "submissions",
+    initialItems: props?.submissions,
+    page: props,
+    args: { exam_id: props?.exam_id },
+  });
 
   if (isPending) {
     return (
@@ -162,33 +190,45 @@ export default function ExamSubmissions() {
     );
   }
 
-  const { submissions, total, exam_id } = props;
+  const { total, exam_id } = props;
+  const submissions = paged.items;
 
   const reviewLabel = (status: string | null): string => {
     const key = (status ?? "pending").toLowerCase();
     return t.reviewStatus[key] ?? status ?? "pending";
   };
 
-  const handleRowClick = async (id: number) => {
+  const fetchDetail = async (id: number) => {
+    setLoadingId(id);
+    setFailedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    try {
+      const result = await callToolAsync({ submission_id: id });
+      const detail = parseDetail(result?.structuredContent);
+      if (detail) {
+        setDetailMap((prev) => ({ ...prev, [id]: detail }));
+      } else {
+        // A result we cannot read is a failure, not an empty submission.
+        setFailedIds((prev) => new Set(prev).add(id));
+      }
+    } catch {
+      setFailedIds((prev) => new Set(prev).add(id));
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handleRowClick = (id: number) => {
     if (expandedId === id) {
       setExpandedId(null);
       return;
     }
     setExpandedId(id);
     if (detailMap[id]) return; // already fetched
-
-    setLoadingId(id);
-    try {
-      const result = await callToolAsync({ submission_id: id });
-      const detail = parseDetail(result?.structuredContent);
-      if (detail) {
-        setDetailMap((prev) => ({ ...prev, [id]: detail }));
-      }
-    } catch {
-      // silently swallow; we just won't show the detail panel
-    } finally {
-      setLoadingId(null);
-    }
+    void fetchDetail(id);
   };
 
   return (
@@ -206,94 +246,128 @@ export default function ExamSubmissions() {
             </p>
           </div>
 
-          {/* Table */}
+          {/*
+            A real <table> with a disclosure row per submission.
+
+            The whole row stays clickable for the mouse, but the control the
+            keyboard and a screen reader actually get is the button in the first
+            cell — a <tr> cannot be a button, and the old `role="button"` on the
+            row swallowed the four cells into one flat announcement with no
+            column names attached to any of them.
+          */}
           <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            {/* Header row */}
-            <div className="grid min-w-[480px] grid-cols-[minmax(140px,1fr)_80px_120px_100px] border-b border-zinc-200 bg-zinc-100 px-4 py-[9px] dark:border-zinc-800 dark:bg-zinc-800">
-              {[t.colStudent, t.colScore, t.colDate, t.colStatus].map((col) => (
-                <span
-                  key={col}
-                  className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase dark:text-zinc-500"
-                >
-                  {col}
-                </span>
-              ))}
-            </div>
-
-            {/* Empty state */}
-            {submissions.length === 0 && (
-              <div className="p-10 text-center text-zinc-400 dark:text-zinc-500">
-                <div className="mb-2.5 text-3xl">📋</div>
-                <p className="m-0 text-sm">{t.empty}</p>
-              </div>
-            )}
-
-            {/* Data rows */}
-            {submissions.map((sub, idx) => {
-              const pill = reviewPill(sub.review_status);
-              const isExpanded = expandedId === sub.id;
-              const isLoadingThis = loadingId === sub.id;
-              const detail = detailMap[sub.id];
-              const isLast = idx === submissions.length - 1 && !isExpanded;
-
-              return (
-                <div key={sub.id}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={isExpanded}
-                    onClick={() => handleRowClick(sub.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleRowClick(sub.id);
-                      }
-                    }}
-                    className={`grid min-w-[480px] cursor-pointer grid-cols-[minmax(140px,1fr)_80px_120px_100px] px-4 py-3 transition-colors ${
-                      isLast ? "" : "border-b border-zinc-200 dark:border-zinc-800"
-                    } ${
-                      isExpanded
-                        ? "bg-[var(--brand-50)] dark:bg-[var(--brand-950)]"
-                        : "bg-transparent hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                    }`}
-                  >
-                    <span
-                      className={`overflow-hidden text-[13px] font-medium text-ellipsis whitespace-nowrap ${
-                        isNamedStudent(sub.student_name)
-                          ? "text-zinc-900 dark:text-zinc-100"
-                          : "text-zinc-400 italic dark:text-zinc-500"
-                      }`}
+            <table className="w-full min-w-[480px] table-fixed border-collapse text-left">
+              <caption className="sr-only">{t.tableCaption(exam_id)}</caption>
+              <colgroup>
+                <col />
+                <col className="w-20" />
+                <col className="w-[120px]" />
+                <col className="w-[100px]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-zinc-200 bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-800">
+                  {[t.colStudent, t.colScore, t.colDate, t.colStatus].map((col) => (
+                    <th
+                      key={col}
+                      scope="col"
+                      className="px-4 py-[9px] text-[11px] font-bold tracking-wider text-zinc-400 uppercase dark:text-zinc-500"
                     >
-                      {studentDisplayName(sub.student_name, t.unnamedStudent)}
-                    </span>
-                    <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                      {fmt.percent(sub.score)}
-                    </span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {fmt.date(sub.submission_date)}
-                    </span>
-                    <span className="inline-flex items-center">
-                      <span
-                        className={`rounded-lg px-2 py-0.5 text-[11px] font-semibold ${pill.bg} ${pill.text}`}
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {submissions.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="p-10 text-center text-zinc-400 dark:text-zinc-500"
+                    >
+                      <div className="mb-2.5 text-3xl">📋</div>
+                      <p className="m-0 text-sm">{t.empty}</p>
+                    </td>
+                  </tr>
+                )}
+
+                {submissions.map((sub) => {
+                  const pill = reviewPill(sub.review_status);
+                  const isExpanded = expandedId === sub.id;
+                  const isLoadingThis = loadingId === sub.id;
+                  const detail = detailMap[sub.id];
+                  const detailFailed = failedIds.has(sub.id);
+
+                  return (
+                    <Fragment key={sub.id}>
+                      <tr
+                        onClick={() => handleRowClick(sub.id)}
+                        className={`cursor-pointer transition-colors ${
+                          isExpanded
+                            ? "bg-[var(--brand-50)] dark:bg-[var(--brand-950)]"
+                            : "border-b border-zinc-200 bg-transparent hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
+                        }`}
                       >
-                        {reviewLabel(sub.review_status)}
-                      </span>
-                    </span>
-                  </div>
+                        <th scope="row" className="px-4 py-3 font-normal">
+                          <button
+                            type="button"
+                            aria-expanded={isExpanded}
+                            onClick={(e) => {
+                              // The row handler already fires on click; without
+                              // this the button would toggle it straight back.
+                              e.stopPropagation();
+                              handleRowClick(sub.id);
+                            }}
+                            className={`block w-full cursor-pointer overflow-hidden border-none bg-transparent p-0 text-left text-[13px] font-medium text-ellipsis whitespace-nowrap ${
+                              isNamedStudent(sub.student_name)
+                                ? "text-zinc-900 dark:text-zinc-100"
+                                : "text-zinc-400 italic dark:text-zinc-500"
+                            }`}
+                          >
+                            {studentDisplayName(sub.student_name, t.unnamedStudent)}
+                          </button>
+                        </th>
+                        <td className="px-4 py-3 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
+                          {fmt.percent(sub.score)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-zinc-500 dark:text-zinc-400">
+                          {fmt.date(sub.submission_date)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-block rounded-lg px-2 py-0.5 text-[11px] font-semibold ${pill.bg} ${pill.text}`}
+                          >
+                            {reviewLabel(sub.review_status)}
+                          </span>
+                        </td>
+                      </tr>
 
-                  {/* Expanded detail panel */}
-                  {isExpanded && (
-                    <div
-                      className={`box-border min-w-[480px] border-t border-t-[var(--brand-200)] bg-[var(--brand-50)] px-4 py-3.5 dark:border-t-[var(--brand-900)] dark:bg-[var(--brand-950)] ${
-                        idx === submissions.length - 1
-                          ? ""
-                          : "border-b border-b-zinc-200 dark:border-b-zinc-800"
-                      }`}
-                    >
+                      {/* Expanded detail row */}
+                      {isExpanded && (
+                        <tr className="border-b border-zinc-200 dark:border-zinc-800">
+                          <td
+                            colSpan={4}
+                            className="box-border border-t border-t-[var(--brand-200)] bg-[var(--brand-50)] px-4 py-3.5 dark:border-t-[var(--brand-900)] dark:bg-[var(--brand-950)]"
+                          >
                       {isLoadingThis ? (
                         <p className="m-0 text-[13px] text-zinc-400 dark:text-zinc-500">
                           {t.loadingDetails}
                         </p>
+                      ) : detailFailed ? (
+                        <div
+                          role="alert"
+                          className="flex flex-wrap items-center gap-3"
+                        >
+                          <p className="m-0 text-[13px] text-red-700 dark:text-red-400">
+                            {t.detailFailed}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void fetchDetail(sub.id)}
+                            className="cursor-pointer rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-[12px] font-semibold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+                          >
+                            {t.retry}
+                          </button>
+                        </div>
                       ) : detail ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex flex-wrap gap-5">
@@ -340,14 +414,26 @@ export default function ExamSubmissions() {
                           {t.noDetail}
                         </p>
                       )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+
+          <LoadMore
+            shown={submissions.length}
+            total={total}
+            paged={paged}
+            formatNumber={fmt.number}
+          />
         </div>
       </div>
     </McpUseProvider>
   );
 }
+
+export default withWidgetBoundary(ExamSubmissions);
