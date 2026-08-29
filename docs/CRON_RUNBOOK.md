@@ -59,6 +59,7 @@ gh workflow enable cron.yml
 | `redeliver-webhook-events` | `*/10` | An event whose worker died mid-lease is never processed by anyone — paid, never enrolled (#625) |
 | `reconcile-solana-platform-activations` | `*/10` | School paid the platform on chain, activation crashed, plan never applied (#622) |
 | `daily-digest` | hourly | No digests, no streak nudges. Must be **hourly** — each tenant sends at its own local hour |
+| `expire-stale-checkouts` | hourly | An abandoned PayPal/Lemon Squeezy/Binance redirect leaves a `pending` transaction inside both purchase-uniqueness indexes, and the buyer can never retry that item again (#624). Reconciles PayPal orders before expiring, so an approved-but-uncaptured payment is taken rather than thrown away |
 | `expire-subscriptions` | `0 0` | Lapsed self-managed subscriptions (Solana, manual) keep their entitlements forever |
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
 | `expire-platform-subscriptions` | `0 2` | No renewal reminders, no grace period, no downgrade to free: a school that stopped paying keeps its paid plan |

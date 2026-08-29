@@ -6208,15 +6208,20 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          checkout_expires_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
+          duplicate_settlement_at: string | null
+          expired_at: string | null
           payment_method: string | null
           payment_provider: string | null
           plan_id: number | null
           product_id: number | null
           provider_charge_id: string | null
+          provider_checkout_id: string | null
           provider_metadata: Json | null
           provider_subscription_id: string | null
           refunded_amount: number
+          revived_at: string | null
           school_percentage_snapshot: number | null
           settlement_base: number | null
           settlement_currency: string | null
@@ -6231,15 +6236,20 @@ export type Database = {
         }
         Insert: {
           amount: number
+          checkout_expires_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          duplicate_settlement_at?: string | null
+          expired_at?: string | null
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
           product_id?: number | null
           provider_charge_id?: string | null
+          provider_checkout_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
           refunded_amount?: number
+          revived_at?: string | null
           school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
@@ -6254,15 +6264,20 @@ export type Database = {
         }
         Update: {
           amount?: number
+          checkout_expires_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          duplicate_settlement_at?: string | null
+          expired_at?: string | null
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
           product_id?: number | null
           provider_charge_id?: string | null
+          provider_checkout_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
           refunded_amount?: number
+          revived_at?: string | null
           school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
@@ -7056,6 +7071,10 @@ export type Database = {
         Returns: undefined
       }
       set_league_opt_out: { Args: { _opt_out: boolean }; Returns: undefined }
+      settle_expired_checkout: {
+        Args: { _transaction_id: number }
+        Returns: string
+      }
       update_token_last_used: {
         Args: { ip_input: unknown; token_id_input: number }
         Returns: undefined

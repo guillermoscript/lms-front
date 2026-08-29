@@ -5,6 +5,10 @@
       "schedule": "0 0 * * *"
     },
     {
+      "path": "/api/cron/expire-stale-checkouts",
+      "schedule": "0 * * * *"
+    },
+    {
       "path": "/api/cron/daily-digest",
       "schedule": "0 * * * *"
     },
