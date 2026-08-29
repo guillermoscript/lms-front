@@ -208,8 +208,14 @@ describe('applies_to_providers stays retired (#547 §3)', () => {
  * `sum + netOfRefunds(t.amount, …)`. Matched per line rather than from
  * `reduce(` onwards, because the callback's own `(sum, t) =>` closes a paren
  * and a naive `[^)]*` scan stops dead at it (which it did, silently passing).
+ *
+ * `sumByCurrency(` is the other shape a total takes — the shared helper from
+ * `lib/payments/format-money.ts` that the platform tenant-detail page moved to
+ * so it never adds USD to EUR. It sums whatever `amount` it is handed, so a
+ * caller that feeds it raw `transactions.amount` is exactly as wrong as a
+ * hand-rolled reduce and must be policed the same way.
  */
-const SUMS_AMOUNT = /\bsum\s*\+[^\n]*\bamount\b/
+const SUMS_AMOUNT = /\bsum\s*\+[^\n]*\bamount\b|\bsumByCurrency\s*\(/
 
 describe('refund-aware money sums (#547 §1)', () => {
   /**

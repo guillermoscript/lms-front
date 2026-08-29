@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -29,6 +30,13 @@ function errorMessage(e: unknown) {
   return e instanceof Error ? e.message : 'Something went wrong. Please try again.'
 }
 
+/**
+ * One primary button per row, chosen by where the request is in its life:
+ * a fresh request wants instructions sent; once the school has them (or has
+ * reported paying) the job is to confirm the money arrived. Confirm stays
+ * reachable on a fresh request for the case where the transfer showed up
+ * before anyone sent instructions.
+ */
 export function BillingActions({ requestId, status }: Props) {
   const router = useRouter()
   const [loadingConfirm, setLoadingConfirm] = useState(false)
@@ -36,6 +44,7 @@ export function BillingActions({ requestId, status }: Props) {
   const [reason, setReason] = useState('')
   const [loadingReject, setLoadingReject] = useState(false)
   const [loadingInstructions, setLoadingInstructions] = useState(false)
+  const busy = loadingConfirm || loadingReject || loadingInstructions
 
   async function handleSendInstructions() {
     setLoadingInstructions(true)
@@ -54,7 +63,7 @@ export function BillingActions({ requestId, status }: Props) {
     setLoadingConfirm(true)
     try {
       await confirmManualPayment(requestId)
-      toast.success('Payment confirmed — tenant plan updated')
+      toast.success('Payment confirmed — school moved to its new plan')
       router.refresh()
     } catch (e) {
       toast.error(errorMessage(e))
@@ -65,7 +74,7 @@ export function BillingActions({ requestId, status }: Props) {
 
   async function handleReject() {
     if (!reason.trim()) {
-      toast.error('Please provide a rejection reason')
+      toast.error('Add a reason — the school will see it')
       return
     }
     setLoadingReject(true)
@@ -81,15 +90,16 @@ export function BillingActions({ requestId, status }: Props) {
     }
   }
 
+  const instructionsFirst = status === 'pending'
+
   return (
     <>
-      <div className="flex items-center justify-end gap-2">
-        {status === 'pending' && (
+      <div className="flex items-center justify-end gap-1.5">
+        {instructionsFirst && (
           <Button
             size="sm"
-            variant="outline"
             onClick={handleSendInstructions}
-            disabled={loadingInstructions}
+            disabled={busy}
             data-testid="send-instructions-btn"
           >
             {loadingInstructions ? 'Sending…' : 'Send instructions'}
@@ -97,16 +107,19 @@ export function BillingActions({ requestId, status }: Props) {
         )}
         <Button
           size="sm"
+          variant={instructionsFirst ? 'outline' : 'default'}
           onClick={handleConfirm}
-          disabled={loadingConfirm}
+          disabled={busy}
           data-testid="confirm-payment-btn"
         >
-          {loadingConfirm ? 'Confirming…' : 'Confirm'}
+          {loadingConfirm ? 'Confirming…' : status === 'payment_received' ? 'Confirm receipt' : 'Confirm'}
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
+          className="text-muted-foreground hover:text-destructive"
           onClick={() => setShowRejectModal(true)}
+          disabled={busy}
           data-testid="reject-payment-btn"
         >
           Reject
@@ -116,21 +129,26 @@ export function BillingActions({ requestId, status }: Props) {
       <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
         <DialogContent data-testid="reject-payment-dialog">
           <DialogHeader>
-            <DialogTitle>Reject Payment Request</DialogTitle>
+            <DialogTitle>Reject this payment request</DialogTitle>
+            <DialogDescription>
+              The school keeps its current plan. Your reason is shown on the request and kept
+              separate from the school&rsquo;s own note.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-2">
             <Textarea
-              placeholder="Reason for rejection — shown on the request, kept separate from the school's own note…"
+              placeholder="e.g. Transfer never arrived after 14 days"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
+              aria-label="Rejection reason"
               data-testid="reject-reason-input"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectModal(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowRejectModal(false)}>Keep request</Button>
             <Button variant="destructive" onClick={handleReject} disabled={loadingReject} data-testid="confirm-reject-btn">
-              {loadingReject ? 'Rejecting…' : 'Reject Request'}
+              {loadingReject ? 'Rejecting…' : 'Reject request'}
             </Button>
           </DialogFooter>
         </DialogContent>
