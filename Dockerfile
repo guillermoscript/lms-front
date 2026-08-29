@@ -37,6 +37,14 @@ RUN npm ci --include=optional --legacy-peer-deps
 # Build
 FROM base AS builder
 WORKDIR /app
+# sentry-cli is a static Rust binary with its own TLS stack, so it reads the OS
+# CA bundle — unlike Node, which bundles its own and therefore made npm work
+# here while every sentry-cli call failed with
+#   [60] SSL certificate problem: unable to get local issuer certificate
+# The `deps` stage installs system packages; this stage never did, so the source
+# map upload has failed on every build this image has ever produced.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -74,10 +82,10 @@ ENV CI=true
 # difference between a diagnosable failure and a silent one.
 ENV SENTRY_LOG_LEVEL=debug
 
-# The plugin passes -p to `sourcemaps upload` but NOT to `releases new`, which
-# leaves the org/project for that call to come from the environment. An org
-# auth token embeds the org, but nothing supplies the project — so state both
-# explicitly rather than relying on which sub-command infers what.
+# Explicit rather than inferred. Note these were NOT the cause of the upload
+# failing — the debug log showed `releases new` already sending
+# {"projects":["lms-front"]} — but stating them costs nothing and removes a
+# variable from the next investigation.
 ENV SENTRY_ORG=guillermoscript
 ENV SENTRY_PROJECT=lms-front
 
