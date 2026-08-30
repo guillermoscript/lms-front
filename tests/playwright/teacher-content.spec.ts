@@ -56,6 +56,49 @@ test.describe('Teacher Content — Course Detail Page', () => {
     }
   })
 
+  test('students tab shows per-student progress and opens the detail sheet (#647)', async ({ page }) => {
+    test.setTimeout(60_000)
+    await page.goto(COURSE_URL)
+
+    // Seeded: student@e2etest.com is enrolled in 1001 with no completions.
+    const studentsTab = page.getByRole('tab', { name: /Students/ })
+    await expect(studentsTab).toBeVisible({ timeout: 15_000 })
+    // base-ui tabs ignore a click that lands before hydration — retry until the panel shows.
+    const filter = page.getByTestId('student-status-filter')
+    await expect
+      .poll(
+        async () => {
+          await studentsTab.evaluate((t) => (t as HTMLElement).click())
+          await page.waitForTimeout(500)
+          return filter.isVisible()
+        },
+        { timeout: 20_000, intervals: [500, 1000] }
+      )
+      .toBe(true)
+    await expect(filter.getByRole('button', { name: /All/ })).toHaveAttribute('aria-pressed', 'true')
+
+    const row = page.locator('[data-testid="student-row"]').first()
+    await expect(row).toBeVisible()
+    // No completions → 0 of 2 lessons and an explicit "not started", never a blank.
+    await expect(row).toContainText('0 / 2')
+    await expect(row.locator('[data-status]')).toHaveAttribute('data-status', 'not_started')
+    await expect(row).toContainText(/No activity yet/)
+
+    // Filtering to a status with no students shows the empty-filter message, not "no students".
+    await filter.locator('[data-status="completed"]').evaluate((b) => (b as HTMLElement).click())
+    await expect(page.getByText(/No students match this filter/)).toBeVisible()
+    await filter.locator('[data-status="all"]').evaluate((b) => (b as HTMLElement).click())
+
+    // Row click opens the lesson-by-lesson sheet with what's next.
+    await row.evaluate((r) => (r as HTMLElement).click())
+    const sheet = page.locator('[data-slot="sheet-content"]')
+    await expect(sheet).toBeVisible({ timeout: 10_000 })
+    await expect(sheet).toContainText(/Next up/)
+    await expect(sheet).toContainText(/Pending/)
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+  })
+
   test('lessons tab shows lesson cards with correct count', async ({ page }) => {
     test.setTimeout(60_000)
     await page.goto(COURSE_URL)
