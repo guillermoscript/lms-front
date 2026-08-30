@@ -9,7 +9,9 @@ const courseItemSchema = z.object({
   lesson_count: z.number(),
   enrollment_count: z.number(),
   created_at: z.string(),
-  updated_at: z.string(),
+  // Courses that were never edited carry NULL — the SDK runtime-validates
+  // structuredContent against this schema, so it must match the DB's reality.
+  updated_at: z.string().nullable(),
 });
 
 export const propsSchema = z.object({
