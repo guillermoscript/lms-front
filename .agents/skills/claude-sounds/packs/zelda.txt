@@ -1,0 +1,36 @@
+# zelda — The Legend of Zelda sound pack.
+#
+# Format: <slot> <url>
+# The installer downloads each to ~/.claude/hooks/sounds/<slot>.mp3.
+#
+# All URLs below were verified live (HTTP 200) and md5-distinct. myinstants
+# serves a generic fallback file for dead slugs, so if you add a URL here,
+# md5-check it against the others — a silent duplicate means the slug died.
+
+# --- turn ended: completed, scaled by lines written/edited ---
+done_tiny    https://www.myinstants.com/media/sounds/rupee-collect.mp3
+done_small   https://www.myinstants.com/media/sounds/korok_appears.mp3
+done_medium  https://www.myinstants.com/media/sounds/loz_secret_BL9kfi1.mp3
+done_big     https://www.myinstants.com/media/sounds/139-item-catch.mp3
+done_epic    https://www.myinstants.com/media/sounds/high-value-item-botw-totk.mp3
+
+# --- turn ended: other statuses ---
+failed       https://www.myinstants.com/media/sounds/zelda-die.mp3
+failed_big   https://www.myinstants.com/media/sounds/low-health.mp3
+needs_input  https://www.myinstants.com/media/sounds/listen-navi.mp3
+other        https://www.myinstants.com/media/sounds/hey-look.mp3
+
+# --- git / gh lifecycle ---
+commit       https://www.myinstants.com/media/sounds/rupee-collect.mp3
+push         https://www.myinstants.com/media/sounds/yahaha.mp3
+pr_opened    https://www.myinstants.com/media/sounds/zelda-chest.mp3
+pr_merged    https://www.myinstants.com/media/sounds/zelda-open-chest.mp3
+tests_pass   https://www.myinstants.com/media/sounds/zeldasecret.swf.mp3
+tests_fail   https://www.myinstants.com/media/sounds/zelda-die.mp3
+
+# --- waiting on you ---
+permission   https://www.myinstants.com/media/sounds/listen-navi.mp3
+
+# --- extras, not wired by default; swap into any slot above ---
+extra_chest_short  https://www.myinstants.com/media/sounds/zelda-chest.mp3
+extra_chest_tp     https://www.myinstants.com/media/sounds/fanfare-chest-opens-zelda-twilight-princess-tp.mp3

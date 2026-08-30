@@ -5,7 +5,7 @@ Setting up OAuth with Auth0. Two modes depending on whether you have access to A
 - **DCR (built-in)** → use `oauthAuth0Provider`. Requires Auth0's Early Access program.
 - **OAuth proxy** → use `oauthProxy` + `jwksVerifier` with a standard Auth0 Regular Web App. No Early Access required.
 
-**Learn more:** [Auth0 MCP Authorization Guide](https://auth0.com/ai/docs/mcp/get-started/authorization-for-your-mcp-server) · [Standalone starter template](https://github.com/mcp-use/mcp-oauth-auth0-template) · [Runnable DCR example](https://github.com/mcp-use/mcp-use/tree/main/libraries/typescript/packages/mcp-use/examples/server/oauth/auth0) · [Runnable proxy example](https://github.com/mcp-use/mcp-use/tree/main/libraries/typescript/packages/mcp-use/examples/server/oauth/auth0-proxy)
+**Learn more:** [Auth0 MCP Authorization Guide](https://auth0.com/ai/docs/mcp/get-started/authorization-for-your-mcp-server) · [Standalone starter template](https://github.com/mcp-use/mcp-oauth-auth0-template) · [Runnable DCR example](https://github.com/mcp-use/mcp-use/tree/main/libraries/typescript/packages/server/examples/auth/auth0) · [Runnable proxy example](https://github.com/mcp-use/mcp-use/tree/main/libraries/typescript/packages/mcp-use/examples/server/oauth/auth0-proxy)
 
 ---
 
@@ -99,7 +99,7 @@ Use a standard Auth0 **Regular Web Application** — no Early Access required. Y
 ### Setup
 
 1. **Auth0 Dashboard → Applications → Create Application** — choose **Regular Web Application**.
-2. Under **Allowed Callback URLs**, add your MCP client's redirect URI (e.g. `http://localhost:3000/inspector/oauth/callback`).
+2. Under **Allowed Callback URLs**, add your MCP client's redirect URI (e.g. `http://localhost:3000/mcp/inspector/oauth/callback`).
 3. Copy the **Client ID** and **Client Secret**.
 4. **APIs → Create API** — set an identifier (e.g. `https://my-mcp-api/`), leave signing as RS256. This is required so Auth0 issues **JWT** access tokens instead of opaque tokens.
 

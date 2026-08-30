@@ -14,6 +14,7 @@ Commands:
   add <issue-or-pr-url>              Add to board (idempotent), prints item id
   find <repo> <number>               Print item id for issue/PR #N (repo = owner/name); empty if absent
   set-field <item-id> <field> <opt>  Set any single-select field (e.g. Status, Priority, Size) by name
+  get-field <item-id> <field>        Print an item's current value for <field>; empty if unset
   status <item-id> <name>            Shorthand for: set-field <item-id> Status <name>
   priority <item-id> <name>          Shorthand for: set-field <item-id> Priority <name>
   size <item-id> <name>              Shorthand for: set-field <item-id> Size <name>
@@ -73,6 +74,27 @@ case "$cmd" in
     gh project item-edit --project-id "$(_project_id)" --id "$item_id" \
       --field-id "$field_id" --single-select-option-id "$option_id" >/dev/null
     echo "$field_name -> $option_name"
+    ;;
+  get-field)
+    # Reads via GraphQL rather than `gh project item-list --format json`, whose
+    # top-level keys are lowercased/renamed per field and vary by field name.
+    [ $# -eq 2 ] || usage
+    item_id="$1" field_name="$2"
+    gh api graphql -F item="$item_id" -f query='query($item:ID!){
+      node(id:$item){
+        ... on ProjectV2Item {
+          fieldValues(first:50){
+            nodes {
+              ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2SingleSelectField { name } } }
+              ... on ProjectV2ItemFieldTextValue        { text field { ... on ProjectV2FieldCommon      { name } } }
+              ... on ProjectV2ItemFieldNumberValue      { number field { ... on ProjectV2FieldCommon    { name } } }
+              ... on ProjectV2ItemFieldDateValue        { date field { ... on ProjectV2FieldCommon      { name } } }
+            }
+          }
+        }
+      }
+    }' --jq ".data.node.fieldValues.nodes[] | select(.field.name==\"$field_name\") |
+             (.name // .text // .number // .date) // empty"
     ;;
   status) [ $# -eq 2 ] || usage; exec "$0" set-field "$1" "Status" "$2" ;;
   priority) [ $# -eq 2 ] || usage; exec "$0" set-field "$1" "Priority" "$2" ;;

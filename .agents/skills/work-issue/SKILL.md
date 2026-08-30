@@ -15,7 +15,7 @@ those artifacts for *them*, not for the user in this chat.
 
 This skill is the **orchestrator**: it owns the pipeline order, the
 implementation (the only phase no companion covers), and the wrap-up. The
-rest lives in five companion skills, each also usable standalone — invoke
+rest lives in six companion skills, each also usable standalone — invoke
 them via the Skill tool at the step that needs them, and follow their rules
 rather than restating them here:
 
@@ -26,6 +26,7 @@ rather than restating them here:
 | `gh-board` | All GitHub Projects (v2) operations (`board.sh`) | via `issue-plan`/`ship-pr` |
 | `ui-evidence` | Before/after screenshots, GIF recording, PR media upload | Steps 2, 4, 6 |
 | `ship-pr` | PR body, draft→ready lifecycle, metadata, Slack announcement, post-merge close-out | Steps 5–7 + close-out |
+| `pr-review-loop` | Poll the PR for review feedback, address it, merge on approval, trigger close-out, clean up the worktree/branch | Step 8 |
 
 ## Invocation and +skill params
 
@@ -116,12 +117,37 @@ invents.
 ## Pipeline
 
 ```
-0. Resolve repo + config (gh-repo-config)  →  1. Load skills
+Name session (#N slug)
+→  0. Resolve repo + config (gh-repo-config)  →  1. Load skills
 →  2. Read + plan + housekeeping (issue-plan; before-shots via ui-evidence if UI)
 →  3. Branch + implement  →  4. Verify (+ GIF via ui-evidence if UI)
 →  5. Draft PR + board (ship-pr)  →  6. Post media (ui-evidence)
-→  7. Mark ready + Slack (ship-pr)
+→  7. Mark ready + Slack (ship-pr)  →  8. Arm review loop (pr-review-loop)
 ```
+
+### First action — name the session after the issue
+
+Before Step 0's discovery, before anything else: name the session so the user
+can tell at a glance — from the session picker or the terminal tab — which
+issue this session is working. The name is `#<N> <slug>`, where the slug is
+two to four words from the issue title (fetch just the title if you don't
+have it yet: `gh issue view <N> --json title -q .title`). Example:
+`#302 status filter options`. In parallel mode, name the main session after
+the batch (`#302 #305 #310 batch`) — subagents can't rename it.
+
+Two mechanisms, in order:
+
+1. **Session-rename tool** — if the harness exposes one (check the tool
+   list, including deferred tools), use it and you're done. As of Claude
+   Code 2.1.x none exists; this line is future-proofing, not a search
+   errand — don't burn a ToolSearch call hunting for it.
+2. **`/rename` nudge** — otherwise, the built-in `/rename` command is the
+   only rename that exists and only the user can type it (it updates both
+   the session picker and the terminal tab title). Make the first line of
+   your next message the exact string to copy, no explanation around it:
+   `/rename #302 status filter options`. Don't try escape-sequence tricks
+   (`printf '\033]0;...'`): the Bash tool has no controlling terminal, so
+   they never reach the tab.
 
 ### Step 0 — Resolve repo facts and per-repo config
 
@@ -146,14 +172,39 @@ Invoke via the Skill tool. Always load:
 2. **`efficient-fable`** — orchestration mode: you architect and judge;
    cheap subagents do bounded research/coding/testing legwork.
 
-Conditionally load, once Step 2 reveals the issue is frontend work (a
-`frontend`/`UI`/`UX` label, or the plan touches UI component/page files) —
-these two can wait until then:
+**Stack skills — recommend, ask, remember.** Which further skills help
+depends on the repo's stack (React, Flutter, Rails, …), and the user's
+toolbox grows over time — so never hardcode a list. Resolve it per repo:
 
-3. **`vercel-react-best-practices`** — React/Next.js performance patterns
-   (skip if the repo isn't React/Next.js).
-4. **`vercel-composition-patterns`** — component API and composition design
-   (skip if the repo isn't React/Next.js).
+1. **Saved?** Check `stackSkills` in the gh-workflow config
+   (`config.sh get .stackSkills` via `gh-repo-config`). If the key exists,
+   load those skills and move on — don't re-ask, even if the array is empty
+   (an empty array records "user wants none"). If the user says the list is
+   stale mid-run ("stop loading X", "also use Y"), update the config
+   immediately.
+2. **Detect the stack.** Step 0's discovery plus the manifest files:
+   `package.json` (and which framework its deps name), `pubspec.yaml`
+   (Flutter/Dart), `go.mod`, `Cargo.toml`, `pyproject.toml`, `Gemfile`,
+   `*.csproj`, `next.config.*`, and so on.
+3. **Match against the skills actually available.** Scan the session's
+   available-skills list for skills whose descriptions fit the detected
+   stack and this kind of work — e.g. a React/Next.js repo suggests
+   `vercel-react-best-practices` and `vercel-composition-patterns`; a
+   Flutter repo suggests whatever Flutter skills are installed. Only
+   recommend skills that exist in the list; never invent names.
+4. **Ask.** One AskUserQuestion with `multiSelect: true`: the detected-stack
+   matches first, marked "(Recommended)", other plausibly relevant skills
+   after, plus a "None" option. The built-in "Other" lets the user type any
+   skill names freely — that freedom is the point of asking. If Step 0 left
+   config questions pending, batch this into the same round of questions.
+5. **Remember.** Write the selection to `stackSkills` (array of skill
+   names, possibly empty) in `.claude/gh-workflow.config.json`, and tell the
+   user it's saved there — next run in this repo skips straight to loading.
+
+Load each chosen skill at the step where it matters: UI-pattern and design
+skills can wait until Step 2 confirms the issue actually touches that layer
+(a `frontend`/`UI`/`UX` label, or the plan touches component/page files) —
+no point loading them for a backend-only issue in the same repo.
 
 Then load every `+skill` passed in the invocation (see "Invocation and
 +skill params" above). When a loaded skill only applies to a sub-phase (e.g.
@@ -221,19 +272,40 @@ comment (Step 6) **before** the PR graduates from draft. `ship-pr` owns the
 ready gate and the Slack announcement — respect its rule that only a
 genuinely reviewable PR gets flipped and announced.
 
+### Step 8 — Arm the review loop (pr-review-loop)
+
+Once the PR is ready and announced, invoke **`pr-review-loop`** and follow
+its arming procedure: it runs one catch-up cycle, then sets an in-session
+cron that polls the PR for reviewer feedback, addresses each comment,
+iterates until approval, merges, and triggers `ship-pr`'s close-out on its
+own. If the PR was left a draft at the ready gate, skip this step — there
+is nothing to review yet.
+
+**If this run happened in an isolated worktree** (see "Worktree isolation"
+above), tell the loop the worktree path when arming it. Its post-merge
+cleanup removes the worktree and deletes the merged branch, and it must
+`ExitWorktree` before doing so — git refuses to remove the worktree the
+session is standing in. Its guards keep uncommitted or unpushed work from
+being destroyed, so a cleanup that skips a step is reporting a real
+condition, not failing.
+
 ## Wrap-up report to the user
 
 End with a terse (caveman-compliant) summary: PR URL, board status of issue +
 PR (if a board is configured), checks run and their results, whether the GIF
-was posted, whether Slack was notified, and anything that needs their eyes —
-especially the visual verification if it was a UI change. Remind them that
-when the PR is approved and merged, saying so ("it's merged") triggers the
-close-out below.
+was posted, whether Slack was notified, whether the review loop is armed,
+and anything that needs their eyes — especially the visual verification if
+it was a UI change. With the loop armed, review feedback and the merge are
+handled automatically while the session lives; remind them that if the
+session ends first, `/pr-review-loop #<N>` resumes it, and saying "it's
+merged" still triggers the manual close-out below.
 
 ## Close-out — after approval and merge
 
-The pipeline's coda, usually in a later session once a human has approved
-and merged the PR. When the user says the PR merged (or you observe it),
+The pipeline's coda when `pr-review-loop` didn't get there first — the
+loop merges and closes out on its own, so this manual path is for when it
+wasn't armed or its session died before approval. When the user says the
+PR merged (or you observe it),
 invoke **`ship-pr`** and follow its close-out step: a final comment on the
 PR recording the work as actually shipped, and a short comment on the issue
 referencing the PR — so both permanent records end with a simple summary of

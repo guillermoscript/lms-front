@@ -24,7 +24,8 @@ they can choose). Example shape; every field is optional and repo-specific:
   "slackChannelId": "C0123456789",
   "defaultReviewer": { "name": "Alex", "slackId": "U0123456789" },
   "prTemplate": ".github/pull_request_template.md",
-  "branchConvention": "<type>/<N>-<slug>"
+  "branchConvention": "<type>/<N>-<slug>",
+  "stackSkills": ["vercel-react-best-practices", "vercel-composition-patterns"]
 }
 ```
 
@@ -36,6 +37,7 @@ Key ownership — which skill consumes what:
 | `slackChannel`, `slackChannelId`, `defaultReviewer` | `ship-pr` |
 | `prTemplate` | `ship-pr` |
 | `branchConvention` | `work-issue` (branching) |
+| `stackSkills` | `work-issue` (Step 1 skill loading — chosen once per repo, empty array means "none") |
 
 `config.sh` commands:
 

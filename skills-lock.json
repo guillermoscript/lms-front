@@ -25,24 +25,30 @@
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/brainstorming/SKILL.md",
-      "computedHash": "8df9b47092524833138b58682d03f2e153a242e550d1693657afdbee0cc9cdb0"
+      "computedHash": "b58d55b64742ecd37923985ec7bdfbe678ffbcb9895562abd28c0a32dcacd7fb"
     },
     "caveman": {
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman/SKILL.md",
-      "computedHash": "dfbf85749fd474feeb0bbe60c779795ecd5dbec0083299b56e68916bc3ddd8c9"
+      "computedHash": "59e1fe0d3eeb4189ee5c467efde567672e5cacb41f157c477a6152ca907d44ea"
     },
     "chatgpt-app-builder": {
       "source": "mcp-use/mcp-use",
       "sourceType": "github",
       "skillPath": "skills/chatgpt-app-builder/SKILL.md",
-      "computedHash": "88cb5525f005394605143d9b72d1ad8f3e304ac09f10ed2247429a8e0bdb2378"
+      "computedHash": "e1160dc1d931fd6ebb63a6e36e9c9d00ec2e4f31b76c86f0b7eacb67a3acff1f"
     },
     "clarify": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "848b37fa3e6445008d9a521930a539a9cf9bac254c0419f80f2757010d4d46db"
+    },
+    "claude-sounds": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/claude-sounds/SKILL.md",
+      "computedHash": "728d7e1d1cac65f31136094753786e1c8821cd5120d5f394671330199b868720"
     },
     "colorize": {
       "source": "pbakaus/impeccable",
@@ -78,13 +84,13 @@
       "source": "guillermoscript/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/gh-board/SKILL.md",
-      "computedHash": "313966158a493570a28515e76192636951bd0e5c9372597a9f1e1896a9396992"
+      "computedHash": "8507cacd79bda0738d166e4bb4c6f958d058153b4adcf7a5a3180bd6619b724a"
     },
     "gh-repo-config": {
       "source": "guillermoscript/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/gh-repo-config/SKILL.md",
-      "computedHash": "538d2c3a4c1a03249b1e6217ec6cdfb5df5abc10456b4e3c303c198b3714f93b"
+      "computedHash": "2d0a97e9519516fea40f62309d3fc6a19090d715c88b5534e306ade667a116fe"
     },
     "handoff": {
       "source": "mattpocock/skills",
@@ -96,12 +102,6 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "69cecc4f28fb2f140652669bd45cc492744ad5c3c45083f5e0be5b0a5ef8acd0"
-    },
-    "impeccable": {
-      "source": "pbakaus/impeccable",
-      "sourceType": "github",
-      "skillPath": "skill/SKILL.md",
-      "computedHash": "ada9c434d56c794352ccd5c7a6901e5ebb4b7f3b7fe42e8c17c2c4b96c3735c8"
     },
     "improve": {
       "source": "shadcn/improve",
@@ -119,7 +119,7 @@
       "source": "mcp-use/mcp-use",
       "sourceType": "github",
       "skillPath": "skills/mcp-apps-builder/SKILL.md",
-      "computedHash": "5fa5b139ad3ff2b66bb37a1ece1a9178299719afcca273403990953bf709c378"
+      "computedHash": "2878d153f4f0fb43c9a77e828f9fa6fda3759824f2d0325c6052f9cb67355be3"
     },
     "next-best-practices": {
       "source": "vercel-labs/next-skills",
@@ -151,6 +151,12 @@
       "sourceType": "github",
       "computedHash": "72c2426ac9540884eb5032bb438324bb344d0e2dd2b80f300a9fb49fe38d624e"
     },
+    "pr-review-loop": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pr-review-loop/SKILL.md",
+      "computedHash": "a2959d83d49d47f3958977d669cce005a3962cc66ff71b9eb45b914ce330de22"
+    },
     "quieter": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -180,13 +186,19 @@
       "source": "guillermoscript/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/ship-pr/SKILL.md",
-      "computedHash": "785602ef6a93bbf5addce0a226cedc60425e09f19ebe937464c1d06df3ec4b72"
+      "computedHash": "65f7b902f435bb403f767eaf7c7268d7c95b74eeca9aa96abeb088e7c2ca3c6c"
     },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "skillPath": "skills/skill-creator/SKILL.md",
       "computedHash": "5ea13a6d9f0d4bb694405d79acd00cadec0d21bb138c4dd10fcf3c500cb835c2"
+    },
+    "sound-setup": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/sound-setup/SKILL.md",
+      "computedHash": "6d58aca6b9a647c8627bdd3cd5570c9a786f84ac3c709c1159711e3a4e80b937"
     },
     "supabase": {
       "source": "supabase/agent-skills",
@@ -198,10 +210,22 @@
       "sourceType": "github",
       "computedHash": "f4cd7570115d97af6bcb2946eb891a958c8d04a43b479871c9ccadbc670ad058"
     },
+    "teach": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/productivity/teach/SKILL.md",
+      "computedHash": "68999bb1a241384b2f921f3321d779b7d05eb6089077b70d88cee2aee3d75ccc"
+    },
     "teach-impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "61855594bf79bc5b2665cfca3580b93840cfe645872c5a2deeaa5ad336570d5a"
+    },
+    "terse": {
+      "source": "guillermoscript/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/terse/SKILL.md",
+      "computedHash": "8344c572fa9f2a3d9103e4f0131d643d44151a731d8720a82b01c05e84c68e38"
     },
     "ui-evidence": {
       "source": "guillermoscript/agent-skills",
@@ -230,7 +254,7 @@
       "source": "guillermoscript/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/work-issue/SKILL.md",
-      "computedHash": "7fc314a50182848d50950936ba2b35bb5705b8100cb85a3ae37ad5dd5290478e"
+      "computedHash": "b1f050d006959e5e7c3ef0019a07dccbfbae708b1f4fc5f58dd40fff20b48467"
     }
   }
 }

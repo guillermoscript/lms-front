@@ -41,6 +41,7 @@ are simply skipped — that's an expected state, not a failure.
 board.sh add <issue-or-pr-url>              Add to board (idempotent), prints item id
 board.sh find <owner/repo> <number>         Print item id for issue/PR #N; empty if absent
 board.sh set-field <item-id> <field> <opt>  Set any single-select field by name
+board.sh get-field <item-id> <field>        Read an item's current value; empty if unset
 board.sh status <item-id> <name>            Shorthand: set-field ... Status <name>
 board.sh priority <item-id> <name>          Shorthand: set-field ... Priority <name>
 board.sh size <item-id> <name>              Shorthand: set-field ... Size <name>
@@ -65,6 +66,19 @@ ITEM=$(<skill-dir>/scripts/board.sh find <owner>/<repo> <N>)
 <skill-dir>/scripts/board.sh status "$ITEM" "In Progress"
 ```
 
+**Read before writing** — for a status that shouldn't be set repeatedly (a
+polling loop, or verifying automation did its job), read first and only write
+on an actual change:
+
+```bash
+[ "$(<skill-dir>/scripts/board.sh get-field "$ITEM" Status)" = "Done" ] \
+  || <skill-dir>/scripts/board.sh status "$ITEM" "Done"
+```
+
+`get-field` reads via GraphQL, so field names match the board exactly — the
+same names `set-field` takes. (`gh project item-list --format json` lowercases
+and renames keys per field; don't parse that for this.)
+
 **Check before offering** — when deciding whether to even mention a field
 like Size or Priority, probe first so you don't offer options the board
 doesn't have:
@@ -86,9 +100,13 @@ gh project field-list "$GH_PROJECT_NUMBER" --owner "$GH_PROJECT_OWNER" \
 - **Issues and PRs are separate board items.** A PR that closes an issue
   doesn't inherit the issue's board item — `add` the PR itself if it should
   appear on the board.
-- **Let automation do the final flip.** An issue's Status flips to Done by
-  the board's built-in automation when its closing PR merges — don't set
-  Done manually and race it.
+- **Let automation do the final flip — then verify it happened.** An
+  issue's Status flips to Done by the board's built-in automation when its
+  closing PR merges, so don't set Done manually and race it. But that
+  automation is opt-in per board: if a read-back after the merge still
+  shows In Review / In Progress, it isn't enabled, and setting the status
+  yourself beats leaving the item stranded. Say so when you do, so the user
+  can enable it once instead of every merge needing a manual flip.
 - **Draft PRs read as In Progress, ready PRs as In Review.** Whatever moves
   a PR out of draft should also move its board item.
 

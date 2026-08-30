@@ -1,0 +1,36 @@
+# mario — Super Mario sound pack.
+#
+# Format: <slot> <url>
+# The installer downloads each to ~/.claude/hooks/sounds/<slot>.mp3.
+#
+# All URLs below were verified live (HTTP 200) and md5-distinct. myinstants
+# serves a generic fallback file for dead slugs, so if you add a URL here,
+# md5-check it against the others — a silent duplicate means the slug died.
+
+# --- turn ended: completed, scaled by lines written/edited ---
+done_tiny    https://www.myinstants.com/media/sounds/mario-coin.mp3
+done_small   https://www.myinstants.com/media/sounds/smw_1-up.mp3
+done_medium  https://www.myinstants.com/media/sounds/mario-1up.mp3
+done_big     https://www.myinstants.com/media/sounds/super-mario-64-1up-extra-life.mp3
+done_epic    https://www.myinstants.com/media/sounds/course-clear-super-mario-world.mp3
+
+# --- turn ended: other statuses ---
+failed       https://www.myinstants.com/media/sounds/mario_bros_die.mp3
+failed_big   https://www.myinstants.com/media/sounds/super-mario-bros-death.mp3
+needs_input  https://www.myinstants.com/media/sounds/mario-jump.mp3
+other        https://www.myinstants.com/media/sounds/mario-coin.mp3
+
+# --- git / gh lifecycle ---
+commit       https://www.myinstants.com/media/sounds/mario-coin.mp3
+push         https://www.myinstants.com/media/sounds/smw_1-up.mp3
+pr_opened    https://www.myinstants.com/media/sounds/mario-1up.mp3
+pr_merged    https://www.myinstants.com/media/sounds/course-clear-super-mario-world.mp3
+tests_pass   https://www.myinstants.com/media/sounds/super-mario-64-1up-extra-life.mp3
+tests_fail   https://www.myinstants.com/media/sounds/mario-death-tune.mp3
+
+# --- waiting on you ---
+permission   https://www.myinstants.com/media/sounds/mario-jump.mp3
+
+# --- extras, not wired by default; swap into any slot above ---
+extra_too_bad    https://www.myinstants.com/media/sounds/super-mario-3d-world-too-bad.mp3
+extra_mamma_mia  https://www.myinstants.com/media/sounds/mario-vs-donkey-kong-mamma-mia-1.mp3

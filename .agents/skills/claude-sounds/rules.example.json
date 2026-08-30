@@ -1,0 +1,46 @@
+{
+  "_comment": "claude-sounds rules. Installed to ~/.claude/hooks/sound-rules.json. Written by /sound-setup but fully hand-editable — it is re-read on every event, so edits apply immediately with no reinstall.",
+
+  "pack": "zelda",
+  "enabled": true,
+
+  "events": {
+    "_comment": "event -> slot. A slot is a file: ~/.claude/hooks/sounds/<slot>.mp3, filled by the pack. Set an event to null to stay silent for it. Point it at any slot name you like, including one from another pack or a file you dropped in yourself.",
+
+    "done_tiny": "done_tiny",
+    "done_small": "done_small",
+    "done_medium": "done_medium",
+    "done_big": "done_big",
+    "done_epic": "done_epic",
+
+    "failed": "failed",
+    "failed_big": "failed_big",
+    "needs_input": "needs_input",
+    "other": "other",
+
+    "commit": "commit",
+    "push": "push",
+    "pr_opened": "pr_opened",
+    "pr_merged": "pr_merged",
+    "tests_pass": "tests_pass",
+    "tests_fail": "tests_fail",
+
+    "permission": null
+  },
+
+  "thresholds": {
+    "_comment": "Lines written/edited in the turn, deciding which done_* event fires.",
+    "small": 50,
+    "medium": 200,
+    "big": 500,
+    "epic": 1000
+  },
+
+  "custom": [
+    {
+      "_comment": "Checked in order, BEFORE built-in turn-end classification. First match wins. `match` is an extended regex tested case-insensitively against Claude's final message. `slot` is any file in the sounds dir.",
+      "match": "deployed to production",
+      "slot": "pr_merged"
+    }
+  ]
+}

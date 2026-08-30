@@ -13,6 +13,18 @@
       "prompt": "set priority P1 on issue #<N> (board has no Priority field)",
       "expected_output": "board.sh set-field warns and exits 0; the skill reports the field doesn't exist on this board instead of erroring or retrying blindly.",
       "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "what status is issue #<N> at on the board?",
+      "expected_output": "board.sh find resolves the item id, then board.sh get-field <item> Status reports the current value (empty reported as unset). No write of any kind — a read-only question stays read-only.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "move issue #<N> to In Review (it is already In Review)",
+      "expected_output": "get-field read first shows the item is already In Review, so no set-field write is issued; the skill says it was already there rather than reporting a change it didn't make.",
+      "files": []
     }
   ]
 }

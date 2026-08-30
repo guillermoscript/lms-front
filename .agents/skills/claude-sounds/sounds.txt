@@ -1,0 +1,24 @@
+# DEPRECATED — kept so older installs keep working.
+#
+# Sound manifests now live in packs/: tiktok.txt (this one), zelda.txt,
+# mario.txt. Install a pack with:
+#
+#   curl -fsSL .../install.sh | bash -s -- --pack zelda
+#
+# or switch after the fact with:
+#
+#   bash ~/.claude/hooks/sound-tool.sh pack zelda
+#
+# This file mirrors packs/tiktok.txt minus the git/gh slots, which older
+# versions of the hook did not know about.
+
+done_tiny    https://www.myinstants.com/media/sounds/vine-boom.mp3
+done_small   https://www.myinstants.com/media/sounds/faaah.mp3
+done_medium  https://www.myinstants.com/media/sounds/faaaa.mp3
+done_big     https://www.myinstants.com/media/sounds/boosted-faaah-meme.mp3
+done_epic    https://www.myinstants.com/media/sounds/i-got-this-faaaaahhhhhh.mp3
+
+failed       https://www.myinstants.com/media/sounds/movie_1.mp3
+failed_big   https://www.myinstants.com/media/sounds/fail-trombone-sound.mp3
+needs_input  https://www.myinstants.com/media/sounds/hm.mp3
+other        https://www.myinstants.com/media/sounds/taco-bell-bong-sfx.mp3
