@@ -31,13 +31,13 @@
       "source": "juliusbrussee/caveman",
       "sourceType": "github",
       "skillPath": "skills/caveman/SKILL.md",
-      "computedHash": "59e1fe0d3eeb4189ee5c467efde567672e5cacb41f157c477a6152ca907d44ea"
+      "computedHash": "1a41e7f3543c4a969c040c34a96925f8a3f82a6179a3f1002692b37957f7140b"
     },
     "chatgpt-app-builder": {
       "source": "mcp-use/mcp-use",
       "sourceType": "github",
       "skillPath": "skills/chatgpt-app-builder/SKILL.md",
-      "computedHash": "e1160dc1d931fd6ebb63a6e36e9c9d00ec2e4f31b76c86f0b7eacb67a3acff1f"
+      "computedHash": "1a00f62669058749fca824fa6c0d051d77d76d9a72ef05e28b96835deab86429"
     },
     "clarify": {
       "source": "pbakaus/impeccable",
@@ -96,7 +96,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/handoff/SKILL.md",
-      "computedHash": "ad03e8d4ea3cbbff66420eb7ba3cc375b5cbe1821a2449b53e863256cf5b5cde"
+      "computedHash": "20e5f4afdef502637510bc5c64d27645d3c85c88df9cb006824bbb0980166319"
     },
     "harden": {
       "source": "pbakaus/impeccable",
@@ -119,7 +119,7 @@
       "source": "mcp-use/mcp-use",
       "sourceType": "github",
       "skillPath": "skills/mcp-apps-builder/SKILL.md",
-      "computedHash": "2878d153f4f0fb43c9a77e828f9fa6fda3759824f2d0325c6052f9cb67355be3"
+      "computedHash": "cc883a65144881648355a89964d1a8c9e023f0a609e49331431fbb8055653e8a"
     },
     "next-best-practices": {
       "source": "vercel-labs/next-skills",
@@ -214,7 +214,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/teach/SKILL.md",
-      "computedHash": "68999bb1a241384b2f921f3321d779b7d05eb6089077b70d88cee2aee3d75ccc"
+      "computedHash": "b8a69574c7a019bed84e84313dc8bf02e1d1bf925ba43057d433217c63863206"
     },
     "teach-impeccable": {
       "source": "pbakaus/impeccable",
