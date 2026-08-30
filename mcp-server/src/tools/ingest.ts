@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
 
@@ -44,7 +44,7 @@ function makeSnippet(
   return first ? first.slice(0, SNIPPET_RADIUS) : "";
 }
 
-export function registerIngestTools(server: MCPServer) {
+export function registerIngestTools(server: LmsServer) {
   // ── lms_get_course_content ──────────────────────────────────────────────────
   server.tool(
     {

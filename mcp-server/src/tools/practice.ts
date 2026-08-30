@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import { propsSchema as practicePlayerPropsSchema } from "../../views/practice-player/schema.js";
+import { propsSchema as examReadinessPropsSchema } from "../../views/exam-readiness/schema.js";
 
 /**
  * AI-tutor practice tools (Epic #348 Phase 1). The host LLM is the tutor AND
@@ -361,7 +366,7 @@ export function eloJitter(id: number): number {
   return (((id * 2654435761) >>> 0) % 1000) / 1000 * 0.06 - 0.03;
 }
 
-export function registerPracticeTools(server: MCPServer) {
+export function registerPracticeTools(server: LmsServer) {
   // ── lms_get_exercise_for_student ───────────────────────────────────────────
   server.tool(
     {
@@ -727,10 +732,11 @@ export function registerPracticeTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "practice-player",
-        invoking: "Setting up practice...",
-        invoked: "Practice quiz ready",
+      outputSchema: practicePlayerPropsSchema,
+      view: { name: "practice-player" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Setting up practice...",
+        "openai/toolInvocation/invoked": "Practice quiz ready",
       },
     },
     async (input, ctx) => {
@@ -788,7 +794,7 @@ export function registerPracticeTools(server: MCPServer) {
         return widget({
           props: {
             topic: input.topic,
-            mode: isMixed ? "mixed" : "focused",
+            mode: isMixed ? ("mixed" as const) : ("focused" as const),
             course_id: input.course_id ?? null,
             lesson_id: input.lesson_id ?? null,
             source_exercise_id: input.source_exercise_id ?? null,
@@ -980,7 +986,7 @@ export function registerPracticeTools(server: MCPServer) {
                 : input.score,
               total_questions: isMixed ? s.questions.length : input.total_questions,
               correct_count: s.correct,
-              mode: isMixed ? "mixed" : "focused",
+              mode: isMixed ? ("mixed" as const) : ("focused" as const),
             }))
           )
           .select("id, topic, score");
@@ -991,7 +997,7 @@ export function registerPracticeTools(server: MCPServer) {
           {
             attempt_ids: (data ?? []).map((row) => row.id),
             session_id: sessionId,
-            mode: isMixed ? "mixed" : "focused",
+            mode: isMixed ? ("mixed" as const) : ("focused" as const),
             per_topic: (data ?? []).map((row) => ({
               topic: row.topic,
               score: row.score,
@@ -1712,10 +1718,11 @@ export function registerPracticeTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "exam-readiness",
-        invoking: "Checking your exam readiness...",
-        invoked: "Readiness report ready",
+      outputSchema: examReadinessPropsSchema,
+      view: { name: "exam-readiness" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Checking your exam readiness...",
+        "openai/toolInvocation/invoked": "Readiness report ready",
       },
     },
     async (input, ctx) => {

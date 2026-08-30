@@ -1,6 +1,9 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import {
   ok,
@@ -9,6 +12,7 @@ import {
   ResponseFormat,
   PaginationSchema,
 } from "../format.js";
+import { propsSchema as artifactSandboxPropsSchema } from "../../views/artifact-sandbox/schema.js";
 
 const exerciseTypes = [
   "quiz",
@@ -32,7 +36,7 @@ function replaceVariables(template: string, variables: Record<string, any>) {
   });
 }
 
-export function registerExerciseTools(server: MCPServer) {
+export function registerExerciseTools(server: LmsServer) {
   // -------------------------------------------------------------------------
   // lms_list_exercises
   // -------------------------------------------------------------------------
@@ -227,10 +231,11 @@ export function registerExerciseTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "artifact-sandbox",
-        invoking: "Rendering artifact…",
-        invoked: "Artifact preview ready",
+      outputSchema: artifactSandboxPropsSchema,
+      view: { name: "artifact-sandbox" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Rendering artifact…",
+        "openai/toolInvocation/invoked": "Artifact preview ready",
       },
     },
     async (input, ctx) => {

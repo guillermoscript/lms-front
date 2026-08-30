@@ -1,8 +1,8 @@
-import type { MCPServer } from "mcp-use/server";
-import { object, error } from "mcp-use/server";
+import type { LmsServer } from "./server-types.js";
+import { object, error } from "mcp-use";
 import { LmsSession } from "./session.js";
 
-export function registerResources(server: MCPServer) {
+export function registerResources(server: LmsServer) {
   // ── course://{courseId} ────────────────────────────────────────────────────
   server.resourceTemplate(
     {
@@ -12,8 +12,8 @@ export function registerResources(server: MCPServer) {
       description: "Full course data including lessons and exams",
       mimeType: "application/json",
     },
-    async (uri: URL, params: Record<string, string>, ctx) => {
-      const courseId = parseInt(params.courseId, 10);
+    async (uri: URL, params, ctx) => {
+      const courseId = parseInt(String(params.courseId), 10);
       if (isNaN(courseId)) {
         return error("Invalid course ID");
       }
@@ -60,8 +60,8 @@ export function registerResources(server: MCPServer) {
       description: "Full lesson data including MDX content",
       mimeType: "application/json",
     },
-    async (uri: URL, params: Record<string, string>, ctx) => {
-      const lessonId = parseInt(params.lessonId, 10);
+    async (uri: URL, params, ctx) => {
+      const lessonId = parseInt(String(params.lessonId), 10);
       if (isNaN(lessonId)) {
         return error("Invalid lesson ID");
       }
@@ -103,8 +103,8 @@ export function registerResources(server: MCPServer) {
       description: "Full exam data with questions and options",
       mimeType: "application/json",
     },
-    async (uri: URL, params: Record<string, string>, ctx) => {
-      const examId = parseInt(params.examId, 10);
+    async (uri: URL, params, ctx) => {
+      const examId = parseInt(String(params.examId), 10);
       if (isNaN(examId)) {
         return error("Invalid exam ID");
       }

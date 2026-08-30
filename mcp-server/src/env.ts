@@ -59,9 +59,20 @@ export function getPlatformDomain(): string | undefined {
   return raw?.trim().replace(/^https?:\/\//, "").replace(/\/$/, "") || undefined;
 }
 
-/** Whether JWTs should be cryptographically verified (disable only in local dev). */
-export function shouldVerifyJwt(): boolean {
-  return process.env.NODE_ENV === "production";
+/**
+ * Legacy HS256 JWT signing secret for `oauthSupabaseProvider`.
+ *
+ * mcp-use v2 always verifies access tokens: ES256 tokens against the project
+ * JWKS, HS256 tokens (local Supabase, or cloud projects still on the legacy
+ * signing secret) against this secret. Optional — omit it on projects that
+ * have migrated to asymmetric signing keys.
+ */
+export function getSupabaseJwtSecret(): string | undefined {
+  return (
+    process.env.MCP_USE_OAUTH_SUPABASE_JWT_SECRET ||
+    process.env.SUPABASE_JWT_SECRET ||
+    undefined
+  );
 }
 
 /**

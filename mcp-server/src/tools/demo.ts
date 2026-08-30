@@ -1,9 +1,62 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { WIDGET_DEMOS } from "../demo-data.js";
 import { BRANDING_META_KEY, type TenantBranding } from "../branding.js";
 import { LOCALE_META_KEY, SUPPORTED_LANGS } from "../locale.js";
+import { propsSchema as courseDashboardPropsSchema } from "../../views/course-dashboard/schema.js";
+import { propsSchema as courseDetailPropsSchema } from "../../views/course-detail/schema.js";
+import { propsSchema as lessonPreviewPropsSchema } from "../../views/lesson-preview/schema.js";
+import { propsSchema as lessonViewerPropsSchema } from "../../views/lesson-viewer/schema.js";
+import { propsSchema as myLearningPropsSchema } from "../../views/my-learning/schema.js";
+import { propsSchema as courseCatalogPropsSchema } from "../../views/course-catalog/schema.js";
+import { propsSchema as examSubmissionsPropsSchema } from "../../views/exam-submissions/schema.js";
+import { propsSchema as submissionGraderPropsSchema } from "../../views/submission-grader/schema.js";
+import { propsSchema as myExamResultsPropsSchema } from "../../views/my-exam-results/schema.js";
+import { propsSchema as gamificationProfilePropsSchema } from "../../views/gamification-profile/schema.js";
+import { propsSchema as examReadinessPropsSchema } from "../../views/exam-readiness/schema.js";
+import { propsSchema as practicePlayerPropsSchema } from "../../views/practice-player/schema.js";
+import { propsSchema as flashcardsPropsSchema } from "../../views/flashcards/schema.js";
+import { propsSchema as studyPlanPropsSchema } from "../../views/study-plan/schema.js";
+import { propsSchema as schoolOverviewPropsSchema } from "../../views/school-overview/schema.js";
+import { propsSchema as studentProgressRosterPropsSchema } from "../../views/student-progress-roster/schema.js";
+import { propsSchema as confusionHotspotsPropsSchema } from "../../views/confusion-hotspots/schema.js";
+import { propsSchema as artifactSandboxPropsSchema } from "../../views/artifact-sandbox/schema.js";
+import { propsSchema as landingPagePreviewPropsSchema } from "../../views/landing-page-preview/schema.js";
+import { propsSchema as myCertificatesPropsSchema } from "../../views/my-certificates/schema.js";
+import { propsSchema as courseCertificatesPropsSchema } from "../../views/course-certificates/schema.js";
+
+/**
+ * Every demo tool renders a different, runtime-chosen widget (`demo.widget`
+ * from `WIDGET_DEMOS`), so its output schema has to be looked up rather than
+ * written literally like the real tools' single-widget registrations.
+ */
+const WIDGET_PROPS_SCHEMAS: Record<string, z.ZodTypeAny> = {
+  "course-dashboard": courseDashboardPropsSchema,
+  "course-detail": courseDetailPropsSchema,
+  "lesson-preview": lessonPreviewPropsSchema,
+  "lesson-viewer": lessonViewerPropsSchema,
+  "my-learning": myLearningPropsSchema,
+  "course-catalog": courseCatalogPropsSchema,
+  "exam-submissions": examSubmissionsPropsSchema,
+  "submission-grader": submissionGraderPropsSchema,
+  "my-exam-results": myExamResultsPropsSchema,
+  "gamification-profile": gamificationProfilePropsSchema,
+  "exam-readiness": examReadinessPropsSchema,
+  "practice-player": practicePlayerPropsSchema,
+  flashcards: flashcardsPropsSchema,
+  "study-plan": studyPlanPropsSchema,
+  "school-overview": schoolOverviewPropsSchema,
+  "student-progress-roster": studentProgressRosterPropsSchema,
+  "confusion-hotspots": confusionHotspotsPropsSchema,
+  "artifact-sandbox": artifactSandboxPropsSchema,
+  "landing-page-preview": landingPagePreviewPropsSchema,
+  "my-certificates": myCertificatesPropsSchema,
+  "course-certificates": courseCertificatesPropsSchema,
+};
 
 /**
  * Fake schools to preview tenant theming with.
@@ -53,7 +106,7 @@ const DEMO_BRANDS: Record<string, TenantBranding | null> = {
  *     means these calls never touch `mcp_audit_log`.
  *   - Handlers touch no session and no Supabase client. They are pure data.
  */
-export function registerDemoTools(server: MCPServer): void {
+export function registerDemoTools(server: LmsServer): void {
   for (const demo of WIDGET_DEMOS) {
     const variantIds = demo.variants.map((v) => v.id) as [string, ...string[]];
     const variantList = demo.variants
@@ -88,10 +141,11 @@ export function registerDemoTools(server: MCPServer): void {
           idempotentHint: true,
           openWorldHint: false,
         },
-        widget: {
-          name: demo.widget,
-          invoking: `Rendering ${demo.widget} demo…`,
-          invoked: `${demo.widget} demo ready`,
+        outputSchema: WIDGET_PROPS_SCHEMAS[demo.widget],
+        view: { name: demo.widget },
+        _meta: {
+          "openai/toolInvocation/invoking": `Rendering ${demo.widget} demo…`,
+          "openai/toolInvocation/invoked": `${demo.widget} demo ready`,
         },
       },
       async (input: { variant?: string; brand?: string; lang?: string }) => {

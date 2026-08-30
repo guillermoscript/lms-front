@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
 
@@ -13,7 +13,7 @@ import { ok, errorResult } from "../format.js";
  * sent — full transparency to the student.
  */
 
-export function registerAskTeacherTools(server: MCPServer) {
+export function registerAskTeacherTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_ask_teacher",

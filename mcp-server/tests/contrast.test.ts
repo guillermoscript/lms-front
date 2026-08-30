@@ -11,7 +11,7 @@ import {
   readableOn,
   relativeLuminance,
   withAlpha,
-} from '../resources/shared/contrast'
+} from '../views/shared/contrast'
 
 /**
  * Contrast helper for author-chosen block colours (issue #569).

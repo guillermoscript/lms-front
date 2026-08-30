@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { text } from "mcp-use/server";
+import type { LmsServer } from "./server-types.js";
+import { text } from "mcp-use";
 
-export function registerPrompts(server: MCPServer) {
+export function registerPrompts(server: LmsServer) {
   // ── create-course-outline ──────────────────────────────────────────────────
   server.prompt(
     {

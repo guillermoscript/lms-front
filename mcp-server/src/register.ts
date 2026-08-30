@@ -1,9 +1,9 @@
-import type { MCPServer } from "mcp-use/server";
 import { recordToolAudit } from "./audit.js";
-import { isToolAllowedForRole, roleOf } from "./tool-policy.js";
+import { isToolAllowedForRole } from "./tool-policy.js";
 import { errorResult } from "./format.js";
 import { BRANDING_META_KEY, getTenantBranding } from "./branding.js";
-import { LmsSession } from "./session.js";
+import { LmsSession, resolveMcpAuth, roleOfAuth } from "./session.js";
+import type { LmsServer } from "./server-types.js";
 
 /**
  * Attach the caller's school branding to a widget result.
@@ -11,7 +11,7 @@ import { LmsSession } from "./session.js";
  * Widget payloads carry `structuredContent`; plain text/JSON results do not, so
  * that is the test for "this renders a widget". The branding rides in `_meta`
  * rather than in props: it stays out of the model's context, and no widget's
- * `propsSchema` has to grow a field for it.
+ * props schema has to grow a field for it.
  *
  * Everything here is best-effort. An unauthenticated caller, a tenant with no
  * colours, or a failed lookup all return the result untouched, and the widget
@@ -23,7 +23,7 @@ export async function brandWidgetResult(result: unknown, ctx: unknown): Promise<
   if (!r.structuredContent) return result;
 
   try {
-    const branding = await getTenantBranding(LmsSession.fromContext(ctx as never));
+    const branding = await getTenantBranding(LmsSession.fromContext(ctx));
     if (!branding) return result;
     r._meta = { ...(r._meta ?? {}), [BRANDING_META_KEY]: branding };
   } catch {
@@ -33,82 +33,67 @@ export async function brandWidgetResult(result: unknown, ctx: unknown): Promise<
 }
 
 /**
- * Per-tool guard wrapper.
+ * Call-time guard middleware (`mcp:tools/call`).
  *
- * WHY THIS EXISTS (mcp-use 1.32.0):
- *   The `mcp:tools/call` middleware context exposes only the tool *arguments*
- *   as `ctx.params` — it does NOT carry the tool name. That makes name-based
- *   call gating and named audit logging impossible from middleware. The
- *   registered tool name, however, is known at registration time. So we
- *   monkey-patch `server.tool` once, before any tool is registered, and wrap
- *   every handler with:
- *     1. Role-based call gating — reject a disallowed tool for the caller's
- *        role (defense in depth on top of `tools/list` hiding, which is not
- *        security). Destructive ops (`lms_delete_*`, `lms_archive_course`) are
- *        admin-only; students get only the self-scoped learning tools.
- *     2. Audit logging — record the call (real tool name + sanitized args +
- *        success + duration) to `mcp_audit_log`.
- *
- * Install this BEFORE registering tools:
- *   installToolGuards(server);
- *   registerCourseTools(server); ...
+ * mcp-use v2 middleware carries the tool name (`ctx.params.name`) and the
+ * arguments (`ctx.params.arguments`) — the v1.32 limitation that forced a
+ * per-registration monkey-patch is gone, so gating, branding, and audit all
+ * live in one typed middleware:
+ *   1. Role-based call gating — reject a disallowed tool for the caller's
+ *      role (defense in depth on top of `tools/list` hiding, which is not
+ *      security). Destructive ops (`lms_delete_*`, `lms_archive_course`) are
+ *      admin-only; students get only the self-scoped learning tools.
+ *   2. Tenant branding — attach `_meta["lms/branding"]` to widget results.
+ *   3. Audit logging — record the call (tool name + sanitized args + success
+ *      + duration) to `mcp_audit_log`, fire-and-forget.
  */
-export function installToolGuards(server: MCPServer): void {
-  const s = server as unknown as {
-    tool: (config: { name: string } & Record<string, unknown>, handler: (input: unknown, ctx: unknown) => unknown) => unknown;
-  };
-  const original = s.tool.bind(server);
+export function installToolGuards(server: LmsServer): void {
+  server.use("mcp:tools/call", async (ctx, next) => {
+    const name = ctx.params.name ?? "";
+    const args = ctx.params.arguments;
+    const auth = resolveMcpAuth(ctx);
+    const role = roleOfAuth(auth);
+    const start = Date.now();
 
-  s.tool = (config, handler) => {
-    const name = config?.name ?? "";
+    // 1. Call gating.
+    if (!isToolAllowedForRole(role, name)) {
+      const msg =
+        role === "teacher" || role === "student"
+          ? `Tool '${name}' is not available for your role.${role === "student" ? " Students can use the lms_my_* learning tools." : " Contact an admin."}`
+          : "Access denied: only students, teachers, and admins can use the LMS MCP server.";
+      recordToolAudit({
+        auth,
+        toolName: name,
+        args,
+        success: false,
+        errorMessage: msg,
+        durationMs: Date.now() - start,
+      });
+      return errorResult(msg);
+    }
 
-    const wrapped = async (input: unknown, ctx: unknown) => {
-      const auth = (ctx as { auth?: { user?: { userId?: string }; payload?: Record<string, unknown> } }).auth;
-      const role = roleOf(ctx as { auth?: unknown });
-      const start = Date.now();
-
-      // 1. Call gating — name is known here (unlike in middleware).
-      if (!isToolAllowedForRole(role, name)) {
-        const msg =
-          role === "teacher" || role === "student"
-            ? `Tool '${name}' is not available for your role.${role === "student" ? " Students can use the lms_my_* learning tools." : " Contact an admin."}`
-            : "Access denied: only students, teachers, and admins can use the LMS MCP server.";
-        recordToolAudit({
-          auth,
-          toolName: name,
-          args: input,
-          success: false,
-          errorMessage: msg,
-          durationMs: Date.now() - start,
-        });
-        return errorResult(msg);
-      }
-
-      // 2. Run the real handler, then audit (fire-and-forget).
-      let success = true;
-      let errorMessage: string | undefined;
-      try {
-        const result = await handler(input, ctx);
-        if (result && typeof result === "object" && (result as { isError?: boolean }).isError === true) {
-          success = false;
-        }
-        return await brandWidgetResult(result, ctx);
-      } catch (err) {
+    // 2. Run the real handler, brand widget results, then audit.
+    let success = true;
+    let errorMessage: string | undefined;
+    try {
+      const result = await next();
+      if (result && typeof result === "object" && (result as { isError?: boolean }).isError === true) {
         success = false;
-        errorMessage = err instanceof Error ? err.message : String(err);
-        throw err;
-      } finally {
-        recordToolAudit({
-          auth,
-          toolName: name,
-          args: input,
-          success,
-          errorMessage,
-          durationMs: Date.now() - start,
-        });
       }
-    };
-
-    return original(config, wrapped);
-  };
+      return (await brandWidgetResult(result, ctx)) as typeof result;
+    } catch (err) {
+      success = false;
+      errorMessage = err instanceof Error ? err.message : String(err);
+      throw err;
+    } finally {
+      recordToolAudit({
+        auth,
+        toolName: name,
+        args,
+        success,
+        errorMessage,
+        durationMs: Date.now() - start,
+      });
+    }
+  });
 }

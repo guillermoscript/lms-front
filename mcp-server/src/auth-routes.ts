@@ -46,7 +46,7 @@
  *   - Exported as installAuthRoutes(server) per the requested API
  */
 
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "./server-types.js";
 import {
   createClient,
   type OAuthAuthorizationDetails,
@@ -465,7 +465,7 @@ function renderConsentPage(
  *   Authentication → OAuth Server → Consent screen URL
  *   → <your server base URL>/auth/consent
  */
-export function installAuthRoutes(server: MCPServer): void {
+export function installAuthRoutes(server: LmsServer): void {
   const supabaseUrl = getSupabaseUrl();
   const publishableKey = getPublishableKey();
 
