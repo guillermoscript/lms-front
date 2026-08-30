@@ -40,6 +40,7 @@ const EXAMS = [{ id: 100, title: 'Final', sequence: 1 }]
 function emptyDb(): FakeDb {
   return {
     lesson_completions: [],
+    lesson_views: [],
     exercise_completions: [],
     exam_submissions: [],
     lesson_checkpoint_attempts: [],
@@ -227,6 +228,20 @@ describe('getCourseProgressReport', () => {
     const s = student(await run(db, ['u1']), 'u1')
     expect(s.lastActivityAt).toBe(daysAgo(4))
     expect(s.status).toBe('active')
+  })
+
+  it('a lesson view is activity (not stalled) but never progress', async () => {
+    const db = emptyDb()
+    db.lesson_completions = [{ id: 1, user_id: 'u1', lesson_id: 1, completed_at: daysAgo(STALL_DAYS + 5) }]
+    // Re-reading lesson 2 yesterday keeps the student active at 25%.
+    db.lesson_views = [{ id: 1, user_id: 'u1', lesson_id: 2, viewed_at: daysAgo(1) }]
+    const s = student(await run(db, ['u1']), 'u1')
+    expect(s.overallPercentage).toBe(25)
+    expect(s.lastActivityAt).toBe(daysAgo(1))
+    expect(s.status).toBe('active')
+    // A view of a lesson outside the course must not count.
+    db.lesson_views = [{ id: 1, user_id: 'u1', lesson_id: 999, viewed_at: daysAgo(1) }]
+    expect(student(await run(db, ['u1']), 'u1').status).toBe('stalled')
   })
 
   it('a student with old progress and nothing recent is stalled', async () => {
