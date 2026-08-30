@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '@/lib/utils'
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 
@@ -9,20 +9,51 @@ interface FlashcardSetProps {
   className?: string
 }
 
+const HALF_FLIP_MS = 220
+
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY)
+  query.addEventListener('change', onChange)
+  return () => query.removeEventListener('change', onChange)
+}
+
+const serverFalse = () => false
+
 export function FlashcardSet({ cards, className }: FlashcardSetProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    serverFalse
+  )
+  // Mid-flip: the card is edge-on (rotateY(90deg)) and swaps its text there.
+  const [edgeOn, setEdgeOn] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setPrefersReducedMotion(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+
+  // Only ever one face in the DOM: a two-faced 3D flip breaks (both texts
+  // overlap, or the card vanishes) whenever an ancestor flattens the 3D
+  // context — overflow/filter/transform on the lesson shell all do that.
+  const flip = () => {
+    if (prefersReducedMotion) {
+      setFlipped((f) => !f)
+      return
+    }
+    if (edgeOn) return
+    setEdgeOn(true)
+    timer.current = setTimeout(() => {
+      setFlipped((f) => !f)
+      setEdgeOn(false)
+    }, HALF_FLIP_MS)
+  }
 
   const goTo = (index: number) => {
+    if (timer.current) clearTimeout(timer.current)
+    setEdgeOn(false)
     setFlipped(false)
     setCurrentIndex(index)
   }
@@ -34,46 +65,27 @@ export function FlashcardSet({ cards, className }: FlashcardSetProps) {
     <div className={cn('my-6', className)}>
       {/* Card */}
       <div
-        onClick={() => setFlipped((f) => !f)}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFlipped((f) => !f) } }}
+        onClick={flip}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip() } }}
         role="button"
         tabIndex={0}
         aria-label={flipped ? 'Mostrando reverso. Clic para voltear.' : 'Mostrando frente. Clic para voltear.'}
-        className="relative mx-auto h-48 w-full max-w-md cursor-pointer select-none"
+        className="mx-auto h-48 w-full max-w-md cursor-pointer select-none"
         style={prefersReducedMotion ? undefined : { perspective: '1000px' }}
       >
         <div
-          className="relative h-full w-full"
+          className={cn(
+            'flex h-full items-center justify-center overflow-y-auto rounded-xl border p-6 shadow-sm',
+            flipped ? 'border-primary/30 bg-muted' : 'bg-card'
+          )}
           style={prefersReducedMotion ? undefined : {
-            transformStyle: 'preserve-3d',
-            transition: 'transform 0.5s',
-            transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+            transition: `transform ${HALF_FLIP_MS}ms ${edgeOn ? 'ease-in' : 'ease-out'}`,
+            transform: edgeOn ? 'rotateY(90deg)' : 'rotateY(0deg)',
           }}
         >
-          {prefersReducedMotion ? (
-            <div className="flex h-full items-center justify-center rounded-xl border bg-card p-6 shadow-sm">
-              <p className="text-center text-sm font-medium">
-                {flipped ? card.back : card.front}
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Front */}
-              <div
-                className="absolute inset-0 flex items-center justify-center rounded-xl border bg-card p-6 shadow-sm"
-                style={{ backfaceVisibility: 'hidden' }}
-              >
-                <p className="text-center text-sm font-medium">{card.front}</p>
-              </div>
-              {/* Back */}
-              <div
-                className="absolute inset-0 flex items-center justify-center rounded-xl border bg-primary/5 p-6 shadow-sm"
-                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-              >
-                <p className="text-center text-sm font-medium">{card.back}</p>
-              </div>
-            </>
-          )}
+          <p className="text-center text-sm font-medium">
+            {flipped ? card.back : card.front}
+          </p>
         </div>
       </div>
 
