@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
@@ -39,6 +39,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
+import { getCourseProgressReport, type CourseItem } from '@/lib/analytics/student-progress'
+import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -205,6 +207,33 @@ export default async function CourseManagementPage({ params }: PageProps) {
     profiles: profilesMap.get(e.user_id) || null,
     email: emailMap.get(e.user_id) || null,
   }))
+
+  // Per-student progress (#647). Only what the student can actually complete
+  // counts: published lessons/exams, and exercises that are not embedded as a
+  // lesson checkpoint (those are done inside the lesson flow). This keeps the
+  // teacher's percentage identical to the one on the student's course page.
+  const publishedLessons: CourseItem[] = lessons
+    .filter((l) => l.status === 'published')
+    .map((l) => ({ id: l.id, title: l.title ?? '', sequence: l.sequence }))
+  const publishedExams: CourseItem[] = exams
+    .filter((e) => e.status === 'published')
+    .map((e) => ({ id: e.exam_id, title: e.title, sequence: e.sequence }))
+  const publishedExercises = exercises.filter((e) => e.status === 'published')
+  const checkpointExerciseIds = await getCheckpointLinkedExerciseIds(supabase, {
+    tenantId,
+    exerciseIds: publishedExercises.map((e) => e.id),
+  })
+  const standaloneExercises: CourseItem[] = publishedExercises
+    .filter((e) => !checkpointExerciseIds.has(e.id))
+    .map((e) => ({ id: e.id, title: e.title, sequence: null }))
+  const progressReport = await getCourseProgressReport(supabase, {
+    courseId: parseInt(courseId),
+    tenantId,
+    userIds: enrolledUserIds,
+    lessons: publishedLessons,
+    exercises: standaloneExercises,
+    exams: publishedExams,
+  })
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -491,14 +520,19 @@ export default async function CourseManagementPage({ params }: PageProps) {
 
           {/* Students Tab */}
           <TabsContent value="students" className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
               <h2 className="text-lg font-semibold">{t('studentList.title')}</h2>
+              <p className="text-sm text-muted-foreground">{t('studentList.description')}</p>
             </div>
 
             <CourseStudentsTable
               enrollments={enrollments}
               issuedCertificates={issuedCertificates}
               courseId={parseInt(courseId)}
+              report={progressReport}
+              lessons={publishedLessons}
+              exercises={standaloneExercises}
+              exams={publishedExams}
             />
           </TabsContent>
 

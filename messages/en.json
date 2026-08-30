@@ -835,16 +835,76 @@
         },
         "studentList": {
           "title": "Enrolled Students",
-          "description": "View and manage students enrolled in this course.",
+          "description": "How far each student is, what they still have left, and whether they are still moving. Click a row for the lesson-by-lesson view.",
           "table": {
             "student": "Student",
             "date": "Enrollment Date",
             "status": "Status",
-            "actions": "Actions"
+            "actions": "Actions",
+            "progress": "Progress",
+            "lessons": "Lessons",
+            "exercises": "Exercises",
+            "exams": "Exams",
+            "lastActivity": "Last activity",
+            "details": "Details",
+            "detailsFor": "Open progress for {name}"
           },
           "noStudents": "No students enrolled in this course yet.",
+          "noMatch": "No students match this filter.",
+          "noLessons": "No published lessons yet — progress can't be measured until there is something to complete.",
+          "noActivity": "No activity yet",
           "viewProgress": "View Progress",
-          "unknownStudent": "Unknown Student"
+          "unknownStudent": "Unknown Student",
+          "summary": {
+            "avgProgress": "Average progress {value}%"
+          },
+          "filter": {
+            "label": "Filter students by status",
+            "all": "All"
+          },
+          "status": {
+            "active": "Active",
+            "stalled": "Stalled",
+            "not_started": "Not started",
+            "completed": "Completed"
+          },
+          "statusHint": {
+            "active": "Activity in the last {days} days",
+            "stalled": "No activity for {days} days or more",
+            "not_started": "No activity in this course yet",
+            "completed": "Every published lesson done and every exam passed"
+          },
+          "pagination": {
+            "prev": "Previous page",
+            "next": "Next page"
+          },
+          "funnel": {
+            "title": "Where students stop",
+            "description": "How many enrolled students completed each lesson, in order. A sharp drop after a lesson is where the group loses momentum — the number on the right is students lost from the previous step.",
+            "completedBy": "{count} of {total}",
+            "meter": "Students who completed {title}"
+          },
+          "sheet": {
+            "enrolled": "Enrolled {date}",
+            "nextUp": "Next up",
+            "nextExam": "Exam: {title}",
+            "allDone": "Nothing left — course complete",
+            "lessons": "Lessons",
+            "exercises": "Exercises",
+            "exams": "Exams",
+            "completed": "Completed",
+            "completedOn": "Completed {date}",
+            "pending": "Pending",
+            "notAttempted": "Not attempted",
+            "ungraded": "Awaiting grading",
+            "passed": "Passed · {score}%",
+            "failed": "{score}% · below {threshold}%",
+            "attempts": "{count, plural, one {# attempt} other {# attempts}}"
+          },
+          "warnings": {
+            "title": "Some progress data could not be loaded",
+            "desc": "These sources failed to read, so activity and progress below may be under-counted:"
+          }
         },
         "certificates": {
           "title": "Certificates",

@@ -835,16 +835,76 @@
         },
         "studentList": {
           "title": "Estudiantes Inscritos",
-          "description": "Mira y gestiona a los estudiantes inscritos en este curso.",
+          "description": "Qué tan lejos va cada estudiante, qué le falta y si sigue avanzando. Haz clic en una fila para ver lección por lección.",
           "table": {
             "student": "Estudiante",
             "date": "Fecha de Inscripción",
             "status": "Estado",
-            "actions": "Acciones"
+            "actions": "Acciones",
+            "progress": "Progreso",
+            "lessons": "Lecciones",
+            "exercises": "Ejercicios",
+            "exams": "Exámenes",
+            "lastActivity": "Última actividad",
+            "details": "Detalle",
+            "detailsFor": "Abrir el progreso de {name}"
           },
           "noStudents": "Aún no hay estudiantes inscritos en este curso.",
+          "noMatch": "Ningún estudiante coincide con este filtro.",
+          "noLessons": "Aún no hay lecciones publicadas: el progreso no se puede medir hasta que haya algo que completar.",
+          "noActivity": "Sin actividad aún",
           "viewProgress": "Ver Progreso",
-          "unknownStudent": "Estudiante Desconocido"
+          "unknownStudent": "Estudiante Desconocido",
+          "summary": {
+            "avgProgress": "Progreso promedio {value}%"
+          },
+          "filter": {
+            "label": "Filtrar estudiantes por estado",
+            "all": "Todos"
+          },
+          "status": {
+            "active": "Activo",
+            "stalled": "Estancado",
+            "not_started": "Sin empezar",
+            "completed": "Completado"
+          },
+          "statusHint": {
+            "active": "Actividad en los últimos {days} días",
+            "stalled": "Sin actividad desde hace {days} días o más",
+            "not_started": "Todavía no hay actividad en este curso",
+            "completed": "Todas las lecciones publicadas completadas y todos los exámenes aprobados"
+          },
+          "pagination": {
+            "prev": "Página anterior",
+            "next": "Página siguiente"
+          },
+          "funnel": {
+            "title": "Dónde se detienen los estudiantes",
+            "description": "Cuántos estudiantes inscritos completaron cada lección, en orden. Una caída brusca después de una lección es donde el grupo pierde impulso; el número de la derecha son los estudiantes perdidos respecto al paso anterior.",
+            "completedBy": "{count} de {total}",
+            "meter": "Estudiantes que completaron {title}"
+          },
+          "sheet": {
+            "enrolled": "Inscrito el {date}",
+            "nextUp": "Siguiente paso",
+            "nextExam": "Examen: {title}",
+            "allDone": "No queda nada: curso completado",
+            "lessons": "Lecciones",
+            "exercises": "Ejercicios",
+            "exams": "Exámenes",
+            "completed": "Completada",
+            "completedOn": "Completada el {date}",
+            "pending": "Pendiente",
+            "notAttempted": "Sin intentar",
+            "ungraded": "Pendiente de calificar",
+            "passed": "Aprobado · {score}%",
+            "failed": "{score}% · por debajo de {threshold}%",
+            "attempts": "{count, plural, one {# intento} other {# intentos}}"
+          },
+          "warnings": {
+            "title": "No se pudieron cargar algunos datos de progreso",
+            "desc": "Estas fuentes fallaron al leerse, así que la actividad y el progreso de abajo pueden estar subestimados:"
+          }
         },
         "certificates": {
           "title": "Certificados",
