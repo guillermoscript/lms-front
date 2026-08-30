@@ -24,11 +24,11 @@
  *   `stalled`     some activity, but nothing for `STALL_DAYS` or longer
  *
  *   "Activity" is the union of the timestamps this schema keeps for a student
- *   inside a course: lesson completions, exercise completions, exam
- *   submissions, checkpoint attempts and practice attempts. There is no page
- *   view log, so a student who re-reads lessons without completing anything
- *   new looks stalled — the UI labels the column "last activity", not "last
- *   seen", for that reason.
+ *   inside a course: lesson views (the student lesson page upserts one row
+ *   per user+lesson, #650), lesson completions, exercise completions, exam
+ *   submissions, checkpoint attempts and practice attempts. Views make
+ *   re-reading count as activity; rows predating the view tracker simply
+ *   contribute nothing.
  *
  * RLS
  *   Every read runs as the signed-in teacher through the teacher-scoped SELECT
@@ -131,6 +131,7 @@ export interface CourseProgressReport {
   /** Row counts per source so an empty tab can explain itself. */
   sources: {
     lessonCompletions: number
+    lessonViews: number
     exerciseCompletions: number
     examSubmissions: number
     checkpointAttempts: number
@@ -248,6 +249,24 @@ function readLessonCompletions(client: Client, userIds: string[], lessonIds: num
   )
 }
 
+interface LessonViewRow {
+  user_id: string
+  viewed_at: string | null
+}
+
+function readLessonViews(client: Client, userIds: string[], lessonIds: number[]) {
+  if (lessonIds.length === 0) return Promise.resolve([] as LessonViewRow[])
+  return fetchAllRowsIn<LessonViewRow, string>('lesson_views', userIds, (chunk, from, to) =>
+    client
+      .from('lesson_views')
+      .select('user_id, viewed_at', { count: 'exact' })
+      .in('lesson_id', lessonIds)
+      .in('user_id', chunk)
+      .order('id')
+      .range(from, to)
+  )
+}
+
 function readExerciseCompletions(client: Client, userIds: string[], exerciseIds: number[]) {
   if (exerciseIds.length === 0) return Promise.resolve([] as ExerciseCompletionRow[])
   return fetchAllRowsIn<ExerciseCompletionRow, string>('exercise_completions', userIds, (chunk, from, to) =>
@@ -316,10 +335,11 @@ export async function getCourseProgressReport(
   const exerciseIds = exercises.map((e) => e.id)
   const examIds = exams.map((e) => e.id)
 
-  const [lc, ec, es, cp, pa] = await Promise.all([
+  const [lc, lv, ec, es, cp, pa] = await Promise.all([
     attempt('lesson_completions', [] as LessonCompletionRow[], () =>
       readLessonCompletions(client, userIds, lessonIds)
     ),
+    attempt('lesson_views', [] as LessonViewRow[], () => readLessonViews(client, userIds, lessonIds)),
     attempt('exercise_completions', [] as ExerciseCompletionRow[], () =>
       readExerciseCompletions(client, userIds, exerciseIds)
     ),
@@ -333,7 +353,7 @@ export async function getCourseProgressReport(
       readPracticeAttempts(client, input.tenantId, input.courseId, userIds)
     ),
   ])
-  const warnings = [lc, ec, es, cp, pa].map((r) => r.warning).filter((w): w is string => w !== null)
+  const warnings = [lc, lv, ec, es, cp, pa].map((r) => r.warning).filter((w): w is string => w !== null)
 
   // ── Index every source by student ────────────────────────────────────────
   const lessonSet = new Set(lessonIds)
@@ -380,6 +400,7 @@ export async function getCourseProgressReport(
   const activityByUser = new Map<string, string | null>()
   const bump = (userId: string, at: string | null | undefined) =>
     activityByUser.set(userId, later(activityByUser.get(userId) ?? null, at))
+  for (const row of lv.value) bump(row.user_id, row.viewed_at)
   for (const row of cp.value) bump(row.user_id, row.created_at)
   for (const row of pa.value) bump(row.user_id, row.created_at)
 
@@ -465,6 +486,7 @@ export async function getCourseProgressReport(
     lessonFunnel: lessons.map((l) => ({ ...l, completedBy: funnelCounts.get(l.id) ?? 0 })),
     sources: {
       lessonCompletions: lc.value.length,
+      lessonViews: lv.value.length,
       exerciseCompletions: ec.value.length,
       examSubmissions: es.value.length,
       checkpointAttempts: cp.value.length,

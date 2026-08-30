@@ -58,6 +58,20 @@ export default async function LessonPage({ params }: PageProps) {
   const numericCourseId = parseInt(courseId)
   await requireCourseAccess(supabase, userId, numericCourseId)
 
+  // Last-seen tracking (#650): one lesson_views row per (user, lesson), stamped
+  // on every open. The teacher Students tab reads it as "last activity", so a
+  // student who re-reads without completing anything no longer looks stalled.
+  // Values are server-derived; a failure must never block the lesson itself.
+  const viewTracked = supabase
+    .from('lesson_views')
+    .upsert(
+      { lesson_id: parseInt(lessonId), user_id: userId, viewed_at: new Date().toISOString() },
+      { onConflict: 'user_id,lesson_id' }
+    )
+    .then(({ error }: { error: { message: string } | null }) => {
+      if (error) console.error('lesson_views upsert failed:', error.message)
+    })
+
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
     .select(`
@@ -87,6 +101,7 @@ export default async function LessonPage({ params }: PageProps) {
   if (lessonError || !lessonData) {
     notFound()
   }
+  await viewTracked
 
   // The lesson is looked up by id alone, so the gate above is only as good as
   // the URL's courseId actually owning it (#509).
