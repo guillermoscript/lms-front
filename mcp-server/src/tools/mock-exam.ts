@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
 
@@ -56,7 +56,7 @@ interface ScoreRow {
   exam_questions: QuestionEmbed | null;
 }
 
-export function registerMockExamTools(server: MCPServer) {
+export function registerMockExamTools(server: LmsServer) {
   // ── lms_get_mock_exam_source ────────────────────────────────────────────────
   server.tool(
     {

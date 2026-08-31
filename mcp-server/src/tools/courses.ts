@@ -1,10 +1,15 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, PaginationSchema } from "../format.js";
+import { propsSchema as courseDashboardPropsSchema } from "../../views/course-dashboard/schema.js";
+import { propsSchema as courseDetailPropsSchema } from "../../views/course-detail/schema.js";
 
-export function registerCourseTools(server: MCPServer) {
+export function registerCourseTools(server: LmsServer) {
   // ── lms_list_courses ────────────────────────────────────────────────────────
   server.tool(
     {
@@ -25,10 +30,11 @@ export function registerCourseTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "course-dashboard",
-        invoking: "Loading courses...",
-        invoked: "Courses loaded",
+      outputSchema: courseDashboardPropsSchema,
+      view: { name: "course-dashboard" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading courses...",
+        "openai/toolInvocation/invoked": "Courses loaded",
       },
     },
     async (input, ctx) => {
@@ -126,10 +132,11 @@ export function registerCourseTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "course-detail",
-        invoking: "Loading course...",
-        invoked: "Course loaded",
+      outputSchema: courseDetailPropsSchema,
+      view: { name: "course-detail" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading course...",
+        "openai/toolInvocation/invoked": "Course loaded",
       },
     },
     async (input, ctx) => {

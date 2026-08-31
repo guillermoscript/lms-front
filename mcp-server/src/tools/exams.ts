@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, ResponseFormat, PaginationSchema } from "../format.js";
 
@@ -18,7 +18,7 @@ const questionSchema = z.object({
   expected_keywords: z.array(z.string()).optional().describe("Expected keywords for free_text questions"),
 });
 
-export function registerExamTools(server: MCPServer) {
+export function registerExamTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_list_exams",

@@ -1,5 +1,6 @@
-import type { MCPServer, MiddlewareContext, McpMiddlewareFn } from "mcp-use/server";
 import { demoWidgetsEnabled } from "./env.js";
+import { resolveMcpAuth, roleOfAuth } from "./session.js";
+import type { LmsServer } from "./server-types.js";
 
 /**
  * Role-based tool access (Option A).
@@ -15,17 +16,11 @@ import { demoWidgetsEnabled } from "./env.js";
  * Deletes are matched by prefix so future `lms_delete_*` tools are covered
  * automatically.
  *
- * ── mcp-use 1.32.0 middleware reality ──────────────────────────────────────
- * Two facts about this version shape how the policy is enforced:
- *   1. `mcp:tools/list` middleware receives the bare tools **array** as the
- *      result of `next()` (mcp-use unwraps `result.tools` before calling the
- *      chain and re-wraps an array return). So the list filter must operate on
- *      an array, not `{ tools: [...] }`.
- *   2. `mcp:tools/call` middleware ctx exposes only the tool *arguments* as
- *      `ctx.params` — the tool **name is not present**. Name-based call gating
- *      therefore cannot live in middleware; it runs in the per-tool wrapper
- *      (`register.ts`), which is given the registered name. This module only
- *      hides disallowed tools from `tools/list`.
+ * Enforcement is two-layered, both in typed mcp-use v2 middleware:
+ *   - `mcp:tools/list` (here) hides disallowed tools — UX, not security.
+ *   - `mcp:tools/call` (`installToolGuards` in register.ts) rejects a
+ *     disallowed call by name; v2 middleware carries `ctx.params.name`, so
+ *     the v1-era per-registration monkey-patch is gone.
  */
 const TEACHER_DENY_PREFIXES = ["lms_delete_"];
 
@@ -118,45 +113,20 @@ export function isToolAllowedForRole(
 }
 
 /** Read the caller's tenant role from the verified JWT claims. */
-export function roleOf(ctx: MiddlewareContext | { auth?: unknown }): string | undefined {
-  const payload = (ctx.auth as { payload?: Record<string, unknown> } | undefined)
-    ?.payload;
-  return (
-    (payload?.tenant_role as string | undefined) ??
-    (payload?.user_role as string | undefined)
-  );
+export function roleOf(ctx: unknown): string | undefined {
+  return roleOfAuth(resolveMcpAuth(ctx));
 }
 
 /**
  * Install `tools/list` gating: hide tools the caller's role may not use.
  *
- * Call-time enforcement (rejecting a disallowed `tools/call`) lives in the
- * per-tool wrapper, see `installToolGuards` in `register.ts` — hiding is not
- * security on its own.
+ * Call-time enforcement (rejecting a disallowed `tools/call`) lives in
+ * `installToolGuards` (register.ts) — hiding is not security on its own.
  */
-export function installToolPolicy(server: MCPServer): void {
-  const use = (
-    server as unknown as {
-      use: (pattern: string, handler: McpMiddlewareFn) => void;
-    }
-  ).use.bind(server);
-
-  use("mcp:tools/list", async (ctx, next) => {
+export function installToolPolicy(server: LmsServer): void {
+  server.use("mcp:tools/list", async (ctx, next) => {
     const role = roleOf(ctx);
-    const result = await next();
-
-    // mcp-use 1.32.0 hands the chain the bare tools array; older/other shapes
-    // may hand `{ tools: [...] }`. Handle both so the filter never silently
-    // no-ops if the framework changes the contract.
-    if (Array.isArray(result)) {
-      return (result as Array<{ name: string }>).filter((t) =>
-        isToolAllowedForRole(role, t.name)
-      );
-    }
-    const obj = result as { tools?: Array<{ name: string }> } | null;
-    if (obj?.tools) {
-      obj.tools = obj.tools.filter((t) => isToolAllowedForRole(role, t.name));
-    }
-    return obj;
+    const tools = await next();
+    return tools.filter((t) => isToolAllowedForRole(role, t.name));
   });
 }

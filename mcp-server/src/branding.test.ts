@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { widget, text } from "mcp-use/server";
+import { widget, text } from "mcp-use";
 import { brandWidgetResult } from "./register.js";
 import { BRANDING_META_KEY } from "./branding.js";
 

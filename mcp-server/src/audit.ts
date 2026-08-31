@@ -14,15 +14,11 @@ function sanitizeParams(params: unknown): unknown {
   return out;
 }
 
-/** Minimal shape of the auth context we read for audit attribution. */
-interface AuditAuth {
-  user?: { userId?: string };
-  payload?: Record<string, unknown>;
-}
+import type { ResolvedAuth } from "./session.js";
 
 export interface AuditRecord {
-  auth: AuditAuth | undefined;
-  /** Tool name — captured at the registration layer (NOT available in middleware ctx). */
+  auth: ResolvedAuth | undefined;
+  /** Tool name — from the typed `mcp:tools/call` middleware params. */
   toolName: string;
   /** The tool's arguments object. */
   args: unknown;
@@ -42,12 +38,9 @@ export function getAuditInsertFailureCount(): number {
  * Record one tool call into `mcp_audit_log` using the service-role client.
  *
  * Fire-and-forget: never throws, never blocks the caller. No-op when no
- * service-role key is configured.
- *
- * IMPORTANT (mcp-use 1.32.0): the `mcp:tools/call` middleware context exposes
- * only the tool *arguments* as `ctx.params` and does NOT carry the tool name,
- * so audit can't run as a generic middleware. It is invoked instead from the
- * per-tool wrapper in `register.ts`, which knows the registered tool name.
+ * service-role key is configured. Invoked from the `mcp:tools/call` guard
+ * middleware (`installToolGuards` in register.ts), which has the tool name
+ * in its typed params.
  */
 export function recordToolAudit(rec: AuditRecord): void {
   const admin = getServiceClient();
@@ -57,7 +50,7 @@ export function recordToolAudit(rec: AuditRecord): void {
   void admin
     .from("mcp_audit_log")
     .insert({
-      user_id: rec.auth?.user?.userId ?? null,
+      user_id: rec.auth?.userId ?? null,
       user_role:
         (payload.tenant_role as string | undefined) ??
         (payload.user_role as string | undefined) ??

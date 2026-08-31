@@ -1,46 +1,70 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getRequestContext } from "mcp-use/server";
 import { createUserClient } from "./supabase.js";
 
 /**
- * Minimal shape of the auth context mcp-use injects into tool/resource/prompt
- * handlers when `oauth` is configured. We only read what we need.
+ * The auth facts every guard and handler needs, normalised across the two
+ * context shapes mcp-use v2 hands us:
+ *
+ *   - Tool/resource/prompt callbacks get a `RequestContext` whose `auth` is
+ *     `{ user: SupabaseOAuthUser, payload, accessToken, ... }`.
+ *   - MCP middleware (`mcp:tools/*`) gets the SDK `AuthInfo` instead:
+ *     `{ token, ... , extra: { user, payload, permissions } }` — `extra` is
+ *     what the OAuth provider's `mapAuthInfo` produced, i.e. the same user
+ *     and verified JWT payload.
  */
-export interface McpAuth {
-  user: { userId: string; email?: string; name?: string };
+export interface ResolvedAuth {
+  userId: string;
   accessToken: string;
   payload: Record<string, unknown>;
 }
 
-export interface McpHandlerContext {
-  auth?: McpAuth;
-  /**
-   * mcp-use passes resource/template handlers the raw request-context store
-   * (AsyncLocalStorage) instead of an object with an `.auth` property — the
-   * auth lives at `ctx.get("auth")`. Tool handlers get `.auth` directly.
-   */
-  get?: (key: string) => unknown;
+interface CallbackAuthShape {
+  user?: { id?: string };
+  accessToken?: string;
+  payload?: Record<string, unknown>;
 }
 
-/**
- * Resolve the auth payload regardless of handler-context shape.
- *
- * mcp-use 1.32.0 hands tool handlers a ctx with `.auth`, but resource/template
- * handlers receive the parsed URI params as their 3rd arg (no auth at all).
- * For those, fall back to the request-scoped AsyncLocalStorage context, which
- * `runWithContext` populates for the entire dispatch (tools AND resources).
- */
-function resolveAuth(ctx: McpHandlerContext): McpAuth | undefined {
-  if (ctx.auth) return ctx.auth;
-  if (typeof ctx.get === "function") {
-    const fromCtx = ctx.get("auth") as McpAuth | undefined;
-    if (fromCtx) return fromCtx;
+interface MiddlewareAuthShape {
+  token?: string;
+  extra?: {
+    user?: { id?: string };
+    payload?: Record<string, unknown>;
+  };
+}
+
+/** Normalise callback- and middleware-shaped auth into one structure. */
+export function resolveMcpAuth(ctx: unknown): ResolvedAuth | undefined {
+  const auth = (ctx as { auth?: unknown } | null | undefined)?.auth;
+  if (!auth || typeof auth !== "object") return undefined;
+
+  const cb = auth as CallbackAuthShape;
+  if (cb.user?.id && typeof cb.accessToken === "string") {
+    return {
+      userId: cb.user.id,
+      accessToken: cb.accessToken,
+      payload: cb.payload ?? {},
+    };
   }
-  const reqCtx = getRequestContext() as { get?: (k: string) => unknown } | undefined;
-  if (reqCtx && typeof reqCtx.get === "function") {
-    return reqCtx.get("auth") as McpAuth | undefined;
+
+  const mw = auth as MiddlewareAuthShape;
+  if (mw.extra?.user?.id && typeof mw.token === "string") {
+    return {
+      userId: mw.extra.user.id,
+      accessToken: mw.token,
+      payload: mw.extra.payload ?? {},
+    };
   }
+
   return undefined;
+}
+
+/** Read the caller's tenant role from the verified JWT claims. */
+export function roleOfAuth(auth: ResolvedAuth | undefined): string | undefined {
+  const payload = auth?.payload;
+  return (
+    (payload?.tenant_role as string | undefined) ??
+    (payload?.user_role as string | undefined)
+  );
 }
 
 const ALLOWED_ROLES = ["student", "teacher", "admin"];
@@ -51,7 +75,7 @@ const ALLOWED_ROLES = ["student", "teacher", "admin"];
  * Wraps the authenticated caller's identity, tenant context (from JWT claims
  * injected by the LMS `custom_access_token_hook`), and an RLS-aware Supabase
  * client. Exposes the same surface the previous `AuthManager` did, so tool
- * handlers read almost identically — but data access is now gated by RLS.
+ * handlers read almost identically — but data access is gated by RLS.
  */
 export class LmsSession {
   private constructor(
@@ -62,18 +86,18 @@ export class LmsSession {
   ) {}
 
   /**
-   * Build a session from a handler context. Throws if the caller is
-   * unauthenticated or has no recognized tenant role (student/teacher/admin).
-   * Which tools a role may call is enforced by the tool policy + per-tool
-   * guards, not here. Callers should wrap in try/catch and return `errorResult`.
+   * Build a session from a handler or middleware context. Throws if the caller
+   * is unauthenticated or has no recognized tenant role (student/teacher/admin).
+   * Which tools a role may call is enforced by the tool policy + call guard,
+   * not here. Callers should wrap in try/catch and return `errorResult`.
    */
-  static fromContext(ctx: McpHandlerContext): LmsSession {
-    const auth = resolveAuth(ctx);
-    if (!auth?.user?.userId || !auth.accessToken) {
+  static fromContext(ctx: unknown): LmsSession {
+    const auth = resolveMcpAuth(ctx);
+    if (!auth) {
       throw new Error("Authentication required.");
     }
 
-    const payload = auth.payload ?? {};
+    const payload = auth.payload;
     const tenantId =
       (payload.tenant_id as string | undefined) ??
       (payload.app_metadata as { tenant_id?: string } | undefined)?.tenant_id;
@@ -96,7 +120,7 @@ export class LmsSession {
 
     return new LmsSession(
       createUserClient(auth.accessToken),
-      auth.user.userId,
+      auth.userId,
       tenantId,
       tenantRole
     );

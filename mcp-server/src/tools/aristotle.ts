@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
 
@@ -31,7 +31,7 @@ const TOPIC_ARRAY = z
   .array(z.string().min(1))
   .describe("Short topic labels discussed this session, e.g. ['recursion', 'base cases']");
 
-export function registerAristotleTools(server: MCPServer) {
+export function registerAristotleTools(server: LmsServer) {
   // ── lms_get_tutor_history ──────────────────────────────────────────────────
   server.tool(
     {

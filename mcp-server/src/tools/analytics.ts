@@ -1,9 +1,17 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, ResponseFormat, PaginationSchema } from "../format.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { propsSchema as examSubmissionsPropsSchema } from "../../views/exam-submissions/schema.js";
+import { propsSchema as submissionGraderPropsSchema } from "../../views/submission-grader/schema.js";
+import { propsSchema as studentProgressRosterPropsSchema } from "../../views/student-progress-roster/schema.js";
+import { propsSchema as schoolOverviewPropsSchema } from "../../views/school-overview/schema.js";
+import { propsSchema as confusionHotspotsPropsSchema } from "../../views/confusion-hotspots/schema.js";
 
 /**
  * Resolve student display names by user id.
@@ -78,7 +86,7 @@ export function aggregateExamSubmissions(
   return out;
 }
 
-export function registerAnalyticsTools(server: MCPServer) {
+export function registerAnalyticsTools(server: LmsServer) {
   // ── lms_list_enrollments ─────────────────────────────────────────────────
   server.tool(
     {
@@ -189,10 +197,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "exam-submissions",
-        invoking: "Loading submissions...",
-        invoked: "Submissions loaded",
+      outputSchema: examSubmissionsPropsSchema,
+      view: { name: "exam-submissions" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading submissions...",
+        "openai/toolInvocation/invoked": "Submissions loaded",
       },
     },
     async ({ exam_id, limit, offset }, ctx) => {
@@ -366,10 +375,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "submission-grader",
-        invoking: "Loading submission…",
-        invoked: "Submission ready to grade",
+      outputSchema: submissionGraderPropsSchema,
+      view: { name: "submission-grader" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading submission…",
+        "openai/toolInvocation/invoked": "Submission ready to grade",
       },
     },
     async ({ submission_id }, ctx) => {
@@ -633,10 +643,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "student-progress-roster",
-        invoking: "Loading roster…",
-        invoked: "Roster loaded",
+      outputSchema: studentProgressRosterPropsSchema,
+      view: { name: "student-progress-roster" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading roster…",
+        "openai/toolInvocation/invoked": "Roster loaded",
       },
     },
     async ({ course_id, status, limit, offset }, ctx) => {
@@ -931,10 +942,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "school-overview",
-        invoking: "Crunching school stats…",
-        invoked: "School overview ready",
+      outputSchema: schoolOverviewPropsSchema,
+      view: { name: "school-overview" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Crunching school stats…",
+        "openai/toolInvocation/invoked": "School overview ready",
       },
     },
     async (_input, ctx) => {
@@ -1187,10 +1199,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "confusion-hotspots",
-        invoking: "Analysing student results…",
-        invoked: "Hotspots ready",
+      outputSchema: confusionHotspotsPropsSchema,
+      view: { name: "confusion-hotspots" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Analysing student results…",
+        "openai/toolInvocation/invoked": "Hotspots ready",
       },
     },
     async (input, ctx) => {

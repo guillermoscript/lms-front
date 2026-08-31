@@ -1,6 +1,9 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import {
   createEmptyCard,
   fsrs,
@@ -12,6 +15,7 @@ import {
 } from "ts-fsrs";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import { propsSchema as flashcardsPropsSchema } from "../../views/flashcards/schema.js";
 
 /**
  * Flashcards + FSRS spaced repetition (Epic #348 Phase 4, issue #355;
@@ -112,7 +116,7 @@ async function resolveCardCourse(
   return input.course_id ?? null;
 }
 
-export function registerFlashcardTools(server: MCPServer) {
+export function registerFlashcardTools(server: LmsServer) {
   // ── lms_create_review_cards ─────────────────────────────────────────────────
   server.tool(
     {
@@ -204,10 +208,11 @@ export function registerFlashcardTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "flashcards",
-        invoking: "Gathering your due cards...",
-        invoked: "Review session ready",
+      outputSchema: flashcardsPropsSchema,
+      view: { name: "flashcards" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Gathering your due cards...",
+        "openai/toolInvocation/invoked": "Review session ready",
       },
     },
     async (input, ctx) => {

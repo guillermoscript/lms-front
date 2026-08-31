@@ -1,10 +1,15 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, PaginationSchema } from "../format.js";
 import { getPlatformDomain } from "../env.js";
+import { propsSchema as myCertificatesPropsSchema } from "../../views/my-certificates/schema.js";
+import { propsSchema as courseCertificatesPropsSchema } from "../../views/course-certificates/schema.js";
 
 /**
  * Certificate tools — the credential half of the LMS, which had no MCP surface
@@ -241,7 +246,7 @@ async function resolveTargetStudent(
   return target;
 }
 
-export function registerCertificateTools(server: MCPServer) {
+export function registerCertificateTools(server: LmsServer) {
   // ── lms_my_certificates ───────────────────────────────────────────────────
   server.tool(
     {
@@ -262,10 +267,11 @@ export function registerCertificateTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "my-certificates",
-        invoking: "Loading your certificates...",
-        invoked: "Certificates ready",
+      outputSchema: myCertificatesPropsSchema,
+      view: { name: "my-certificates" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading your certificates...",
+        "openai/toolInvocation/invoked": "Certificates ready",
       },
     },
     async (input, ctx) => {
@@ -534,10 +540,11 @@ export function registerCertificateTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "course-certificates",
-        invoking: "Loading certificates...",
-        invoked: "Certificate roster ready",
+      outputSchema: courseCertificatesPropsSchema,
+      view: { name: "course-certificates" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading certificates...",
+        "openai/toolInvocation/invoked": "Certificate roster ready",
       },
     },
     async (input, ctx) => {
