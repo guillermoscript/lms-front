@@ -1480,6 +1480,42 @@ export type Database = {
           },
         ]
       }
+      cron_runs: {
+        Row: {
+          completed_at: string | null
+          error: string | null
+          id: number
+          request_id: number | null
+          requested_at: string
+          response: Json | null
+          route: string
+          scheduler: string
+          status_code: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error?: string | null
+          id?: number
+          request_id?: number | null
+          requested_at?: string
+          response?: Json | null
+          route: string
+          scheduler?: string
+          status_code?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          error?: string | null
+          id?: number
+          request_id?: number | null
+          requested_at?: string
+          response?: Json | null
+          route?: string
+          scheduler?: string
+          status_code?: number | null
+        }
+        Relationships: []
+      }
       device_push_tokens: {
         Row: {
           created_at: string
@@ -6753,6 +6789,7 @@ export type Database = {
         Returns: string
       }
       get_tenant_plan_usage: { Args: { _tenant_id: string }; Returns: Json }
+      invoke_cron_route: { Args: { _route: string }; Returns: number }
       observe_solana_platform_payment: {
         Args: { _request_id: string; _signature: string; _tenant_id: string }
         Returns: {
@@ -7016,6 +7053,7 @@ export type Database = {
         Returns: undefined
       }
       publish_scheduled_lessons: { Args: never; Returns: undefined }
+      record_cron_run_results: { Args: never; Returns: number }
       redeem_store_item: {
         Args: { _item_id: string; _tenant_id: string; _user_id: string }
         Returns: Json

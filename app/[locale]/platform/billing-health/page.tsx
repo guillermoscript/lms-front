@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { IconCircleCheck } from '@tabler/icons-react'
 import {
   getAtRiskTenants,
+  getLastPlanLimitSweep,
   getPlanConfigurationHealth,
 } from '@/app/actions/platform/billing-health'
 import type { AtRiskReason } from '@/lib/billing/billing-health'
@@ -27,9 +28,10 @@ function reasonLabel(reason: AtRiskReason, cutoffActive: boolean): string {
 }
 
 export default async function PlatformBillingHealthPage() {
-  const [atRisk, planHealth] = await Promise.all([
+  const [atRisk, planHealth, sweep] = await Promise.all([
     getAtRiskTenants(),
     getPlanConfigurationHealth(),
+    getLastPlanLimitSweep(),
   ])
 
   // The metric cards deliberately keep counting past-due tenants only, so the
@@ -196,6 +198,57 @@ export default async function PlatformBillingHealthPage() {
             </p>
           </div>
         )}
+      </PlatformSection>
+
+      {/*
+        Enforcement liveness (#660). Every countdown below assumes the nightly
+        sweep runs; this is the ledger that proves it did. pg_cron writes a
+        `cron_runs` row per invocation, so "never" here means no scheduler has
+        reached the route from the database yet.
+      */}
+      <PlatformSection
+        title="Plan-limit sweep"
+        description="Last nightly enforce-plan-limits run from the pg_cron scheduler. Reminders, cutoffs and clearances only happen when this runs."
+        data-testid="billing-health-sweep"
+        className="mb-8"
+      >
+        <PlatformPanel>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm" data-state={sweep.state}>
+            <Badge
+              variant={sweep.state === 'ok' ? 'secondary' : sweep.state === 'running' ? 'outline' : 'destructive'}
+              data-testid="billing-health-sweep-state"
+            >
+              {sweep.state === 'ok' && 'Healthy'}
+              {sweep.state === 'running' && 'Running'}
+              {sweep.state === 'failed' && 'Failed'}
+              {sweep.state === 'unconfigured' && 'Not configured'}
+              {sweep.state === 'never' && 'Never run'}
+            </Badge>
+            {sweep.requestedAt ? (
+              <span className="text-muted-foreground">
+                Last run {format(new Date(sweep.requestedAt), 'PPp')}
+                {sweep.statusCode !== null && ` · HTTP ${sweep.statusCode}`}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">
+                No pg_cron invocation recorded. Create the <code>cron_secret</code> and{' '}
+                <code>cron_base_url</code> Vault secrets (docs/CRON_RUNBOOK.md §1).
+              </span>
+            )}
+            {sweep.summary && (
+              <span className="text-muted-foreground">
+                {String(sweep.summary.none ?? 0)} unchanged · {String(sweep.summary.scheduled ?? 0)} cutoffs scheduled ·{' '}
+                {String(sweep.summary.cleared ?? 0)} cleared · {String(sweep.summary.errors ?? 0)} errors ·{' '}
+                {String(sweep.summary.notifyFailures ?? 0)} notify failures
+              </span>
+            )}
+            {sweep.error && (
+              <span className="text-destructive" data-testid="billing-health-sweep-error">
+                {sweep.error}
+              </span>
+            )}
+          </div>
+        </PlatformPanel>
       </PlatformSection>
 
       <StatStrip stats={metrics} className="mb-8" data-testid="billing-health-metrics" />

@@ -22,6 +22,29 @@ these routes.
 - pg_cron runs `league-weekly-rollover` (Mondays 00:05) *inside* the database.
   The `league-rollover` route is a deliberate second path to the same idempotent
   RPC, not a duplicate to remove.
+- pg_cron is also **primary for `enforce-plan-limits`** (#660): job
+  `enforce-plan-limits-daily` at `0 3 * * *` calls
+  `public.invoke_cron_route('enforce-plan-limits')`, which reaches the route
+  over HTTP with pg_net using `cron_secret` + `cron_base_url` from Supabase
+  Vault. GitHub's `0 3` slot for that route is the fallback — GitHub has never
+  been observed firing a daily schedule for this repo. Every invocation lands
+  in `public.cron_runs`; `record-cron-run-results` (every 5 min) fills in the
+  HTTP status/body, and `/platform/billing-health` shows the last sweep.
+
+  ```sql
+  -- once per environment (values never leave Vault)
+  select vault.create_secret('<CRON_SECRET>',          'cron_secret');
+  select vault.create_secret('https://preciopana.com', 'cron_base_url');
+  -- is it alive?
+  select route, requested_at, status_code, response, error
+    from public.cron_runs order by requested_at desc limit 5;
+  -- run it now
+  select public.invoke_cron_route('enforce-plan-limits');
+  ```
+
+  With the Vault secrets missing the job records a `cron_runs` row with
+  `error` set and does nothing else, so an unconfigured environment is loud on
+  the billing-health page rather than silently idle.
 
 Running two schedulers means every route fires twice. The routes tolerate it,
 but it doubles load and makes logs unreadable. **If you move to Dokploy
@@ -63,7 +86,7 @@ gh workflow enable cron.yml
 | `expire-subscriptions` | `0 0` | Lapsed self-managed subscriptions (Solana, manual) keep their entitlements forever |
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
 | `expire-platform-subscriptions` | `0 2` | No renewal reminders, no grace period, no downgrade to free: a school that stopped paying keeps its paid plan |
-| `enforce-plan-limits` | `0 3` | A tenant that grows past its plan limits with no plan-change event is never cut off, and a pending cutoff never completes |
+| `enforce-plan-limits` | `0 3` | pg_cron is primary (#660); this is the fallback. If neither runs: a tenant that grows past its plan limits with no plan-change event is never cut off, a pending cutoff never completes, and no reminder email is ever sent |
 | `solana-pull` | **never** | See §5 |
 
 Every route is idempotent, so a late or repeated run is safe. `league-rollover`
@@ -84,7 +107,7 @@ Three signals, and they catch different things:
 
 | Signal | Raised by | Means |
 |---|---|---|
-| Job failure | GitHub Actions (the job exits non-zero) | A route answered non-200 |
+| Job failure | GitHub Actions (the job exits non-zero) | A route answered non-200. A deliberately unconfigured rail (`solana-reconcile`, `solana-pull` without Solana env) answers **200 `{ skipped }`**, not 503 (#660) — absence is not failure |
 | Check-in `error` | Sentry | Same event, visible next to the run history |
 | **Missed check-in** | Sentry | The run never happened at all |
 

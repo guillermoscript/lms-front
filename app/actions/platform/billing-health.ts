@@ -239,3 +239,58 @@ export async function getPlanConfigurationHealth(): Promise<PlanConfigurationHea
     partiallyPriced: findPartiallyPricedPlans(plans, prices, { providerStatuses }),
   }
 }
+
+export interface PlanLimitSweepStatus {
+  /** `never` when no pg_cron invocation has ever been recorded. */
+  state: 'never' | 'running' | 'ok' | 'failed' | 'unconfigured'
+  requestedAt: string | null
+  completedAt: string | null
+  statusCode: number | null
+  error: string | null
+  /** The route's own JSON body when it answered 200 (`none`, `scheduled`, …). */
+  summary: Record<string, unknown> | null
+}
+
+/**
+ * Last `enforce-plan-limits` invocation from the pg_cron ledger (#660), so the
+ * page can say whether enforcement is alive rather than assuming a scheduler
+ * somewhere is doing its job. `cron_runs` is written by `invoke_cron_route()`
+ * and completed by `record_cron_run_results()` every 5 minutes; a row with no
+ * completion inside that window is simply still running.
+ */
+export async function getLastPlanLimitSweep(): Promise<PlanLimitSweepStatus> {
+  await verifySuperAdmin()
+  const admin = createAdminClient()
+
+  const { data: run } = await admin
+    .from('cron_runs')
+    .select('requested_at, completed_at, status_code, response, error')
+    .eq('route', 'enforce-plan-limits')
+    .order('requested_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!run) {
+    return { state: 'never', requestedAt: null, completedAt: null, statusCode: null, error: null, summary: null }
+  }
+
+  const summary =
+    run.response && typeof run.response === 'object' && !Array.isArray(run.response)
+      ? (run.response as Record<string, unknown>)
+      : null
+
+  let state: PlanLimitSweepStatus['state']
+  if (!run.completed_at) state = 'running'
+  else if (run.error?.startsWith('vault secrets')) state = 'unconfigured'
+  else if (run.status_code === 200 && !run.error) state = 'ok'
+  else state = 'failed'
+
+  return {
+    state,
+    requestedAt: run.requested_at,
+    completedAt: run.completed_at,
+    statusCode: run.status_code,
+    error: run.error,
+    summary,
+  }
+}
