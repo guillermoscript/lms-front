@@ -57,6 +57,14 @@ ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_SENTRY_DSN
 
+# Product analytics (OpenPanel, self-hosted). All three are inlined into the
+# bundles at build time; unset here means the tracker never renders and every
+# server-side track() no-ops — which is exactly the "no data at all" failure.
+# The runtime-only OPENPANEL_CLIENT_SECRET lives in the Dokploy service env.
+ARG NEXT_PUBLIC_OPENPANEL_CLIENT_ID
+ARG NEXT_PUBLIC_OPENPANEL_API_URL
+ARG NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN
+
 # Not NEXT_PUBLIC_, but still build-time only: withSentryConfig uses it to upload
 # source maps during `npm run build`. Without it every browser stack in Sentry is
 # unreadable minified chunk offsets. It is consumed in this stage and never
@@ -95,6 +103,9 @@ ENV NEXT_PUBLIC_PLATFORM_DOMAIN=$NEXT_PUBLIC_PLATFORM_DOMAIN
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_OPENPANEL_CLIENT_ID=$NEXT_PUBLIC_OPENPANEL_CLIENT_ID
+ENV NEXT_PUBLIC_OPENPANEL_API_URL=$NEXT_PUBLIC_OPENPANEL_API_URL
+ENV NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN=$NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN
 ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 ENV SENTRY_RELEASE=$SENTRY_RELEASE
 

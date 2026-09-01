@@ -218,6 +218,24 @@ export const ANALYTICS_EVENTS = {
   MCP_TOOL_CALLED: 'mcp_tool_called',
   MCP_TOOL_FAILED: 'mcp_tool_failed',
   MCP_SESSION_STARTED: 'mcp_session_started',
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Observability cross-link (Sentry ↔ OpenPanel)
+  //
+  // Sentry is the ONLY error store — stack traces, breadcrumbs, replays and
+  // grouping live there and nowhere else. This event is a POINTER, not a
+  // duplicate: one lightweight row per Sentry error event, carrying the
+  // `sentry_event_id`, so error rate can sit on the same charts as the
+  // funnels (errors per tenant, errors around checkout) and any spike is one
+  // copy-paste away from the full Sentry event
+  // (search `id:<sentry_event_id>` in the Sentry issue stream).
+  //
+  // Emitters: `beforeSend` in `instrumentation-client.ts` (browser) and
+  // `sentry.server.config.ts` (node). Do NOT emit it anywhere else, and do
+  // NOT attach messages, stacks or user agents — that would be the duplicate
+  // error-tracking system this design exists to avoid.
+  // ───────────────────────────────────────────────────────────────────────
+  ERROR_CAPTURED: 'error_captured',
 } as const
 
 /** Every event name the platform is allowed to emit. */
@@ -290,6 +308,17 @@ export interface KnownEventProperties {
     plan: string
     current: number
     max: number | null
+  }
+
+  // Observability cross-link. A row without `sentry_event_id` is unjoinable
+  // and therefore worthless — type it so it cannot be omitted.
+  error_captured: {
+    /** Sentry event id — `id:<value>` in Sentry search jumps straight to it. */
+    sentry_event_id: string
+    /** Where it was captured. */
+    source: 'client' | 'server'
+    /** Exception class (`TypeError`) — coarse grouping only, never the message. */
+    error_name?: string
   }
 }
 

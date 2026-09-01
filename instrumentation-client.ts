@@ -1,4 +1,12 @@
 import * as Sentry from "@sentry/nextjs";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { shouldDropEvent } from "@/lib/analytics/exclusions";
+
+// The OpenPanel tracker installs a queueing `window.op` stub before the script
+// loads, so calling it here is safe at any point in the page lifecycle — but it
+// only exists at all when `<OpenPanelComponent>` rendered (client id configured
+// and the environment is tracked), so it must be feature-detected every time.
+type OpenPanelGlobal = (method: "track", name: string, properties?: Record<string, unknown>) => void;
 
 // The feedback dialog is built by Sentry outside React, so it can't reach
 // next-intl's messages. `<html lang>` is server-rendered and therefore already
@@ -59,6 +67,33 @@ Sentry.init({
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
+  // Sentry ↔ OpenPanel cross-link. Sentry stays the only error store; OpenPanel
+  // gets ONE pointer event (`error_captured`, carrying the `sentry_event_id`)
+  // per captured error so error rate can be charted next to the product funnels
+  // and joined back to the full Sentry event by id. Nothing here may ever block
+  // or drop the Sentry event itself — the pointer is strictly best-effort.
+  beforeSend(event) {
+    try {
+      const op = (window as { op?: OpenPanelGlobal }).op;
+      if (
+        typeof op === "function" &&
+        event.event_id &&
+        !shouldDropEvent({ path: window.location.pathname })
+      ) {
+        op("track", ANALYTICS_EVENTS.ERROR_CAPTURED, {
+          sentry_event_id: event.event_id,
+          source: "client",
+          error_name: event.exception?.values?.[0]?.type,
+        });
+        // Reverse lookup: from a Sentry event, `openpanel.pointer:sent` says a
+        // matching `error_captured` row exists on the OpenPanel side.
+        event.tags = { ...event.tags, "openpanel.pointer": "sent" };
+      }
+    } catch {
+      // Telemetry must never break telemetry.
+    }
+    return event;
+  },
   integrations: [
     Sentry.replayIntegration(),
     Sentry.feedbackIntegration({

@@ -3,6 +3,7 @@ import { Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProgress } from "@/components/shared/route-progress";
+import { SentryUserBinder } from "@/components/sentry-user-binder";
 import { FeedbackButton } from "@/components/shared/feedback-button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
@@ -193,6 +194,7 @@ export default async function RootLayout({
                 />
               ) : null}
               <RouteProgress />
+              <SentryUserBinder />
               {children}
               <FeedbackButton />
               <Toaster />

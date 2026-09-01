@@ -621,3 +621,36 @@ That third one closes the loop: it measures whether the daily digest (#397) actu
 3. **Is per-tenant analytics a product feature** (Pro/Business perk) or purely internal? Self-hosting makes this *more* attractive — unlimited projects at zero marginal cost. Recommendation: internal now, revisit post-launch.
 4. **Should this be one issue or an epic?** Recommendation: epic, one issue per phase — phases 2/3/4 parallelize cleanly, and §9/§10 add two more (mobile, MCP) that are independent of everything else.
 5. **Instrument the MCP server in this epic or separately?** Recommendation: separate issue — different repo boundary, different env vars, one middleware hook. High insight-per-hour (§10.2).
+
+## 12. Sentry ↔ OpenPanel cross-link (shipped)
+
+Two telemetry systems, one rule: **Sentry is the only error store.** Stack
+traces, breadcrumbs, replays and issue grouping never leave it, and OpenPanel
+never grows a duplicate error-tracking table. What the cross-link adds is a
+*join*, in both directions, with exactly one lightweight pointer per error:
+
+- **OpenPanel → Sentry.** Every Sentry-captured error also emits one
+  `error_captured` product event (see `lib/analytics/events.ts`) carrying only
+  `sentry_event_id`, `source: 'client' | 'server'` and the exception class.
+  That puts error rate on the same charts as the funnels (errors per tenant,
+  errors around checkout) and any spike is a copy-paste away from the full
+  event: search `id:<sentry_event_id>` in Sentry.
+- **Sentry → OpenPanel.** Events that produced a pointer are tagged
+  `openpanel.pointer:sent`. The shared key for everything else is the Supabase
+  auth user id: OpenPanel stores it as `profileId` (identify at login/signup),
+  Sentry as `user.id`, kept in sync for the whole tab lifetime by
+  `components/sentry-user-binder.tsx` in the root layout (OpenPanel's tracker
+  persists its binding itself; `Sentry.setUser` is memory-only, hence the
+  binder).
+
+Emitters live in `instrumentation-client.ts` (`beforeSend`, browser) and
+`sentry.server.config.ts` (`beforeSend`, node) and NOWHERE else. Both are
+fire-and-forget and swallow everything — the pointer must never delay, drop or
+break the Sentry event. The client leg respects `shouldDropEvent()` (§9.6);
+loop-safety holds because `lib/analytics/server.ts` reports its own failures
+only as breadcrumbs, never as captured events.
+
+**No duplicates, by construction:** the Sentry feedback dialog stays
+Sentry-only, `error_captured` carries no message/stack/user-agent, and
+`beforeSend` runs exactly once per event — so each error exists once in Sentry
+and at most once, as a pointer, in OpenPanel.
