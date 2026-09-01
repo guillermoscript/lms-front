@@ -25,4 +25,35 @@ Sentry.init({
   // Skip Sentry's OTEL setup — we register our own NodeTracerProvider
   // with LangfuseSpanProcessor for AI observability.
   skipOpenTelemetrySetup: true,
+
+  // Sentry ↔ OpenPanel cross-link, server leg. Same contract as the client's
+  // `beforeSend` in `instrumentation-client.ts`: Sentry keeps the error, an
+  // `error_captured` pointer event (just the `sentry_event_id`) goes to
+  // OpenPanel. Fire-and-forget — `track()` can never throw, and delaying or
+  // failing the Sentry event over analytics would invert the priorities.
+  // Loop-safety: `lib/analytics/server.ts` reports its own failures only as
+  // breadcrumbs, never as captured events, so this cannot ping-pong.
+  beforeSend(event) {
+    try {
+      if (event.event_id) {
+        // Dynamic import keeps Sentry init free of the analytics module (and
+        // its vendor SDK) on cold start; by the first error it is warm.
+        void import("@/lib/analytics/server").then(({ track }) =>
+          track(
+            "error_captured",
+            {
+              sentry_event_id: event.event_id as string,
+              source: "server",
+              error_name: event.exception?.values?.[0]?.type,
+            },
+            { userId: event.user?.id != null ? String(event.user.id) : null }
+          )
+        ).catch(() => undefined);
+        event.tags = { ...event.tags, "openpanel.pointer": "sent" };
+      }
+    } catch {
+      // Telemetry must never break telemetry.
+    }
+    return event;
+  },
 });
