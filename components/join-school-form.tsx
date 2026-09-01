@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -20,7 +19,6 @@ interface JoinSchoolFormProps {
 export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
   const handleJoin = async () => {
     setIsJoining(true)
@@ -31,16 +29,19 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
 
       if (!result.success) {
         setError(result.error || 'Failed to join school. Please try again.')
+        setIsJoining(false)
         return
       }
 
-      // Redirect to student dashboard
-      router.push('/dashboard/student')
-      router.refresh()
+      // Hard navigation, not router.push + router.refresh: the pair interleaves
+      // two Router transitions and crashes Next's app-router with React #310
+      // (LMS-FRONT-9K/8F, upstream vercel/next.js#78396) — and the membership
+      // just changed, so a full request through proxy.ts with fresh claims is
+      // what we want anyway. The button stays disabled until the page unloads.
+      window.location.assign('/dashboard/student')
     } catch (err) {
       console.error('Join error:', err)
       setError('An unexpected error occurred')
-    } finally {
       setIsJoining(false)
     }
   }
@@ -61,7 +62,7 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
         )}
 
         <div className="space-y-2">
-          <h4 className="font-medium text-sm">What you'll get:</h4>
+          <h4 className="font-medium text-sm">What you&apos;ll get:</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />
