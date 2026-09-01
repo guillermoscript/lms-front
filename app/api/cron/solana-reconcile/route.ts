@@ -70,7 +70,11 @@ export async function GET(req: NextRequest) {
   const rpcUrl = process.env.SOLANA_RPC_URL
   const platformWallet = process.env.SOLANA_PLATFORM_WALLET
   if (!rpcUrl || !platformWallet) {
-    return NextResponse.json({ error: 'Solana not configured' }, { status: 503 })
+    // A rail that is deliberately not configured is not a failure (#660): a 503
+    // here failed the */10 scheduler run every ten minutes in prod and buried
+    // the real reconcilers' results under permanent red. 200 + `skipped` keeps
+    // the run green and the Sentry check-in `ok`, and the body still says why.
+    return NextResponse.json({ success: true, skipped: 'solana_not_configured' })
   }
 
   const admin = getSupabaseAdmin()

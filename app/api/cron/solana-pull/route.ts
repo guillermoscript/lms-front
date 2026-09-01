@@ -74,7 +74,9 @@ export async function GET(req: NextRequest) {
   const platformWallet = process.env.SOLANA_PLATFORM_WALLET
   const mintEnv = process.env.SOLANA_USDC_MINT
   if (!rpcUrl || !pullerSecret || !platformWallet || !mintEnv) {
-    return NextResponse.json({ error: 'Solana subscriptions not configured' }, { status: 503 })
+    // Deliberately unconfigured rail → 200 + `skipped`, not 503 (see
+    // solana-reconcile, #660). This route is manual-only anyway.
+    return NextResponse.json({ success: true, skipped: 'solana_subscriptions_not_configured' })
   }
 
   const admin = getSupabaseAdmin()
