@@ -6,6 +6,7 @@ import { text } from "mcp-use";
 import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, PaginationSchema } from "../format.js";
+import { courseLimitHeadroomError, isPlanLimitError, planLimitMessage } from "../plan-limits.js";
 import { propsSchema as courseDashboardPropsSchema } from "../../views/course-dashboard/schema.js";
 import { propsSchema as courseDetailPropsSchema } from "../../views/course-detail/schema.js";
 
@@ -232,6 +233,13 @@ export function registerCourseTools(server: LmsServer) {
 
       try {
         const supabase = session.getClient();
+
+        // Plan-limit pre-check (#658). The DB trigger behind it is the
+        // authoritative gate; this just gives the agent the upgrade message
+        // before it spends a round-trip on an insert that will be refused.
+        const headroomError = await courseLimitHeadroomError(supabase, session.getTenantId());
+        if (headroomError) return errorResult(headroomError);
+
         const { data, error } = await supabase
           .from("courses")
           .insert({
@@ -246,7 +254,12 @@ export function registerCourseTools(server: LmsServer) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return errorResult(`Creating course: ${error.message}`);
+        if (error)
+          return errorResult(
+            isPlanLimitError(error)
+              ? await planLimitMessage(supabase, session.getTenantId(), "courses")
+              : `Creating course: ${error.message}`
+          );
 
         return ok(
           { id: data.course_id, title: data.title, status: data.status },
@@ -332,6 +345,21 @@ export function registerCourseTools(server: LmsServer) {
           return okText("No fields to update.");
         }
 
+        // Un-archiving consumes a course slot exactly like creating one (#658).
+        // Only a transition OUT of `archived` is checked — changing an already
+        // counted course between draft/published never touches the limit.
+        if (input.status !== undefined && input.status !== "archived") {
+          const { data: current } = await supabase
+            .from("courses")
+            .select("status")
+            .eq("course_id", input.course_id)
+            .maybeSingle();
+          if (current?.status === "archived") {
+            const headroomError = await courseLimitHeadroomError(supabase, session.getTenantId());
+            if (headroomError) return errorResult(headroomError);
+          }
+        }
+
         const { data, error } = await supabase
           .from("courses")
           .update(updateData)
@@ -339,7 +367,12 @@ export function registerCourseTools(server: LmsServer) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return errorResult(`Updating course: ${error.message}`);
+        if (error)
+          return errorResult(
+            isPlanLimitError(error)
+              ? await planLimitMessage(supabase, session.getTenantId(), "courses")
+              : `Updating course: ${error.message}`
+          );
 
         return ok(
           { id: data.course_id, title: data.title, status: data.status },

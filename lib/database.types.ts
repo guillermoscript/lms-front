@@ -6641,6 +6641,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      assert_plan_limit_headroom: {
+        Args: { _resource: string; _tenant_id: string }
+        Returns: undefined
+      }
       calculate_platform_billing_period: {
         Args: {
           _current_period_end: string | null
@@ -6726,6 +6730,10 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      count_plan_limit_usage: {
+        Args: { _resource: string; _tenant_id: string }
+        Returns: number
+      }
       downgrade_platform_subscription_if_current: {
         Args: {
           _payment_provider: string
@@ -6744,6 +6752,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_tenant_plan_usage: { Args: { _tenant_id: string }; Returns: Json }
       observe_solana_platform_payment: {
         Args: { _request_id: string; _signature: string; _tenant_id: string }
         Returns: {
@@ -7074,6 +7083,10 @@ export type Database = {
       settle_expired_checkout: {
         Args: { _transaction_id: number }
         Returns: string
+      }
+      tenant_plan_limit: {
+        Args: { _key: string; _tenant_id: string }
+        Returns: number
       }
       update_token_last_used: {
         Args: { ip_input: unknown; token_id_input: number }

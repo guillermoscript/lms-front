@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
+import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
@@ -124,11 +125,7 @@ export async function createCourse(courseData: CourseFormData) {
   // Check plan limits
   const limitCheck = await checkCourseLimit()
   if (!limitCheck.canCreate) {
-    throw new Error(
-      `Your ${limitCheck.plan} plan is limited to ${limitCheck.limit} courses. ` +
-      `You currently have ${limitCheck.currentCount} courses. ` +
-      `Please upgrade your plan to create more courses.`
-    )
+    throw new Error(courseLimitMessage(limitCheck))
   }
 
   // Use admin client for insert — auth and role are already validated above.
@@ -163,6 +160,12 @@ export async function createCourse(courseData: CourseFormData) {
     .single()
 
   if (error) {
+    // The `enforce_course_plan_limit` trigger (#658) is the authoritative check;
+    // the pre-check above can lose a race to a concurrent insert or an MCP
+    // write, and this is the message it would have shown.
+    if (isPlanLimitError(error)) {
+      throw new Error(courseLimitMessage(await checkCourseLimit()))
+    }
     console.error('Failed to create course:', error)
     throw new Error(`Failed to create course: ${error.message}`)
   }
