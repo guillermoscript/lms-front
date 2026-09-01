@@ -9,6 +9,7 @@ import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
+import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { aiGenerationLimiter } from '@/lib/rate-limit'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
@@ -111,10 +112,7 @@ export async function generateStarterCourse(
     // tokens so free-plan owners see the upgrade message, not a silent error.
     const limitCheck = await checkCourseLimit()
     if (!limitCheck.canCreate) {
-      throw new Error(
-        `Your ${limitCheck.plan} plan is limited to ${limitCheck.limit} courses. ` +
-          `You currently have ${limitCheck.currentCount} courses.`
-      )
+      throw new Error(courseLimitMessage(limitCheck))
     }
 
     analyticsCtx = { userId, tenantId, role }
@@ -160,7 +158,13 @@ export async function generateStarterCourse(
       .select('course_id')
       .single()
 
-    if (courseError) throw courseError
+    if (courseError) {
+      // Trigger-level rejection (#658) — same copy as the pre-check above.
+      if (isPlanLimitError(courseError)) {
+        throw new Error(courseLimitMessage(await checkCourseLimit()))
+      }
+      throw courseError
+    }
 
     const lessonRows = outline.lessons.slice(0, MAX_LESSONS).map((lesson, index) => ({
       course_id: course.course_id,

@@ -7,6 +7,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { assertReadyToPublish } from '@/lib/payments/tenant-payment-readiness'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
+import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { getProductCreationReadiness } from '@/lib/admin/product-creation/validation'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
@@ -58,6 +59,19 @@ function buildPostRegistrationStepRows(steps: ProductPostRegistrationStepInput[]
       sort_order: index,
       is_active: true,
     }))
+}
+
+/**
+ * The wizard RPC inserts the course inside one transaction, so the
+ * `enforce_course_plan_limit` trigger (#658) can reject it after the pre-check
+ * passed (a concurrent create, an MCP write). Surface the same upgrade copy the
+ * pre-check shows instead of the raw `plan_limit_exceeded:courses`.
+ */
+async function wizardErrorMessage(rpcError: { message: string; code?: string }): Promise<string> {
+  if (isPlanLimitError(rpcError)) {
+    return courseLimitMessage(await checkCourseLimit())
+  }
+  return rpcError.message
 }
 
 function revalidateOfferingPaths() {
@@ -604,7 +618,7 @@ export async function saveProductCreationWizard(
         }
       )
 
-      if (rpcError) throw new Error(rpcError.message)
+      if (rpcError) throw new Error(await wizardErrorMessage(rpcError))
 
       const freeResult = rpcResult as { course_id: number; product_id: number }
 
@@ -807,7 +821,7 @@ export async function saveProductCreationWizard(
       if (provider && createdProviderObjects.length > 0) {
         await compensateProviderObjects(provider, createdProviderObjects)
       }
-      throw new Error(rpcError.message)
+      throw new Error(await wizardErrorMessage(rpcError))
     }
 
     // Commit succeeded — safe to archive the superseded provider objects.
