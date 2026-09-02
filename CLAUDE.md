@@ -166,6 +166,8 @@ NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lvh.me for local dev, lmsplatform.com 
 
 E2E tests in `tests/playwright/` — 33 spec files (tenant isolation, auth security, payment flows, enrollment, entitlements, gamification, community, i18n, platform panel, plan change, teacher/admin CRUD). Read the directory rather than a list here; it changes often. Highest-priority: `tenant-isolation.spec.ts`, `auth-security.spec.ts`, `payment-flows.spec.ts`, `evaluations-security.spec.ts`.
 
+Plan-gate specs (`plan-limit-surfaces`, `access-cutoff-lifecycle`, `plan-feature-tiers`, `platform-billing-stripe-webhook`) each own a dedicated tenant and a hidden `platform_plans` row with tiny limits (`tests/playwright/utils/plan-gate-fixtures.ts`) — every enforcement path reads the plan by slug with no `is_active` filter, so "at the cap" costs one row, not fifty users. Never move the seeded tenants off their plan.
+
 The Playwright config has no `webServer` — start `npm run dev` yourself first, use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
 
 Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
