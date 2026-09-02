@@ -33,8 +33,16 @@ export interface PlanInfo {
 }
 
 /**
- * Which plan is needed to unlock a given feature.
- * Used for upgrade nudges.
+ * Which plan is needed to unlock a given feature — the pricing promise.
+ *
+ * Every key here is enforced on the server (issue #662): either through
+ * `requirePlanFeature()` / `hasPlanFeature()` in lib/plans/server.ts, or by the
+ * database / edge functions for the gamification keys. A contract test
+ * (tests/unit/plan-feature-gate-contract.test.ts) fails the build when a key is
+ * added here without a gate site, so a feature cannot be sold and not enforced.
+ *
+ * `api_access` was removed 2026-09-01: the MCP server stays open on every plan
+ * (role-gated only), so it is no longer something a plan unlocks.
  */
 export const FEATURE_REQUIRED_PLAN: Record<string, string> = {
   leaderboard: 'starter',
@@ -48,9 +56,33 @@ export const FEATURE_REQUIRED_PLAN: Record<string, string> = {
   custom_branding: 'business',
   custom_domain: 'business',
   priority_support: 'business',
-  api_access: 'enterprise',
   white_label: 'enterprise',
 }
+
+/**
+ * Canonical feature list for every comparison surface (public pricing table,
+ * admin plan comparison, upgrade nudge). One list so the pricing page, the
+ * upgrade page and the nudge can never disagree about what a plan includes.
+ * Labels are the English fallback; `messages/*.json` `featureGate.features.*`
+ * carries the translations.
+ */
+export const PLAN_FEATURE_LABELS: Record<string, string> = {
+  leaderboard: 'Leaderboard',
+  achievements: 'Achievements',
+  store: 'Point Store',
+  community: 'Community',
+  certificates: 'Certificates',
+  analytics: 'Analytics',
+  ai_grading: 'AI Auto-Grading',
+  voice_exercises: 'Voice Exercises',
+  remove_branding: 'Remove "Powered by" branding',
+  custom_branding: 'Custom Branding',
+  custom_domain: 'Custom Domain',
+  white_label: 'White-Label',
+  priority_support: 'Priority Support',
+}
+
+export const PLAN_FEATURE_KEYS = Object.keys(PLAN_FEATURE_LABELS)
 
 /**
  * Plan display prices (monthly) for upgrade nudges

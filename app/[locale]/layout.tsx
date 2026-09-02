@@ -20,6 +20,7 @@ import type { StoredPreset } from '@/lib/themes/presets';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
 import { OpenPanelComponent } from '@openpanel/nextjs';
 import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
+import { hasPlanFeature } from '@/lib/plans/server';
 
 const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
 
@@ -134,16 +135,31 @@ export default async function RootLayout({
     }, {});
   }
 
+  // Custom branding is a Business+ feature (#662). Below that the school's
+  // logo and name still apply — a school must stay recognisable — but its
+  // colours, theme preset, radius and font are ignored in favour of the
+  // platform palette. Both the server <style> and the client re-applier read
+  // from this object, so nulling the fields here gates both.
+  const customBranding = tenant ? await hasPlanFeature(tenant.id, 'custom_branding') : false;
+
   const tenantInfo = tenant ? {
     id: tenant.id,
     slug: tenant.slug,
     name: tenantSettings.site_name?.value || tenant.name,
     logo_url: tenantSettings.logo_url?.value || tenant.logo_url,
-    primary_color: tenantSettings.primary_color?.value || tenant.primary_color,
-    secondary_color: tenantSettings.secondary_color?.value || tenant.secondary_color,
+    // Empty string = "no override": TenantCssVarsServer only writes the brand
+    // vars when the value is truthy, so the platform palette applies.
+    primary_color: customBranding
+      ? tenantSettings.primary_color?.value || tenant.primary_color
+      : '',
+    secondary_color: customBranding
+      ? tenantSettings.secondary_color?.value || tenant.secondary_color
+      : '',
     plan: tenant.plan,
     settings: tenantSettings,
-    theme_preset: (tenantSettings.theme_preset as unknown as StoredPreset | undefined) ?? null,
+    theme_preset: customBranding
+      ? ((tenantSettings.theme_preset as unknown as StoredPreset | undefined) ?? null)
+      : null,
   } : null;
 
   // Product analytics. Renders nothing at all — no script tag, no network —

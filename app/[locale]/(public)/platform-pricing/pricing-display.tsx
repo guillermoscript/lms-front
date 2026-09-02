@@ -1,4 +1,5 @@
 'use client'
+import { PLAN_FEATURE_LABELS } from '@/lib/plans/features'
 
 import { useState } from 'react'
 import { IconCheck, IconX, IconArrowRight, IconSchool, IconSparkles } from '@tabler/icons-react'
@@ -18,19 +19,12 @@ interface PlanData {
   limits: { max_courses: number; max_students: number }
 }
 
-const FEATURE_CONFIG: { key: string; label: string; icon?: string }[] = [
-  { key: 'leaderboard', label: 'Leaderboard' },
-  { key: 'achievements', label: 'Achievements' },
-  { key: 'store', label: 'Point Store' },
-  { key: 'certificates', label: 'Certificates' },
-  { key: 'analytics', label: 'Analytics' },
-  { key: 'ai_grading', label: 'AI Auto-Grading' },
-  { key: 'custom_branding', label: 'Custom Branding' },
-  { key: 'custom_domain', label: 'Custom Domain' },
-  { key: 'api_access', label: 'API Access' },
-  { key: 'white_label', label: 'White-Label' },
-  { key: 'priority_support', label: 'Priority Support' },
-]
+// One list for every comparison surface (#662) — the pricing page must not
+// promise a feature the server does not gate, and `api_access` is no longer a
+// plan feature (the MCP server is open on every plan).
+const FEATURE_CONFIG: { key: string; label: string; icon?: string }[] = Object.entries(
+  PLAN_FEATURE_LABELS
+).map(([key, label]) => ({ key, label }))
 
 const PLAN_ACCENTS: Record<string, { gradient: string; glow: string; badge: string; ring: string }> = {
   free: {

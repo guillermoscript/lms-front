@@ -7,10 +7,31 @@ import { Switch } from '@/components/ui/switch'
 import { IconPalette, IconQrcode } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { useCertificateTemplate, COLOR_PRESETS } from './certificate-template-context'
+import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 
 export function DesignSection() {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
-    const { formData, updateDesignSetting, applyPreset } = useCertificateTemplate()
+    const { formData, updateDesignSetting, applyPreset, certificateTier } = useCertificateTemplate()
+
+    // Basic certificates (Free, #662) always use the platform design; the save
+    // action refuses custom colours/QR below the custom tier.
+    if (certificateTier !== 'custom') {
+        return (
+            <div className="space-y-5" data-testid="certificate-design-locked">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                        <IconPalette className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+                        {t('design')}
+                    </h2>
+                </div>
+                <div className="pl-[42px]">
+                    <UpgradeNudge feature="certificates" hint="certificatesBasic" compact />
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-5">

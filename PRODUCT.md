@@ -78,3 +78,15 @@ Missing data shows as missing. Ungraded shows as ungraded, not as zero. Estimate
 - **Bilingual layout resilience.** Every layout is checked in Spanish. Text does not truncate, wrap awkwardly, or overflow its container in either language.
 - **Long-session legibility.** Learning surfaces carry the longest reading sessions in the product. Body copy stays at 65 to 75ch, and both light and dark themes are genuinely usable rather than one being an afterthought.
 - **Real-world devices and networks.** Mid-range Android and constrained mobile bandwidth are the assumed baseline for the LATAM student audience, not an edge case.
+
+## Plan tiers
+
+What a plan unlocks is `platform_plans.features`, enforced on the server by `lib/plans/server.ts` (issue #662) and shown by `<UpgradeNudge/>` when refused. Two features are tiered rather than on/off:
+
+- **Analytics.** `basic` (Starter): user growth, engagement and course popularity on the admin analytics page. `advanced` (Pro+): everything in basic plus revenue reporting, CSV export, and the per-course confusion hotspots page for teachers. Free has no analytics page.
+- **Certificates.** `basic` (Free): every course can auto-issue certificates, on the platform design. `custom` (Starter+): the template's colours, logo, signature image and QR toggle. A school never loses the ability to issue a certificate by being on Free.
+
+Two more rules that are product decisions, not accidents:
+
+- **Custom branding (Business+) is colours, theme presets, radius and font.** A school's logo, favicon and name apply on every plan — a school must stay recognisable to its own students. Below Business the tenant's colours are ignored in favour of the platform palette.
+- **The MCP server is open on every plan**, gated by role only. `api_access` is not a plan feature and does not appear in the pricing comparison.

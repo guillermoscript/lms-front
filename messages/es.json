@@ -5264,7 +5264,27 @@
   "featureGate": {
     "locked": "Esta función requiere el plan {plan} o superior",
     "upgrade": "Actualizar a {plan}",
-    "upgradeToUnlock": "Actualiza a {plan} para desbloquear {feature}"
+    "upgradeToUnlock": "Actualiza a {plan} para desbloquear {feature}",
+    "youAreOn": "estás en {plan}",
+    "startingAt": "Desde ${price}/mes",
+    "analyticsBasic": "Los reportes de ingresos, la exportación CSV y los puntos de confusión por curso son parte de Analíticas avanzadas.",
+    "certificatesBasic": "Colores personalizados, logo, imagen de firma y código QR son parte de Certificados personalizados. Los certificados básicos usan el diseño de la plataforma.",
+    "brandingLocked": "Los colores, presets de tema y fuentes siguen la paleta de la plataforma en tu plan. Tu logo y el nombre de la escuela sí se aplican.",
+    "features": {
+      "leaderboard": "Tabla de posiciones",
+      "achievements": "Logros",
+      "store": "Tienda de puntos",
+      "community": "Comunidad",
+      "certificates": "Certificados personalizados",
+      "analytics": "Analíticas",
+      "ai_grading": "Calificación automática con IA",
+      "voice_exercises": "Ejercicios de voz",
+      "remove_branding": "Quitar la marca \"Powered by\"",
+      "custom_branding": "Marca personalizada",
+      "custom_domain": "Dominio personalizado",
+      "white_label": "Marca blanca",
+      "priority_support": "Soporte prioritario"
+    }
   },
   "limits": {
     "approaching": "Estás usando {current} de {limit} {resource}. Considera actualizar para más.",

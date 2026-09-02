@@ -12,6 +12,7 @@ import {
   isFirstConnectedProvider,
 } from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
+import { isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
 
 /**
  * A `tenant_settings.setting_value` JSONB payload. Every setting is stored as
@@ -147,6 +148,27 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
 }
 
 /**
+ * Settings that only a plan with `custom_branding` may write (#662). Logo,
+ * favicon and site name are identity, not branding, and stay open to every
+ * plan — see PRODUCT.md "Plan tiers".
+ */
+const CUSTOM_BRANDING_KEYS = new Set(['primary_color', 'secondary_color', 'theme_preset'])
+
+async function refuseBrandingBelowPlan(
+  tenantId: string,
+  keys: string[]
+): Promise<SettingsResponse | null> {
+  if (!keys.some((k) => CUSTOM_BRANDING_KEYS.has(k))) return null
+  try {
+    await requirePlanFeature(tenantId, 'custom_branding')
+    return null
+  } catch (err) {
+    if (isPlanFeatureError(err)) return { success: false, error: planFeatureErrorMessage(err) }
+    throw err
+  }
+}
+
+/**
  * Update a setting by key (upsert into tenant_settings)
  */
 export async function updateSetting(
@@ -164,6 +186,8 @@ export async function updateSetting(
     }
 
     const tenantId = await getCurrentTenantId()
+    const brandingRefusal = await refuseBrandingBelowPlan(tenantId, [key])
+    if (brandingRefusal) return brandingRefusal
     const supabase = createAdminClient()
 
     const { data, error } = await supabase
@@ -200,6 +224,8 @@ export async function updateSettings(
     }
 
     const tenantId = await getCurrentTenantId()
+    const brandingRefusal = await refuseBrandingBelowPlan(tenantId, Object.keys(settings))
+    if (brandingRefusal) return brandingRefusal
     const supabase = createAdminClient()
 
     const rows = Object.entries(settings).map(([key, value]) => ({

@@ -9,7 +9,7 @@ import { useCertificateTemplate } from './certificate-template-context'
 
 export function SignatureSection() {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
-    const { formData, setFormData, signatureInputRef, uploadingSignature, handleFileChange } = useCertificateTemplate()
+    const { formData, setFormData, signatureInputRef, uploadingSignature, handleFileChange, certificateTier } = useCertificateTemplate()
 
     return (
         <div className="space-y-5">
@@ -50,7 +50,8 @@ export function SignatureSection() {
                     </div>
                 </div>
 
-                {/* Signature image upload */}
+                {/* Signature image upload — custom certificates only (#662) */}
+                {certificateTier === 'custom' && (
                 <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('signatureImageLabel')}</Label>
                     <p className="text-xs text-muted-foreground">{t('signatureImageDescription')}</p>
@@ -101,6 +102,7 @@ export function SignatureSection() {
                         </div>
                     </div>
                 </div>
+                )}
             </div>
         </div>
     )

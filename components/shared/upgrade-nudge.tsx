@@ -1,69 +1,82 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IconLock } from '@tabler/icons-react'
 import Link from 'next/link'
-import { FEATURE_REQUIRED_PLAN, PLAN_PRICES, type PlanFeatures } from '@/lib/plans/features'
+import { FEATURE_REQUIRED_PLAN, PLAN_FEATURE_LABELS, PLAN_PRICES, type PlanFeatures } from '@/lib/plans/features'
 
-const FEATURE_DISPLAY_NAMES: Record<string, string> = {
-  leaderboard: 'Leaderboard',
-  achievements: 'Achievements',
-  store: 'Point Store',
-  certificates: 'Custom Certificates',
-  analytics: 'Analytics',
-  ai_grading: 'AI Auto-Grading',
-  custom_branding: 'Custom Branding',
-  custom_domain: 'Custom Domain',
-  api_access: 'API Access',
-  white_label: 'White-Label',
-  priority_support: 'Priority Support',
-}
+/**
+ * Extra one-line explanation for tiered features, keyed into
+ * `featureGate.*` — e.g. what "basic" analytics leaves out.
+ */
+export type UpgradeNudgeHint = 'analyticsBasic' | 'certificatesBasic' | 'brandingLocked'
 
 interface UpgradeNudgeProps {
   feature: keyof PlanFeatures | string
   currentPlan?: string
   className?: string
   compact?: boolean
+  hint?: UpgradeNudgeHint
 }
 
-export function UpgradeNudge({ feature, currentPlan, className, compact }: UpgradeNudgeProps) {
+function titleCase(slug: string) {
+  return slug.charAt(0).toUpperCase() + slug.slice(1)
+}
+
+/**
+ * The upgrade prompt shown wherever a server gate (lib/plans/server.ts) said
+ * no. Required plan and price come from lib/plans/features so this can never
+ * promise a different plan than the pricing page; copy comes from
+ * `featureGate.*` in messages/*.json (issue #662 — it used to be hardcoded
+ * English).
+ */
+export function UpgradeNudge({ feature, currentPlan, className, compact, hint }: UpgradeNudgeProps) {
+  const t = useTranslations('featureGate')
   const requiredPlan = FEATURE_REQUIRED_PLAN[feature] || 'starter'
-  const featureName = FEATURE_DISPLAY_NAMES[feature] || feature
-  const price = PLAN_PRICES[requiredPlan] || 9
+  const featureName = t.has(`features.${feature}`)
+    ? t(`features.${feature}`)
+    : PLAN_FEATURE_LABELS[feature] || feature
+  const price = PLAN_PRICES[requiredPlan] ?? 9
+  const planLabel = titleCase(requiredPlan)
 
   if (compact) {
     return (
-      <div className={`flex items-center gap-2 text-sm text-muted-foreground ${className || ''}`}>
-        <IconLock className="h-4 w-4" />
-        <span>Upgrade to {requiredPlan} (${price}/mo) to unlock {featureName}</span>
+      <div
+        className={`flex flex-wrap items-center gap-2 text-sm text-muted-foreground ${className || ''}`}
+        data-testid="upgrade-nudge"
+        data-feature={feature}
+      >
+        <IconLock className="h-4 w-4 shrink-0" aria-hidden />
+        <span>{t('upgradeToUnlock', { plan: planLabel, feature: featureName })}</span>
+        {hint && <span className="text-xs">{t(hint)}</span>}
         <Link href="/dashboard/admin/billing/upgrade">
-          <Button variant="link" size="sm" className="h-auto p-0">Upgrade</Button>
+          <Button variant="link" size="sm" className="h-auto p-0">
+            {t('upgrade', { plan: planLabel })}
+          </Button>
         </Link>
       </div>
     )
   }
 
   return (
-    <Card className={className}>
+    <Card className={className} data-testid="upgrade-nudge" data-feature={feature}>
       <CardContent className="flex flex-col items-center gap-4 py-8">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <IconLock className="h-6 w-6 text-muted-foreground" />
+          <IconLock className="h-6 w-6 text-muted-foreground" aria-hidden />
         </div>
-        <div className="text-center">
+        <div className="max-w-md text-center">
           <h3 className="font-semibold">{featureName}</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            This feature requires the <strong className="capitalize">{requiredPlan}</strong> plan
-            {currentPlan && currentPlan !== requiredPlan && ` (you're on ${currentPlan})`}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('locked', { plan: planLabel })}
+            {currentPlan && currentPlan !== requiredPlan && ` (${t('youAreOn', { plan: currentPlan })})`}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Starting at ${price}/month
-          </p>
+          {hint && <p className="mt-2 text-sm text-muted-foreground">{t(hint)}</p>}
+          <p className="mt-1 text-xs text-muted-foreground">{t('startingAt', { price })}</p>
         </div>
         <Link href="/dashboard/admin/billing/upgrade">
-          <Button>
-            Upgrade to {requiredPlan.charAt(0).toUpperCase() + requiredPlan.slice(1)}
-          </Button>
+          <Button>{t('upgrade', { plan: planLabel })}</Button>
         </Link>
       </CardContent>
     </Card>
