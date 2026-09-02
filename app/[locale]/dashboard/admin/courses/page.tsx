@@ -1,12 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import {
-  IconArrowLeft,
   IconBook,
+  IconPlus,
 } from '@tabler/icons-react'
 import { CoursesTable } from '@/components/admin/courses-table'
 import { getTranslations } from 'next-intl/server'
@@ -78,8 +77,19 @@ export default async function AdminCoursesPage() {
               ]}
             />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+            </div>
+            {/* Admins create courses through the teacher editor. Without this
+                entry point the page reads as a read-only report and admins
+                cannot find how to add a course (Sentry LMS-FRONT-9N). */}
+            <Button size="sm" className="gap-2" render={<Link href="/dashboard/teacher/courses/new" />} data-testid="admin-create-course">
+              <IconPlus className="h-3.5 w-3.5" />
+              {t('createCourse')}
+            </Button>
+          </div>
         </div>
       </header>
 

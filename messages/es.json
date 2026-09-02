@@ -2884,6 +2884,7 @@
         "title": "Gestión de Cursos",
         "description": "Ver y gestionar todos los cursos de la plataforma",
         "backToDashboard": "Volver al Panel",
+        "createCourse": "Crear Curso",
         "stats": {
           "total": "Cursos Totales",
           "published": "Publicados",
@@ -2910,6 +2911,8 @@
           },
           "unknownAuthor": "Sin autor asignado",
           "empty": "No se encontraron cursos",
+          "emptyDesc": "Nadie ha creado un curso en esta escuela todavía. Crea el primero para empezar.",
+          "createFirst": "Crea tu primer curso",
           "actions": {
             "manage": "Gestionar"
           }

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { IconUsers, IconSettings, IconBook, IconUserOff } from '@tabler/icons-react'
+import { IconUsers, IconSettings, IconBook, IconUserOff, IconPlus } from '@tabler/icons-react'
 import { CourseStatusActions } from './course-status-actions'
 import Link from 'next/link'
 
@@ -216,8 +216,22 @@ export function CoursesTable({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                  {t('empty')}
+                <TableCell colSpan={7} className="py-12">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <IconBook className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-sm font-medium">{t('empty')}</p>
+                    {courses.length === 0 && (
+                      <>
+                        <p className="mt-1 max-w-sm text-sm text-muted-foreground">{t('emptyDesc')}</p>
+                        <Button size="sm" className="mt-4 gap-2" render={<Link href="/dashboard/teacher/courses/new" />}>
+                          <IconPlus className="h-3.5 w-3.5" />
+                          {t('createFirst')}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             )}
