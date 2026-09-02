@@ -81,31 +81,31 @@ VALUES
 (
   'free', 'Free', 'Get started with basic features',
   0, 0, 10.00, 0,
-  '{"leaderboard":false,"achievements":false,"store":false,"certificates":"basic","analytics":false,"ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":false,"achievements":false,"store":false,"certificates":"basic","analytics":false,"ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":true,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true,"community":false,"remove_branding":false,"voice_exercises":false,"landing_pages":true}'::jsonb,
   '{"max_courses":5,"max_students":50}'::jsonb
 ),
 (
   'starter', 'Starter', 'For growing schools that need more capacity',
   9, 90, 5.00, 1,
-  '{"leaderboard":true,"achievements":true,"store":false,"certificates":"custom","analytics":"basic","ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":false,"certificates":"custom","analytics":"basic","ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":true,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true,"community":true,"remove_branding":false,"voice_exercises":false,"landing_pages":true}'::jsonb,
   '{"max_courses":15,"max_students":200}'::jsonb
 ),
 (
   'pro', 'Pro', 'Advanced features for professional educators',
   29, 290, 2.00, 2,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":false,"custom_domain":false,"api_access":true,"white_label":false,"priority_support":false,"xp":true,"levels":true,"streaks":true,"community":true,"remove_branding":true,"voice_exercises":true,"landing_pages":true}'::jsonb,
   '{"max_courses":100,"max_students":1000}'::jsonb
 ),
 (
   'business', 'Business', 'Full platform with custom branding and priority support',
   79, 790, 0, 3,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":false,"white_label":false,"priority_support":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":false,"priority_support":true,"xp":true,"levels":true,"streaks":true,"community":true,"remove_branding":true,"voice_exercises":true,"landing_pages":true}'::jsonb,
   '{"max_courses":-1,"max_students":5000}'::jsonb
 ),
 (
   'enterprise', 'Enterprise', 'Unlimited everything with white-label and API access',
   199, 1990, 0, 4,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":true,"priority_support":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":true,"priority_support":true,"xp":true,"levels":true,"streaks":true,"community":true,"remove_branding":true,"voice_exercises":true,"landing_pages":true}'::jsonb,
   '{"max_courses":-1,"max_students":-1}'::jsonb
 )
 ON CONFLICT (slug) DO UPDATE SET

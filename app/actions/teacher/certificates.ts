@@ -4,6 +4,8 @@ import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/l
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import { PlanFeatureError, certificateTierOf, getTenantPlan } from '@/lib/plans/server'
+import { hasCustomCertificateDesign } from '@/lib/certificates/default-design'
 
 export interface CertificateTemplateFormData {
   template_name: string
@@ -34,6 +36,14 @@ export async function upsertCertificateTemplate(courseId: number, data: Certific
 
     if (!data.template_name?.trim()) throw new Error('Template name is required')
     if (!data.issuer_name?.trim()) throw new Error('Issuer name is required')
+
+    // Basic certificates (Free) use the platform design; colours, logo,
+    // signature image and the QR toggle are the `custom` tier (#662). The
+    // editor hides those controls below the tier, so reaching this means a
+    // hand-built request — refuse rather than silently strip.
+    if (certificateTierOf(await getTenantPlan(ctx.tenantId)) !== 'custom' && hasCustomCertificateDesign(data)) {
+      throw new PlanFeatureError('certificates', (await getTenantPlan(ctx.tenantId)).slug, 'starter')
+    }
 
     const { error } = await ctx.supabase
       .from('certificate_templates')

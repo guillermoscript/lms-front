@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { IconCheck, IconMinus, IconSparkles } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { PLAN_FEATURE_LABELS } from '@/lib/plans/features'
 
 interface PlanData {
   plan_id: string
@@ -44,21 +45,12 @@ interface PlanComparisonTableProps {
   currentInterval?: 'monthly' | 'yearly'
 }
 
+// Gamification basics first, then the canonical gated list (#662).
 const FEATURE_LABELS: Record<string, string> = {
   xp: 'XP & Levels',
   levels: 'Level System',
   streaks: 'Streaks',
-  leaderboard: 'Leaderboard',
-  achievements: 'Achievements',
-  store: 'Point Store',
-  certificates: 'Certificates',
-  analytics: 'Analytics',
-  ai_grading: 'AI Auto-Grading',
-  custom_branding: 'Custom Branding',
-  custom_domain: 'Custom Domain',
-  api_access: 'API Access',
-  white_label: 'White-Label',
-  priority_support: 'Priority Support',
+  ...PLAN_FEATURE_LABELS,
 }
 
 const FEATURE_KEYS = Object.keys(FEATURE_LABELS)

@@ -6,9 +6,12 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { upsertCertificateTemplate, type CertificateTemplateFormData } from '@/app/actions/teacher/certificates'
 import { uploadCertificateAsset } from '@/app/actions/admin/certificate-assets'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 
 export interface CertificateTemplateFormProps {
     courseId: number
+    /** From the tenant plan (lib/plans/server getCertificateTier); defaults to custom. */
+    certificateTier?: 'basic' | 'custom'
     tenantId?: string
     initialData?: any
 }
@@ -37,6 +40,8 @@ export interface CertificateTemplateContextValue {
 
     // Props
     courseId: number
+    /** `basic` (Free) locks colours, logo, signature image and QR (#662). */
+    certificateTier: 'basic' | 'custom'
 
     // Actions
     setFormData: React.Dispatch<React.SetStateAction<CertificateTemplateFormData>>
@@ -59,6 +64,7 @@ export function useCertificateTemplate() {
 export function CertificateTemplateProvider({
     courseId,
     initialData,
+    certificateTier = 'custom',
     children,
 }: CertificateTemplateFormProps & { children: React.ReactNode }) {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
@@ -84,9 +90,7 @@ export function CertificateTemplateProvider({
         requires_all_exams: initialData?.requires_all_exams ?? true,
         expiration_days: initialData?.expiration_days ?? null,
         design_settings: initialData?.design_settings || {
-            primary_color: '#3B82F6',
-            secondary_color: '#1E40AF',
-            show_qr_code: true,
+            ...DEFAULT_CERTIFICATE_DESIGN,
             logo_url: ''
         }
     })
@@ -189,10 +193,10 @@ export function CertificateTemplateProvider({
     const value = useMemo(() => ({
         formData, isLoading, uploadingLogo, uploadingSignature,
         logoInputRef, signatureInputRef,
-        courseId,
+        courseId, certificateTier,
         setFormData, updateField, updateDesignSetting, applyPreset,
         handleSubmit, handleFileChange, goBack,
-    }), [formData, isLoading, uploadingLogo, uploadingSignature, courseId])
+    }), [formData, isLoading, uploadingLogo, uploadingSignature, courseId, certificateTier])
 
     return (
         <CertificateTemplateContext value={value}>

@@ -5271,7 +5271,27 @@
   "featureGate": {
     "locked": "This feature requires the {plan} plan or higher",
     "upgrade": "Upgrade to {plan}",
-    "upgradeToUnlock": "Upgrade to {plan} to unlock {feature}"
+    "upgradeToUnlock": "Upgrade to {plan} to unlock {feature}",
+    "youAreOn": "you're on {plan}",
+    "startingAt": "Starting at ${price}/month",
+    "analyticsBasic": "Revenue reporting, CSV export and per-course confusion hotspots are part of Advanced analytics.",
+    "certificatesBasic": "Custom colours, logo, signature image and QR code are part of Custom certificates. Basic certificates use the platform design.",
+    "brandingLocked": "Colours, theme presets and fonts follow the platform palette on your plan. Your logo and school name still apply.",
+    "features": {
+      "leaderboard": "Leaderboard",
+      "achievements": "Achievements",
+      "store": "Point Store",
+      "community": "Community",
+      "certificates": "Custom Certificates",
+      "analytics": "Analytics",
+      "ai_grading": "AI Auto-Grading",
+      "voice_exercises": "Voice Exercises",
+      "remove_branding": "Remove \"Powered by\" branding",
+      "custom_branding": "Custom Branding",
+      "custom_domain": "Custom Domain",
+      "white_label": "White-Label",
+      "priority_support": "Priority Support"
+    }
   },
   "limits": {
     "approaching": "You're using {current} of {limit} {resource}. Consider upgrading for more.",

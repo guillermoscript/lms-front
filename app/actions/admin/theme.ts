@@ -7,6 +7,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { CURATED_PRESETS, RADIUS_OPTIONS, FONT_OPTIONS, type StoredPreset, type CSSVariableMap } from '@/lib/themes/presets'
+import { isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
 
 interface ThemeActionResult {
   success: boolean
@@ -36,11 +37,28 @@ async function trackThemeCustomized(
 }
 
 /**
+ * Theme presets, radius and font are `custom_branding` (Business+, #662).
+ * Every mutating action below refuses with the upgrade copy when the plan
+ * lacks it; reads (`getActivePreset`) stay open so the page can render.
+ */
+async function refuseBelowCustomBranding(): Promise<ThemeActionResult | null> {
+  try {
+    await requirePlanFeature(await getCurrentTenantId(), 'custom_branding')
+    return null
+  } catch (err) {
+    if (isPlanFeatureError(err)) return { success: false, error: planFeatureErrorMessage(err) }
+    throw err
+  }
+}
+
+/**
  * Apply a curated preset to the current tenant.
  */
 export async function applyCuratedPreset(presetId: string): Promise<ThemeActionResult> {
   const role = await getUserRole()
   if (role !== 'admin') return { success: false, error: 'Unauthorized' }
+  const brandingRefusal = await refuseBelowCustomBranding()
+  if (brandingRefusal) return brandingRefusal
 
   const preset = CURATED_PRESETS.find((p) => p.id === presetId)
   if (!preset) return { success: false, error: 'Preset not found' }
@@ -78,6 +96,8 @@ export async function applyCuratedPreset(presetId: string): Promise<ThemeActionR
 export async function applyCustomPreset(presetCode: string): Promise<ThemeActionResult> {
   const role = await getUserRole()
   if (role !== 'admin') return { success: false, error: 'Unauthorized' }
+  const brandingRefusal = await refuseBelowCustomBranding()
+  if (brandingRefusal) return brandingRefusal
 
   if (!/^[a-zA-Z0-9_-]{4,32}$/.test(presetCode)) {
     return { success: false, error: 'Invalid preset code format' }
@@ -147,6 +167,8 @@ export async function applyCustomPreset(presetCode: string): Promise<ThemeAction
 export async function resetThemePreset(): Promise<ThemeActionResult> {
   const role = await getUserRole()
   if (role !== 'admin') return { success: false, error: 'Unauthorized' }
+  const brandingRefusal = await refuseBelowCustomBranding()
+  if (brandingRefusal) return brandingRefusal
 
   const tenantId = await getCurrentTenantId()
   const supabase = createAdminClient()
@@ -174,6 +196,8 @@ export async function resetThemePreset(): Promise<ThemeActionResult> {
 export async function updateRadius(radius: string): Promise<ThemeActionResult> {
   const role = await getUserRole()
   if (role !== 'admin') return { success: false, error: 'Unauthorized' }
+  const brandingRefusal = await refuseBelowCustomBranding()
+  if (brandingRefusal) return brandingRefusal
 
   if (!RADIUS_OPTIONS.some((o) => o.value === radius)) {
     return { success: false, error: 'Invalid radius value' }
@@ -215,6 +239,8 @@ export async function updateRadius(radius: string): Promise<ThemeActionResult> {
 export async function updateFont(fontFamily: string): Promise<ThemeActionResult> {
   const role = await getUserRole()
   if (role !== 'admin') return { success: false, error: 'Unauthorized' }
+  const brandingRefusal = await refuseBelowCustomBranding()
+  if (brandingRefusal) return brandingRefusal
 
   if (!FONT_OPTIONS.some((f) => f.value === fontFamily)) {
     return { success: false, error: 'Invalid font family' }
