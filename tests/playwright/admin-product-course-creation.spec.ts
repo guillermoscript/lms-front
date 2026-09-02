@@ -2,10 +2,10 @@ import { expect, type Page, test } from '@playwright/test'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
 
-// /products/new renders the one-screen quick create; the multi-step wizard
-// these helpers drive lives behind ?advanced=1.
-const wizardPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new?advanced=1`
-const quickCreatePath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new`
+// /products/new is the multi-step product wizard these helpers drive; the
+// one-screen quick create is the admin "create a course" page (#665).
+const wizardPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new`
+const quickCreatePath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/courses/new`
 const productsPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products`
 
 function uniqueTitle(prefix: string) {
@@ -241,6 +241,11 @@ test.describe('Admin Product/Course Creation Wizard', () => {
     // 'free' is the default pricing mode — publish straight away.
     await page.getByRole('button', { name: /publish|publicar/i }).first().click()
 
+    // Quick create lands in the course editor (the next step is adding
+    // lessons), not on the products list.
+    await expect(page).toHaveURL(/\/dashboard\/teacher\/courses\/\d+/, { timeout: 20_000 })
+
+    await page.goto(productsPath, { timeout: 30_000 })
     await expect(
       page.getByTestId('products-page').getByText(title).first()
     ).toBeVisible({ timeout: 20_000 })

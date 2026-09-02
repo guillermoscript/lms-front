@@ -45,7 +45,7 @@ interface QuickProductCreateProps {
 /**
  * One-screen quick-create: title + free/paid + price + publish.
  * Everything else (category, thumbnail, after-purchase steps, provider choice)
- * is deferred with defaults — the full wizard stays at ?advanced=1.
+ * is deferred with defaults — the full wizard stays at /dashboard/admin/products/new.
  */
 export function QuickProductCreate({ limitInfo, className }: QuickProductCreateProps) {
   const t = useTranslations('dashboard.admin.products.new.quick')
@@ -85,13 +85,15 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
         postRegistrationSteps: [],
       })
 
-      if (!result.success) {
-        toast.error(result.error || t('saveError'))
+      if (!result.success || !result.data) {
+        toast.error((!result.success && result.error) || t('saveError'))
         return
       }
 
       toast.success(intent === 'publish' ? t('published') : t('draftSaved'))
-      router.push('/dashboard/admin/products')
+      // Land in the course editor, not the products list: the course has no
+      // lessons yet and that is the obvious next step (#665).
+      router.push(`/dashboard/teacher/courses/${result.data.courseId}`)
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('saveError'))
@@ -222,7 +224,7 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
             </Button>
           </div>
           <Link
-            href="/dashboard/admin/products/new?advanced=1"
+            href="/dashboard/admin/products/new"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
             {t('moreOptions')}

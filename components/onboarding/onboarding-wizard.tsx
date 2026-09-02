@@ -105,7 +105,7 @@ export default function OnboardingWizard({ userName, currentSettings, redirectTo
       })
 
       if (result.success) {
-        router.push('/dashboard/teacher/courses/new')
+        router.push('/dashboard/admin/courses/new')
       } else {
         throw new Error(result.error)
       }
