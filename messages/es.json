@@ -2161,6 +2161,7 @@
         "upgrade": "Mejorar",
         "products": "Productos",
         "newProduct": "Nuevo Producto",
+        "newCourse": "Nuevo Curso",
         "editProduct": "Editar Producto",
         "plans": "Planes",
         "newPlan": "Nuevo Plan",
@@ -2885,7 +2886,12 @@
         "description": "Ver y gestionar todos los cursos de la plataforma",
         "backToDashboard": "Volver al Panel",
         "createCourse": "Crear Curso",
-        "stats": {
+
+        "new": {
+          "title": "Crear un curso",
+          "description": "Ponle nombre, elige un precio y publícalo. Luego irás al editor del curso para añadir lecciones.",
+          "or": "o"
+        },        "stats": {
           "total": "Cursos Totales",
           "published": "Publicados",
           "drafts": "Borradores"

@@ -28,7 +28,7 @@ test.describe('Admin Pages', () => {
     const schoolDetails = checklist.getByRole('link', { name: /Configure school details/ })
 
     await expect(checklist.getByText(/^\d\/5$/)).toBeVisible()
-    await expect(createCourse).toHaveAttribute('href', '/dashboard/admin/products/new')
+    await expect(createCourse).toHaveAttribute('href', '/dashboard/admin/courses/new')
     await expect(payments).toHaveAttribute('href', '/dashboard/admin/settings?tab=payment')
     await expect(branding).toHaveAttribute('href', '/dashboard/admin/appearance')
     await expect(inviteStudents).toHaveAttribute('href', '/dashboard/admin/users')
@@ -88,7 +88,7 @@ test.describe('Admin Pages', () => {
     // that entry point or admins cannot find it (#665, Sentry LMS-FRONT-9N).
     const createCta = page.getByTestId('admin-create-course')
     await expect(createCta).toBeVisible()
-    await expect(createCta).toHaveAttribute('href', /\/dashboard\/teacher\/courses\/new$/)
+    await expect(createCta).toHaveAttribute('href', /\/dashboard\/admin\/courses\/new$/)
   })
 
   test('admin enrollments page loads', async ({ page }) => {

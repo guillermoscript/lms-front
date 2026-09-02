@@ -231,7 +231,7 @@ export default async function AdminDashboardPage({
             id: 'add-course',
             label: t('onboarding.addCourse'),
             description: t('onboarding.addCourseDesc'),
-            href: '/dashboard/admin/products/new',
+            href: '/dashboard/admin/courses/new',
             completed: (publishedCourses || 0) > 0,
             timeHint: t('onboarding.addCourseTime'),
           },

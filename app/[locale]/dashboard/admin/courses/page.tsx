@@ -85,7 +85,7 @@ export default async function AdminCoursesPage() {
             {/* Admins create courses through the teacher editor. Without this
                 entry point the page reads as a read-only report and admins
                 cannot find how to add a course (Sentry LMS-FRONT-9N). */}
-            <Button size="sm" className="gap-2" render={<Link href="/dashboard/teacher/courses/new" />} data-testid="admin-create-course">
+            <Button size="sm" className="gap-2" render={<Link href="/dashboard/admin/courses/new" />} data-testid="admin-create-course">
               <IconPlus className="h-3.5 w-3.5" />
               {t('createCourse')}
             </Button>

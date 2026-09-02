@@ -2161,6 +2161,7 @@
         "upgrade": "Upgrade",
         "products": "Products",
         "newProduct": "New Product",
+        "newCourse": "New Course",
         "editProduct": "Edit Product",
         "plans": "Plans",
         "newPlan": "New Plan",
@@ -2889,7 +2890,12 @@
         "description": "View and manage all platform courses",
         "backToDashboard": "Back to Dashboard",
         "createCourse": "Create Course",
-        "stats": {
+
+        "new": {
+          "title": "Create a course",
+          "description": "Name it, pick a price, publish. You will land in the course editor to add lessons.",
+          "or": "or"
+        },        "stats": {
           "total": "Total Courses",
           "published": "Published",
           "drafts": "Drafts"

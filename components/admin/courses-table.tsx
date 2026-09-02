@@ -225,7 +225,7 @@ export function CoursesTable({
                     {courses.length === 0 && (
                       <>
                         <p className="mt-1 max-w-sm text-sm text-muted-foreground">{t('emptyDesc')}</p>
-                        <Button size="sm" className="mt-4 gap-2" render={<Link href="/dashboard/teacher/courses/new" />}>
+                        <Button size="sm" className="mt-4 gap-2" render={<Link href="/dashboard/admin/courses/new" />}>
                           <IconPlus className="h-3.5 w-3.5" />
                           {t('createFirst')}
                         </Button>

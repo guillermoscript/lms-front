@@ -146,7 +146,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {
                     title: t('courses'), href: "/dashboard/admin/courses", icon: IconBook,
                     items: [
-                        { title: t('createCourse'), href: "/dashboard/teacher/courses/new" },
+                        { title: t('createCourse'), href: "/dashboard/admin/courses/new" },
                         { title: t('myCourses'), href: "/dashboard/teacher/courses", tourId: 'sidebar-courses' },
                         { title: t('enrollments'), href: "/dashboard/admin/enrollments" },
                     ],
