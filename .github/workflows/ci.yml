@@ -3,7 +3,18 @@ name: CI
 on:
   pull_request:
   push:
-    branches-ignore: ["master"]
+    # master too: the merge commit is verified by the same jobs before
+    # deploy.yml (which waits on this workflow) builds and ships it.
+    branches: ["master"]
+  schedule:
+    # Nightly: the E2E suite also runs the `mobile` project (see `e2e`).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      e2e_projects:
+        description: "Playwright projects for the e2e job (space-separated)"
+        default: "desktop-chromium"
+        required: false
 
 jobs:
   verify:
@@ -29,6 +40,117 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test:unit
+
+  # The Playwright suite (#667). Until this job existed, 374 E2E tests ran only
+  # on whoever remembered to run them locally.
+  #
+  # Each shard is a full environment: Supabase CLI starts the local stack
+  # (migrations + seed.sql, same as `npm run db:reset`), `next build` makes the
+  # production bundle, and Playwright's `webServer` starts `next start` on
+  # lvh.me:3000. Shards split the tests; within a shard they run serially
+  # (`workers: 1`) because the specs mutate one shared seeded database.
+  #
+  # Every env var a spec gates on is provided here, so a `test.skip(!ENV)` is a
+  # CI bug — `scripts/ci/check-e2e-skips.mjs` fails the job on any of them.
+  # Nothing below is a real secret: the Supabase keys are the CLI's well-known
+  # local development keys and the Stripe/cron values are synthetic.
+  e2e:
+    name: E2E (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      # App + suite
+      NEXT_PUBLIC_PLATFORM_DOMAIN: lvh.me:3000
+      NEXT_PUBLIC_APP_URL: http://lvh.me:3000
+      NEXT_PUBLIC_APP_NAME: LMS CI
+      BASE_URL: http://lvh.me:3000
+      NEXT_PUBLIC_ANALYTICS_DISABLED: "true"
+      # Gated specs (platform-billing-*, access-cutoff-lifecycle, webhook claims)
+      CRON_SECRET: ci-cron-secret-synthetic
+      STRIPE_SECRET_KEY: sk_test_ci_synthetic_never_called
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_synthetic
+      STRIPE_WEBHOOK_SECRET: whsec_ci_synthetic_connect
+      STRIPE_PLATFORM_WEBHOOK_SECRET: whsec_ci_synthetic_platform
+      # Runtime-generated issuer keys / tenant payment credentials are encrypted
+      # with these; any constant works for a throwaway database.
+      CERTIFICATE_ENCRYPTION_KEY: ci-certificate-key-synthetic
+      PAYMENT_CREDENTIALS_ENCRYPTION_KEY: ci-payment-credentials-key-synthetic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci
+
+      # The tenant proxy resolves the school from the subdomain, so the suite
+      # needs wildcard-ish hostnames. lvh.me resolves to 127.0.0.1 via public
+      # DNS; pin the ones the specs use so a DNS hiccup cannot fail a run.
+      - name: Pin lvh.me hostnames
+        run: echo "127.0.0.1 lvh.me default.lvh.me code-academy.lvh.me" | sudo tee -a /etc/hosts
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.115.0
+      - name: Start local Supabase (migrations + seed)
+        # Only what the app and specs touch. Studio, log shipping, edge
+        # functions and the pooler are dead weight on a runner.
+        run: supabase start -x studio,imgproxy,logflare,vector,edge-runtime,supavisor,mailpit,postgres-meta
+      - name: Export Supabase keys
+        run: |
+          supabase status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=' \
+            | tr -d '"' | tee -a "$GITHUB_ENV"
+      - name: Supabase keys present
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo "::error::NEXT_PUBLIC_SUPABASE_URL empty"; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY" || { echo "::error::anon key empty"; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "::error::service role key empty"; exit 1; }
+
+      - name: Playwright browser cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Playwright
+        run: |
+          PROJECTS="${{ github.event.inputs.e2e_projects || 'desktop-chromium' }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then PROJECTS="desktop-chromium mobile"; fi
+          ARGS=""; for p in $PROJECTS; do ARGS="$ARGS --project=$p"; done
+          npx playwright test $ARGS --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Summary + env-skip gate
+        if: always()
+        run: node scripts/ci/check-e2e-skips.mjs playwright-report/results.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
 
   # The production image, built exactly as deploy.yml builds it — but never
   # pushed. `verify` above cannot catch a broken deploy: it installs from
