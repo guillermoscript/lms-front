@@ -1,8 +1,15 @@
 name: Build and deploy to Dokploy
 
+# Runs after the CI workflow (typecheck, unit, Playwright E2E, image build)
+# has passed on master — a red merge commit is not shipped (#667). If CI is
+# wrong and a hotfix has to go out anyway, trigger this workflow by hand from
+# the Actions tab (workflow_dispatch) — that path skips the CI gate.
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: ["master"]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -10,6 +17,9 @@ env:
 
 jobs:
   build-and-push:
+    # workflow_run fires on failure too; only ship a green run. Manual
+    # dispatch has no upstream run and always proceeds.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,6 +28,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # On workflow_run `github.sha` is the default-branch head, which is
+          # what we want on master; pin to the verified commit anyway.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -53,7 +67,7 @@ jobs:
             NEXT_PUBLIC_OPENPANEL_API_URL=${{ vars.NEXT_PUBLIC_OPENPANEL_API_URL }}
             NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN=${{ vars.NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN }}
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
-            SENTRY_RELEASE=${{ github.sha }}
+            SENTRY_RELEASE=${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Trigger Dokploy deployment
         run: |
