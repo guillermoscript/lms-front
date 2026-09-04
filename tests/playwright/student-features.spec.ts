@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsStudent, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
+import { openSidebarGroup } from './utils/sidebar'
 
 /**
  * P1 — Student Feature Tests
@@ -107,6 +108,10 @@ test.describe('Student Features', () => {
     test('sidebar contains links to all student sections', async ({
       page,
     }) => {
+      // Progress Report and My Certificates live inside the collapsible
+      // "My Courses" group, which is closed unless one of them is the route.
+      await openSidebarGroup(page, 'My Courses')
+
       // Verify sidebar has key navigation links from the dashboard
       const sidebarSections = [
         'courses',
@@ -144,7 +149,9 @@ test.describe('Student Features', () => {
         timeout: 15_000,
       })
 
-      // Click progress link and verify navigation
+      // Click progress link and verify navigation (it sits in the collapsed
+      // "My Courses" group)
+      await openSidebarGroup(page, 'My Courses')
       const progressLink = page.locator(
         'a[href*="/dashboard/student/progress"]'
       ).first()

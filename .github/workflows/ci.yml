@@ -75,6 +75,15 @@ jobs:
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_synthetic
       STRIPE_WEBHOOK_SECRET: whsec_ci_synthetic_connect
       STRIPE_PLATFORM_WEBHOOK_SECRET: whsec_ci_synthetic_platform
+      # The upgrade page offers a rail only when its env is present
+      # (lib/billing/platform-checkout-runtime.ts); the payment-method-choice
+      # spec expects Binance Pay and Solana next to Stripe and bank transfer.
+      # A Solana checkout renders a QR for this wallet and never settles.
+      BINANCE_PAY_API_KEY: ci_binance_key_synthetic
+      BINANCE_PAY_API_SECRET: ci_binance_secret_synthetic
+      SOLANA_RPC_URL: https://api.devnet.solana.com
+      SOLANA_PLATFORM_WALLET: EqK4KJFiUoV53TrCt2kXHn8Ryg6fcSTuwaa9nNppqc2A
+      SOLANA_USDC_MINT: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
       # Runtime-generated issuer keys / tenant payment credentials are encrypted
       # with these; any constant works for a throwaway database.
       CERTIFICATE_ENCRYPTION_KEY: ci-certificate-key-synthetic
@@ -98,9 +107,13 @@ jobs:
         with:
           version: 2.115.0
       - name: Start local Supabase (migrations + seed)
-        # Only what the app and specs touch. Studio, log shipping, edge
-        # functions and the pooler are dead weight on a runner.
-        run: supabase start -x studio,imgproxy,logflare,vector,edge-runtime,supavisor,mailpit,postgres-meta
+        # Only what the app and specs touch. Studio, log shipping and the
+        # pooler are dead weight on a runner. edge-runtime stays: the client
+        # reads plan features and the gamification summary from
+        # supabase/functions (get-plan-features, get-gamification-summary,
+        # get-leaderboard) — without it every client-side feature gate closes
+        # and the dashboard renders without its gamification header.
+        run: supabase start -x studio,imgproxy,logflare,vector,supavisor,mailpit,postgres-meta
       - name: Export Supabase keys
         run: |
           supabase status -o env \
@@ -149,6 +162,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            docs/SMOKE_TEST_LOG.md
           retention-days: 14
           if-no-files-found: ignore
 
