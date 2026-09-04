@@ -16,6 +16,7 @@
  */
 import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { restoreAliceSeedSubscription } from './utils/seed-state'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -31,10 +32,12 @@ const OVERLAP_COURSE_A = 2001
 const PRODUCT_A_ID = 2001
 
 /**
- * Course 2002 is ALSO an overlap — Alice owns it via product 2002 (seed data)
- * AND plan 2001 covers it. Validates the second perpetual-survives-lapse path.
+ * Course 2002 is ALSO an overlap — Alice buys it here as product 2002 (the seed
+ * only gives her product 2001) AND plan 2001 covers it. Validates the second
+ * perpetual-survives-lapse path.
  */
 const OVERLAP_COURSE_B = 2002
+const PRODUCT_B_ID = 2002
 
 /** Course 10005 is plan-only — Alice has no product entitlement for it. */
 const PLAN_ONLY_COURSE = 10005
@@ -94,6 +97,19 @@ async function cleanState() {
     .eq('tenant_id', CODE_ACADEMY_TENANT)
 
   await admin.from('transactions').delete().eq('user_id', ALICE_ID).eq('product_id', PRODUCT_A_ID)
+  await admin
+    .from('entitlements')
+    .delete()
+    .eq('user_id', ALICE_ID)
+    .eq('source_type', 'product')
+    .eq('source_id', PRODUCT_B_ID)
+    .eq('course_id', OVERLAP_COURSE_B)
+  await admin
+    .from('enrollments')
+    .delete()
+    .eq('user_id', ALICE_ID)
+    .eq('course_id', OVERLAP_COURSE_B)
+    .eq('tenant_id', CODE_ACADEMY_TENANT)
 }
 
 async function hasAccess(admin: ReturnType<typeof getAdmin>, courseId: number): Promise<boolean> {
@@ -108,7 +124,12 @@ async function hasAccess(admin: ReturnType<typeof getAdmin>, courseId: number): 
 /*  Tests                                                              */
 /* ------------------------------------------------------------------ */
 test.beforeAll(cleanState)
-test.afterAll(cleanState)
+// cleanState wipes the seeded plan-2001 subscription too; put it back so the
+// specs that run after this one in the same database still find it.
+test.afterAll(async () => {
+  await cleanState()
+  await restoreAliceSeedSubscription(getAdmin())
+})
 
 test('subscription lapse revokes plan entitlements but not perpetual product entitlements', async ({}, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'DB-only regression — single project')
@@ -124,9 +145,15 @@ test('subscription lapse revokes plan entitlements but not perpetual product ent
   })
   expect(productErr).toBeNull()
 
+  // Course 2002 as a second one-time product (the seed has no such row).
+  const { error: productBErr } = await admin.rpc('enroll_user', {
+    _user_id: ALICE_ID,
+    _product_id: PRODUCT_B_ID,
+  })
+  expect(productBErr).toBeNull()
+
   // Confirm product entitlement active for both overlap courses
   expect(await hasAccess(admin, OVERLAP_COURSE_A)).toBe(true)
-  // Course 2002 perpetual product entitlement comes from seed data
   expect(await hasAccess(admin, OVERLAP_COURSE_B)).toBe(true)
 
   // ── Step 2: Alice buys plan 2001 (subscription) ────────────────────────────

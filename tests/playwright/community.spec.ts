@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsStudent, loginAsTeacher, loginAsAdmin } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
+import { openSidebarGroup } from './utils/sidebar'
 
 /**
  * P1 — Community Spaces Tests
@@ -147,6 +148,8 @@ test.describe('Community Spaces', () => {
     test('admin sidebar contains community link', async ({ page }) => {
       await loginAsAdmin(page)
 
+      // Community is a sub-link of the collapsible "People" group.
+      await openSidebarGroup(page, 'People')
       const communityLink = page.locator('a[href*="/dashboard/admin/community"]')
       await expect(communityLink.first()).toBeVisible({ timeout: 10_000 })
     })
