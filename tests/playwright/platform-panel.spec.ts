@@ -92,7 +92,7 @@ test.describe('Platform Overview', () => {
       '/platform/tenants',
       '/platform/billing',
       '/platform/plans',
-      '/platform/referrals',
+      // /platform/referrals still exists as a route but is not in the sidebar (#680)
       '/dashboard/admin', // Back to School
     ]
 
@@ -133,8 +133,8 @@ test.describe('Platform Tenants', () => {
   test('tenant rows show name, plan badge, and status badge', async ({ page }) => {
     const firstRow = page.getByTestId('tenant-row').first()
     await expect(firstRow).toBeVisible()
-    // Has a link with tenant name
-    await expect(firstRow.locator('a')).toBeVisible()
+    // Has a link with tenant name (the row carries more than one link)
+    await expect(firstRow.locator('a').first()).toBeVisible()
   })
 
   test('search filter narrows results', async ({ page }) => {
@@ -173,12 +173,12 @@ test.describe('Platform Tenants', () => {
     const emptyCount = await page.getByTestId('tenant-row').count()
     expect(emptyCount).toBe(0)
 
-    // Clear and re-submit
-    await page.getByTestId('tenants-search').fill('')
-    await page.getByTestId('tenants-filter-submit').click()
-    await page.waitForLoadState('networkidle')
-    const restoredCount = await page.getByTestId('tenant-row').count()
-    expect(restoredCount).toBeGreaterThan(0)
+    // Clear via the page's own "clear filters" link and wait for the
+    // navigation — `networkidle` after a submit resolves before the new
+    // server-rendered rows arrive, which is what made the count stay at 0.
+    await page.getByTestId('tenants-clear-filters').click()
+    await page.waitForURL((url) => !url.searchParams.has('q'))
+    await expect(page.getByTestId('tenant-row').first()).toBeVisible({ timeout: 10_000 })
   })
 })
 
