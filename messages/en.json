@@ -2161,6 +2161,7 @@
         "upgrade": "Upgrade",
         "products": "Products",
         "newProduct": "New Product",
+        "newCourse": "New Course",
         "editProduct": "Edit Product",
         "plans": "Plans",
         "newPlan": "New Plan",
@@ -2888,7 +2889,13 @@
         "title": "Course Management",
         "description": "View and manage all platform courses",
         "backToDashboard": "Back to Dashboard",
-        "stats": {
+        "createCourse": "Create Course",
+
+        "new": {
+          "title": "Create a course",
+          "description": "Name it, pick a price, publish. You will land in the course editor to add lessons.",
+          "or": "or"
+        },        "stats": {
           "total": "Total Courses",
           "published": "Published",
           "drafts": "Drafts"
@@ -2914,6 +2921,8 @@
           },
           "unknownAuthor": "No author assigned",
           "empty": "No courses found",
+          "emptyDesc": "No one has created a course in this school yet. Create the first one to get started.",
+          "createFirst": "Create your first course",
           "actions": {
             "manage": "Manage"
           }

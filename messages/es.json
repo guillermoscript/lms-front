@@ -2161,6 +2161,7 @@
         "upgrade": "Mejorar",
         "products": "Productos",
         "newProduct": "Nuevo Producto",
+        "newCourse": "Nuevo Curso",
         "editProduct": "Editar Producto",
         "plans": "Planes",
         "newPlan": "Nuevo Plan",
@@ -2884,7 +2885,13 @@
         "title": "Gestión de Cursos",
         "description": "Ver y gestionar todos los cursos de la plataforma",
         "backToDashboard": "Volver al Panel",
-        "stats": {
+        "createCourse": "Crear Curso",
+
+        "new": {
+          "title": "Crear un curso",
+          "description": "Ponle nombre, elige un precio y publícalo. Luego irás al editor del curso para añadir lecciones.",
+          "or": "o"
+        },        "stats": {
           "total": "Cursos Totales",
           "published": "Publicados",
           "drafts": "Borradores"
@@ -2910,6 +2917,8 @@
           },
           "unknownAuthor": "Sin autor asignado",
           "empty": "No se encontraron cursos",
+          "emptyDesc": "Nadie ha creado un curso en esta escuela todavía. Crea el primero para empezar.",
+          "createFirst": "Crea tu primer curso",
           "actions": {
             "manage": "Gestionar"
           }

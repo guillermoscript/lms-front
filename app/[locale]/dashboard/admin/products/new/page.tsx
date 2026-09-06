@@ -2,22 +2,15 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
-import { AiCourseGenerator } from '@/components/admin/ai-course-generator'
 import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
-import { QuickProductCreate } from '@/components/admin/quick-product-create'
 import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
-import { checkCourseLimit } from '@/app/actions/teacher/courses'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
-// AI starter-course generation (issue #441) runs as a server action invoked
-// from this segment; give it headroom beyond the default function timeout.
-export const maxDuration = 60
-
-export default async function NewProductPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ advanced?: string }>
-}) {
+// The one-screen quick create + AI generator moved to
+// /dashboard/admin/courses/new (#665) so "create a course" has a single home.
+// This page is the full product wizard: existing course, providers, currency,
+// after-purchase steps. `?advanced=1` links from before the move still land here.
+export default async function NewProductPage() {
   const t = await getTranslations('dashboard.admin.products.new')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
 
@@ -25,9 +18,6 @@ export default async function NewProductPage({
   if (!userId) {
     redirect('/auth/login')
   }
-
-  const { advanced } = await searchParams
-  const showAdvanced = advanced === '1'
 
   const breadcrumb = (
     <AdminBreadcrumb
@@ -39,37 +29,6 @@ export default async function NewProductPage({
       ]}
     />
   )
-
-  if (!showAdvanced) {
-    const limitInfo = await checkCourseLimit()
-
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-            <div className="mb-4">{breadcrumb}</div>
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">{t('title')}</h1>
-              <p className="mt-1 text-muted-foreground">{t('description')}</p>
-            </div>
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-          <QuickProductCreate limitInfo={limitInfo} />
-          <div className="mx-auto my-6 flex w-full max-w-xl items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-xs uppercase text-muted-foreground">{t('quick.or')}</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-          <AiCourseGenerator
-            disabled={!limitInfo.canCreate}
-            className="mx-auto w-full max-w-xl"
-          />
-        </main>
-      </div>
-    )
-  }
 
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()

@@ -86,7 +86,7 @@ test.describe('plan limits — every surface at the cap (#296)', () => {
   test('the AI course wizard is disabled at the cap', async ({ page }) => {
     test.setTimeout(120_000)
     await login(page, SEEDED.owner.email, SEEDED.owner.password, QA_BASE)
-    await page.goto(`${QA_BASE}/${LOCALE}/dashboard/admin/products/new`)
+    await page.goto(`${QA_BASE}/${LOCALE}/dashboard/admin/courses/new`)
 
     await expect(page.getByText('Course limit reached')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('button', { name: 'Generate draft' })).toBeDisabled()
