@@ -188,38 +188,34 @@ Videos are automatically recorded on failure (configured in `playwright.config.t
 
 ## CI/CD Integration
 
-The configuration is CI-ready:
+The suite runs in GitHub Actions on every pull request and on every push to
+`master` — job `e2e` in `.github/workflows/ci.yml` (#667). `deploy.yml` waits
+for that workflow to pass before it builds and ships the image.
 
-```yaml
-# .github/workflows/playwright.yml
-name: Playwright Tests
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-jobs:
-  test:
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 20
-    - name: Install dependencies
-      run: npm ci
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
-    - uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
-```
+What the job does, per shard (4 shards, `fail-fast: false`):
+
+1. `supabase start` — the local stack with migrations + `seed.sql`, same state
+   as `npm run db:reset`.
+2. Exports the stack's anon / service-role keys into the job env.
+3. `npm run build`, then Playwright's `webServer` starts `next start` on
+   `lvh.me:3000` (`/etc/hosts` pins `lvh.me`, `default.lvh.me`,
+   `code-academy.lvh.me`).
+4. `npx playwright test --project=desktop-chromium --shard=N/4`. Tests inside
+   a shard run serially (`workers: 1`) because they mutate one shared database.
+5. `node scripts/ci/check-e2e-skips.mjs` writes the job summary
+   (passed / failed / flaky / skipped) and **fails the job if any test skipped
+   because an env var was missing**. Project-gated skips
+   (`runs once — DB state is shared`) and permanent skips are listed, not
+   failed.
+
+Every env var a spec gates on is set in the job (`CRON_SECRET`,
+`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_PLATFORM_WEBHOOK_SECRET`, …) with
+synthetic values. If you add a `test.skip(!process.env.X, …)`, add `X` to the
+job env or the gate turns red.
+
+Nightly (`schedule`) the job also runs the `mobile` project. `workflow_dispatch`
+takes an `e2e_projects` input for ad-hoc runs. Reports and traces are uploaded
+as `playwright-report-shard-N` artifacts.
 
 ## Test Coverage Goals
 

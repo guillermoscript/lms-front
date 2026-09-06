@@ -14,6 +14,7 @@ import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
+import { openSidebarGroup } from './utils/sidebar'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -36,7 +37,7 @@ function getAdmin() {
 /* ------------------------------------------------------------------ */
 /*  Seeded data tracking                                               */
 /* ------------------------------------------------------------------ */
-let createdPostIds: string[] = []
+const createdPostIds: string[] = []
 
 test.afterAll(async () => {
   const admin = getAdmin()
@@ -271,6 +272,8 @@ test.describe('Community Sidebar Navigation', () => {
     test.setTimeout(60_000)
     await loginAsAdmin(page)
 
+    // Community is a sub-link of the collapsible "People" group.
+    await openSidebarGroup(page, 'People')
     const communityLink = page.locator('a[href*="/dashboard/admin/community"]')
     await expect(communityLink.first()).toBeVisible({ timeout: 10_000 })
   })

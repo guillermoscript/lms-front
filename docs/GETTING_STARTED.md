@@ -263,9 +263,9 @@ npm run test:unit
 
 Three rules, all of which cost people an afternoon when ignored:
 
-1. **Start the dev server first.** The Playwright config has no `webServer` — it will not boot the app for you.
+1. **Have the database seeded.** Playwright boots the app for you (`webServer` in `playwright.config.ts` runs `next dev` on the `BASE_URL` port, or reuses your running `npm run dev`), but it does not reset the database.
 2. **Use `lvh.me`, never `localhost`** (`baseURL` already defaults to `http://lvh.me:3000`). On localhost every authenticated test bounces to `/join-school`.
-3. **Run serially locally** — the config already sets `workers: 1` outside CI. Parallel workers trip the GoTrue sign-in rate limit and cascade into auth timeouts.
+3. **Serial by design** — `workers: 1` everywhere. The specs mutate one shared seeded database and GoTrue rate-limits sign-ins per IP. CI gets its speed from `--shard`, one Supabase stack per shard.
 
 ```bash
 npm run db:reset            # tests assume seed state
@@ -276,6 +276,8 @@ npx playwright test --project=human --headed   # 500ms slow-mo, for watching/deb
 ```
 
 First run needs browsers: `npx playwright install chromium`.
+
+**In CI** the same suite runs on every PR and on `master` (`.github/workflows/ci.yml`, job `e2e`): Supabase CLI starts the local stack, `next build` + `next start` serve it on `lvh.me:3000`, and `scripts/ci/check-e2e-skips.mjs` fails the run if any test skipped for a missing env var. `deploy.yml` waits for CI to pass. Details in `tests/README.md` → CI/CD Integration.
 
 Test credentials live in `tests/playwright/utils/constants.ts` (note: the `teacher` key there maps to `owner@e2etest.com`, which actually resolves to **admin**).
 

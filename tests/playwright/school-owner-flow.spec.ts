@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsTeacher } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
+import { getServiceRoleClient } from './utils/seed-state'
 
 /**
  * P0 — School Owner Core Flows
@@ -17,11 +18,30 @@ import { BASE, LOCALE } from './utils/constants'
  * Uses owner@e2etest.com (admin role on default tenant).
  */
 
+const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000001'
+const CREATED_TITLES = [
+  'E2E Test Course',
+  'Lesson Test Course',
+  'Exam Test Course',
+  'Exercise Test Course',
+  'Settings Test Course',
+  'Listed Course',
+]
+
 test.describe('School Owner Core Flows', () => {
   let courseId: string
 
   test.beforeEach(async ({ page }) => {
     await loginAsTeacher(page)
+  })
+
+  // Default School is on the free plan (max_courses: 5) and the seed already
+  // holds 2 courses. Each test here creates one more, and the plan-limit
+  // trigger (#658) refuses the 6th — so on a fresh database tests 5–7 stalled
+  // on the create form. Remove what each test made before the next one runs.
+  test.afterEach(async () => {
+    const admin = getServiceRoleClient()
+    await admin.from('courses').delete().eq('tenant_id', DEFAULT_TENANT).in('title', CREATED_TITLES)
   })
 
   test('1. admin dashboard loads', async ({ page }) => {

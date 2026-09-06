@@ -54,12 +54,9 @@ export default function PromptTemplatesPage() {
   const [search, setSearch] = useState('')
   const [deleteId, setDeleteId] = useState<number | null>(null)
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
-
+  // `loading` starts true and refetches after a mutation keep the current list
+  // on screen instead of flashing the skeleton, so nothing sets it back to true.
   const fetchTemplates = async () => {
-    setLoading(true)
     try {
       const res = await fetch('/api/teacher/templates')
       const data = await res.json()
@@ -71,6 +68,14 @@ export default function PromptTemplatesPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    // Mount-time load. Awaiting a resolved promise first moves every setState
+    // into an async continuation, which is what react-hooks/set-state-in-effect
+    // asks for (same pattern as plan-change-dialog).
+    void Promise.resolve().then(fetchTemplates)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDelete = async (id: number) => {
     try {
@@ -211,10 +216,10 @@ export default function PromptTemplatesPage() {
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button variant="ghost" size="icon-xs" aria-label={t('table.actions')}>
-                            <IconDotsVertical size={14} />
-                          </Button>
+                        <DropdownMenuTrigger
+                          render={<Button variant="ghost" size="icon-xs" aria-label={t('table.actions')} />}
+                        >
+                          <IconDotsVertical size={14} />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/teacher/templates/${template.id}/edit`)} className="flex items-center gap-2 text-sm">

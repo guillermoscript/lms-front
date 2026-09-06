@@ -8,6 +8,12 @@ const EXAM_ID = 9999
 
 test.describe('Full Student Journey', () => {
   test('lessons → exam → AI grading → certificate', async ({ page }) => {
+    // Course 9999 / exam 9999 / lessons 10000-10001 exist in no seed file in
+    // the repo, so on a fresh database the lesson URL bounces to the dashboard
+    // and the test fails before its first assertion. It only ever passed on a
+    // laptop whose local DB had been hand-populated. Loop 2 (#671) rewrites
+    // this journey on seeded data; until then it is documented, not run.
+    test.fixme(true, 'course 9999 is not part of supabase/seed.sql — rewritten in #671')
     test.setTimeout(120000)
 
     // ── LOGIN ──

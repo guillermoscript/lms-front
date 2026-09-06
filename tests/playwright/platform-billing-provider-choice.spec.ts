@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login } from './utils/auth'
 import { BASE, LOCALE, ACCOUNTS } from './utils/constants'
+import { DEFAULT_TENANT, getServiceRoleClient } from './utils/seed-state'
 
 /**
  * The payment-method step on the school's upgrade page, and the contract of the
@@ -17,9 +18,38 @@ import { BASE, LOCALE, ACCOUNTS } from './utils/constants'
  * is offered" is deterministic here. The seeded ids are placeholders, so this
  * spec stops at the dialog rather than following the redirect — completing a
  * real checkout needs live test-mode price ids.
+ *
+ * Since #631 a price row is necessary but not sufficient: the school's own
+ * `tenant_settings` toggle (`binance_enabled`, `solana_enabled`) has to be on,
+ * and the seed switches none of them on, so this spec turns the two crypto rails
+ * on for Default School and off again afterwards. Stripe defaults to enabled.
  */
 
 const UPGRADE = `${BASE}/${LOCALE}/dashboard/admin/billing/upgrade`
+
+const CRYPTO_TOGGLES = ['binance_enabled', 'solana_enabled']
+
+test.beforeAll(async () => {
+  const admin = getServiceRoleClient()
+  const { error } = await admin.from('tenant_settings').upsert(
+    CRYPTO_TOGGLES.map((setting_key) => ({
+      tenant_id: DEFAULT_TENANT,
+      setting_key,
+      setting_value: { enabled: true },
+    })),
+    { onConflict: 'tenant_id,setting_key' },
+  )
+  if (error) throw new Error(`could not enable crypto rails for Default School: ${error.message}`)
+})
+
+test.afterAll(async () => {
+  const admin = getServiceRoleClient()
+  await admin
+    .from('tenant_settings')
+    .delete()
+    .eq('tenant_id', DEFAULT_TENANT)
+    .in('setting_key', CRYPTO_TOGGLES)
+})
 
 /** The plan cards are base-ui Buttons; a synthetic click on them is unreliable. */
 async function clickByText(page: import('@playwright/test').Page, text: string) {

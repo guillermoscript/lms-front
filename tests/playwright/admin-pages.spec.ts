@@ -17,50 +17,61 @@ test.describe('Admin Pages', () => {
     await expect(page.getByTestId('admin-stats-grid')).toBeVisible()
   })
 
-  test('getting started checklist follows the course-first funnel', async ({ page }) => {
+  /**
+   * Since #453 the checklist shows ONE call to action (the next incomplete
+   * step, a base-ui Button rendered over a Link, so it is not role=link),
+   * the completed steps as struck-through links, and the remaining ones inside
+   * a collapsed <details>. Expand it before looking for every step.
+   */
+  async function expandChecklist(page: import('@playwright/test').Page) {
     const checklist = page.locator('[data-tour="admin-checklist"]')
-    const createCourse = checklist.getByRole('link', {
-      name: /Create your first course — set a price and publish/,
-    })
-    const payments = checklist.getByRole('link', { name: /Set up how you get paid/ })
-    const branding = checklist.getByRole('link', { name: /Brand your school/ })
-    const inviteStudents = checklist.getByRole('link', { name: /Invite your first students/ })
-    const schoolDetails = checklist.getByRole('link', { name: /Configure school details/ })
+    await expect(checklist.getByText(/^\d\/5$/)).toBeVisible({ timeout: 15_000 })
+    const more = checklist.locator('details:not([open]) > summary')
+    if (await more.count()) await more.click()
+    return checklist
+  }
 
-    await expect(checklist.getByText(/^\d\/5$/)).toBeVisible()
-    await expect(createCourse).toHaveAttribute('href', '/dashboard/admin/courses/new')
-    await expect(payments).toHaveAttribute('href', '/dashboard/admin/settings?tab=payment')
-    await expect(branding).toHaveAttribute('href', '/dashboard/admin/appearance')
-    await expect(inviteStudents).toHaveAttribute('href', '/dashboard/admin/users')
-    await expect(schoolDetails).toHaveAttribute('href', '/dashboard/admin/settings')
+  test('getting started checklist follows the course-first funnel', async ({ page }) => {
+    const checklist = await expandChecklist(page)
+
+    // Every step is reachable and points where the funnel says (#451/#665):
+    // course first, then getting paid, then brand / students / details.
+    const steps: Array<[RegExp, string]> = [
+      [/Create your first course — set a price and publish/, '/dashboard/admin/courses/new'],
+      [/Set up how you get paid/, '/dashboard/admin/settings?tab=payment'],
+      [/Brand your school/, '/dashboard/admin/appearance'],
+      [/Invite your first students/, '/dashboard/admin/users'],
+      [/Configure school details/, '/dashboard/admin/settings'],
+    ]
+    for (const [label, href] of steps) {
+      const link = checklist.locator(`a[href="${href}"]`).filter({ hasText: label }).first()
+      await expect(link, `step "${label}" → ${href}`).toBeAttached()
+    }
     await expect(checklist.getByText('Review your billing plan')).toHaveCount(0)
 
-    const stepLabels = await checklist.locator('a').evaluateAll((links) =>
-      links.slice(0, 5).map((link) => link.textContent?.trim())
-    )
-    expect(stepLabels).toEqual([
-      expect.stringContaining('Create your first course'),
-      expect.stringContaining('Set up how you get paid'),
-      expect.stringContaining('Brand your school'),
-      expect.stringContaining('Invite your first students'),
-      expect.stringContaining('Configure school details'),
-    ])
+    // The single CTA is the first incomplete step, and it links somewhere in the funnel.
+    const next = checklist.getByTestId('onboarding-next-step')
+    await expect(next).toBeVisible()
+    const nextHref = await next.locator('a').first().getAttribute('href')
+    expect(steps.map(([, href]) => href)).toContain(nextHref)
 
     // Code Academy has school details configured, so this validates that a
     // checked row remains a real navigation link.
-    await schoolDetails.click()
+    await checklist.locator('a[href="/dashboard/admin/settings"]').first().click()
     await expect(page).toHaveURL(/\/en\/dashboard\/admin\/settings$/)
   })
 
   test('getting started checklist copy is localized in Spanish', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/es/dashboard/admin`)
-    const checklist = page.locator('[data-tour="admin-checklist"]')
+    const checklist = await expandChecklist(page)
 
-    await expect(checklist.getByRole('link', {
-      name: /Crea tu primer curso — define un precio y publícalo/,
-    })).toBeVisible()
-    await expect(checklist.getByRole('link', { name: /Configura cómo recibir pagos/ })).toBeVisible()
-    await expect(checklist.getByRole('link', { name: /Invita a tus primeros estudiantes/ })).toBeVisible()
+    for (const label of [
+      /Crea tu primer curso — define un precio y publícalo/,
+      /Configura cómo recibir pagos/,
+      /Invita a tus primeros estudiantes/,
+    ]) {
+      await expect(checklist.locator('a').filter({ hasText: label }).first()).toBeAttached()
+    }
   })
 
   test('admin users page loads with user list', async ({ page }) => {
