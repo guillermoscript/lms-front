@@ -524,13 +524,13 @@ export default async function CourseDetailsPage(props: {
                                     <div className="space-y-3">
                                         {!userId ? (
                                             <Link href={`/auth/login?next=${encodeURIComponent(isFree ? `/courses/${params.id}?enroll=1` : `/checkout?courseId=${course.course_id}`)}`}>
-                                                <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
+                                                <Button data-testid="course-enroll-cta" className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
                                                     {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
                                                 </Button>
                                             </Link>
                                         ) : hasAccess ? (
                                             <Link href={`/dashboard/student/courses/${course.course_id}`}>
-                                                <Button className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
+                                                <Button data-testid="course-go-to-course" className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
                                                     {t('pricing.goToCourse')}
                                                 </Button>
                                             </Link>

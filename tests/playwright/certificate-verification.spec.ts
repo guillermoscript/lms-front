@@ -31,100 +31,81 @@ function getAdmin() {
 /* ------------------------------------------------------------------ */
 /*  Seeded data                                                        */
 /* ------------------------------------------------------------------ */
-let existingVerificationCode: string | null = null
-let seededCertificateId: number | null = null
+const TEMPLATE_NAME = '[E2E] Cert Verify Template'
+const CODE_PREFIX = 'E2E-CERTVERIFY-'
+
+let existingVerificationCode: string
+let seededCertificateId: string
+let seededTemplateId: string
 
 /* ------------------------------------------------------------------ */
-/*  Setup: find or seed a certificate                                  */
+/*  Setup: always seed our own template + certificate                  */
 /* ------------------------------------------------------------------ */
 test.beforeAll(async () => {
   const admin = getAdmin()
 
-  // Check if any certificates exist
-  const { data: certs } = await admin
+  // Idempotent cleanup in case a prior run crashed mid-seed
+  await admin.from('certificates').delete().like('verification_code', `${CODE_PREFIX}%`)
+  await admin.from('certificate_templates').delete().eq('template_name', TEMPLATE_NAME)
+
+  // Seed a fresh template
+  const { data: template, error: tErr } = await admin
+    .from('certificate_templates')
+    .insert({
+      course_id: 1001,
+      tenant_id: DEFAULT_TENANT,
+      template_name: TEMPLATE_NAME,
+      issuer_name: '[E2E] Test School',
+      issuance_criteria: 'Complete all lessons',
+      is_active: true,
+    })
+    .select('template_id')
+    .single()
+
+  if (tErr) throw new Error(`Seed template failed: ${tErr.message}`)
+  seededTemplateId = template.template_id
+
+  // Seed a fresh certificate against it
+  const verificationCode = `${CODE_PREFIX}${Date.now()}`
+  const { data: cert, error: cErr } = await admin
     .from('certificates')
+    .insert({
+      user_id: STUDENT_ID,
+      course_id: 1001,
+      template_id: seededTemplateId,
+      verification_code: verificationCode,
+      issued_at: new Date().toISOString(),
+      tenant_id: DEFAULT_TENANT,
+      credential_json: {
+        type: 'CourseCompletion',
+        student: 'E2E Test Student',
+        course: 'Introduction to Testing',
+        issuer: '[E2E] Test School',
+      },
+      completion_data: {
+        lessons_completed: 2,
+        total_lessons: 2,
+        completion_percentage: 100,
+      },
+    })
     .select('certificate_id, verification_code')
-    .limit(1)
+    .single()
 
-  if (certs && certs.length > 0) {
-    existingVerificationCode = certs[0].verification_code
-  } else {
-    // Seed a certificate for testing
-    // First check if a certificate_template exists
-    let templateId: number | null = null
-
-    const { data: templates } = await admin
-      .from('certificate_templates')
-      .select('template_id')
-      .eq('tenant_id', DEFAULT_TENANT)
-      .limit(1)
-
-    if (templates && templates.length > 0) {
-      templateId = templates[0].template_id
-    } else {
-      // Create a template
-      const { data: template, error: tErr } = await admin
-        .from('certificate_templates')
-        .insert({
-          course_id: 1001,
-          tenant_id: DEFAULT_TENANT,
-          template_name: '[E2E] Test Template',
-          issuer_name: '[E2E] Test School',
-          issuance_criteria: 'Complete all lessons',
-        })
-        .select('template_id')
-        .single()
-
-      if (tErr) throw new Error(`Seed template failed: ${tErr.message}`)
-      templateId = template.template_id
-    }
-
-    // Create a certificate
-    const verificationCode = `E2E-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const { data: cert, error: cErr } = await admin
-      .from('certificates')
-      .insert({
-        user_id: STUDENT_ID,
-        course_id: 1001,
-        template_id: templateId,
-        verification_code: verificationCode,
-        issued_at: new Date().toISOString(),
-        tenant_id: DEFAULT_TENANT,
-        credential_json: {
-          type: 'CourseCompletion',
-          student: 'E2E Test Student',
-          course: 'Introduction to Testing',
-          issuer: '[E2E] Test School',
-        },
-        completion_data: {
-          lessons_completed: 2,
-          total_lessons: 2,
-          completion_percentage: 100,
-        },
-      })
-      .select('certificate_id, verification_code')
-      .single()
-
-    if (cErr) throw new Error(`Seed certificate failed: ${cErr.message}`)
-    seededCertificateId = cert.certificate_id
-    existingVerificationCode = cert.verification_code
-  }
+  if (cErr) throw new Error(`Seed certificate failed: ${cErr.message}`)
+  seededCertificateId = cert.certificate_id
+  existingVerificationCode = cert.verification_code
 })
 
 test.afterAll(async () => {
   const admin = getAdmin()
 
-  // Clean up seeded certificate (only the one we created)
+  // Clean up only the rows this run created
   if (seededCertificateId) {
     await admin.from('certificates').delete().eq('certificate_id', seededCertificateId)
   }
-
-  // Clean up seeded template
-  await admin
-    .from('certificate_templates')
-    .delete()
-    .eq('template_name', '[E2E] Test Template')
-    .eq('tenant_id', DEFAULT_TENANT)
+  if (seededTemplateId) {
+    await admin.from('certificate_templates').delete().eq('template_id', seededTemplateId)
+  }
 })
 
 /* ================================================================== */
@@ -164,11 +145,6 @@ test.describe('Valid Certificate Verification', () => {
   test('valid code shows verified credential page', async ({ page }) => {
     test.setTimeout(30_000)
 
-    if (!existingVerificationCode) {
-      test.skip()
-      return
-    }
-
     await page.goto(`${BASE}/${LOCALE}/verify/${existingVerificationCode}`)
     await page.waitForLoadState('networkidle')
 
@@ -187,11 +163,6 @@ test.describe('Valid Certificate Verification', () => {
   test('valid certificate shows student name', async ({ page }) => {
     test.setTimeout(30_000)
 
-    if (!existingVerificationCode) {
-      test.skip()
-      return
-    }
-
     await page.goto(`${BASE}/${LOCALE}/verify/${existingVerificationCode}`)
     await page.waitForLoadState('networkidle')
 
@@ -206,11 +177,6 @@ test.describe('Valid Certificate Verification', () => {
 
   test('valid certificate shows verification code on page', async ({ page }) => {
     test.setTimeout(30_000)
-
-    if (!existingVerificationCode) {
-      test.skip()
-      return
-    }
 
     await page.goto(`${BASE}/${LOCALE}/verify/${existingVerificationCode}`)
     await page.waitForLoadState('networkidle')

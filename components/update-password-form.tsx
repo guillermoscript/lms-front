@@ -61,6 +61,7 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
                 <Label htmlFor="password">{t('password')}</Label>
                 <Input
                   id="password"
+                  data-testid="update-password-password"
                   type="password"
                   placeholder={t('password')}
                   required
@@ -69,7 +70,7 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" data-testid="update-password-submit" className="w-full" disabled={isLoading}>
                 {isLoading ? t('submitting') : t('submit')}
               </Button>
             </div>

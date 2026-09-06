@@ -62,6 +62,7 @@ test.beforeAll(async () => {
       exercise_type: 'essay',
       difficulty_level: 'easy',
       course_id: 1001,
+      lesson_id: 1001,
       created_by: TEACHER_ID,
       tenant_id: DEFAULT_TENANT,
       status: 'published',
@@ -337,9 +338,8 @@ test.describe('Exercise page tenant isolation', () => {
 /*  DB-Level: exercise_completions                                     */
 /* ================================================================== */
 test.describe.serial('DB-level: exercise_completions', () => {
-  // Note: exercise_completions insert triggers a function referencing l.lesson_id
-  // which doesn't exist — this is a pre-existing DB trigger bug, not a test issue
-  test.skip('exercise completion can be inserted with seeded exercise', async () => {
+  // Requires the seeded exercise to carry a lesson_id so handle_exercise_completion_xp can resolve a tenant.
+  test('exercise completion can be inserted with seeded exercise', async () => {
     const admin = getAdmin()
 
     // Clean any prior completion
@@ -381,8 +381,8 @@ test.describe.serial('DB-level: exercise_completions', () => {
 /*  DB-Level: XP Trigger on exercise_completions                       */
 /* ================================================================== */
 test.describe('DB-level: XP trigger', () => {
-  // Depends on exercise_completions insert which has a broken trigger (l.lesson_id)
-  test.skip('exercise_completion inserts xp_transactions with tenant_id and 50 XP', async () => {
+  // Requires the seeded exercise's lesson_id so the trigger can resolve a tenant and award XP.
+  test('exercise_completion inserts xp_transactions with tenant_id and 50 XP', async () => {
     const admin = getAdmin()
 
     // Record XP before
