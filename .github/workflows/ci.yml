@@ -112,8 +112,11 @@ jobs:
         # reads plan features and the gamification summary from
         # supabase/functions (get-plan-features, get-gamification-summary,
         # get-leaderboard) — without it every client-side feature gate closes
-        # and the dashboard renders without its gamification header.
-        run: supabase start -x studio,imgproxy,logflare,vector,supavisor,mailpit,postgres-meta
+        # and the dashboard renders without its gamification header. mailpit
+        # stays too: GoTrue refuses a password-reset request outright when it
+        # cannot hand the mail to an SMTP host, and loop-2-student-learns
+        # asserts that request succeeds and the email lands (#671).
+        run: supabase start -x studio,imgproxy,logflare,vector,supavisor,postgres-meta
       - name: Export Supabase keys
         run: |
           supabase status -o env \

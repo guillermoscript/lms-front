@@ -175,6 +175,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
                   <Label htmlFor="password">{t('password')}</Label>
                   <Link
                     href="/auth/forgot-password"
+                    data-testid="login-forgot-password-link"
                     className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                   >
                     {t('forgotPassword')}
@@ -246,6 +247,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
               {t('noAccount')}{' '}
               <Link
                 href={nextPath ? `/auth/sign-up?next=${encodeURIComponent(nextPath)}` : '/auth/sign-up'}
+                data-testid="login-signup-link"
                 className="underline underline-offset-4"
               >
                 {t('signup')}

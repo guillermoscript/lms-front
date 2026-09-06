@@ -83,6 +83,7 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
                   <Label htmlFor="email">{t('email')}</Label>
                   <Input
                     id="email"
+                    data-testid="forgot-password-email"
                     type="email"
                     placeholder="m@example.com"
                     required
@@ -91,7 +92,7 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
                   />
                 </div>
                 {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" data-testid="forgot-password-submit" className="w-full" disabled={isLoading}>
                   {isLoading ? t('submitting') : t('submit')}
                 </Button>
               </div>

@@ -14,10 +14,22 @@ import {
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { SocialShareModal } from './social-share-modal'
-import { cn } from '@/lib/utils'
+
+/** The slice of the `certificates` row (with its joins) the card reads. */
+interface StudentCertificate {
+    certificate_id: string
+    verification_code: string
+    issued_at: string
+    courses?: { title?: string | null } | null
+    certificate_templates?: {
+        template_name?: string | null
+        issuer_name?: string | null
+        design_settings?: { primary_color?: string | null } | null
+    } | null
+}
 
 interface StudentCertificateCardProps {
-    certificate: any
+    certificate: StudentCertificate
 }
 
 export function StudentCertificateCard({ certificate }: StudentCertificateCardProps) {
@@ -126,13 +138,13 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                         {t('view')}
                                     </Button>
                                 </a>
-                                <a href={`/api/certificates/${certificate.certificate_id}?format=pdf`} download>
+                                <a href={`/api/certificates/${certificate.certificate_id}?format=pdf`} download data-testid="certificate-download-pdf">
                                     <Button variant="outline" size="sm" className="h-8 text-xs font-semibold gap-1.5">
                                         <IconDownload size={13} />
                                         {t('download')}
                                     </Button>
                                 </a>
-                                <Link href={`/verify/${certificate.verification_code}`}>
+                                <Link href={`/verify/${certificate.verification_code}`} data-testid="certificate-verify-link">
                                     <Button variant="outline" size="sm" className="h-8 text-xs font-semibold gap-1.5">
                                         <IconShieldCheck size={13} />
                                         {t('verify')}
