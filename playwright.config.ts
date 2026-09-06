@@ -11,6 +11,13 @@ const isCI = !!process.env.CI;
 const baseURL = process.env.BASE_URL || 'http://lvh.me:3000';
 const port = Number(new URL(baseURL).port || 3000);
 
+// Specs that create a school on the fly (loop-1-creator-publishes) land on a
+// subdomain nobody pinned in /etc/hosts. Resolve every *.<platform host> to
+// loopback inside the browser so a fresh slug works on a runner with no
+// public DNS for lvh.me, and the suite never depends on that DNS at all.
+const platformHost = new URL(baseURL).hostname;
+const chromiumArgs = [`--host-resolver-rules=MAP *.${platformHost} 127.0.0.1, MAP ${platformHost} 127.0.0.1`];
+
 /**
  * Playwright Test Configuration
  *
@@ -76,7 +83,7 @@ export default defineConfig({
   projects: [
     {
       name: 'desktop-chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], launchOptions: { args: chromiumArgs } },
     },
     {
       name: 'mobile',
