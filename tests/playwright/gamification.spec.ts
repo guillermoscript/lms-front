@@ -60,6 +60,9 @@ test.describe('Gamification', () => {
   test.describe('XP and Level Display', () => {
     test.beforeEach(async ({ page }) => {
       await loginAsStudent(page)
+      // Login resolves on the first `/dashboard` commit, which still redirects
+      // to `/dashboard/student`; `networkidle` alone catches the skeleton.
+      await expect(page.getByTestId('student-dashboard')).toBeVisible({ timeout: 30_000 })
     })
 
     test('student dashboard loads with gamification header', async ({ page }) => {
@@ -99,6 +102,7 @@ test.describe('Gamification', () => {
   test.describe('Leaderboard', () => {
     test.beforeEach(async ({ page }) => {
       await loginAsStudent(page)
+      await expect(page.getByTestId('student-dashboard')).toBeVisible({ timeout: 30_000 })
     })
 
     test('leaderboard renders on student dashboard', async ({ page }) => {

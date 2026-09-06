@@ -14,6 +14,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
  * `restoreAliceSeedSubscription()` in `afterAll`.
  */
 export const ALICE_ID = 'a1000000-0000-0000-0000-000000000004'
+export const DEFAULT_TENANT = '00000000-0000-0000-0000-000000000001'
 export const CODE_ACADEMY_TENANT = '00000000-0000-0000-0000-000000000002'
 export const ALICE_SEED_PLAN_ID = 2001
 
@@ -39,7 +40,7 @@ export async function restoreAliceSeedSubscription(admin: SupabaseClient = getSe
 
   // Same shape as seed.sql (minus the fixed id — it is an identity column).
   // The insert fires the trigger that creates the subscription and its
-  // entitlements for courses 2001, 2002 and 10005.
+  // entitlements for courses 2001 and 2002 (every plan_courses row for plan 2001).
   const { error } = await admin.from('transactions').insert({
     user_id: ALICE_ID,
     tenant_id: CODE_ACADEMY_TENANT,

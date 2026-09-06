@@ -94,10 +94,10 @@ export function UserActions({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <Button variant="outline" size="icon" aria-label={t('menu')}>
-            <IconDots className="h-4 w-4" />
-          </Button>
+        <DropdownMenuTrigger
+          render={<Button variant="outline" size="icon" aria-label={t('menu')} />}
+        >
+          <IconDots className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setShowRoleDialog(true)}>

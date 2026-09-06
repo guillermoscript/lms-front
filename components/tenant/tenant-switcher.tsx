@@ -40,19 +40,19 @@ export function TenantSwitcher({ tenants }: { tenants: TenantOption[] }) {
 
     // Navigate to new subdomain
     const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
-    window.location.href = `https://${slug}.${platformDomain}/dashboard`
+    window.location.assign(`https://${slug}.${platformDomain}/dashboard`)
   }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white">
-          <School className="h-4 w-4" />
-          <span className="hidden sm:inline max-w-[120px] truncate">
-            {currentTenant?.name || 'Select School'}
-          </span>
-          <ChevronsUpDown className="h-3 w-3 opacity-50" />
-        </Button>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-white" />}
+      >
+        <School className="h-4 w-4" />
+        <span className="hidden sm:inline max-w-[120px] truncate">
+          {currentTenant?.name || 'Select School'}
+        </span>
+        <ChevronsUpDown className="h-3 w-3 opacity-50" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuGroup>
