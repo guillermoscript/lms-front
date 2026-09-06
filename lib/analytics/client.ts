@@ -28,6 +28,7 @@ import {
   type PropertiesFor,
 } from './events'
 import { type AnalyticsExclusionContext, shouldDropEvent } from './exclusions'
+import type { AnalyticsUserTraits } from './identity'
 
 export type ClientAnalyticsOptions = Omit<AnalyticsExclusionContext, 'path'>
 
@@ -37,8 +38,19 @@ export type ClientAnalytics = {
     name: E,
     props?: PropertiesFor<E>
   ) => void
-  /** Attach non-PII traits to the current profile. Never send email or name. */
-  identify: (userId: string, properties?: AnalyticsProperties) => void
+  /**
+   * Bind the session to a profile. `traits` (name, email, avatar) are what
+   * make the OpenPanel sessions list readable — the instance is self-hosted,
+   * so they stay on our own hardware. `components/analytics-user-binder.tsx`
+   * is the steady-state caller; login/sign-up call it at the click.
+   */
+  identify: (
+    userId: string,
+    properties?: AnalyticsProperties,
+    traits?: AnalyticsUserTraits
+  ) => void
+  /** Forget the profile on sign-out so the next visitor on this device starts anonymous. */
+  reset: () => void
   /** Manual screen view. Routine navigation is already covered by `trackScreenViews`. */
   screenView: (path?: string, properties?: AnalyticsProperties) => void
 }
@@ -72,16 +84,25 @@ export function useAnalytics(options: ClientAnalyticsOptions = {}): ClientAnalyt
   )
 
   const identify = useCallback<ClientAnalytics['identify']>(
-    (userId, properties) => {
+    (userId, properties, traits) => {
       if (dropped || !userId || typeof window === 'undefined') return
       try {
-        op.identify({ profileId: userId, properties })
+        op.identify({ profileId: userId, ...traits, properties })
       } catch {
         // Ignored by design — see `track`.
       }
     },
     [dropped, op]
   )
+
+  const reset = useCallback<ClientAnalytics['reset']>(() => {
+    if (typeof window === 'undefined') return
+    try {
+      op.clear()
+    } catch {
+      // Ignored by design — see `track`.
+    }
+  }, [op])
 
   const screenView = useCallback<ClientAnalytics['screenView']>(
     (path, properties) => {
@@ -97,7 +118,7 @@ export function useAnalytics(options: ClientAnalyticsOptions = {}): ClientAnalyt
   )
 
   return useMemo(
-    () => ({ track, identify, screenView }),
-    [track, identify, screenView]
+    () => ({ track, identify, screenView, reset }),
+    [track, identify, screenView, reset]
   )
 }

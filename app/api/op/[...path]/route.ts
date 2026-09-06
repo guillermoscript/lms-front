@@ -13,34 +13,45 @@
  * than as an error.
  *
  * WHAT THE VENDOR HANDLER DOES
- *   GET  …/op1.js  → serves the tracker script
+ *   GET  …/op1.js  → serves the tracker script (from openpanel.dev)
  *   POST …/track   → forwards to the collector at `apiUrl`
  *   anything else  → 404
  *
+ * WHAT WE ADD
+ *   GET  …/op1-replay.js → the session-replay recorder (rrweb, ~185 KB).
+ *        The tracker derives this URL from its own script src, and the vendor
+ *        handler 404s it, so without this branch replay silently never starts.
+ *        Replay *chunks* need nothing extra: they are POSTed to `/track` with
+ *        `type: "replay"`, which the vendor forwarder already passes through.
+ *
  * `createRouteHandler({ apiUrl })` points the *ingest* leg at our self-hosted
- * instance. The *script* leg is hardcoded to `https://openpanel.dev/op1.js` in
- * the vendor build and is NOT covered by `apiUrl`, so the override below exists
- * for the case where the self-hosted collector needs its own matching tracker
- * build. Unset, we serve the CDN script — still first-party to the browser,
- * because we fetch it server-side and re-serve it from this route.
+ * instance. The *script* leg is hardcoded to `https://openpanel.dev` in the
+ * vendor build and is NOT covered by `apiUrl`, so `NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN`
+ * exists for the case where the self-hosted collector needs its own matching
+ * tracker build. Unset, we serve the CDN scripts — still first-party to the
+ * browser, because we fetch them server-side and re-serve them from this route.
  */
 
 import { createRouteHandler } from '@openpanel/nextjs/server'
 
 export const dynamic = 'force-dynamic'
 
-const SCRIPT_PATH = '/op1.js'
+const TRACKER_SCRIPT_PATH = '/op1.js'
+const REPLAY_SCRIPT_PATH = '/op1-replay.js'
+const VENDOR_SCRIPT_ORIGIN = 'https://openpanel.dev'
 
 const apiUrl = process.env.NEXT_PUBLIC_OPENPANEL_API_URL?.replace(/\/+$/, '')
-const scriptOrigin = process.env.NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN?.replace(/\/+$/, '')
+// `|| undefined`: an env file line with no value yields '' — not undefined —
+// and '' must mean "use the vendor CDN", never "origin is the empty string".
+const scriptOrigin = process.env.NEXT_PUBLIC_OPENPANEL_SCRIPT_ORIGIN?.replace(/\/+$/, '') || undefined
 
 const openPanelHandler = apiUrl
   ? createRouteHandler({ apiUrl })
   : createRouteHandler()
 
-async function serveSelfHostedScript(origin: string, request: Request): Promise<Response> {
+async function serveScript(origin: string, scriptPath: string, request: Request): Promise<Response> {
   const requested = new URL(request.url)
-  const target = new URL(SCRIPT_PATH, `${origin}/`)
+  const target = new URL(scriptPath, `${origin}/`)
   target.search = requested.search
 
   try {
@@ -68,8 +79,13 @@ async function handle(request: Request): Promise<Response> {
   }
 
   const { pathname } = new URL(request.url)
-  if (scriptOrigin && request.method === 'GET' && pathname.endsWith(SCRIPT_PATH)) {
-    return serveSelfHostedScript(scriptOrigin, request)
+  if (request.method === 'GET') {
+    if (pathname.endsWith(REPLAY_SCRIPT_PATH)) {
+      return serveScript(scriptOrigin || VENDOR_SCRIPT_ORIGIN, REPLAY_SCRIPT_PATH, request)
+    }
+    if (scriptOrigin && pathname.endsWith(TRACKER_SCRIPT_PATH)) {
+      return serveScript(scriptOrigin, TRACKER_SCRIPT_PATH, request)
+    }
   }
 
   return openPanelHandler(request)

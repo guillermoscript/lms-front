@@ -88,8 +88,9 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
       }
 
       // The session is already in hand here, so this is the cheapest place in
-      // the app to bind the anonymous visitor to a profile. No email, no name —
-      // the auth user id only.
+      // the app to bind the anonymous visitor to a profile. Name/email follow a
+      // moment later from <AnalyticsUserBinder>, which also keeps the binding
+      // alive across hard navigations.
       if (session?.user?.id) analytics.identify(session.user.id, { role: userRole })
 
       analytics.track(ANALYTICS_EVENTS.LOGIN_SUCCEEDED, {
