@@ -1,6 +1,7 @@
 import createIntlMiddleware from 'next-intl/middleware'
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
+import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -341,39 +342,15 @@ export default async function proxy(request: NextRequest) {
     supabaseResponse.headers.set('x-user-id', user.id)
   }
 
-  // Read JWT claims from cookie (no network call) — getSession() is a local read
+  // Read JWT claims from the cookie (no network call). `accessTokenFromCookies`
+  // understands the `base64-` encoding @supabase/ssr writes; a hand-rolled
+  // JSON.parse here used to throw on it and silently default the role.
   let userRole: 'student' | 'teacher' | 'admin' = 'student'
-  if (user) {
-    try {
-      // Parse JWT directly from cookie to avoid creating another Supabase client
-      const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
-      if (authCookie) {
-        const sessionData = JSON.parse(authCookie.value)
-        const accessToken = sessionData?.access_token || sessionData?.[0]?.access_token
-        if (accessToken) {
-          const payload = JSON.parse(atob(accessToken.split('.')[1]))
-          userRole = payload.tenant_role || payload.user_role || 'student'
-        }
-      }
-    } catch {
-      // Fallback: try chunked cookies (sb-*-auth-token.0, .1, etc.)
-      try {
-        const chunks = request.cookies.getAll()
-          .filter(c => c.name.match(/^sb-.*-auth-token\.\d+$/))
-          .sort((a, b) => a.name.localeCompare(b.name))
-        if (chunks.length > 0) {
-          const combined = chunks.map(c => c.value).join('')
-          const sessionData = JSON.parse(combined)
-          const accessToken = sessionData?.access_token
-          if (accessToken) {
-            const payload = JSON.parse(atob(accessToken.split('.')[1]))
-            userRole = payload.tenant_role || payload.user_role || 'student'
-          }
-        }
-      } catch {
-        // ignore — default to 'student'
-      }
-    }
+  const cookieAccessToken = user ? accessTokenFromCookies(request.cookies.getAll()) : null
+  const cookieClaims = cookieAccessToken ? jwtClaims(cookieAccessToken) : null
+  if (cookieClaims) {
+    const claimed = (cookieClaims.tenant_role ?? cookieClaims.user_role) as string | undefined
+    if (claimed === 'student' || claimed === 'teacher' || claimed === 'admin') userRole = claimed
   }
 
   // Auth Guards — public routes
@@ -453,22 +430,14 @@ export default async function proxy(request: NextRequest) {
     //   1. Update app_metadata via admin API (so custom_access_token_hook picks it up)
     //   2. Refresh the session so the CURRENT response gets a new JWT with the right tenant_id
     // This costs 2 auth API calls but only runs when there's an actual mismatch.
+    //
+    // The claim comes from `cookieClaims` above. Until #672 this block re-parsed
+    // the cookie as plain JSON, which throws on the `base64-` value
+    // @supabase/ssr writes, so the catch below swallowed it and the sync NEVER
+    // ran: a member of two schools carried the first school's tenant_id into
+    // every RLS read on the second school's subdomain and saw nothing.
     try {
-      const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
-      const chunks = request.cookies.getAll()
-        .filter(c => c.name.match(/^sb-.*-auth-token\.\d+$/))
-        .sort((a, b) => a.name.localeCompare(b.name))
-      let accessToken: string | null = null
-      if (authCookie) {
-        const sd = JSON.parse(authCookie.value)
-        accessToken = sd?.access_token || sd?.[0]?.access_token
-      } else if (chunks.length > 0) {
-        const sd = JSON.parse(chunks.map(c => c.value).join(''))
-        accessToken = sd?.access_token
-      }
-      const jwtTenantId = accessToken
-        ? JSON.parse(atob(accessToken.split('.')[1])).tenant_id
-        : null
+      const jwtTenantId = (cookieClaims?.tenant_id as string | undefined) ?? null
 
       if (jwtTenantId !== tenantId) {
         // Step 1: Update app_metadata so the hook includes the right tenant_id
@@ -488,7 +457,7 @@ export default async function proxy(request: NextRequest) {
         await supabase.auth.refreshSession()
       }
     } catch {
-      // JWT parsing failed or refresh failed — page will work on next reload
+      // Admin update or refresh failed — page will work on next reload
     }
   }
 

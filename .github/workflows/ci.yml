@@ -71,8 +71,15 @@ jobs:
       NEXT_PUBLIC_ANALYTICS_DISABLED: "true"
       # Gated specs (platform-billing-*, access-cutoff-lifecycle, webhook claims)
       CRON_SECRET: ci-cron-secret-synthetic
-      STRIPE_SECRET_KEY: sk_test_ci_synthetic_never_called
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_synthetic
+      # Loop 3 (loop-3-student-pays) charges a real test-mode card through Stripe
+      # Connect, so it needs the repo's sk_test key, its matching pk_test key (a
+      # build-time NEXT_PUBLIC_*, hence set on the job) and a connected account
+      # with charges_enabled. Every other spec only signs synthetic webhooks and
+      # is happy with the fallbacks; without the secrets Loop 3 skips loudly and
+      # check-e2e-skips.mjs fails the job, which is the alarm we want.
+      STRIPE_SECRET_KEY: ${{ secrets.E2E_STRIPE_SECRET_KEY || 'sk_test_ci_synthetic_never_called' }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.E2E_STRIPE_PUBLISHABLE_KEY || 'pk_test_ci_synthetic' }}
+      E2E_STRIPE_CONNECT_ACCOUNT: ${{ secrets.E2E_STRIPE_CONNECT_ACCOUNT }}
       STRIPE_WEBHOOK_SECRET: whsec_ci_synthetic_connect
       STRIPE_PLATFORM_WEBHOOK_SECRET: whsec_ci_synthetic_platform
       # The upgrade page offers a rail only when its env is present

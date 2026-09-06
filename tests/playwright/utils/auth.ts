@@ -23,6 +23,17 @@ async function fillCredentials(page: Page, email: string, password: string) {
   const emailField = page.getByTestId('login-email')
   await emailField.waitFor({ state: 'visible', timeout: 30_000 })
 
+  // React stamps `__reactProps$…` on a node when it hydrates it; a value typed
+  // before that never reaches component state however long it sits on screen,
+  // and the 750 ms settle below is not enough on a dev server busy compiling
+  // the previous test's routes (Loop 3 lost 3 of 4 first logins to it).
+  await expect
+    .poll(
+      () => emailField.evaluate((el) => Object.keys(el).some((k) => k.startsWith('__reactProps'))),
+      { timeout: 60_000, intervals: [250, 500, 1000] }
+    )
+    .toBe(true)
+
   await expect
     .poll(
       async () => {
