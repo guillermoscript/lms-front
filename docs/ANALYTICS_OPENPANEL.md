@@ -639,9 +639,7 @@ never grows a duplicate error-tracking table. What the cross-link adds is a
   `openpanel.pointer:sent`. The shared key for everything else is the Supabase
   auth user id: OpenPanel stores it as `profileId` (identify at login/signup),
   Sentry as `user.id`, kept in sync for the whole tab lifetime by
-  `components/sentry-user-binder.tsx` in the root layout (OpenPanel's tracker
-  persists its binding itself; `Sentry.setUser` is memory-only, hence the
-  binder).
+  `components/analytics-user-binder.tsx` in the root layout (§13).
 
 Emitters live in `instrumentation-client.ts` (`beforeSend`, browser) and
 `sentry.server.config.ts` (`beforeSend`, node) and NOWHERE else. Both are
@@ -654,3 +652,57 @@ only as breadcrumbs, never as captured events.
 Sentry-only, `error_captured` carries no message/stack/user-agent, and
 `beforeSend` runs exactly once per event — so each error exists once in Sentry
 and at most once, as a pointer, in OpenPanel.
+
+## 13. Sessions are people, and they have a video (#692)
+
+Two changes so the **Sessions** view answers "what did *this user* do" instead
+of listing device ids.
+
+### 13.1 Identity on every session
+
+| Layer | Where | What it does |
+|---|---|---|
+| Init snippet | `app/[locale]/layout.tsx` passes `profileId={x-user-id}` to `<OpenPanelComponent>` | The very first `screen_view` of a hard load is already attributed. Header read only, no auth call. |
+| Steady state | `components/analytics-user-binder.tsx` (root layout) | `identify({ profileId, firstName, lastName, email, avatar, properties: { tenant_role, user_role } })` from the cookie session, re-applied on every load and on `onAuthStateChange`. De-duplicated per user id, so token refreshes are silent. On sign-out it calls `op.clear()` so the next visitor on that device is anonymous again. Also owns `Sentry.setUser({ id })` (§12). |
+| Event time | `components/login-form.tsx`, `components/sign-up-form.tsx` | Unchanged: bind at the click so the anonymous pre-login events stitch to the profile before navigation. |
+
+Helpers are pure and unit-tested in `lib/analytics/identity.ts`
+(`splitFullName`, `traitsFromSessionUser`, `rolesFromAccessToken`).
+
+**This relaxes the earlier "id only, never email or name" rule for OpenPanel**
+(Sentry still gets the id only). The reason the rule existed was a hosted
+vendor; the instance is self-hosted, so the traits never leave our hardware,
+and a sessions list keyed by UUID is unreadable. To go back, drop the `email`
+line in `traitsFromSessionUser()`.
+
+### 13.2 Session replay
+
+`sessionReplay` is configured in `lib/analytics/replay.ts` and passed to
+`<OpenPanelComponent>`:
+
+- **Sample rate** — `NEXT_PUBLIC_OPENPANEL_REPLAY_SAMPLE_RATE` (build arg:
+  Dockerfile + `deploy.yml`). Unset = **1**, record everything; that is the
+  right default while every user fits on one screen (§0). Lower it before
+  launch; `0`/`off` never downloads the recorder.
+- **Masking** — `maskAllInputs: true` (every field value), `maskAllText: false`
+  (the vendor default of masking all page text makes a journey unwatchable).
+  Anything that must not be recorded gets `data-analytics-block` and is drawn
+  as an empty box (`REPLAY_BLOCK_SELECTOR`). Stripe Elements are cross-origin
+  iframes and are invisible to rrweb regardless.
+- **Transport** — the recorder script is served first-party at
+  `/api/op/op1-replay.js` by `app/api/op/[...path]/route.ts` (the vendor route
+  handler only knows `op1.js` and 404s the replay script, which presents as
+  "replay never starts", not as an error). Chunks are POSTed to `/api/op/track`
+  as `type: "replay"` and forwarded like any event; the instance's ingest
+  validator accepts `replay` (§8).
+- **Cost** — the recorder is a separately code-split ~185 KB chunk, fetched
+  after the tracker and only for sampled sessions. Replays dominate disk on the
+  instance; keep a shorter retention for them than for events.
+- **Why you see no replay locally** — the SDK queues `replay` chunks until a
+  `/track` response returns a `sessionId` (`shouldQueue()` in
+  `@openpanel/sdk`). Against `lvh.me` the collector answers 401 (origin not in
+  the project's allowed domains, §8.3), so no session id ever arrives and the
+  chunks sit in `window.openpanel.queue` forever. Not a bug in our proxy: the
+  same page with a production `Origin` flushes chunks within the 10 s interval.
+  To probe locally, rewrite the `Origin` on `/api/op/track` from Node
+  (Playwright `route.fetch({ headers })`; Chromium ignores it on `continue()`).

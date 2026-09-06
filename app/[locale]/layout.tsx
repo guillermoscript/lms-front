@@ -3,13 +3,13 @@ import { Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProgress } from "@/components/shared/route-progress";
-import { SentryUserBinder } from "@/components/sentry-user-binder";
+import { AnalyticsUserBinder } from "@/components/analytics-user-binder";
 import { FeedbackButton } from "@/components/shared/feedback-button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
 import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
 import { TenantCssVarsServer } from "@/components/tenant/tenant-css-vars-server";
-import { getCurrentTenant } from "@/lib/supabase/tenant";
+import { getCurrentTenant, getCurrentUserId } from "@/lib/supabase/tenant";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
 import { NextIntlClientProvider } from 'next-intl';
@@ -20,6 +20,7 @@ import type { StoredPreset } from '@/lib/themes/presets';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
 import { OpenPanelComponent } from '@openpanel/nextjs';
 import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
+import { getSessionReplayConfig } from '@/lib/analytics/replay';
 import { hasPlanFeature } from '@/lib/plans/server';
 
 const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
@@ -169,6 +170,13 @@ export default async function RootLayout({
   const analyticsClientId = isAnalyticsEnvironmentEnabled()
     ? process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID
     : undefined;
+  // `x-user-id` is set by proxy.ts — a header read, no auth round trip. Passing
+  // it as `profileId` puts the identify call in the init snippet, so even the
+  // first screen_view of a hard load lands on the user instead of a device id.
+  // <AnalyticsUserBinder> then adds name/email and follows sign-in/sign-out.
+  const analyticsProfileId = analyticsClientId
+    ? (await getCurrentUserId()) ?? undefined
+    : undefined;
 
   return (
     <html lang={locale} className={notoSans.variable} suppressHydrationWarning>
@@ -200,8 +208,14 @@ export default async function RootLayout({
                   // every beacon 307s to /join-school.
                   apiUrl="/api/op"
                   scriptUrl="/api/op/op1.js"
+                  profileId={analyticsProfileId}
                   trackScreenViews
                   trackOutgoingLinks
+                  // Session replay: the recorder is fetched through the same
+                  // first-party route (`/api/op/op1-replay.js`) and its chunks
+                  // ride `/api/op/track` as `type: "replay"`. Sample rate and
+                  // masking live in lib/analytics/replay.ts.
+                  sessionReplay={getSessionReplayConfig()}
                   globalProperties={{
                     tenant_id: tenantInfo?.id ?? null,
                     tenant_slug: tenantInfo?.slug ?? null,
@@ -210,7 +224,7 @@ export default async function RootLayout({
                 />
               ) : null}
               <RouteProgress />
-              <SentryUserBinder />
+              <AnalyticsUserBinder />
               {children}
               <FeedbackButton />
               <Toaster />
