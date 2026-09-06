@@ -20,12 +20,14 @@
  * is viewport-specific.
  *
  * Why the recovery link is taken from the token, not clicked from the inbox:
- * CI starts Supabase with `-x mailpit` (no inbox at all), and locally the E2E
- * port is not in `additional_redirect_urls`, so GoTrue would bounce the
- * emailed link to `site_url`. Both the email and `generateLink` carry the same
- * `token_hash`; opening `/auth/confirm?token_hash=…&type=recovery` is the same
- * GoTrue verify path the link performs. When Mailpit is reachable the spec
- * still asserts the reset email actually arrived for the address.
+ * the emailed link carries a PKCE token that only the requesting browser's
+ * verifier cookie can exchange, and the local E2E port is not in
+ * `additional_redirect_urls`, so GoTrue rewrites `redirect_to` to `site_url`.
+ * `generateLink` yields the plain `token_hash`, and
+ * `/auth/confirm?token_hash=…&type=recovery` is the same GoTrue verify path
+ * the link performs. When Mailpit is reachable (locally, and in CI — see
+ * `.github/workflows/ci.yml`) the spec also asserts the reset email arrived;
+ * without a mailer GoTrue rejects the request and the spec records that.
  */
 import { test, expect, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -311,6 +313,11 @@ async function domClick(page: Page, testIdOrLocator: string | ReturnType<Page['l
 
 async function completeCurrentLesson(page: Page) {
   const toggle = page.getByTestId('lesson-complete-toggle')
+  // On the production build the app router briefly keeps the outgoing lesson
+  // tree mounted while the next one streams in, so two toggles can exist for
+  // a moment. Wait for exactly one — clicking both would complete and then
+  // un-complete the lesson.
+  await expect(toggle).toHaveCount(1, { timeout: 30_000 })
   await expect(toggle).toBeVisible({ timeout: 30_000 })
   await expect(toggle).toBeEnabled({ timeout: 30_000 })
   await domClick(page, 'lesson-complete-toggle')
@@ -581,19 +588,27 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
       await page.waitForURL(/\/auth\/forgot-password/, { timeout: 30_000 })
       await fillSettled(page, 'forgot-password-email', STUDENT.email)
       await domClick(page, 'forgot-password-submit')
-      await expect(page.getByText(/check your email/i)).toBeVisible({ timeout: 30_000 })
+      const success = page.getByText(/check your email/i)
+      if (hasInbox) {
+        await expect(success).toBeVisible({ timeout: 30_000 })
+        return
+      }
+      // No mailer behind GoTrue (Supabase started with `-x mailpit`): the
+      // request itself is rejected with "Error sending recovery email" and
+      // the form shows it. The form round-trip is still exercised; the
+      // recovery token comes from generateLink below.
+      const outcome = success.or(page.locator('form p.text-red-500'))
+      await expect(outcome.first()).toBeVisible({ timeout: 30_000 })
+      test.info().annotations.push({
+        type: 'note',
+        description: `no inbox — forgot-password form showed: ${(await outcome.first().textContent())?.trim()}`,
+      })
     })
 
     let tokenHash: string | null = null
 
     await test.step('the reset email reaches the local inbox (when one is running)', async () => {
-      if (!hasInbox) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Mailpit is not running here (CI excludes it) — email delivery not asserted, recovery token taken from generateLink',
-        })
-        return
-      }
+      if (!hasInbox) return
       const message = await expect
         .poll(() => findMailpitMessage(STUDENT.email), { timeout: 30_000 })
         .not.toBeNull()
