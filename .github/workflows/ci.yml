@@ -41,6 +41,40 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+  # The MCP server package (#669). It carries its own vitest.config.ts with
+  # ~90 tests that the root config never includes, and until this job existed
+  # nothing in CI ran them: deploy-mcp.yml shipped the image untested.
+  #
+  # Two installs on purpose: mcp-server/vitest.config.ts resolves the ROOT
+  # Vitest binary through the ancestor node_modules/.bin on PATH (the package
+  # has no Vitest of its own), so the root install is what provides the
+  # runner, and the package install provides what the tools import.
+  # Unconditional (no paths filter) so the check name is stable enough to be
+  # required by branch protection; the job costs well under a minute.
+  mcp-server:
+    name: MCP server unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mcp-server/package-lock.json
+      - name: Install (root, provides Vitest)
+        run: npm ci
+      - name: Install (mcp-server)
+        run: npm ci
+        working-directory: mcp-server
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: mcp-server
+      - name: Unit tests
+        run: npm test
+        working-directory: mcp-server
+
   # The Playwright suite (#667). Until this job existed, 374 E2E tests ran only
   # on whoever remembered to run them locally.
   #
