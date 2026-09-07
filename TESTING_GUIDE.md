@@ -24,16 +24,16 @@ This script will:
 2. **In Another Terminal, Run Tests**
    ```bash
    # Run all product tests
-   npx playwright test tests/admin/products-manual-payment.spec.ts
+   npx playwright test tests/playwright/admin-product-course-creation.spec.ts
 
    # Run with UI
-   npx playwright test tests/admin/products-manual-payment.spec.ts --ui
+   npx playwright test tests/playwright/admin-product-course-creation.spec.ts --ui
 
    # Run specific test
    npx playwright test -g "should create a product with manual payment"
 
    # Run in headed mode (see browser)
-   npx playwright test tests/admin/products-manual-payment.spec.ts --headed
+   npx playwright test tests/playwright/admin-product-course-creation.spec.ts --headed
    ```
 
 ## Test Coverage

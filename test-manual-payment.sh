@@ -26,7 +26,7 @@ echo "🧪 Running Playwright tests..."
 echo ""
 
 # Run the manual payment tests
-npx playwright test tests/admin/products-manual-payment.spec.ts --headed
+npx playwright test tests/playwright/admin-product-course-creation.spec.ts --headed
 
 TEST_RESULT=$?
 

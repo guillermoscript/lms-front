@@ -168,7 +168,7 @@ E2E tests in `tests/playwright/` — 33 spec files (tenant isolation, auth secur
 
 Plan-gate specs (`plan-limit-surfaces`, `access-cutoff-lifecycle`, `plan-feature-tiers`, `platform-billing-stripe-webhook`) each own a dedicated tenant and a hidden `platform_plans` row with tiny limits (`tests/playwright/utils/plan-gate-fixtures.ts`) — every enforcement path reads the plan by slug with no `is_active` filter, so "at the cap" costs one row, not fifty users. Never move the seeded tenants off their plan.
 
-The Playwright config has no `webServer` — start `npm run dev` yourself first, use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
+The Playwright config boots its own `webServer` (`next dev` locally on the `BASE_URL` port, reusing a server already listening; `next start` in CI). Use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Every spec lives in `tests/playwright/` — the only `testDir` — and every skip carries a reason (permanent ones link an issue); see `tests/README.md`. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
 
 Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
 - `student@e2etest.com` / `password123` — student (Default School)
