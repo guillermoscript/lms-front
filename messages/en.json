@@ -85,7 +85,10 @@
       "doThisNext": "Do this next → {step}",
       "completedSteps": "Completed steps",
       "remainingSteps": "{count, plural, one {# more step} other {# more steps}}",
-      "allDone": "All done! You can dismiss this checklist."
+      "allDone": "All done! You can dismiss this checklist.",
+      "substeps": "Sub-steps",
+      "substepDone": "done",
+      "substepPending": "pending"
     },
     "courseSelector": {
       "label": "Courses Included",
@@ -805,7 +808,11 @@
           "addLesson": "Add Lesson",
           "noLessons": "No lessons yet",
           "createFirst": "Add your first lesson",
-          "editLesson": "Edit Lesson"
+          "editLesson": "Edit Lesson",
+          "generateWithAi": "Generate with AI",
+          "generating": "Drafting lessons…",
+          "generateSuccess": "{count, plural, one {# draft lesson} other {# draft lessons}} added. Review and publish.",
+          "generateError": "Could not generate lessons. Try again."
         },
         "practice": {
           "title": "Practice Exercises",
@@ -1649,6 +1656,10 @@
             "removeItem": "Remove item",
             "addItem": "Add item"
           }
+        },
+        "firstLessonHint": {
+          "title": "{course} is created.",
+          "body": "Students can open it once this lesson is published — write it and hit Publish."
         }
       },
       "exerciseBuilder": {
@@ -2318,17 +2329,23 @@
           "connectPaymentsTime": "~2 min",
           "wizardPrompt": "Prefer a guided setup?",
           "wizardLink": "Open the setup wizard",
-          "addCourse": "Create your first course — set a price and publish",
-          "addCourseDesc": "Use quick create to publish in minutes, or generate a draft with AI.",
+          "addCourse": "Create your first course",
+          "addCourseDesc": "A course is live once it is published and has at least one published lesson a student can open.",
           "addCourseTime": "~3 min",
-          "inviteUsers": "Invite your first students",
-          "inviteUsersDesc": "Invite students to join your school.",
+          "inviteUsers": "Invite your first student",
+          "inviteUsersDesc": "Share your school link. Anyone who signs up through it joins as a student.",
           "inviteUsersTime": "~1 min",
           "courseSuccessTitle": "Your first course is live!",
           "courseSuccessDescription": "{course} is ready to share. Send the link to your first students.",
           "copyCourseLink": "Copy course link",
           "courseLinkCopied": "Link copied",
-          "viewCourse": "View course"
+          "viewCourse": "View course",
+          "addCourseStepPublish": "Publish the course",
+          "addCourseStepLesson": "Publish your first lesson",
+          "copyJoinLink": "Copy join link",
+          "joinLinkCopied": "Link copied",
+          "shareWhatsApp": "Share on WhatsApp",
+          "inviteWhatsAppMessage": "Join my school! Sign up here: {url}"
         },
         "tour": {
           "checklist": {
@@ -2898,7 +2915,7 @@
         "createCourse": "Create Course",
         "new": {
           "title": "Create a course",
-          "description": "Name it, pick a price, publish. You will land in the course editor to add lessons.",
+          "description": "Name it, pick a price, publish. You will land in the lesson editor to write your first lesson.",
           "or": "or"
         },
         "stats": {
@@ -3745,7 +3762,8 @@
             "thumbnailIdea": "Thumbnail idea",
             "openCourse": "Edit your course",
             "startOver": "Generate another",
-            "error": "Could not generate the course draft. Try again."
+            "error": "Could not generate the course draft. Try again.",
+            "openFirstLesson": "Review the first lesson"
           }
         },
         "edit": {

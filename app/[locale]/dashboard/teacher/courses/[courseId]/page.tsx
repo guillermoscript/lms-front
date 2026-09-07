@@ -34,6 +34,7 @@ import {
   IconChartBar,
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
+import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
@@ -369,12 +370,17 @@ export default async function CourseManagementPage({ params }: PageProps) {
                     <p className="text-sm text-muted-foreground max-w-sm mb-6">
                       {t('curriculum.description')}
                     </p>
-                    <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`}>
-                      <Button className="gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <Button
+                        className="gap-2"
+                        nativeButton={false}
+                        render={<Link href={`/dashboard/teacher/courses/${courseId}/lessons/new?from=new-course`} />}
+                      >
                         <IconPlus className="h-4 w-4" />
                         {t('curriculum.createFirst')}
                       </Button>
-                    </Link>
+                      <GenerateLessonsButton courseId={course.course_id} />
+                    </div>
                   </CardContent>
                 </Card>
               )}

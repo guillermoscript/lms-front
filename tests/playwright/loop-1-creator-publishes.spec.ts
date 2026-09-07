@@ -7,14 +7,15 @@
  *   1. Anonymous on the bare platform domain → /create-school → sign up →
  *      name the school → land on the new subdomain's /dashboard/admin.
  *   2. Checklist "Create your first course" → /dashboard/admin/courses/new →
- *      quick create as a draft → course editor.
+ *      quick create as a draft → the new-lesson editor, with a hint (#675).
  *   3. Add the first lesson with block content (a Text block and a Callout,
  *      which serialises to an MDX component) → publish the lesson.
  *   4. Publish the course from its settings page (base-ui Select → Update).
  *   5. Anonymous visitor opens https://<slug>/courses/<id>: title, lesson
  *      list, Free badge and the enroll CTA. /courses lists the card. The same
  *      id 404s on another tenant's subdomain.
- *   6. The checklist reports the first course as done.
+ *   6. The checklist reports the first course as done (published course AND
+ *      published lesson, #675) and hands over the join link for the first student.
  *
  * A second test walks steps 1 and 5 in Spanish.
  *
@@ -327,26 +328,24 @@ test('a creator signs up, creates a school, publishes a course with a lesson and
     // Draft on purpose: publishing is its own step (4) through the settings page.
     // One creation click per attempt; a long settle so a slow server action
     // never gets a second, duplicating click.
+    // Creating a course lands on its first lesson, not the course overview
+    // (#675): the course has nothing a student can open until a lesson exists.
+    const onNewLesson = /\/dashboard\/teacher\/courses\/\d+\/lessons\/new\?from=new-course/
     await clickUntil(
       page.getByRole('button', { name: /save as draft/i }),
-      async () => /\/dashboard\/teacher\/courses\/\d+/.test(page.url()),
+      async () => onNewLesson.test(page.url()),
       { attempts: 2, settleMs: 30_000 },
     )
-    await expect(page).toHaveURL(/\/dashboard\/teacher\/courses\/\d+/, { timeout: 30_000 })
+    await expect(page).toHaveURL(onNewLesson, { timeout: 30_000 })
     courseId = Number(page.url().match(/courses\/(\d+)/)![1])
+    await expect(page.getByTestId('first-lesson-hint')).toContainText(courseTitle, { timeout: 20_000 })
 
     const course = await readCourse(admin, courseId)
     expect(course.title).toBe(courseTitle)
     expect(course.status).toBe('draft')
   })
 
-  await test.step('3. add the first lesson with a Text block and a Callout, publish it', async () => {
-    await clickUntil(
-      page.getByRole('link', { name: /add (your first )?lesson/i }).first(),
-      async () => /\/lessons\/new/.test(page.url()),
-    )
-    await expect(page).toHaveURL(/\/lessons\/new/, { timeout: 20_000 })
-
+  await test.step('3. write the first lesson with a Text block and a Callout, publish it', async () => {
     await fillStable(page.getByPlaceholder(/introduction to variables/i), lessonTitle)
     const addBlock = page.getByRole('button', { name: /^add block$/i })
     await clickUntil(page.getByRole('button', { name: /write content/i }), () =>
@@ -388,6 +387,23 @@ test('a creator signs up, creates a school, publishes a course with a lesson and
     expect(lessons![0].content).toContain(lessonText)
     expect(lessons![0].content).toMatch(/<Callout[\s>]/)
     expect(lessons![0].content).toContain(calloutText)
+  })
+
+  await test.step('3b. the checklist counts the lesson, not the course (#675)', async () => {
+    // A published lesson inside a draft course: the step stays the next
+    // action, with one of its two sub-steps ticked and no milestone yet.
+    await page.goto(`${base}/en/dashboard/admin`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('admin-dashboard')).toBeVisible({ timeout: 30_000 })
+    const next = page.getByTestId('onboarding-next-step')
+    await expect(next).toContainText('Create your first course')
+    await expect(next.getByTestId('onboarding-substep-publish-course')).toHaveAttribute('data-completed', 'false')
+    await expect(next.getByTestId('onboarding-substep-publish-lesson')).toHaveAttribute('data-completed', 'true')
+    await expect(page.getByTestId('onboarding-milestone')).toHaveCount(0)
+    // Its CTA points at the course, not at "create another course".
+    await expect(next.locator('a[href]').first()).toHaveAttribute(
+      'href',
+      new RegExp(`/dashboard/teacher/courses/${courseId}$`),
+    )
   })
 
   await test.step('4. publish the course from its settings', async () => {
@@ -447,16 +463,26 @@ test('a creator signs up, creates a school, publishes a course with a lesson and
     }
   })
 
-  await test.step('6. the checklist reports the first course as done', async () => {
+  await test.step('6. the checklist reports the first course as done and hands over the join link', async () => {
     await page.goto(`${base}/en/dashboard/admin`, { waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('admin-dashboard')).toBeVisible({ timeout: 30_000 })
     await expect(page.getByTestId('onboarding-milestone')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByTestId('onboarding-next-step')).not.toContainText(
-      'Create your first course',
-    )
+    const next = page.getByTestId('onboarding-next-step')
+    await expect(next).not.toContainText('Create your first course')
     await expect(
       page.getByLabel('Completed steps').getByText('Create your first course'),
     ).toBeVisible()
+
+    // Next up is the first student (#675): the join link, inline, with copy
+    // and WhatsApp share — no detour through the users page.
+    await expect(next).toContainText('Invite your first student')
+    const share = next.getByTestId('onboarding-share-invite-users')
+    await expect(share).toContainText(`${creator.slug}.`)
+    await expect(share).toContainText('/join-school')
+    const whatsapp = share.getByTestId('onboarding-share-whatsapp')
+    await expect(whatsapp).toBeVisible()
+    const copy = share.getByTestId('onboarding-share-copy')
+    await clickUntil(copy, () => copy.getByText(/link copied/i).isVisible())
   })
 })
 
@@ -482,13 +508,17 @@ test('en español: crea la escuela y la página pública del curso se ve en espa
   await test.step('curso publicado con una lección (creación rápida + lección sembrada)', async () => {
     await page.goto(`${base}/es/dashboard/admin/courses/new`, { waitUntil: 'domcontentloaded' })
     await fillStable(page.locator('#quick-title'), courseTitle)
+    const onNewLesson = /\/dashboard\/teacher\/courses\/\d+\/lessons\/new\?from=new-course/
     await clickUntil(
       page.getByRole('button', { name: /crear y publicar/i }),
-      async () => /\/dashboard\/teacher\/courses\/\d+/.test(page.url()),
+      async () => onNewLesson.test(page.url()),
       { attempts: 2, settleMs: 30_000 },
     )
-    await expect(page).toHaveURL(/\/dashboard\/teacher\/courses\/\d+/, { timeout: 30_000 })
+    await expect(page).toHaveURL(onNewLesson, { timeout: 30_000 })
     courseId = Number(page.url().match(/courses\/(\d+)/)![1])
+    await expect(page.getByTestId('first-lesson-hint')).toContainText('ya está creado', {
+      timeout: 20_000,
+    })
     const course = await readCourse(admin, courseId)
     expect(course.status).toBe('published')
 
@@ -532,5 +562,17 @@ test('en español: crea la escuela y la página pública del curso se ve en espa
     } finally {
       await context.close()
     }
+  })
+
+  await test.step('6. la lista de tareas en español: curso listo, invita a tu primer estudiante', async () => {
+    await page.goto(`${base}/es/dashboard/admin`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('admin-dashboard')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('onboarding-milestone')).toBeVisible({ timeout: 15_000 })
+    const next = page.getByTestId('onboarding-next-step')
+    await expect(next).toContainText('Invita a tu primer estudiante')
+    const share = next.getByTestId('onboarding-share-invite-users')
+    await expect(share).toContainText('/join-school')
+    await expect(share.getByTestId('onboarding-share-whatsapp')).toContainText('WhatsApp')
+    await expect(share.getByTestId('onboarding-share-copy')).toContainText('Copiar enlace')
   })
 })
