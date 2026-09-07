@@ -15,11 +15,18 @@ export interface MailerStatus {
   from: string | null
 }
 
-export function isMailerConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+/**
+ * `Record<string, string | undefined>` rather than `NodeJS.ProcessEnv`: the
+ * project augments `ProcessEnv` with required keys, so a test cannot pass a
+ * small literal env without spelling out every one of them.
+ */
+type EnvLike = Record<string, string | undefined>
+
+export function isMailerConfigured(env: EnvLike = process.env): boolean {
   return Boolean(env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN)
 }
 
-export function getMailerStatus(env: NodeJS.ProcessEnv = process.env): MailerStatus {
+export function getMailerStatus(env: EnvLike = process.env): MailerStatus {
   const configured = isMailerConfigured(env)
   if (!configured) return { configured: false, domain: null, from: null }
   const domain = env.MAILGUN_DOMAIN as string
