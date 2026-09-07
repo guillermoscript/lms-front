@@ -1,17 +1,56 @@
 name: Build and deploy MCP server to Dokploy
 
+# Runs after the CI workflow (which includes the `MCP server unit tests` job,
+# #669) has passed on master — a red merge commit is not shipped, same
+# contract as deploy.yml. The image is only rebuilt when the verified commit
+# touches mcp-server/**; the `changed` job below stands in for the `paths:`
+# filter that a `workflow_run` trigger cannot express. If CI is wrong and a
+# hotfix has to go out anyway, trigger this workflow by hand from the Actions
+# tab (workflow_dispatch) — that path skips both the CI gate and the paths
+# check.
 on:
-  push:
-    branches: ["master", "feature/mcp"]
-    paths:
-      - "mcp-server/**"
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: ["master"]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}-mcp
 
 jobs:
+  changed:
+    name: mcp-server changed?
+    # workflow_run fires on failure too; only consider a green run. Manual
+    # dispatch has no upstream run and always proceeds.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.diff.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          # HEAD and its first parent: master receives squash merges, so the
+          # merge commit's own diff is the whole PR.
+          fetch-depth: 2
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --quiet HEAD^ HEAD -- mcp-server; then
+            echo "mcp-server/ untouched by ${GITHUB_SHA::7}; skipping deploy"
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only HEAD^ HEAD -- mcp-server
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build-and-push:
+    needs: changed
+    if: needs.changed.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,6 +59,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # On workflow_run `github.sha` is the default-branch head, which is
+          # what we want on master; pin to the verified commit anyway.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
