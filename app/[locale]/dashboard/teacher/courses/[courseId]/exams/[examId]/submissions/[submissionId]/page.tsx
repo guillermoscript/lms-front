@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { SubmissionReview } from '@/components/teacher/submission-review'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -211,7 +211,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
       .eq('submission_id', parseInt(submissionId))
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`)
-    redirect(`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`)
+    redirect(`/${await getLocale()}/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`)
   }
 
   return (

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { hasPlanFeature, isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
 import { openai } from '@ai-sdk/openai'
@@ -214,12 +215,17 @@ export async function gradeExamWithAI(
       }
     }
 
-    // Get AI configuration for free-text grading
-    const { data: aiConfig } = await supabase
+    // Get AI configuration for free-text grading. This action runs as the
+    // student, and `exam_ai_configs` is readable by tenant staff only, so the
+    // RLS client always came back empty here and the defaults below (AI ON)
+    // silently overrode a teacher who had switched AI grading off (#674).
+    // The exam row was already resolved through the student's own RLS read
+    // above, so a service-role lookup keyed by that exam id leaks nothing.
+    const { data: aiConfig } = await createAdminClient()
       .from('exam_ai_configs')
       .select('*')
-      .eq('exam_id', params.examId)
-      .single()
+      .eq('exam_id', exam.exam_id)
+      .maybeSingle()
 
     // Use config or sensible defaults (don't try to insert — student won't have RLS permission)
     const config = aiConfig || {
@@ -275,11 +281,20 @@ export async function gradeExamWithAI(
         p_processing_time_ms: processingTime,
       })
 
-      // Mark submission as needing teacher attention
-      await supabase
+      // Mark submission as needing teacher attention. `save_exam_feedback`
+      // (SECURITY DEFINER) just stamped it `ai_reviewed`, and students have no
+      // UPDATE policy on exam_submissions, so this write used to be dropped by
+      // RLS: the queue never flagged the row and the student saw "AI
+      // Evaluated" for an answer nobody had graded (#674). Service role,
+      // scoped to the caller's own submission.
+      const { error: flagError } = await createAdminClient()
         .from('exam_submissions')
         .update({ review_status: 'pending_teacher_review', requires_attention: true })
         .eq('submission_id', params.submissionId)
+        .eq('student_id', userId)
+      if (flagError) {
+        console.error('Failed to flag submission for teacher review:', flagError)
+      }
 
       return {
         success: true,

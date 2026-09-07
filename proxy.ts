@@ -104,10 +104,27 @@ function getTenantSlugFromHost(host: string): string | null {
  * production, `:3005`-style in local dev) and the scheme from
  * `x-forwarded-proto`.
  */
+/**
+ * The host:port the browser actually dialed.
+ *
+ * `Host` is right for every request the browser sends. It is wrong for the one
+ * request Next makes on its own: when a Server Action calls `redirect()`, Next
+ * renders the target page inline through an internal fetch that carries
+ * `Host: localhost:<port>` and keeps the real authority in `x-forwarded-host`.
+ * Resolving the tenant from `Host` there lands every tenant-subdomain action
+ * redirect on the DEFAULT tenant, where the caller is not a member, so the
+ * teacher who just saved a grade was bounced to /join-school (#674). Behind
+ * Cloudflare → Traefik both headers name the public domain, so preferring
+ * `x-forwarded-host` changes nothing in production.
+ */
+function requestAuthority(request: NextRequest): string {
+  return request.headers.get('x-forwarded-host') || request.headers.get('host') || ''
+}
+
 function publicRedirectUrl(request: NextRequest, path: string): URL {
   const url = new URL(path, request.url)
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const hostHeader = request.headers.get('host') || url.host
+  const hostHeader = requestAuthority(request) || url.host
 
   // The Host header is the exact authority the browser dialed, so it is the
   // only host:port a redirect can safely send it back to. Behind
@@ -193,7 +210,7 @@ export default async function proxy(request: NextRequest) {
   }
 
   // --- Tenant Resolution (runs for ALL routes including /api) ---
-  const host = request.headers.get('host') || ''
+  const host = requestAuthority(request)
   const tenantSlug = getTenantSlugFromHost(host)
     || request.headers.get('x-tenant-slug') // Dev override
   let tenantId = DEFAULT_TENANT_ID
