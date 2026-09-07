@@ -2587,6 +2587,9 @@
           "copied": "¡Copiado!",
           "sent": "¡Invitación enviada!",
           "sentDescription": "Se envió un correo a {email} con instrucciones para unirse.",
+          "createdNotSent": "Invitación creada — correo no enviado",
+          "createdNotSentDescription": "El servicio de correo de la escuela no está configurado, así que no se envió nada a {email}. Comparte este enlace en su lugar; se unirá con el rol que elegiste.",
+          "joinLinkLabel": "Enlace para unirse",
           "inviteAnother": "Invitar a otra persona",
           "linkNote": "WhatsApp y el enlace compartirán la página de registro de tu escuela.",
           "whatsappMessage": "¡Estás invitado a unirte a nuestra escuela! Regístrate aquí: {url} (Te unirás como {role})"
