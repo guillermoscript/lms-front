@@ -1092,7 +1092,8 @@
         "archiveSuccess": "Course archived successfully",
         "archiveError": "Failed to archive course",
         "deleteSuccess": "Course deleted",
-        "deleteError": "Failed to delete course"
+        "deleteError": "Failed to delete course",
+        "deleteSuccessNotEmailed": "Course deleted — {count, plural, one {# enrolled student was} other {# enrolled students were}} not emailed because the email service is not configured"
       },
       "examBuilder": {
         "editTitle": "Edit Exam",
@@ -1988,7 +1989,9 @@
         "notEligible": "Student is not yet eligible for a certificate",
         "issueGenericError": "An error occurred while issuing the certificate",
         "issued": "Issued",
-        "issueCertificate": "Issue Certificate"
+        "issueCertificate": "Issue Certificate",
+        "issuedNotEmailed": "Certificate issued to {name} — email not sent",
+        "issuedNotEmailedDescription": "The school's email service is not configured, so nothing was sent. Share this verify link with them instead: {url}"
       },
       "templateForm": {
         "basicInfo": "Basic Information",
@@ -2893,12 +2896,12 @@
         "description": "View and manage all platform courses",
         "backToDashboard": "Back to Dashboard",
         "createCourse": "Create Course",
-
         "new": {
           "title": "Create a course",
           "description": "Name it, pick a price, publish. You will land in the course editor to add lessons.",
           "or": "or"
-        },        "stats": {
+        },
+        "stats": {
           "total": "Total Courses",
           "published": "Published",
           "drafts": "Drafts"
@@ -3327,6 +3330,12 @@
             "saving": "Saving...",
             "save": "Save"
           }
+        },
+        "mailer": {
+          "label": "Platform mailer",
+          "configured": "Configured — emails are sent from {from} via {domain}.",
+          "notConfigured": "Not configured — no emails are sent. Invitations show a shareable link instead; certificates and course notices are not delivered.",
+          "hint": "Set by the platform operator (MAILGUN_API_KEY, MAILGUN_DOMAIN, EMAIL_FROM). The SMTP fields below are stored but not used for sending yet."
         }
       },
       "revenue": {

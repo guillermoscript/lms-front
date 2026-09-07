@@ -185,9 +185,11 @@ export async function joinCurrentSchool() {
   revalidatePath('/dashboard/student')
   revalidatePath('/join-school')
 
-  // Send welcome email (non-blocking)
+  // Send welcome email (non-blocking). `emailSent` is reported honestly —
+  // false when the platform mailer is not configured (#676) — but no caller
+  // needs to act on it: the member is already in, there is nothing to share.
+  let emailSent = false
   try {
-    const adminClient = createAdminClient()
     const { data: authUser } = await adminClient.auth.admin.getUserById(user.id)
     const { data: tenantRow } = await adminClient
       .from('tenants')
@@ -202,13 +204,13 @@ export async function joinCurrentSchool() {
         schoolName: tenantRow?.name || 'the school',
         dashboardUrl: `${appUrl}/dashboard/student`,
       })
-      await sendEmail({ to: authUser.user.email, ...template })
+      emailSent = await sendEmail({ to: authUser.user.email, ...template })
     }
   } catch (emailErr) {
     console.error('Failed to send welcome email:', emailErr)
   }
 
-  return { success: true }
+  return { success: true, emailSent }
 }
 
 /**

@@ -55,7 +55,17 @@ export function IssueCertificateButton({
             }
 
             if (result.success) {
-                toast.success(t('issueSuccess', { name: studentName }))
+                // The route reports whether the student's email actually went
+                // out; with the platform mailer unset it did not, and the
+                // teacher needs the verify link to pass along instead (#676).
+                if (result.emailSent === false && result.verifyUrl) {
+                    toast.warning(t('issuedNotEmailed', { name: studentName }), {
+                        description: t('issuedNotEmailedDescription', { url: result.verifyUrl }),
+                        duration: 15_000,
+                    })
+                } else {
+                    toast.success(t('issueSuccess', { name: studentName }))
+                }
                 setIsSuccess(true)
                 router.refresh()
             } else {

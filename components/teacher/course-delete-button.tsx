@@ -48,8 +48,8 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
         toast.success(t('archiveSuccess'))
         setOpen(false)
         router.push('/dashboard/teacher/courses')
-      } catch (err: any) {
-        toast.error(err.message || t('archiveError'))
+      } catch (err) {
+        toast.error(err instanceof Error && err.message ? err.message : t('archiveError'))
       }
     })
   }
@@ -57,12 +57,19 @@ export function CourseDeleteButton({ courseId, courseTitle }: CourseDeleteButton
   const handleDelete = () => {
     startTransition(async () => {
       try {
-        await deleteCourse(courseId)
-        toast.success(t('deleteSuccess'))
+        const result = await deleteCourse(courseId)
+        // Enrolled students are emailed about the removal — unless the platform
+        // mailer is not configured, in which case say so instead of implying
+        // they were told (#676).
+        if (result.recipients > 0 && !result.mailerConfigured) {
+          toast.warning(t('deleteSuccessNotEmailed', { count: result.recipients }), { duration: 10_000 })
+        } else {
+          toast.success(t('deleteSuccess'))
+        }
         setOpen(false)
         router.push('/dashboard/teacher/courses')
-      } catch (err: any) {
-        toast.error(err.message || t('deleteError'))
+      } catch (err) {
+        toast.error(err instanceof Error && err.message ? err.message : t('deleteError'))
       }
     })
   }
