@@ -10,6 +10,22 @@ import { invitationTemplate } from '@/lib/email/templates/invitation'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
+
+export interface CreateInvitationResult {
+  success: boolean
+  error?: string
+  /**
+   * Whether an email actually left the server. `false` when the admin did not
+   * ask for one, when Mailgun is not configured (`sendEmail()` then returns
+   * false and logs), or when the Mailgun call failed. The dialog uses this to
+   * say "email not sent — share this link" instead of "Invitation sent!" (#673,
+   * the invitation slice of #676).
+   */
+  emailSent?: boolean
+  /** The school's join page, so the UI can hand the admin a link that works. */
+  joinUrl?: string
+}
 
 /**
  * Create an invitation and optionally send an email.
@@ -23,7 +39,7 @@ export async function createInvitation({
   email: string
   role: 'student' | 'teacher'
   sendEmailInvite: boolean
-}) {
+}): Promise<CreateInvitationResult> {
   const userRole = await getUserRole()
   if (userRole !== 'admin') {
     return { success: false, error: 'Unauthorized' }
@@ -70,22 +86,23 @@ export async function createInvitation({
     return { success: false, error: 'Failed to create invitation' }
   }
 
-  // Send email if requested
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('name, slug')
+    .eq('id', tenantId)
+    .single()
+  const joinUrl = await buildJoinUrl(tenant?.slug)
+
+  // Send email if requested. The invitation row exists either way; what the
+  // caller learns is whether the email really went out, never a guess.
+  let emailSent = false
   if (sendEmailInvite) {
     try {
-      const { data: tenant } = await adminClient
-        .from('tenants')
-        .select('name, slug')
-        .eq('id', tenantId)
-        .single()
-
       const { data: inviterProfile } = await adminClient
         .from('profiles')
         .select('full_name')
         .eq('id', userId)
         .single()
-
-      const joinUrl = buildJoinUrl(tenant?.slug)
 
       const template = invitationTemplate({
         schoolName: tenant?.name || 'the school',
@@ -94,7 +111,7 @@ export async function createInvitation({
         joinUrl,
       })
 
-      await sendEmail({ to: email, ...template })
+      emailSent = await sendEmail({ to: email, ...template })
     } catch (emailErr) {
       console.error('Failed to send invitation email:', emailErr)
       // Invitation was created, email just failed — don't return error
@@ -105,12 +122,12 @@ export async function createInvitation({
   // is PII and the event only needs the shape of the invite.
   await track(
     ANALYTICS_EVENTS.STUDENT_INVITED,
-    { invited_role: role, email_sent: sendEmailInvite },
+    { invited_role: role, email_sent: emailSent },
     { userId, tenantId, role: 'admin' }
   )
 
   revalidatePath('/dashboard/admin/users')
-  return { success: true }
+  return { success: true, emailSent, joinUrl }
 }
 
 /**
@@ -129,8 +146,13 @@ export async function getSchoolJoinUrl() {
   return buildJoinUrl(tenant?.slug)
 }
 
-function buildJoinUrl(slug?: string | null): string {
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
-  const protocol = platformDomain.includes('localhost') ? 'http' : 'https'
-  return `${protocol}://${slug || 'app'}.${platformDomain}/join-school`
+/**
+ * `https://<slug>.<platform domain>/join-school` in production; scheme and
+ * port from the current request otherwise. The old builder hardcoded `https`
+ * and no port unless the domain said `localhost`, so on `lvh.me` (local, CI)
+ * every copied/emailed link was `https://school.lvh.me/join-school` — a page
+ * nobody could open (#673).
+ */
+async function buildJoinUrl(slug?: string | null): Promise<string> {
+  return `${await getTenantSiteUrl(slug || 'app')}/join-school`
 }

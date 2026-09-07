@@ -2588,6 +2588,9 @@
           "copied": "Copied!",
           "sent": "Invitation sent!",
           "sentDescription": "An email has been sent to {email} with instructions to join.",
+          "createdNotSent": "Invitation created — email not sent",
+          "createdNotSentDescription": "The school's email service is not configured, so nothing was sent to {email}. Share this link with them instead — they will join with the role you chose.",
+          "joinLinkLabel": "Join link",
           "inviteAnother": "Invite another person",
           "linkNote": "WhatsApp and link sharing will share your school's join page.",
           "whatsappMessage": "You're invited to join our school! Sign up here: {url} (You'll join as a {role})"
