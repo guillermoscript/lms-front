@@ -356,9 +356,10 @@ test.describe('Platform Referrals (hidden)', () => {
   })
 })
 
-// Skipped: /platform/referrals redirects to /platform until the referral schema
-// lands (see app/[locale]/platform/referrals/page.tsx) — unskip when restored.
-test.describe.skip('Platform Referrals', () => {
+// Skipped until #317 lands the referral schema + RPCs: /platform/referrals
+// redirects to /platform today (see app/[locale]/platform/referrals/page.tsx).
+// Un-skip in the PR that closes #317.
+test.describe.skip('Platform Referrals (blocked on #317)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsSuperAdmin(page)
     await page.goto(`${PLATFORM_BASE}/referrals`)

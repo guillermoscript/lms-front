@@ -277,6 +277,26 @@ test.describe('Admin Product/Course Creation Wizard', () => {
     await expect(page.getByText('$99.00').first()).toBeVisible({ timeout: 10_000 })
   })
 
+  // Folded in from the orphaned tests/admin/products-manual-payment.spec.ts (#668):
+  // the one check there the live suite lacked. The pricing step must refuse to
+  // advance a paid offering priced at 0 and say why, instead of letting a free
+  // product masquerade as paid.
+  test('refuses to advance past pricing when a paid offering is priced at 0', async ({ page }) => {
+    await openWizard(page)
+    await chooseNewCourse(page)
+    await clickNext(page)
+    await fillBasics(page, uniqueTitle('E2E Zero Price Course'))
+    await clickNext(page)
+    await choosePricing(page, 'paid')
+    await page.getByTestId('product-creation-price').fill('0')
+    await clickNext(page)
+
+    await expect(page.getByText('Enter a price greater than 0.')).toBeVisible({ timeout: 5_000 })
+    // Still on the pricing step: the price field is only rendered there.
+    await expect(page.getByTestId('product-creation-price')).toBeVisible()
+    await expect(page.getByTestId('product-creation-price')).toHaveAttribute('aria-invalid', 'true')
+  })
+
   test('creates a paid offering from an existing tenant course', async ({ page }) => {
     await openWizard(page)
     await chooseExistingCourse(page)
