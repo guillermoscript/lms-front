@@ -5,6 +5,9 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
+import { isMailerConfigured } from '@/lib/email/status'
+import { courseRemovedTemplate } from '@/lib/email/templates/course-removed'
+import { getLocale } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
@@ -372,6 +375,18 @@ export async function archiveCourse(courseId: number) {
 }
 
 /**
+ * Best-effort request locale for outbound email copy. `getLocale()` throws
+ * outside a request scope; an unknown locale falls back to English.
+ */
+async function requestLocale(): Promise<string | undefined> {
+  try {
+    return await getLocale()
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Delete a course. Sends email to enrolled students if any.
  * Requires explicit confirmation — use getCourseEnrollmentCount first to warn the UI.
  */
@@ -397,7 +412,10 @@ export async function deleteCourse(courseId: number) {
 
   const adminClient = createAdminClient()
 
-  // Notify enrolled students before deleting
+  // Notify enrolled students before deleting. `sendEmail()` returns false when
+  // the platform mailer is not configured, and the dialog tells the teacher how
+  // many students were NOT reached rather than implying everyone was (#676).
+  const notification = { recipients: 0, emailsSent: 0, mailerConfigured: isMailerConfigured() }
   try {
     const { data: enrollments } = await adminClient
       .from('enrollments')
@@ -406,23 +424,32 @@ export async function deleteCourse(courseId: number) {
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
 
-    const { data: tenantRow } = await adminClient
-      .from('tenants')
-      .select('name')
-      .eq('id', tenantId)
-      .single()
+    notification.recipients = enrollments?.length ?? 0
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+    if (notification.recipients > 0 && notification.mailerConfigured) {
+      const [{ data: tenantRow }, locale, authUsers] = await Promise.all([
+        adminClient.from('tenants').select('name').eq('id', tenantId).single(),
+        requestLocale(),
+        // One round-trip per student, but in parallel — `auth.admin` has no
+        // "get users by ids", and `listUsers` pages the whole instance.
+        Promise.all(
+          (enrollments || []).map((enrollment) => adminClient.auth.admin.getUserById(enrollment.user_id))
+        ),
+      ])
 
-    for (const enrollment of enrollments || []) {
-      const { data: authUser } = await adminClient.auth.admin.getUserById(enrollment.user_id)
-      if (authUser?.user?.email) {
-        await sendEmail({
-          to: authUser.user.email,
-          subject: `Course "${course.title}" has been removed — ${tenantRow?.name || 'LMS Platform'}`,
-          html: `<p>Hi,</p><p>The course <strong>${course.title}</strong> that you were enrolled in has been removed from ${tenantRow?.name || 'the platform'}. We're sorry for any inconvenience.</p><p><a href="${appUrl}/dashboard/student/browse">Browse other courses</a></p>`,
-        })
-      }
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+      const template = courseRemovedTemplate({
+        courseTitle: course.title,
+        schoolName: tenantRow?.name || 'LMS Platform',
+        browseUrl: `${appUrl}/dashboard/student/browse`,
+        locale,
+      })
+
+      const recipients = authUsers
+        .map(({ data }) => data?.user?.email)
+        .filter((email): email is string => Boolean(email))
+      const results = await Promise.all(recipients.map((to) => sendEmail({ to, ...template })))
+      notification.emailsSent = results.filter(Boolean).length
     }
   } catch (emailErr) {
     console.error('Failed to notify students of course deletion:', emailErr)
@@ -445,5 +472,5 @@ export async function deleteCourse(courseId: number) {
   await reconcileAccessCutoffSafely(adminClient, tenantId)
 
   revalidatePath('/dashboard/teacher/courses')
-  return { success: true }
+  return { success: true, ...notification }
 }

@@ -1092,7 +1092,8 @@
         "archiveSuccess": "Curso archivado exitosamente",
         "archiveError": "Error al archivar curso",
         "deleteSuccess": "Curso eliminado",
-        "deleteError": "Error al eliminar curso"
+        "deleteError": "Error al eliminar curso",
+        "deleteSuccessNotEmailed": "Curso eliminado — {count, plural, one {# estudiante inscrito no recibió} other {# estudiantes inscritos no recibieron}} email porque el servicio de email no está configurado"
       },
       "examBuilder": {
         "editTitle": "Editar Examen",
@@ -1988,7 +1989,9 @@
         "notEligible": "El estudiante aún no es elegible para un certificado",
         "issueGenericError": "Ocurrió un error al emitir el certificado",
         "issued": "Emitido",
-        "issueCertificate": "Emitir Certificado"
+        "issueCertificate": "Emitir Certificado",
+        "issuedNotEmailed": "Certificado emitido a {name} — email no enviado",
+        "issuedNotEmailedDescription": "El servicio de email de la escuela no está configurado, así que no se envió nada. Comparte este enlace de verificación en su lugar: {url}"
       },
       "templateForm": {
         "basicInfo": "Información Básica",
@@ -2889,12 +2892,12 @@
         "description": "Ver y gestionar todos los cursos de la plataforma",
         "backToDashboard": "Volver al Panel",
         "createCourse": "Crear Curso",
-
         "new": {
           "title": "Crear un curso",
           "description": "Ponle nombre, elige un precio y publícalo. Luego irás al editor del curso para añadir lecciones.",
           "or": "o"
-        },        "stats": {
+        },
+        "stats": {
           "total": "Cursos Totales",
           "published": "Publicados",
           "drafts": "Borradores"
@@ -3323,6 +3326,12 @@
             "saving": "Guardando...",
             "save": "Guardar"
           }
+        },
+        "mailer": {
+          "label": "Servicio de email de la plataforma",
+          "configured": "Configurado — los emails se envían desde {from} vía {domain}.",
+          "notConfigured": "No configurado — no se envía ningún email. Las invitaciones muestran un enlace para compartir; los certificados y avisos de cursos no se entregan.",
+          "hint": "Lo configura el operador de la plataforma (MAILGUN_API_KEY, MAILGUN_DOMAIN, EMAIL_FROM). Los campos SMTP de abajo se guardan pero aún no se usan para enviar."
         }
       },
       "apiTokens": {

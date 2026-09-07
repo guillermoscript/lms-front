@@ -141,7 +141,12 @@ export async function POST(request: NextRequest) {
           { userId: studentId, tenantId }
         )
 
-        // Send certificate issued email (non-blocking)
+        // Send certificate issued email (non-blocking). The response carries
+        // whether it actually went out so the teacher can share the verify
+        // link instead when the platform mailer is not configured (#676).
+        let emailSent = false
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+        const verifyUrl = `${appUrl}/verify/${result.certificateId}`
         try {
           const adminClient = createAdminClient()
           const { data: authUser } = await adminClient.auth.admin.getUserById(studentId)
@@ -157,15 +162,14 @@ export async function POST(request: NextRequest) {
             .single()
 
           if (authUser?.user?.email && result.certificateId) {
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
             const template = certificateIssuedTemplate({
               studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
               courseTitle: courseRow?.title || 'the course',
               schoolName: tenantRow?.name || 'LMS Platform',
-              verifyUrl: `${appUrl}/verify/${result.certificateId}`,
+              verifyUrl,
               downloadUrl: `${appUrl}/api/certificates/${result.certificateId}?format=pdf`,
             })
-            await sendEmail({ to: authUser.user.email, ...template })
+            emailSent = await sendEmail({ to: authUser.user.email, ...template })
           }
         } catch (emailErr) {
           console.error('Failed to send certificate email:', emailErr)
@@ -174,6 +178,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           certificateId: result.certificateId,
+          emailSent,
+          verifyUrl,
         })
       }
 
@@ -354,7 +360,11 @@ async function simplifiedIssuance(
     { userId, tenantId }
   )
 
-  // Send certificate issued email (non-blocking)
+  // Send certificate issued email (non-blocking); see the signed path above
+  // for why `emailSent` and `verifyUrl` travel back to the caller (#676).
+  let emailSent = false
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+  const verifyUrl = `${appUrl}/verify/${certificate.verification_code}`
   try {
     const adminClient = createAdminClient()
     const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
@@ -365,15 +375,14 @@ async function simplifiedIssuance(
       .single()
 
     if (authUser?.user?.email) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
       const template = certificateIssuedTemplate({
         studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
         courseTitle: course?.title || 'the course',
         schoolName: tenantRow?.name || 'LMS Platform',
-        verifyUrl: `${appUrl}/verify/${certificate.verification_code}`,
+        verifyUrl,
         downloadUrl: `${appUrl}/api/certificates/${certificate.certificate_id}?format=pdf`,
       })
-      await sendEmail({ to: authUser.user.email, ...template })
+      emailSent = await sendEmail({ to: authUser.user.email, ...template })
     }
   } catch (emailErr) {
     console.error('Failed to send certificate email:', emailErr)
@@ -382,6 +391,8 @@ async function simplifiedIssuance(
   return NextResponse.json({
     success: true,
     certificateId: certificate.certificate_id,
+    emailSent,
+    verifyUrl,
   })
 }
 

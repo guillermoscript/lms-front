@@ -17,6 +17,8 @@ import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
+import { getMailerStatus } from '@/lib/email/status'
+import { MailerStatusRow } from '@/components/admin/mailer-status-row'
 
 export default async function SettingsPage({
   searchParams,
@@ -78,6 +80,10 @@ export default async function SettingsPage({
   if (stripeAccountId && !connectStatus.chargesEnabled) {
     connectStatus = (await syncConnectAccountStatus(tenantId, stripeAccountId)) ?? connectStatus
   }
+
+  // Whether the platform mailer can send at all — read-only, from env presence
+  // (#676). Rendered on the server so the API key never reaches the client.
+  const mailer = getMailerStatus()
 
   // Deep link support: /dashboard/admin/settings?tab=payment
   const { tab } = await searchParams
@@ -146,7 +152,8 @@ export default async function SettingsPage({
                     {t('sections.email.description')}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                  <MailerStatusRow status={mailer} />
                   <EmailSettingsForm settings={settings.email || {}} />
                 </CardContent>
               </Card>
