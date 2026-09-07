@@ -88,9 +88,22 @@ export function AiCourseGenerator({ disabled, className }: AiCourseGeneratorProp
           </CardContent>
         )}
         <CardFooter className="flex flex-wrap gap-3">
-          <Link href={`/dashboard/teacher/courses/${result.courseId}`}>
-            <Button>{t('openCourse')}</Button>
-          </Link>
+          {/* The draft already has lessons, so open the first one for review
+              rather than the overview (#675). Publishing it is the value moment. */}
+          <Button
+            nativeButton={false}
+            render={
+              <Link
+                href={
+                  result.firstLessonId
+                    ? `/dashboard/teacher/courses/${result.courseId}/lessons/${result.firstLessonId}?from=new-course`
+                    : `/dashboard/teacher/courses/${result.courseId}`
+                }
+              />
+            }
+          >
+            {result.firstLessonId ? t('openFirstLesson') : t('openCourse')}
+          </Button>
           <Button
             variant="outline"
             onClick={() => {

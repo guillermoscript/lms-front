@@ -21,15 +21,19 @@ const LessonEditor = dynamic(
 )
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
+import { FirstLessonHint } from '@/components/teacher/lesson-editor/first-lesson-hint'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
-export default async function NewLessonPage({ params }: PageProps) {
-  const { courseId } = await params
+export default async function NewLessonPage({ params, searchParams }: PageProps) {
+  const [{ courseId }, { from }] = await Promise.all([params, searchParams])
+  // Arrived straight from creating the course (#675): show the one-line hint.
+  const fromNewCourse = from === 'new-course'
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
@@ -68,6 +72,7 @@ export default async function NewLessonPage({ params }: PageProps) {
         completed={isTourCompleted(uiState, 'lesson-editor')}
         toursEnabled={areToursEnabled(uiState)}
       />
+      {fromNewCourse && <FirstLessonHint courseTitle={course.title} />}
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}

@@ -119,9 +119,10 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
         await updateCourse(initialData.course_id, courseData)
         router.push(`/dashboard/teacher/courses/${initialData.course_id}`)
       } else {
-        // Create new course
+        // Create new course, then go straight to its first lesson (#675):
+        // the course overview has nothing to show until a lesson exists.
         const course = await createCourse(courseData)
-        router.push(`/dashboard/teacher/courses/${course.course_id}`)
+        router.push(`/dashboard/teacher/courses/${course.course_id}/lessons/new?from=new-course`)
       }
     } catch (err) {
       console.error('Error saving course:', err)

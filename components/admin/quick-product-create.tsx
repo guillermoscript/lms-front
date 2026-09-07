@@ -91,9 +91,10 @@ export function QuickProductCreate({ limitInfo, className }: QuickProductCreateP
       }
 
       toast.success(intent === 'publish' ? t('published') : t('draftSaved'))
-      // Land in the course editor, not the products list: the course has no
-      // lessons yet and that is the obvious next step (#665).
-      router.push(`/dashboard/teacher/courses/${result.data.courseId}`)
+      // Land in the lesson editor, not the course overview: the course has no
+      // lessons yet and a student can open nothing until one is published
+      // (#665, #675). `from=new-course` shows the one-line hint there.
+      router.push(`/dashboard/teacher/courses/${result.data.courseId}/lessons/new?from=new-course`)
       router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('saveError'))

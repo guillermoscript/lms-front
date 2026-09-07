@@ -85,7 +85,10 @@
       "doThisNext": "Haz esto ahora → {step}",
       "completedSteps": "Pasos completados",
       "remainingSteps": "{count, plural, one {# paso más} other {# pasos más}}",
-      "allDone": "¡Todo listo! Puedes descartar esta lista."
+      "allDone": "¡Todo listo! Puedes descartar esta lista.",
+      "substeps": "Subpasos",
+      "substepDone": "hecho",
+      "substepPending": "pendiente"
     },
     "courseSelector": {
       "label": "Cursos Incluidos",
@@ -805,7 +808,11 @@
           "addLesson": "Añadir Lección",
           "noLessons": "Sin lecciones aún",
           "createFirst": "Añade tu primera lección",
-          "editLesson": "Editar Lección"
+          "editLesson": "Editar Lección",
+          "generateWithAi": "Generar con IA",
+          "generating": "Redactando lecciones…",
+          "generateSuccess": "Se {count, plural, one {añadió # lección en borrador} other {añadieron # lecciones en borrador}}. Revisa y publica.",
+          "generateError": "No se pudieron generar las lecciones. Inténtalo de nuevo."
         },
         "practice": {
           "title": "Ejercicios de Práctica",
@@ -1649,6 +1656,10 @@
             "removeItem": "Eliminar elemento",
             "addItem": "Añadir elemento"
           }
+        },
+        "firstLessonHint": {
+          "title": "{course} ya está creado.",
+          "body": "Los estudiantes podrán abrirlo cuando publiques esta lección — escríbela y pulsa Publicar."
         }
       },
       "exerciseBuilder": {
@@ -2318,17 +2329,23 @@
           "connectPaymentsTime": "~2 min",
           "wizardPrompt": "¿Prefieres una configuración guiada?",
           "wizardLink": "Abrir el asistente de configuración",
-          "addCourse": "Crea tu primer curso — define un precio y publícalo",
-          "addCourseDesc": "Usa la creación rápida para publicar en minutos o genera un borrador con IA.",
+          "addCourse": "Crea tu primer curso",
+          "addCourseDesc": "Un curso está en vivo cuando está publicado y tiene al menos una lección publicada que un estudiante pueda abrir.",
           "addCourseTime": "~3 min",
-          "inviteUsers": "Invita a tus primeros estudiantes",
-          "inviteUsersDesc": "Invita estudiantes a unirse a tu escuela.",
+          "inviteUsers": "Invita a tu primer estudiante",
+          "inviteUsersDesc": "Comparte el enlace de tu escuela. Quien se registre con él entra como estudiante.",
           "inviteUsersTime": "~1 min",
           "courseSuccessTitle": "¡Tu primer curso ya está disponible!",
           "courseSuccessDescription": "{course} está listo para compartir. Envía el enlace a tus primeros estudiantes.",
           "copyCourseLink": "Copiar enlace del curso",
           "courseLinkCopied": "Enlace copiado",
-          "viewCourse": "Ver curso"
+          "viewCourse": "Ver curso",
+          "addCourseStepPublish": "Publica el curso",
+          "addCourseStepLesson": "Publica tu primera lección",
+          "copyJoinLink": "Copiar enlace de acceso",
+          "joinLinkCopied": "Enlace copiado",
+          "shareWhatsApp": "Compartir por WhatsApp",
+          "inviteWhatsAppMessage": "¡Únete a mi escuela! Regístrate aquí: {url}"
         },
         "tour": {
           "checklist": {
@@ -2894,7 +2911,7 @@
         "createCourse": "Crear Curso",
         "new": {
           "title": "Crear un curso",
-          "description": "Ponle nombre, elige un precio y publícalo. Luego irás al editor del curso para añadir lecciones.",
+          "description": "Ponle nombre, elige un precio y publícalo. Luego irás al editor de lecciones para escribir tu primera lección.",
           "or": "o"
         },
         "stats": {
@@ -3566,7 +3583,8 @@
             "thumbnailIdea": "Idea de miniatura",
             "openCourse": "Editar tu curso",
             "startOver": "Generar otro",
-            "error": "No se pudo generar el borrador del curso. Inténtalo de nuevo."
+            "error": "No se pudo generar el borrador del curso. Inténtalo de nuevo.",
+            "openFirstLesson": "Revisar la primera lección"
           }
         },
         "edit": {

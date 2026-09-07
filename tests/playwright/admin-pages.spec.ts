@@ -34,18 +34,24 @@ test.describe('Admin Pages', () => {
   test('getting started checklist follows the course-first funnel', async ({ page }) => {
     const checklist = await expandChecklist(page)
 
-    // Every step is reachable and points where the funnel says (#451/#665):
-    // course first, then getting paid, then brand / students / details.
-    const steps: Array<[RegExp, string]> = [
-      [/Create your first course — set a price and publish/, '/dashboard/admin/courses/new'],
-      [/Set up how you get paid/, '/dashboard/admin/settings?tab=payment'],
-      [/Brand your school/, '/dashboard/admin/appearance'],
-      [/Invite your first students/, '/dashboard/admin/users'],
-      [/Configure school details/, '/dashboard/admin/settings'],
+    // Every step is reachable and points where the funnel says (#451/#665/#675):
+    // course first, then the first student, then getting paid / brand / details.
+    // The course step's link follows the school's state (quick create, the
+    // first course's lesson editor, or the course itself), so it is a pattern.
+    const steps: Array<[RegExp, RegExp]> = [
+      [/Create your first course/, /^\/dashboard\/(admin\/courses\/new|teacher\/courses\/\d+)/],
+      [/Invite your first student/, /^\/dashboard\/admin\/users$/],
+      [/Set up how you get paid/, /^\/dashboard\/admin\/settings\?tab=payment$/],
+      [/Brand your school/, /^\/dashboard\/admin\/appearance$/],
+      [/Configure school details/, /^\/dashboard\/admin\/settings$/],
     ]
+    const hrefs: string[] = []
     for (const [label, href] of steps) {
-      const link = checklist.locator(`a[href="${href}"]`).filter({ hasText: label }).first()
-      await expect(link, `step "${label}" → ${href}`).toBeAttached()
+      const link = checklist.locator('a[href]').filter({ hasText: label }).first()
+      await expect(link, `step "${label}"`).toBeAttached()
+      const actual = (await link.getAttribute('href')) ?? ''
+      expect(actual, `step "${label}" → ${actual}`).toMatch(href)
+      hrefs.push(actual)
     }
     await expect(checklist.getByText('Review your billing plan')).toHaveCount(0)
 
@@ -53,7 +59,7 @@ test.describe('Admin Pages', () => {
     const next = checklist.getByTestId('onboarding-next-step')
     await expect(next).toBeVisible()
     const nextHref = await next.locator('a').first().getAttribute('href')
-    expect(steps.map(([, href]) => href)).toContain(nextHref)
+    expect(hrefs).toContain(nextHref)
 
     // Code Academy has school details configured, so this validates that a
     // checked row remains a real navigation link.
@@ -66,9 +72,9 @@ test.describe('Admin Pages', () => {
     const checklist = await expandChecklist(page)
 
     for (const label of [
-      /Crea tu primer curso — define un precio y publícalo/,
+      /Crea tu primer curso/,
       /Configura cómo recibir pagos/,
-      /Invita a tus primeros estudiantes/,
+      /Invita a tu primer estudiante/,
     ]) {
       await expect(checklist.locator('a').filter({ hasText: label }).first()).toBeAttached()
     }

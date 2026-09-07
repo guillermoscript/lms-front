@@ -7,6 +7,7 @@ import * as motion from 'motion/react-client'
 import { useReducedMotion } from 'motion/react'
 import {
   IconArrowRight,
+  IconBrandWhatsapp,
   IconCheck,
   IconChevronDown,
   IconClock,
@@ -20,6 +21,27 @@ import { setUiState } from '@/app/actions/ui-state'
 import { Card, CardContent } from '@/components/ui/card'
 import { getChecklistState } from '@/lib/onboarding-checklist'
 
+export interface OnboardingSubstep {
+  id: string
+  label: string
+  completed: boolean
+}
+
+/**
+ * A link the step wants the user to hand to someone else (the school's join
+ * link, #675). Rendered inline with Copy + WhatsApp buttons while the step is
+ * the next action, so "invite your first student" never requires finding the
+ * users page first.
+ */
+export interface OnboardingShare {
+  url: string
+  copyLabel: string
+  copiedLabel: string
+  whatsappLabel: string
+  /** Full message for the WhatsApp composer, already containing the url. */
+  whatsappText: string
+}
+
 export interface OnboardingStep {
   id: string
   label: string
@@ -27,6 +49,12 @@ export interface OnboardingStep {
   href: string
   completed: boolean
   timeHint?: string
+  /**
+   * Sub-goals shown under the step (#675). `completed` on the step itself is
+   * still what the checklist counts; the caller decides how substeps roll up.
+   */
+  substeps?: OnboardingSubstep[]
+  share?: OnboardingShare
 }
 
 interface OnboardingMilestone {
@@ -75,7 +103,9 @@ export function OnboardingChecklist({
     () => false,
   )
   const [dismissedNow, setDismissedNow] = useState(false)
-  const [copied, setCopied] = useState(false)
+  // Which copy button just fired: 'milestone' or a step id.
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const copied = copiedKey === 'milestone'
   const isDismissed = dismissed || cachedDismissed || dismissedNow
   const {
     allDone,
@@ -97,14 +127,11 @@ export function OnboardingChecklist({
     if (stateKey) void setUiState(stateKey, 'dismissed')
   }
 
-  const handleCopyMilestone = async () => {
-    if (!milestone) return
-
-    const shareUrl = new URL(milestone.href, window.location.origin).toString()
+  const copyText = async (text: string, key: string) => {
     let usedClipboardApi = false
     if (navigator.clipboard?.writeText) {
       try {
-        await navigator.clipboard.writeText(shareUrl)
+        await navigator.clipboard.writeText(text)
         usedClipboardApi = true
       } catch {
         // HTTP development origins may expose Clipboard API but reject writes.
@@ -113,7 +140,7 @@ export function OnboardingChecklist({
 
     if (!usedClipboardApi) {
       const textarea = document.createElement('textarea')
-      textarea.value = shareUrl
+      textarea.value = text
       textarea.style.position = 'fixed'
       textarea.style.opacity = '0'
       document.body.appendChild(textarea)
@@ -121,8 +148,17 @@ export function OnboardingChecklist({
       document.execCommand('copy')
       textarea.remove()
     }
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2000)
+    setCopiedKey(key)
+    window.setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 2000)
+  }
+
+  const handleCopyMilestone = async () => {
+    if (!milestone) return
+    await copyText(new URL(milestone.href, window.location.origin).toString(), 'milestone')
+  }
+
+  const handleShareWhatsApp = (share: OnboardingShare) => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(share.whatsappText)}`, '_blank', 'noopener')
   }
 
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0
@@ -233,6 +269,73 @@ export function OnboardingChecklist({
                   {nextStep.description}
                 </p>
               )}
+              {nextStep.substeps && nextStep.substeps.length > 0 && (
+                <ul className="mt-3 space-y-1.5" aria-label={t('substeps')}>
+                  {nextStep.substeps.map((substep) => (
+                    <li
+                      key={substep.id}
+                      className="flex items-center gap-2 text-sm"
+                      data-testid={`onboarding-substep-${substep.id}`}
+                      data-completed={substep.completed ? 'true' : 'false'}
+                    >
+                      {substep.completed ? (
+                        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <IconCheck className="size-2.5" aria-hidden="true" />
+                        </span>
+                      ) : (
+                        <span
+                          className="size-4 shrink-0 rounded-full border border-muted-foreground/40"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span
+                        className={
+                          substep.completed
+                            ? 'text-muted-foreground line-through decoration-muted-foreground/50'
+                            : ''
+                        }
+                      >
+                        {substep.label}
+                      </span>
+                      <span className="sr-only">
+                        {substep.completed ? t('substepDone') : t('substepPending')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {nextStep.share && (
+                <div
+                  className="mt-4 rounded-lg border bg-muted/30 p-3"
+                  data-testid={`onboarding-share-${nextStep.id}`}
+                >
+                  <p className="truncate font-mono text-xs text-muted-foreground" title={nextStep.share.url}>
+                    {nextStep.share.url}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyText(nextStep.share!.url, nextStep.id)}
+                      data-testid="onboarding-share-copy"
+                    >
+                      {copiedKey === nextStep.id ? <IconCheck /> : <IconCopy />}
+                      {copiedKey === nextStep.id
+                        ? nextStep.share.copiedLabel
+                        : nextStep.share.copyLabel}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleShareWhatsApp(nextStep.share!)}
+                      data-testid="onboarding-share-whatsapp"
+                    >
+                      <IconBrandWhatsapp />
+                      {nextStep.share.whatsappLabel}
+                    </Button>
+                  </div>
+                </div>
+              )}
               <Button
                 className="mt-4 h-auto w-full whitespace-normal py-2 sm:w-auto"
                 size="lg"
@@ -281,6 +384,11 @@ export function OnboardingChecklist({
                     <div className="size-5 shrink-0 rounded-full border border-muted-foreground/30" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium">{step.label}</p>
+                      {step.substeps && step.substeps.length > 0 && (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {step.substeps.map((substep) => substep.label).join(' · ')}
+                        </p>
+                      )}
                       {step.timeHint && (
                         <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
                           <IconClock className="size-3" aria-hidden="true" />
