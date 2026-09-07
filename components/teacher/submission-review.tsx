@@ -238,7 +238,13 @@ export function SubmissionReview({
                 {!isFreeText && (
                   <div className="space-y-2">
                     {q.options?.map((opt: any) => {
-                      const isSelected = opt.option_text === q.answer_text
+                      // exam_answers.answer_text holds the option id for multiple
+                      // choice and the literal "true"/"false" for true/false, so
+                      // comparing the label alone never marked the pick (#674).
+                      const answer = String(q.answer_text ?? '').toLowerCase()
+                      const isSelected =
+                        answer !== '' &&
+                        (String(opt.id) === answer || String(opt.option_text ?? '').toLowerCase() === answer)
                       return (
                         <div key={opt.id} className={cn(
                           "p-3 rounded-lg border flex items-center justify-between text-sm",

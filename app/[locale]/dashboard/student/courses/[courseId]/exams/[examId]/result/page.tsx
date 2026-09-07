@@ -189,11 +189,19 @@ export default async function ExamResultPage({ params }: PageProps) {
 
                     <div className="bg-white dark:bg-slate-900 text-indigo-950 dark:text-white rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
                         <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Final Score</span>
-                        <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score || 0)}%</div>
+                        {/* Ungraded shows as ungraded, not as 0% (PRODUCT.md principle 5). */}
+                        {score == null ? (
+                            <>
+                                <div className="text-5xl sm:text-6xl font-black mb-2" aria-label="Not graded yet">—</div>
+                                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Not graded yet</span>
+                            </>
+                        ) : (
+                            <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score)}%</div>
+                        )}
                         <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-3 sm:mt-4">
                             <div
                                 className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-1000"
-                                style={{ width: `${score || 0}%` }}
+                                style={{ width: `${score ?? 0}%` }}
                             />
                         </div>
                     </div>
@@ -305,7 +313,13 @@ export default async function ExamResultPage({ params }: PageProps) {
                         const isCorrect = (question.question_type === 'multiple_choice' || question.question_type === 'true_false')
                             ? correctOptionsByQuestion[question.question_id] ?? qScore?.is_correct ?? answer?.is_correct
                             : qScore?.is_correct ?? answer?.is_correct;
-                        const isFreeTextPending = question.question_type === 'free_text' && (!qScore?.ai_feedback || qScore?.ai_confidence === 0);
+                        // A teacher override is a grade: the parked row keeps its
+                        // ai_confidence = 0 / "Pending teacher review." text, so
+                        // is_overridden must win or the student keeps seeing
+                        // "Pending Review" after the teacher graded it (#674).
+                        const isFreeTextPending = question.question_type === 'free_text'
+                            && !qScore?.is_overridden
+                            && (!qScore?.ai_feedback || qScore?.ai_confidence === 0);
 
                         return (
                             <Card key={question.question_id} className={cn(
@@ -445,8 +459,9 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     {/* Free Text Questions */}
                                     {question.question_type === 'free_text' && (() => {
                                         const questionScore = questionScoresByQuestionId[question.question_id];
-                                        const isPendingReview = !questionScore?.ai_feedback || questionScore?.ai_confidence === 0;
-                                        const hasTeacherOverride = questionScore?.is_overridden;
+                                        const hasTeacherOverride = !!questionScore?.is_overridden;
+                                        const isPendingReview = !hasTeacherOverride
+                                            && (!questionScore?.ai_feedback || questionScore?.ai_confidence === 0);
 
                                         return (
                                             <div className="space-y-3">
@@ -502,7 +517,10 @@ export default async function ExamResultPage({ params }: PageProps) {
                                             : (questionScore?.ai_feedback || answer?.feedback);
                                         const feedbackSource = questionScore?.is_overridden ? 'Teacher' : 'AI';
 
-                                        if (!feedbackText || (question.question_type === 'free_text' && questionScore?.ai_confidence === 0)) return null;
+                                        const stillPending = question.question_type === 'free_text'
+                                            && !questionScore?.is_overridden
+                                            && questionScore?.ai_confidence === 0;
+                                        if (!feedbackText || stillPending) return null;
 
                                         return (
                                             <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 dark:border-blue-500 p-3.5 sm:p-5 rounded-r-xl">
