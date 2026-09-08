@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { buildPageMetadata } from '@/lib/seo'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -16,12 +17,27 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return buildPageMetadata({ title: t('joinSchool.title'), description: t('joinSchool.description'), path: '/join-school', locale })
 }
 
-export default async function JoinSchoolPage() {
+export default async function JoinSchoolPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>
+}) {
+  const { next: requestedNext } = await searchParams
+  // Where to go once the visitor is a member (#684). proxy.ts sets it when it
+  // bounces a non-member off a protected page such as /checkout; a missing or
+  // unsafe value falls back to the dashboard, never off-origin.
+  const nextPath = getSafeNextPath(
+    Array.isArray(requestedNext) ? requestedNext[0] : requestedNext,
+    ''
+  )
+  const destination = nextPath || '/dashboard/student'
+
   const supabase = await createClient()
   const userId = await getCurrentUserId()
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated, keeping the intent through login
   if (!userId) {
-    redirect('/auth/login?next=/join-school')
+    const returnTo = nextPath ? `/join-school?next=${encodeURIComponent(nextPath)}` : '/join-school'
+    redirect(`/auth/login?next=${encodeURIComponent(returnTo)}`)
   }
 
   const tenantId = await getCurrentTenantId()
@@ -79,8 +95,8 @@ export default async function JoinSchoolPage() {
               You have access to all courses and resources at {tenant.name}.
             </p>
             <div className="flex gap-2">
-              <Link href="/dashboard/student" className="flex-1">
-                <Button className="w-full">Go to Dashboard</Button>
+              <Link href={destination} className="flex-1">
+                <Button className="w-full">{nextPath ? 'Continue' : 'Go to Dashboard'}</Button>
               </Link>
               <Link href="/dashboard/student/browse" className="flex-1">
                 <Button variant="outline" className="w-full">Browse Courses</Button>
@@ -147,7 +163,7 @@ export default async function JoinSchoolPage() {
         </Card>
       )}
 
-      <JoinSchoolForm tenant={tenant} />
+      <JoinSchoolForm tenant={tenant} next={nextPath || null} />
     </div>
   )
 }

@@ -14,9 +14,15 @@ interface JoinSchoolFormProps {
     slug: string
     description?: string
   }
+  /**
+   * Same-origin path to land on after joining, already validated by the page
+   * with `getSafeNextPath`. Carries a purchase/enroll intent through the join
+   * step (#684); absent, the student dashboard is the destination.
+   */
+  next?: string | null
 }
 
-export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
+export function JoinSchoolForm({ tenant, next }: JoinSchoolFormProps) {
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,7 +44,7 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
       // (LMS-FRONT-9K/8F, upstream vercel/next.js#78396) — and the membership
       // just changed, so a full request through proxy.ts with fresh claims is
       // what we want anyway. The button stays disabled until the page unloads.
-      window.location.assign('/dashboard/student')
+      window.location.assign(next || '/dashboard/student')
     } catch (err) {
       console.error('Join error:', err)
       setError('An unexpected error occurred')
@@ -94,6 +100,7 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
           disabled={isJoining}
           className="w-full"
           size="lg"
+          data-testid="join-school-submit"
         >
           {isJoining ? (
             <>

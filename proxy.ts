@@ -2,6 +2,7 @@ import createIntlMiddleware from 'next-intl/middleware'
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -434,6 +435,15 @@ export default async function proxy(request: NextRequest) {
 
     if (!membership) {
       const joinUrl = publicRedirectUrl(request, `/${locale}/join-school`)
+      // Keep the destination so a purchase or enroll intent survives the join
+      // step (#684): a first-time visitor who clicked a paid CTA arrives here
+      // as a member of no school, and without `next` the join form could only
+      // send them to an empty dashboard. Sanitised again by the join page and
+      // form; skipped for `/` so the plain case keeps a clean URL.
+      const intended = getSafeNextPath(normalizedPath + request.nextUrl.search, '/')
+      if (intended !== '/') {
+        joinUrl.searchParams.set('next', intended)
+      }
       return NextResponse.redirect(joinUrl)
     }
 
