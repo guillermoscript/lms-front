@@ -99,9 +99,9 @@
     "litesvm": "^1.4.1",
     "lru-cache": "^11.5.2",
     "lucide-react": "^1.43.0",
-    "mailgun.js": "^13.3.0",
+    "mailgun.js": "^14.0.1",
     "media-chrome": "^4.19.2",
-    "motion": "^12.43.0",
+    "motion": "^13.2.0",
     "nanoid": "^6.0.1",
     "next": "16.2.12",
     "next-intl": "^4.14.2",
@@ -146,6 +146,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",
-    "vitest": "^4.1.11"
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0"
   }
 }
