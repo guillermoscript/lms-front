@@ -24,14 +24,20 @@ authenticated test bounces to `/join-school`.
 ## Running
 
 ```bash
-npx playwright test                                   # whole suite, desktop-chromium
+npx playwright test                                   # whole suite, desktop-chromium, headless
 npx playwright test tests/playwright/auth-security.spec.ts
 npx playwright test -g "student can enroll"           # by title
 npx playwright test --project=mobile                  # Pixel 5 viewport
 npx playwright test --project=human --headed          # slowMo 500 ms, video on (demos, QA GIFs)
+npx playwright test --headed                          # visible browser for any run
 npx playwright test --ui                              # interactive runner
 npx playwright show-report                            # last HTML report
 ```
+
+Every run is headless unless you pass `--headed`. A bare run drives only
+`desktop-chromium`; `mobile`, `human` and `human-mobile` take part only when
+named with `--project` (`npm run test:e2e:mobile`, `test:e2e:all`,
+`test:e2e:human`), so a file with 7 tests runs 7 tests, not 28.
 
 `workers` is pinned to 1: the specs mutate one shared seeded database, and
 GoTrue rate-limits sign-ins per IP. Do not raise it locally.

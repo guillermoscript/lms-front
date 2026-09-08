@@ -10,9 +10,9 @@ export function ExamQuestionsToolbar() {
   const t = useTranslations('dashboard.teacher.examBuilder')
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <h2 className="text-xl font-bold">{t('questionsTitle')} ({formData.questions.length})</h2>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button size="sm" className="gap-1.5" onClick={() => addQuestion('multiple_choice')}>
           <IconPlus className="h-3.5 w-3.5" /> {t('addMultipleChoice')}
         </Button>
