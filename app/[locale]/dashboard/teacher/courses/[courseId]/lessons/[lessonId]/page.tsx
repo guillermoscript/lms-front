@@ -19,7 +19,8 @@ const LessonEditor = dynamic(
     ),
   }
 )
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
 import { FirstLessonHint } from '@/components/teacher/lesson-editor/first-lesson-hint'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -42,16 +43,22 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
     redirect('/auth/login')
   }
 
-  // Verify course ownership
-  const { data: course } = await supabase
-    .from('courses')
-    .select('course_id, title')
-    .eq('course_id', parseInt(courseId))
-    .eq('author_id', userId)
-    .eq('tenant_id', tenantId)
-    .single()
+  // The author or a tenant admin may edit lessons (#690); other staff 404
+  // exactly as before.
+  const [{ data: course }, role] = await Promise.all([
+    supabase
+      .from('courses')
+      .select('course_id, title, author_id')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single(),
+    getUserRole(),
+  ])
 
   if (!course) {
+    notFound()
+  }
+  if (course.author_id !== userId && role !== 'admin') {
     notFound()
   }
 

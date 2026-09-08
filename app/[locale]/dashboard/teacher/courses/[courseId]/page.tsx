@@ -35,7 +35,8 @@ import {
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -105,10 +106,14 @@ export default async function CourseManagementPage({ params }: PageProps) {
     )
   }
 
-  // Ownership check - simplified for debugging but keeping security in mind
+  // Authors manage their own courses; tenant admins manage every course of
+  // the tenant (#690) — the same rule the settings page and the lesson
+  // server actions (`verifyCourseOwnership`) already apply.
+  const role = await getUserRole()
   const isOwner = course.author_id === userId
+  const isAdmin = role === 'admin'
 
-  if (!isOwner) {
+  if (!isOwner && !isAdmin) {
     return (
       <div className="p-8">
         <Card className="border-warning">
