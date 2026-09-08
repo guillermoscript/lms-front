@@ -15,14 +15,14 @@ interface JoinSchoolFormProps {
     description?: string
   }
   /**
-   * Same-origin path to land on after joining, already validated by the page
-   * with `getSafeNextPath`. Carries a purchase/enroll intent through the join
-   * step (#684); absent, the student dashboard is the destination.
+   * Same-origin path to land on after a successful join. The page resolves it
+   * (a sanitised `next` such as `/checkout?courseId=42`, or the student
+   * dashboard) so a purchase or enroll intent survives the join step (#684).
    */
-  next?: string | null
+  destination: string
 }
 
-export function JoinSchoolForm({ tenant, next }: JoinSchoolFormProps) {
+export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -44,7 +44,7 @@ export function JoinSchoolForm({ tenant, next }: JoinSchoolFormProps) {
       // (LMS-FRONT-9K/8F, upstream vercel/next.js#78396) — and the membership
       // just changed, so a full request through proxy.ts with fresh claims is
       // what we want anyway. The button stays disabled until the page unloads.
-      window.location.assign(next || '/dashboard/student')
+      window.location.assign(destination)
     } catch (err) {
       console.error('Join error:', err)
       setError('An unexpected error occurred')

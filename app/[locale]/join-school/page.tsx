@@ -22,18 +22,23 @@ export default async function JoinSchoolPage({
 }: {
   searchParams: Promise<{ next?: string | string[] }>
 }) {
-  const { next: requestedNext } = await searchParams
-  // Where to go once the visitor is a member (#684). proxy.ts sets it when it
-  // bounces a non-member off a protected page such as /checkout; a missing or
-  // unsafe value falls back to the dashboard, never off-origin.
+  // The three inputs are independent — resolve them together, not as a
+  // waterfall of awaits.
+  const [{ next: requestedNext }, supabase, userId] = await Promise.all([
+    searchParams,
+    createClient(),
+    getCurrentUserId(),
+  ])
+  // Where to go once the visitor is a member (#684). proxy.ts sets `next` when
+  // it bounces a non-member off a protected page such as /checkout; a missing
+  // or unsafe value falls back to the dashboard, never off-origin. Resolved
+  // once here so the form and the member card share a single destination.
   const nextPath = getSafeNextPath(
     Array.isArray(requestedNext) ? requestedNext[0] : requestedNext,
     ''
   )
   const destination = nextPath || '/dashboard/student'
 
-  const supabase = await createClient()
-  const userId = await getCurrentUserId()
   // Redirect to login if not authenticated, keeping the intent through login
   if (!userId) {
     const returnTo = nextPath ? `/join-school?next=${encodeURIComponent(nextPath)}` : '/join-school'
@@ -163,7 +168,7 @@ export default async function JoinSchoolPage({
         </Card>
       )}
 
-      <JoinSchoolForm tenant={tenant} next={nextPath || null} />
+      <JoinSchoolForm tenant={tenant} destination={destination} />
     </div>
   )
 }
