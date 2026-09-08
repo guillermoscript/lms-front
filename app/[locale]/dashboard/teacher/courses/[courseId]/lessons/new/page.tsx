@@ -19,7 +19,8 @@ const LessonEditor = dynamic(
     ),
   }
 )
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
 import { FirstLessonHint } from '@/components/teacher/lesson-editor/first-lesson-hint'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -40,16 +41,20 @@ export default async function NewLessonPage({ params, searchParams }: PageProps)
   const userId = await getCurrentUserId()
   if (!userId) return notFound()
 
-  // Verify course ownership
-  const { data: course } = await supabase
-    .from('courses')
-    .select('course_id, title')
-    .eq('course_id', parseInt(courseId))
-    .eq('author_id', userId)
-    .eq('tenant_id', tenantId)
-    .single()
+  // The author or a tenant admin may add lessons (#690); other staff 404
+  // exactly as before.
+  const [{ data: course }, role] = await Promise.all([
+    supabase
+      .from('courses')
+      .select('course_id, title, author_id')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single(),
+    getUserRole(),
+  ])
 
   if (!course) return notFound()
+  if (course.author_id !== userId && role !== 'admin') return notFound()
 
   // Get the next sequence number
   const [{ data: lessons }, uiState] = await Promise.all([
