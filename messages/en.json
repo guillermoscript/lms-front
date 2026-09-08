@@ -1362,7 +1362,6 @@
         "charCount": "{count, plural, one {# character} other {# characters}}",
         "contentLabel": "Content",
         "contentPlaceholder": "# Lesson Content...",
-        "contentDefault": "# New topic\n\nWrite the lesson content here...\n\n<Callout type=\"info\">Add learning objectives here</Callout>",
         "contentHint": "Write in MDX — Markdown with components like Callout, Steps, and Quiz.",
         "editorMode": "Editor",
         "lines": "lines",

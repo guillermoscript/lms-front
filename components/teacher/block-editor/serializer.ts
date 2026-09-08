@@ -206,14 +206,16 @@ export function mdxToBlocks(mdx: string): Block[] {
       const variant = (typeMatch?.[1] || 'info') as 'info' | 'warning' | 'success' | 'error'
       const contentLines: string[] = []
       
-      // Check for self-closing or multi-line
-      if (line.includes('/>')) {
-        const contentMatch = line.match(/>([^<]+)<\/Callout>/)
+      // One-line forms: `<Callout type="info">text</Callout>` keeps its text,
+      // a self-closing `<Callout type="info" />` is an empty callout. Only a
+      // bare opening tag falls through to the multi-line scan below (#687).
+      if (line.includes('</Callout>') || line.includes('/>')) {
+        const contentMatch = line.match(/<Callout[^>]*>([\s\S]*?)<\/Callout>/)
         blocks.push({
           id: nanoid(),
           type: 'callout',
           variant,
-          content: contentMatch?.[1] || '',
+          content: contentMatch?.[1]?.trim() || '',
         })
         i++
         continue
