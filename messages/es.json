@@ -5346,7 +5346,8 @@
       "title": "Página no encontrada",
       "description": "Lo sentimos, no pudimos encontrar la página que buscas.",
       "backToDashboard": "Volver al Panel",
-      "goHome": "Ir al Inicio"
+      "goHome": "Ir al Inicio",
+      "backToOverview": "Volver al resumen"
     },
     "generic": {
       "title": "Algo salió mal",
@@ -5354,6 +5355,18 @@
       "retry": "Intentar de Nuevo",
       "backToDashboard": "Volver al Panel",
       "reference": "Referencia del error"
+    },
+    "panel": {
+      "title": "Esta página no cargó",
+      "description": "Algo falló al cargar esta sección. Reintentar suele resolverlo; si no, la referencia de abajo apunta al registro del servidor.",
+      "reference": "Referencia: {code}",
+      "retry": "Intentar de nuevo",
+      "back": {
+        "dashboard": "Volver al panel",
+        "platform": "Volver al resumen",
+        "home": "Ir al inicio",
+        "login": "Volver a iniciar sesión"
+      }
     }
   },
   "landingPageBuilder": {
