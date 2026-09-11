@@ -1,11 +1,20 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 import { withSentryConfig } from "@sentry/nextjs/config";
+import { resolveDeploymentId } from "./lib/build/deployment-id";
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Version-skew protection (#679). Rolling deploys leave browsers holding the
+  // previous build's JS; without an id they keep talking to the new server and
+  // a Server Action id that no longer exists 500s (LMS-FRONT-82). With one, the
+  // mismatch is detected on the response header and the client hard-navigates
+  // to the new deployment instead. Resolves from the build SHA — see the
+  // module for why that env var, and note it also busts asset caches per
+  // deploy, which is the point.
+  deploymentId: resolveDeploymentId(),
   // Local multi-tenant dev is served on subdomains (e.g. code-academy.lvh.me),
   // which differ from the dev server origin (localhost). Next.js 16 blocks
   // cross-origin access to /_next/* dev resources (HMR + client chunks) by

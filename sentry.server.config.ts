@@ -3,6 +3,7 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { isServerActionNotFoundError } from "@/lib/sentry/noise";
 
 // The DSN comes from the environment, never a literal. It used to be hardcoded,
 // which meant every fork of this repo deployed elsewhere reported its crashes into
@@ -34,6 +35,11 @@ Sentry.init({
   // Loop-safety: `lib/analytics/server.ts` reports its own failures only as
   // breadcrumbs, never as captured events, so this cannot ping-pong.
   beforeSend(event) {
+    // Before the OpenPanel pointer, never after: a dropped Sentry event must
+    // not leave an `error_captured` row pointing at an event that was never
+    // stored. See `lib/sentry/noise.ts` for why this one is not ours to fix.
+    if (isServerActionNotFoundError(event)) return null;
+
     try {
       if (event.event_id) {
         // Dynamic import keeps Sentry init free of the analytics module (and
