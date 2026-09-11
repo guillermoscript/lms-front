@@ -6396,6 +6396,8 @@
     "stepSignedUp": "Signed up",
     "stepSchool": "School",
     "google": "Continue with Google",
+    "googleRedirecting": "Redirecting to Google…",
+    "googleUnreachable": "Google isn't responding. Check your connection, or create your account with email below.",
     "orEmail": "Or continue with email",
     "nameLabel": "Your name",
     "namePlaceholder": "Ada Lovelace",
