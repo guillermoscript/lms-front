@@ -45,20 +45,24 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify access (entitlements model) before reading anything about the course
-  await requireCourseAccess(supabase, userId, numericCourseId)
-
+  // #677: existence first, so a bad id gets the dashboard 404 instead of the
+  // silent bounce `requireCourseAccess` gives a missing entitlement. Course
+  // ids are already enumerable through /browse, so this reveals nothing new;
+  // the entitlement gate below still runs for every course that exists.
   const { data: course, error } = await supabase
     .from('courses')
     .select('course_id, title, description, thumbnail_url, author_id')
     .eq('course_id', numericCourseId)
     .eq('tenant_id', tenantId)
-    .single()
+    .maybeSingle()
 
   if (error || !course) {
-    console.error('Error fetching course:', error)
+    if (error) console.error('Error fetching course:', error)
     notFound()
   }
+
+  // Verify access (entitlements model) before reading anything else about the course
+  await requireCourseAccess(supabase, userId, numericCourseId)
 
   // Fetch all remaining data in parallel
   const [

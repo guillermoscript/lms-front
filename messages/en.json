@@ -5352,7 +5352,8 @@
       "title": "Page not found",
       "description": "Sorry, we couldn't find the page you're looking for.",
       "backToDashboard": "Back to Dashboard",
-      "goHome": "Go Home"
+      "goHome": "Go Home",
+      "backToOverview": "Back to overview"
     },
     "generic": {
       "title": "Something went wrong",
@@ -5360,6 +5361,18 @@
       "retry": "Try Again",
       "backToDashboard": "Back to Dashboard",
       "reference": "Error reference"
+    },
+    "panel": {
+      "title": "This page didn't load",
+      "description": "Something went wrong while loading this section. Retrying usually fixes it; if not, the reference below points at the server log.",
+      "reference": "Reference: {code}",
+      "retry": "Try again",
+      "back": {
+        "dashboard": "Back to dashboard",
+        "platform": "Back to overview",
+        "home": "Go home",
+        "login": "Back to sign in"
+      }
     }
   },
   "landingPageBuilder": {
