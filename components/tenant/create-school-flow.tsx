@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +39,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
     ? `?plan=${encodeURIComponent(plan)}${interval ? `&interval=${interval}` : ''}`
     : ''
   const router = useRouter()
+  const t = useTranslations('createSchool')
   const [step, setStep] = useState<'account' | 'school'>(user ? 'school' : 'account')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,12 +91,12 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
 
     const name = ownerName.trim()
     if (!name) {
-      setError('Please enter your name')
+      setError(t('errorNameRequired'))
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError(t('errorPasswordTooShort'))
       return
     }
 
@@ -117,7 +119,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
 
     if (signUpError) {
       if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
-        setError('This email is already registered. Please log in instead.')
+        setError(t('errorEmailRegistered'))
       } else {
         setError(signUpError.message)
       }
@@ -164,9 +166,9 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
 
       if (createError) {
         if (createError.code === '23505') {
-          setError('This school URL is already taken. Please choose a different one.')
+          setError(t('errorSlugTaken'))
         } else {
-          setError('Failed to create school: ' + createError.message)
+          setError(t('errorCreateFailed', { message: createError.message }))
         }
         setLoading(false)
         return
@@ -189,7 +191,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
           .eq('id', authedUser.id)
       }
 
-      toast.success('School created! Setting up your dashboard...')
+      toast.success(t('created'))
 
       // Land directly on the dashboard (subdomain if configured), carrying a
       // paid plan choice from /platform-pricing into the upgrade page.
@@ -204,7 +206,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
         router.push(destination)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : t('errorGeneric'))
       setLoading(false)
     }
   }
@@ -216,11 +218,9 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
         <div className="mx-auto mb-4 w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
           <GraduationCap className="w-7 h-7 text-blue-400" />
         </div>
-        <h1 className="text-3xl font-bold text-white">Create Your School</h1>
+        <h1 className="text-3xl font-bold text-white">{t('title')}</h1>
         <p className="text-zinc-400 mt-2">
-          {step === 'account'
-            ? 'First, create your account'
-            : 'Choose a name and URL for your school'}
+          {step === 'account' ? t('subtitleAccount') : t('subtitleSchool')}
         </p>
       </div>
 
@@ -232,13 +232,13 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
               step === 'school' ? 'bg-emerald-500' : 'bg-blue-500'
             }`} />
             <span className={`text-xs ${step === 'school' ? 'text-emerald-400' : 'text-zinc-500'}`}>
-              {step === 'school' ? 'Signed up' : 'Account'}
+              {step === 'school' ? t('stepSignedUp') : t('stepAccount')}
             </span>
           </div>
           <div className={`w-8 h-px transition-colors ${step === 'school' ? 'bg-blue-500' : 'bg-zinc-700'}`} />
           <div className="flex items-center gap-1.5">
             <div className={`w-2.5 h-2.5 rounded-full transition-colors ${step === 'school' ? 'bg-blue-500' : 'bg-zinc-700'}`} />
-            <span className="text-xs text-zinc-500">School</span>
+            <span className="text-xs text-zinc-500">{t('stepSchool')}</span>
           </div>
         </div>
       )}
@@ -261,7 +261,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
-                Continue with Google
+                {t('google')}
               </Button>
 
               <div className="relative">
@@ -269,19 +269,19 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                   <span className="w-full border-t border-zinc-800" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-zinc-900 px-2 text-zinc-500">Or continue with email</span>
+                  <span className="bg-zinc-900 px-2 text-zinc-500">{t('orEmail')}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="owner-name" className="text-zinc-300">Your name</Label>
+                <Label htmlFor="owner-name" className="text-zinc-300">{t('nameLabel')}</Label>
                 <Input
                   id="owner-name"
                   type="text"
                   autoComplete="name"
                   value={ownerName}
                   onChange={(e) => setOwnerName(e.target.value)}
-                  placeholder="Ada Lovelace"
+                  placeholder={t('namePlaceholder')}
                   className="bg-zinc-800 border-zinc-700 text-white"
                   required
                   disabled={loading}
@@ -290,14 +290,14 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-zinc-300">Email</Label>
+                <Label htmlFor="email" className="text-zinc-300">{t('emailLabel')}</Label>
                 <Input
                   id="email"
                   type="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
+                  placeholder={t('emailPlaceholder')}
                   className="bg-zinc-800 border-zinc-700 text-white"
                   required
                   disabled={loading}
@@ -305,14 +305,14 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-zinc-300">Password</Label>
+                <Label htmlFor="password" className="text-zinc-300">{t('passwordLabel')}</Label>
                 <InputGroup>
                   <InputGroupInput
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
+                    placeholder={t('passwordPlaceholder')}
                     className="bg-zinc-800 border-zinc-700 text-white"
                     required
                     disabled={loading}
@@ -322,7 +322,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                     <InputGroupButton
                       size="icon-xs"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                     >
                       {showPassword ? <EyeOff /> : <Eye />}
                     </InputGroupButton>
@@ -340,20 +340,20 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
+                    {t('creatingAccount')}
                   </>
                 ) : (
                   <>
-                    Create Account & Continue
+                    {t('createAccount')}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </>
                 )}
               </Button>
 
               <p className="text-center text-sm text-zinc-500">
-                Already have an account?{' '}
+                {t('haveAccount')}{' '}
                 <Link href={`/auth/login?redirectTo=${encodeURIComponent(`/create-school${planQuery}`)}`} className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
-                  Log in
+                  {t('logIn')}
                 </Link>
               </p>
             </form>
@@ -370,18 +370,17 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                 <Mail className="w-7 h-7 text-emerald-400" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-semibold text-white">Check your email</h2>
+                <h2 className="text-xl font-semibold text-white">{t('confirmTitle')}</h2>
                 <p className="text-sm text-zinc-400">
-                  We sent a confirmation link to{' '}
-                  <span className="text-zinc-200 font-medium">{email}</span>.
+                  {t('confirmBody', { email })}
                   <br />
-                  Please verify your email, then log in to continue.
+                  {t('confirmHint')}
                 </p>
               </div>
               <div className="w-full pt-2 space-y-3">
                 <Link href={`/auth/login?redirectTo=${encodeURIComponent(`/create-school${planQuery}`)}`}>
                   <Button className="w-full bg-blue-600 hover:bg-blue-500 text-white">
-                    Go to Log in
+                    {t('goToLogin')}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </Button>
                 </Link>
@@ -392,7 +391,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                   className="w-full text-zinc-500 hover:text-zinc-300"
                 >
                   <ArrowLeft className="mr-2 w-4 h-4" />
-                  Back to sign up
+                  {t('backToSignUp')}
                 </Button>
               </div>
             </div>
@@ -408,18 +407,20 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
               {signedInEmail && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 mb-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <p className="text-sm text-emerald-300 truncate">Signed in as {signedInEmail}</p>
+                  <p className="text-sm text-emerald-300 truncate">
+                    {t('signedInAs', { email: signedInEmail })}
+                  </p>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="school-name" className="text-zinc-300">School Name</Label>
+                <Label htmlFor="school-name" className="text-zinc-300">{t('schoolNameLabel')}</Label>
                 <Input
                   id="school-name"
                   data-testid="create-school-name"
                   value={schoolName}
                   onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="My Awesome Academy"
+                  placeholder={t('schoolNamePlaceholder')}
                   className="bg-zinc-800 border-zinc-700 text-white"
                   required
                   disabled={loading}
@@ -428,14 +429,14 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="school-slug" className="text-zinc-300">School URL</Label>
+                <Label htmlFor="school-slug" className="text-zinc-300">{t('schoolUrlLabel')}</Label>
                 <div className="flex items-center gap-0">
                   <Input
                     id="school-slug"
                     data-testid="create-school-slug"
                     value={slug}
                     onChange={(e) => setSlug(generateSlug(e.target.value))}
-                    placeholder="my-academy"
+                    placeholder={t('schoolUrlPlaceholder')}
                     className="bg-zinc-800 border-zinc-700 text-white rounded-r-none"
                     required
                     disabled={loading}
@@ -444,9 +445,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                     .{process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'}
                   </span>
                 </div>
-                <p className="text-xs text-zinc-500">
-                  Only lowercase letters, numbers, and hyphens
-                </p>
+                <p className="text-xs text-zinc-500">{t('slugHint')}</p>
               </div>
 
               {error && <p className="text-sm text-red-400">{error}</p>}
@@ -460,11 +459,11 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating your school...
+                    {t('creatingSchool')}
                   </>
                 ) : (
                   <>
-                    Create School
+                    {t('createSchool')}
                     <ArrowRight className="ml-2 w-4 h-4" />
                   </>
                 )}
@@ -479,7 +478,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                   disabled={loading}
                 >
                   <ArrowLeft className="mr-2 w-4 h-4" />
-                  Back
+                  {t('back')}
                 </Button>
               )}
             </form>

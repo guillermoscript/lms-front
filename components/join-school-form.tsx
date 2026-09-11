@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -23,6 +24,7 @@ interface JoinSchoolFormProps {
 }
 
 export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
+  const t = useTranslations('joinSchool')
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,7 +36,7 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
       const result = await joinCurrentSchool()
 
       if (!result.success) {
-        setError(result.error || 'Failed to join school. Please try again.')
+        setError(result.error || t('error'))
         setIsJoining(false)
         return
       }
@@ -47,7 +49,7 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
       window.location.assign(destination)
     } catch (err) {
       console.error('Join error:', err)
-      setError('An unexpected error occurred')
+      setError(t('unexpectedError'))
       setIsJoining(false)
     }
   }
@@ -55,10 +57,8 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ready to Start Learning?</CardTitle>
-        <CardDescription>
-          Join {tenant.name} and get access to their courses and resources
-        </CardDescription>
+        <CardTitle>{t('formTitle')}</CardTitle>
+        <CardDescription>{t('formDescription', { school: tenant.name })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {tenant.description && (
@@ -68,23 +68,23 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
         )}
 
         <div className="space-y-2">
-          <h4 className="font-medium text-sm">What you&apos;ll get:</h4>
+          <h4 className="font-medium text-sm">{t('benefitsTitle')}</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />
-              Access to all available courses
+              {t('benefitCourses')}
             </li>
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />
-              Track your progress and earn certificates
+              {t('benefitProgress')}
             </li>
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />
-              Participate in exams and exercises
+              {t('benefitExams')}
             </li>
             <li className="flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />
-              Join the learning community
+              {t('benefitCommunity')}
             </li>
           </ul>
         </div>
@@ -105,15 +105,15 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
           {isJoining ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Joining...
+              {t('submitting')}
             </>
           ) : (
-            <>Join {tenant.name}</>
+            <>{t('submit', { school: tenant.name })}</>
           )}
         </Button>
 
         <p className="text-xs text-muted-foreground text-center">
-          By joining, you agree to {tenant.name}&apos;s terms of service and privacy policy
+          {t('terms', { school: tenant.name })}
         </p>
       </CardContent>
     </Card>
