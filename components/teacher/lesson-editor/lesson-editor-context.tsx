@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect, useMemo, createContext, use } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { createLesson, updateLesson } from '@/app/actions/teacher/lessons'
+import { getLessonStarterTemplate } from './starter-template'
 import {
   IconFileText,
   IconLayoutGrid,
@@ -108,6 +109,7 @@ export function LessonEditorProvider({
   children,
 }: LessonEditorProps & { children: React.ReactNode }) {
   const router = useRouter()
+  const locale = useLocale()
   const t = useTranslations('dashboard.teacher.lessonEditor')
 
   const [loading, setLoading] = useState(false)
@@ -120,11 +122,9 @@ export function LessonEditorProvider({
   const [formData, setFormData] = useState<LessonFormData>({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    content:
-      initialData?.content ??
-      (initialData
-        ? ''
-        : t('contentDefault')),
+    // A new lesson opens on the starter blocks. The template is a plain constant,
+    // not a message: next-intl would reject its <Callout> tag (#687).
+    content: initialData?.content ?? (initialData ? '' : getLessonStarterTemplate(locale)),
     video_url: initialData?.video_url || '',
     sequence: initialData?.sequence || initialSequence,
     publish_at: initialData?.publish_at || '',

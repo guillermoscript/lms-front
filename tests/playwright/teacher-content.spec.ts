@@ -273,6 +273,51 @@ test.describe('Teacher Content — Lesson Editor', () => {
     // Description is empty
     await expect(page.locator('#description')).toHaveValue('')
   })
+
+  // #687 — the starter template used to go through next-intl, which rejected its
+  // <Callout> tag (INVALID_MESSAGE: INVALID_TAG) and seeded the editor with the
+  // bare translation key. The template is a plain constant now, per locale.
+  for (const locale of ['en', 'es'] as const) {
+    test(`new lesson opens on the starter blocks, not a translation key (${locale})`, async ({ page }) => {
+      test.setTimeout(90_000)
+      const intlErrors: string[] = []
+      page.on('console', (msg) => {
+        if (msg.type() === 'error' && /INVALID_MESSAGE|MISSING_MESSAGE/.test(msg.text())) {
+          intlErrors.push(msg.text())
+        }
+      })
+
+      await page.goto(`${BASE}/${locale}/dashboard/teacher/courses/1001/lessons/new`)
+      await expect(page.locator('[data-tour="lesson-header"]')).toBeVisible({ timeout: 15_000 })
+
+      // Content is the 2nd step. base-ui buttons need a DOM click from Playwright.
+      const stepButtons = page.getByRole('navigation').getByRole('button')
+      await stepButtons.nth(1).evaluate((btn) => (btn as HTMLButtonElement).click())
+
+      const editor = page.locator('[data-tour="lesson-editor-mode"]')
+      await expect(editor).toBeVisible({ timeout: 15_000 })
+
+      // Visual mode: the heading block (an input) carries the starter title, and
+      // nothing on the page is the raw message key.
+      const expectedHeading = locale === 'es' ? 'Nuevo tema' : 'New topic'
+      const fieldValues = () =>
+        page
+          .locator('input, textarea')
+          .evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value))
+      await expect.poll(fieldValues, { timeout: 15_000 }).toContain(expectedHeading)
+      expect((await fieldValues()).join('\n')).not.toMatch(/lessonEditor\.contentDefault/)
+
+      // MDX mode shows the same starter, callout included.
+      const mdxButton = editor.getByRole('button', { name: /mdx/i })
+      await mdxButton.evaluate((btn) => (btn as HTMLButtonElement).click())
+      const source = page.locator('#lesson-content')
+      await expect(source).toBeVisible({ timeout: 15_000 })
+      await expect(source).toHaveValue(new RegExp(`^# ${expectedHeading}\\n`))
+      await expect(source).toHaveValue(/<Callout type="info">/)
+
+      expect(intlErrors, intlErrors.join('\n')).toEqual([])
+    })
+  }
 })
 
 test.describe('Teacher Content — Exercise Builder', () => {
