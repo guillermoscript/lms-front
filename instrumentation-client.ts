@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 import { shouldDropEvent } from "@/lib/analytics/exclusions";
+import { classifyDomMutationError } from "@/lib/sentry/noise";
 
 // The OpenPanel tracker installs a queueing `window.op` stub before the script
 // loads, so calling it here is safe at any point in the page lifecycle — but it
@@ -73,6 +74,21 @@ Sentry.init({
   // and joined back to the full Sentry event by id. Nothing here may ever block
   // or drop the Sentry event itself — the pointer is strictly best-effort.
   beforeSend(event) {
+    // LMS-FRONT-9M. A `removeChild` NotFoundError raised while a page
+    // translator is rewriting our text nodes is React losing a race with code
+    // we do not control; the same error with no translator present may be a
+    // real reconciliation bug, so that one is kept and tagged rather than
+    // dropped. Runs before the OpenPanel pointer so a dropped event never
+    // leaves an `error_captured` row pointing at nothing.
+    const domVerdict = classifyDomMutationError(
+      event,
+      typeof document === "undefined" ? null : document
+    );
+    if (domVerdict.kind === "drop") return null;
+    if (domVerdict.kind === "keep") {
+      event.tags = { ...event.tags, "dom.third_party_mutation": "none-detected" };
+    }
+
     try {
       const op = (window as { op?: OpenPanelGlobal }).op;
       if (
