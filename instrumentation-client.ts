@@ -108,3 +108,7 @@ Sentry.init({
     }),
   ],
 });
+
+// Client navigations are invisible to Sentry without this hook — the SDK has
+// warned "ACTION REQUIRED" on every dev boot and build since it was introduced.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
