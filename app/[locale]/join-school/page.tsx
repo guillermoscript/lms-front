@@ -24,10 +24,11 @@ export default async function JoinSchoolPage({
 }) {
   // The three inputs are independent — resolve them together, not as a
   // waterfall of awaits.
-  const [{ next: requestedNext }, supabase, userId] = await Promise.all([
+  const [{ next: requestedNext }, supabase, userId, t] = await Promise.all([
     searchParams,
     createClient(),
     getCurrentUserId(),
+    getTranslations('joinSchool'),
   ])
   // Where to go once the visitor is a member (#684). proxy.ts sets `next` when
   // it bounces a non-member off a protected page such as /checkout; a missing
@@ -53,14 +54,12 @@ export default async function JoinSchoolPage({
       <div className="container mx-auto py-12 max-w-md">
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
-            <CardTitle className="text-red-900">School Not Found</CardTitle>
-            <CardDescription className="text-red-700">
-              The school you&apos;re trying to join doesn&apos;t exist or is no longer available.
-            </CardDescription>
+            <CardTitle className="text-red-900">{t('notFoundTitle')}</CardTitle>
+            <CardDescription className="text-red-700">{t('notFoundDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/">
-              <Button variant="outline">Return to Home</Button>
+              <Button variant="outline">{t('returnHome')}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -89,22 +88,24 @@ export default async function JoinSchoolPage({
           <CardHeader>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-6 w-6 text-green-600" />
-              <CardTitle className="text-green-900">You&apos;re Already a Member!</CardTitle>
+              <CardTitle className="text-green-900">{t('memberTitle')}</CardTitle>
             </div>
             <CardDescription className="text-green-700">
-              You&apos;re already enrolled in {tenant.name}
+              {t('memberDescription', { school: tenant.name })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-green-800">
-              You have access to all courses and resources at {tenant.name}.
+              {t('memberBody', { school: tenant.name })}
             </p>
             <div className="flex gap-2">
               <Link href={destination} className="flex-1">
-                <Button className="w-full">{nextPath ? 'Continue' : 'Go to Dashboard'}</Button>
+                <Button className="w-full">
+                  {nextPath ? t('continue') : t('goToDashboard')}
+                </Button>
               </Link>
               <Link href="/dashboard/student/browse" className="flex-1">
-                <Button variant="outline" className="w-full">Browse Courses</Button>
+                <Button variant="outline" className="w-full">{t('browseCourses')}</Button>
               </Link>
             </div>
           </CardContent>
@@ -131,18 +132,16 @@ export default async function JoinSchoolPage({
             <School className="h-8 w-8 text-primary" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">Join {tenant.name}</h1>
-        <p className="text-muted-foreground">
-          Start learning with {tenant.name} today
-        </p>
+        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
+          {t('title', { school: tenant.name })}
+        </h1>
+        <p className="text-muted-foreground">{t('subtitle', { school: tenant.name })}</p>
       </div>
 
       {otherMemberships && otherMemberships.length > 0 && (
         <Card className="mb-6 border-blue-200 bg-blue-50">
           <CardHeader>
-            <CardTitle className="text-sm text-blue-900">
-              You&apos;re already a member of:
-            </CardTitle>
+            <CardTitle className="text-sm text-blue-900">{t('otherSchoolsTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -156,14 +155,12 @@ export default async function JoinSchoolPage({
                   : membership.tenants
                 return (
                   <li key={membership.tenant_id} className="text-sm text-blue-800">
-                    • {school?.name || 'Unknown School'}
+                    • {school?.name || t('unknownSchool')}
                   </li>
                 )
               })}
             </ul>
-            <p className="text-xs text-blue-700 mt-3">
-              You can switch between schools anytime from your dashboard.
-            </p>
+            <p className="text-xs text-blue-700 mt-3">{t('otherSchoolsHint')}</p>
           </CardContent>
         </Card>
       )}

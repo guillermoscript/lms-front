@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
@@ -24,6 +25,7 @@ interface ConsentFormProps {
 }
 
 export function ConsentForm({ authorizationId, memberships, defaultTenantId }: ConsentFormProps) {
+  const t = useTranslations("oauthConsent")
   const [loading, setLoading] = useState<"approve" | "deny" | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tenantId, setTenantId] = useState<string | undefined>(defaultTenantId)
@@ -49,11 +51,11 @@ export function ConsentForm({ authorizationId, memberships, defaultTenantId }: C
       if (data.redirect_to) {
         window.location.href = data.redirect_to
       } else {
-        setError(data.error || "Something went wrong. Please try again.")
+        setError(data.error || t("genericError"))
         setLoading(null)
       }
     } catch {
-      setError("An error occurred. Please try again.")
+      setError(t("unexpectedError"))
       setLoading(null)
     }
   }
@@ -62,10 +64,10 @@ export function ConsentForm({ authorizationId, memberships, defaultTenantId }: C
     <div className="space-y-4">
       {memberships.length > 1 && (
         <div className="space-y-2">
-          <Label htmlFor="consent-tenant">Connect to school</Label>
+          <Label htmlFor="consent-tenant">{t("schoolLabel")}</Label>
           <Select value={tenantId} onValueChange={(v) => v && setTenantId(v)}>
             <SelectTrigger id="consent-tenant" className="w-full">
-              <SelectValue placeholder="Choose a school" />
+              <SelectValue placeholder={t("schoolPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {memberships.map((m) => (
@@ -75,9 +77,7 @@ export function ConsentForm({ authorizationId, memberships, defaultTenantId }: C
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            The application will only see this school&apos;s data.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("schoolHint")}</p>
         </div>
       )}
 
@@ -88,14 +88,14 @@ export function ConsentForm({ authorizationId, memberships, defaultTenantId }: C
           disabled={loading !== null}
           onClick={() => handleDecision("deny")}
         >
-          {loading === "deny" ? "Denying..." : "Deny"}
+          {loading === "deny" ? t("denying") : t("deny")}
         </Button>
         <Button
           className="flex-1"
           disabled={loading !== null || (memberships.length > 1 && !tenantId)}
           onClick={() => handleDecision("approve")}
         >
-          {loading === "approve" ? "Approving..." : "Approve"}
+          {loading === "approve" ? t("approving") : t("approve")}
         </Button>
       </div>
 

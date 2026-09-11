@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
@@ -9,13 +10,14 @@ export default async function OAuthConsentPage({
   searchParams: Promise<{ authorization_id?: string }>
 }) {
   const { authorization_id } = await searchParams
+  const t = await getTranslations("oauthConsent")
 
   if (!authorization_id) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Invalid Request</h1>
-          <p className="mt-2 text-muted-foreground">Missing authorization_id parameter.</p>
+          <h1 className="text-2xl font-bold">{t("invalidTitle")}</h1>
+          <p className="mt-2 text-muted-foreground">{t("invalidDescription")}</p>
         </div>
       </div>
     )
@@ -62,7 +64,7 @@ export default async function OAuthConsentPage({
     role: (row.role as string) ?? "student",
     name:
       ((row.tenants as { name?: string } | null)?.name as string) ??
-      "Unknown school",
+      t("unknownSchool"),
   }))
 
   const currentTenantId =
@@ -79,9 +81,9 @@ export default async function OAuthConsentPage({
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="mx-auto max-w-md rounded-lg border bg-card p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-bold">Authorization Error</h1>
+          <h1 className="text-2xl font-bold">{t("errorTitle")}</h1>
           <p className="mt-2 text-muted-foreground">
-            {error?.message || "Could not retrieve authorization details."}
+            {error?.message || t("errorFallback")}
           </p>
         </div>
       </div>
@@ -99,26 +101,24 @@ export default async function OAuthConsentPage({
       <div className="mx-auto w-full max-w-md rounded-lg border bg-card p-8 shadow-sm">
         <div className="mb-6 text-center">
           <div className="mb-3 text-3xl">🔐</div>
-          <h1 className="text-2xl font-bold">Authorize Access</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            An application is requesting access to your LMS account.
-          </p>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
 
         <div className="mb-6 space-y-3 rounded-md border bg-muted/50 p-4">
           <div>
-            <p className="text-xs font-medium uppercase text-muted-foreground">Application</p>
-            <p className="font-medium">{authDetails.client?.name || "Unknown Application"}</p>
+            <p className="text-xs font-medium uppercase text-muted-foreground">{t("application")}</p>
+            <p className="font-medium">{authDetails.client?.name || t("unknownApplication")}</p>
           </div>
           {authDetails.redirect_uri && (
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">Redirect URI</p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">{t("redirectUri")}</p>
               <p className="truncate text-sm text-muted-foreground">{authDetails.redirect_uri}</p>
             </div>
           )}
           {authDetails.scope && (
             <div>
-              <p className="text-xs font-medium uppercase text-muted-foreground">Permissions</p>
+              <p className="text-xs font-medium uppercase text-muted-foreground">{t("permissions")}</p>
               <ul className="mt-1 space-y-1">
                 {authDetails.scope.split(" ").map((scope: string) => (
                   <li key={scope} className="flex items-center gap-2 text-sm">
@@ -133,12 +133,10 @@ export default async function OAuthConsentPage({
 
         <div className="mb-4 rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
           <p className="text-xs text-yellow-700 dark:text-yellow-300">
-            Signed in as <strong>{user.email}</strong> ({currentTenant?.role ?? globalRole})
+            {t("signedInAs")} <strong>{user.email}</strong> ({currentTenant?.role ?? globalRole})
             {currentTenant && memberships.length === 1 && (
-              <> — connecting to <strong>{currentTenant.name}</strong></>
-            )}.
-            This will let the application access your LMS data — teachers and
-            admins get course management, students get their own learning tools.
+              <> {t("connectingTo")} <strong>{currentTenant.name}</strong></>
+            )}. {t("explain")}
           </p>
         </div>
 

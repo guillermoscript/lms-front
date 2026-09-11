@@ -14,6 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function ProductsPage() {
   const supabase = await createClient()
+  const t = await getTranslations('products')
 
   // Get all active products
   const { data: products } = await supabase
@@ -25,10 +26,8 @@ export default async function ProductsPage() {
   return (
     <div className="container mx-auto py-12">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Available Products</h1>
-        <p className="text-muted-foreground">
-          Browse our available courses and products. Select one to get started.
-        </p>
+        <h1 className="text-4xl font-bold mb-4">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -43,13 +42,16 @@ export default async function ProductsPage() {
                 ${product.price} {product.currency.toUpperCase()}
               </div>
               <div className="mt-2 text-sm text-muted-foreground">
-                Payment Method: {product.payment_provider === 'manual' ? 'Manual/Offline' : product.payment_provider}
+                {t('paymentMethod', {
+                  provider:
+                    product.payment_provider === 'manual' ? t('manual') : product.payment_provider,
+                })}
               </div>
             </CardContent>
             <CardFooter>
               <Link href={`/products/${product.product_id}`} className="w-full">
                 <Button className="w-full">
-                  {product.payment_provider === 'manual' ? 'Request Payment Info' : 'Buy Now'}
+                  {product.payment_provider === 'manual' ? t('requestPaymentInfo') : t('buyNow')}
                 </Button>
               </Link>
             </CardFooter>
@@ -57,9 +59,9 @@ export default async function ProductsPage() {
         ))}
       </div>
 
-      {!products || products.length === 0 && (
+      {(!products || products.length === 0) && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">No products available at the moment.</p>
+          <p className="text-muted-foreground">{t('empty')}</p>
         </div>
       )}
     </div>

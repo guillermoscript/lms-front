@@ -14,6 +14,7 @@ export default async function UpgradePage({
   searchParams: Promise<{ plan?: string; interval?: string }>
 }) {
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
+  const t = await getTranslations('dashboard.admin.billing.upgrade')
   const [plans, status, { plan: planParam, interval: intervalParam }] = await Promise.all([
     getAvailablePlans(),
     getSubscriptionStatus(),
@@ -86,10 +87,8 @@ export default async function UpgradePage({
         ]}
       />
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Upgrade Your Plan</h1>
-        <p className="text-muted-foreground">
-          Choose the plan that best fits your school&apos;s needs
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       <UpgradePageClient

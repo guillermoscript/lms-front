@@ -5,12 +5,15 @@ import es from '../../messages/es.json'
 /**
  * `/platform` was English-only until the payouts page moved onto next-intl
  * (#516). A key present in `en` but missing from `es` doesn't throw — next-intl
- * falls back and the operator sees English inside a Spanish page — so parity is
+ * falls back and the reader sees English inside a Spanish page — so parity is
  * asserted here instead of being noticed in production.
  *
- * Scoped to the `platform` namespace on purpose: the rest of the catalogue has
- * pre-existing drift, and a global assertion would fail for reasons that have
- * nothing to do with the page under test. Widen it when that drift is cleaned up.
+ * This used to be scoped to the `platform` namespace because the rest of the
+ * catalogue had pre-existing drift: 101 keys that existed top-level in `en` and
+ * only under `dashboard.*` in `es`, plus seven leaves with no counterpart at
+ * all. #678 cleared that drift, so the assertion now covers the whole
+ * catalogue — a new English string added without its Spanish twin fails here,
+ * which is the point.
  */
 function leafKeys(value: unknown, prefix = ''): string[] {
   if (value === null || typeof value !== 'object') return [prefix]
@@ -19,43 +22,66 @@ function leafKeys(value: unknown, prefix = ''): string[] {
   )
 }
 
-describe('platform message catalogue', () => {
-  const enKeys = leafKeys(en.platform, 'platform')
-  const esKeys = leafKeys(es.platform, 'platform')
+function flat(value: unknown, prefix = ''): [string, string][] {
+  return value !== null && typeof value === 'object'
+    ? Object.entries(value as Record<string, unknown>).flatMap(([k, v]) =>
+        flat(v, prefix ? `${prefix}.${k}` : k),
+      )
+    : [[prefix, String(value)]]
+}
+
+describe('message catalogue', () => {
+  const enKeys = leafKeys(en)
+  const esKeys = leafKeys(es)
 
   it('has the same keys in English and Spanish', () => {
-    expect([...esKeys].sort()).toEqual([...enKeys].sort())
+    const enSet = new Set(enKeys)
+    const esSet = new Set(esKeys)
+    expect(
+      enKeys.filter((k) => !esSet.has(k)).sort(),
+      'keys in en.json with no es.json counterpart',
+    ).toEqual([])
+    expect(
+      esKeys.filter((k) => !enSet.has(k)).sort(),
+      'keys in es.json with no en.json counterpart',
+    ).toEqual([])
   })
 
   it('has no empty or untranslated-placeholder strings', () => {
-    const flat = (obj: unknown, prefix = ''): [string, string][] =>
-      obj !== null && typeof obj === 'object'
-        ? Object.entries(obj as Record<string, unknown>).flatMap(([k, v]) =>
-            flat(v, prefix ? `${prefix}.${k}` : k),
-          )
-        : [[prefix, String(obj)]]
-
-    for (const [key, value] of [...flat(en.platform, 'platform'), ...flat(es.platform, 'platform')]) {
+    for (const [key, value] of [...flat(en), ...flat(es)]) {
       expect(value.trim(), key).not.toBe('')
-      expect(value, key).not.toMatch(/^TODO/i)
+      // Case-sensitive, and `\b`: "Todo" and "Todos ..." are ordinary Spanish
+      // words ("All", "All the ..."), and a case-insensitive /^TODO/ flags
+      // every one of them. Only a shouted TODO marker is a stub.
+      expect(value, key).not.toMatch(/^TODO\b/)
     }
   })
 
   it('keeps the ICU placeholders of each English string in its Spanish counterpart', () => {
-    const placeholders = (s: string) => [...s.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort()
-    const byKey = (obj: unknown, prefix = ''): Record<string, string> =>
-      obj !== null && typeof obj === 'object'
-        ? Object.assign(
-            {},
-            ...Object.entries(obj as Record<string, unknown>).map(([k, v]) =>
-              byKey(v, prefix ? `${prefix}.${k}` : k),
-            ),
-          )
-        : { [prefix]: String(obj) }
-
-    const enFlat = byKey(en.platform, 'platform')
-    const esFlat = byKey(es.platform, 'platform')
-    for (const [key, value] of Object.entries(enFlat)) {
+    /**
+     * Only the arguments the code passes in, which is the depth-0 names. The
+     * branch labels inside a plural — `one {curso} other {cursos}` — are part
+     * of the translation and are *supposed* to differ between languages, so a
+     * flat `/\{(\w+)/g` would fail every pluralised string.
+     */
+    const placeholders = (message: string) => {
+      const names: string[] = []
+      let depth = 0
+      for (let i = 0; i < message.length; i++) {
+        const char = message[i]
+        if (char === '}') depth--
+        else if (char === '{') {
+          if (depth === 0) {
+            const name = /^\s*(\w+)/.exec(message.slice(i + 1))
+            if (name) names.push(name[1])
+          }
+          depth++
+        }
+      }
+      return names.sort()
+    }
+    const esFlat = Object.fromEntries(flat(es))
+    for (const [key, value] of flat(en)) {
       expect(placeholders(esFlat[key] ?? ''), key).toEqual(placeholders(value))
     }
   })

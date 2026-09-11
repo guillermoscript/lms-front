@@ -2423,7 +2423,9 @@
         },
         "upgrade": {
           "checkoutError": "Error al crear la sesión de pago",
-          "checkoutFailed": "Error al iniciar el pago. Por favor, inténtalo de nuevo."
+          "checkoutFailed": "Error al iniciar el pago. Por favor, inténtalo de nuevo.",
+          "title": "Mejora tu plan",
+          "subtitle": "Elige el plan que mejor se adapte a las necesidades de tu escuela"
         },
         "changePlan": {
           "upgradeTitle": "Mejorar a {plan}",
@@ -2612,7 +2614,8 @@
           "inviteAnother": "Invitar a otra persona",
           "linkNote": "WhatsApp y el enlace compartirán la página de registro de tu escuela.",
           "whatsappMessage": "¡Estás invitado a unirte a nuestra escuela! Regístrate aquí: {url} (Te unirás como {role})"
-        }
+        },
+        "searchPlaceholder": "Buscar por nombre, correo o ID..."
       },
       "paymentRequests": {
         "title": "Solicitudes de Pago",
@@ -2646,7 +2649,10 @@
             "actions": "Acciones"
           },
           "noRequests": "No se encontraron solicitudes de pago",
-          "manage": "Gestionar"
+          "manage": "Gestionar",
+          "review": "Revisar",
+          "id": "ID de solicitud",
+          "invoice": "Factura"
         },
         "status": {
           "pending": "Pendiente",
@@ -3773,6 +3779,10 @@
             "success": "Notificación enviada con éxito",
             "draft": "Notificación guardada como borrador",
             "error": "Error al crear la notificación"
+          },
+          "dialog": {
+            "title": "Crear nueva notificación",
+            "description": "Envía una notificación a usuarios específicos, a grupos o a toda la plataforma"
           }
         },
         "templates": {
@@ -3890,127 +3900,6 @@
         "created": "Creado",
         "stripeConnected": "Conectado"
       }
-    },
-    "course": {
-      "title": "Curso",
-      "description": "Descripción",
-      "lessons": "Lecciones",
-      "lesson": "Lección",
-      "exams": "Exámenes",
-      "exam": "Examen",
-      "students": "Estudiantes",
-      "progress": "Progreso",
-      "complete": "Completar",
-      "completed": "Completado",
-      "inProgress": "En Progreso",
-      "notStarted": "No Iniciado",
-      "viewCourse": "Ver Curso",
-      "viewExams": "Ver Exámenes",
-      "backToCourse": "Volver al Curso",
-      "courseContent": "Contenido del Curso",
-      "noLessons": "Aún no hay lecciones disponibles.",
-      "published": "Publicado",
-      "draft": "Borrador",
-      "archived": "Archivado"
-    },
-    "lesson": {
-      "markAsComplete": "Marcar como Completado",
-      "completed": "Completado",
-      "duration": "Duración",
-      "minutes": "minutos",
-      "video": "Video",
-      "content": "Contenido",
-      "comments": "Comentarios",
-      "noComments": "Aún no hay comentarios. ¡Sé el primero en comentar!",
-      "postComment": "Publicar Comentario",
-      "commentPlaceholder": "Comparte tus ideas o haz una pregunta...",
-      "posting": "Publicando..."
-    },
-    "exam": {
-      "title": "Examen",
-      "startExam": "Comenzar Examen",
-      "submitExam": "Enviar Examen",
-      "timeRemaining": "Tiempo Restante",
-      "questions": "Preguntas",
-      "question": "Pregunta",
-      "multipleChoice": "Opción Múltiple",
-      "trueFalse": "Verdadero/Falso",
-      "freeText": "Texto Libre",
-      "yourAnswer": "Tu Respuesta",
-      "correctAnswer": "Respuesta Correcta",
-      "score": "Puntuación",
-      "passed": "Aprobado",
-      "failed": "Reprobado",
-      "results": "Resultados",
-      "viewResults": "Ver Resultados",
-      "noExams": "Aún no hay exámenes disponibles."
-    },
-    "review": {
-      "title": "Reseñas",
-      "yourRating": "Tu Calificación",
-      "yourReview": "Tu Reseña",
-      "submitReview": "Enviar Reseña",
-      "submitting": "Enviando...",
-      "reviewPlaceholder": "Comparte tu experiencia con este curso...",
-      "noReviews": "Aún no hay reseñas. ¡Sé el primero en reseñar este curso!",
-      "alreadyReviewed": "Ya has reseñado este curso. ¡Gracias por tu opinión!",
-      "averageRating": "Calificación Promedio",
-      "reviews": "reseñas"
-    },
-    "enrollment": {
-      "enroll": "Inscribirse",
-      "enrolled": "Inscrito",
-      "enrollmentDate": "Fecha de Inscripción",
-      "status": "Estado",
-      "active": "Activo",
-      "completed": "Completado",
-      "cancelled": "Cancelado"
-    },
-    "user": {
-      "profile": "Perfil",
-      "settings": "Configuración",
-      "account": "Cuenta",
-      "name": "Nombre",
-      "email": "Correo Electrónico",
-      "role": "Rol",
-      "student": "Estudiante",
-      "teacher": "Profesor",
-      "admin": "Administrador",
-      "joined": "Se unió",
-      "lastActive": "Última Actividad"
-    },
-    "transaction": {
-      "transactions": "Transacciones",
-      "amount": "Monto",
-      "status": "Estado",
-      "paymentMethod": "Método de Pago",
-      "date": "Fecha",
-      "successful": "Exitoso",
-      "pending": "Pendiente",
-      "failed": "Fallido",
-      "noTransactions": "No se encontraron transacciones"
-    },
-    "stats": {
-      "total": "Total",
-      "active": "Activo",
-      "published": "Publicado",
-      "draft": "Borrador"
-    },
-    "validation": {
-      "required": "Este campo es obligatorio",
-      "emailInvalid": "Por favor ingresa un correo electrónico válido",
-      "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
-      "passwordsMustMatch": "Las contraseñas deben coincidir"
-    },
-    "messages": {
-      "success": "¡Éxito!",
-      "saveSuccess": "Guardado exitosamente",
-      "deleteSuccess": "Eliminado exitosamente",
-      "createSuccess": "Creado exitosamente",
-      "updateSuccess": "Actualizado exitosamente",
-      "errorOccurred": "Ocurrió un error. Por favor intenta de nuevo.",
-      "confirmDelete": "¿Estás seguro de que quieres eliminar esto?",
-      "unsavedChanges": "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?"
     }
   },
   "navbar": {
@@ -5287,6 +5176,25 @@
           "failed": "No se pudo registrar el pago"
         }
       }
+    },
+    "sidebar": {
+      "brand": "Plataforma",
+      "brandSubtitle": "Super administrador",
+      "groups": {
+        "operate": "Operación",
+        "money": "Dinero",
+        "configure": "Configuración"
+      },
+      "overview": "Resumen",
+      "schools": "Escuelas",
+      "paymentRequests": "Solicitudes de pago",
+      "billingHealth": "Salud de facturación",
+      "revenue": "Ingresos",
+      "payouts": "Pagos",
+      "plans": "Planes",
+      "badgeTooltip": "{title} ({count})",
+      "backToSchool": "Volver a mi escuela",
+      "logout": "Cerrar sesión"
     }
   },
   "platformPricing": {
@@ -6417,5 +6325,110 @@
     "view": "Ver",
     "ctaTitle": "¿Listo para comenzar a aprender en {name}?",
     "ctaButton": "Únete a {name} ahora"
+  },
+  "oauthConsent": {
+    "invalidTitle": "Solicitud inválida",
+    "invalidDescription": "Falta el parámetro authorization_id.",
+    "errorTitle": "Error de autorización",
+    "errorFallback": "No se pudieron obtener los detalles de la autorización.",
+    "title": "Autorizar acceso",
+    "subtitle": "Una aplicación está solicitando acceso a tu cuenta del LMS.",
+    "application": "Aplicación",
+    "unknownApplication": "Aplicación desconocida",
+    "unknownSchool": "Escuela desconocida",
+    "redirectUri": "URI de redirección",
+    "permissions": "Permisos",
+    "signedInAs": "Sesión iniciada como",
+    "connectingTo": "— conectando a",
+    "explain": "Esto permitirá que la aplicación acceda a tus datos del LMS: los profesores y administradores obtienen la gestión de cursos, y los estudiantes sus propias herramientas de aprendizaje.",
+    "schoolLabel": "Conectar con la escuela",
+    "schoolPlaceholder": "Elige una escuela",
+    "schoolHint": "La aplicación solo verá los datos de esta escuela.",
+    "deny": "Denegar",
+    "denying": "Denegando...",
+    "approve": "Aprobar",
+    "approving": "Aprobando...",
+    "genericError": "Algo salió mal. Inténtalo de nuevo.",
+    "unexpectedError": "Ocurrió un error. Inténtalo de nuevo."
+  },
+  "products": {
+    "title": "Productos disponibles",
+    "subtitle": "Explora nuestros cursos y productos disponibles. Elige uno para empezar.",
+    "paymentMethod": "Método de pago: {provider}",
+    "manual": "Manual / Fuera de línea",
+    "requestPaymentInfo": "Solicitar información de pago",
+    "buyNow": "Comprar ahora",
+    "empty": "No hay productos disponibles por el momento."
+  },
+  "joinSchool": {
+    "notFoundTitle": "Escuela no encontrada",
+    "notFoundDescription": "La escuela a la que intentas unirte no existe o ya no está disponible.",
+    "returnHome": "Volver al inicio",
+    "memberTitle": "¡Ya eres miembro!",
+    "memberDescription": "Ya estás inscrito en {school}",
+    "memberBody": "Tienes acceso a todos los cursos y recursos de {school}.",
+    "continue": "Continuar",
+    "goToDashboard": "Ir al panel",
+    "browseCourses": "Explorar cursos",
+    "title": "Únete a {school}",
+    "subtitle": "Empieza a aprender hoy con {school}",
+    "otherSchoolsTitle": "Ya eres miembro de:",
+    "unknownSchool": "Escuela desconocida",
+    "otherSchoolsHint": "Puedes cambiar de escuela en cualquier momento desde tu panel.",
+    "formTitle": "¿Listo para empezar a aprender?",
+    "formDescription": "Únete a {school} y obtén acceso a sus cursos y recursos",
+    "benefitsTitle": "Esto es lo que obtienes:",
+    "benefitCourses": "Acceso a todos los cursos disponibles",
+    "benefitProgress": "Sigue tu progreso y obtén certificados",
+    "benefitExams": "Participa en exámenes y ejercicios",
+    "benefitCommunity": "Únete a la comunidad de aprendizaje",
+    "submit": "Únete a {school}",
+    "submitting": "Uniéndote...",
+    "terms": "Al unirte, aceptas los términos de servicio y la política de privacidad de {school}",
+    "error": "No se pudo unir a la escuela. Inténtalo de nuevo.",
+    "unexpectedError": "Ocurrió un error inesperado"
+  },
+  "createSchool": {
+    "title": "Crea tu escuela",
+    "subtitleAccount": "Primero, crea tu cuenta",
+    "subtitleSchool": "Elige un nombre y una URL para tu escuela",
+    "stepAccount": "Cuenta",
+    "stepSignedUp": "Registrado",
+    "stepSchool": "Escuela",
+    "google": "Continuar con Google",
+    "orEmail": "O continúa con tu correo",
+    "nameLabel": "Tu nombre",
+    "namePlaceholder": "Ada Lovelace",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Al menos 6 caracteres",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "createAccount": "Crear cuenta y continuar",
+    "creatingAccount": "Creando la cuenta...",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "logIn": "Inicia sesión",
+    "confirmTitle": "Revisa tu correo",
+    "confirmBody": "Enviamos un enlace de confirmación a {email}.",
+    "confirmHint": "Verifica tu correo y luego inicia sesión para continuar.",
+    "goToLogin": "Ir a iniciar sesión",
+    "backToSignUp": "Volver al registro",
+    "signedInAs": "Sesión iniciada como {email}",
+    "schoolNameLabel": "Nombre de la escuela",
+    "schoolNamePlaceholder": "Mi Academia",
+    "schoolUrlLabel": "URL de la escuela",
+    "schoolUrlPlaceholder": "mi-academia",
+    "slugHint": "Solo letras minúsculas, números y guiones",
+    "createSchool": "Crear escuela",
+    "creatingSchool": "Creando tu escuela...",
+    "back": "Atrás",
+    "created": "¡Escuela creada! Preparando tu panel...",
+    "errorNameRequired": "Escribe tu nombre",
+    "errorPasswordTooShort": "La contraseña debe tener al menos 6 caracteres",
+    "errorEmailRegistered": "Este correo ya está registrado. Inicia sesión en su lugar.",
+    "errorSlugTaken": "Esta URL de escuela ya está en uso. Elige otra.",
+    "errorCreateFailed": "No se pudo crear la escuela: {message}",
+    "errorGeneric": "Algo salió mal"
   }
 }

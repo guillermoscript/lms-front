@@ -120,6 +120,20 @@ async function clickUntil(
   }
 }
 
+/** Locale-specific copy on /create-school — the flow is fully localised (#689). */
+const CREATE_SCHOOL_COPY = {
+  en: {
+    title: 'Create Your School',
+    createAccount: /create account/i,
+    schoolNameLabel: 'School Name',
+  },
+  es: {
+    title: 'Crea tu escuela',
+    createAccount: /crear cuenta/i,
+    schoolNameLabel: 'Nombre de la escuela',
+  },
+} as const
+
 /**
  * Steps 1: anonymous on the bare platform domain, sign up and name the
  * school. Resolves once the new tenant's admin dashboard is on screen.
@@ -131,7 +145,12 @@ async function clickUntil(
  * own base so both setups reach the same assertion.
  */
 async function createSchool(page: Page, locale: 'en' | 'es', creator: Creator) {
+  const copy = CREATE_SCHOOL_COPY[locale]
   await page.goto(`${BASE}/${locale}/create-school`, { waitUntil: 'domcontentloaded' })
+
+  // The screen was hardcoded English on every string until #689; asserting the
+  // heading is what keeps the Spanish run honest rather than merely green.
+  await expect(page.getByRole('heading', { name: copy.title })).toBeVisible()
 
   await fillAllStable([
     [page.locator('#owner-name'), 'Loop One Creator'],
@@ -141,9 +160,11 @@ async function createSchool(page: Page, locale: 'en' | 'es', creator: Creator) {
 
   const schoolName = page.getByTestId('create-school-name')
   await clickUntil(
-    page.getByRole('button', { name: /create account/i }),
+    page.getByRole('button', { name: copy.createAccount }),
     () => schoolName.isVisible(),
   )
+
+  await expect(page.getByText(copy.schoolNameLabel, { exact: true })).toBeVisible()
 
   await fillAllStable([
     [schoolName, creator.schoolName],

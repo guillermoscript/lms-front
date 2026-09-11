@@ -29,6 +29,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { useTranslations } from "next-intl"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -38,7 +39,8 @@ interface PlatformSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 interface NavItem {
-  title: string
+  /** Message key under `platform.sidebar`, resolved at render — not a literal label. */
+  titleKey: string
   href: string
   icon: typeof IconSchool
   badge?: number
@@ -53,6 +55,7 @@ const BADGE_TONE: Record<NonNullable<NavItem['badgeTone']>, string> = {
 
 export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...props }: PlatformSidebarProps) {
   const pathname = usePathname()
+  const t = useTranslations('platform.sidebar')
   const supabase = createClient()
 
   const handleLogout = async () => {
@@ -60,39 +63,39 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
     window.location.href = "/auth/login"
   }
 
-  const groups: { label: string; items: NavItem[] }[] = [
+  const groups: { labelKey: string; items: NavItem[] }[] = [
     {
-      label: 'Operate',
+      labelKey: 'groups.operate',
       items: [
-        { title: 'Overview', href: '/platform', icon: IconLayoutDashboard },
-        { title: 'Schools', href: '/platform/tenants', icon: IconSchool },
+        { titleKey: 'overview', href: '/platform', icon: IconLayoutDashboard },
+        { titleKey: 'schools', href: '/platform/tenants', icon: IconSchool },
       ],
     },
     {
-      label: 'Money',
+      labelKey: 'groups.money',
       items: [
         {
-          title: 'Payment requests',
+          titleKey: 'paymentRequests',
           href: '/platform/billing',
           icon: IconReceipt,
           badge: pendingBillingCount,
           badgeTone: 'warning',
         },
         {
-          title: 'Billing health',
+          titleKey: 'billingHealth',
           href: '/platform/billing-health',
           icon: IconAlertTriangle,
           badge: atRiskCount,
           badgeTone: 'danger',
         },
-        { title: 'Revenue', href: '/platform/revenue', icon: IconReportMoney },
-        { title: 'Payouts', href: '/platform/payouts', icon: IconWallet },
+        { titleKey: 'revenue', href: '/platform/revenue', icon: IconReportMoney },
+        { titleKey: 'payouts', href: '/platform/payouts', icon: IconWallet },
       ],
     },
     {
-      label: 'Configure',
+      labelKey: 'groups.configure',
       items: [
-        { title: 'Plans', href: '/platform/plans', icon: IconBuildingStore },
+        { titleKey: 'plans', href: '/platform/plans', icon: IconBuildingStore },
         // Referrals stays hidden until the backing schema is built.
       ],
     },
@@ -112,8 +115,8 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
                 <IconShieldCheck className="size-4" />
               </div>
               <div className="flex flex-col gap-0.5 leading-none">
-                <span className="font-semibold">Platform</span>
-                <span className="text-xs text-muted-foreground">Super admin</span>
+                <span className="font-semibold">{t('brand')}</span>
+                <span className="text-xs text-muted-foreground">{t('brandSubtitle')}</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -122,12 +125,13 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
 
       <SidebarContent>
         {groups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroup key={group.labelKey}>
+            <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
                   const href = `${localePrefix}${item.href}`
+                  const title = t(item.titleKey)
                   // Segment match, not prefix match — `/platform/billing` must not
                   // light up on `/platform/billing-health`.
                   const isActive = item.href === '/platform'
@@ -135,14 +139,14 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
                     : pathname === href || pathname.startsWith(`${href}/`)
                   const showBadge = item.badge !== undefined && item.badge > 0
                   return (
-                    <SidebarMenuItem key={item.title}>
+                    <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton
                         render={<Link href={href} />}
                         isActive={isActive}
-                        tooltip={showBadge ? `${item.title} (${item.badge})` : item.title}
+                        tooltip={showBadge ? t('badgeTooltip', { title, count: item.badge ?? 0 }) : title}
                       >
                         <item.icon />
-                        <span>{item.title}</span>
+                        <span>{title}</span>
                       </SidebarMenuButton>
                       {showBadge && (
                         <SidebarMenuBadge
@@ -163,15 +167,18 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton render={<Link href={`${localePrefix}/dashboard/admin`} />} tooltip="Back to my school">
+            <SidebarMenuButton
+              render={<Link href={`${localePrefix}/dashboard/admin`} />}
+              tooltip={t('backToSchool')}
+            >
               <IconExternalLink />
-              <span>Back to my school</span>
+              <span>{t('backToSchool')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} tooltip="Log out">
+            <SidebarMenuButton onClick={handleLogout} tooltip={t('logout')}>
               <IconLogout />
-              <span>Log out</span>
+              <span>{t('logout')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
