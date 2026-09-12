@@ -362,20 +362,22 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
     const admin = getServiceRoleClient()
 
     /* ---- 1. Public link → sign-up with `next` preserved → auto-enroll ---- */
-    await test.step('anonymous course page offers free enrollment and keeps the intent through login and sign-up', async () => {
+    await test.step('anonymous course page offers free enrollment and keeps the intent into sign-up', async () => {
       await page.goto(`${BASE}/${LOCALE}/courses/${courseId}`, { waitUntil: 'domcontentloaded' })
       const cta = page.getByTestId('course-enroll-cta')
       await expect(cta).toBeVisible({ timeout: 30_000 })
       await expect(cta).toHaveText(/enroll for free/i)
 
-      await domClick(page, 'course-enroll-cta')
-      await page.waitForURL(/\/auth\/login\?/, { timeout: 30_000 })
-      expect(new URL(page.url()).searchParams.get('next')).toBe(`/courses/${courseId}?enroll=1`)
+      // A first-time visitor arrived by a shared link and has no account, so
+      // the CTA goes straight to sign-up (#685); returning students take the
+      // secondary link, which carries the same intent.
+      const loginLink = page.getByTestId('course-enroll-login')
+      await expect(loginLink).toBeVisible({ timeout: 30_000 })
+      expect(await loginLink.getAttribute('href')).toContain(
+        encodeURIComponent(`/courses/${courseId}?enroll=1`),
+      )
 
-      // First-time visitors have no account: the login page forwards `next` to sign-up.
-      const signupLink = page.getByTestId('login-signup-link')
-      await expect(signupLink).toBeVisible({ timeout: 30_000 })
-      await signupLink.click()
+      await domClick(page, 'course-enroll-cta')
       await page.waitForURL(/\/auth\/sign-up\?/, { timeout: 30_000 })
       expect(new URL(page.url()).searchParams.get('next')).toBe(`/courses/${courseId}?enroll=1`)
     })

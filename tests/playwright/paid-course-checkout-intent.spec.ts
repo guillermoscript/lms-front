@@ -147,19 +147,19 @@ test.describe('Paid course CTA keeps checkout intent for a new visitor (#684)', 
     const email = `paid684-${RUN}@e2etest.com`
     const checkoutPath = `/checkout?courseId=${courseId}`
 
-    await test.step('anonymous course page sends the visitor to login with the checkout as next', async () => {
+    await test.step('anonymous course page sends the visitor to sign-up with the checkout as next', async () => {
       await page.goto(`${BASE}/${LOCALE}/courses/${courseId}`, { waitUntil: 'domcontentloaded' })
       const cta = page.getByTestId('course-enroll-cta')
       await expect(cta).toBeVisible({ timeout: 30_000 })
       await expect(cta).toHaveText(/enroll now/i)
 
-      await domClick(page, cta)
-      await page.waitForURL(/\/auth\/login\?/, { timeout: 30_000 })
-      expect(new URL(page.url()).searchParams.get('next')).toBe(checkoutPath)
+      // Sign-up is the primary path for a first-time visitor (#685); the
+      // login link beside it carries the same checkout intent.
+      const loginLink = page.getByTestId('course-enroll-login')
+      await expect(loginLink).toBeVisible({ timeout: 30_000 })
+      expect(await loginLink.getAttribute('href')).toContain(encodeURIComponent(checkoutPath))
 
-      const signupLink = page.getByTestId('login-signup-link')
-      await expect(signupLink).toBeVisible({ timeout: 30_000 })
-      await signupLink.click()
+      await domClick(page, cta)
       await page.waitForURL(/\/auth\/sign-up\?/, { timeout: 30_000 })
       expect(new URL(page.url()).searchParams.get('next')).toBe(checkoutPath)
     })

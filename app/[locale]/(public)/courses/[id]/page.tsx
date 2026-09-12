@@ -198,6 +198,14 @@ export default async function CourseDetailsPage(props: {
         ? t('pricing.free')
         : formatPrice(Number(courseProduct.price), courseProduct.currency);
 
+    // Where an anonymous visitor lands once they have an account. Unchanged
+    // from when the CTA pointed at login: the free path re-enters this page
+    // with `enroll=1` so `AutoFreeEnrollButton` finishes the job, the paid one
+    // goes straight to checkout.
+    const anonymousNext = isFree
+        ? `/courses/${params.id}?enroll=1`
+        : `/checkout?courseId=${course.course_id}`;
+
     const instructor = author ? {
         name: author.full_name || t('sections.instructor.defaultName'),
         avatar_url: author.avatar_url,
@@ -523,11 +531,26 @@ export default async function CourseDetailsPage(props: {
                                     {/* CTA */}
                                     <div className="space-y-3">
                                         {!userId ? (
-                                            <Link href={`/auth/login?next=${encodeURIComponent(isFree ? `/courses/${params.id}?enroll=1` : `/checkout?courseId=${course.course_id}`)}`}>
-                                                <Button data-testid="course-enroll-cta" className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
-                                                    {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
-                                                </Button>
-                                            </Link>
+                                            <div className="space-y-2">
+                                                {/* A visitor who arrived by a shared link most likely has no
+                                                    account yet, so the button goes to sign-up; the login link
+                                                    below carries the same `next` for the ones who do (#685). */}
+                                                <Link href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}>
+                                                    <Button data-testid="course-enroll-cta" className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
+                                                        {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
+                                                    </Button>
+                                                </Link>
+                                                <p className="text-center text-xs text-zinc-400">
+                                                    {t('pricing.haveAccount')}{' '}
+                                                    <Link
+                                                        data-testid="course-enroll-login"
+                                                        href={`/auth/login?next=${encodeURIComponent(anonymousNext)}`}
+                                                        className="text-cyan-400 hover:underline"
+                                                    >
+                                                        {t('pricing.logIn')}
+                                                    </Link>
+                                                </p>
+                                            </div>
                                         ) : hasAccess ? (
                                             <Link href={`/dashboard/student/courses/${course.course_id}`}>
                                                 <Button data-testid="course-go-to-course" className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
