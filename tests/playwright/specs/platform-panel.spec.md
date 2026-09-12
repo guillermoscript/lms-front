@@ -94,7 +94,7 @@ Precondition: logged in as super admin.
 
 | # | Test | Assertions | Selectors |
 |---|------|------------|-----------|
-| 27 | referrals route renders the platform not-found page | Platform 404 renders; URL unchanged | `[data-testid="dashboard-not-found"]` (10s timeout) |
+| 27 | referrals route no longer serves a page | Response status >= 400; the old referrals page is absent | `page.goto()` status; `[data-testid="platform-referrals-page"]` count 0 |
 | 28 | no sidebar entry points at referrals | Zero matching links on the overview | `a[href*="/platform/referrals"]` count 0 |
 
 ### Impersonation Dialog (P2)

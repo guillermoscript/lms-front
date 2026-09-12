@@ -349,13 +349,15 @@ test.describe('Platform Plans', () => {
 // The feature request lives in #317; the last implementation is in git history.
 // Until then the route must simply not exist.
 test.describe('Platform Referrals (not built — #317)', () => {
-  test('referrals route renders the platform not-found page', async ({ page }) => {
+  test('referrals route no longer serves a page', async ({ page }) => {
     await loginAsSuperAdmin(page)
-    await page.goto(`${PLATFORM_BASE}/referrals`)
-    // The platform segment has its own not-found (#677); the shell can answer 200
-    // with the not-found rendered inside it, so assert on the UI, not the status.
-    await expect(page.getByTestId('dashboard-not-found')).toBeVisible({ timeout: 10_000 })
-    expect(page.url()).toContain('/platform/referrals')
+    const response = await page.goto(`${PLATFORM_BASE}/referrals`)
+    // Which 404 surface Next renders for an unmatched path is its business — a nested
+    // `not-found.tsx` only answers a `notFound()` thrown inside its own segment, so do
+    // not assert on one. What matters is that nothing serves this path any more: a
+    // surviving page, or the old redirect stub, would both land on a 200.
+    expect(response?.status()).toBeGreaterThanOrEqual(400)
+    await expect(page.getByTestId('platform-referrals-page')).toHaveCount(0)
   })
 
   test('no sidebar entry points at referrals', async ({ page }) => {
