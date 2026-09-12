@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -15,11 +16,15 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function ProductsPage() {
   const supabase = await createClient()
   const t = await getTranslations('products')
+  const tenantId = await getCurrentTenantId()
 
-  // Get all active products
+  // Get all active products for this school. The tenant filter is what makes
+  // the page safe to serve anonymously (#719): RLS on `products` is permissive
+  // for `anon`, so without it a subdomain listed every school's catalogue.
   const { data: products } = await supabase
     .from('products')
     .select('*')
+    .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
 

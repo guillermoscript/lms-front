@@ -2,11 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ManualPaymentButton } from '@/components/student/manual-payment-button'
-import { getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import type { Metadata } from 'next'
 import { buildPageMetadata } from '@/lib/seo'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { getTranslations } from 'next-intl/server'
+import { AlreadyHaveAccountLink } from '@/components/public/already-have-account-link'
 
 export async function generateMetadata({
   params
@@ -19,6 +21,7 @@ export async function generateMetadata({
     .from('products')
     .select('name, description')
     .eq('product_id', parseInt(productId))
+    .eq('tenant_id', await getCurrentTenantId())
     .eq('status', 'active')
     .single()
   if (!product) return {}
@@ -37,14 +40,20 @@ export default async function ProductDetailPage({
   params: Promise<{ productId: string }>
 }) {
   const supabase = await createClient()
+  const t = await getTranslations('products')
+  const tenantId = await getCurrentTenantId()
   const { productId: productIdStr } = await params
   const productId = parseInt(productIdStr)
 
-  // Get product details
+  // Get product details. Scoped to this school: RLS on `products` is permissive
+  // for `anon`, and the page is now served to anonymous visitors (#719), so the
+  // tenant filter is the only thing keeping one subdomain out of another's
+  // catalogue.
   const { data: product, error } = await supabase
     .from('products')
     .select('*')
     .eq('product_id', productId)
+    .eq('tenant_id', tenantId)
     .eq('status', 'active')
     .single()
 
@@ -54,6 +63,9 @@ export default async function ProductDetailPage({
 
   // Check if user is authenticated
   const userId = await getCurrentUserId()
+  // Where an anonymous visitor lands once they have an account: back here, so
+  // the payment request they came for is one click away.
+  const anonymousNext = `/products/${product.product_id}`
   return (
     <div className="container mx-auto py-12">
       <div className="max-w-2xl mx-auto">
@@ -68,18 +80,21 @@ export default async function ProductDetailPage({
                 ${product.price} {product.currency.toUpperCase()}
               </div>
               <div className="text-sm text-muted-foreground">
-                Payment Method: {product.payment_provider === 'manual' ? 'Manual/Offline Payment' : product.payment_provider}
+                {t('paymentMethod', {
+                  provider:
+                    product.payment_provider === 'manual' ? t('manual') : product.payment_provider,
+                })}
               </div>
             </div>
 
             {product.payment_provider === 'manual' && (
               <div className="bg-muted p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">How Manual Payment Works:</h3>
+                <h3 className="font-semibold mb-2">{t('detail.manualTitle')}</h3>
                 <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                  <li>Click the button below to request payment information</li>
-                  <li>We’ll send you payment instructions via email</li>
-                  <li>Complete the payment using your preferred method (bank transfer, etc.)</li>
-                  <li>Once verified, you’ll get instant access to your course</li>
+                  <li>{t('detail.manualSteps.request')}</li>
+                  <li>{t('detail.manualSteps.instructions')}</li>
+                  <li>{t('detail.manualSteps.pay')}</li>
+                  <li>{t('detail.manualSteps.access')}</li>
                 </ol>
               </div>
             )}
@@ -93,11 +108,19 @@ export default async function ProductDetailPage({
                   productCurrency={product.currency}
                 />
               ) : (
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-4">Please login to request payment information</p>
-                  <Link href={`/auth/login?next=${encodeURIComponent(`/products/${product.product_id}`)}`}>
-                    <Button>Login</Button>
+                // A visitor who followed a shared product link most likely has
+                // no account yet, so the button goes to sign-up; the link under
+                // it carries the same `next` for the ones who do (#719).
+                <div className="text-center space-y-2">
+                  <Link
+                    data-testid="product-request-cta"
+                    href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}
+                  >
+                    <Button>
+                      {product.payment_provider === 'manual' ? t('requestPaymentInfo') : t('buyNow')}
+                    </Button>
                   </Link>
+                  <AlreadyHaveAccountLink next={anonymousNext} testId="product-request-login" />
                 </div>
               )}
             </div>

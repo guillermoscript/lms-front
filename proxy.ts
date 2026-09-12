@@ -329,6 +329,11 @@ export default async function proxy(request: NextRequest) {
     '/pricing',
     '/verify',
     '/courses',
+    // Product pages live under (public) and carry SEO metadata, but were never
+    // listed here — so the shared link a school sends a prospective student
+    // bounced off the login wall before the page rendered (#719). Both pages
+    // filter by `tenant_id`, so a subdomain shows only its own catalogue.
+    '/products',
     // OAuth 2.1 consent screen (Supabase redirects here with ?authorization_id=…).
     // Must be public: the page handles its own login redirect and preserves the
     // authorization_id — the middleware's redirectTo drops query strings.

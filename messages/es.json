@@ -76,6 +76,8 @@
     "completed": "Completado",
     "lessonsCompleted": "lecciones completadas",
     "lessons": "lecciones",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "logIn": "Inicia sesión",
     "tour": {
       "replay": "Repetir recorrido"
     },
@@ -4819,8 +4821,6 @@
       "enrollNow": "Inscribirse Ahora",
       "goToCourse": "Ir al Curso",
       "buyNow": "Comprar Ahora",
-      "haveAccount": "¿Ya tienes una cuenta?",
-      "logIn": "Inicia sesión",
       "or": "o",
       "subscription": "Obtén acceso mediante Suscripción",
       "includes": {
@@ -6366,6 +6366,15 @@
     "manual": "Manual / Fuera de línea",
     "requestPaymentInfo": "Solicitar información de pago",
     "buyNow": "Comprar ahora",
+    "detail": {
+      "manualTitle": "Cómo funciona el pago manual:",
+      "manualSteps": {
+        "request": "Haz clic en el botón de abajo para solicitar la información de pago",
+        "instructions": "Te enviaremos las instrucciones de pago por correo electrónico",
+        "pay": "Completa el pago con el método que prefieras (transferencia bancaria, etc.)",
+        "access": "Una vez verificado, obtendrás acceso inmediato a tu curso"
+      }
+    },
     "empty": "No hay productos disponibles por el momento."
   },
   "joinSchool": {

@@ -30,6 +30,7 @@ import { pickCourseProduct } from '@/lib/course-pricing';
 import { JsonLd, courseJsonLd } from '@/lib/structured-data';
 import { AutoFreeEnrollButton, FreeEnrollButton } from '@/components/public/free-enroll-button';
 import { PlanEnrollButton } from '@/components/public/plan-enroll-button';
+import { AlreadyHaveAccountLink } from '@/components/public/already-have-account-link';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getCourseSocialProof } from '@/lib/social-proof';
 import { StarRating } from '@/components/shared/star-rating';
@@ -540,16 +541,12 @@ export default async function CourseDetailsPage(props: {
                                                         {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
                                                     </Button>
                                                 </Link>
-                                                <p className="text-center text-xs text-zinc-400">
-                                                    {t('pricing.haveAccount')}{' '}
-                                                    <Link
-                                                        data-testid="course-enroll-login"
-                                                        href={`/auth/login?next=${encodeURIComponent(anonymousNext)}`}
-                                                        className="text-cyan-400 hover:underline"
-                                                    >
-                                                        {t('pricing.logIn')}
-                                                    </Link>
-                                                </p>
+                                                <AlreadyHaveAccountLink
+                                                    next={anonymousNext}
+                                                    testId="course-enroll-login"
+                                                    className="text-zinc-400"
+                                                    linkClassName="text-cyan-400"
+                                                />
                                             </div>
                                         ) : hasAccess ? (
                                             <Link href={`/dashboard/student/courses/${course.course_id}`}>
