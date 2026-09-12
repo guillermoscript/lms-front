@@ -462,9 +462,15 @@ test('a creator signs up, creates a school, publishes a course with a lesson and
       await expect(anon.getByText(lessonTitle)).toBeVisible()
       await expect(anon.getByText('Free', { exact: true }).first()).toBeVisible()
 
+      // A visitor with no account gets sign-up, not a login form (#685); the
+      // secondary link carries the same intent for a returning student.
       const cta = anon.getByRole('link', { name: /enroll for free/i })
       await expect(cta).toBeVisible()
-      await expect(cta).toHaveAttribute('href', /\/auth\/login\?next=/)
+      await expect(cta).toHaveAttribute('href', /\/auth\/sign-up\?next=/)
+      await expect(anon.getByTestId('course-enroll-login')).toHaveAttribute(
+        'href',
+        /\/auth\/login\?next=/,
+      )
 
       await anon.goto(`${base}/en/courses`, { waitUntil: 'domcontentloaded' })
       const card = anon.getByRole('link', { name: new RegExp(courseTitle) })
@@ -573,7 +579,11 @@ test('en español: crea la escuela y la página pública del curso se ve en espa
       await expect(anon.getByText('Gratis', { exact: true }).first()).toBeVisible()
       const cta = anon.getByRole('link', { name: /inscribirse gratis/i })
       await expect(cta).toBeVisible()
-      await expect(cta).toHaveAttribute('href', /\/auth\/login\?next=/)
+      await expect(cta).toHaveAttribute('href', /\/auth\/sign-up\?next=/)
+      await expect(anon.getByTestId('course-enroll-login')).toHaveAttribute(
+        'href',
+        /\/auth\/login\?next=/,
+      )
 
       await anon.goto(`${base}/es/courses`, { waitUntil: 'domcontentloaded' })
       const card = anon.getByRole('link', { name: new RegExp(courseTitle) })
