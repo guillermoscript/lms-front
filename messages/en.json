@@ -76,6 +76,8 @@
     "completed": "Completed",
     "lessonsCompleted": "lessons completed",
     "lessons": "lessons",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in",
     "tour": {
       "replay": "Replay tour"
     },
@@ -4819,8 +4821,6 @@
       "enrollNow": "Enroll Now",
       "goToCourse": "Go to Course",
       "buyNow": "Buy Now",
-      "haveAccount": "Already have an account?",
-      "logIn": "Log in",
       "or": "or",
       "subscription": "Get access via Subscription",
       "includes": {
@@ -6366,6 +6366,15 @@
     "manual": "Manual/Offline",
     "requestPaymentInfo": "Request Payment Info",
     "buyNow": "Buy Now",
+    "detail": {
+      "manualTitle": "How Manual Payment Works:",
+      "manualSteps": {
+        "request": "Click the button below to request payment information",
+        "instructions": "We’ll send you payment instructions via email",
+        "pay": "Complete the payment using your preferred method (bank transfer, etc.)",
+        "access": "Once verified, you’ll get instant access to your course"
+      }
+    },
     "empty": "No products available at the moment."
   },
   "joinSchool": {
