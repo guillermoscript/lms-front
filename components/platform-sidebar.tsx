@@ -96,7 +96,6 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
       labelKey: 'groups.configure',
       items: [
         { titleKey: 'plans', href: '/platform/plans', icon: IconBuildingStore },
-        // Referrals stays hidden until the backing schema is built.
       ],
     },
   ]

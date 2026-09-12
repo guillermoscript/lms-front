@@ -10,7 +10,6 @@ const SECTION_LABELS: Record<string, string> = {
   billing: 'Payment requests',
   'billing-health': 'Billing health',
   plans: 'Plans',
-  referrals: 'Referrals',
 }
 
 /**
