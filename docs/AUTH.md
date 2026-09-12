@@ -244,6 +244,19 @@ If a user accesses a dashboard route they are not authorized for, `proxy.ts` red
 - Non-members are redirected to `/join-school`
 - After a tenant switch, the client must call `supabase.auth.refreshSession()` to update JWT claims with the new tenant context
 
+### Redirect-Only Destinations
+
+Some pages exist to be redirected *to*. They carry no nav entry and no inbound link on
+purpose — reaching one by typing the URL is harmless, but nothing links there.
+
+| Route | Who sends you there | Why |
+|-------|--------------------|-----|
+| `/dashboard/student/access-suspended` | `requireCourseAccess()` in `lib/services/course-access-guard.ts:38`, when the refusal is the **tenant** cutoff rather than a missing entitlement | Tells the student their school is over its plan limits and that their enrolment is intact. Shipped in #509; covered by `tests/playwright/access-cutoff-lifecycle.spec.ts` |
+| `/join-school` | `proxy.ts`, when an authenticated user has no active `tenant_users` row | See **Tenant Membership** above |
+| `/create-school` | Sign-up on the apex domain | Public route; also linked from the homepage |
+
+Do not "clean up" the first one as an orphan: no nav entry is the point.
+
 ### Cross-Subdomain Session
 
 JWT cookies are set with cross-subdomain support via `updateSession()` in `lib/supabase/proxy.ts`. This allows users to stay authenticated when navigating between:

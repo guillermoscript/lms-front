@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getAllSettingsByCategory, getSolanaWallet, getBinancePersonalStatus } from '@/app/actions/admin/settings'
-import { getOrCreateTenantReferralCode } from '@/app/actions/admin/referrals'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
@@ -13,7 +12,6 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
-import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
@@ -94,10 +92,6 @@ export default async function SettingsPage({
   // in the tabs above (#452). Absent user id just falls back to tours-enabled.
   const userId = await getCurrentUserId()
   const uiState = userId ? await getUiState(userId) : {}
-
-  // Fetch referral code (non-blocking — silently skip if it fails)
-  const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
 
   return (
     <div className="min-h-screen bg-background" data-testid="settings-page">
@@ -224,17 +218,6 @@ export default async function SettingsPage({
               <ToursToggle initialEnabled={areToursEnabled(uiState)} />
             </CardContent>
           </Card>
-
-          {/* Referral Program — secondary, below main settings */}
-          {referralCode && (
-            <ReferralLinkCard
-              code={referralCode.code}
-              usedCount={referralCode.used_count ?? 0}
-              discountMonths={referralCode.discount_months ?? 1}
-              referrerRewardMonths={referralCode.referrer_reward_months ?? 1}
-              appUrl={appUrl}
-            />
-          )}
         </div>
       </main>
     </div>

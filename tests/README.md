@@ -120,8 +120,10 @@ A skip is either **conditional** (data or env is missing at runtime) or
   add a new `process.env.X` gate, add `X` to the job env in
   `.github/workflows/ci.yml`.
 - Permanent skips (`test.describe.skip`) must name the tracking issue in the
-  title or reason, and the PR that closes that issue un-skips them. Today
-  there is one: `Platform Referrals (blocked on #317)` in `platform-panel.spec.ts`.
+  title or reason, and the PR that closes that issue un-skips them. Today there
+  are none — the last one (`Platform Referrals`) went away with the dead code it
+  guarded in #680. Prefer deleting a skipped block over letting it rot: git
+  history keeps the implementation, and the tracking issue keeps the intent.
 
 ## CI
 

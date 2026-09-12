@@ -149,6 +149,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('createCourse'), href: "/dashboard/admin/courses/new" },
                         { title: t('myCourses'), href: "/dashboard/teacher/courses", tourId: 'sidebar-courses' },
                         { title: t('enrollments'), href: "/dashboard/admin/enrollments" },
+                        { title: t('categories'), href: "/dashboard/admin/categories" },
                     ],
                 },
                 {

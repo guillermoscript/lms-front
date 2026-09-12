@@ -89,7 +89,6 @@ const KNOWN_UNBOUNDED: Record<string, string> = {
   'app/[locale]/dashboard/admin/users/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/[locale]/dashboard/admin/subscriptions/page.tsx::subscriptions': 'gap #540 — tenant-wide listing',
   'app/[locale]/dashboard/admin/transactions/page.tsx::transactions': 'gap #540 — tenant-wide listing',
-  'app/[locale]/dashboard/admin/tenants/page.tsx::tenants': 'gap #540 — platform-wide listing',
   'app/[locale]/dashboard/teacher/page.tsx::enrollments': 'gap #540 — tenant-wide, counted',
   'app/actions/admin/binance-personal.ts::transactions': 'gap #540 — tenant-wide reconcile list',
   'app/api/cron/binance-personal-reconcile/route.ts::transactions': 'gap #540 — platform-wide cron queue',
