@@ -433,9 +433,9 @@ test('a creator signs up, creates a school, publishes a course with a lesson and
     })
     const status = page.locator('#status')
     await expect(status).toBeVisible({ timeout: 20_000 })
-    // The option labels are the status hints today (see the ux gap linked
-    // from #670); match the one that describes "published".
-    const publishedOption = page.getByRole('option', { name: /visible to students/i })
+    // Short state labels since #688 — the hint sentence stays under the field,
+    // it is no longer what the options read.
+    const publishedOption = page.getByRole('option', { name: 'Published', exact: true })
     await clickUntil(status, () => publishedOption.isVisible())
     await clickUntil(publishedOption, async () => !(await publishedOption.isVisible()))
     await clickUntil(

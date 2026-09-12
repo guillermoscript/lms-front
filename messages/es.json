@@ -1067,10 +1067,15 @@
         "categoryPlaceholder": "Selecciona una categoría",
         "statusLabel": "Estado",
         "statusPlaceholder": "Selecciona el estado",
+        "statusOptions": {
+          "draft": "Borrador",
+          "published": "Publicado",
+          "archived": "Archivado"
+        },
         "statusHints": {
           "draft": "Sólo tú puedes ver este curso.",
           "published": "El curso es visible para los estudiantes y está listo para la inscripción.",
-          "archived": "el curso está oculto del catálogo pero los estudiantes existentes conservan el acceso."
+          "archived": "El curso está oculto del catálogo pero los estudiantes existentes conservan el acceso."
         },
         "limitReached": "Límite de Cursos Alcanzado",
         "limitReachedDesc": "Tu plan {plan} está limitado a {limit} cursos. Actualmente tienes {current} cursos. Actualiza tu plan para crear más cursos.",

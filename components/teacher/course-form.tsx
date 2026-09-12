@@ -338,9 +338,9 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
                 <SelectValue placeholder={t('statusPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">{t('statusHints.draft')}</SelectItem>
-                <SelectItem value="published">{t('statusHints.published')}</SelectItem>
-                <SelectItem value="archived">{t('statusHints.archived')}</SelectItem>
+                <SelectItem value="draft">{t('statusOptions.draft')}</SelectItem>
+                <SelectItem value="published">{t('statusOptions.published')}</SelectItem>
+                <SelectItem value="archived">{t('statusOptions.archived')}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

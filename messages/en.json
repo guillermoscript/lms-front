@@ -1067,6 +1067,11 @@
         "categoryPlaceholder": "Select a category",
         "statusLabel": "Status",
         "statusPlaceholder": "Select status",
+        "statusOptions": {
+          "draft": "Draft",
+          "published": "Published",
+          "archived": "Archived"
+        },
         "statusHints": {
           "draft": "Only you can see this course.",
           "published": "Course is visible to students and ready for enrollment.",
