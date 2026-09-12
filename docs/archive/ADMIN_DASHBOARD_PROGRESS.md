@@ -1,5 +1,10 @@
 # Admin Dashboard Enhancement - Progress Report
 
+> **Archived — historical record, not maintained.** This file describes the codebase as it
+> was on the date below. Parts of it are now wrong. Read it for *why* something was done,
+> never as the current source of truth — for that see [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md) and [`../STATUS.md`](../STATUS.md).
+
 **Last Updated:** February 14, 2026  
 **Status:** 3 of 6 phases complete (50%)
 

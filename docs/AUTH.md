@@ -561,5 +561,5 @@ redirect(next) // recovery, magiclink, etc.
 ## Related Documentation
 
 - [Database Schema](./DATABASE_SCHEMA.md) - User tables and role structure
-- [RLS Policies](./RLS_POLICIES.md) - Detailed RLS policy examples
+- [Database Schema § Row Level Security](./DATABASE_SCHEMA.md#row-level-security-rls) - RLS policy patterns and examples
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) - Testing auth locally

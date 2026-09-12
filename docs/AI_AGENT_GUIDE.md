@@ -479,7 +479,7 @@ Reusable components:
 - `components/student/course-card.tsx` - Course card with progress
 - `components/student/lesson-sidebar.tsx` - Lesson navigation sidebar
 
-See [PHASE_5_SUMMARY.md](./PHASE_5_SUMMARY.md) for detailed implementation notes.
+See [PHASE_5_SUMMARY.md](./archive/PHASE_5_SUMMARY.md) (archived) for the original implementation notes.
 
 ### When working on...
 

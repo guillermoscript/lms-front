@@ -1,5 +1,10 @@
 # Phase 5 Summary: Student Dashboard
 
+> **Archived — historical record, not maintained.** This file describes the codebase as it
+> was on the date below. Parts of it are now wrong. Read it for *why* something was done,
+> never as the current source of truth — for that see [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md) and [`../STATUS.md`](../STATUS.md).
+
 **Status**: Complete
 **Date**: 2026-01-26
 

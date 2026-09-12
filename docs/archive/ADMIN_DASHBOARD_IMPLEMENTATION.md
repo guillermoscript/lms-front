@@ -1,5 +1,10 @@
 # Admin Dashboard Implementation Progress
 
+> **Archived — historical record, not maintained.** This file describes the codebase as it
+> was on the date below. Parts of it are now wrong. Read it for *why* something was done,
+> never as the current source of truth — for that see [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md) and [`../STATUS.md`](../STATUS.md).
+
 ## Overview
 
 This document tracks the implementation of the comprehensive admin dashboard for LMS V2, following the plan outlined in the project root.

@@ -439,7 +439,7 @@ A: Implement a "Send Test Email" button (feature not yet implemented).
 
 ## Related Documentation
 
-- [Admin Dashboard Progress Report](./ADMIN_DASHBOARD_PROGRESS.md)
+- [Admin Dashboard Progress Report](./archive/ADMIN_DASHBOARD_PROGRESS.md) (archived, 2026-02-14)
 - [Database Schema](./DATABASE_SCHEMA.md)
 - [Project Overview](./PROJECT_OVERVIEW.md)
 

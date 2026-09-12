@@ -4,7 +4,7 @@
  * Complete Test Data Seeding Script (WITH CORRECT SCHEMAS)
  * 
  * This script uses the ACTUAL database schema discovered via testing.
- * See docs/ACTUAL_SCHEMA.md for reference.
+ * See docs/DATABASE_SCHEMA.md for reference (docs/archive/ACTUAL_SCHEMA.md is a stale 2026-02 snapshot).
  * 
  * Run with: node scripts/seed-complete-test-data.js
  */

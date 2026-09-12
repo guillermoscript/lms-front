@@ -18,7 +18,6 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | **Required** | Supabase project API URL. Used everywhere (client, server, proxy, admin). | Supabase Dashboard > Project Settings > API > Project URL | `https://abcdefghij.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY` | **Required** | Supabase anon/publishable key. Safe for client-side. Used by `createClient()` in both client and server. | Supabase Dashboard > Project Settings > API > Project API keys > `anon` `public` | `eyJhbGciOi...` (JWT) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Required** | Service-role key that **bypasses RLS**. Used by `createAdminClient()`, proxy middleware, webhooks, and scripts. Keep secret. | Supabase Dashboard > Project Settings > API > Project API keys > `service_role` | `eyJhbGciOi...` (JWT) |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Optional | Legacy alias referenced in `lib/supabase/middleware.ts`. If set, used by the Supabase middleware client. Typically same value as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`. | Same as anon key above | `eyJhbGciOi...` (JWT) |
 
 **Local Supabase:** For local development with `supabase start`, use:
 ```

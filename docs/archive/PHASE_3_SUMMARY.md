@@ -1,5 +1,10 @@
 # Phase 3 Completion Summary
 
+> **Archived — historical record, not maintained.** This file describes the codebase as it
+> was on the date below. Parts of it are now wrong. Read it for *why* something was done,
+> never as the current source of truth — for that see [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md) and [`../STATUS.md`](../STATUS.md).
+
 ## ✅ What Was Accomplished
 
 Phase 3 has been **successfully completed** with full authentication, authorization, and comprehensive documentation.
@@ -268,18 +273,18 @@ PROGRESS.md                             # Updated status
 
 If you're new to this project, start here:
 
-1. **Read**: [docs/GETTING_STARTED.md](./GETTING_STARTED.md)
-2. **Understand**: [docs/PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)
-3. **Reference**: [docs/DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)
-4. **Build**: [docs/DEVELOPMENT_WORKFLOW.md](./DEVELOPMENT_WORKFLOW.md)
+1. **Read**: [docs/GETTING_STARTED.md](../GETTING_STARTED.md)
+2. **Understand**: [docs/PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md)
+3. **Reference**: [docs/DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md)
+4. **Build**: [docs/DEVELOPMENT_WORKFLOW.md](../DEVELOPMENT_WORKFLOW.md)
 
 ## 🤖 For AI Agents
 
 If you're an AI assistant working on this codebase:
 
-1. **MUST READ**: [docs/AI_AGENT_GUIDE.md](./AI_AGENT_GUIDE.md)
-2. **Reference**: [docs/DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)
-3. **Quick Copy-Paste**: [docs/COMMON_TASKS.md](./COMMON_TASKS.md)
+1. **MUST READ**: [docs/AI_AGENT_GUIDE.md](../AI_AGENT_GUIDE.md)
+2. **Reference**: [docs/DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md)
+3. **Quick Copy-Paste**: [docs/COMMON_TASKS.md](../COMMON_TASKS.md)
 
 ## ✨ Key Achievements
 

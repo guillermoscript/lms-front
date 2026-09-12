@@ -1,13 +1,18 @@
 # Actual Database Schema Reference
 
+> **Archived — historical record, not maintained.** This file describes the codebase as it
+> was on the date below. Parts of it are now wrong. Read it for *why* something was done,
+> never as the current source of truth — for that see [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../DATABASE_SCHEMA.md`](../DATABASE_SCHEMA.md) and [`../STATUS.md`](../STATUS.md).
+
 > ## ⚠️ OUT OF DATE — do not trust this file
 >
 > This was a snapshot of the live database taken **2026-02-08**. The schema has changed since; parts of this page are now wrong. Known example: the `enrollments` section below still lists `product_id` / `subscription_id` and their CHECK constraint, all of which were **dropped** when access moved to the `entitlements` table (migration `20260516150000`).
 >
 > Current sources of truth, in order:
 > 1. **`lib/database.types.ts`** — generated from the database, always correct
-> 2. **The live database** — see [DATABASE_SCHEMA.md § Verifying this document](./DATABASE_SCHEMA.md#verifying-this-document)
-> 3. **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)** — curated and maintained
+> 2. **The live database** — see [DATABASE_SCHEMA.md § Verifying this document](../DATABASE_SCHEMA.md#verifying-this-document)
+> 3. **[DATABASE_SCHEMA.md](../DATABASE_SCHEMA.md)** — curated and maintained
 >
 > Kept only as a historical record of what the schema looked like in February 2026.
 
