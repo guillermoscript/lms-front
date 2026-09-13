@@ -90,6 +90,11 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
         ]
       : manualItems
 
+    // Nothing to show: disappear, the way StatsCounter does. Rendering the
+    // heading alone leaves "Our school in numbers — updated live from our
+    // catalog" over empty space, promising figures that aren't there.
+    if (!safeItems.length) return <></>
+
     return (
       <div className={sectionOuterClass(spacing)}>
         <div className={sectionInnerClass(spacing)}>
