@@ -160,9 +160,14 @@ export function LessonEditorProvider({
     // A brand-new lesson opens on the starter blocks (#687); a creator who adds
     // their own block without touching those ends up publishing them verbatim
     // alongside their real content (#730). Strip any block that still matches
-    // the starter template before it ever reaches the server, and refuse to
-    // publish a lesson that has no real content once that's done.
-    const content = stripStarterPlaceholders(formData.content)
+    // the starter template on publish, and refuse to publish a lesson that has
+    // no real content once that's done.
+    //
+    // A draft is saved exactly as typed. Stripping there would edit a lesson
+    // the creator is still working on — including the scaffold they may be
+    // writing around — without telling them, and the editor would go on showing
+    // blocks the database no longer has.
+    const content = publish ? stripStarterPlaceholders(formData.content) : formData.content
     if (publish && content.length === 0) {
       setError(t('emptyContentError'))
       setLoading(false)
