@@ -207,10 +207,13 @@ export default async function CourseDetailsPage(props: {
         ? `/courses/${params.id}?enroll=1`
         : `/checkout?courseId=${course.course_id}`;
 
+    // Real data only (#730): an author without a full name falls back to the
+    // school's own name (never an invented "Instructor"), and a missing bio
+    // just hides the bio line instead of inventing one.
     const instructor = author ? {
-        name: author.full_name || t('sections.instructor.defaultName'),
+        name: author.full_name || seo.siteName,
         avatar_url: author.avatar_url,
-        bio: author.bio || t('sections.instructor.defaultBio')
+        bio: author.bio?.trim() || null,
     } : null;
 
     // Teacher-authored objectives only — never derived from lesson content;
@@ -473,7 +476,6 @@ export default async function CourseDetailsPage(props: {
                                     </div>
                                     <div className="min-w-0">
                                         <div className="text-lg font-bold text-white">{instructor.name}</div>
-                                        <div className="text-sm text-zinc-400 mt-1">{t('sections.instructor.experience')}</div>
                                         {instructor.bio && (
                                             <p className="text-zinc-300 leading-relaxed mt-3 text-sm">
                                                 {instructor.bio}
@@ -537,7 +539,7 @@ export default async function CourseDetailsPage(props: {
                                                     account yet, so the button goes to sign-up; the login link
                                                     below carries the same `next` for the ones who do (#685). */}
                                                 <Link href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}>
-                                                    <Button data-testid="course-enroll-cta" className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
+                                                    <Button data-testid="course-enroll-cta" className="w-full h-11 font-bold text-sm shadow-lg shadow-primary/20">
                                                         {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
                                                     </Button>
                                                 </Link>
@@ -564,7 +566,7 @@ export default async function CourseDetailsPage(props: {
                                             <PlanEnrollButton courseId={course.course_id} />
                                         ) : (
                                             <Link href={`/checkout?courseId=${course.course_id}`}>
-                                                <Button className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-lg shadow-cyan-500/20">
+                                                <Button className="w-full h-11 font-bold text-sm shadow-lg shadow-primary/20">
                                                     {t('pricing.buyNow')}
                                                 </Button>
                                             </Link>

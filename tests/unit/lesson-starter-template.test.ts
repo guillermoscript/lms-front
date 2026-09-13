@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   LESSON_STARTER_TEMPLATE,
   getLessonStarterTemplate,
+  stripStarterPlaceholders,
 } from '@/components/teacher/lesson-editor/starter-template'
 import { blocksToMdx, mdxToBlocks } from '@/components/teacher/block-editor/serializer'
 
@@ -42,6 +43,56 @@ describe('lesson starter template', () => {
     for (const template of Object.values(LESSON_STARTER_TEMPLATE)) {
       expect(template).not.toMatch(/[{}]/)
     }
+  })
+})
+
+describe('stripStarterPlaceholders (#730)', () => {
+  it('strips a fully untouched template down to nothing, for every locale', () => {
+    for (const template of Object.values(LESSON_STARTER_TEMPLATE)) {
+      expect(stripStarterPlaceholders(template)).toBe('')
+    }
+  })
+
+  it('keeps a block a creator added after the untouched starter blocks', () => {
+    const content = `${LESSON_STARTER_TEMPLATE.en}\n\nHere is what I actually want to teach.`
+    expect(stripStarterPlaceholders(content)).toBe('Here is what I actually want to teach.')
+  })
+
+  it('keeps a block a creator added before the untouched starter blocks', () => {
+    const content = `Here is what I actually want to teach.\n\n${LESSON_STARTER_TEMPLATE.es}`
+    expect(stripStarterPlaceholders(content)).toBe('Here is what I actually want to teach.')
+  })
+
+  it('keeps a block the creator edited, but still strips the ones left untouched', () => {
+    const edited = [
+      '# Photosynthesis',
+      '',
+      'Write the lesson content here...',
+      '',
+      '<Callout type="info">',
+      'Add learning objectives here',
+      '</Callout>',
+    ].join('\n')
+    // The heading was rewritten, so it no longer matches the placeholder and
+    // survives. The body and callout are still byte-identical to the starter
+    // template, so — like any other untouched starter block — they go.
+    expect(stripStarterPlaceholders(edited)).toBe('# Photosynthesis')
+  })
+
+  it('is a no-op on content that never had a starter block', () => {
+    const content = 'Some real content.\n\nA second paragraph.'
+    expect(stripStarterPlaceholders(content)).toBe(content)
+  })
+
+  it('handles empty content without throwing', () => {
+    expect(stripStarterPlaceholders('')).toBe('')
+  })
+
+  it('strips starter blocks regardless of which locale template they came from', () => {
+    // A locale switch mid-edit (or a copy/paste) could land the other
+    // locale's placeholder text in the document — still a placeholder.
+    const content = `${LESSON_STARTER_TEMPLATE.es}\n\nMy real content.`
+    expect(stripStarterPlaceholders(content)).toBe('My real content.')
   })
 })
 

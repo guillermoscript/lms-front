@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, createContext, use } from 'r
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { createLesson, updateLesson } from '@/app/actions/teacher/lessons'
-import { getLessonStarterTemplate } from './starter-template'
+import { getLessonStarterTemplate, stripStarterPlaceholders } from './starter-template'
 import {
   IconFileText,
   IconLayoutGrid,
@@ -157,11 +157,28 @@ export function LessonEditorProvider({
     setLoading(true)
     setError(null)
 
+    // A brand-new lesson opens on the starter blocks (#687); a creator who adds
+    // their own block without touching those ends up publishing them verbatim
+    // alongside their real content (#730). Strip any block that still matches
+    // the starter template on publish, and refuse to publish a lesson that has
+    // no real content once that's done.
+    //
+    // A draft is saved exactly as typed. Stripping there would edit a lesson
+    // the creator is still working on — including the scaffold they may be
+    // writing around — without telling them, and the editor would go on showing
+    // blocks the database no longer has.
+    const content = publish ? stripStarterPlaceholders(formData.content) : formData.content
+    if (publish && content.length === 0) {
+      setError(t('emptyContentError'))
+      setLoading(false)
+      return
+    }
+
     try {
       const data = {
         title: formData.title,
         description: formData.description,
-        content: formData.content,
+        content,
         video_url: formData.video_url,
         sequence: formData.sequence,
         publish,
@@ -179,6 +196,15 @@ export function LessonEditorProvider({
         setError(result.error)
         setLoading(false)
         return
+      }
+
+      // Only once the strip is actually in the database. Updating before the
+      // call meant a FAILED publish left the editor without the placeholders
+      // the row still had — and the creator's next Save-as-draft would then
+      // persist that silently, which is exactly what the draft path refuses
+      // to do. (On success the publish redirect usually unmounts this first.)
+      if (content !== formData.content) {
+        setFormData((current) => ({ ...current, content }))
       }
 
       setSavedTask({

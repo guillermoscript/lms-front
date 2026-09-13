@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { getTranslations } from 'next-intl/server';
 import { IconBrandTwitter, IconBrandFacebook, IconBrandInstagram, IconBrandYoutube, IconBrandLinkedin, IconBrandTiktok, IconBrandGithub } from '@tabler/icons-react'
@@ -22,7 +23,10 @@ interface FooterProps {
 export async function Footer({ footerSettings }: FooterProps = {}) {
     const tenant = await getCurrentTenant();
     const t = await getTranslations('landingPageBuilder.footer');
-    const brandName = tenant && tenant.id !== DEFAULT_TENANT_ID ? tenant.name : 'LMS V2';
+    // Real product name (#730) when there's no tenant to brand this footer with
+    // (the platform's own marketing pages), matching lib/seo.ts's fallback.
+    const platformName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS Platform';
+    const brandName = tenant && tenant.id !== DEFAULT_TENANT_ID ? tenant.name : platformName;
 
     // If footerSettings is provided, render custom footer
     if (footerSettings) {
@@ -83,11 +87,14 @@ export async function Footer({ footerSettings }: FooterProps = {}) {
         )
     }
 
-    // Default footer
+    // Default footer (#730): every link must resolve to a route that
+    // actually exists under app/[locale]/(public)/ — a school that hasn't
+    // configured its own footer yet gets Courses, Pricing and About, not
+    // "Instructors" / "Careers" / "Contact" / legal pages that were never built.
     return (
         <footer className="border-t border-border bg-muted/50 py-12">
             <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
                     <div>
                         <h3 className="font-bold text-lg mb-4 text-foreground">{brandName}</h3>
                         <p className="text-muted-foreground text-sm">
@@ -98,26 +105,15 @@ export async function Footer({ footerSettings }: FooterProps = {}) {
                     <div>
                         <h4 className="font-semibold text-foreground mb-4">{t('platform')}</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li><a href="/courses" className="hover:text-foreground transition-colors">{t('courses')}</a></li>
-                            <li><a href="/pricing" className="hover:text-foreground transition-colors">{t('pricing')}</a></li>
-                            <li><a href="#" className="hover:text-foreground transition-colors">{t('instructors')}</a></li>
+                            <li><Link href="/courses" className="hover:text-foreground transition-colors">{t('courses')}</Link></li>
+                            <li><Link href="/pricing" className="hover:text-foreground transition-colors">{t('pricing')}</Link></li>
                         </ul>
                     </div>
 
                     <div>
                         <h4 className="font-semibold text-foreground mb-4">{t('company')}</h4>
                         <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li><a href="#" className="hover:text-foreground transition-colors">{t('aboutUs')}</a></li>
-                            <li><a href="#" className="hover:text-foreground transition-colors">{t('careers')}</a></li>
-                            <li><a href="#" className="hover:text-foreground transition-colors">{t('contact')}</a></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold text-foreground mb-4">{t('legal')}</h4>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li><a href="#" className="hover:text-foreground transition-colors">{t('privacyPolicy')}</a></li>
-                            <li><a href="#" className="hover:text-foreground transition-colors">{t('termsOfService')}</a></li>
+                            <li><Link href="/about" className="hover:text-foreground transition-colors">{t('aboutUs')}</Link></li>
                         </ul>
                     </div>
                 </div>
