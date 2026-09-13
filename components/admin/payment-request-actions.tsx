@@ -44,9 +44,11 @@ interface PaymentRequestActionsProps {
     payment_currency: string
     admin_notes: string | null
   }
+  /** School-wide text from Settings → Payment; seeds an empty instructions field (#727). */
+  defaultInstructions?: string
 }
 
-export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
+export function PaymentRequestActions({ request, defaultInstructions = '' }: PaymentRequestActionsProps) {
   const t = useTranslations('dashboard.admin.paymentRequests.detail')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -60,7 +62,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
   // Form states
   const [paymentMethod, setPaymentMethod] = useState(request.payment_method || 'Bank Transfer')
   const [paymentInstructions, setPaymentInstructions] = useState(
-    request.payment_instructions || ''
+    request.payment_instructions || defaultInstructions
   )
   const [paymentDeadline, setPaymentDeadline] = useState('')
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || '')

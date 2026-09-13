@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { IconArrowLeft, IconUser, IconMail, IconPhone, IconShoppingCart, IconCalendar, IconFileInvoice } from '@tabler/icons-react'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
+import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { PaymentRequestActions } from '@/components/admin/payment-request-actions'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
@@ -82,7 +85,14 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
     redirect('/dashboard/admin/payment-requests')
   }
 
-  const currencySymbol = request.payment_currency === 'usd' ? '$' : '€'
+  // Same locale + tenant zone as the student's My Payments page, and the
+  // request's own currency (never a `$`/`€` guess) — #727.
+  const [locale, timeZone, schoolInstructions] = await Promise.all([
+    getLocale(),
+    getTenantTimeZone(tenantId),
+    getManualPaymentInstructions(),
+  ])
+  const fmtDate = (value: string) => formatDateTime(value, { locale, timeZone })
 
   // Get status badge variant
   const getStatusVariant = (status: string) => {
@@ -148,7 +158,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                 </Badge>
               </div>
               <p className="mt-1 text-muted-foreground">
-                {t('detail.created', { date: format(new Date(request.created_at), 'PPp') })}
+                {t('detail.created', { date: fmtDate(request.created_at) })}
               </p>
             </div>
           </div>
@@ -223,7 +233,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
 
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-bold">
-                  {currencySymbol}{request.payment_amount.toFixed(2)}
+                  {formatCurrency(Number(request.payment_amount), request.payment_currency || 'usd', locale)}
                 </span>
                 <span className="text-sm text-muted-foreground uppercase">
                   {request.payment_currency}
@@ -279,7 +289,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                 <div>
                   <p className="text-sm font-medium mb-1">{t('detail.paymentDeadline')}</p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(request.payment_deadline), 'PPp')}
+                    {fmtDate(request.payment_deadline)}
                   </p>
                 </div>
               )}
@@ -288,7 +298,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                 <div>
                   <p className="text-sm font-medium mb-1">{t('detail.paymentConfirmed')}</p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(request.payment_confirmed_at), 'PPp')}
+                    {fmtDate(request.payment_confirmed_at)}
                   </p>
                 </div>
               )}
@@ -332,7 +342,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
               <Separator />
 
               {/* Action Buttons */}
-              <PaymentRequestActions request={request} />
+              <PaymentRequestActions request={request} defaultInstructions={schoolInstructions} />
             </CardContent>
           </Card>
         </div>

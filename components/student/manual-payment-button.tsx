@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { ManualPaymentDialog } from './manual-payment-dialog'
 
@@ -17,6 +18,7 @@ export function ManualPaymentButton({
   productPrice,
   productCurrency
 }: ManualPaymentButtonProps) {
+  const t = useTranslations('products')
   const [dialogOpen, setDialogOpen] = useState(false)
 
   return (
@@ -26,7 +28,7 @@ export function ManualPaymentButton({
         className="w-full"
         size="lg"
       >
-        Request Payment Information
+        {t('requestPaymentInfo')}
       </Button>
 
       <ManualPaymentDialog

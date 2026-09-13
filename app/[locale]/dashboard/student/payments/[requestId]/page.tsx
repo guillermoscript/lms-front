@@ -1,6 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime as formatInZone } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +34,7 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.payments')
+  const [locale, timeZone] = await Promise.all([getLocale(), getTenantTimeZone(tenantId)])
 
   const userId = await getCurrentUserId()
   if (!userId) {
@@ -82,14 +86,8 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
     }
   }
 
-  const formatDateTime = (dateString: string) =>
-    new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(dateString))
+  // Same locale + tenant zone as the admin screens (#727).
+  const formatDateTime = (dateString: string) => formatInZone(dateString, { locale, timeZone })
 
   const statusBadge = getStatusBadge(request.status)
   const canCancel = request.status === 'pending' || request.status === 'contacted'
@@ -126,10 +124,7 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t('detail.amount')}</span>
             <span className="font-semibold">
-              {new Intl.NumberFormat(undefined, {
-                style: 'currency',
-                currency: (request.payment_currency || 'usd').toUpperCase(),
-              }).format(parseFloat(request.payment_amount || '0'))}
+              {formatCurrency(Number(request.payment_amount ?? 0), request.payment_currency || 'usd', locale)}
             </span>
           </div>
 

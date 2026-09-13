@@ -5,7 +5,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * which providers appear in the plan/product forms (issue #280 admin UI).
  * Contract:
  *   - `manual` is ALWAYS available (offline never gated).
- *   - No settings row yet → seed defaults: Stripe on, everything else off.
+ *   - No settings row yet → everything off, except Stripe when the tenant's
+ *     Connect account is already ready (#727: a brand-new school no longer
+ *     starts with a rail it never chose; a connected one keeps selling).
  *   - The one Solana toggle expands to BOTH `solana` and `solana_subs`.
  *   - A non-admin (or any failure) degrades to `['manual']`, never throws.
  *   - Stripe: the flag alone is not enough — the tenant's Connect account
@@ -87,17 +89,38 @@ const SOLANA_WALLET = { provider: 'solana', wallet_address: 'ADDR123', credentia
 beforeEach(() => {
   state.role = 'admin'
   state.settingsRows = []
-  // Default: Stripe is on by seed default, so give it a connected account
-  // unless a test is specifically exercising the not-ready path.
+  // Default: a connected account, so a missing `stripe_enabled` row resolves
+  // to "on" unless a test is specifically exercising the not-ready path.
   state.tenant = READY_TENANT
   state.wallets = []
 })
 
 describe('getEnabledPaymentProviders', () => {
-  it('no settings rows → seed defaults: manual + stripe only (stripe connected)', async () => {
+  it('no settings rows + ready Connect account → manual + stripe (existing school keeps cards)', async () => {
     const r = await getEnabledPaymentProviders()
     expect(r.success).toBe(true)
     expect(r.data.sort()).toEqual(['manual', 'stripe'])
+  })
+
+  // #727: a fresh school with no row and no Connect account used to count as
+  // Stripe ON, which Settings → Payment then flagged as "Action required".
+  it('no settings rows + no Connect account → stripe off (brand-new school)', async () => {
+    state.tenant = { stripe_account_id: null, stripe_charges_enabled: false }
+    const r = await getEnabledPaymentProviders()
+    expect(r.data).toEqual(['manual'])
+  })
+
+  it('no settings rows + unfinished Connect onboarding → stripe off', async () => {
+    state.tenant = UNFINISHED_TENANT
+    const r = await getEnabledPaymentProviders()
+    expect(r.data).not.toContain('stripe')
+  })
+
+  it('an explicit stripe_enabled=false row wins over a ready account', async () => {
+    state.settingsRows = [off('stripe_enabled')]
+    state.tenant = READY_TENANT
+    const r = await getEnabledPaymentProviders()
+    expect(r.data).not.toContain('stripe')
   })
 
   it('manual is always present even when stripe is explicitly off', async () => {

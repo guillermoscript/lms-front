@@ -1,6 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime as formatInZone } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +32,10 @@ export default async function StudentPaymentsPage() {
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.payments')
+  // Explicit locale + the school's zone: the server runs in UTC, so
+  // `Intl.DateTimeFormat(undefined, …)` showed a different time than the
+  // admin saw, with English month names on /es (#727).
+  const [locale, timeZone] = await Promise.all([getLocale(), getTenantTimeZone(tenantId)])
 
   // Get authenticated user
   const userId = await getCurrentUserId()
@@ -146,23 +153,11 @@ export default async function StudentPaymentsPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(new Date(dateString))
-  }
-
-  const formatDateTime = (dateString: string) => {
-    return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(dateString))
-  }
+  const formatDate = (dateString: string) =>
+    formatInZone(dateString, { locale, timeZone, precision: 'date' })
+  const formatDateTime = (dateString: string) => formatInZone(dateString, { locale, timeZone })
+  const formatAmount = (amount: string | number | null, currency: string | null) =>
+    formatCurrency(Number(amount ?? 0), currency || 'usd', locale)
 
   const canCancel = (status: string) => {
     return status === 'pending' || status === 'contacted'
@@ -242,7 +237,7 @@ export default async function StudentPaymentsPage() {
                       <TableRow key={request.request_id}>
                         <TableCell className="font-medium max-w-[200px] truncate">{product?.name || t('unknownProduct')}</TableCell>
                         <TableCell>
-                          {new Intl.NumberFormat(undefined, { style: 'currency', currency: request.payment_currency || 'USD' }).format(parseFloat(request.payment_amount || '0'))}
+                          {formatAmount(request.payment_amount, request.payment_currency)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusBadge.variant} className="gap-1">
@@ -310,8 +305,7 @@ export default async function StudentPaymentsPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{t('amount')}:</span>
                       <span className="font-semibold">
-                        {request.payment_currency?.toUpperCase() || 'USD'}{' '}
-                        {parseFloat(request.payment_amount || '0').toFixed(2)}
+                        {formatAmount(request.payment_amount, request.payment_currency)}
                       </span>
                     </div>
 

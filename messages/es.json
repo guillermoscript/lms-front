@@ -600,7 +600,7 @@
       "payments": {
         "title": "Solicitudes de Pago",
         "subtitle": "Rastrea tus solicitudes de pago manual e instrucciones",
-        "infoMessage": "Nuestro equipo revisará tu solicitud y enviará instrucciones de pago a tu correo.",
+        "infoMessage": "La escuela revisará tu solicitud y publicará aquí las instrucciones de pago. Recibirás una notificación cuando estén listas.",
         "tableTitle": "Tus Solicitudes de Pago",
         "tableDescription": "{count, plural, one {# solicitud} other {# solicitudes}}",
         "amount": "Monto",
@@ -650,7 +650,7 @@
           "paymentMethod": "Método de Pago",
           "paymentInstructions": "Instrucciones de Pago",
           "paymentDeadline": "Fecha Límite de Pago",
-          "noInstructionsYet": "Aún no se han enviado instrucciones de pago. Te enviaremos un correo cuando tu solicitud sea revisada.",
+          "noInstructionsYet": "Aún no se han enviado instrucciones de pago. Recibirás una notificación cuando la escuela las agregue aquí.",
           "proofSection": "Comprobante de Pago",
           "proofUploaded": "Comprobante subido",
           "uploadHint": "Sube tu comprobante de transferencia para que podamos verificar tu pago.",
@@ -2697,7 +2697,7 @@
               "method": "Método de Pago",
               "instructions": "Instrucciones",
               "placeholder": "Ingrese datos bancarios, instrucciones de transferencia u otra información de pago...",
-              "hint": "Estas instrucciones se enviarán al correo del estudiante.",
+              "hint": "El estudiante las ve en Mis Pagos y recibe una notificación. También se envían por correo cuando la escuela tiene el correo configurado.",
               "deadline": "Fecha Límite de Pago",
               "deadlineOptional": "Opcional"
             },
@@ -4274,7 +4274,7 @@
     },
     "manualPayment": {
       "title": "Solicitar Información de Pago",
-      "description": "Completa este formulario para recibir instrucciones de pago para <strong>{productName}</strong> ({symbol}{price})",
+      "description": "Completa este formulario para recibir instrucciones de pago para <strong>{productName}</strong> ({amount})",
       "fullName": "Nombre Completo",
       "fullNamePlaceholder": "Juan Pérez",
       "email": "Correo Electrónico",
@@ -4284,7 +4284,7 @@
       "message": "Mensaje Adicional (opcional)",
       "messagePlaceholder": "Cualquier pregunta o petición especial...",
       "whatHappensNext": "¿Qué sucede después?",
-      "step1": "Te enviaremos las instrucciones de pago por correo electrónico",
+      "step1": "La escuela publica las instrucciones de pago en Mis Pagos y te avisa",
       "step2": "Elige tu método de pago preferido (transferencia bancaria, factura, etc.)",
       "step3": "Una vez confirmado el pago, obtendrás acceso instantáneo",
       "sending": "Enviando...",
@@ -4433,7 +4433,7 @@
       "contactNamePlaceholder": "Juan Pérez",
       "contactEmail": "Correo Electrónico",
       "contactEmailPlaceholder": "juan@ejemplo.com",
-      "contactEmailHint": "Enviaremos las instrucciones de pago a este correo",
+      "contactEmailHint": "La escuela también puede enviar las instrucciones a este correo",
       "contactPhone": "Número de Teléfono (Opcional)",
       "contactPhonePlaceholder": "+52 55 1234 5678",
       "contactPhoneHint": "Opcional - para confirmación de pago",
@@ -4447,7 +4447,7 @@
       "success": "¡Solicitud de pago enviada exitosamente!",
       "error": "Error al enviar la solicitud de pago",
       "successTitle": "¡Solicitud Enviada!",
-      "successDescription": "Hemos recibido su solicitud de pago y enviaremos las instrucciones a su correo en breve.",
+      "successDescription": "Recibimos tu solicitud. Las instrucciones de pago de la escuela aparecerán en Mis Pagos y recibirás una notificación cuando estén listas.",
       "viewRequests": "Ver Mis Solicitudes",
       "howToPayTitle": "Cómo pagar",
       "proofLabel": "Comprobante de pago (opcional)",
@@ -4455,7 +4455,8 @@
         "nameRequired": "El nombre es requerido",
         "emailRequired": "El correo electrónico es requerido",
         "emailInvalid": "Por favor ingrese un correo electrónico válido"
-      }
+      },
+      "close": "Cerrar"
     },
     "cancelPaymentButton": {
       "cancel": "Cancelar",
@@ -6370,12 +6371,17 @@
       "manualTitle": "Cómo funciona el pago manual:",
       "manualSteps": {
         "request": "Haz clic en el botón de abajo para solicitar la información de pago",
-        "instructions": "Te enviaremos las instrucciones de pago por correo electrónico",
+        "instructions": "La escuela publica las instrucciones de pago en Mis Pagos y te avisa",
         "pay": "Completa el pago con el método que prefieras (transferencia bancaria, etc.)",
         "access": "Una vez verificado, obtendrás acceso inmediato a tu curso"
-      }
+      },
+      "freeTitle": "Este producto es gratis",
+      "freeDescription": "No necesitas pagar. Inscríbete con un clic.",
+      "noCourses": "Este producto aún no tiene cursos vinculados."
     },
-    "empty": "No hay productos disponibles por el momento."
+    "empty": "No hay productos disponibles por el momento.",
+    "free": "Gratis",
+    "enrollFree": "Inscribirme gratis"
   },
   "joinSchool": {
     "notFoundTitle": "Escuela no encontrada",
