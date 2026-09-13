@@ -4066,14 +4066,35 @@
       "lessons": "Lecciones",
       "exams": "Exámenes",
       "upNext": "Siguiente",
-      "enrolled": "Inscrito hace {date}",
+      "enrolled": "Inscrito {date}",
       "renew": "Renovar Suscripción",
       "review": "Repasar Curso",
       "continue": "Continuar Aprendiendo",
       "completed": "Completado",
       "inProgress": "En Progreso",
       "notStarted": "No Iniciado",
-      "expired": "Tu suscripción ha expirado. Renueva para continuar."
+      "expired": "Tu suscripción ha expirado. Renueva para continuar.",
+      "accessBadge": {
+        "lifetime": "Acceso de por vida",
+        "subscription": "Suscripción",
+        "expired": "Suscripción vencida",
+        "none": "Sin acceso"
+      }
+    },
+    "examTaker": {
+      "progress": "Progreso: {answered}/{total}",
+      "timeLeft": "Tiempo restante",
+      "question": "Pregunta {number}",
+      "aiEvaluates": "La IA evaluará tu razonamiento",
+      "answerPlaceholder": "Escribe tu respuesta aquí...",
+      "previous": "Anterior",
+      "finishSubmit": "Finalizar y enviar",
+      "nextQuestion": "Siguiente pregunta",
+      "true": "Verdadero",
+      "false": "Falso",
+      "noQuestionsTitle": "No se encontraron preguntas",
+      "noQuestionsDescription": "Este examen todavía no tiene preguntas. Vuelve a intentarlo más tarde.",
+      "returnToAssessments": "Volver a las evaluaciones"
     },
     "courseFilters": {
       "searchPlaceholder": "Buscar tus cursos...",
@@ -4302,7 +4323,26 @@
       "cancel": "Cancelar",
       "success": "¡Solicitud de pago enviada! Nos pondremos en contacto contigo pronto con las instrucciones.",
       "error": "Error al enviar la solicitud. Por favor, inténtalo de nuevo.",
-      "proofLabel": "Comprobante de Pago (opcional)"
+      "proofLabel": "Comprobante de Pago (opcional)",
+      "requestButton": "Solicitar información de pago"
+    },
+    "proofUpload": {
+      "defaultLabel": "Comprobante de pago",
+      "hint": "Sube el recibo o una captura de pantalla (imagen o PDF, máx. 10 MB)",
+      "uploading": "Subiendo...",
+      "fileTooLarge": "El archivo debe pesar menos de 10 MB",
+      "invalidFileType": "Solo se aceptan imágenes y archivos PDF",
+      "uploadFailed": "No se pudo subir el archivo. Inténtalo de nuevo.",
+      "uploaded": "Comprobante subido",
+      "viewProof": "Ver comprobante",
+      "previewAlt": "Vista previa del comprobante de pago",
+      "remove": "Quitar archivo"
+    },
+    "modeToggle": {
+      "toggle": "Cambiar tema",
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
     },
     "notifications": {
       "title": "Notificaciones",
@@ -5944,6 +5984,67 @@
         "title": "No hay exámenes disponibles",
         "description": "Las evaluaciones de este curso aparecerán aquí cuando sean publicadas."
       }
+    }
+  },
+  "examResult": {
+    "breadcrumb": {
+      "dashboard": "Panel",
+      "exams": "Exámenes",
+      "results": "Resultados"
+    },
+    "courseFallback": "Curso",
+    "completed": "Examen completado",
+    "completedOn": "Completado el {date}",
+    "finalScore": "Puntaje final",
+    "notGradedYet": "Aún sin calificar",
+    "pendingReview": {
+      "title": "Pendiente de revisión del profesor",
+      "description": "Tus respuestas de opción múltiple y verdadero/falso se calificaron automáticamente. Las respuestas abiertas están a la espera de que el profesor las evalúe. Tu puntaje final puede cambiar después de la revisión."
+    },
+    "aiReviewed": {
+      "title": "Evaluado por IA",
+      "description": "Todas las respuestas fueron evaluadas por IA. Tu profesor todavía puede revisar y ajustar los puntajes."
+    },
+    "teacherReviewed": {
+      "title": "Revisado por el profesor",
+      "description": "Tu profesor revisó y finalizó la calificación de este examen."
+    },
+    "certificate": {
+      "title": "¡Certificado obtenido!",
+      "description": "¡Felicidades! Completaste todos los requisitos de este curso y obtuviste un certificado.",
+      "view": "Ver certificado"
+    },
+    "aiAnalysis": {
+      "title": "Análisis de desempeño por IA",
+      "fallback": "Tu desempeño fue evaluado. Revisa abajo la retroalimentación detallada de cada pregunta."
+    },
+    "detailedReview": "Revisión detallada por pregunta",
+    "question": "Pregunta {number}",
+    "questionType": {
+      "multiple_choice": "opción múltiple",
+      "true_false": "verdadero o falso",
+      "free_text": "respuesta abierta"
+    },
+    "yourChoice": "Tu elección",
+    "correct": "Correcta",
+    "yourSubmission": "Tu respuesta",
+    "noAnswer": "Sin respuesta.",
+    "points": "{earned}/{possible} pts",
+    "teacherReviewedBadge": "Revisado por el profesor",
+    "questionPending": {
+      "title": "Pendiente de revisión",
+      "description": "Esta respuesta abierta está a la espera de evaluación. Tu profesor la revisará o será evaluada por IA."
+    },
+    "teacherFeedback": "Comentarios del profesor",
+    "aiFeedback": "Comentarios de la IA",
+    "viewAllAssessments": "Ver todas las evaluaciones",
+    "continueLearning": "Continuar aprendiendo",
+    "feedback": {
+      "graded": "Tu examen ya fue calificado.",
+      "pendingTeacherReview": "Pendiente de revisión del profesor.",
+      "correct": "¡Respuesta correcta!",
+      "incorrect": "Incorrecta.",
+      "incorrectWithAnswer": "Incorrecta. La respuesta correcta es: {answer}"
     }
   },
   "puck": {
