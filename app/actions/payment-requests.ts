@@ -12,7 +12,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
 import { manualTransactionPaymentMethod } from '@/lib/payments/manual-payment-method'
 import { sendEmail } from '@/lib/email/send'
-import { getLocale } from 'next-intl/server'
+import { bestEffortLocaleOr } from '@/lib/i18n/best-effort-locale'
 import { paymentInstructionsTemplate } from '@/lib/email/templates/payment-instructions'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
 import { formatCurrency } from '@/lib/currency'
@@ -114,9 +114,8 @@ async function emailPaymentInstructions(params: {
       // The school's own UI language — the closest thing to the reader's that
       // this flow knows, since nothing stores a per-student locale. Sending a
       // LATAM buyer an English email would undo the point of translating the
-      // in-app copy (#727). `getLocale()` throws outside a request scope, and a
-      // missing locale must never fail the action.
-      getLocale().catch(() => 'en'),
+      // in-app copy (#727).
+      bestEffortLocaleOr('en'),
     ])
     const to = authUser?.user?.email
     if (!to) return false

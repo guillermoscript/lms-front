@@ -6,7 +6,7 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, upsertSchoolGroup } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
-import { getLocale } from 'next-intl/server'
+import { bestEffortLocale } from '@/lib/i18n/best-effort-locale'
 
 interface OnboardingData {
   schoolName: string
@@ -19,17 +19,6 @@ interface CreateSchoolData {
   slug: string
 }
 
-/**
- * Best-effort request locale. `getLocale()` throws outside a request scope, and
- * an unknown locale is a missing analytics dimension, never a failed action.
- */
-async function analyticsLocale(): Promise<string | undefined> {
-  try {
-    return await getLocale()
-  } catch {
-    return undefined
-  }
-}
 
 export async function createSchoolForUser(data: CreateSchoolData) {
   // Loop A denominator. `/create-school` submits straight into this action, so
@@ -91,7 +80,7 @@ export async function createSchoolForUser(data: CreateSchoolData) {
     // §2.1 — register the school as an OpenPanel group so every later event
     // rolls up to it. The helper fails soft on instances without the Groups
     // feature; the flat `tenant_id` property keeps carrying the data.
-    const locale = await analyticsLocale()
+    const locale = await bestEffortLocale()
     await upsertSchoolGroup({
       tenantId: tenant.id,
       name: data.schoolName,
@@ -168,7 +157,7 @@ export async function completeOnboarding(data: OnboardingData) {
         has_logo: Boolean(data.logoUrl),
         has_description: Boolean(data.schoolDescription?.trim()),
       },
-      { userId, tenantId, role: 'admin', locale: await analyticsLocale() }
+      { userId, tenantId, role: 'admin', locale: await bestEffortLocale() }
     )
 
     revalidatePath('/dashboard/admin/settings')
