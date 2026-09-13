@@ -27,6 +27,28 @@ Each issue is self-contained (file:line, root cause, fix, acceptance). File owne
 | WS5 | #729 | P2 | Missing toasts, React #418 date hydration, silent lesson un-complete, sidebar active item, "Básico" plan name, exams index 404 | `exam-builder-context.tsx`, course page tabs, `submission-review.tsx`, `certificate-template-context.tsx`, date render sites listed in the issue, `lesson-navigation.tsx`, `use-active-nav.ts`, `weekly-league.tsx` |
 | WS6 | #730 | P2 | Defaults: starter placeholders publish as content, invented instructor bio, dead footer links + "LMS V2" banner, three CTA colours | `lesson-editor/starter-template.ts` + editor context, `(public)/courses/[id]/page.tsx`, `public/footer.tsx`, `powered-by-banner.tsx`, `navbar.tsx`, `school-landing-page.tsx`, `free-enroll-button.tsx`, `plan-enroll-button.tsx` |
 
+## Status — 2026-09-13, all seven shipped as PRs
+
+| WS | Issue | PR | State | Verification |
+|---|---|---|---|---|
+| WS1 | #724 | #734 | draft | typecheck · unit · build · `public-entry-ctas` + `i18n` (8 passed) |
+| WS2a | #725 | #733 | draft | typecheck · unit · build · `student-exams` (9 passed) |
+| WS2b | #726 | #736 | draft | typecheck · unit · build · `plan-limit-surfaces` + `plan-change` (7 passed, 1 failure that is also red on master) |
+| WS3 | #727 | #731 | draft | typecheck · unit · build · `payment-flows` + `manual-payment-confirmation-rpc` (11 passed); `loop-3-student-pays` blocked by an expired Stripe test key |
+| WS4 | #728 | #735 | **ready** | typecheck · unit · build · `auth-security` + `tenant-isolation` + `public-entry-ctas` (29 passed) + a new routing spec (17 passed) |
+| WS5 | #729 | #732 | draft | typecheck · unit · build · `teacher-grading-queue` + `loop-2-student-learns` (7 passed) |
+| WS6 | #730 | #737 | draft | typecheck · unit · build · `course-publishing` + `teacher-content` + `public-entry-ctas` (30 passed, 1 failure that is also red on master) |
+
+Still outstanding for every draft PR: before/after screenshots in `/en` and `/es`. Two environment problems surfaced during verification and are not code defects:
+
+- **The local Stripe test key has expired**, so `loop-3-student-pays.spec.ts` cannot run at all. Roll the key in the Stripe dashboard and update `.env.local`.
+- **Two specs are already red on master**, so they are pre-existing rather than sweep regressions: `plan-limit-surfaces.spec.ts` "joining the school is refused at the cap" (login never leaves `/auth/login` on the plan-limits tenant) and `teacher-content.spec.ts` "students tab shows per-student progress" (the predicate times out). Both deserve their own issue.
+
+Two items were found during the work and left for their owning workstream:
+
+- `lib/puck/templates/index.ts` still publishes invented figures (~line 423 "10,000 Students", ~702 "Join 12,000+ students") — noted on #726.
+- The certificate-template save on #729 could not be reproduced: the confirmation exists in the code and the toast container is mounted globally, so it needs one manual check.
+
 **Suggested order if run sequentially:** WS3 → WS4 → WS2a → WS2b → WS1 → WS5 → WS6 (money and lost purchases first, then what a student reads, then what an owner reads).
 
 **Shared-file caveat:** every WS adds keys to `messages/en.json` and `messages/es.json`. Add keys in your own namespace block and rebase before merging; the catalogue parity unit test (#712) fails if a key exists on one side only.
