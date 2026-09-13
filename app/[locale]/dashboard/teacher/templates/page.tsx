@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { systemTemplateMessageKey, templateCategoryMessageKey } from '@/lib/prompt-template-labels'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -49,6 +50,21 @@ interface Template {
 export default function PromptTemplatesPage() {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.templates')
+  const locale = useLocale()
+  // The six seeded `is_system` templates are stored in English; a teacher's own
+  // template is shown exactly as they typed it (#726).
+  const displayName = (name: string, isSystem: boolean) => {
+    const key = isSystem ? systemTemplateMessageKey(name) : null
+    return key ? t(`system.${key}.name` as Parameters<typeof t>[0]) : name
+  }
+  const displayDescription = (name: string, description: string | null, isSystem: boolean) => {
+    const key = isSystem ? systemTemplateMessageKey(name) : null
+    return key ? t(`system.${key}.description` as Parameters<typeof t>[0]) : description
+  }
+  const displayCategory = (category: string) => {
+    const key = templateCategoryMessageKey(category)
+    return key ? t(`categories.${key}` as Parameters<typeof t>[0]) : category.replace(/_/g, ' ')
+  }
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -185,7 +201,7 @@ export default function PromptTemplatesPage() {
                   <TableRow key={template.id} className="hover:bg-muted/40">
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{template.name}</span>
+                        <span className="font-medium text-sm">{displayName(template.name, template.is_system)}</span>
                         {template.is_system && (
                           <Badge variant="secondary" className="gap-1 text-[10px]">
                             <IconSparkles size={10} />
@@ -194,12 +210,12 @@ export default function PromptTemplatesPage() {
                         )}
                       </div>
                       <div className="text-[11px] text-muted-foreground/70 line-clamp-1 mt-0.5">
-                        {template.description}
+                        {displayDescription(template.name, template.description, template.is_system)}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[10px] capitalize">
-                        {template.category.replace('_', ' ')}
+                        {displayCategory(template.category)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -212,7 +228,7 @@ export default function PromptTemplatesPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-xs tabular-nums text-muted-foreground">
-                      {new Date(template.created_at).toLocaleDateString()}
+                      {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(template.created_at))}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

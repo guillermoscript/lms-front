@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import {
   AlertDialog,
@@ -58,12 +58,16 @@ interface PlanChangeDialogProps {
   onConfirmed: () => void
 }
 
-function money(amount: number, currency: string) {
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount)
+// Locale-less `Intl` formatting renders one way on the server and another in
+// the browser, which React reports as a hydration mismatch — and showed US
+// formats on a Spanish page (#726). Both formatters take the page locale.
+function money(amount: number, currency: string, locale: string) {
+  return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
 }
 
 export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: PlanChangeDialogProps) {
   const t = useTranslations('dashboard.admin.billing.changePlan')
+  const locale = useLocale()
   const [preview, setPreview] = useState<PreviewState>({ kind: 'loading' })
   const [confirming, setConfirming] = useState(false)
 
@@ -170,7 +174,9 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
               <p className="rounded-lg border bg-muted/25 p-3.5 text-muted-foreground">
                 {preview.noProration.effectiveAt
                   ? t('noProrationWithDate', {
-                      date: new Date(preview.noProration.effectiveAt).toLocaleDateString(),
+                      date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(
+                        new Date(preview.noProration.effectiveAt)
+                      ),
                     })
                   : t('noProration')}
               </p>
@@ -181,13 +187,13 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
                     {preview.proration.prorationAmount < 0 ? t('prorationCredit') : t('prorationDueNow')}
                   </dt>
                   <dd className="font-medium tabular-nums">
-                    {money(Math.abs(preview.proration.prorationAmount), preview.proration.currency)}
+                    {money(Math.abs(preview.proration.prorationAmount), preview.proration.currency, locale)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-4 border-t pt-2">
                   <dt className="text-muted-foreground">{t('nextInvoiceTotal')}</dt>
                   <dd className="font-semibold tabular-nums">
-                    {money(preview.proration.total, preview.proration.currency)}
+                    {money(preview.proration.total, preview.proration.currency, locale)}
                   </dd>
                 </div>
               </dl>

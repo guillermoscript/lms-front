@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { IconBuildingBank, IconCheck } from '@tabler/icons-react'
 import { ProofUpload } from '@/components/shared/proof-upload'
+import { useLocale, useTranslations } from 'next-intl'
 
 interface ManualTransferFormProps {
   planName: string
@@ -28,6 +29,17 @@ export function ManualTransferForm({
   onSuccess,
   onCancel,
 }: ManualTransferFormProps) {
+  const t = useTranslations('dashboard.admin.billing.manualTransfer')
+  const locale = useLocale()
+  // The amount was printed as `$9/month` regardless of the school's language or
+  // the plan's currency (#726).
+  const amountLabel = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount)
+  const intervalLabel = interval === 'yearly' ? t('intervalYearly') : t('intervalMonthly')
+
   const [bankReference, setBankReference] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -52,12 +64,10 @@ export function ManualTransferForm({
             <IconCheck className="h-6 w-6 text-green-600" />
           </div>
           <div className="text-center">
-            <h3 className="font-semibold">Request Submitted</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Your upgrade request has been submitted. We&apos;ll send you bank transfer instructions shortly.
-            </p>
+            <h3 className="font-semibold">{t('submittedTitle')}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{t('submittedDescription')}</p>
           </div>
-          <Button variant="outline" onClick={onSuccess || onCancel}>Back to Billing</Button>
+          <Button variant="outline" onClick={onSuccess || onCancel}>{t('backToBilling')}</Button>
         </CardContent>
       </Card>
     )
@@ -68,48 +78,46 @@ export function ManualTransferForm({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <IconBuildingBank className="h-5 w-5" />
-          Bank Transfer Request
+          {t('title')}
         </CardTitle>
         <CardDescription>
-          Upgrade to {planName} ({interval}) for ${amount}/{interval === 'yearly' ? 'year' : 'month'} via bank transfer
+          {t('description', { plan: planName, interval: intervalLabel, amount: amountLabel })}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="rounded-md bg-muted p-3 text-sm">
-            <p>After submitting this request:</p>
+            <p>{t('stepsIntro')}</p>
             <ol className="list-decimal list-inside mt-2 space-y-1 text-muted-foreground">
-              <li>We&apos;ll send bank transfer instructions to your billing email</li>
-              <li>Make the transfer and provide the reference number</li>
-              <li>Your plan will be activated once payment is confirmed</li>
+              <li>{t('step1')}</li>
+              <li>{t('step2')}</li>
+              <li>{t('step3')}</li>
             </ol>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bankRef">Bank Reference (optional)</Label>
+            <Label htmlFor="bankRef">{t('bankRefLabel')}</Label>
             <Input
               id="bankRef"
-              placeholder="e.g. Transfer confirmation number"
+              placeholder={t('bankRefPlaceholder')}
               value={bankReference}
               onChange={(e) => setBankReference(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              If you&apos;ve already made the transfer, enter the reference number here
-            </p>
+            <p className="text-xs text-muted-foreground">{t('bankRefHint')}</p>
           </div>
 
           {onProofUpload && (
             <ProofUpload
               onUpload={onProofUpload}
-              label="Payment Proof (optional)"
+              label={t('proofLabel')}
             />
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Additional Notes (optional)</Label>
+            <Label htmlFor="notes">{t('notesLabel')}</Label>
             <Textarea
               id="notes"
-              placeholder="Any additional information..."
+              placeholder={t('notesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -118,10 +126,10 @@ export function ManualTransferForm({
 
           <div className="flex gap-2">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Request'}
+              {loading ? t('submitting') : t('submit')}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
+              {t('cancel')}
             </Button>
           </div>
         </form>

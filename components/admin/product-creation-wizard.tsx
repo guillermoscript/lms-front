@@ -742,8 +742,7 @@ export function ProductCreationWizard({
               <Alert>
                 <IconInfoCircle />
                 <AlertDescription>
-                  Post-registration instructions are product-scoped, so they are available for
-                  paid offerings only in this version.
+                  {tWizard('postRegistration.freeNotice')}
                 </AlertDescription>
               </Alert>
             ) : (
@@ -763,41 +762,39 @@ export function ProductCreationWizard({
           <div className="flex flex-col gap-5">
             <dl className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3">
               <div className="bg-card p-3">
-                <dt className="text-xs text-muted-foreground">Course</dt>
+                <dt className="text-xs text-muted-foreground">{tWizard('review.courseLabel')}</dt>
                 <dd className="mt-1 truncate text-sm font-medium">
-                  {input.course.title || 'Untitled course'}
+                  {input.course.title || tWizard('review.untitled')}
                 </dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
-                  {input.course.sourceMode === 'new' ? 'New course' : 'Existing course'}
+                  {input.course.sourceMode === 'new' ? tWizard('review.newCourse') : tWizard('review.existingCourse')}
                 </dd>
               </div>
               <div className="bg-card p-3">
-                <dt className="text-xs text-muted-foreground">Pricing</dt>
-                <dd className="mt-1 text-sm font-medium">{formatPrice(input)}</dd>
+                <dt className="text-xs text-muted-foreground">{tWizard('review.pricingLabel')}</dt>
+                <dd className="mt-1 text-sm font-medium">{formatPrice(input, tWizard('pricing.freeTitle'))}</dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
                   {input.pricing.mode === 'paid'
-                    ? input.pricing.paymentProvider || 'No provider'
-                    : 'No payment required'}
+                    ? input.pricing.paymentProvider || tWizard('review.noProvider')
+                    : tWizard('review.noPaymentRequired')}
                 </dd>
               </div>
               <div className="bg-card p-3">
-                <dt className="text-xs text-muted-foreground">After purchase</dt>
+                <dt className="text-xs text-muted-foreground">{tWizard('review.afterPurchaseLabel')}</dt>
                 <dd className="mt-1 text-sm font-medium">
                   {input.pricing.mode === 'paid'
-                    ? `${input.postRegistrationSteps.length} step${
-                        input.postRegistrationSteps.length === 1 ? '' : 's'
-                      }`
-                    : 'Not applicable'}
+                    ? tWizard('review.steps', { count: input.postRegistrationSteps.length })
+                    : tWizard('review.notApplicable')}
                 </dd>
                 <dd className="mt-1 text-xs text-muted-foreground">
-                  {input.pricing.mode === 'paid' ? 'Optional instructions' : 'Free course'}
+                  {input.pricing.mode === 'paid' ? tWizard('review.optionalInstructions') : tWizard('review.freeCourse')}
                 </dd>
               </div>
             </dl>
 
             <div className="divide-y overflow-hidden rounded-lg border">
-              <ReadinessRow checked={readiness.canSaveDraft} label="Draft can be saved" />
-              <ReadinessRow checked={readiness.canPublish} label="Ready to publish" />
+              <ReadinessRow checked={readiness.canSaveDraft} label={tWizard('review.draftReady')} />
+              <ReadinessRow checked={readiness.canPublish} label={tWizard('review.publishReady')} />
               {readiness.issues.map((issue, index) => (
                 <div
                   key={`${issue.field}-${index}`}
@@ -827,7 +824,7 @@ export function ProductCreationWizard({
               onClick={() => setCurrentStep((step) => Math.max(step - 1, 0))}
             >
               <IconChevronLeft data-icon="inline-start" />
-              Back
+              {tWizard('backButton')}
             </Button>
             <Button
               type="button"
@@ -836,7 +833,7 @@ export function ProductCreationWizard({
               disabled={currentStep === wizardSteps.length - 1 || isSaving}
               onClick={() => goToStep(currentStep + 1)}
             >
-              Next
+              {tWizard('nextButton')}
               <IconChevronRight data-icon="inline-end" />
             </Button>
           </div>
@@ -849,7 +846,7 @@ export function ProductCreationWizard({
               disabled={isSaving || !readiness.canSaveDraft}
               onClick={() => submit('draft')}
             >
-              {isSaving ? tProductForm('saving') : 'Save draft'}
+              {isSaving ? tProductForm('saving') : tWizard('saveDraftButton')}
             </Button>
             <Button
               type="button"
@@ -857,7 +854,7 @@ export function ProductCreationWizard({
               disabled={isSaving || !readiness.canPublish}
               onClick={() => submit('publish')}
             >
-              {isSaving ? tProductForm('saving') : 'Publish'}
+              {isSaving ? tProductForm('saving') : tWizard('publishButton')}
             </Button>
           </div>
         </div>
