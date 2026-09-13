@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
 import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { isProtectedPath } from '@/lib/auth/route-access'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -311,38 +312,18 @@ export default async function proxy(request: NextRequest) {
     : pathname
   const normalizedPath = cleanPath === '' ? '/' : cleanPath
 
-  // Public routes
-  const publicRoutes = [
-    '/auth/login',
-    '/auth/sign-up',
-    '/auth/sign-up-success',
-    '/auth/forgot-password',
-    '/auth/update-password',
-    '/auth/confirm',
-    '/auth/error',
-    '/',
-    '/auth/callback',
-    '/create-school',
-    '/creators',
-    '/join-school',
-    '/platform-pricing',
-    '/pricing',
-    '/verify',
-    '/courses',
-    // Product pages live under (public) and carry SEO metadata, but were never
-    // listed here — so the shared link a school sends a prospective student
-    // bounced off the login wall before the page rendered (#719). Both pages
-    // filter by `tenant_id`, so a subdomain shows only its own catalogue.
-    '/products',
-    // OAuth 2.1 consent screen (Supabase redirects here with ?authorization_id=…).
-    // Must be public: the page handles its own login redirect and preserves the
-    // authorization_id — the middleware's redirectTo drops query strings.
-    '/oauth/consent',
-  ]
-
-  const isPublicRoute = publicRoutes.some(route =>
-    normalizedPath === route || normalizedPath.startsWith(route + '/')
-  )
+  // Which paths need a session.
+  //
+  // This used to be the other way round: an allow-list of public routes, with
+  // everything else treated as protected. That made a typo'd URL a login wall
+  // for a logged-out visitor and a `/join-school` bounce for a logged-in one,
+  // instead of a 404 — and it meant every new public page had to remember to
+  // add itself here (`/products` did not, #719). The protected set is small,
+  // closed and rarely changes, so listing it instead is both safer to reason
+  // about and the fix for #728: an unknown path is simply not protected, and
+  // falls through to Next's not-found.
+  const isProtectedRoute = isProtectedPath(normalizedPath)
+  const isPublicRoute = !isProtectedRoute
 
   // --- Public routes: skip auth entirely when no cookies ---
   intlResponse.headers.set('x-tenant-id', tenantId)
