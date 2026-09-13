@@ -174,13 +174,6 @@ export function LessonEditorProvider({
       return
     }
 
-    // Show the creator what was published. Without this the editor keeps
-    // rendering blocks the database no longer has, and their next draft save
-    // would write the placeholders straight back in.
-    if (content !== formData.content) {
-      setFormData((current) => ({ ...current, content }))
-    }
-
     try {
       const data = {
         title: formData.title,
@@ -203,6 +196,15 @@ export function LessonEditorProvider({
         setError(result.error)
         setLoading(false)
         return
+      }
+
+      // Only once the strip is actually in the database. Updating before the
+      // call meant a FAILED publish left the editor without the placeholders
+      // the row still had — and the creator's next Save-as-draft would then
+      // persist that silently, which is exactly what the draft path refuses
+      // to do. (On success the publish redirect usually unmounts this first.)
+      if (content !== formData.content) {
+        setFormData((current) => ({ ...current, content }))
       }
 
       setSavedTask({
