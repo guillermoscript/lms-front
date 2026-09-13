@@ -2,10 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatDate } from '@/lib/format-date'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,8 +51,7 @@ interface UsersTableProps {
 
 export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableProps) {
   const t = useTranslations('dashboard.admin.users.table')
-  const { locale } = useParams()
-  const dateLocale = locale === 'es' ? es : enUS
+  const locale = useLocale()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<{
     id: string
@@ -168,7 +165,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(profile.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                      {formatDate(profile.created_at, locale)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">

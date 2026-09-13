@@ -46,6 +46,16 @@ import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
+  searchParams: Promise<{ tab?: string | string[] }>
+}
+
+const COURSE_TABS = ['lessons', 'exercises', 'exams', 'students', 'certificates'] as const
+type CourseTab = (typeof COURSE_TABS)[number]
+
+/** `?tab=exams` opens that tab; anything else falls back to Lessons (#729). */
+function resolveTab(tab: string | string[] | undefined): CourseTab {
+  const value = Array.isArray(tab) ? tab[0] : tab
+  return (COURSE_TABS as readonly string[]).includes(value ?? '') ? (value as CourseTab) : 'lessons'
 }
 
 interface IssuedCertificate {
@@ -66,8 +76,9 @@ function getInitials(name: string | null | undefined) {
     .join('')
 }
 
-export default async function CourseManagementPage({ params }: PageProps) {
+export default async function CourseManagementPage({ params, searchParams }: PageProps) {
   const { courseId } = await params
+  const activeTab = resolveTab((await searchParams).tab)
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
@@ -296,7 +307,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-        <Tabs defaultValue="lessons" className="space-y-6">
+        <Tabs defaultValue={activeTab} className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList data-tour="course-tabs" className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">
               <TabsTrigger value="lessons" className="flex items-center gap-2 whitespace-nowrap">

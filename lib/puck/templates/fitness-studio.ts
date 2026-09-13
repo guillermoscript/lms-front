@@ -55,12 +55,7 @@ const homeTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '25,000', label: 'Members', prefix: '', suffix: '+' },
-          { value: '600', label: 'Workouts', prefix: '', suffix: '+' },
-          { value: '15', label: 'Expert Coaches', prefix: '', suffix: '' },
-          { value: '4.9', label: 'App Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -162,12 +157,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '25,000', label: 'Members', prefix: '', suffix: '+' },
-          { value: '50', label: 'Countries', prefix: '', suffix: '+' },
-          { value: '1.2M', label: 'Workouts Completed', prefix: '', suffix: '' },
-          { value: '2020', label: 'Founded', prefix: '', suffix: '' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

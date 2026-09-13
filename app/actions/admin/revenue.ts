@@ -61,6 +61,7 @@ export async function getRevenueOverview() {
       currency: 'usd',
       revenueByCourse: [],
       monthlyTrend: [],
+      canReduceFees: false,
     }
   }
 
@@ -139,5 +140,38 @@ export async function getRevenueOverview() {
     currency: transactions[0]?.currency || 'usd',
     revenueByCourse,
     monthlyTrend,
+    // Drives the "upgrade to pay less" hint under the fees card. It used to
+    // print unconditionally — under `$0.00` on a fee-free manual sale (#727).
+    canReduceFees: platformFees > 0 && (await hasLowerFeePlan(adminClient, tenantId)),
   }
+}
+
+/**
+ * `true` when some active platform plan charges a lower transaction fee than
+ * the tenant's current one. Read the same way `getTenantPlan()` reads the
+ * current plan (by slug, no `is_active` filter — a retired plan's fee is still
+ * the fee its subscribers pay); the candidates ARE filtered to active plans,
+ * since the hint sends the admin to a page that only sells those.
+ */
+async function hasLowerFeePlan(
+  adminClient: ReturnType<typeof createAdminClient>,
+  tenantId: string
+): Promise<boolean> {
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('plan')
+    .eq('id', tenantId)
+    .maybeSingle()
+  const slug = (tenant?.plan as string | null) || 'free'
+
+  const [{ data: current }, { data: candidates }] = await Promise.all([
+    adminClient.from('platform_plans').select('transaction_fee_percent').eq('slug', slug).maybeSingle(),
+    adminClient.from('platform_plans').select('transaction_fee_percent').eq('is_active', true),
+  ])
+
+  // `??`, never `||`: Business and Enterprise carry a genuine 0% (#613).
+  const currentFee = Number(current?.transaction_fee_percent ?? 10)
+  return (candidates || []).some(
+    (plan) => Number(plan.transaction_fee_percent ?? currentFee) < currentFee
+  )
 }

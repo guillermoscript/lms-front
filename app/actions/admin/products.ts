@@ -627,7 +627,10 @@ export async function saveProductCreationWizard(
         productId: freeResult.product_id,
         price: 0,
         currency: input.pricing.currency ?? 'usd',
-        provider: 'manual',
+        // Price 0 is the free sentinel; no rail is involved, so the event no
+        // longer claims one (#727). The RPC still stores `manual` on the row
+        // only because `products.payment_provider` is NOT NULL.
+        provider: 'none',
         isFree: true,
       })
 

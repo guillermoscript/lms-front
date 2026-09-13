@@ -10,6 +10,14 @@ import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
+import { manualTransactionPaymentMethod } from '@/lib/payments/manual-payment-method'
+import { sendEmail } from '@/lib/email/send'
+import { bestEffortLocaleOr } from '@/lib/i18n/best-effort-locale'
+import { paymentInstructionsTemplate } from '@/lib/email/templates/payment-instructions'
+import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 
 export interface PaymentRequestFormData {
   productId?: number
@@ -76,6 +84,61 @@ async function notifyPaymentRequestStatus(params: {
   }
 }
 
+/**
+ * Best-effort "here is how to pay" email (issue #727). The student copy used
+ * to promise this message while nothing sent one. `sendEmail()` returns
+ * `false` — and this returns `false` — when Mailgun is not configured (#676);
+ * the in-app notification and the My Payments page carry the instructions
+ * either way, so a missing mailer never fails the admin's action.
+ */
+async function emailPaymentInstructions(params: {
+  adminClient: ReturnType<typeof createAdminClient>
+  tenantId: string
+  requestId: number
+  studentUserId: string
+  itemName: string
+  paymentMethod: string | null
+  instructions: string
+  amount: number | null
+  currency: string | null
+  deadline: string | null
+}): Promise<boolean> {
+  const { adminClient, tenantId, requestId, studentUserId } = params
+  try {
+    if (!params.instructions.trim()) return false
+
+    const [{ data: authUser }, { data: tenant }, timeZone, locale] = await Promise.all([
+      adminClient.auth.admin.getUserById(studentUserId),
+      adminClient.from('tenants').select('name, slug').eq('id', tenantId).single(),
+      getTenantTimeZone(tenantId),
+      // The school's own UI language — the closest thing to the reader's that
+      // this flow knows, since nothing stores a per-student locale. Sending a
+      // LATAM buyer an English email would undo the point of translating the
+      // in-app copy (#727).
+      bestEffortLocaleOr('en'),
+    ])
+    const to = authUser?.user?.email
+    if (!to) return false
+
+    const template = paymentInstructionsTemplate({
+      schoolName: tenant?.name || 'Your school',
+      itemName: params.itemName,
+      amountLabel: formatCurrency(params.amount ?? 0, params.currency || 'usd'),
+      paymentMethod: params.paymentMethod,
+      instructions: params.instructions,
+      deadlineLabel: params.deadline
+        ? formatDateTime(params.deadline, { locale, timeZone })
+        : null,
+      requestUrl: `${await getTenantSiteUrl(tenant?.slug || 'app')}/dashboard/student/payments/${requestId}`,
+      locale,
+    })
+    return await sendEmail({ to, ...template })
+  } catch (err) {
+    console.error('Failed to email payment instructions:', err)
+    return false
+  }
+}
+
 export interface PaymentInstructionsData {
   paymentMethod: string
   paymentInstructions: string
@@ -131,6 +194,13 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
 
     if (product.payment_provider !== 'manual') {
       throw new Error('This product does not support manual payments')
+    }
+
+    // A free offering is stored as price 0 with provider `manual` (the wizard's
+    // NOT NULL default). Nothing is owed, so there is nothing to request — the
+    // product page offers one-click enrollment instead (#727).
+    if (!(parseFloat(product.price) > 0)) {
+      throw new Error('This product is free — enroll directly from the product page')
     }
 
     paymentAmount = parseFloat(product.price)
@@ -262,8 +332,9 @@ export async function sendPaymentInstructions(
     throw new Error('Failed to send payment instructions')
   }
 
+  const adminClient = createAdminClient()
   await notifyPaymentRequestStatus({
-    adminClient: createAdminClient(),
+    adminClient,
     tenantId: request.tenant_id,
     studentUserId: request.user_id,
     createdBy: userId,
@@ -271,10 +342,24 @@ export async function sendPaymentInstructions(
     status: 'awaiting payment',
   })
 
+  const emailSent = await emailPaymentInstructions({
+    adminClient,
+    tenantId: request.tenant_id,
+    requestId,
+    studentUserId: request.user_id,
+    itemName: itemNameFromRequest(request),
+    paymentMethod: instructions.paymentMethod || null,
+    instructions: instructions.paymentInstructions,
+    amount: instructions.paymentAmount,
+    currency: instructions.paymentCurrency,
+    deadline: instructions.paymentDeadline || null,
+  })
+
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+  revalidatePath('/dashboard/student/payments')
 
-  return { success: true }
+  return { success: true, emailSent }
 }
 
 /**
@@ -428,7 +513,9 @@ export async function completeAndEnroll(requestId: number) {
       plan_id: request.plan_id || null,
       amount: request.payment_amount,
       currency: request.payment_currency,
-      payment_method: `manual - ${request.payment_method}`,
+      // `manual`, or `manual - <method>` only when the admin typed one — never
+      // the literal "manual - null" the Transactions table used to print (#727).
+      payment_method: manualTransactionPaymentMethod(request.payment_method),
       status: 'successful',
       tenant_id: tenantId,
     })
@@ -565,15 +652,38 @@ export async function updatePaymentRequest(
     return { success: false, error: 'Unauthorized' }
   }
 
-  // Verify request belongs to tenant
+  // Verify request belongs to tenant. The extra columns feed the instructions
+  // email below — one read instead of a second round trip.
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, tenant_id')
+    .select('request_id, tenant_id, user_id, payment_instructions, payment_method, payment_amount, payment_currency, payment_deadline, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
   if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
     return { success: false, error: 'Payment request not found or access denied' }
+  }
+
+  // Emailed only when the instructions text actually changed: re-saving the
+  // dialog with the same text (to add an internal note, say) must not send
+  // the student the same email twice.
+  const nextInstructions = updates.paymentInstructions?.trim() || ''
+  const instructionsChanged =
+    nextInstructions.length > 0 && nextInstructions !== (request.payment_instructions || '').trim()
+  const emailAfterSave = async () => {
+    if (!instructionsChanged) return false
+    return emailPaymentInstructions({
+      adminClient: createAdminClient(),
+      tenantId: request.tenant_id,
+      requestId,
+      studentUserId: request.user_id,
+      itemName: itemNameFromRequest(request),
+      paymentMethod: updates.paymentMethod?.trim() || request.payment_method || null,
+      instructions: nextInstructions,
+      amount: request.payment_amount,
+      currency: request.payment_currency,
+      deadline: request.payment_deadline,
+    })
   }
 
   try {
@@ -635,10 +745,13 @@ export async function updatePaymentRequest(
 
     if (error) throw error
 
+    const emailSent = await emailAfterSave()
+
     revalidatePath('/dashboard/admin/payment-requests')
     revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+    revalidatePath('/dashboard/student/payments')
 
-    return { success: true }
+    return { success: true, emailSent }
   } catch (error) {
     console.error('Failed to update payment request:', error)
     return {

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { IconLoader2, IconArrowRight, IconArrowLeft, IconHome, IconInfoCircle, IconMail, IconQuestionMark, IconFileText, IconCalendar } from '@tabler/icons-react'
 import type { Data } from '@measured/puck'
 import { useTranslations } from 'next-intl'
+import { templateMessageKey } from '@/lib/puck/template-labels'
 
 interface PuckTemplate {
   name: string
@@ -26,13 +27,15 @@ interface Props {
   loading?: boolean
 }
 
+// Labels come from `landingPageBuilder.pageTypes` — they were hardcoded
+// English on an otherwise translated screen (#726).
 const PAGE_TYPE_PRESETS = [
-  { slug: 'home', icon: IconHome, label: 'Home' },
-  { slug: 'about', icon: IconInfoCircle, label: 'About' },
-  { slug: 'contact', icon: IconMail, label: 'Contact' },
-  { slug: 'faq', icon: IconQuestionMark, label: 'FAQ' },
-  { slug: 'terms', icon: IconFileText, label: 'Terms' },
-  { slug: 'events', icon: IconCalendar, label: 'Events' },
+  { slug: 'home', icon: IconHome },
+  { slug: 'about', icon: IconInfoCircle },
+  { slug: 'contact', icon: IconMail },
+  { slug: 'faq', icon: IconQuestionMark },
+  { slug: 'terms', icon: IconFileText },
+  { slug: 'events', icon: IconCalendar },
 ] as const
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -52,6 +55,19 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
   const [selectedSlug, setSelectedSlug] = useState('home')
   const [customSlug, setCustomSlug] = useState('')
   const t = useTranslations('landingPageBuilder.templatePicker')
+  const tPageTypes = useTranslations('landingPageBuilder.pageTypes')
+  // Template names and descriptions stay in English in the data, because the
+  // MCP tools and stored pages reference them; only the display is translated,
+  // and a template with no key falls back to the name as written (#726).
+  const tTemplates = useTranslations('landingPageBuilder.templates')
+  const templateName = (name: string) => {
+    const key = templateMessageKey(name)
+    return key ? tTemplates(`${key}.name` as Parameters<typeof tTemplates>[0]) : name
+  }
+  const templateDescription = (name: string, fallback?: string) => {
+    const key = templateMessageKey(name)
+    return key ? tTemplates(`${key}.description` as Parameters<typeof tTemplates>[0]) : fallback
+  }
 
   const pageType = selectedSlug === 'custom' ? 'home' : selectedSlug
   const filtered = templates.filter(t => t.pageType === pageType || t.pageType === 'all')
@@ -137,7 +153,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                       >
                         <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                         <div className="min-w-0">
-                          <p className="font-medium text-sm">{preset.label}</p>
+                          <p className="font-medium text-sm">{tPageTypes(preset.slug)}</p>
                           <p className="text-xs font-mono text-muted-foreground truncate">
                             {preset.slug === 'home' ? '/' : `/p/${preset.slug}`}
                           </p>
@@ -221,13 +237,13 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                       {/* Info */}
                       <div className="flex-1 px-3 pb-3 space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-sm">{template.name}</h3>
+                          <h3 className="font-medium text-sm">{templateName(template.name)}</h3>
                           <Badge variant="outline" className={`text-xs px-1.5 py-0 ${catColor}`}>
                             {template.category}
                           </Badge>
                         </div>
-                        {template.description && (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{template.description}</p>
+                        {templateDescription(template.name, template.description) && (
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{templateDescription(template.name, template.description)}</p>
                         )}
                         <p className="text-xs text-muted-foreground">{count} sections</p>
                       </div>

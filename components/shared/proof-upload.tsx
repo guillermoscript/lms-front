@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { IconUpload, IconFile, IconPhoto, IconLoader2, IconX } from '@tabler/icons-react'
 
@@ -10,10 +11,16 @@ interface ProofUploadProps {
   onUpload: (file: File) => Promise<void>
   currentProofUrl?: string | null
   disabled?: boolean
+  /** Field label; defaults to the translated "Payment Proof". */
   label?: string
 }
 
-export function ProofUpload({ onUpload, currentProofUrl, disabled, label = 'Payment Proof' }: ProofUploadProps) {
+/**
+ * Shared by the student payment form and the admin billing screens, so its
+ * copy lives in the shared `components.proofUpload` namespace (#725).
+ */
+export function ProofUpload({ onUpload, currentProofUrl, disabled, label }: ProofUploadProps) {
+  const t = useTranslations('components.proofUpload')
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -27,12 +34,12 @@ export function ProofUpload({ onUpload, currentProofUrl, disabled, label = 'Paym
     setError(null)
 
     if (file.size > MAX_FILE_SIZE) {
-      setError('File must be less than 10MB')
+      setError(t('fileTooLarge'))
       return
     }
 
     if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      setError('Only images and PDFs are accepted')
+      setError(t('invalidFileType'))
       return
     }
 
@@ -50,7 +57,7 @@ export function ProofUpload({ onUpload, currentProofUrl, disabled, label = 'Paym
     try {
       await onUpload(file)
     } catch {
-      setError('Upload failed. Please try again.')
+      setError(t('uploadFailed'))
     } finally {
       setUploading(false)
     }
@@ -67,21 +74,21 @@ export function ProofUpload({ onUpload, currentProofUrl, disabled, label = 'Paym
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">{label}</label>
+      <label className="text-sm font-medium">{label ?? t('defaultLabel')}</label>
 
       {hasProof ? (
         <div className="flex items-center gap-3 rounded-md border p-3">
           {preview ? (
-            <img src={preview} alt="Proof" className="h-12 w-12 rounded object-cover" />
+            <img src={preview} alt={t('previewAlt')} className="h-12 w-12 rounded object-cover" />
           ) : currentProofUrl ? (
             currentProofUrl.endsWith('.pdf') ? (
               <IconFile className="h-8 w-8 text-muted-foreground" />
             ) : (
-              <img src={currentProofUrl} alt="Proof" className="h-12 w-12 rounded object-cover" />
+              <img src={currentProofUrl} alt={t('previewAlt')} className="h-12 w-12 rounded object-cover" />
             )
           ) : null}
           <div className="flex-1 min-w-0">
-            <p className="text-sm truncate">{fileName || 'Proof uploaded'}</p>
+            <p className="text-sm truncate">{fileName || t('uploaded')}</p>
             {currentProofUrl && !preview && (
               <a
                 href={currentProofUrl}
@@ -89,12 +96,12 @@ export function ProofUpload({ onUpload, currentProofUrl, disabled, label = 'Paym
                 rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline"
               >
-                View proof
+                {t('viewProof')}
               </a>
             )}
           </div>
           {!disabled && (
-            <Button type="button" variant="ghost" size="sm" onClick={handleClear}>
+            <Button type="button" variant="ghost" size="sm" onClick={handleClear} aria-label={t('remove')}>
               <IconX className="h-4 w-4" />
             </Button>
           )}
@@ -107,12 +114,12 @@ export function ProofUpload({ onUpload, currentProofUrl, disabled, label = 'Paym
           {uploading ? (
             <>
               <IconLoader2 className="h-5 w-5 animate-spin" />
-              <span>Uploading...</span>
+              <span>{t('uploading')}</span>
             </>
           ) : (
             <>
               <IconUpload className="h-5 w-5" />
-              <span>Upload receipt or screenshot (image or PDF, max 10MB)</span>
+              <span>{t('hint')}</span>
             </>
           )}
         </div>

@@ -11,8 +11,9 @@ import {
     IconCalendar,
     IconUser,
 } from '@tabler/icons-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { formatDate } from '@/lib/format-date'
 import { SocialShareModal } from './social-share-modal'
 
 /** The slice of the `certificates` row (with its joins) the card reads. */
@@ -34,6 +35,7 @@ interface StudentCertificateCardProps {
 
 export function StudentCertificateCard({ certificate }: StudentCertificateCardProps) {
     const t = useTranslations('dashboard.student.profile.certificates')
+    const locale = useLocale()
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
     const designSettings = certificate.certificate_templates?.design_settings
@@ -84,7 +86,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                     style={{ background: `linear-gradient(90deg, transparent, ${primaryColor}60, transparent)` }}
                                 />
                                 <div className="text-[7px] text-muted-foreground/60 uppercase tracking-wider">
-                                    {issuedDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                                    {formatDate(issuedDate, locale, { month: 'short', year: 'numeric' })}
                                 </div>
                             </div>
                         </div>
@@ -119,7 +121,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                 </span>
                                 <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
                                     <IconCalendar size={11} className="text-muted-foreground/50" />
-                                    {t('issuedOn', { date: issuedDate.toLocaleDateString() })}
+                                    {t('issuedOn', { date: formatDate(issuedDate, locale) })}
                                 </span>
                             </div>
 

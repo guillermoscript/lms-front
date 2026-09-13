@@ -6,6 +6,7 @@ import { useTransition, useState, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { IconSearch, IconX } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { categoryMessageKey } from '@/lib/course-categories'
 
 interface CourseSearchBarProps {
   categories: { id: number; name: string }[]
@@ -24,6 +25,13 @@ export function CourseSearchBar({
   const [isPending, startTransition] = useTransition()
   const [searchValue, setSearchValue] = useState(currentSearch)
   const t = useTranslations('courseSearch')
+  // Seeded category rows are stored in English; a school's own categories are
+  // shown as typed (#724).
+  const tCategories = useTranslations('coursesCatalog.categories')
+  const categoryLabel = (name: string) => {
+    const key = categoryMessageKey(name)
+    return key ? tCategories(key) : name
+  }
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -106,7 +114,7 @@ export function CourseSearchBar({
         <div
           className="flex flex-wrap gap-2"
           role="list"
-          aria-label="Course categories"
+          aria-label={t('categoriesLabel')}
         >
           <button
             type="button"
@@ -132,7 +140,7 @@ export function CourseSearchBar({
                   : 'border-border bg-muted/50 text-muted-foreground hover:border-foreground/30 hover:text-foreground'
               )}
             >
-              {cat.name}
+              {categoryLabel(cat.name)}
             </button>
           ))}
         </div>

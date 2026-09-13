@@ -1,12 +1,13 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { IconCheck, IconMinus, IconSparkles } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
-import { PLAN_FEATURE_LABELS } from '@/lib/plans/features'
+import { PLAN_FEATURE_KEYS } from '@/lib/plans/features'
 
 interface PlanData {
   plan_id: string
@@ -45,34 +46,33 @@ interface PlanComparisonTableProps {
   currentInterval?: 'monthly' | 'yearly'
 }
 
-// Gamification basics first, then the canonical gated list (#662).
-const FEATURE_LABELS: Record<string, string> = {
-  xp: 'XP & Levels',
-  levels: 'Level System',
-  streaks: 'Streaks',
-  ...PLAN_FEATURE_LABELS,
-}
-
-const FEATURE_KEYS = Object.keys(FEATURE_LABELS)
+// Gamification basics first, then the canonical gated list (#662). The labels
+// themselves live in `dashboard.admin.billing.planComparison.features` so this
+// screen reads in the school's language (#726).
+const FEATURE_KEYS = ['xp', 'levels', 'streaks', ...PLAN_FEATURE_KEYS]
 
 function isIncluded(value: boolean | string | undefined) {
   return value === true || (typeof value === 'string' && value !== 'false')
 }
 
-function formatLimit(value: number) {
-  return value === -1 ? 'Unlimited' : value.toLocaleString()
-}
-
-function FeatureValue({ value }: { value: boolean | string | undefined }) {
+function FeatureValue({
+  value,
+  includedLabel,
+  notIncludedLabel,
+}: {
+  value: boolean | string | undefined
+  includedLabel: string
+  notIncludedLabel: string
+}) {
   if (!isIncluded(value)) {
-    return <IconMinus aria-label="Not included" className="mx-auto size-4 text-muted-foreground/50" />
+    return <IconMinus aria-label={notIncludedLabel} className="mx-auto size-4 text-muted-foreground/50" />
   }
 
   if (typeof value === 'string' && value !== 'true') {
     return <span className="text-xs font-medium">{value}</span>
   }
 
-  return <IconCheck aria-label="Included" className="mx-auto size-4 text-primary" strokeWidth={2.5} />
+  return <IconCheck aria-label={includedLabel} className="mx-auto size-4 text-primary" strokeWidth={2.5} />
 }
 
 export function PlanComparisonTable({
@@ -86,6 +86,13 @@ export function PlanComparisonTable({
   existingSubscriber = false,
   currentInterval,
 }: PlanComparisonTableProps) {
+  const t = useTranslations('dashboard.admin.billing.planComparison')
+  const locale = useLocale()
+  // Locale-less `toLocaleString()` formatted on the server in one locale and in
+  // the browser in another, which is a hydration mismatch (#726).
+  const formatLimit = (value: number) =>
+    value === -1 ? t('unlimited') : new Intl.NumberFormat(locale).format(value)
+  const featureLabel = (key: string) => t(`features.${key}` as Parameters<typeof t>[0])
   const [interval, setInterval] = useState<'monthly' | 'yearly'>(initialInterval ?? 'monthly')
   const yearly = interval === 'yearly'
   const featureKeys = useMemo(
@@ -99,7 +106,7 @@ export function PlanComparisonTable({
       <div className="flex flex-col items-center gap-3 text-center">
         <div
           role="group"
-          aria-label="Billing interval"
+          aria-label={t('intervalGroupLabel')}
           className="inline-flex rounded-lg border bg-muted/45 p-1"
         >
           <button
@@ -111,7 +118,7 @@ export function PlanComparisonTable({
               !yearly ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            Monthly
+            {t('monthly')}
           </button>
           <button
             type="button"
@@ -122,14 +129,14 @@ export function PlanComparisonTable({
               yearly ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            Yearly
+            {t('yearly')}
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-semibold text-primary">
-              Save ~17%
+              {t('yearlySaving')}
             </Badge>
           </button>
         </div>
         <p className="text-sm text-muted-foreground">
-          {yearly ? 'Billed once per year. Cancel at the end of your billing period.' : 'Billed monthly. Change plans when your school needs more room.'}
+          {yearly ? t('billedYearlyNote') : t('billedMonthlyNote')}
         </p>
       </div>
 
@@ -156,12 +163,12 @@ export function PlanComparisonTable({
               data-preselected={isPreselected || undefined}
             >
               {isPreselected && (
-                <Badge className="absolute -top-3 right-5 shadow-sm">Your selection</Badge>
+                <Badge className="absolute -top-3 right-5 shadow-sm">{t('yourSelection')}</Badge>
               )}
               {isPopular && (
                 <Badge className="absolute -top-3 left-5 gap-1.5 shadow-sm">
                   <IconSparkles className="size-3" />
-                  Most popular
+                  {t('mostPopular')}
                 </Badge>
               )}
               <CardHeader className="gap-5 pb-4">
@@ -170,23 +177,23 @@ export function PlanComparisonTable({
                     <CardTitle className="text-xl">{plan.name}</CardTitle>
                     <p className="min-h-10 text-sm leading-5 text-muted-foreground">{plan.description}</p>
                   </div>
-                  {isCurrent && <Badge variant="secondary">Current plan</Badge>}
+                  {isCurrent && <Badge variant="secondary">{t('currentPlan')}</Badge>}
                 </div>
 
                 <div>
                   {plan.slug === 'free' ? (
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-semibold tracking-tight">$0</span>
-                      <span className="text-sm text-muted-foreground">forever</span>
+                      <span className="text-sm text-muted-foreground">{t('forever')}</span>
                     </div>
                   ) : (
                     <>
                       <div className="flex items-baseline gap-1">
                         <span className="text-4xl font-semibold tracking-tight">${monthlyEquivalent}</span>
-                        <span className="text-sm text-muted-foreground">/ month</span>
+                        <span className="text-sm text-muted-foreground">{t('perMonth')}</span>
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {yearly ? `$${price} billed yearly` : 'Billed monthly'}
+                        {yearly ? t('billedYearly', { price }) : t('billedMonthly')}
                       </p>
                     </>
                   )}
@@ -194,31 +201,31 @@ export function PlanComparisonTable({
 
                 <dl className="grid grid-cols-3 divide-x rounded-lg border bg-muted/25 text-center">
                   <div className="px-2 py-2.5">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Courses</dt>
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t('courses')}</dt>
                     <dd className="mt-1 text-sm font-semibold tabular-nums">{formatLimit(plan.limits.max_courses)}</dd>
                   </div>
                   <div className="px-2 py-2.5">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Students</dt>
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t('students')}</dt>
                     <dd className="mt-1 text-sm font-semibold tabular-nums">{formatLimit(plan.limits.max_students)}</dd>
                   </div>
                   <div className="px-2 py-2.5">
-                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Platform fee</dt>
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t('platformFee')}</dt>
                     <dd className="mt-1 text-sm font-semibold tabular-nums">{plan.transaction_fee_percent}%</dd>
                   </div>
                 </dl>
               </CardHeader>
 
               <CardContent className="flex-1 pt-2">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Highlights</p>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('highlights')}</p>
                 <ul className="space-y-2.5">
                   {visibleFeatures.map((key) => (
                     <li key={key} className="flex items-start gap-2 text-sm">
                       <IconCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={2.5} />
-                      <span>{FEATURE_LABELS[key]}</span>
+                      <span>{featureLabel(key)}</span>
                     </li>
                   ))}
                   {remainingFeatureCount > 0 && (
-                    <li className="pl-6 text-sm text-muted-foreground">+ {remainingFeatureCount} more in full comparison</li>
+                    <li className="pl-6 text-sm text-muted-foreground">{t('moreInComparison', { count: remainingFeatureCount })}</li>
                   )}
                 </ul>
               </CardContent>
@@ -229,11 +236,11 @@ export function PlanComparisonTable({
                     isCurrent ? (
                       currentInterval && interval !== currentInterval ? (
                         <Button className="w-full" onClick={() => onChoosePlan?.(plan.plan_id, interval)} disabled={loading}>
-                          {interval === 'yearly' ? 'Switch to yearly billing' : 'Switch to monthly billing'}
+                          {interval === 'yearly' ? t('switchToYearly') : t('switchToMonthly')}
                         </Button>
                       ) : (
                         <>
-                          <Button variant="outline" className="w-full" disabled>Current plan</Button>
+                          <Button variant="outline" className="w-full" disabled>{t('currentPlan')}</Button>
                           {/*
                             The only route to a different payment method for a
                             school staying on its current plan. Without it, a
@@ -248,24 +255,24 @@ export function PlanComparisonTable({
                             onClick={() => onChoosePlan?.(plan.plan_id, interval)}
                             disabled={loading}
                           >
-                            Change payment method
+                            {t('changePaymentMethod')}
                           </Button>
                         </>
                       )
                     ) : plan.slug === 'free' ? (
-                      <Button variant="ghost" className="w-full" disabled>Cancel to downgrade</Button>
+                      <Button variant="ghost" className="w-full" disabled>{t('cancelToDowngrade')}</Button>
                     ) : (
                       <Button className="w-full" onClick={() => onChoosePlan?.(plan.plan_id, interval)} disabled={loading}>
-                        {planIndex > currentIndex ? 'Upgrade to this plan' : 'Downgrade to this plan'}
+                        {planIndex > currentIndex ? t('upgradeToPlan') : t('downgradeToPlan')}
                       </Button>
                     )
                   ) : isCurrent ? (
-                    <Button variant="outline" className="w-full" disabled>Current plan</Button>
+                    <Button variant="outline" className="w-full" disabled>{t('currentPlan')}</Button>
                   ) : plan.slug === 'free' ? (
-                    <Button variant="ghost" className="w-full" disabled>Free plan</Button>
+                    <Button variant="ghost" className="w-full" disabled>{t('freePlan')}</Button>
                   ) : (
                     <Button className="w-full" onClick={() => onChoosePlan?.(plan.plan_id, interval)} disabled={loading}>
-                      {loading ? 'Opening checkout...' : 'Choose plan'}
+                      {loading ? t('openingCheckout') : t('choosePlan')}
                     </Button>
                   )}
                 </CardFooter>
@@ -278,23 +285,23 @@ export function PlanComparisonTable({
       {featureKeys.length > 0 && (
         <section aria-labelledby="plan-comparison-heading" className="overflow-hidden rounded-xl border">
           <div className="border-b bg-muted/30 px-5 py-4">
-            <h2 id="plan-comparison-heading" className="font-semibold">Compare every feature</h2>
-            <p className="mt-1 text-sm text-muted-foreground">See exactly what your school gets at each level.</p>
+            <h2 id="plan-comparison-heading" className="font-semibold">{t('compareTitle')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t('compareSubtitle')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-[720px] w-full text-sm">
               <thead className="bg-muted/20">
                 <tr className="border-b">
-                  <th scope="col" className="w-48 px-5 py-3 text-left text-xs font-medium text-muted-foreground">Feature</th>
+                  <th scope="col" className="w-48 px-5 py-3 text-left text-xs font-medium text-muted-foreground">{t('featureColumn')}</th>
                   {plans.map((plan) => <th key={plan.plan_id} scope="col" className="px-4 py-3 text-center text-xs font-semibold">{plan.name}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {featureKeys.map((key) => (
                   <tr key={key} className="hover:bg-muted/20">
-                    <th scope="row" className="px-5 py-3 text-left font-medium">{FEATURE_LABELS[key]}</th>
+                    <th scope="row" className="px-5 py-3 text-left font-medium">{featureLabel(key)}</th>
                     {plans.map((plan) => (
-                      <td key={plan.plan_id} className="px-4 py-3 text-center"><FeatureValue value={plan.features[key]} /></td>
+                      <td key={plan.plan_id} className="px-4 py-3 text-center"><FeatureValue value={plan.features[key]} includedLabel={t('included')} notIncludedLabel={t('notIncluded')} /></td>
                     ))}
                   </tr>
                 ))}

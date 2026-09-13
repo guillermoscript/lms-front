@@ -7,11 +7,13 @@ import { PointStoreItem } from "./point-store-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconShoppingBag, IconCoins, IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 export function StoreSection() {
     const { summary, refresh } = useGamificationSummary();
     const { items: storeItems, loading: storeLoading, fetch: fetchStore } = usePointStore({ onPurchase: refresh });
     const t = useTranslations('components.gamification');
+    const tPlans = useTranslations('billing.plans');
 
     useEffect(() => {
         if (summary?.features?.store) {
@@ -36,7 +38,7 @@ export function StoreSection() {
                     <div className="mx-auto w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
                         <IconLock size={24} className="text-muted-foreground" />
                     </div>
-                    <p className="text-sm font-bold">{t('upgrade.storeLocked')}</p>
+                    <p className="text-sm font-bold">{t('upgrade.storeLocked', { plan: tPlans(FEATURE_REQUIRED_PLAN.store) })}</p>
                     <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
                 </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useEventListener } from 'usehooks-ts'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -56,6 +57,7 @@ export function ExamTaker({
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(duration ? duration * 60 : null) // in seconds
+  const t = useTranslations('components.examTaker')
   const router = useRouter()
   const supabase = createClient()
   const analytics = useAnalytics()
@@ -188,12 +190,12 @@ export function ExamTaker({
       <div className="container mx-auto max-w-2xl py-20 px-4 text-center">
         <div className="bg-card border rounded-3xl p-12 shadow-soft">
           <IconFileText className="mx-auto mb-6 h-16 w-16 text-muted-foreground/30" />
-          <h2 className="text-2xl font-bold mb-2">No Questions Found</h2>
-          <p className="text-muted-foreground mb-8 text-lg">This exam doesn&apos;t have any questions yet. Please check back later.</p>
+          <h2 className="text-2xl font-bold mb-2">{t('noQuestionsTitle')}</h2>
+          <p className="text-muted-foreground mb-8 text-lg">{t('noQuestionsDescription')}</p>
           <Link href={`/dashboard/student/courses/${courseId}/exams`}>
             <Button variant="outline" className="rounded-2xl h-12 px-8 font-bold">
               <IconChevronLeft className="mr-2 h-5 w-5" />
-              Return to Assessments
+              {t('returnToAssessments')}
             </Button>
           </Link>
         </div>
@@ -214,7 +216,7 @@ export function ExamTaker({
               <h1 className="font-bold tracking-tight line-clamp-1">{title}</h1>
               <div className="flex items-center gap-4">
                 <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
-                  Progress: {answeredCount}/{questions.length}
+                  {t('progress', { answered: answeredCount, total: questions.length })}
                 </span>
                 <Progress value={progressPercent} className="h-1.5 w-24" />
               </div>
@@ -228,7 +230,7 @@ export function ExamTaker({
             )}>
               <IconClock className={cn("h-5 w-5", timeLeft < 300 ? "text-white" : "text-muted-foreground")} />
               <div className="flex flex-col -space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Time Left</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">{t('timeLeft')}</span>
                 <span className="font-mono text-xl font-black">{formatTime(timeLeft)}</span>
               </div>
             </div>
@@ -254,7 +256,7 @@ export function ExamTaker({
               <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.2em] text-sm">
                   <span className="h-[1px] w-8 bg-current opacity-20" />
-                  Question {currentQuestionIndex + 1}
+                  {t('question', { number: currentQuestionIndex + 1 })}
                 </div>
 
                 <h2 className="text-2xl md:text-3xl font-black leading-tight text-center md:text-left">
@@ -296,7 +298,7 @@ export function ExamTaker({
                       onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
                       className="grid grid-cols-2 gap-4"
                     >
-                      {['true', 'false'].map((val) => (
+                      {(['true', 'false'] as const).map((val) => (
                         <Label
                           key={val}
                           htmlFor={val}
@@ -308,7 +310,7 @@ export function ExamTaker({
                           )}
                         >
                           <RadioGroupItem value={val} id={val} className="sr-only" />
-                          <span className="text-2xl font-black capitalize">{val}</span>
+                          <span className="text-2xl font-black">{t(val)}</span>
                           <div className={cn(
                             "h-8 w-8 rounded-full border-2 flex items-center justify-center",
                             answers[currentQuestion.id] === val ? "bg-primary border-primary text-white" : "border-muted-foreground/20"
@@ -325,12 +327,12 @@ export function ExamTaker({
                       <Textarea
                         value={answers[currentQuestion.id] || ''}
                         onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                        placeholder="Share your knowledge here..."
+                        placeholder={t('answerPlaceholder')}
                         className="min-h-[250px] p-6 text-lg rounded-3xl border-2 border-muted-foreground/10 focus-visible:ring-primary focus-visible:border-primary shadow-inner"
                       />
                       <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 justify-end px-2">
                         <IconMessageChatbot size={14} />
-                        AI will evaluate your reasoning
+                        {t('aiEvaluates')}
                       </p>
                     </div>
                   )}
@@ -350,7 +352,7 @@ export function ExamTaker({
             disabled={currentQuestionIndex === 0}
           >
             <IconChevronLeft size={20} stroke={3} />
-            Previous
+            {t('previous')}
           </Button>
 
           <div className="flex gap-4">
@@ -367,7 +369,7 @@ export function ExamTaker({
                 ) : (
                   <IconSend size={20} stroke={3} />
                 )}
-                Finish & Submit
+                {t('finishSubmit')}
               </Button>
             ) : (
               <Button
@@ -375,7 +377,7 @@ export function ExamTaker({
                 className="rounded-2xl h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
               >
-                Next Question
+                {t('nextQuestion')}
                 <IconChevronRight size={20} stroke={3} />
               </Button>
             )}

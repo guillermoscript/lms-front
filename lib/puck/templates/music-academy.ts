@@ -55,12 +55,7 @@ const homeTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '18,000', label: 'Students', prefix: '', suffix: '+' },
-          { value: '10', label: 'Instruments', prefix: '', suffix: '+' },
-          { value: '90', label: 'Pro Teachers', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Student Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -163,12 +158,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '18,000', label: 'Students', prefix: '', suffix: '+' },
-          { value: '10', label: 'Instruments', prefix: '', suffix: '+' },
-          { value: '45', label: 'Countries', prefix: '', suffix: '+' },
-          { value: '2018', label: 'Founded', prefix: '', suffix: '' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

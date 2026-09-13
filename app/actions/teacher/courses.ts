@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { isMailerConfigured } from '@/lib/email/status'
 import { courseRemovedTemplate } from '@/lib/email/templates/course-removed'
-import { getLocale } from 'next-intl/server'
+import { bestEffortLocale } from '@/lib/i18n/best-effort-locale'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
@@ -374,17 +374,6 @@ export async function archiveCourse(courseId: number) {
   return { success: true }
 }
 
-/**
- * Best-effort request locale for outbound email copy. `getLocale()` throws
- * outside a request scope; an unknown locale falls back to English.
- */
-async function requestLocale(): Promise<string | undefined> {
-  try {
-    return await getLocale()
-  } catch {
-    return undefined
-  }
-}
 
 /**
  * Delete a course. Sends email to enrolled students if any.
@@ -429,7 +418,7 @@ export async function deleteCourse(courseId: number) {
     if (notification.recipients > 0 && notification.mailerConfigured) {
       const [{ data: tenantRow }, locale, authUsers] = await Promise.all([
         adminClient.from('tenants').select('name').eq('id', tenantId).single(),
-        requestLocale(),
+        bestEffortLocale(),
         // One round-trip per student, but in parallel — `auth.admin` has no
         // "get users by ids", and `listUsers` pages the whole instance.
         Promise.all(

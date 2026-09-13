@@ -28,7 +28,7 @@ export default async function NewCoursePage() {
     <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center gap-2">
         <Link href="/dashboard/teacher/courses">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Back">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('back')}>
             <IconArrowLeft className="h-4 w-4" />
           </Button>
         </Link>

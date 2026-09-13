@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatCurrency } from '@/lib/currency'
 import {
   IconPlus,
   IconInfoCircle,
@@ -25,6 +26,7 @@ interface ProductCourseLink {
 
 export default async function AdminProductsPage() {
   const t = await getTranslations('dashboard.admin.products')
+  const locale = await getLocale()
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
@@ -193,8 +195,7 @@ export default async function AdminProductsPage() {
                       ) : (
                         <>
                           <p className="text-2xl font-bold tracking-tight tabular-nums">
-                            {product.currency === 'usd' ? '$' : '€'}
-                            {product.price.toFixed(2)}
+                            {formatCurrency(Number(product.price), product.currency, locale)}
                           </p>
                           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                             {product.currency}

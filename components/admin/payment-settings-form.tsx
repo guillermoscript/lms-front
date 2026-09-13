@@ -53,11 +53,21 @@ export default function PaymentSettingsForm({
   const tConnect = useTranslations('dashboard.admin.settings.sections.payment.connect')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Readiness per rail, mirroring what getEnabledProviders() will actually
+  // offer at checkout — a row must never claim "Ready" for a rail the server
+  // would refuse. Rails on a global platform account need no tenant setup.
+  const stripeReady = Boolean(connect.accountId && connect.chargesEnabled)
+  const solanaReady = Boolean(solanaWalletAddress)
+  const binancePersonalReady = Boolean(binancePersonal.payId && binancePersonal.hasCredentials)
+
   // Toggles are controlled rather than read off FormData at submit time: the
   // status pill, the warning state and the expand-on-enable config all have to
   // react the moment the switch moves, not when the form is posted.
   const [flags, setFlags] = useState({
-    stripe: settings.stripe_enabled?.value?.enabled ?? true,
+    // No saved row → on only when Connect is already ready, exactly the rule
+    // `getEnabledPaymentProviders()` applies (#727). A fresh school used to
+    // open this page to Stripe ON and a red "Action required".
+    stripe: settings.stripe_enabled?.value?.enabled ?? stripeReady,
     paypal: settings.paypal_enabled?.value?.enabled ?? false,
     lemonsqueezy: settings.lemonsqueezy_enabled?.value?.enabled ?? false,
     binance: settings.binance_enabled?.value?.enabled ?? false,
@@ -82,13 +92,6 @@ export default function PaymentSettingsForm({
   const manualPaymentInstructions = String(
     settings.manual_payment_instructions?.value?.value ?? ''
   )
-
-  // Readiness per rail, mirroring what getEnabledProviders() will actually
-  // offer at checkout — a row must never claim "Ready" for a rail the server
-  // would refuse. Rails on a global platform account need no tenant setup.
-  const stripeReady = Boolean(connect.accountId && connect.chargesEnabled)
-  const solanaReady = Boolean(solanaWalletAddress)
-  const binancePersonalReady = Boolean(binancePersonal.payId && binancePersonal.hasCredentials)
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)

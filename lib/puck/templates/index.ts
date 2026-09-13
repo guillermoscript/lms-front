@@ -258,12 +258,7 @@ const boldCreatorTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '5,000', label: 'Students', prefix: '', suffix: '+' },
-          { value: '200', label: 'Courses', prefix: '', suffix: '+' },
-          { value: '50', label: 'Instructors', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('CourseGrid', {
@@ -419,12 +414,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '10,000', label: 'Students', prefix: '', suffix: '+' },
-          { value: '500', label: 'Courses', prefix: '', suffix: '+' },
-          { value: '50', label: 'Countries', prefix: '', suffix: '' },
-          { value: '4.9', label: 'Satisfaction', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('TeamGrid', {
@@ -638,12 +628,7 @@ const codeSchoolHomeTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '12,000', label: 'Students Enrolled', prefix: '', suffix: '+' },
-          { value: '95', label: 'Completion Rate', prefix: '', suffix: '%' },
-          { value: '85', label: 'Job Placement', prefix: '', suffix: '%' },
-          { value: '4.8', label: 'Student Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -772,12 +757,7 @@ const codeSchoolAboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '12,000', label: 'Students Worldwide', prefix: '', suffix: '+' },
-          { value: '40', label: 'Countries', prefix: '', suffix: '+' },
-          { value: '85', label: 'Job Placement Rate', prefix: '', suffix: '%' },
-          { value: '2019', label: 'Founded', prefix: '', suffix: '' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

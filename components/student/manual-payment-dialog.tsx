@@ -8,7 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatCurrency } from '@/lib/currency'
 import { createClient } from '@/lib/supabase/client'
 import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { PaymentRequestForm } from './payment-request-form'
@@ -70,7 +71,10 @@ export function ManualPaymentDialog({
     return () => { cancelled = true }
   }, [open])
 
-  const currencySymbol = productCurrency === 'usd' ? '$' : '€'
+  const locale = useLocale()
+  // Formatted in the product's own currency — COP, MXN and BRL are not euros,
+  // and zero-decimal currencies carry no cents (#727).
+  const amount = formatCurrency(productPrice, productCurrency || 'usd', locale)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,8 +84,7 @@ export function ManualPaymentDialog({
           <DialogDescription>
             {t.rich('description', {
               productName: productName,
-              symbol: currencySymbol,
-              price: productPrice,
+              amount,
               strong: (chunks) => <strong>{chunks}</strong>,
             })}
           </DialogDescription>
@@ -92,12 +95,12 @@ export function ManualPaymentDialog({
           productId={productId}
           planId={planId}
           productName={productName}
-          price={`${currencySymbol}${productPrice}`}
+          price={amount}
           currency={productCurrency}
           userName={userName}
           userEmail={userEmail}
           instructions={instructions}
-          onSuccess={() => onOpenChange(false)}
+          onClose={() => onOpenChange(false)}
         />
       </DialogContent>
     </Dialog>

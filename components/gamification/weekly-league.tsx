@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 const TIER_ACCENTS: Record<string, string> = {
     bronze: "text-amber-600",
@@ -46,6 +47,7 @@ export function WeeklyLeague() {
     const { summary } = useGamificationSummary();
     const { data, isLoading, error } = useLeague();
     const t = useTranslations("components.gamification");
+    const tPlans = useTranslations("billing.plans");
     const timeLeft = useCountdown(data?.in_league ? data.week_end : undefined);
 
     // Feature locked — same upgrade-card pattern as MiniLeaderboard
@@ -66,7 +68,7 @@ export function WeeklyLeague() {
                         <IconShield size={24} className="text-muted-foreground" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold">{t("upgrade.leagueLocked")}</p>
+                        <p className="text-sm font-bold">{t("upgrade.leagueLocked", { plan: tPlans(FEATURE_REQUIRED_PLAN.leaderboard) })}</p>
                         <p className="text-xs text-muted-foreground mt-1">{t("upgrade.upgradeDescription")}</p>
                     </div>
                 </div>

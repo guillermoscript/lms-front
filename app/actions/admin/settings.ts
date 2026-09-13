@@ -274,7 +274,9 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       smtp_from_email: { value: 'noreply@example.com' },
       smtp_from_name: { value: 'My School' },
       email_notifications: { enabled: true },
-      stripe_enabled: { enabled: true },
+      // Off until the school turns it on: a fresh school opened Settings →
+      // Payment to a red "Action required" on a rail it never chose (#727).
+      stripe_enabled: { enabled: false },
       paypal_enabled: { enabled: false },
       lemonsqueezy_enabled: { enabled: false },
       solana_enabled: { enabled: false },
@@ -602,7 +604,8 @@ export async function getBinancePersonalStatus(): Promise<{
  * the one-time `solana` and the auto-pull `solana_subs` providers, since they
  * share one wallet.
  *
- * Defaults match the seed defaults: Stripe on, everything else off.
+ * Defaults: everything off, except that a tenant with no `stripe_enabled` row
+ * and a ready Connect account keeps Stripe (see the note inline).
  */
 export async function getEnabledPaymentProviders(): Promise<{ success: boolean; data: string[]; error?: string }> {
   try {
@@ -630,11 +633,10 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
       {} as Record<string, boolean>
     )
 
-    // No row yet → fall back to the seed defaults (Stripe on, rest off).
+    // No row yet → fall back to the defaults (everything off).
     const isOn = (key: string, fallback: boolean) =>
       key in flags ? flags[key] : fallback
 
-    const stripeOn = isOn('stripe_enabled', true)
     const solanaOn = isOn('solana_enabled', false)
     const binancePersonalOn = isOn('binance_personal_enabled', false)
 
@@ -646,8 +648,14 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
     // (`evaluateConnectedAccountReadiness`) rather than calling Stripe's API on
     // this hot path — `syncConnectAccountStatus()` and the `account.updated`
     // webhook keep those columns fresh.
+    //
+    // A tenant with NO `stripe_enabled` row is treated as "on" only when its
+    // Connect account is already ready (#727): a school that finished
+    // onboarding before the row existed keeps selling by card, while a brand-new
+    // school no longer starts with a rail it never chose. An explicit row —
+    // either value — always wins.
     let stripeReady = false
-    if (stripeOn) {
+    if (isOn('stripe_enabled', true)) {
       const { data: tenant } = await supabase
         .from('tenants')
         .select('stripe_account_id, stripe_charges_enabled')
@@ -655,6 +663,7 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
         .single()
       stripeReady = evaluateConnectedAccountReadiness(tenant).ready
     }
+    const stripeOn = isOn('stripe_enabled', stripeReady)
 
     // Solana and binance_personal both gate on a `tenant_payment_wallets` row —
     // fetch both providers in ONE query instead of one round trip per provider.

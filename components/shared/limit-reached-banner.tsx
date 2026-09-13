@@ -5,6 +5,7 @@ import { IconAlertTriangle, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useLocale, useTranslations } from 'next-intl'
 
 interface LimitReachedBannerProps {
   resource: string       // "courses" | "students"
@@ -15,7 +16,14 @@ interface LimitReachedBannerProps {
 }
 
 export function LimitReachedBanner({ resource, current, limit, className, cutoffAt }: LimitReachedBannerProps) {
+  const t = useTranslations('components.limitBanner')
+  const locale = useLocale()
   const [dismissed, setDismissed] = useState(false)
+  // `resource` arrives as the raw column name ("courses"), which read as English
+  // inside otherwise Spanish copy (#726). An unknown resource falls back to its
+  // own name rather than showing an empty gap.
+  const resourceLabel =
+    resource === 'courses' || resource === 'students' ? t(`resources.${resource}`) : resource
 
   if (dismissed || limit === -1) return null
 
@@ -37,25 +45,27 @@ export function LimitReachedBanner({ resource, current, limit, className, cutoff
       <div className="flex-1 text-sm">
         <p>
           {isAtLimit
-            ? `You've reached your ${resource} limit (${limit}). Upgrade your plan to add more.`
-            : `You're using ${current} of ${limit} ${resource}. Consider upgrading for more capacity.`
-          }
+            ? t('atLimit', { resource: resourceLabel, limit })
+            : t('approaching', { current, limit, resource: resourceLabel })}
         </p>
         {cutoffAt && (
           <p className="font-semibold">
-            If this is not resolved by {new Date(cutoffAt).toLocaleDateString(undefined, { dateStyle: 'long' })}, all students will lose access to all courses.
+            {t('cutoffWarning', {
+              date: new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(cutoffAt)),
+            })}
           </p>
         )}
       </div>
       <Link href="/dashboard/admin/billing/upgrade">
         <Button variant={isAtLimit ? 'destructive' : 'outline'} size="sm">
-          Upgrade
+          {t('upgrade')}
         </Button>
       </Link>
       {!isAtLimit && (
         <button
           onClick={() => setDismissed(true)}
           className="text-muted-foreground hover:text-foreground"
+          aria-label={t('dismiss')}
         >
           <IconX className="h-4 w-4" />
         </button>
