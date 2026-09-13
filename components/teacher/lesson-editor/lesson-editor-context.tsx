@@ -174,6 +174,13 @@ export function LessonEditorProvider({
       return
     }
 
+    // Show the creator what was published. Without this the editor keeps
+    // rendering blocks the database no longer has, and their next draft save
+    // would write the placeholders straight back in.
+    if (content !== formData.content) {
+      setFormData((current) => ({ ...current, content }))
+    }
+
     try {
       const data = {
         title: formData.title,
