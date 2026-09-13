@@ -2243,32 +2243,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       }
     },
     "defaultProps": {
-      "items": [
-        {
-          "value": "10,000",
-          "label": "Students",
-          "prefix": "",
-          "suffix": "+"
-        },
-        {
-          "value": "500",
-          "label": "Courses",
-          "prefix": "",
-          "suffix": "+"
-        },
-        {
-          "value": "50",
-          "label": "Instructors",
-          "prefix": "",
-          "suffix": "+"
-        },
-        {
-          "value": "4.9",
-          "label": "Rating",
-          "prefix": "",
-          "suffix": "/5"
-        }
-      ],
+      "items": [],
       "alignment": "center",
       "useLiveStats": true,
       "accentColor": "",
@@ -4345,9 +4320,9 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       }
     },
     "defaultProps": {
-      "text": "Trusted by 10,000+ students worldwide",
+      "text": "",
       "rating": 5,
-      "reviewCount": "Based on 2,000+ reviews",
+      "reviewCount": "",
       "avatarCount": 5
     }
   },
