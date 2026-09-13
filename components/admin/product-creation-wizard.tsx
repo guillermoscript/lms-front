@@ -152,9 +152,16 @@ const providerFormLabelKeys: Record<ProductCreationPaymentProvider, string> = {
 /**
  * Every validation issue in lib/admin/product-creation/validation.ts carries a
  * raw English `message`; this maps its `field` to a translated string instead
- * so FieldError text (and the review step's issue list) never render English.
+ * so the field errors, the submit error and the review step's issue list never
+ * render English.
+ *
+ * Returns `null` for a field this build does not know, so the caller falls back
+ * to the issue's own English message. Guessing would be worse: an earlier
+ * version sent every unrecognised field to the post-registration-step messages,
+ * so the first new validation rule added upstream would have shown an admin
+ * "Add a title for this step" for something else entirely.
  */
-function wizardFieldMessageKey(field: string): string {
+function wizardFieldMessageKey(field: string): string | null {
   switch (field) {
     case 'course.existingCourseId':
       return 'errors.fields.courseExistingCourseId'
@@ -167,9 +174,12 @@ function wizardFieldMessageKey(field: string): string {
     case 'pricing.paymentProvider':
       return 'errors.fields.pricingPaymentProvider'
     default:
-      return field.endsWith('.url')
-        ? 'errors.fields.postRegistrationStepUrl'
-        : 'errors.fields.postRegistrationStepTitle'
+      // `postRegistrationSteps.url` (no index) and `postRegistrationSteps.3.url`
+      // are both produced by validation.ts, depending on whether the step is
+      // validated on its own or as part of the list.
+      if (/^postRegistrationSteps(\.\d+)?\.url$/.test(field)) return 'errors.fields.postRegistrationStepUrl'
+      if (/^postRegistrationSteps(\.\d+)?\.title$/.test(field)) return 'errors.fields.postRegistrationStepTitle'
+      return null
   }
 }
 
@@ -260,10 +270,20 @@ export function ProductCreationWizard({
 
   // Returns a field's error only once its step has been attempted, so required
   // fields don't show errors before the user interacts with them.
+  /** An issue's text in the reader's language, falling back to its own message. */
+  function issueText(issue: { field: string; message: string }) {
+    const key = wizardFieldMessageKey(issue.field)
+    return key ? tWizard(key) : issue.message
+  }
+
   function fieldError(field: string, stepIndex: number) {
     if (!attempted.has(stepIndex)) return undefined
-    const issue = getFieldIssue(readiness.issues, field)
-    return issue ? tWizard(wizardFieldMessageKey(field)) : undefined
+    // `getFieldIssue` hands back the issue's own English message, which is the
+    // fallback for a field this build has no translation for.
+    const message = getFieldIssue(readiness.issues, field)
+    if (!message) return undefined
+    const key = wizardFieldMessageKey(field)
+    return key ? tWizard(key) : message
   }
 
   function setSourceMode(sourceMode: CourseSourceMode) {
@@ -345,7 +365,7 @@ export function ProductCreationWizard({
       markAttempted(0, 1, 2, 3, 4)
       const firstIssue = localReadiness.issues[0]
       setSubmitError(
-        firstIssue ? tWizard(wizardFieldMessageKey(firstIssue.field)) : tWizard('errors.draftBlocked')
+        firstIssue ? issueText(firstIssue) : tWizard('errors.draftBlocked')
       )
       setCurrentStep(0)
       return
@@ -357,7 +377,7 @@ export function ProductCreationWizard({
       const firstInvalid = wizardSteps.findIndex((_, index) => stepHasIssues(index))
       const firstIssue = localReadiness.issues[0]
       setSubmitError(
-        firstIssue ? tWizard(wizardFieldMessageKey(firstIssue.field)) : tWizard('errors.publishBlocked')
+        firstIssue ? issueText(firstIssue) : tWizard('errors.publishBlocked')
       )
       setCurrentStep(firstInvalid === -1 ? 4 : firstInvalid)
       return
@@ -801,7 +821,7 @@ export function ProductCreationWizard({
                   className="flex items-start gap-2 px-3 py-2 text-xs/relaxed text-destructive"
                 >
                   <IconCircle className="mt-0.5 size-4 shrink-0" />
-                  <span>{issue.message}</span>
+                  <span>{issueText(issue)}</span>
                 </div>
               ))}
             </div>
