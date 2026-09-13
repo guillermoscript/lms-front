@@ -3846,6 +3846,99 @@
           "restore": "Restore",
           "restoreSuccess": "\"{name}\" has been restored",
           "restoreError": "Couldn't restore product. Try again."
+        },
+        "wizard": {
+          "badgeEdit": "Edit mode",
+          "badgeNew": "New offering",
+          "stepProgress": "Step {current} of {total}",
+          "stepsNavLabel": "Product creation steps",
+          "steps": {
+            "source": {
+              "title": "Course",
+              "description": "Choose whether this offering starts from a new or existing course."
+            },
+            "basics": {
+              "title": "Basics",
+              "description": "Set the course details students and admins will recognize."
+            },
+            "pricing": {
+              "title": "Pricing",
+              "description": "Create a free course or configure a paid product."
+            },
+            "postRegistration": {
+              "title": "After purchase",
+              "description": "Add paid-only instructions students see after checkout."
+            },
+            "review": {
+              "title": "Review",
+              "description": "Check readiness and choose draft or publish."
+            }
+          },
+          "source": {
+            "legend": "Course source",
+            "newTitle": "Create new course",
+            "newDescription": "Create a course shell and optionally attach paid pricing.",
+            "existingTitle": "Use existing course",
+            "existingDescription": "Reuse a tenant course, including drafts being prepared for launch.",
+            "courseLabel": "Course",
+            "coursePlaceholder": "Select a course",
+            "selectedStatus": "Selected course status: {status}"
+          },
+          "basics": {
+            "titleLabel": "Title",
+            "titlePlaceholder": "e.g., Product Strategy Intensive",
+            "categoryLabel": "Category",
+            "categoryPlaceholder": "Select category",
+            "noCategories": "No categories are available yet."
+          },
+          "pricing": {
+            "legend": "Pricing mode",
+            "freeTitle": "Free",
+            "freeDescription": "Create a $0 product students enroll in with one click.",
+            "paidTitle": "Paid",
+            "paidDescription": "Create a product and link it to this course."
+          },
+          "postRegistration": {
+            "freeNotice": "Post-registration instructions are product-scoped, so they are available for paid offerings only in this version."
+          },
+          "review": {
+            "courseLabel": "Course",
+            "untitled": "Untitled course",
+            "newCourse": "New course",
+            "existingCourse": "Existing course",
+            "pricingLabel": "Pricing",
+            "noProvider": "No provider",
+            "noPaymentRequired": "No payment required",
+            "afterPurchaseLabel": "After purchase",
+            "notApplicable": "Not applicable",
+            "freeCourse": "Free course",
+            "optionalInstructions": "Optional instructions",
+            "steps": "{count, plural, one {# step} other {# steps}}",
+            "draftReady": "Draft can be saved",
+            "publishReady": "Ready to publish"
+          },
+          "backButton": "Back",
+          "nextButton": "Next",
+          "saveDraftButton": "Save draft",
+          "publishButton": "Publish",
+          "toasts": {
+            "published": "Offering published.",
+            "draftSaved": "Draft saved."
+          },
+          "errors": {
+            "generic": "Could not save this offering.",
+            "draftBlocked": "Add a title before saving.",
+            "publishBlocked": "Complete required setup first.",
+            "fields": {
+              "courseExistingCourseId": "Select a course.",
+              "courseTitle": "Enter a course title.",
+              "pricingPrice": "Enter a price greater than 0.",
+              "pricingCurrency": "Select a currency.",
+              "pricingPaymentProvider": "Select a payment method.",
+              "postRegistrationStepTitle": "Enter a step title.",
+              "postRegistrationStepUrl": "Enter a valid URL."
+            }
+          }
         }
       },
       "apiTokens": {

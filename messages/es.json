@@ -3671,6 +3671,99 @@
           "restore": "Restaurar",
           "restoreSuccess": "\"{name}\" ha sido restaurado",
           "restoreError": "No se pudo restaurar el producto. Inténtalo de nuevo."
+        },
+        "wizard": {
+          "badgeEdit": "Modo edición",
+          "badgeNew": "Nueva oferta",
+          "stepProgress": "Paso {current} de {total}",
+          "stepsNavLabel": "Pasos de creación del producto",
+          "steps": {
+            "source": {
+              "title": "Curso",
+              "description": "Elige si esta oferta parte de un curso nuevo o de uno existente."
+            },
+            "basics": {
+              "title": "Datos básicos",
+              "description": "Define los datos del curso que verán estudiantes y administradores."
+            },
+            "pricing": {
+              "title": "Precio",
+              "description": "Crea un curso gratuito o configura un producto de pago."
+            },
+            "postRegistration": {
+              "title": "Después de la compra",
+              "description": "Agrega instrucciones exclusivas de pago que verán los estudiantes tras completar la compra."
+            },
+            "review": {
+              "title": "Revisión",
+              "description": "Verifica que todo esté listo y elige guardar como borrador o publicar."
+            }
+          },
+          "source": {
+            "legend": "Origen del curso",
+            "newTitle": "Crear curso nuevo",
+            "newDescription": "Crea la base de un curso y, si quieres, agrégale un precio.",
+            "existingTitle": "Usar curso existente",
+            "existingDescription": "Reutiliza un curso de tu escuela, incluidos los borradores en preparación.",
+            "courseLabel": "Curso",
+            "coursePlaceholder": "Selecciona un curso",
+            "selectedStatus": "Estado del curso seleccionado: {status}"
+          },
+          "basics": {
+            "titleLabel": "Título",
+            "titlePlaceholder": "Ej.: Curso intensivo de estrategia de producto",
+            "categoryLabel": "Categoría",
+            "categoryPlaceholder": "Selecciona una categoría",
+            "noCategories": "Todavía no hay categorías disponibles."
+          },
+          "pricing": {
+            "legend": "Tipo de precio",
+            "freeTitle": "Gratis",
+            "freeDescription": "Crea un producto de $0 en el que los estudiantes se inscriben con un clic.",
+            "paidTitle": "De pago",
+            "paidDescription": "Crea un producto y vincúlalo a este curso."
+          },
+          "postRegistration": {
+            "freeNotice": "Las instrucciones después de la compra son exclusivas del producto, así que solo están disponibles para ofertas de pago en esta versión."
+          },
+          "review": {
+            "courseLabel": "Curso",
+            "untitled": "Curso sin título",
+            "newCourse": "Curso nuevo",
+            "existingCourse": "Curso existente",
+            "pricingLabel": "Precio",
+            "noProvider": "Sin proveedor",
+            "noPaymentRequired": "No requiere pago",
+            "afterPurchaseLabel": "Después de la compra",
+            "notApplicable": "No aplica",
+            "freeCourse": "Curso gratuito",
+            "optionalInstructions": "Instrucciones opcionales",
+            "steps": "{count, plural, one {# paso} other {# pasos}}",
+            "draftReady": "El borrador se puede guardar",
+            "publishReady": "Listo para publicar"
+          },
+          "backButton": "Atrás",
+          "nextButton": "Siguiente",
+          "saveDraftButton": "Guardar borrador",
+          "publishButton": "Publicar",
+          "toasts": {
+            "published": "Oferta publicada.",
+            "draftSaved": "Borrador guardado."
+          },
+          "errors": {
+            "generic": "No se pudo guardar esta oferta.",
+            "draftBlocked": "Agrega un título antes de guardar.",
+            "publishBlocked": "Completa primero la configuración requerida.",
+            "fields": {
+              "courseExistingCourseId": "Selecciona un curso.",
+              "courseTitle": "Escribe un título para el curso.",
+              "pricingPrice": "Ingresa un precio mayor a 0.",
+              "pricingCurrency": "Selecciona una moneda.",
+              "pricingPaymentProvider": "Selecciona un método de pago.",
+              "postRegistrationStepTitle": "Escribe un título para el paso.",
+              "postRegistrationStepUrl": "Ingresa una URL válida."
+            }
+          }
         }
       },
       "notifications": {

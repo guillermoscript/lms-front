@@ -82,33 +82,15 @@ interface ProductCreationWizardProps {
   className?: string
 }
 
-const wizardSteps = [
-  {
-    id: 'source',
-    title: 'Course',
-    description: 'Choose whether this offering starts from a new or existing course.',
-  },
-  {
-    id: 'basics',
-    title: 'Basics',
-    description: 'Set the course details students and admins will recognize.',
-  },
-  {
-    id: 'pricing',
-    title: 'Pricing',
-    description: 'Create a free course or configure a paid product.',
-  },
-  {
-    id: 'post-registration',
-    title: 'After purchase',
-    description: 'Add paid-only instructions students see after checkout.',
-  },
-  {
-    id: 'review',
-    title: 'Review',
-    description: 'Check readiness and choose draft or publish.',
-  },
-] as const
+const wizardStepIds = ['source', 'basics', 'pricing', 'post-registration', 'review'] as const
+
+const wizardStepMessageKeys: Record<(typeof wizardStepIds)[number], string> = {
+  source: 'source',
+  basics: 'basics',
+  pricing: 'pricing',
+  'post-registration': 'postRegistration',
+  review: 'review',
+}
 
 const defaultInput: ProductCreationWizardInput = {
   intent: 'draft',
@@ -149,14 +131,46 @@ function mergeInput(initialInput?: ProductCreationWizardInput): ProductCreationW
   }
 }
 
-function formatPrice(input: ProductCreationWizardInput) {
+function formatPrice(input: ProductCreationWizardInput, freeLabel: string) {
   if (input.pricing.mode === 'free') {
-    return 'Free'
+    return freeLabel
   }
 
   const amount = input.pricing.price || 0
   const currency = (input.pricing.currency || 'usd').toUpperCase()
   return `${currency} ${amount.toFixed(2)}`
+}
+
+const providerFormLabelKeys: Record<ProductCreationPaymentProvider, string> = {
+  manual: 'methodManual',
+  stripe: 'methodStripe',
+  paypal: 'methodPaypal',
+  binance: 'methodBinance',
+  binance_personal: 'methodBinancePersonal',
+}
+
+/**
+ * Every validation issue in lib/admin/product-creation/validation.ts carries a
+ * raw English `message`; this maps its `field` to a translated string instead
+ * so FieldError text (and the review step's issue list) never render English.
+ */
+function wizardFieldMessageKey(field: string): string {
+  switch (field) {
+    case 'course.existingCourseId':
+      return 'errors.fields.courseExistingCourseId'
+    case 'course.title':
+      return 'errors.fields.courseTitle'
+    case 'pricing.price':
+      return 'errors.fields.pricingPrice'
+    case 'pricing.currency':
+      return 'errors.fields.pricingCurrency'
+    case 'pricing.paymentProvider':
+      return 'errors.fields.pricingPaymentProvider'
+    default:
+      return field.endsWith('.url')
+        ? 'errors.fields.postRegistrationStepUrl'
+        : 'errors.fields.postRegistrationStepTitle'
+  }
 }
 
 export function ProductCreationWizard({
@@ -170,6 +184,17 @@ export function ProductCreationWizard({
 }: ProductCreationWizardProps) {
   const router = useRouter()
   const tProductForm = useTranslations('dashboard.admin.products.form')
+  const tWizard = useTranslations('dashboard.admin.products.wizard')
+  const tCourseStatus = useTranslations('dashboard.admin.courses.table.statuses')
+  const wizardSteps = useMemo(
+    () =>
+      wizardStepIds.map((id) => ({
+        id,
+        title: tWizard(`steps.${wizardStepMessageKeys[id]}.title`),
+        description: tWizard(`steps.${wizardStepMessageKeys[id]}.description`),
+      })),
+    [tWizard]
+  )
   const [currentStep, setCurrentStep] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -237,7 +262,8 @@ export function ProductCreationWizard({
   // fields don't show errors before the user interacts with them.
   function fieldError(field: string, stepIndex: number) {
     if (!attempted.has(stepIndex)) return undefined
-    return getFieldIssue(readiness.issues, field)
+    const issue = getFieldIssue(readiness.issues, field)
+    return issue ? tWizard(wizardFieldMessageKey(field)) : undefined
   }
 
   function setSourceMode(sourceMode: CourseSourceMode) {
@@ -317,7 +343,10 @@ export function ProductCreationWizard({
 
     if (intent === 'draft' && !localReadiness.canSaveDraft) {
       markAttempted(0, 1, 2, 3, 4)
-      setSubmitError(localReadiness.issues[0]?.message || 'Add a title before saving.')
+      const firstIssue = localReadiness.issues[0]
+      setSubmitError(
+        firstIssue ? tWizard(wizardFieldMessageKey(firstIssue.field)) : tWizard('errors.draftBlocked')
+      )
       setCurrentStep(0)
       return
     }
@@ -326,7 +355,10 @@ export function ProductCreationWizard({
       markAttempted(0, 1, 2, 3, 4)
       // Land on the first step that still has blockers.
       const firstInvalid = wizardSteps.findIndex((_, index) => stepHasIssues(index))
-      setSubmitError(localReadiness.issues[0]?.message || 'Complete required setup first.')
+      const firstIssue = localReadiness.issues[0]
+      setSubmitError(
+        firstIssue ? tWizard(wizardFieldMessageKey(firstIssue.field)) : tWizard('errors.publishBlocked')
+      )
       setCurrentStep(firstInvalid === -1 ? 4 : firstInvalid)
       return
     }
@@ -338,17 +370,17 @@ export function ProductCreationWizard({
       const result = await saveProductCreationWizard(payload)
 
       if (!result.success) {
-        const message = result.error || 'Could not save this offering.'
+        const message = result.error || tWizard('errors.generic')
         setSubmitError(message)
         toast.error(message)
         return
       }
 
-      toast.success(intent === 'publish' ? 'Offering published.' : 'Draft saved.')
+      toast.success(intent === 'publish' ? tWizard('toasts.published') : tWizard('toasts.draftSaved'))
       router.push('/dashboard/admin/products')
       router.refresh()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not save this offering.'
+      const message = error instanceof Error ? error.message : tWizard('errors.generic')
       setSubmitError(message)
       toast.error(message)
     } finally {
@@ -364,7 +396,7 @@ export function ProductCreationWizard({
       <div className="flex flex-col gap-3 lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-medium">
-            Step {currentStep + 1} of {wizardSteps.length}
+            {tWizard('stepProgress', { current: currentStep + 1, total: wizardSteps.length })}
           </span>
           <span className="truncate text-xs text-muted-foreground">
             {wizardSteps[currentStep].title}
@@ -373,7 +405,7 @@ export function ProductCreationWizard({
         <Progress value={stepProgress} />
       </div>
 
-      <nav aria-label="Product creation steps" className="hidden lg:block">
+      <nav aria-label={tWizard('stepsNavLabel')} className="hidden lg:block">
         <ol className="flex flex-col gap-1">
           {wizardSteps.map((step, index) => {
             const isCurrent = index === currentStep
@@ -420,7 +452,9 @@ export function ProductCreationWizard({
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold">{wizardSteps[currentStep].title}</h2>
-            <Badge variant="secondary">{mode === 'edit' ? 'Edit mode' : 'New offering'}</Badge>
+            <Badge variant="secondary">
+              {mode === 'edit' ? tWizard('badgeEdit') : tWizard('badgeNew')}
+            </Badge>
           </div>
           <p className="text-xs/relaxed text-muted-foreground">
             {wizardSteps[currentStep].description}
@@ -431,7 +465,7 @@ export function ProductCreationWizard({
 
         {currentStep === 0 && (
           <FieldSet>
-            <FieldLegend>Course source</FieldLegend>
+            <FieldLegend>{tWizard('source.legend')}</FieldLegend>
             <RadioGroup
               value={input.course.sourceMode}
               onValueChange={(value) => setSourceMode(value as CourseSourceMode)}
@@ -441,10 +475,8 @@ export function ProductCreationWizard({
                 <Field orientation="horizontal">
                   <RadioGroupItem value="new" disabled={isSaving} />
                   <FieldContent>
-                    <span className="text-sm font-medium">Create new course</span>
-                    <FieldDescription>
-                      Create a course shell and optionally attach paid pricing.
-                    </FieldDescription>
+                    <span className="text-sm font-medium">{tWizard('source.newTitle')}</span>
+                    <FieldDescription>{tWizard('source.newDescription')}</FieldDescription>
                   </FieldContent>
                 </Field>
               </FieldLabel>
@@ -453,10 +485,8 @@ export function ProductCreationWizard({
                 <Field orientation="horizontal">
                   <RadioGroupItem value="existing" disabled={isSaving} />
                   <FieldContent>
-                    <span className="text-sm font-medium">Use existing course</span>
-                    <FieldDescription>
-                      Reuse a tenant course, including drafts being prepared for launch.
-                    </FieldDescription>
+                    <span className="text-sm font-medium">{tWizard('source.existingTitle')}</span>
+                    <FieldDescription>{tWizard('source.existingDescription')}</FieldDescription>
                   </FieldContent>
                 </Field>
               </FieldLabel>
@@ -464,7 +494,7 @@ export function ProductCreationWizard({
 
             {input.course.sourceMode === 'existing' && (
               <Field data-invalid={Boolean(fieldError('course.existingCourseId', 0))}>
-                <FieldLabel htmlFor="existing-course">Course</FieldLabel>
+                <FieldLabel htmlFor="existing-course">{tWizard('source.courseLabel')}</FieldLabel>
                 <Select
                   value={input.course.existingCourseId?.toString()}
                   disabled={isSaving}
