@@ -28,3 +28,21 @@ describe('formatCurrency (manual-payment screens)', () => {
     expect(formatCurrency(10, 'USD', 'en')).toBe('$10.00')
   })
 })
+
+/**
+ * `products.currency` and `plans.currency` are nullable with no database
+ * default, and the admin client is untyped. A default parameter only fires on
+ * `undefined`, so a NULL used to throw and take down the whole admin page.
+ */
+describe('formatCurrency with a missing currency', () => {
+  it('falls back to USD for null, undefined and empty', () => {
+    const usd = formatCurrency(10, 'usd', 'en-US')
+    expect(formatCurrency(10, null, 'en-US')).toBe(usd)
+    expect(formatCurrency(10, undefined, 'en-US')).toBe(usd)
+    expect(formatCurrency(10, '', 'en-US')).toBe(usd)
+  })
+
+  it('still honours zero-decimal currencies', () => {
+    expect(formatCurrency(1500, 'clp', 'es')).not.toContain(',00')
+  })
+})

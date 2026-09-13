@@ -12,6 +12,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
 import { manualTransactionPaymentMethod } from '@/lib/payments/manual-payment-method'
 import { sendEmail } from '@/lib/email/send'
+import { getLocale } from 'next-intl/server'
 import { paymentInstructionsTemplate } from '@/lib/email/templates/payment-instructions'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
 import { formatCurrency } from '@/lib/currency'
@@ -106,10 +107,16 @@ async function emailPaymentInstructions(params: {
   try {
     if (!params.instructions.trim()) return false
 
-    const [{ data: authUser }, { data: tenant }, timeZone] = await Promise.all([
+    const [{ data: authUser }, { data: tenant }, timeZone, locale] = await Promise.all([
       adminClient.auth.admin.getUserById(studentUserId),
       adminClient.from('tenants').select('name, slug').eq('id', tenantId).single(),
       getTenantTimeZone(tenantId),
+      // The school's own UI language — the closest thing to the reader's that
+      // this flow knows, since nothing stores a per-student locale. Sending a
+      // LATAM buyer an English email would undo the point of translating the
+      // in-app copy (#727). `getLocale()` throws outside a request scope, and a
+      // missing locale must never fail the action.
+      getLocale().catch(() => 'en'),
     ])
     const to = authUser?.user?.email
     if (!to) return false
@@ -121,9 +128,10 @@ async function emailPaymentInstructions(params: {
       paymentMethod: params.paymentMethod,
       instructions: params.instructions,
       deadlineLabel: params.deadline
-        ? formatDateTime(params.deadline, { locale: 'en', timeZone })
+        ? formatDateTime(params.deadline, { locale, timeZone })
         : null,
       requestUrl: `${await getTenantSiteUrl(tenant?.slug || 'app')}/dashboard/student/payments/${requestId}`,
+      locale,
     })
     return await sendEmail({ to, ...template })
   } catch (err) {
