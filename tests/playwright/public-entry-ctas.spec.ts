@@ -16,27 +16,55 @@
  * tenant filter both pages now apply is what makes serving it to `anon` safe —
  * RLS on `products` is permissive for anonymous readers.
  *
- * Fixtures: seeded product 1002 (`Web Dev Starter`, manual, Default School) and
- * one throwaway $0 monthly plan on the same tenant — the Default School has no
- * seeded plans, so the free CTA needs one to render at all.
+ * Fixtures: seeded product 1002 (`Web Dev Starter`, manual, **$0**, Default
+ * School), one throwaway priced COP manual product, and one throwaway $0
+ * monthly plan on the same tenant — the Default School has no seeded plans, so
+ * the free CTA needs one to render at all.
+ *
+ * #727: 1002 is priced 0, so it now takes the free path (no manual-payment
+ * copy, "Enroll for free"); the manual-payment assertions moved to the priced
+ * COP fixture, which also pins that a non-USD price is never shown as euros.
  */
 import { test, expect } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { BASE, TENANT_BASE } from './utils/constants'
 import { getServiceRoleClient, DEFAULT_TENANT } from './utils/seed-state'
 
-const SEEDED_MANUAL_PRODUCT = 1002
+const SEEDED_FREE_PRODUCT = 1002
 const FIXTURE_PLAN_NAME = '[E2E] #719 Free Plan'
+const FIXTURE_PRODUCT_NAME = '[E2E] #727 COP Manual Product'
 
 let freePlanId: number
+let manualProductId: number
 
 async function removeStalePlans(admin: SupabaseClient) {
   await admin.from('plans').delete().eq('tenant_id', DEFAULT_TENANT).eq('plan_name', FIXTURE_PLAN_NAME)
 }
 
+async function removeStaleProducts(admin: SupabaseClient) {
+  await admin.from('products').delete().eq('tenant_id', DEFAULT_TENANT).eq('name', FIXTURE_PRODUCT_NAME)
+}
+
 test.beforeAll(async () => {
   const admin = getServiceRoleClient()
   await removeStalePlans(admin)
+  await removeStaleProducts(admin)
+
+  const { data: product, error: productError } = await admin
+    .from('products')
+    .insert({
+      name: FIXTURE_PRODUCT_NAME,
+      description: 'Priced COP manual product used by the #719/#727 CTA regression.',
+      price: 120000,
+      currency: 'cop',
+      status: 'active',
+      payment_provider: 'manual',
+      tenant_id: DEFAULT_TENANT,
+    })
+    .select('product_id')
+    .single()
+  if (productError || !product) throw new Error(`seed manual product: ${productError?.message ?? 'no row'}`)
+  manualProductId = product.product_id
 
   const { data, error } = await admin
     .from('plans')
@@ -57,14 +85,16 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  await removeStalePlans(getServiceRoleClient())
+  const admin = getServiceRoleClient()
+  await removeStalePlans(admin)
+  await removeStaleProducts(admin)
 })
 
 test.describe('Public entry CTAs lead with sign-up (#719)', () => {
   test('the product page offers sign-up first and keeps the product as the destination', async ({ page }) => {
-    const next = encodeURIComponent(`/products/${SEEDED_MANUAL_PRODUCT}`)
+    const next = encodeURIComponent(`/products/${manualProductId}`)
 
-    await page.goto(`${BASE}/en/products/${SEEDED_MANUAL_PRODUCT}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${BASE}/en/products/${manualProductId}`, { waitUntil: 'domcontentloaded' })
 
     const cta = page.getByTestId('product-request-cta')
     await expect(cta).toBeVisible({ timeout: 30_000 })
@@ -79,21 +109,37 @@ test.describe('Public entry CTAs lead with sign-up (#719)', () => {
   })
 
   test('the product page reads Spanish in /es', async ({ page }) => {
-    await page.goto(`${BASE}/es/products/${SEEDED_MANUAL_PRODUCT}`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${BASE}/es/products/${manualProductId}`, { waitUntil: 'domcontentloaded' })
 
     await expect(page.getByTestId('product-request-cta')).toHaveText(/solicitar información de pago/i)
     await expect(page.getByText(/cómo funciona el pago manual/i)).toBeVisible()
     await expect(page.getByText(/método de pago/i)).toBeVisible()
+    // #727: a COP price is formatted as COP, never guessed as euros or `$120000`.
+    await expect(page.getByTestId('product-price')).toContainText(/COP|\$\s?120\.000/)
+    await expect(page.getByTestId('product-price')).not.toContainText('€')
     // The English strings this page used to hardcode are gone, not merely
     // pushed down the page.
     await expect(page.getByText(/please login/i)).toHaveCount(0)
     await expect(page.getByText(/how manual payment works/i)).toHaveCount(0)
   })
 
+  test('a $0 product takes the free path, not the manual-payment flow (#727)', async ({ page }) => {
+    const next = encodeURIComponent(`/products/${SEEDED_FREE_PRODUCT}`)
+
+    await page.goto(`${BASE}/es/products/${SEEDED_FREE_PRODUCT}`, { waitUntil: 'domcontentloaded' })
+
+    const cta = page.getByTestId('product-request-cta')
+    await expect(cta).toHaveText(/inscribirme gratis/i, { timeout: 30_000 })
+    expect(await cta.getAttribute('href')).toBe(`/auth/sign-up?next=${next}`)
+    await expect(page.getByTestId('product-price')).toHaveText(/gratis/i)
+    await expect(page.getByText(/cómo funciona el pago manual/i)).toHaveCount(0)
+    await expect(page.getByText(/método de pago/i)).toHaveCount(0)
+  })
+
   test('another school cannot read this one\u2019s product anonymously', async ({ page }) => {
     // Product 1002 belongs to the Default School; Code Academy must not serve
     // it now that the route answers anonymous requests.
-    await page.goto(`${TENANT_BASE}/en/products/${SEEDED_MANUAL_PRODUCT}`, {
+    await page.goto(`${TENANT_BASE}/en/products/${SEEDED_FREE_PRODUCT}`, {
       waitUntil: 'domcontentloaded',
     })
     await expect(page).toHaveURL(/\/products\/?$/)

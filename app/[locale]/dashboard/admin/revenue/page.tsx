@@ -1,7 +1,7 @@
 import { getRevenueOverview } from '@/app/actions/admin/revenue'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/currency'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import {
   IconCurrencyDollar,
@@ -12,6 +12,7 @@ import {
 export default async function RevenuePage() {
   const t = await getTranslations('dashboard.admin.revenue')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
+  const locale = await getLocale()
   const revenue = await getRevenueOverview()
 
   return (
@@ -57,7 +58,7 @@ export default async function RevenuePage() {
                         {t('totalRevenue')}
                       </p>
                       <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
-                        {formatCurrency(revenue.totalRevenue, revenue.currency)}
+                        {formatCurrency(revenue.totalRevenue, revenue.currency, locale)}
                       </p>
                       <p className="mt-1 text-[11px] text-muted-foreground/70">
                         {t('transactionCount', { count: revenue.transactionCount })}
@@ -78,11 +79,15 @@ export default async function RevenuePage() {
                         {t('platformFees')}
                       </p>
                       <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-muted-foreground">
-                        {formatCurrency(revenue.platformFees, revenue.currency)}
+                        {formatCurrency(revenue.platformFees, revenue.currency, locale)}
                       </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground/70">
-                        {t('upgradeToReduce')}
-                      </p>
+                      {/* Only when there is a fee to reduce AND a cheaper plan to
+                          move to — never "upgrade to pay less" under $0.00 (#727). */}
+                      {revenue.platformFees > 0 && revenue.canReduceFees && (
+                        <p className="mt-1 text-[11px] text-muted-foreground/70">
+                          {t('upgradeToReduce')}
+                        </p>
+                      )}
                     </div>
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
                       <IconReceipt className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
@@ -99,7 +104,7 @@ export default async function RevenuePage() {
                         {t('netRevenue')}
                       </p>
                       <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(revenue.netRevenue, revenue.currency)}
+                        {formatCurrency(revenue.netRevenue, revenue.currency, locale)}
                       </p>
                       <p className="mt-1 text-[11px] text-muted-foreground/70">
                         {t('afterFees')}
@@ -126,7 +131,7 @@ export default async function RevenuePage() {
                       <div key={item.id} className="flex items-center justify-between rounded-lg px-3 py-2.5 hover:bg-muted/50 transition-colors">
                         <span className="text-sm font-medium">{item.name}</span>
                         <span className="text-sm tabular-nums text-muted-foreground">
-                          {formatCurrency(item.amount, revenue.currency)}
+                          {formatCurrency(item.amount, revenue.currency, locale)}
                         </span>
                       </div>
                     ))}
@@ -158,7 +163,7 @@ export default async function RevenuePage() {
                               style={{ width: `${Math.max(width, 2)}%` }}
                             >
                               <span className="text-xs font-medium tabular-nums">
-                                {formatCurrency(item.amount, revenue.currency)}
+                                {formatCurrency(item.amount, revenue.currency, locale)}
                               </span>
                             </div>
                           </div>

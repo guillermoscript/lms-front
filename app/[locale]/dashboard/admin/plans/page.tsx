@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatCurrency } from '@/lib/currency'
 import {
   IconArrowLeft,
   IconPlus,
@@ -17,6 +18,7 @@ import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 
 export default async function AdminPlansPage() {
   const t = await getTranslations('dashboard.admin.plans')
+  const locale = await getLocale()
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
@@ -158,8 +160,7 @@ export default async function AdminPlansPage() {
                     </p>
                     <div className="mb-4">
                       <p className="text-2xl font-bold tracking-tight tabular-nums">
-                        {plan.currency === 'usd' ? '$' : '€'}
-                        {plan.price.toFixed(2)}
+                        {formatCurrency(Number(plan.price), plan.currency, locale)}
                       </p>
                       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {isMonthly ? t('card.perMonth') : t('card.perYear')}

@@ -600,7 +600,7 @@
       "payments": {
         "title": "Payment Requests",
         "subtitle": "Track your manual payment requests and instructions",
-        "infoMessage": "Our team will review your request and send payment instructions to your email.",
+        "infoMessage": "The school will review your request and post payment instructions here. You'll get a notification when they're ready.",
         "tableTitle": "Your Payment Requests",
         "tableDescription": "{count, plural, one {# request} other {# requests}}",
         "amount": "Amount",
@@ -650,7 +650,7 @@
           "paymentMethod": "Payment Method",
           "paymentInstructions": "Payment Instructions",
           "paymentDeadline": "Payment Deadline",
-          "noInstructionsYet": "Payment instructions haven't been sent yet. We'll email you once your request is reviewed.",
+          "noInstructionsYet": "Payment instructions haven't been sent yet. You'll get a notification when the school adds them here.",
           "proofSection": "Payment Proof",
           "proofUploaded": "Proof uploaded",
           "uploadHint": "Upload your transfer receipt so we can verify your payment.",
@@ -2701,7 +2701,7 @@
               "method": "Payment Method",
               "instructions": "Instructions",
               "placeholder": "Enter bank details, wire instructions, or other payment information...",
-              "hint": "These instructions will be sent to the student's email.",
+              "hint": "The student sees these in My Payments and gets a notification. They are also emailed when the school's mailer is configured.",
               "deadline": "Payment Deadline",
               "deadlineOptional": "Optional"
             },
@@ -4433,7 +4433,7 @@
     },
     "manualPayment": {
       "title": "Request Payment Information",
-      "description": "Fill out this form to receive payment instructions for <strong>{productName}</strong> ({symbol}{price})",
+      "description": "Fill out this form to receive payment instructions for <strong>{productName}</strong> ({amount})",
       "fullName": "Full Name",
       "fullNamePlaceholder": "John Doe",
       "email": "Email",
@@ -4443,7 +4443,7 @@
       "message": "Additional Message (optional)",
       "messagePlaceholder": "Any questions or special requests...",
       "whatHappensNext": "What happens next?",
-      "step1": "We'll send you payment instructions via email",
+      "step1": "The school posts payment instructions in My Payments and notifies you",
       "step2": "Choose your preferred payment method (bank transfer, invoice, etc.)",
       "step3": "Once payment is confirmed, you'll get instant access",
       "sending": "Sending...",
@@ -4592,7 +4592,7 @@
       "contactNamePlaceholder": "John Doe",
       "contactEmail": "Email Address",
       "contactEmailPlaceholder": "john@example.com",
-      "contactEmailHint": "We'll send payment instructions to this email",
+      "contactEmailHint": "The school may also email the instructions to this address",
       "contactPhone": "Phone Number (Optional)",
       "contactPhonePlaceholder": "+1 234 567 8900",
       "contactPhoneHint": "Optional - for payment confirmation",
@@ -4606,7 +4606,7 @@
       "success": "Payment request submitted successfully!",
       "error": "Failed to submit payment request",
       "successTitle": "Request Submitted!",
-      "successDescription": "We've received your payment request and will send instructions to your email shortly.",
+      "successDescription": "We've received your request. The school's payment instructions will appear in My Payments, and you'll get a notification when they're ready.",
       "viewRequests": "View My Requests",
       "howToPayTitle": "How to pay",
       "proofLabel": "Payment proof (optional)",
@@ -4614,7 +4614,8 @@
         "nameRequired": "Name is required",
         "emailRequired": "Email is required",
         "emailInvalid": "Please enter a valid email address"
-      }
+      },
+      "close": "Close"
     },
     "cancelPaymentButton": {
       "cancel": "Cancel",
@@ -6454,12 +6455,17 @@
       "manualTitle": "How Manual Payment Works:",
       "manualSteps": {
         "request": "Click the button below to request payment information",
-        "instructions": "We’ll send you payment instructions via email",
+        "instructions": "The school posts payment instructions in My Payments and notifies you",
         "pay": "Complete the payment using your preferred method (bank transfer, etc.)",
         "access": "Once verified, you’ll get instant access to your course"
-      }
+      },
+      "freeTitle": "This product is free",
+      "freeDescription": "No payment needed. Enroll in one click.",
+      "noCourses": "No courses are linked to this product yet."
     },
-    "empty": "No products available at the moment."
+    "empty": "No products available at the moment.",
+    "free": "Free",
+    "enrollFree": "Enroll for free"
   },
   "joinSchool": {
     "notFoundTitle": "School Not Found",

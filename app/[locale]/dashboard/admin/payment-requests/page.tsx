@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import { PaymentRequestsTable } from '@/components/admin/payment-requests-table'
 import { BinancePersonalPendingTable } from '@/components/admin/binance-personal-pending-table'
 import { listPendingBinancePersonalTransactions } from '@/app/actions/admin/binance-personal'
@@ -63,6 +64,7 @@ export default async function PaymentRequestsPage({
     .order('created_at', { ascending: false })
 
   const requests = allRequests || []
+  const timeZone = await getTenantTimeZone(tenantId)
 
   // Pending binance_personal transactions that need manual admin confirmation (#482)
   const pendingBinancePersonal = await listPendingBinancePersonalTransactions()
@@ -167,29 +169,33 @@ export default async function PaymentRequestsPage({
           <TabsContent value="pending" className="space-y-4">
             <PaymentRequestsTable
               requests={requests.filter(r => r.status === 'pending')}
+              timeZone={timeZone}
             />
           </TabsContent>
 
           <TabsContent value="contacted" className="space-y-4">
             <PaymentRequestsTable
               requests={requests.filter(r => r.status === 'contacted')}
+              timeZone={timeZone}
             />
           </TabsContent>
 
           <TabsContent value="payment_received" className="space-y-4">
             <PaymentRequestsTable
               requests={requests.filter(r => r.status === 'payment_received')}
+              timeZone={timeZone}
             />
           </TabsContent>
 
           <TabsContent value="completed" className="space-y-4">
             <PaymentRequestsTable
               requests={requests.filter(r => r.status === 'completed')}
+              timeZone={timeZone}
             />
           </TabsContent>
 
           <TabsContent value="all" className="space-y-4">
-            <PaymentRequestsTable requests={requests} />
+            <PaymentRequestsTable requests={requests} timeZone={timeZone} />
           </TabsContent>
         </Tabs>
 

@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { format } from 'date-fns'
+import { useEffect, useState, FormEvent } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime } from '@/lib/format-date-time'
+import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -71,14 +73,20 @@ interface PaymentRequestDialogProps {
   request: PaymentRequest
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Tenant IANA zone, so the admin reads the same time the student does (#727). */
+  timeZone?: string | null
 }
+
+const STATUS_VALUES = ['pending', 'contacted', 'payment_received', 'completed', 'cancelled'] as const
 
 export function PaymentRequestDialog({
   request,
   open,
-  onOpenChange
+  onOpenChange,
+  timeZone,
 }: PaymentRequestDialogProps) {
   const t = useTranslations('dashboard.admin.paymentRequests')
+  const locale = useLocale()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -87,6 +95,26 @@ export function PaymentRequestDialog({
     paymentInstructions: request.payment_instructions || '',
     adminNotes: request.admin_notes || ''
   })
+
+  // A request with no instructions yet starts from the school-wide text saved
+  // under Settings → Payment, instead of making the admin retype it (#727).
+  // Never overwrites what the request already has or what the admin typed.
+  useEffect(() => {
+    if (!open || request.payment_instructions) return
+    let cancelled = false
+    getManualPaymentInstructions()
+      .then((text) => {
+        if (cancelled || !text) return
+        setFormData((prev) => (prev.paymentInstructions ? prev : { ...prev, paymentInstructions: text }))
+      })
+      .catch(() => {
+        // Non-fatal: the admin can still type instructions by hand.
+      })
+    return () => { cancelled = true }
+  }, [open, request.payment_instructions])
+
+  // Base UI renders the raw value in <SelectValue /> unless it gets the labels.
+  const statusItems = STATUS_VALUES.map((value) => ({ value, label: t(`status.${value}`) }))
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault()
@@ -150,8 +178,6 @@ export function PaymentRequestDialog({
     setLoading(false)
   }
 
-  const currencySymbol = request.payment_currency === 'eur' ? '€' : '$'
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -186,12 +212,14 @@ export function PaymentRequestDialog({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.amount')}:</span>
                 <span className="font-semibold">
-                  {request.payment_amount != null ? `${currencySymbol}${request.payment_amount.toFixed(2)}` : '—'}
+                  {request.payment_amount != null
+                    ? formatCurrency(Number(request.payment_amount), request.payment_currency || 'usd', locale)
+                    : '—'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('dialog.details.date')}:</span>
-                <span>{format(new Date(request.created_at), 'PPp')}</span>
+                <span suppressHydrationWarning>{formatDateTime(request.created_at, { locale, timeZone })}</span>
               </div>
               {request.invoice_number && (
                 <div className="flex justify-between">
@@ -216,6 +244,7 @@ export function PaymentRequestDialog({
             <div className="space-y-2">
               <Label htmlFor="status">{t('dialog.form.status')}</Label>
               <Select
+                items={statusItems}
                 value={formData.status}
                 onValueChange={(value: string | null) => setFormData({ ...formData, status: value || 'pending' })}
                 disabled={loading}
@@ -224,11 +253,11 @@ export function PaymentRequestDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pending">{t('status.pending')}</SelectItem>
-                  <SelectItem value="contacted">{t('status.contacted')}</SelectItem>
-                  <SelectItem value="payment_received">{t('status.payment_received')}</SelectItem>
-                  <SelectItem value="completed">{t('status.completed')}</SelectItem>
-                  <SelectItem value="cancelled">{t('status.cancelled')}</SelectItem>
+                  {statusItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

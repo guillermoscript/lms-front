@@ -33,11 +33,15 @@ interface InvoiceData {
   notes?: string
 }
 
+import { formatCurrency } from '@/lib/currency'
+
 /**
  * Generate invoice HTML
  */
 export function generateInvoiceHTML(data: InvoiceData): string {
-  const currencySymbol = data.currency === 'usd' ? '$' : '€'
+  // Formatted in the request's own currency — COP, MXN and friends are not
+  // euros, and zero-decimal currencies carry no cents (#727).
+  const formattedPrice = formatCurrency(data.price, data.currency || 'usd')
   const formattedDate = data.invoiceDate.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -244,11 +248,11 @@ export function generateInvoiceHTML(data: InvoiceData): string {
           <strong>${data.productName}</strong>
           ${data.productDescription ? `<br><span style="color: #666; font-size: 14px;">${data.productDescription}</span>` : ''}
         </td>
-        <td class="text-right">${currencySymbol}${data.price.toFixed(2)}</td>
+        <td class="text-right">${formattedPrice}</td>
       </tr>
       <tr class="total-row">
         <td><strong>Total</strong></td>
-        <td class="text-right"><strong>${currencySymbol}${data.price.toFixed(2)}</strong></td>
+        <td class="text-right"><strong>${formattedPrice}</strong></td>
       </tr>
     </tbody>
   </table>

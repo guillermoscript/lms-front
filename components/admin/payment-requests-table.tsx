@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
+import { formatDateTime } from '@/lib/format-date-time'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
@@ -63,11 +62,14 @@ const statusColors = {
 
 export function PaymentRequestsTable({
   requests,
+  timeZone,
 }: {
   requests: PaymentRequestWithUser[]
+  /** Tenant IANA zone — the same one the student's My Payments page uses (#727). */
+  timeZone?: string | null
 }) {
   const { locale } = useParams()
-  const dateLocale = locale === 'es' ? es : enUS
+  const dateOptions = { locale: (locale as string) || 'en', timeZone }
   const t = useTranslations('dashboard.admin.paymentRequests')
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null)
 
@@ -142,11 +144,11 @@ export function PaymentRequestsTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">
-                    {format(new Date(request.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                  <div className="text-sm" suppressHydrationWarning>
+                    {formatDateTime(request.created_at, { ...dateOptions, precision: 'date' })}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {format(new Date(request.created_at), 'h:mm a', { locale: dateLocale })}
+                  <div className="text-xs text-muted-foreground" suppressHydrationWarning>
+                    {formatDateTime(request.created_at, { ...dateOptions, precision: 'time' })}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -169,6 +171,7 @@ export function PaymentRequestsTable({
           request={selectedRequest}
           open={!!selectedRequest}
           onOpenChange={(open) => !open && setSelectedRequest(null)}
+          timeZone={timeZone}
         />
       )}
     </>
