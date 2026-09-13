@@ -253,7 +253,7 @@ export default async function CreatorsPage() {
                                 </tr>
                                 <tr className="border-b border-zinc-800/50">
                                     <td className="py-4 px-4 text-sm text-zinc-300">{t('comparison.rows.transactionFee')}</td>
-                                    <td className="py-4 px-4 text-center text-sm font-semibold text-emerald-400">0%</td>
+                                    <td className="py-4 px-4 text-center text-sm font-semibold text-emerald-400">{t('comparison.rows.feeRange')}</td>
                                     <td className="py-4 px-4 text-center text-sm text-zinc-500">5%</td>
                                     <td className="py-4 px-4 text-center text-sm text-zinc-500">3%</td>
                                     <td className="py-4 px-4 text-center text-sm text-zinc-500">63%</td>
@@ -322,7 +322,7 @@ export default async function CreatorsPage() {
                         <div className="bg-zinc-900/30 border border-zinc-800/50 p-8 rounded-3xl flex flex-col">
                             <h3 className="text-lg font-bold text-white mb-2">{t('pricing.creator.name')}</h3>
                             <div className="mb-6">
-                                <span className="text-4xl font-bold text-white">$39</span>
+                                <span className="text-4xl font-bold text-white">$9</span>
                                 <span className="text-zinc-500 text-sm">/{t('pricing.mo')}</span>
                             </div>
                             <ul className="space-y-3 mb-8 flex-1">
@@ -361,7 +361,7 @@ export default async function CreatorsPage() {
                             </Badge>
                             <h3 className="text-lg font-bold text-white mb-2">{t('pricing.pro.name')}</h3>
                             <div className="mb-6">
-                                <span className="text-4xl font-bold text-white">$99</span>
+                                <span className="text-4xl font-bold text-white">$29</span>
                                 <span className="text-zinc-500 text-sm">/{t('pricing.mo')}</span>
                             </div>
                             <ul className="space-y-3 mb-8 flex-1">
@@ -401,7 +401,7 @@ export default async function CreatorsPage() {
                         <div className="bg-zinc-900/30 border border-zinc-800/50 p-8 rounded-3xl flex flex-col">
                             <h3 className="text-lg font-bold text-white mb-2">{t('pricing.business.name')}</h3>
                             <div className="mb-6">
-                                <span className="text-4xl font-bold text-white">$249</span>
+                                <span className="text-4xl font-bold text-white">$79</span>
                                 <span className="text-zinc-500 text-sm">/{t('pricing.mo')}</span>
                             </div>
                             <ul className="space-y-3 mb-8 flex-1">
