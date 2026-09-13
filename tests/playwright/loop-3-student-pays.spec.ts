@@ -128,6 +128,12 @@ async function stripeDelete(request: APIRequestContext, path: string) {
  * Stripe's PaymentElement renders the card inputs inside one of several
  * `__privateStripeFrame` iframes whose titles vary by release, so the frame is
  * found by content: whichever one holds the card-number input.
+ *
+ * This assumes the card form renders directly rather than behind an accordion,
+ * which holds while the test account has only card + Link enabled. Turn on more
+ * payment methods and the PaymentElement switches to an accordion whose inputs
+ * do not exist until Card is clicked — the inputs then never appear and this
+ * polls for the full 90s against a healthy page.
  */
 async function paymentFrame(page: Page): Promise<Frame> {
   const find = async () => {
@@ -135,22 +141,6 @@ async function paymentFrame(page: Page): Promise<Frame> {
       if ((await frame.locator('input[name="number"]').count().catch(() => 0)) > 0) return frame
     }
     return null
-  }
-
-  // With more than one payment method enabled on the platform account, the
-  // PaymentElement renders an ACCORDION — "Card" and "Amazon Pay" as collapsed
-  // rows — and the card inputs do not exist until Card is expanded. The old
-  // test account had card only, so the form was always open and this helper
-  // polled straight for the inputs; it then timed out for 90s against a page
-  // that was perfectly healthy. Open Card first when the accordion is there.
-  if (await find() === null) {
-    for (const frame of page.frames()) {
-      const tab = frame.locator('[data-testid="card-accordion-item-button"], button:has-text("Card")').first()
-      if (await tab.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await tab.click().catch(() => undefined)
-        break
-      }
-    }
   }
 
   await expect.poll(async () => (await find()) !== null, { timeout: 90_000, intervals: [500, 1000] }).toBe(true)
