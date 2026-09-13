@@ -63,8 +63,11 @@ export async function GET(request: NextRequest) {
           // Already set up → where they were headed, else the dashboard
           redirect(intended ?? '/dashboard/student')
         } else if (tenantId === DEFAULT_TENANT_ID) {
-          // Main platform → prompt to create a school
-          redirect('/create-school')
+          // Main platform → where they were headed, else prompt to create a
+          // school. A buyer who signs up on the platform tenant from a product
+          // page would otherwise lose that product here — the same bug this
+          // route fixes on a school subdomain.
+          redirect(intended ?? '/create-school')
         } else {
           // School subdomain → join that school, carrying the destination.
           // Sending a non-member straight to `intended` would drop them on a

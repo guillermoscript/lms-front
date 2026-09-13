@@ -182,7 +182,13 @@ async function acceptInvitation(
   await test.step(`${invitee.email} opens the join link and is sent to log in with the intent kept`, async () => {
     await page.goto(joinUrl, { waitUntil: 'domcontentloaded' })
     await page.waitForURL(/\/auth\/login\?/, { timeout: 60_000 })
-    expect(new URL(page.url()).searchParams.get('next')).toBe('/join-school')
+    // `/join-school` is a guarded route since #728, so the bounce to login now
+    // comes from the proxy, which names the destination `redirectTo`, rather
+    // than from the page itself, which named it `next`. The login form reads
+    // either, and the sign-up link it builds still carries `next` (asserted
+    // below), so what matters here is only that the destination survives.
+    const loginParams = new URL(page.url()).searchParams
+    expect(loginParams.get('next') ?? loginParams.get('redirectTo')).toBe('/join-school')
     const signupLink = page.getByTestId('login-signup-link')
     await expect(signupLink).toBeVisible({ timeout: 30_000 })
     await signupLink.click()
