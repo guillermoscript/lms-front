@@ -4721,6 +4721,11 @@
     "cta": {
       "title": "Ready to transform your learning?",
       "button": "Start Now"
+    },
+    "facts": {
+      "freePlan": "Free plan, no card required",
+      "ownSubdomain": "Your school on its own subdomain",
+      "openSource": "Open source, MIT licensed"
     }
   },
   "coursesCatalog": {
@@ -4780,7 +4785,8 @@
     "placeholder": "Search courses...",
     "allCategories": "All",
     "noResults": "No courses found matching your search.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "categoriesLabel": "Course categories"
   },
   "coursePublicDetails": {
     "socialProof": {

@@ -4721,6 +4721,11 @@
     "cta": {
       "title": "¿Listo para transformar tu aprendizaje?",
       "button": "Comenzar Ahora"
+    },
+    "facts": {
+      "freePlan": "Plan gratuito, sin tarjeta",
+      "ownSubdomain": "Tu escuela en su propio subdominio",
+      "openSource": "Código abierto con licencia MIT"
     }
   },
   "coursesCatalog": {
@@ -4780,7 +4785,8 @@
     "placeholder": "Buscar cursos...",
     "allCategories": "Todos",
     "noResults": "No se encontraron cursos que coincidan con tu búsqueda.",
-    "clearFilters": "Limpiar filtros"
+    "clearFilters": "Limpiar filtros",
+    "categoriesLabel": "Categorías de cursos"
   },
   "coursePublicDetails": {
     "socialProof": {

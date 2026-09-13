@@ -55,15 +55,17 @@ export default async function AboutPage() {
                 {/* Stats Section */}
                 <section className="container mx-auto max-w-6xl px-4 md:px-6 py-12">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Statements the product actually backs, in place of the
+                            invented "10k+ students / 150+ courses / 50+ instructors"
+                            this section used to publish (#724). */}
                         {[
-                            { label: t('stats.students'), value: "10k+", icon: Users, color: "text-blue-400" },
-                            { label: t('stats.courses'), value: "150+", icon: GraduationCap, color: "text-purple-400" },
-                            { label: t('stats.teachers'), value: "50+", icon: Gem, color: "text-emerald-400" },
-                        ].map((stat, i) => (
+                            { label: t('facts.freePlan'), icon: Users, color: "text-blue-400" },
+                            { label: t('facts.ownSubdomain'), icon: GraduationCap, color: "text-purple-400" },
+                            { label: t('facts.openSource'), icon: Gem, color: "text-emerald-400" },
+                        ].map((fact, i) => (
                             <div key={i} className="p-8 bg-zinc-900/30 border border-white/5 rounded-3xl hover:bg-zinc-900/50 transition-colors group">
-                                <stat.icon className={`w-8 h-8 ${stat.color} mb-4 group-hover:scale-110 transition-transform`} />
-                                <div className="text-4xl font-bold mb-1">{stat.value}</div>
-                                <div className="text-zinc-500 font-medium">{stat.label}</div>
+                                <fact.icon className={`w-8 h-8 ${fact.color} mb-4 group-hover:scale-110 transition-transform`} />
+                                <div className="text-lg font-semibold leading-snug">{fact.label}</div>
                             </div>
                         ))}
                     </div>

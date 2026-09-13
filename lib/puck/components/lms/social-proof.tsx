@@ -17,10 +17,15 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
     reviewCount: { type: 'text', label: 'Review Count Text' },
     avatarCount: { type: 'number', label: 'Number of Avatars', min: 1, max: 8 },
   },
+  // No invented counts in the defaults (#724): a school dropping this block on
+  // a brand-new page used to publish "Trusted by 10,000+ students worldwide"
+  // and "Based on 2,000+ reviews" as if they were its own numbers. The real
+  // figures come from the course reviews resolved in `puck.metadata` below;
+  // until there are any, the strip shows only what the school typed itself.
   defaultProps: {
-    text: 'Trusted by 10,000+ students worldwide',
+    text: '',
     rating: 5,
-    reviewCount: 'Based on 2,000+ reviews',
+    reviewCount: '',
     avatarCount: 5,
   },
   render: ({ text, rating, reviewCount, avatarCount, puck }) => {
@@ -71,8 +76,12 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
           </span>
           <span className="sr-only">{displayRating} out of 5 stars</span>
         </div>
-        <p className="font-semibold text-[0.9375rem] text-foreground truncate">{text}</p>
-        <p className="text-[0.8125rem] text-muted-foreground">{displayReviewCount}</p>
+        {text ? (
+          <p className="font-semibold text-[0.9375rem] text-foreground truncate">{text}</p>
+        ) : null}
+        {displayReviewCount ? (
+          <p className="text-[0.8125rem] text-muted-foreground">{displayReviewCount}</p>
+        ) : null}
       </div>
     )
   },
