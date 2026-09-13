@@ -4306,10 +4306,6 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "type": "text",
         "label": "Text"
       },
-      "rating": {
-        "type": "number",
-        "label": "Rating (1-5)"
-      },
       "reviewCount": {
         "type": "text",
         "label": "Review Count Text"
@@ -4321,7 +4317,6 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
     },
     "defaultProps": {
       "text": "",
-      "rating": 5,
       "reviewCount": "",
       "avatarCount": 5
     }

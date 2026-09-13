@@ -4296,10 +4296,6 @@
         "type": "text",
         "label": "Text"
       },
-      "rating": {
-        "type": "number",
-        "label": "Rating (1-5)"
-      },
       "reviewCount": {
         "type": "text",
         "label": "Review Count Text"
@@ -4311,7 +4307,6 @@
     },
     "defaultProps": {
       "text": "",
-      "rating": 5,
       "reviewCount": "",
       "avatarCount": 5
     }
