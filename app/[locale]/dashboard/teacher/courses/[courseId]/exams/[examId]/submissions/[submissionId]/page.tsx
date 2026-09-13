@@ -8,15 +8,18 @@ import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { revalidatePath } from 'next/cache'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { describeExamFeedback } from '@/lib/exams/feedback-codes'
+import { parseExamFeedback } from '@/lib/exams/feedback-codes'
+
+/** The stored value when it is the teacher's own prose, empty when it is a status code. */
+function teacherOwnFeedback(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) return ''
+  return parseExamFeedback(value) ? '' : value
+}
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ courseId: string; examId: string; submissionId: string }> }) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
-  const [t, tFeedback] = await Promise.all([
-    getTranslations('dashboard.teacher'),
-    getTranslations('examResult.feedback'),
-  ])
+  const t = await getTranslations('dashboard.teacher')
   const userId = await getCurrentUserId()
   if (!userId) return notFound()
 
@@ -115,16 +118,14 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     submitted_at: rawSubmission.submission_date,
     ai_score: aiScore,
     final_score: finalScore,
-    // `exam_scores.feedback` / `ai_data.overall_feedback` are AI-origin and,
-    // since #725, hold a status code (e.g. "pending_teacher_review") rather
-    // than prose — decode before it pre-fills the teacher's editable
-    // textarea. `rawSubmission.feedback` is always the teacher's own typed
-    // note (never a code); `describeExamFeedback` passes real prose through
-    // unchanged, so wrapping the whole chain is safe either way.
-    teacher_feedback: describeExamFeedback(
-      examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as any)?.overall_feedback,
-      tFeedback,
-    ) || '',
+    // Only the teacher's own prose pre-fills their editable note. An AI status
+    // code must NOT be decoded into it: the teacher would save the localized
+    // sentence back into `exam_scores.feedback`, where `parseExamFeedback` no
+    // longer recognises it, and a student reading in the other language would
+    // get that sentence verbatim (#725).
+    teacher_feedback: teacherOwnFeedback(
+      examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as any)?.overall_feedback
+    ),
     ai_data: rawSubmission.ai_data,
     ai_model_used: rawSubmission.ai_model_used,
   }

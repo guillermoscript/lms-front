@@ -52,6 +52,7 @@ export default async function ExamResultPage({ params }: PageProps) {
           question_id,
           question_text,
           question_type,
+          correct_answer,
           question_options (
             option_id,
             is_correct,
@@ -177,12 +178,19 @@ export default async function ExamResultPage({ params }: PageProps) {
     const showAiAnalysis = !!aiData && !overallIsStatusCode
 
     // Correct option per question, so a stored `incorrect` code can name it.
+    // A true/false question can define its answer either as a flagged option or
+    // in its own `correct_answer` column; the grader accepts both, so naming the
+    // right answer has to as well, or such a question shows a bare "Incorrect."
     const correctAnswerByQuestionId = (examData.exam_questions || []).reduce(
         (acc: Record<number, string | undefined>, q: {
             question_id: number
+            correct_answer?: string | null
             question_options?: { is_correct?: boolean; option_text?: string }[]
         }) => {
-            acc[q.question_id] = q.question_options?.find((opt) => opt.is_correct)?.option_text
+            acc[q.question_id] =
+                q.question_options?.find((opt) => opt.is_correct)?.option_text
+                ?? q.correct_answer
+                ?? undefined
             return acc
         },
         {} as Record<number, string | undefined>
