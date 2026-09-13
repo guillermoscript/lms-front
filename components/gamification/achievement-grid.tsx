@@ -8,6 +8,7 @@ import { IconLock, IconCheck, IconAward } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 export function AchievementGrid() {
     const { summary } = useGamificationSummary();
@@ -19,6 +20,7 @@ export function AchievementGrid() {
         }
     }, [summary?.features?.achievements]);
     const t = useTranslations('components.gamification');
+    const tPlans = useTranslations('billing.plans');
 
     // Show upgrade prompt if achievements feature is not available
     if (summary && !summary.features?.achievements) {
@@ -27,7 +29,7 @@ export function AchievementGrid() {
                 <div className="mx-auto w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
                     <IconAward size={24} className="text-muted-foreground" />
                 </div>
-                <p className="text-sm font-bold">{t('upgrade.achievementsLocked')}</p>
+                <p className="text-sm font-bold">{t('upgrade.achievementsLocked', { plan: tPlans(FEATURE_REQUIRED_PLAN.achievements) })}</p>
                 <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
             </div>
         );

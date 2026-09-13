@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatDate } from '@/lib/format-date'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,6 +20,7 @@ export default async function CertificatesPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
+  const locale = await getLocale()
   const tenantId = await getCurrentTenantId()
 
   const userId = await getCurrentUserId()
@@ -291,11 +293,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                              {new Date(cert.issued_at).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
+                              {formatDate(cert.issued_at, locale)}
                             </td>
                             <td className="px-4 py-3">
                               <code className="text-[11px] font-mono bg-muted/50 px-2 py-0.5 rounded border">

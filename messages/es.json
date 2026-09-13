@@ -1156,7 +1156,9 @@
         "saveError": "No se pudo guardar el examen. Revisa tu conexión e intenta de nuevo.",
         "removeQuestion": "Eliminar pregunta",
         "removeOption": "Eliminar opción",
-        "dragQuestion": "Arrastrar para reordenar pregunta"
+        "dragQuestion": "Arrastrar para reordenar pregunta",
+        "publishSuccess": "Examen publicado",
+        "draftSaved": "Borrador guardado"
       },
       "versionHistory": {
         "trigger": "Historial",
@@ -1784,7 +1786,9 @@
           "teacherFeedbackLabel": "Feedback del Profesor",
           "teacherFeedbackPlaceholder": "Proporciona comentarios generales sobre el desempeño del estudiante...",
           "finalNotice": "Guardar marcará esta entrega como revisada por el profesor.",
-          "saveReviewButton": "Guardar y Finalizar Revisión"
+          "saveReviewButton": "Guardar y Finalizar Revisión",
+          "saveSuccess": "Revisión guardada",
+          "saveError": "No se pudo guardar la revisión"
         }
       },
       "examSubmissionsReview": {
@@ -4209,7 +4213,13 @@
       "certificateEarnedDescription": "Has completado todos los requisitos y obtenido un certificado para este curso.",
       "certificateBanner": "¡Certificado obtenido para este curso!",
       "view": "Ver",
-      "checkpointsRequired": "Completa {count, plural, one {el checkpoint obligatorio} other {los # checkpoints obligatorios}} de esta lección primero"
+      "checkpointsRequired": "Completa {count, plural, one {el checkpoint obligatorio} other {los # checkpoints obligatorios}} de esta lección primero",
+      "uncompleted": "Lección marcada como no completada",
+      "uncompleteConfirmTitle": "¿Marcar esta lección como no completada?",
+      "uncompleteConfirmDescription": "Esto elimina tu progreso en esta lección y puede afectar el avance del curso y la elegibilidad para el certificado.",
+      "uncompleteCancel": "Cancelar",
+      "uncompleteConfirm": "Marcar como no completada",
+      "uncompleteConfirming": "Actualizando…"
     },
     "checkpoints": {
       "checkpoint": "Checkpoint",
@@ -4414,10 +4424,10 @@
       },
       "upgrade": {
         "upgradeDescription": "Pide al administrador de tu escuela que actualice el plan para desbloquear esta función.",
-        "leaderboardLocked": "Tabla de Clasificación — Actualiza a Básico",
-        "achievementsLocked": "Logros — Actualiza a Básico",
-        "storeLocked": "Tienda de Puntos — Actualiza a Profesional",
-        "leagueLocked": "Liga Semanal — Actualiza a Básico"
+        "leaderboardLocked": "Tabla de Clasificación — Actualiza a {plan}",
+        "achievementsLocked": "Logros — Actualiza a {plan}",
+        "storeLocked": "Tienda de Puntos — Actualiza a {plan}",
+        "leagueLocked": "Liga Semanal — Actualiza a {plan}"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — ¡Lección completada!",

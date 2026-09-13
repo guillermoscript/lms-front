@@ -1156,7 +1156,9 @@
         "saveError": "Couldn't save the exam. Check your connection and try again.",
         "removeQuestion": "Remove question",
         "removeOption": "Remove option",
-        "dragQuestion": "Drag to reorder question"
+        "dragQuestion": "Drag to reorder question",
+        "publishSuccess": "Exam published",
+        "draftSaved": "Draft saved"
       },
       "versionHistory": {
         "trigger": "History",
@@ -1784,7 +1786,9 @@
           "teacherFeedbackLabel": "Teacher Feedback",
           "teacherFeedbackPlaceholder": "Provide overall feedback on the student's performance...",
           "finalNotice": "Saving will mark this submission as teacher-reviewed.",
-          "saveReviewButton": "Save & Finalize Review"
+          "saveReviewButton": "Save & Finalize Review",
+          "saveSuccess": "Review saved",
+          "saveError": "Failed to save the review"
         }
       },
       "examSubmissionsReview": {
@@ -4357,7 +4361,13 @@
       "certificateEarnedDescription": "You have completed all requirements and earned a certificate for this course.",
       "certificateBanner": "Certificate earned for this course!",
       "view": "View",
-      "checkpointsRequired": "Complete {count, plural, one {the required checkpoint} other {# required checkpoints}} in this lesson first"
+      "checkpointsRequired": "Complete {count, plural, one {the required checkpoint} other {# required checkpoints}} in this lesson first",
+      "uncompleted": "Lesson marked as incomplete",
+      "uncompleteConfirmTitle": "Mark this lesson as incomplete?",
+      "uncompleteConfirmDescription": "This removes your completion for this lesson and may affect your course progress and certificate eligibility.",
+      "uncompleteCancel": "Cancel",
+      "uncompleteConfirm": "Mark as incomplete",
+      "uncompleteConfirming": "Updating…"
     },
     "checkpoints": {
       "checkpoint": "Checkpoint",
@@ -4562,10 +4572,10 @@
       },
       "upgrade": {
         "upgradeDescription": "Ask your school admin to upgrade the plan to unlock this feature.",
-        "leaderboardLocked": "Leaderboard — Upgrade to Basic",
-        "achievementsLocked": "Achievements — Upgrade to Basic",
-        "storeLocked": "Point Store — Upgrade to Professional",
-        "leagueLocked": "Weekly League — Upgrade to Basic"
+        "leaderboardLocked": "Leaderboard — Upgrade to {plan}",
+        "achievementsLocked": "Achievements — Upgrade to {plan}",
+        "storeLocked": "Point Store — Upgrade to {plan}",
+        "leagueLocked": "Weekly League — Upgrade to {plan}"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — Lesson completed!",

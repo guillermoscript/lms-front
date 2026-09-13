@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatDate } from '@/lib/format-date'
 import {
   Card,
   CardContent,
@@ -45,6 +46,7 @@ export function ExamSubmissionsReview({
   examTitle,
 }: ExamSubmissionsReviewProps) {
   const t = useTranslations('dashboard.teacher.examSubmissionsReview')
+  const locale = useLocale()
   const [activeTab, setActiveTab] = useState('all')
 
   const stats = {
@@ -209,7 +211,7 @@ export function ExamSubmissionsReview({
                             : '—'}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {new Date(submission.submitted_at).toLocaleDateString()}
+                          {formatDate(submission.submitted_at, locale)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Link href={`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions/${submission.id}`}>

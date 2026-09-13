@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IconTrophy, IconMedal, IconTrendingUp, IconLock } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 export function MiniLeaderboard() {
     const { summary } = useGamificationSummary();
@@ -19,6 +20,7 @@ export function MiniLeaderboard() {
         }
     }, [summary?.features?.leaderboard]);
     const t = useTranslations('components.gamification');
+    const tPlans = useTranslations('billing.plans');
 
     // Show upgrade prompt if leaderboard feature is not available
     if (summary && !summary.features?.leaderboard) {
@@ -38,7 +40,7 @@ export function MiniLeaderboard() {
                         <IconTrophy size={24} className="text-muted-foreground" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold">{t('upgrade.leaderboardLocked')}</p>
+                        <p className="text-sm font-bold">{t('upgrade.leaderboardLocked', { plan: tPlans(FEATURE_REQUIRED_PLAN.leaderboard) })}</p>
                         <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
                     </div>
                 </div>

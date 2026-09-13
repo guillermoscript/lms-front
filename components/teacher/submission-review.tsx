@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import {
   Card,
   CardContent,
@@ -102,16 +103,24 @@ export function SubmissionReview({
       if (updatedSub) setSubmission(updatedSub)
       setEditingQuestionId(null)
 
+      // Fire before `onSave`: the page's server action redirects to the
+      // submissions list, and the toaster in the root layout survives that
+      // soft navigation, so the teacher sees the confirmation there (#729).
+      toast.success(t('finalReview.saveSuccess'))
+
       // invoke optional callback for parent pages
       if (typeof onSave === 'function') {
         try {
           await onSave(overrides)
         } catch (e) {
-          // ignore
+          // The review itself is already persisted above; the callback only
+          // recomputes the score and navigates, so log rather than alarm.
+          console.error('Error in onSave callback:', e)
         }
       }
     } catch (err) {
       console.error('Error saving review:', err)
+      toast.error(t('finalReview.saveError'))
     } finally {
       setLoading(false)
     }
