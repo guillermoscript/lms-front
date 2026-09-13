@@ -1,7 +1,8 @@
 'use client'
-import { PLAN_FEATURE_LABELS } from '@/lib/plans/features'
+import { PLAN_FEATURE_KEYS, PLAN_FEATURE_LABELS } from '@/lib/plans/features'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { IconCheck, IconX, IconArrowRight, IconSchool, IconSparkles } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -22,9 +23,7 @@ interface PlanData {
 // One list for every comparison surface (#662) — the pricing page must not
 // promise a feature the server does not gate, and `api_access` is no longer a
 // plan feature (the MCP server is open on every plan).
-const FEATURE_CONFIG: { key: string; label: string; icon?: string }[] = Object.entries(
-  PLAN_FEATURE_LABELS
-).map(([key, label]) => ({ key, label }))
+const FEATURE_KEYS = PLAN_FEATURE_KEYS
 
 const PLAN_ACCENTS: Record<string, { gradient: string; glow: string; badge: string; ring: string }> = {
   free: {
@@ -59,15 +58,29 @@ const PLAN_ACCENTS: Record<string, { gradient: string; glow: string; badge: stri
   },
 }
 
-function formatLimit(value: number) {
-  if (value === -1) return 'Unlimited'
-  if (value >= 1000) return `${(value / 1000).toFixed(0)}k`
-  return value.toString()
-}
-
 export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
   const [yearly, setYearly] = useState(false)
+  const t = useTranslations('platformPricing')
+  const tFeatures = useTranslations('featureGate.features')
   const proIndex = plans.findIndex((p) => p.slug === 'pro')
+
+  const formatLimit = (value: number) => {
+    if (value === -1) return t('card.unlimited')
+    if (value >= 1000) return `${(value / 1000).toFixed(0)}k`
+    return value.toString()
+  }
+
+  const featureLabel = (key: string) => (tFeatures.has(key) ? tFeatures(key) : PLAN_FEATURE_LABELS[key] ?? key)
+
+  const planName = (plan: PlanData) => {
+    const key = `plans.${plan.slug}.name`
+    return t.has(key) ? t(key) : plan.name
+  }
+
+  const planDescription = (plan: PlanData) => {
+    const key = `plans.${plan.slug}.description`
+    return t.has(key) ? t(key) : plan.description
+  }
 
   return (
     <div className="relative">
@@ -85,20 +98,19 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
         <div className="relative max-w-4xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-zinc-400 mb-8 backdrop-blur-sm">
             <IconSparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span>Transparent pricing for every stage</span>
+            <span>{t('hero.badge')}</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-[0.95] mb-6">
-            Launch your school.
+            {t('hero.titleLead')}
             <br />
             <span className="bg-gradient-to-r from-blue-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
-              Scale without limits.
+              {t('hero.titleHighlight')}
             </span>
           </h1>
 
           <p className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed mb-12">
-            Start free, upgrade when you're ready. No hidden fees, no surprises.
-            Every plan includes the core LMS &mdash; just unlock more as you grow.
+            {t('hero.subtitle')}
           </p>
 
           {/* Billing Toggle */}
@@ -112,7 +124,7 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                   : 'text-zinc-500 hover:text-zinc-300'
               )}
             >
-              Monthly
+              {t('toggle.monthly')}
             </button>
             <button
               onClick={() => setYearly(true)}
@@ -123,14 +135,14 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                   : 'text-zinc-500 hover:text-zinc-300'
               )}
             >
-              Yearly
+              {t('toggle.yearly')}
               <span className={cn(
                 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full transition-colors',
                 yearly
                   ? 'bg-emerald-600 text-white'
                   : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
               )}>
-                Save 17%
+                {t('toggle.save')}
               </span>
             </button>
           </div>
@@ -176,7 +188,7 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                   {isPopular && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
                       <div className="bg-gradient-to-r from-blue-600 to-violet-600 text-white text-[10px] font-black px-5 py-1.5 rounded-full uppercase tracking-[0.15em] shadow-xl shadow-blue-600/25">
-                        Most Popular
+                        {t('card.mostPopular')}
                       </div>
                     </div>
                   )}
@@ -190,10 +202,10 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                           'w-2.5 h-2.5 rounded-full bg-gradient-to-br',
                           accent.gradient
                         )} />
-                        <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                        <h3 className="text-lg font-bold text-white">{planName(plan)}</h3>
                       </div>
                       <p className="text-sm text-zinc-500 leading-relaxed pl-[22px]">
-                        {plan.description}
+                        {planDescription(plan)}
                       </p>
                     </div>
 
@@ -204,17 +216,17 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                           ${monthlyEquiv}
                         </span>
                         {plan.slug !== 'free' && (
-                          <span className="text-zinc-500 font-medium">/mo</span>
+                          <span className="text-zinc-500 font-medium">{t('card.perMonth')}</span>
                         )}
                       </div>
                       {yearly && plan.slug !== 'free' && (
                         <p className="text-xs text-zinc-600 mt-1.5 font-medium">
-                          ${price} billed annually
+                          {t('card.billedAnnually', { price: `$${price}` })}
                         </p>
                       )}
                       {plan.slug === 'free' && (
                         <p className="text-xs text-zinc-600 mt-1.5 font-medium">
-                          Free forever
+                          {t('card.freeForever')}
                         </p>
                       )}
                     </div>
@@ -238,7 +250,7 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                               : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
                         )}
                       >
-                        {plan.slug === 'free' ? 'Start Free' : plan.slug === 'enterprise' ? 'Contact Sales' : 'Get Started'}
+                        {plan.slug === 'free' ? t('card.startFree') : plan.slug === 'enterprise' ? t('card.contactSales') : t('card.getStarted')}
                         <IconArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
@@ -250,21 +262,21 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                     <div className="grid grid-cols-3 gap-3 mb-6">
                       <div className="text-center p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/50">
                         <div className="text-base font-black text-white">{formatLimit(plan.limits.max_courses)}</div>
-                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">Courses</div>
+                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">{t('card.courses')}</div>
                       </div>
                       <div className="text-center p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/50">
                         <div className="text-base font-black text-white">{formatLimit(plan.limits.max_students)}</div>
-                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">Students</div>
+                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">{t('card.students')}</div>
                       </div>
                       <div className="text-center p-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/50">
                         <div className="text-base font-black text-white">{plan.transaction_fee_percent}%</div>
-                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">Tx Fee</div>
+                        <div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">{t('card.txFee')}</div>
                       </div>
                     </div>
 
                     {/* Features */}
                     <div className="space-y-2.5 flex-1">
-                      {FEATURE_CONFIG.map(({ key, label }) => {
+                      {FEATURE_KEYS.map((key) => {
                         const value = plan.features[key]
                         const has = value === true || (typeof value === 'string' && value !== 'false')
                         return (
@@ -285,7 +297,7 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                               'text-sm',
                               has ? 'text-zinc-300' : 'text-zinc-600',
                             )}>
-                              {label}
+                              {featureLabel(key)}
                               {typeof value === 'string' && value !== 'true' && value !== 'false' && (
                                 <span className="ml-1 text-xs text-zinc-500">({value})</span>
                               )}
@@ -305,25 +317,25 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
       {/* === COMPARISON TABLE (desktop) === */}
       <section className="relative px-6 pb-32 max-w-6xl mx-auto hidden lg:block">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-black text-white mb-3">Compare all features</h2>
-          <p className="text-zinc-500">See exactly what you get with each plan.</p>
+          <h2 className="text-3xl font-black text-white mb-3">{t('compare.title')}</h2>
+          <p className="text-zinc-500">{t('compare.subtitle')}</p>
         </div>
 
         <div className="rounded-2xl border border-zinc-800/80 overflow-hidden bg-zinc-950/40 backdrop-blur-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-800/80">
-                <th className="text-left py-4 px-6 text-zinc-500 font-medium w-[200px]">Feature</th>
+                <th className="text-left py-4 px-6 text-zinc-500 font-medium w-[200px]">{t('compare.feature')}</th>
                 {plans.map((plan) => {
                   const accent = PLAN_ACCENTS[plan.slug] || PLAN_ACCENTS.free
                   return (
                     <th key={plan.plan_id} className="py-4 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <div className={cn('w-2 h-2 rounded-full bg-gradient-to-br', accent.gradient)} />
-                        <span className="font-bold text-white">{plan.name}</span>
+                        <span className="font-bold text-white">{planName(plan)}</span>
                       </div>
                       <div className="text-zinc-500 font-normal mt-0.5">
-                        ${yearly ? Math.round(plan.price_yearly / 12) : plan.price_monthly}/mo
+                        {t('compare.pricePerMonth', { price: `$${yearly ? Math.round(plan.price_yearly / 12) : plan.price_monthly}` })}
                       </div>
                     </th>
                   )
@@ -333,9 +345,9 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
             <tbody>
               {/* Limits rows */}
               {[
-                { label: 'Courses', key: 'max_courses' as const },
-                { label: 'Students', key: 'max_students' as const },
-                { label: 'Transaction fee', key: 'fee' as const },
+                { label: t('compare.courses'), key: 'max_courses' as const },
+                { label: t('compare.students'), key: 'max_students' as const },
+                { label: t('compare.transactionFee'), key: 'fee' as const },
               ].map((row) => (
                 <tr key={row.key} className="border-b border-zinc-800/40 hover:bg-zinc-900/30 transition-colors">
                   <td className="py-3 px-6 text-zinc-400">{row.label}</td>
@@ -350,9 +362,9 @@ export function PlatformPricingDisplay({ plans }: { plans: PlanData[] }) {
                 </tr>
               ))}
               {/* Feature rows */}
-              {FEATURE_CONFIG.map(({ key, label }) => (
+              {FEATURE_KEYS.map((key) => (
                 <tr key={key} className="border-b border-zinc-800/40 last:border-0 hover:bg-zinc-900/30 transition-colors">
-                  <td className="py-3 px-6 text-zinc-400">{label}</td>
+                  <td className="py-3 px-6 text-zinc-400">{featureLabel(key)}</td>
                   {plans.map((plan) => {
                     const value = plan.features[key]
                     const has = value === true || (typeof value === 'string' && value !== 'false')

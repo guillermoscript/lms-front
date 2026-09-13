@@ -3946,9 +3946,9 @@
     "ctaHero": "Start Creating for Free",
     "ctaSecondary": "See How It Works",
     "socialProof": {
-      "creators": "500+ Course Creators",
-      "students": "50,000+ Students Enrolled",
-      "revenue": "$2M+ Creator Revenue"
+      "creators": "Open source under the MIT license",
+      "students": "Free plan, no credit card required",
+      "revenue": "Bank transfer, PayPal and crypto payments for LATAM"
     },
     "differentiators": {
       "title": "Why Creators Choose LMS V2",
@@ -3983,8 +3983,8 @@
         "description": "Interactive coding challenges with an AI assistant that guides students through problem-solving."
       },
       "payments": {
-        "title": "Stripe Payments",
-        "description": "Sell courses individually or via subscription plans. Accept credit cards with zero platform transaction fees."
+        "title": "Stripe payments and more",
+        "description": "Sell courses individually or via subscription plans. Accept cards, bank transfers, PayPal and crypto."
       },
       "dashboard": {
         "title": "Student Dashboard",
@@ -4005,7 +4005,8 @@
         "openSource": "Open Source",
         "transactionFee": "Transaction Fee",
         "startingPrice": "Starting Price",
-        "free": "Free"
+        "free": "Free",
+        "feeRange": "0–10% by plan"
       },
       "footnote": "* Udemy is free to publish but takes up to 63% revenue share on organic sales."
     },
@@ -4019,41 +4020,41 @@
       "popular": "Most Popular",
       "free": {
         "name": "Free",
-        "f1": "1 published course",
+        "f1": "Up to 5 courses",
         "f2": "Up to 50 students",
-        "f3": "Basic exam builder",
-        "f4": "Community support"
+        "f3": "Exam builder and certificates",
+        "f4": "Manual payments (10% platform fee)"
       },
       "creator": {
-        "name": "Creator",
-        "f1": "5 published courses",
-        "f2": "Up to 500 students",
-        "f3": "AI auto-grading",
-        "f4": "Gamification system",
-        "f5": "Stripe payments (0% fee)"
+        "name": "Starter",
+        "f1": "Up to 15 courses",
+        "f2": "Up to 200 students",
+        "f3": "Card payments",
+        "f4": "Leaderboard and achievements",
+        "f5": "Community (5% platform fee)"
       },
       "pro": {
         "name": "Pro",
-        "f1": "Unlimited courses",
-        "f2": "Unlimited students",
+        "f1": "Up to 100 courses",
+        "f2": "Up to 1,000 students",
         "f3": "AI auto-grading",
-        "f4": "Full gamification suite",
+        "f4": "Coin store and voice exercises",
         "f5": "Advanced analytics",
-        "f6": "Priority support"
+        "f6": "2% platform fee"
       },
       "business": {
         "name": "Business",
-        "f1": "Everything in Pro",
-        "f2": "Custom branding",
-        "f3": "API access",
-        "f4": "Dedicated account manager",
-        "f5": "SSO / SAML",
-        "f6": "SLA & uptime guarantee"
+        "f1": "Unlimited courses",
+        "f2": "Up to 5,000 students",
+        "f3": "Custom branding and domain",
+        "f4": "Priority support",
+        "f5": "Everything in Pro",
+        "f6": "0% platform fee"
       }
     },
     "cta": {
       "title": "Start Building Your Course Today",
-      "subtitle": "Join hundreds of creators who are already earning revenue on LMS V2. Your first course is free.",
+      "subtitle": "Your first course is free. Publish it today and get paid the way your students actually pay.",
       "button": "Create Your Free Account"
     }
   },
@@ -4767,6 +4768,12 @@
         "intermediate": "Intermediate",
         "advanced": "Advanced"
       }
+    },
+    "categories": {
+      "programming": "Programming",
+      "design": "Design",
+      "business": "Business",
+      "dataScience": "Data Science"
     }
   },
   "courseSearch": {
@@ -5213,6 +5220,65 @@
       "description": "Create your school for free and upgrade whenever you need more.",
       "createSchool": "Create Your School",
       "signIn": "Sign In"
+    },
+    "hero": {
+      "badge": "Transparent pricing for every stage",
+      "titleLead": "Launch your school.",
+      "titleHighlight": "Scale without limits.",
+      "subtitle": "Start free, upgrade when you're ready. No hidden fees, no surprises. Every plan includes the core LMS — just unlock more as you grow."
+    },
+    "toggle": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "save": "Save 17%"
+    },
+    "card": {
+      "mostPopular": "Most popular",
+      "perMonth": "/mo",
+      "billedAnnually": "{price} billed annually",
+      "freeForever": "Free forever",
+      "startFree": "Start free",
+      "getStarted": "Get started",
+      "contactSales": "Contact sales",
+      "courses": "Courses",
+      "students": "Students",
+      "txFee": "Tx fee",
+      "unlimited": "Unlimited"
+    },
+    "compare": {
+      "title": "Compare all features",
+      "subtitle": "See exactly what you get with each plan.",
+      "feature": "Feature",
+      "courses": "Courses",
+      "students": "Students",
+      "transactionFee": "Transaction fee",
+      "pricePerMonth": "{price}/mo"
+    },
+    "bottomCta": {
+      "title": "Ready to build your school?",
+      "subtitle": "Create your school in minutes and start teaching today. Free to start, upgrade whenever you need more."
+    },
+    "plans": {
+      "free": {
+        "name": "Free",
+        "description": "Get started with basic features"
+      },
+      "starter": {
+        "name": "Starter",
+        "description": "For growing schools that need more capacity"
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "AI grading, a coin store and advanced analytics for serious creators"
+      },
+      "business": {
+        "name": "Business",
+        "description": "Full platform with custom branding and priority support"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "description": "White-label, dedicated support and custom terms"
+      }
     }
   },
   "featureGate": {
@@ -6138,7 +6204,9 @@
       "noCoursesFound": "No courses found.",
       "statStudents": "Students",
       "statCourses": "Courses",
-      "statCompletions": "Completions"
+      "statCompletions": "Completions",
+      "socialProofReviews": "Based on {count, plural, one {# review} other {# reviews}}",
+      "socialProofRating": "{rating} out of 5 stars"
     }
   },
   "verification": {
@@ -6449,5 +6517,268 @@
     "errorSlugTaken": "This school URL is already taken. Please choose a different one.",
     "errorCreateFailed": "Failed to create school: {message}",
     "errorGeneric": "Something went wrong"
+  },
+  "home": {
+    "hero": {
+      "badge": "White-label LMS platform",
+      "titleLead": "Launch your online academy in",
+      "titleHighlight": "minutes",
+      "subtitle": "The complete platform to create, sell, and scale your online courses. AI grading, gamification, payments that work in Latin America, and one isolated school per subdomain — all out of the box.",
+      "ctaPrimary": "Start your school free",
+      "ctaSecondary": "Browse courses",
+      "trust": {
+        "noCard": "No credit card required",
+        "freePlan": "Free plan available",
+        "subdomain": "Your own subdomain",
+        "openSource": "Open source (MIT)"
+      }
+    },
+    "audience": {
+      "badge": "One platform, two experiences",
+      "title": "Built for schools and students",
+      "schools": {
+        "title": "Course creators & schools",
+        "description": "Launch your branded online academy in minutes. Create courses, set pricing, accept payments, and follow your students' progress — all from one dashboard.",
+        "items": {
+          "subdomain": "Your own subdomain (yourschool.platform.com)",
+          "branding": "Custom branding, logo & colors",
+          "payments": "Stripe Connect, PayPal, bank transfer or crypto — payments go to you",
+          "ai": "AI-powered exam grading & exercises",
+          "analytics": "Student analytics & progress tracking"
+        },
+        "cta": "Create your school"
+      },
+      "learners": {
+        "title": "Learners",
+        "description": "Learn at your pace with structured courses, video lessons, and AI-guided exercises. Earn XP, climb the leaderboard, and prove your skills with verifiable certificates.",
+        "items": {
+          "progress": "Progress tracking across all enrolled courses",
+          "tutor": "AI tutor helps you through exercises in real time",
+          "gamification": "Gamification: XP, levels, streaks & achievements",
+          "certificates": "Downloadable certificates verified via QR code",
+          "mdx": "Rich lessons with code blocks & interactive demos"
+        },
+        "cta": "Browse courses"
+      }
+    },
+    "ai": {
+      "badge": "AI-powered teaching",
+      "title": "Let AI do the heavy lifting",
+      "subtitle": "Stop spending hours grading. The AI grades exams, gives personalized feedback, and tutors students in real time.",
+      "grading": {
+        "title": "AI exam grading",
+        "description": "Open-ended answers graded automatically with per-question feedback and an overall score. Teachers review, not grade.",
+        "note": "Every grade can be overridden by the teacher"
+      },
+      "tutor": {
+        "title": "Interactive AI tutor",
+        "description": "Students get a personalized AI guide during exercises — hints, explanations, and encouragement without giving away answers.",
+        "note": "Hints, never the solution"
+      },
+      "templates": {
+        "title": "Prompt templates",
+        "description": "Teachers define exactly how the AI should grade — rubrics, tone, strictness. Full control over feedback quality.",
+        "note": "Reusable across all courses"
+      }
+    },
+    "gamification": {
+      "badge": "Duolingo-style engagement",
+      "title": "Students who play, students who stay",
+      "subtitle": "A full gamification engine built in from day one. No plugins, no integrations — just engaged students who keep coming back.",
+      "perks": {
+        "xp": {
+          "title": "XP system",
+          "description": "Earn XP for lessons, exams, exercises, comments & reviews"
+        },
+        "levels": {
+          "title": "Levels",
+          "description": "Progressive level-up milestones that reward consistent learners"
+        },
+        "streaks": {
+          "title": "Daily streaks",
+          "description": "Streak bonuses encourage daily habits"
+        },
+        "achievements": {
+          "title": "Achievements",
+          "description": "Unlock badges for learning milestones, social engagement & streaks"
+        },
+        "coins": {
+          "title": "Coin store",
+          "description": "Spend earned coins on profile customizations and bonus content"
+        },
+        "leaderboard": {
+          "title": "Leaderboard",
+          "description": "Weekly rankings motivate healthy competition between students"
+        }
+      },
+      "preview": {
+        "title": "Your progress",
+        "level": "Level {level}",
+        "xpProgress": "XP progress",
+        "xpValue": "{current} / {total} XP",
+        "streak": "Streak",
+        "streakValue": "{count} days",
+        "coins": "Coins",
+        "rank": "Rank",
+        "recent": "Recent achievements",
+        "badges": {
+          "firstExam": "First exam",
+          "streak7": "7-day streak",
+          "lessons10": "10 lessons",
+          "firstComment": "First comment"
+        },
+        "leaders": "This week's leaders",
+        "you": "You",
+        "xp": "{count} XP"
+      }
+    },
+    "features": {
+      "badge": "Everything included",
+      "title": "Every feature you need, nothing you don't",
+      "subtitle": "No plugins. No paid add-ons. No nickel-and-diming. Everything ships in the box.",
+      "items": {
+        "mdx": {
+          "title": "Rich MDX editor",
+          "description": "Block-based content editor with video, code highlights, images, embeds, and interactive components."
+        },
+        "exams": {
+          "title": "Exam builder",
+          "description": "Multiple choice, open-ended, and true/false questions. Build timed or untimed exams with configurable scoring."
+        },
+        "video": {
+          "title": "Video lessons",
+          "description": "Embed YouTube or any video URL inside lessons. Students watch and read in the same view."
+        },
+        "exercises": {
+          "title": "AI exercises",
+          "description": "Interactive coding and concept exercises guided by an AI tutor. Configurable prompts per exercise."
+        },
+        "payments": {
+          "title": "Payments that work in LATAM",
+          "description": "Sell courses individually or via subscription plans. Stripe, PayPal, bank transfer, Binance Pay or Solana — you choose the rails."
+        },
+        "plans": {
+          "title": "Subscription plans",
+          "description": "Create free, paid, and tiered plans. Bundle courses per plan with automatic access control."
+        },
+        "certificates": {
+          "title": "Certificates",
+          "description": "Auto-issue signed PDF certificates on course completion. QR-code verification on a public URL."
+        },
+        "multiTenant": {
+          "title": "Multi-tenant",
+          "description": "Every school gets its own subdomain, branding, students, and data — fully isolated at the database level."
+        },
+        "rls": {
+          "title": "Row-level security",
+          "description": "All data scoped by tenant via Postgres RLS. No cross-tenant data leakage possible by design."
+        },
+        "notifications": {
+          "title": "Notifications",
+          "description": "Platform notifications with read/unread states, templated emails, and real-time updates."
+        },
+        "analytics": {
+          "title": "Admin analytics",
+          "description": "Revenue, enrollment, and engagement dashboards for school admins. Platform-wide metrics for super admins."
+        },
+        "i18n": {
+          "title": "English & Spanish",
+          "description": "Full internationalization. Every UI string translated. Locale switching in the navbar."
+        }
+      }
+    },
+    "howItWorks": {
+      "badge": "How it works",
+      "title": "From idea to live school in 3 steps",
+      "steps": {
+        "create": {
+          "title": "Create your school",
+          "description": "Sign up, pick a name, get your own subdomain. Takes 30 seconds."
+        },
+        "build": {
+          "title": "Build your courses",
+          "description": "Use the block editor to add lessons, exams, and exercises. Publish when ready."
+        },
+        "enroll": {
+          "title": "Students enroll & learn",
+          "description": "Share your link, accept payments, and watch your students progress."
+        }
+      }
+    },
+    "multiTenant": {
+      "badge": "True multi-tenancy",
+      "title": "Every school is a completely separate world",
+      "description": "Database-level isolation means School A can never see School B's students, courses, or transactions — even if they share the same platform. RLS policies enforce this at the query level, not the application layer.",
+      "items": {
+        "subdomain": "Dedicated subdomain: yourschool.platform.com",
+        "branding": "Independent branding — logo, colors, site name",
+        "students": "Isolated student base — no cross-school visibility",
+        "payments": "Separate payment accounts per school",
+        "roles": "Role-based access: admin, teacher, student per school"
+      },
+      "cards": {
+        "a": {
+          "name": "Code Academy",
+          "plan": "Pro"
+        },
+        "b": {
+          "name": "Design School",
+          "plan": "Starter"
+        },
+        "c": {
+          "name": "Data Labs",
+          "plan": "Business"
+        },
+        "d": {
+          "name": "DevBoot",
+          "plan": "Free"
+        },
+        "students": "{count} students",
+        "courses": "{count} courses"
+      }
+    },
+    "pricing": {
+      "title": "Start free. Grow without limits.",
+      "subtitle": "The free plan has no monthly fee. Upgrade when you're ready to scale.",
+      "plans": {
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "f1": "5 courses",
+          "f2": "50 students",
+          "f3": "Manual payments"
+        },
+        "starter": {
+          "name": "Starter",
+          "price": "$9/mo",
+          "f1": "15 courses",
+          "f2": "200 students",
+          "f3": "Card payments"
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "$29/mo",
+          "f1": "100 courses",
+          "f2": "1,000 students",
+          "f3": "2% transaction fee",
+          "f4": "All AI features"
+        },
+        "business": {
+          "name": "Business",
+          "price": "$79/mo",
+          "f1": "Unlimited courses",
+          "f2": "5,000 students",
+          "f3": "0% transaction fee",
+          "f4": "Priority support"
+        }
+      },
+      "seeAll": "See full pricing details"
+    },
+    "cta": {
+      "title": "Your academy is one click away",
+      "subtitle": "Create your own branded school today. Free to start, no credit card required.",
+      "primary": "Create your free school",
+      "secondary": "Learn more"
+    }
   }
 }
