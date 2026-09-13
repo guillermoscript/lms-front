@@ -122,9 +122,30 @@ jobs:
       # A Solana checkout renders a QR for this wallet and never settles.
       BINANCE_PAY_API_KEY: ci_binance_key_synthetic
       BINANCE_PAY_API_SECRET: ci_binance_secret_synthetic
+      # binance-personal-settlement.spec.ts hosts a stub of Binance's
+      # GET /sapi/v1/pay/transactions inside the Playwright process and points the
+      # APP at it with this override (lib/payments/binance-personal-provider.ts
+      # reads it per call). Playwright merges this job env into the `next start`
+      # it launches, so setting it HERE is what reaches the server. Drop the line
+      # and the spec skips "not set", which check-e2e-skips.mjs turns into a job
+      # failure — the alarm we want. Server-runtime only (not a NEXT_PUBLIC_*), so
+      # the Build step neither inlines it nor needs a Dockerfile ARG, and it must
+      # never be set on a deployed environment.
+      BINANCE_PAY_API_BASE: http://127.0.0.1:3099
       SOLANA_RPC_URL: https://api.devnet.solana.com
       SOLANA_PLATFORM_WALLET: EqK4KJFiUoV53TrCt2kXHn8Ryg6fcSTuwaa9nNppqc2A
       SOLANA_USDC_MINT: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+      # Lemon Squeezy verifies a webhook with nothing but an HMAC-SHA256 of
+      # the raw body against LEMONSQUEEZY_WEBHOOK_SECRET
+      # (lib/payments/lemonsqueezy-provider.ts). The API key and store id are
+      # never touched by verification — they exist only because
+      # getPaymentProvider() refuses to construct the adapter without all
+      # three, which is what would turn a signed LS webhook into a 503 on a
+      # runner. The secret is OURS, not Lemon Squeezy’s, so
+      # lemonsqueezy-webhook-settlement.spec.ts signs with this same value.
+      LEMONSQUEEZY_API_KEY: ci_ls_key_synthetic
+      LEMONSQUEEZY_STORE_ID: "1"
+      LEMONSQUEEZY_WEBHOOK_SECRET: ci_ls_whsec_synthetic
       # Runtime-generated issuer keys / tenant payment credentials are encrypted
       # with these; any constant works for a throwaway database.
       CERTIFICATE_ENCRYPTION_KEY: ci-certificate-key-synthetic
@@ -142,7 +163,7 @@ jobs:
       # needs wildcard-ish hostnames. lvh.me resolves to 127.0.0.1 via public
       # DNS; pin the ones the specs use so a DNS hiccup cannot fail a run.
       - name: Pin lvh.me hostnames
-        run: echo "127.0.0.1 lvh.me default.lvh.me code-academy.lvh.me" | sudo tee -a /etc/hosts
+        run: echo "127.0.0.1 lvh.me default.lvh.me code-academy.lvh.me qa-binance-personal.lvh.me" | sudo tee -a /etc/hosts
 
       - uses: supabase/setup-cli@v1
         with:

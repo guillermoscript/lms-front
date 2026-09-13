@@ -39,7 +39,54 @@ import {
 } from './types'
 import crypto from 'crypto'
 
-const BASE_URL = 'https://api.binance.com'
+const DEFAULT_BASE_URL = 'https://api.binance.com'
+
+/** `http(s)://` on 127.0.0.0/8, ::1 or localhost — nothing else can be a test stub. */
+function isLoopbackOrigin(value: string): boolean {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return false
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+  const host = url.hostname.replace(/^\[|\]$/g, '') // an IPv6 literal arrives bracketed
+  return host === 'localhost' || host === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)
+}
+
+let warnedNonLoopback = false
+
+/**
+ * Binance's API host. Overridable so the settlement E2E can point the server at
+ * a local stub; production never sets it. Read per call, not at module scope,
+ * because the value must follow the server process's env.
+ *
+ * LOOPBACK ONLY, and that is a security boundary, not tidiness: the request this
+ * host receives carries the school's DECRYPTED Binance API key in `X-MBX-APIKEY`
+ * plus a valid HMAC over the query. A stray non-loopback value — a copy-pasted
+ * Dokploy env, a leaked `.env.local` on a self-hosted install, a bad Actions
+ * variable — would ship every tenant's credential to it on each verify/reconcile
+ * poll, silently. So anything that is not loopback is ignored (warned once) and
+ * we fall back to Binance. A `NODE_ENV !== 'production'` guard would NOT work
+ * here: CI runs the spec against `next start`, i.e. NODE_ENV=production.
+ *
+ * A trailing slash is trimmed — the callers interpolate `${baseUrl()}/sapi/…`.
+ */
+function baseUrl(): string {
+  const override = process.env.BINANCE_PAY_API_BASE
+  if (!override) return DEFAULT_BASE_URL
+  if (!isLoopbackOrigin(override)) {
+    if (!warnedNonLoopback) {
+      warnedNonLoopback = true
+      console.warn(
+        `[binance-personal] ignoring non-loopback BINANCE_PAY_API_BASE (${override}) — using ${DEFAULT_BASE_URL}. ` +
+          'This override exists only to point the settlement E2E at a local stub; it must never be set on a deployed environment.',
+      )
+    }
+    return DEFAULT_BASE_URL
+  }
+  return override.replace(/\/+$/, '')
+}
 
 /** One incoming Pay transfer, normalized from /sapi/v1/pay/transactions. */
 export interface BinancePayTransfer {
@@ -178,7 +225,7 @@ export class BinancePersonalProvider implements IPaymentProvider {
     const query = params.toString()
     const signature = signSapiQuery(query, this.apiSecret)
 
-    const res = await fetch(`${BASE_URL}/sapi/v1/pay/transactions?${query}&signature=${signature}`, {
+    const res = await fetch(`${baseUrl()}/sapi/v1/pay/transactions?${query}&signature=${signature}`, {
       headers: { 'X-MBX-APIKEY': this.apiKey },
     })
     if (!res.ok) {

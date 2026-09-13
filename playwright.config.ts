@@ -86,6 +86,19 @@ export default defineConfig({
     timeout: 180_000,
     stdout: 'ignore',
     stderr: 'pipe',
+    // binance-personal-settlement.spec.ts hosts a stub of Binance's Pay-history
+    // endpoint inside the Playwright process, but it is the APP that calls
+    // Binance — so the override has to reach the server BEFORE it boots.
+    // Playwright builds the server env as `{...process.env, ...webServer.env}`,
+    // so this line is a pass-through and not a new source: CI sets the value on
+    // the `e2e` job, and `.env.local` is dotenv-loaded into process.env at the
+    // top of this file. Written out anyway so the coupling is greppable here.
+    //
+    // Deliberately NOT defaulted. The spec gates on this same variable, and a
+    // default here would make a REUSED `npm run dev` (reuseExistingServer, which
+    // never receives this env) look configured when it is not. Empty string =
+    // unset: the provider's `||` falls back to api.binance.com.
+    env: { BINANCE_PAY_API_BASE: process.env.BINANCE_PAY_API_BASE ?? '' },
   },
   projects: selectProjects([
     {
