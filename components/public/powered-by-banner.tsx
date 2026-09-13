@@ -19,6 +19,9 @@ export async function PoweredByBanner() {
   const platformUrl = platformDomain.includes('localhost') || platformDomain.includes('lvh.me')
     ? `http://${platformDomain}`
     : `https://${platformDomain}`
+  // The real product name (#730) — same fallback lib/seo.ts uses for the SEO
+  // site name — instead of the hardcoded "LMS V2" version label.
+  const platformName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS Platform'
 
   return (
     <div className="border-t border-border bg-muted/30 py-2.5">
@@ -31,7 +34,7 @@ export async function PoweredByBanner() {
             rel="noopener noreferrer"
             className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
-            {t('brandName')}
+            {platformName}
           </a>
           {' '}&mdash;{' '}
           <a

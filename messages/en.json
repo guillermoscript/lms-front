@@ -1380,6 +1380,7 @@
         "enterTitleFirst": "Add a title to continue.",
         "writeContent": "Write Content",
         "saveError": "Couldn't save the lesson. Check your connection and try again.",
+        "emptyContentError": "Add some content before publishing this lesson.",
         "modeVisual": "Visual",
         "modeMDX": "MDX",
         "closePreview": "Close preview",
@@ -5673,7 +5674,6 @@
     },
     "poweredBy": {
       "text": "Powered by",
-      "brandName": "LMS V2",
       "createSchool": "Create your own school"
     },
     "footer": {
@@ -5682,14 +5682,8 @@
       "platform": "Platform",
       "courses": "Courses",
       "pricing": "Pricing",
-      "instructors": "Instructors",
       "company": "Company",
-      "aboutUs": "About Us",
-      "careers": "Careers",
-      "contact": "Contact",
-      "legal": "Legal",
-      "privacyPolicy": "Privacy Policy",
-      "termsOfService": "Terms of Service"
+      "aboutUs": "About Us"
     }
   },
   "exercises": {

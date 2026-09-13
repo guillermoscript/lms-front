@@ -22,9 +22,12 @@ interface Props {
 export async function SchoolLandingPage({ tenant, products }: Props) {
   const t = await getTranslations('schoolLanding')
   // Brand colour is `custom_branding` (Business+, #662); below that the public
-  // page uses the platform accent like the rest of the app.
+  // page uses the platform accent (`--primary`, the tenant theming token —
+  // never a hardcoded hue, #730) like the rest of the app. `color-mix()` (used
+  // below wherever this used to be a hex value with an alpha suffix) works
+  // the same whether `accentColor` ends up a real hex or a CSS var.
   const accentColor =
-    ((await hasPlanFeature(tenant.id, 'custom_branding')) ? tenant.primary_color : '') || '#3B82F6'
+    ((await hasPlanFeature(tenant.id, 'custom_branding')) ? tenant.primary_color : '') || 'var(--primary)'
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-hidden">
@@ -32,7 +35,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10" aria-hidden="true">
         <div
           className="absolute top-[-10%] right-[-10%] w-[700px] h-[700px] rounded-full blur-[140px]"
-          style={{ backgroundColor: `${accentColor}14` }}
+          style={{ backgroundColor: `color-mix(in oklch, ${accentColor} 8%, transparent)` }}
         />
         <div className="absolute bottom-[30%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px]" />
       </div>
@@ -117,7 +120,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                   ) : (
                     <div
                       className="aspect-video flex items-center justify-center"
-                      style={{ backgroundColor: `${accentColor}22` }}
+                      style={{ backgroundColor: `color-mix(in oklch, ${accentColor} 13%, transparent)` }}
                     >
                       <GraduationCap className="w-12 h-12" style={{ color: accentColor }} aria-hidden="true" />
                     </div>
@@ -158,7 +161,9 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
         <div className="container mx-auto px-4 md:px-6">
           <div
             className="rounded-[2.5rem] p-12 md:p-16 text-center relative overflow-hidden"
-            style={{ background: `linear-gradient(135deg, ${accentColor}dd, ${accentColor}88)` }}
+            style={{
+              background: `linear-gradient(135deg, color-mix(in oklch, ${accentColor} 87%, transparent), color-mix(in oklch, ${accentColor} 53%, transparent))`,
+            }}
           >
             <div
               className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
