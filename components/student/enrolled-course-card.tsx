@@ -1,6 +1,6 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -18,6 +18,7 @@ import {
 import { calculateCourseProgress, type ExamInfo, type ExamAttempt } from '@/lib/services/course-progress-service'
 import { getAccessBadge, shouldShowRenewCTA, type CourseAccess } from '@/lib/services/enrollment-service'
 import { formatDistanceToNow } from 'date-fns'
+import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
 interface EnrolledCourseCardProps {
@@ -28,6 +29,7 @@ interface EnrolledCourseCardProps {
 
 export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCourseCardProps) {
   const t = useTranslations('components.enrolledCourse')
+  const locale = useLocale()
   const course = enrollment.course as any
 
   if (!course) return null
@@ -73,8 +75,13 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
       return !completions.some((c: any) => c.user_id === userId)
     })
 
+  // date-fns has no request locale of its own: without `es` a Spanish reader
+  // got "Inscrito hace 1 minute ago" (#725). The suffix carries "hace"/"ago".
   const enrolledDate = enrollment.enrollment_date
-    ? formatDistanceToNow(new Date(enrollment.enrollment_date), { addSuffix: true })
+    ? formatDistanceToNow(new Date(enrollment.enrollment_date), {
+        addSuffix: true,
+        ...(locale === 'es' ? { locale: es } : {}),
+      })
     : null
 
   const isCompleted = progress.status === 'completed'
@@ -147,7 +154,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
               )}
             </div>
             <Badge variant={accessBadge.variant as any} className="text-[11px] font-bold shrink-0 uppercase tracking-wider">
-              {accessBadge.text}
+              {t(`accessBadge.${accessBadge.code}`)}
             </Badge>
           </div>
 

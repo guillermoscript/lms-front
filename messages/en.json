@@ -4217,7 +4217,28 @@
       "completed": "Completed",
       "inProgress": "In Progress",
       "notStarted": "Not Started",
-      "expired": "Your subscription has expired. Renew to continue learning."
+      "expired": "Your subscription has expired. Renew to continue learning.",
+      "accessBadge": {
+        "lifetime": "Lifetime Access",
+        "subscription": "Subscription",
+        "expired": "Subscription Expired",
+        "none": "No Access"
+      }
+    },
+    "examTaker": {
+      "progress": "Progress: {answered}/{total}",
+      "timeLeft": "Time Left",
+      "question": "Question {number}",
+      "aiEvaluates": "AI will evaluate your reasoning",
+      "answerPlaceholder": "Share your knowledge here...",
+      "previous": "Previous",
+      "finishSubmit": "Finish & Submit",
+      "nextQuestion": "Next Question",
+      "true": "True",
+      "false": "False",
+      "noQuestionsTitle": "No Questions Found",
+      "noQuestionsDescription": "This exam doesn't have any questions yet. Please check back later.",
+      "returnToAssessments": "Return to Assessments"
     },
     "courseFilters": {
       "searchPlaceholder": "Search your courses...",
@@ -4440,7 +4461,26 @@
       "cancel": "Cancel",
       "success": "Payment request sent! We will contact you shortly with payment instructions.",
       "error": "Failed to send request. Please try again.",
-      "proofLabel": "Payment Proof (optional)"
+      "proofLabel": "Payment Proof (optional)",
+      "requestButton": "Request Payment Information"
+    },
+    "proofUpload": {
+      "defaultLabel": "Payment Proof",
+      "hint": "Upload receipt or screenshot (image or PDF, max 10MB)",
+      "uploading": "Uploading...",
+      "fileTooLarge": "File must be less than 10MB",
+      "invalidFileType": "Only images and PDFs are accepted",
+      "uploadFailed": "Upload failed. Please try again.",
+      "uploaded": "Proof uploaded",
+      "viewProof": "View proof",
+      "previewAlt": "Payment proof preview",
+      "remove": "Remove file"
+    },
+    "modeToggle": {
+      "toggle": "Toggle theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
     },
     "notifications": {
       "title": "Notifications",
@@ -5861,6 +5901,67 @@
         "title": "No exams available",
         "description": "Evaluations for this course will appear here when published."
       }
+    }
+  },
+  "examResult": {
+    "breadcrumb": {
+      "dashboard": "Dashboard",
+      "exams": "Exams",
+      "results": "Results"
+    },
+    "courseFallback": "Course",
+    "completed": "Exam Completed",
+    "completedOn": "Completed on {date}",
+    "finalScore": "Final Score",
+    "notGradedYet": "Not graded yet",
+    "pendingReview": {
+      "title": "Pending Teacher Review",
+      "description": "Your multiple choice and true/false answers have been auto-graded. Free-text answers are awaiting teacher evaluation. Your final score may change after review."
+    },
+    "aiReviewed": {
+      "title": "AI Evaluated",
+      "description": "All answers have been evaluated by AI. Your teacher may still review and adjust scores."
+    },
+    "teacherReviewed": {
+      "title": "Teacher Reviewed",
+      "description": "Your exam has been reviewed and finalized by your teacher."
+    },
+    "certificate": {
+      "title": "Certificate Earned!",
+      "description": "Congratulations! You have completed all requirements for this course and earned a certificate.",
+      "view": "View Certificate"
+    },
+    "aiAnalysis": {
+      "title": "AI Performance Analysis",
+      "fallback": "Your performance has been evaluated. Review the detailed feedback per question below."
+    },
+    "detailedReview": "Detailed Question Review",
+    "question": "Question {number}",
+    "questionType": {
+      "multiple_choice": "multiple choice",
+      "true_false": "true false",
+      "free_text": "free text"
+    },
+    "yourChoice": "Your Choice",
+    "correct": "Correct",
+    "yourSubmission": "Your submission",
+    "noAnswer": "No answer provided.",
+    "points": "{earned}/{possible} pts",
+    "teacherReviewedBadge": "Teacher reviewed",
+    "questionPending": {
+      "title": "Pending Review",
+      "description": "This free-text answer is awaiting evaluation. Your teacher will review it, or it will be evaluated by AI."
+    },
+    "teacherFeedback": "Teacher Feedback",
+    "aiFeedback": "AI Feedback",
+    "viewAllAssessments": "View All Assessments",
+    "continueLearning": "Continue Learning",
+    "feedback": {
+      "graded": "Your exam has been graded.",
+      "pendingTeacherReview": "Pending teacher review.",
+      "correct": "Correct answer!",
+      "incorrect": "Incorrect.",
+      "incorrectWithAnswer": "Incorrect. The correct answer is: {answer}"
     }
   },
   "puck": {

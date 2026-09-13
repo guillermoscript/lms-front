@@ -7,6 +7,30 @@ import { hasPlanFeature, isPlanFeatureError, planFeatureErrorMessage, requirePla
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
+import { getLocale } from 'next-intl/server'
+import { EXAM_FEEDBACK_CODES } from '@/lib/exams/feedback-codes'
+
+/**
+ * Language the model must write feedback in, keyed by request locale. The
+ * student reads the result page in their interface language, so the prose
+ * is generated in it rather than translated afterwards (#725).
+ */
+const FEEDBACK_LANGUAGES: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+}
+
+/**
+ * Best-effort request locale. `getLocale()` throws outside a request scope;
+ * an unknown locale falls back to English.
+ */
+async function requestLocale(): Promise<string> {
+  try {
+    return await getLocale()
+  } catch {
+    return 'en'
+  }
+}
 
 /**
  * AI Persona configurations for exam grading
@@ -146,9 +170,7 @@ export async function gradeExamWithAI(
       if (q.question_type === 'multiple_choice') {
         const correctOption = q.options.find((opt: any) => opt.is_correct)
         isCorrect = studentAnswer === correctOption?.option_id?.toString()
-        feedback = isCorrect
-          ? 'Correct answer!'
-          : `Incorrect. The correct answer is: ${correctOption?.option_text}`
+        feedback = isCorrect ? EXAM_FEEDBACK_CODES.correct : EXAM_FEEDBACK_CODES.incorrect
       } else if (q.question_type === 'true_false') {
         // true/false: student answers with 'true'/'false' string
         // Match against correct_answer field if set, otherwise use question_options
@@ -161,10 +183,7 @@ export async function gradeExamWithAI(
             isCorrect = studentAnswer?.toLowerCase() === correctOption.option_text?.toLowerCase()
           }
         }
-        const correctAnswer = q.correct_answer || q.options.find((opt: any) => opt.is_correct)?.option_text || 'Unknown'
-        feedback = isCorrect
-          ? 'Correct!'
-          : `Incorrect. The correct answer is: ${correctAnswer}`
+        feedback = isCorrect ? EXAM_FEEDBACK_CODES.correct : EXAM_FEEDBACK_CODES.incorrect
       }
 
       const questionPoints = q.points || 10
@@ -196,7 +215,7 @@ export async function gradeExamWithAI(
         p_exam_id: params.examId,
         p_student_id: userId,
         p_answers: params.answers,
-        p_overall_feedback: 'Exam graded successfully.',
+        p_overall_feedback: EXAM_FEEDBACK_CODES.graded,
         p_score: scorePercentage,
         p_question_feedback: autoGradedScores,
         p_ai_model: 'programmatic',
@@ -210,7 +229,7 @@ export async function gradeExamWithAI(
       return {
         success: true,
         score: scorePercentage,
-        overall_feedback: 'Exam graded successfully.',
+        overall_feedback: EXAM_FEEDBACK_CODES.graded,
         question_feedback: autoGradedScores,
       }
     }
@@ -253,7 +272,9 @@ export async function gradeExamWithAI(
       // Score only from auto-graded questions; free-text will be scored by teacher
       const scorePercentage = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0
 
-      // Add placeholder feedback for free-text questions
+      // Park free-text questions behind a status code — the result page and
+      // the teacher's review translate it; prose here would be English for
+      // every reader (#725).
       const pendingFeedback: Record<string, QuestionFeedback> = {}
       freeTextQuestions.forEach((q: any) => {
         pendingFeedback[q.question_id] = {
@@ -262,7 +283,7 @@ export async function gradeExamWithAI(
           is_correct: false,
           points_earned: 0,
           points_possible: q.points || 10,
-          feedback: 'Pending teacher review.',
+          feedback: EXAM_FEEDBACK_CODES.pendingTeacherReview,
           confidence: 0,
         }
       })
@@ -274,7 +295,7 @@ export async function gradeExamWithAI(
         p_exam_id: params.examId,
         p_student_id: userId,
         p_answers: params.answers,
-        p_overall_feedback: 'Multiple choice and true/false questions have been auto-graded. Free-text questions are pending teacher review.',
+        p_overall_feedback: EXAM_FEEDBACK_CODES.pendingTeacherReview,
         p_score: scorePercentage,
         p_question_feedback: allFeedback,
         p_ai_model: 'programmatic',
@@ -299,12 +320,14 @@ export async function gradeExamWithAI(
       return {
         success: true,
         score: scorePercentage,
-        overall_feedback: 'Multiple choice and true/false questions have been auto-graded. Free-text questions are pending teacher review.',
+        overall_feedback: EXAM_FEEDBACK_CODES.pendingTeacherReview,
         question_feedback: allFeedback,
       }
     }
 
     // Build AI grading prompt using config
+    const locale = await requestLocale()
+    const feedbackLanguage = FEEDBACK_LANGUAGES[locale] ?? FEEDBACK_LANGUAGES.en
     const persona = AI_PERSONAS[config.ai_persona as AIPersona] || AI_PERSONAS.professional_educator
     const tone = FEEDBACK_TONES[config.ai_feedback_tone as FeedbackTone] || FEEDBACK_TONES.encouraging
     const detailLevel = DETAIL_LEVELS[config.ai_feedback_detail_level as DetailLevel] || DETAIL_LEVELS.detailed
@@ -381,7 +404,7 @@ IMPORTANT: Use the exact "Question ID" number from each question header above (e
 - Provide specific, actionable feedback explaining why points were awarded or deducted
 - Acknowledge good points even in incomplete answers
 - End "overall_feedback" with 1-2 reflective pointers instead of only listing errors: name where the misses cluster and give the student one concrete self-explanation task to do before retrying (e.g. "your misses cluster on X — before retrying, explain to yourself in one sentence how X differs from Y")
-- Write all feedback in the language the student answered in
+- Write ALL feedback ("feedback" and "overall_feedback") in ${feedbackLanguage}: it is the language of the student's interface, so use it even if the answer was written in another language
 - Use the confidence score to indicate how certain you are about your grading (0.0-1.0)
 - Always return valid JSON
 
@@ -460,7 +483,7 @@ Evaluate these free-text answers now:`
       p_exam_id: params.examId,
       p_student_id: userId,
       p_answers: params.answers,
-      p_overall_feedback: aiEvaluation.overall_feedback || 'Exam graded successfully.',
+      p_overall_feedback: aiEvaluation.overall_feedback || EXAM_FEEDBACK_CODES.graded,
       p_score: scorePercentage,
       p_question_feedback: questionFeedback,
       p_ai_model: 'gpt-4o-mini',

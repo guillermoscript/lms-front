@@ -100,26 +100,30 @@ export function shouldShowRenewCTA(access: CourseAccess): boolean {
   return !access.hasAccess && access.isExpired
 }
 
+/** Access badge shown on the course card; the card translates it (#725). */
+export type AccessBadgeCode = 'lifetime' | 'subscription' | 'expired' | 'none'
+
 /**
- * Get badge configuration for course card display.
+ * Get badge configuration for course card display. Returns a code, never
+ * copy: this service has no locale, the component rendering it does.
  */
 export function getAccessBadge(access: CourseAccess): {
-  text: string
+  code: AccessBadgeCode
   variant: 'default' | 'secondary' | 'destructive' | 'outline'
 } {
   if (access.hasAccess && access.isPerpetual) {
-    return { text: 'Lifetime Access', variant: 'default' }
+    return { code: 'lifetime', variant: 'default' }
   }
 
   if (access.hasAccess && access.accessTypes.includes('subscription')) {
-    return { text: 'Subscription', variant: 'secondary' }
+    return { code: 'subscription', variant: 'secondary' }
   }
 
   if (access.isExpired) {
-    return { text: 'Subscription Expired', variant: 'destructive' }
+    return { code: 'expired', variant: 'destructive' }
   }
 
-  return { text: 'No Access', variant: 'outline' }
+  return { code: 'none', variant: 'outline' }
 }
 
 /**

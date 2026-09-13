@@ -9,6 +9,10 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
+import { getFormatter, getTranslations } from 'next-intl/server'
+import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
+
+type ExamQuestionTypeKey = `questionType.${'multiple_choice' | 'true_false' | 'free_text'}`
 
 interface PageProps {
     params: Promise<{ courseId: string; examId: string }>
@@ -17,6 +21,11 @@ interface PageProps {
 export default async function ExamResultPage({ params }: PageProps) {
     const { courseId, examId } = await params
     const supabase = createAdminClient()
+    const [t, tFeedback, format] = await Promise.all([
+        getTranslations('examResult'),
+        getTranslations('examResult.feedback'),
+        getFormatter(),
+    ])
 
     const userId = await getCurrentUserId()
     if (!userId) redirect('/auth/login')
@@ -150,14 +159,34 @@ export default async function ExamResultPage({ params }: PageProps) {
 
     const firstExam = examData;
     const courseData = firstExam?.courses;
-    const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || "Course";
+    const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || t('courseFallback');
 
     const breadcrumbLinks = [
-        { href: '/dashboard/student', label: 'Dashboard' },
+        { href: '/dashboard/student', label: t('breadcrumb.dashboard') },
         { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
-        { href: `/dashboard/student/courses/${courseId}/exams`, label: 'Exams' },
-        { href: '#', label: 'Results' },
+        { href: `/dashboard/student/courses/${courseId}/exams`, label: t('breadcrumb.exams') },
+        { href: '#', label: t('breadcrumb.results') },
     ]
+
+    // The deterministic grading branches store a status code, not prose
+    // (#725). A code is already conveyed by the review banner above the
+    // card — and after a teacher review "pending" would be stale — so the AI
+    // card only renders what the model actually wrote.
+    const overallFeedback = aiData?.overall_feedback || aiData?.summary
+    const overallIsStatusCode = parseExamFeedback(overallFeedback) !== null
+    const showAiAnalysis = !!aiData && !overallIsStatusCode
+
+    // Correct option per question, so a stored `incorrect` code can name it.
+    const correctAnswerByQuestionId = (examData.exam_questions || []).reduce(
+        (acc: Record<number, string | undefined>, q: {
+            question_id: number
+            question_options?: { is_correct?: boolean; option_text?: string }[]
+        }) => {
+            acc[q.question_id] = q.question_options?.find((opt) => opt.is_correct)?.option_text
+            return acc
+        },
+        {} as Record<number, string | undefined>
+    )
 
     return (
         <div className="container mx-auto py-5 sm:py-8 px-4 space-y-5 sm:space-y-8 animate-in fade-in duration-500">
@@ -172,7 +201,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-8">
                     <div className="space-y-3 sm:space-y-4 text-center md:text-left">
                         <Badge variant="outline" className="text-white border-white/30 bg-white/10 px-3 py-1">
-                            Exam Completed
+                            {t('completed')}
                         </Badge>
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-black">{examData.title}</h1>
                         <p className="text-indigo-100 max-w-lg text-sm sm:text-base">{examData.description}</p>
@@ -182,18 +211,18 @@ export default async function ExamResultPage({ params }: PageProps) {
                                 <div className="p-1.5 sm:p-2 rounded-lg bg-white/10">
                                     <IconClock size={18} />
                                 </div>
-                                <span className="text-xs sm:text-sm font-medium">Completed on {new Date(submission.submission_date).toLocaleDateString()}</span>
+                                <span className="text-xs sm:text-sm font-medium">{t('completedOn', { date: format.dateTime(new Date(submission.submission_date), { dateStyle: 'long' }) })}</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="bg-white dark:bg-slate-900 text-indigo-950 dark:text-white rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
-                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Final Score</span>
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">{t('finalScore')}</span>
                         {/* Ungraded shows as ungraded, not as 0% (PRODUCT.md principle 5). */}
                         {score == null ? (
                             <>
-                                <div className="text-5xl sm:text-6xl font-black mb-2" aria-label="Not graded yet">—</div>
-                                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Not graded yet</span>
+                                <div className="text-5xl sm:text-6xl font-black mb-2" aria-label={t('notGradedYet')}>—</div>
+                                <span className="text-xs sm:text-sm font-medium text-muted-foreground">{t('notGradedYet')}</span>
                             </>
                         ) : (
                             <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score)}%</div>
@@ -216,9 +245,9 @@ export default async function ExamResultPage({ params }: PageProps) {
                             <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-amber-900 dark:text-amber-200">Pending Teacher Review</h3>
+                            <h3 className="font-bold text-lg text-amber-900 dark:text-amber-200">{t('pendingReview.title')}</h3>
                             <p className="text-amber-800 dark:text-amber-300 text-sm">
-                                Your multiple choice and true/false answers have been auto-graded. Free-text answers are awaiting teacher evaluation. Your final score may change after review.
+                                {t('pendingReview.description')}
                             </p>
                         </div>
                     </CardContent>
@@ -232,9 +261,9 @@ export default async function ExamResultPage({ params }: PageProps) {
                             <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-green-900 dark:text-green-200">AI Evaluated</h3>
+                            <h3 className="font-bold text-lg text-green-900 dark:text-green-200">{t('aiReviewed.title')}</h3>
                             <p className="text-green-800 dark:text-green-300 text-sm">
-                                All answers have been evaluated by AI. Your teacher may still review and adjust scores.
+                                {t('aiReviewed.description')}
                             </p>
                         </div>
                     </CardContent>
@@ -248,9 +277,9 @@ export default async function ExamResultPage({ params }: PageProps) {
                             <IconUserCheck className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-blue-900 dark:text-blue-200">Teacher Reviewed</h3>
+                            <h3 className="font-bold text-lg text-blue-900 dark:text-blue-200">{t('teacherReviewed.title')}</h3>
                             <p className="text-blue-800 dark:text-blue-300 text-sm">
-                                Your exam has been reviewed and finalized by your teacher.
+                                {t('teacherReviewed.description')}
                             </p>
                         </div>
                     </CardContent>
@@ -265,15 +294,15 @@ export default async function ExamResultPage({ params }: PageProps) {
                             <IconCertificate className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-200">Certificate Earned!</h3>
+                            <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-200">{t('certificate.title')}</h3>
                             <p className="text-emerald-800 dark:text-emerald-300 text-sm">
-                                Congratulations! You have completed all requirements for this course and earned a certificate.
+                                {t('certificate.description')}
                             </p>
                         </div>
                         <Link href={`/verify/${certificate.verification_code}`}>
                             <Button variant="outline" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold gap-2 whitespace-nowrap">
                                 <IconCertificate className="h-4 w-4" />
-                                View Certificate
+                                {t('certificate.view')}
                             </Button>
                         </Link>
                     </CardContent>
@@ -281,20 +310,20 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {/* AI Analysis Section */}
-            {aiData && (
+            {showAiAnalysis && (
                 <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
                     <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-4 sm:p-6 text-white">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-white/20 rounded-lg shrink-0">
                                 <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                             </div>
-                            <CardTitle className="text-base sm:text-xl font-bold">AI Performance Analysis</CardTitle>
+                            <CardTitle className="text-base sm:text-xl font-bold">{t('aiAnalysis.title')}</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <div className="prose prose-lg dark:prose-invert max-w-none">
                             <p className="text-gray-900 dark:text-gray-100 leading-relaxed font-medium text-base">
-                                {aiData.overall_feedback || aiData.summary || "Your performance has been evaluated. Review the detailed feedback per question below."}
+                                {overallFeedback || t('aiAnalysis.fallback')}
                             </p>
                         </div>
                     </CardContent>
@@ -303,7 +332,7 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {/* Detailed Review */}
             <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-xl sm:text-2xl font-bold px-1 sm:px-2">Detailed Question Review</h2>
+                <h2 className="text-xl sm:text-2xl font-bold px-1 sm:px-2">{t('detailedReview')}</h2>
                 <div className="space-y-4">
                     {examData.exam_questions?.map((question: any, idx: number) => {
                         const answer = answersByQuestionId[question.question_id];
@@ -334,8 +363,8 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     <div className="flex items-start justify-between gap-3 sm:gap-4">
                                         <div className="space-y-1 min-w-0">
                                             <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">
-                                                Question {idx + 1}
-                                                <Badge variant="secondary" className="lowercase font-medium text-[10px] sm:text-xs">{question.question_type.replace('_', ' ')}</Badge>
+                                                {t('question', { number: idx + 1 })}
+                                                <Badge variant="secondary" className="lowercase font-medium text-[10px] sm:text-xs">{t(`questionType.${question.question_type}` as ExamQuestionTypeKey)}</Badge>
                                             </div>
                                             <h3 className="text-base sm:text-xl font-bold">{question.question_text}</h3>
                                         </div>
@@ -387,12 +416,12 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                                                     : "bg-red-600 dark:bg-red-500 text-white"
                                                                             )}
                                                                         >
-                                                                            Your Choice
+                                                                            {t('yourChoice')}
                                                                         </Badge>
                                                                     )}
                                                                     {isOptionCorrect && (
                                                                         <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
-                                                                            Correct
+                                                                            {t('correct')}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
@@ -439,12 +468,12 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                                                     : "bg-red-600 dark:bg-red-500 text-white"
                                                                             )}
                                                                         >
-                                                                            Your Choice
+                                                                            {t('yourChoice')}
                                                                         </Badge>
                                                                     )}
                                                                     {isOptionCorrect && (
                                                                         <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
-                                                                            Correct
+                                                                            {t('correct')}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
@@ -473,9 +502,9 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                             ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
                                                             : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800"
                                                 )}>
-                                                    <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-2">YOUR SUBMISSION</p>
+                                                    <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-2">{t('yourSubmission')}</p>
                                                     <p className="font-medium text-gray-900 dark:text-gray-100 text-base leading-relaxed">
-                                                        {answer?.answer_text || "No answer provided."}
+                                                        {answer?.answer_text || t('noAnswer')}
                                                     </p>
                                                 </div>
 
@@ -483,12 +512,12 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 {questionScore && !isPendingReview && (
                                                     <div className="flex items-center gap-3 px-2">
                                                         <Badge variant="secondary" className="font-bold">
-                                                            {questionScore.points_earned}/{questionScore.points_possible} pts
+                                                            {t('points', { earned: questionScore.points_earned, possible: questionScore.points_possible })}
                                                         </Badge>
                                                         {hasTeacherOverride && (
                                                             <Badge className="bg-blue-600 text-white font-bold gap-1">
                                                                 <IconUserCheck size={14} />
-                                                                Teacher reviewed
+                                                                {t('teacherReviewedBadge')}
                                                             </Badge>
                                                         )}
                                                     </div>
@@ -498,10 +527,10 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                     <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 dark:border-amber-600 p-3.5 sm:p-5 rounded-r-xl">
                                                         <div className="flex items-center gap-2 font-bold mb-2 text-amber-900 dark:text-amber-300">
                                                             <IconHourglass size={20} />
-                                                            <span>Pending Review</span>
+                                                            <span>{t('questionPending.title')}</span>
                                                         </div>
                                                         <p className="text-amber-800 dark:text-amber-200 text-sm leading-relaxed">
-                                                            This free-text answer is awaiting evaluation. Your teacher will review it, or it will be evaluated by AI.
+                                                            {t('questionPending.description')}
                                                         </p>
                                                     </div>
                                                 )}
@@ -512,10 +541,16 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     {/* Per-question AI/Teacher feedback */}
                                     {(() => {
                                         const questionScore = questionScoresByQuestionId[question.question_id];
-                                        const feedbackText = questionScore?.is_overridden
+                                        const isTeacherFeedback = !!questionScore?.is_overridden;
+                                        // Stored codes (and the legacy English sentences) are
+                                        // translated here; real AI prose passes through.
+                                        const feedbackText = isTeacherFeedback
                                             ? questionScore?.teacher_notes
-                                            : (questionScore?.ai_feedback || answer?.feedback);
-                                        const feedbackSource = questionScore?.is_overridden ? 'Teacher' : 'AI';
+                                            : describeExamFeedback(
+                                                questionScore?.ai_feedback || answer?.feedback,
+                                                tFeedback,
+                                                { correctAnswer: correctAnswerByQuestionId[question.question_id] },
+                                            );
 
                                         const stillPending = question.question_type === 'free_text'
                                             && !questionScore?.is_overridden
@@ -525,8 +560,8 @@ export default async function ExamResultPage({ params }: PageProps) {
                                         return (
                                             <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 dark:border-blue-500 p-3.5 sm:p-5 rounded-r-xl">
                                                 <div className="flex items-center gap-2 font-bold mb-2 text-blue-900 dark:text-blue-300">
-                                                    {feedbackSource === 'Teacher' ? <IconUserCheck size={20} /> : <IconMessageChatbot size={20} />}
-                                                    <span>{feedbackSource} Feedback</span>
+                                                    {isTeacherFeedback ? <IconUserCheck size={20} /> : <IconMessageChatbot size={20} />}
+                                                    <span>{isTeacherFeedback ? t('teacherFeedback') : t('aiFeedback')}</span>
                                                 </div>
                                                 <p className="text-blue-900 dark:text-blue-200 text-base leading-relaxed">{feedbackText}</p>
                                             </div>
@@ -544,12 +579,12 @@ export default async function ExamResultPage({ params }: PageProps) {
                 <Link href={`/dashboard/student/courses/${courseId}/exams`}>
                     <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-2xl gap-2 font-bold py-5 sm:py-6 px-6 sm:px-8">
                         <IconArrowLeft size={18} />
-                        View All Assessments
+                        {t('viewAllAssessments')}
                     </Button>
                 </Link>
                 <Link href={`/dashboard/student/courses/${courseId}`}>
                     <Button size="lg" className="w-full sm:w-auto rounded-2xl font-bold py-5 sm:py-6 px-6 sm:px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
-                        Continue Learning
+                        {t('continueLearning')}
                     </Button>
                 </Link>
             </div>
