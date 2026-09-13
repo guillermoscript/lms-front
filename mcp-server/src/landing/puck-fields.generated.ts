@@ -3109,20 +3109,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "heading": "Our platform in numbers",
       "subtitle": "A growing community of learners and educators building courses, tracking progress, and earning certificates every day.",
       "useLiveStats": true,
-      "items": [
-        {
-          "value": "+1200",
-          "label": "Courses published"
-        },
-        {
-          "value": "22,000",
-          "label": "Active students"
-        },
-        {
-          "value": "+500",
-          "label": "Certificates issued"
-        }
-      ]
+      "items": []
     }
   },
   "ShinyEyebrow": {

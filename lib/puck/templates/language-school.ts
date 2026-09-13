@@ -55,12 +55,7 @@ const homeTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '8,000', label: 'Active Students', prefix: '', suffix: '+' },
-          { value: '6', label: 'Languages', prefix: '', suffix: '' },
-          { value: '120', label: 'Native Teachers', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Average Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -162,12 +157,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '8,000', label: 'Students Worldwide', prefix: '', suffix: '+' },
-          { value: '6', label: 'Languages Taught', prefix: '', suffix: '' },
-          { value: '50', label: 'Countries', prefix: '', suffix: '+' },
-          { value: '2017', label: 'Founded', prefix: '', suffix: '' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

@@ -54,19 +54,13 @@ const homeTemplate: PuckTemplate = {
         backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
       }),
       c('SocialProof', {
-        text: 'Trusted by 3,500+ founders and creators worldwide',
-        rating: 5,
-        reviewCount: 'Based on 900+ reviews',
+        text: '',
+        reviewCount: '',
         avatarCount: 5,
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '3,500', label: 'Clients Coached', prefix: '', suffix: '+' },
-          { value: '40', label: 'Avg. Revenue Growth', prefix: '', suffix: '%' },
-          { value: '12', label: 'Years Experience', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Client Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -158,12 +152,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '3,500', label: 'Clients Coached', prefix: '', suffix: '+' },
-          { value: '$50M', label: 'Client Revenue Added', prefix: '', suffix: '' },
-          { value: '12', label: 'Years Experience', prefix: '', suffix: '+' },
-          { value: '30', label: 'Countries', prefix: '', suffix: '+' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

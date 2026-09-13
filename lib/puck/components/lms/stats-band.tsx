@@ -51,7 +51,7 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
         value: { type: 'text', label: 'Value' },
         label: { type: 'text', label: 'Label' },
       },
-      defaultItemProps: { value: '+1200', label: 'Description' },
+      defaultItemProps: { value: '', label: '' },
     },
     ...sectionSpacingFields,
   },
@@ -61,11 +61,13 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
     subtitle:
       'A growing community of learners and educators building courses, tracking progress, and earning certificates every day.',
     useLiveStats: true,
-    items: [
-      { value: '+1200', label: 'Courses published' },
-      { value: '22,000', label: 'Active students' },
-      { value: '+500', label: 'Certificates issued' },
-    ],
+    // No invented counts in the defaults (#724), the same rule StatsCounter
+    // and SocialProof follow — this block was missed in that pass. A school
+    // dropping it on a new page used to publish "+1200 Courses published" and
+    // "22,000 Active students" as its own figures. With "Use Live Stats" on,
+    // the real counts arrive through `puck.metadata`; with it off the school
+    // types its own, and the grid hides itself while there is nothing to show.
+    items: [],
   },
   render: ({ paddingY, paddingX, maxWidth, marginY, heading, subtitle, useLiveStats, items, puck }) => {
     const t = useTranslations('puck.render')

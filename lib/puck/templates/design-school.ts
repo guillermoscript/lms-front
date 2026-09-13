@@ -55,12 +55,7 @@ const homeTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '14,000', label: 'Designers Trained', prefix: '', suffix: '+' },
-          { value: '120', label: 'Hands-On Projects', prefix: '', suffix: '+' },
-          { value: '40', label: 'Industry Mentors', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Student Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -163,12 +158,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '14,000', label: 'Designers Trained', prefix: '', suffix: '+' },
-          { value: '40', label: 'Countries', prefix: '', suffix: '+' },
-          { value: '120', label: 'Real Projects', prefix: '', suffix: '+' },
-          { value: '2019', label: 'Founded', prefix: '', suffix: '' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
