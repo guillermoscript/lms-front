@@ -41,7 +41,7 @@ Each issue is self-contained (file:line, root cause, fix, acceptance). File owne
 
 Still outstanding for every draft PR: before/after screenshots in `/en` and `/es`. Two environment problems surfaced during verification and are not code defects:
 
-- **The local Stripe test key has expired**, so `loop-3-student-pays.spec.ts` cannot run at all. Roll the key in the Stripe dashboard and update `.env.local`.
+- **The Stripe test key was the CLI's own 90-day session key** (from `stripe login`), wired into both `.env.local` and the `E2E_STRIPE_SECRET_KEY` secret, and it expired on 2026-09-13. Both now hold a dashboard test key for the LMS sandbox account `acct_1T6ALPItB7gRJWFf`, which does not expire. That account has **not** signed up for Connect, so `E2E_STRIPE_CONNECT_ACCOUNT` was cleared in both places and `loop-3-student-pays.spec.ts` now *skips* rather than fails; signing up at dashboard.stripe.com/connect and creating a test connected account restores it.
 - **CI shard 2 is red on every one of these PRs, and on master before them** (run on 4cb0e2b4), for two environment reasons: the expired Stripe key above, and `invitations-send-accept.spec.ts`, which needs the Mailgun credentials still on the owner's list. The other 95 tests in that shard pass, as do shards 1, 3 and 4.
 - **Two further specs are already red on master**, so they are pre-existing rather than sweep regressions: `plan-limit-surfaces.spec.ts` "joining the school is refused at the cap" (login never leaves `/auth/login` on the plan-limits tenant) and `teacher-content.spec.ts` "students tab shows per-student progress" (the predicate times out). Both deserve their own issue.
 
