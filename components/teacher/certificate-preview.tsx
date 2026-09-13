@@ -18,6 +18,9 @@ interface CertificatePreviewProps {
     logoUrl?: string
 }
 
+/** Sample date shown in the template preview — fixed so server and client agree. */
+const SAMPLE_CERTIFICATE_DATE = new Date('2026-06-15T12:00:00.000Z')
+
 export function CertificatePreview({
     templateName,
     issuerName,
@@ -31,8 +34,11 @@ export function CertificatePreview({
     const locale = useLocale()
 
     const mockStudentName = "Jane Doe"
-    // Pinned locale + zone: this preview is server-rendered and hydrated (#729).
-    const mockDate = formatDate(new Date(), locale, { dateStyle: 'long' })
+    // A fixed sample date, not `new Date()`: this preview is server-rendered and
+    // then hydrated, so "now" is evaluated twice. Pinning the locale and zone
+    // narrows the gap, but a render straddling midnight still produces two
+    // different strings and the React #418 this was meant to fix (#729).
+    const mockDate = formatDate(SAMPLE_CERTIFICATE_DATE, locale, { dateStyle: 'long' })
     const mockCode = "VERIFY-MOCK-12345"
 
     return (
