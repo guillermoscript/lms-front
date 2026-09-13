@@ -128,8 +128,10 @@ test.describe('School Owner Core Flows', () => {
     // Save
     await page.getByRole('button', { name: /save draft/i }).click()
 
-    // Should redirect back to course
-    await page.waitForURL(/\/dashboard\/teacher\/courses\/\d+$/, { timeout: 15_000 })
+    // Should redirect back to course. Saving an exam now lands on the Exams
+    // tab (`?tab=exams`, #729), so the pattern must tolerate a query string —
+    // a `$` straight after the id fails on a redirect that is working.
+    await page.waitForURL(/\/dashboard\/teacher\/courses\/\d+(\?.*)?$/, { timeout: 15_000 })
 
     // Click Exams tab and verify
     await page.getByRole('tab', { name: /exams/i }).click()
