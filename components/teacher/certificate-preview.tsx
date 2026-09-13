@@ -1,7 +1,8 @@
 'use client'
 
 import { IconAward, IconQrcode, IconShieldCheck } from '@tabler/icons-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatDate } from '@/lib/format-date'
 
 interface CertificatePreviewProps {
     templateName: string
@@ -27,9 +28,11 @@ export function CertificatePreview({
     logoUrl
 }: CertificatePreviewProps) {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
+    const locale = useLocale()
 
     const mockStudentName = "Jane Doe"
-    const mockDate = new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+    // Pinned locale + zone: this preview is server-rendered and hydrated (#729).
+    const mockDate = formatDate(new Date(), locale, { dateStyle: 'long' })
     const mockCode = "VERIFY-MOCK-12345"
 
     return (

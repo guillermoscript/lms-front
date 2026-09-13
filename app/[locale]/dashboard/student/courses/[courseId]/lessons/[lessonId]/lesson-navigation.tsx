@@ -6,6 +6,16 @@ import Link from 'next/link'
 import { useHotkey } from '@tanstack/react-hotkeys'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { createClient } from '@/lib/supabase/client'
 import {
   IconArrowLeft,
@@ -104,7 +114,57 @@ export function LessonNavigation({
     }
   }, { enabled: !!nextLessonId && !nextBlocked })
 
+  // Un-completing is destructive (the completion row is deleted, the course
+  // progress drops) and the button that does it is the same green "Done"
+  // button the student just pressed — one accidental second tap silently
+  // undid the lesson (#729). It now asks first; completing stays one click.
+  const [uncompleteOpen, setUncompleteOpen] = useState(false)
+
+  async function handleUncomplete() {
+    setUncompleteOpen(false)
+    setLoading(true)
+
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
+
+    if (!user) {
+      setLoading(false)
+      return
+    }
+
+    // Optimistic: flip immediately, revert on error
+    setCompleted(false)
+
+    const { error } = await supabase
+      .from('lesson_completions')
+      .delete()
+      .eq('lesson_id', lessonId)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Failed to uncomplete lesson:', error)
+      toast.error(t('updateFailed'))
+      setCompleted(true)
+      setLoading(false)
+      return
+    }
+
+    // After the delete lands, never on the optimistic flip above.
+    analytics.track(ANALYTICS_EVENTS.LESSON_UNCOMPLETED, {
+      lesson_id: lessonId,
+      course_id: courseId,
+    })
+
+    toast.success(t('uncompleted'))
+    setLoading(false)
+    startTransition(() => { router.refresh() })
+  }
+
   async function handleComplete() {
+    if (completed) {
+      setUncompleteOpen(true)
+      return
+    }
     if (checkpointsBlocked) {
       toast.error(
         t('checkpointsRequired', { count: checkpointsCtx?.missingRequired ?? 0 })
@@ -121,33 +181,7 @@ export function LessonNavigation({
       return
     }
 
-    if (completed) {
-      // Optimistic: flip immediately, revert on error
-      setCompleted(false)
-
-      const { error } = await supabase
-        .from('lesson_completions')
-        .delete()
-        .eq('lesson_id', lessonId)
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('Failed to uncomplete lesson:', error)
-        toast.error(t('updateFailed'))
-        setCompleted(true)
-        setLoading(false)
-        return
-      }
-
-      // After the delete lands, never on the optimistic flip above.
-      analytics.track(ANALYTICS_EVENTS.LESSON_UNCOMPLETED, {
-        lesson_id: lessonId,
-        course_id: courseId,
-      })
-
-      setLoading(false)
-      startTransition(() => { router.refresh() })
-    } else {
+    {
       // Optimistic: celebrate immediately, revert on error
       setCompleted(true)
       const isCourseNowComplete = totalLessons > 0 && completedCount + 1 >= totalLessons
@@ -352,6 +386,27 @@ export function LessonNavigation({
         </div>
       </div>
     </footer>
+    <AlertDialog open={uncompleteOpen} onOpenChange={setUncompleteOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('uncompleteConfirmTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('uncompleteConfirmDescription')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={loading}>{t('uncompleteCancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleUncomplete} disabled={loading}>
+            {loading ? (
+              <>
+                <IconLoader2 className="w-4 h-4 mr-2 motion-safe:animate-spin" />
+                {t('uncompleteConfirming')}
+              </>
+            ) : (
+              t('uncompleteConfirm')
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   )
 }
