@@ -136,6 +136,23 @@ async function paymentFrame(page: Page): Promise<Frame> {
     }
     return null
   }
+
+  // With more than one payment method enabled on the platform account, the
+  // PaymentElement renders an ACCORDION — "Card" and "Amazon Pay" as collapsed
+  // rows — and the card inputs do not exist until Card is expanded. The old
+  // test account had card only, so the form was always open and this helper
+  // polled straight for the inputs; it then timed out for 90s against a page
+  // that was perfectly healthy. Open Card first when the accordion is there.
+  if (await find() === null) {
+    for (const frame of page.frames()) {
+      const tab = frame.locator('[data-testid="card-accordion-item-button"], button:has-text("Card")').first()
+      if (await tab.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await tab.click().catch(() => undefined)
+        break
+      }
+    }
+  }
+
   await expect.poll(async () => (await find()) !== null, { timeout: 90_000, intervals: [500, 1000] }).toBe(true)
   return (await find())!
 }
