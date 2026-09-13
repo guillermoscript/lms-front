@@ -55,6 +55,14 @@ export function InviteUserDialog({ joinUrl }: InviteUserDialogProps) {
   const [result, setResult] = useState<InviteResult | null>(null)
   const [copied, setCopied] = useState(false)
 
+  // Base UI's Select renders the raw value in the trigger unless it is given an
+  // items map to look the label up in — which is why the closed trigger read
+  // "student" instead of "Estudiante" (#726).
+  const roleItems = [
+    { value: 'student', label: t('roleStudent') },
+    { value: 'teacher', label: t('roleTeacher') },
+  ]
+
   const resetForm = () => {
     setEmail('')
     setRole('student')
@@ -218,6 +226,7 @@ export function InviteUserDialog({ joinUrl }: InviteUserDialogProps) {
             <div className="space-y-2">
               <Label>{t('roleLabel')}</Label>
               <Select
+                items={roleItems}
                 value={role}
                 onValueChange={(v) => v && setRole(v as 'student' | 'teacher')}
               >
@@ -225,8 +234,11 @@ export function InviteUserDialog({ joinUrl }: InviteUserDialogProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="student">{t('roleStudent')}</SelectItem>
-                  <SelectItem value="teacher">{t('roleTeacher')}</SelectItem>
+                  {roleItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">{t('roleHint')}</p>

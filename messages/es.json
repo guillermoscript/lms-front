@@ -1042,7 +1042,8 @@
       },
       "newCourse": {
         "title": "Crear Nuevo Curso",
-        "description": "Rellena la información básica de tu curso"
+        "description": "Rellena la información básica de tu curso",
+        "back": "Volver"
       },
       "courseForm": {
         "details": "Detalles del Curso",
@@ -1860,7 +1861,32 @@
         "searchPlaceholder": "Buscar plantillas...",
         "loading": "Cargando plantillas...",
         "noTemplates": "No se encontraron plantillas.",
-        "system": "Sistema",
+        "system": {
+          "conversationPractice": {
+            "name": "Práctica de conversación",
+            "description": "Práctica de conversación interactiva para aprender idiomas"
+          },
+          "comprehensionCheck": {
+            "name": "Comprobación de comprensión",
+            "description": "Verifica que se entendieron los conceptos de la lección"
+          },
+          "writingPractice": {
+            "name": "Práctica de escritura",
+            "description": "Evaluación de escritura con retroalimentación estructurada"
+          },
+          "codeReviewAssistant": {
+            "name": "Asistente de revisión de código",
+            "description": "La IA ayuda a los estudiantes a depurar y mejorar su código"
+          },
+          "essayEvaluation": {
+            "name": "Evaluación de ensayos",
+            "description": "Calificación completa de ensayos con rúbrica"
+          },
+          "criticalThinkingGrader": {
+            "name": "Calificador de pensamiento crítico",
+            "description": "Califica respuestas abiertas que requieren análisis"
+          }
+        },
         "editAction": "Editar",
         "duplicateAction": "Duplicar",
         "deleteAction": "Eliminar",
@@ -1878,6 +1904,11 @@
           "variables": "Variables",
           "created": "Creado",
           "actions": "Acciones"
+        },
+        "categories": {
+          "lessonTask": "Tarea de lección",
+          "exercise": "Ejercicio",
+          "examGrading": "Calificación de examen"
         }
       },
       "templateSelector": {
@@ -2478,11 +2509,115 @@
           "expired": "Esta solicitud de pago venció. Inicia la mejora de nuevo para obtener una nueva.",
           "backToBilling": "Volver a facturación",
           "usdEquivalent": "≈ ${amount} USD"
+        },
+        "planComparison": {
+          "intervalGroupLabel": "Periodo de facturación",
+          "monthly": "Mensual",
+          "yearly": "Anual",
+          "yearlySaving": "Ahorra ~17%",
+          "billedYearlyNote": "Se cobra una vez al año. Cancela al final de tu periodo de facturación.",
+          "billedMonthlyNote": "Se cobra cada mes. Cambia de plan cuando tu escuela necesite más espacio.",
+          "yourSelection": "Tu selección",
+          "mostPopular": "Más popular",
+          "currentPlan": "Plan actual",
+          "forever": "para siempre",
+          "perMonth": "/ mes",
+          "billedYearly": "${price} al año",
+          "billedMonthly": "Facturación mensual",
+          "courses": "Cursos",
+          "students": "Estudiantes",
+          "platformFee": "Comisión de la plataforma",
+          "unlimited": "Sin límite",
+          "highlights": "Lo que incluye",
+          "moreInComparison": "+ {count} más en la comparación completa",
+          "switchToYearly": "Cambiar a facturación anual",
+          "switchToMonthly": "Cambiar a facturación mensual",
+          "changePaymentMethod": "Cambiar método de pago",
+          "cancelToDowngrade": "Cancela para bajar de plan",
+          "upgradeToPlan": "Mejorar a este plan",
+          "downgradeToPlan": "Bajar a este plan",
+          "freePlan": "Plan gratuito",
+          "openingCheckout": "Abriendo el pago...",
+          "choosePlan": "Elegir plan",
+          "compareTitle": "Compara todas las funciones",
+          "compareSubtitle": "Mira exactamente qué obtiene tu escuela en cada nivel.",
+          "featureColumn": "Función",
+          "included": "Incluido",
+          "notIncluded": "No incluido",
+          "features": {
+            "xp": "XP y niveles",
+            "levels": "Sistema de niveles",
+            "streaks": "Rachas",
+            "leaderboard": "Tabla de clasificación",
+            "achievements": "Logros",
+            "store": "Tienda de puntos",
+            "community": "Comunidad",
+            "certificates": "Certificados",
+            "analytics": "Analíticas",
+            "ai_grading": "Calificación automática con IA",
+            "voice_exercises": "Ejercicios de voz",
+            "remove_branding": "Quitar la marca \"Powered by\"",
+            "custom_branding": "Marca personalizada",
+            "custom_domain": "Dominio propio",
+            "white_label": "Marca blanca",
+            "priority_support": "Soporte prioritario"
+          }
+        },
+        "paymentMethod": {
+          "title": "¿Cómo quieres pagar?",
+          "planLine": "{plan}, con facturación {interval}.",
+          "intervalYearly": "anual",
+          "intervalMonthly": "mensual",
+          "switchingNote": " Tu suscripción actual con {provider} se cancela cuando empieza la nueva, así que nunca pagas dos veces.",
+          "currentMethod": "Método actual",
+          "bankTransfer": "Transferencia bancaria",
+          "bankTransferHint": "Te enviamos las instrucciones de pago y activamos el plan en cuanto llega la transferencia.",
+          "noAutomatic": "Todavía no hay un método de pago automático configurado para este plan; la transferencia bancaria es la forma de pagarlo hoy.",
+          "cancel": "Cancelar"
+        },
+        "manualTransfer": {
+          "submittedTitle": "Solicitud enviada",
+          "submittedDescription": "Recibimos tu solicitud de mejora. Te enviaremos las instrucciones de transferencia en breve.",
+          "backToBilling": "Volver a Facturación",
+          "title": "Solicitud de transferencia bancaria",
+          "description": "Mejora a {plan} ({interval}) por {amount} mediante transferencia bancaria",
+          "stepsIntro": "Después de enviar esta solicitud:",
+          "step1": "Te enviamos las instrucciones de transferencia al correo de facturación",
+          "step2": "Haces la transferencia e indicas el número de referencia",
+          "step3": "Tu plan se activa en cuanto confirmamos el pago",
+          "bankRefLabel": "Referencia bancaria (opcional)",
+          "bankRefPlaceholder": "Ej.: número de confirmación de la transferencia",
+          "bankRefHint": "Si ya hiciste la transferencia, escribe aquí el número de referencia",
+          "proofLabel": "Comprobante de pago (opcional)",
+          "notesLabel": "Notas adicionales (opcional)",
+          "notesPlaceholder": "Cualquier información adicional...",
+          "submitting": "Enviando...",
+          "submit": "Enviar solicitud",
+          "cancel": "Cancelar",
+          "intervalYearly": "anual",
+          "intervalMonthly": "mensual"
+        },
+        "pendingRequests": {
+          "title": "Solicitudes de pago pendientes",
+          "descriptionOne": "Tu solicitud de transferencia está en la fila. La revisamos y activamos tu plan en cuanto se confirme el pago.",
+          "descriptionMany": "Tus solicitudes de transferencia están en la fila. Las revisamos y activamos tu plan en cuanto se confirme el pago.",
+          "unknownPlan": "Plan desconocido",
+          "submittedOn": "{amount}/{interval} · Enviada el {date}",
+          "intervalYear": "año",
+          "intervalMonth": "mes",
+          "viewProof": "Ver comprobante",
+          "statusPending": "En revisión",
+          "statusInstructionsSent": "Instrucciones enviadas",
+          "statusPaymentReceived": "Pago recibido",
+          "hintPending": "Te enviaremos las instrucciones de transferencia al correo de facturación en breve.",
+          "hintInstructionsSent": "Revisa tu correo para ver las instrucciones de transferencia. Cuando la hagas, sube el comprobante aquí.",
+          "hintPaymentReceived": "Recibimos tu pago y lo estamos confirmando. Tu plan se activará pronto.",
+          "uploadProof": "Sube el comprobante de pago (opcional; agiliza la activación)"
         }
       },
       "users": {
         "title": "Gestión de Usuarios",
-        "description": "Ver y gestionar todos los usuarios de la plataforma",
+        "description": "Ver y gestionar las personas de tu escuela",
         "backToDashboard": "Volver al Panel",
         "stats": {
           "totalUsers": "Total de Usuarios",
@@ -3131,8 +3266,8 @@
         }
       },
       "settings": {
-        "title": "Configuración de la Plataforma",
-        "description": "Configura los ajustes de la plataforma, email, pagos y políticas de inscripción.",
+        "title": "Configuración de tu escuela",
+        "description": "Configura los ajustes de tu escuela: correo, pagos y políticas de inscripción.",
         "errorTitle": "Error al Cargar Configuración",
         "errorDesc": "No se pudieron cargar los ajustes de la plataforma",
         "tabs": {
@@ -3555,7 +3690,7 @@
         },
         "new": {
           "title": "Crear Producto",
-          "description": "Crea un nuevo producto con integración de Stripe",
+          "description": "Crea un producto y elige cómo lo cobras",
           "back": "Volver a Productos",
           "details": {
             "title": "Detalles del Producto",
@@ -3675,6 +3810,99 @@
           "restore": "Restaurar",
           "restoreSuccess": "\"{name}\" ha sido restaurado",
           "restoreError": "No se pudo restaurar el producto. Inténtalo de nuevo."
+        },
+        "wizard": {
+          "badgeEdit": "Modo edición",
+          "badgeNew": "Nueva oferta",
+          "stepProgress": "Paso {current} de {total}",
+          "stepsNavLabel": "Pasos de creación del producto",
+          "steps": {
+            "source": {
+              "title": "Curso",
+              "description": "Elige si esta oferta parte de un curso nuevo o de uno existente."
+            },
+            "basics": {
+              "title": "Datos básicos",
+              "description": "Define los datos del curso que verán estudiantes y administradores."
+            },
+            "pricing": {
+              "title": "Precio",
+              "description": "Crea un curso gratuito o configura un producto de pago."
+            },
+            "postRegistration": {
+              "title": "Después de la compra",
+              "description": "Agrega instrucciones exclusivas de pago que verán los estudiantes tras completar la compra."
+            },
+            "review": {
+              "title": "Revisión",
+              "description": "Verifica que todo esté listo y elige guardar como borrador o publicar."
+            }
+          },
+          "source": {
+            "legend": "Origen del curso",
+            "newTitle": "Crear curso nuevo",
+            "newDescription": "Crea la base de un curso y, si quieres, agrégale un precio.",
+            "existingTitle": "Usar curso existente",
+            "existingDescription": "Reutiliza un curso de tu escuela, incluidos los borradores en preparación.",
+            "courseLabel": "Curso",
+            "coursePlaceholder": "Selecciona un curso",
+            "selectedStatus": "Estado del curso seleccionado: {status}"
+          },
+          "basics": {
+            "titleLabel": "Título",
+            "titlePlaceholder": "Ej.: Curso intensivo de estrategia de producto",
+            "categoryLabel": "Categoría",
+            "categoryPlaceholder": "Selecciona una categoría",
+            "noCategories": "Todavía no hay categorías disponibles."
+          },
+          "pricing": {
+            "legend": "Tipo de precio",
+            "freeTitle": "Gratis",
+            "freeDescription": "Crea un producto de $0 en el que los estudiantes se inscriben con un clic.",
+            "paidTitle": "De pago",
+            "paidDescription": "Crea un producto y vincúlalo a este curso."
+          },
+          "postRegistration": {
+            "freeNotice": "Las instrucciones después de la compra son exclusivas del producto, así que solo están disponibles para ofertas de pago en esta versión."
+          },
+          "review": {
+            "courseLabel": "Curso",
+            "untitled": "Curso sin título",
+            "newCourse": "Curso nuevo",
+            "existingCourse": "Curso existente",
+            "pricingLabel": "Precio",
+            "noProvider": "Sin proveedor",
+            "noPaymentRequired": "No requiere pago",
+            "afterPurchaseLabel": "Después de la compra",
+            "notApplicable": "No aplica",
+            "freeCourse": "Curso gratuito",
+            "optionalInstructions": "Instrucciones opcionales",
+            "steps": "{count, plural, one {# paso} other {# pasos}}",
+            "draftReady": "El borrador se puede guardar",
+            "publishReady": "Listo para publicar"
+          },
+          "backButton": "Atrás",
+          "nextButton": "Siguiente",
+          "saveDraftButton": "Guardar borrador",
+          "publishButton": "Publicar",
+          "toasts": {
+            "published": "Oferta publicada.",
+            "draftSaved": "Borrador guardado."
+          },
+          "errors": {
+            "generic": "No se pudo guardar esta oferta.",
+            "draftBlocked": "Agrega un título antes de guardar.",
+            "publishBlocked": "Completa primero la configuración requerida.",
+            "fields": {
+              "courseExistingCourseId": "Selecciona un curso.",
+              "courseTitle": "Escribe un título para el curso.",
+              "pricingPrice": "Ingresa un precio mayor a 0.",
+              "pricingCurrency": "Selecciona una moneda.",
+              "pricingPaymentProvider": "Selecciona un método de pago.",
+              "postRegistrationStepTitle": "Escribe un título para el paso.",
+              "postRegistrationStepUrl": "Ingresa una URL válida."
+            }
+          }
         }
       },
       "notifications": {
@@ -4532,6 +4760,17 @@
         "tooMany": "Puedes adjuntar hasta {count} imágenes por mensaje.",
         "unsupported": "No se pudo leer {name} como imagen, así que no se envió.",
         "tooLarge": "{name} sigue siendo demasiado grande para enviarla incluso tras redimensionarla."
+      }
+    },
+    "limitBanner": {
+      "atLimit": "Llegaste al límite de {resource} de tu plan ({limit}). Mejora tu plan para añadir más.",
+      "approaching": "Vas {current} de {limit} {resource}. Considera mejorar tu plan para tener más espacio.",
+      "cutoffWarning": "Si no lo resuelves antes del {date}, todos los estudiantes perderán el acceso a todos los cursos.",
+      "upgrade": "Mejorar plan",
+      "dismiss": "Descartar",
+      "resources": {
+        "courses": "cursos",
+        "students": "estudiantes"
       }
     }
   },
@@ -5813,6 +6052,152 @@
       "legal": "Legal",
       "privacyPolicy": "Política de Privacidad",
       "termsOfService": "Términos de Servicio"
+    },
+    "templates": {
+      "blank": {
+        "name": "En blanco",
+        "description": "Empieza desde cero con un lienzo vacío."
+      },
+      "modernAcademy": {
+        "name": "Academia moderna",
+        "description": "Una página cuidada con funciones, cursos, testimonios y llamada a la acción."
+      },
+      "minimal": {
+        "name": "Minimalista",
+        "description": "Una página limpia y sencilla, centrada en los cursos."
+      },
+      "boldCreator": {
+        "name": "Creador con carácter",
+        "description": "Una página enérgica para creadores en solitario y equipos pequeños."
+      },
+      "courseCatalog": {
+        "name": "Catálogo de cursos",
+        "description": "Muestra todo tu catálogo de cursos con precios."
+      },
+      "aboutUs": {
+        "name": "Quiénes somos",
+        "description": "Cuenta tu historia con perfiles del equipo y cifras."
+      },
+      "contact": {
+        "name": "Contacto",
+        "description": "Formulario de contacto con sección de preguntas frecuentes."
+      },
+      "faq": {
+        "name": "Preguntas frecuentes",
+        "description": "Página completa de preguntas frecuentes con varias categorías."
+      },
+      "freeCourseSchool": {
+        "name": "Escuela con curso gratis",
+        "description": "Empieza con un curso gratuito. Cifras, cursos, reseñas, instructores y precios se rellenan con tus datos."
+      },
+      "businessCoachingHome": {
+        "name": "Coaching de negocios — Inicio",
+        "description": "Página de inicio para coaches de negocios, marketing y emprendimiento."
+      },
+      "businessCoachingAbout": {
+        "name": "Coaching de negocios — Quiénes somos",
+        "description": "Página sobre el coach: historia, filosofía y credenciales."
+      },
+      "businessCoachingFaq": {
+        "name": "Coaching de negocios — Preguntas frecuentes",
+        "description": "Preguntas frecuentes sobre programas, formato, resultados y precios."
+      },
+      "businessCoachingContact": {
+        "name": "Coaching de negocios — Contacto",
+        "description": "Página de contacto y reserva de llamada, con formulario y respuestas rápidas."
+      },
+      "designSchoolHome": {
+        "name": "Escuela de diseño — Inicio",
+        "description": "Página de inicio para escuelas de diseño y creadores de cursos creativos (UX/UI, gráfico, ilustración)."
+      },
+      "designSchoolAbout": {
+        "name": "Escuela de diseño — Quiénes somos",
+        "description": "Página sobre la escuela: misión, método de enseñanza y mentores."
+      },
+      "designSchoolFaq": {
+        "name": "Escuela de diseño — Preguntas frecuentes",
+        "description": "Preguntas frecuentes sobre cursos, herramientas, portafolio y precios."
+      },
+      "designSchoolContact": {
+        "name": "Escuela de diseño — Contacto",
+        "description": "Página de contacto con formulario y respuestas rápidas."
+      },
+      "fitnessStudioHome": {
+        "name": "Estudio fitness — Inicio",
+        "description": "Página de inicio para entrenadores, estudios de yoga y programas de entrenamiento en línea."
+      },
+      "fitnessStudioAbout": {
+        "name": "Estudio fitness — Quiénes somos",
+        "description": "Página sobre el estudio: misión, filosofía y entrenadores."
+      },
+      "fitnessStudioFaq": {
+        "name": "Estudio fitness — Preguntas frecuentes",
+        "description": "Preguntas frecuentes sobre programas, equipo, precios y membresías."
+      },
+      "fitnessStudioContact": {
+        "name": "Estudio fitness — Contacto",
+        "description": "Página de contacto con formulario y respuestas rápidas."
+      },
+      "codeSchoolHome": {
+        "name": "Escuela de programación — Inicio",
+        "description": "Página de inicio completa para bootcamps y escuelas de programación."
+      },
+      "codeSchoolAbout": {
+        "name": "Escuela de programación — Quiénes somos",
+        "description": "Página sobre la escuela, con equipo, misión y cifras."
+      },
+      "codeSchoolFaq": {
+        "name": "Escuela de programación — Preguntas frecuentes",
+        "description": "Preguntas frecuentes sobre cursos, precios y apoyo profesional."
+      },
+      "codeSchoolContact": {
+        "name": "Escuela de programación — Contacto",
+        "description": "Página de contacto con formulario y preguntas comunes."
+      },
+      "codeSchoolCourses": {
+        "name": "Escuela de programación — Cursos",
+        "description": "Catálogo de cursos con rutas de aprendizaje y precios."
+      },
+      "languageSchoolHome": {
+        "name": "Escuela de idiomas — Inicio",
+        "description": "Página de inicio para academias de idiomas: niveles, profesores nativos, práctica de conversación y precios."
+      },
+      "languageSchoolAbout": {
+        "name": "Escuela de idiomas — Quiénes somos",
+        "description": "Página sobre la academia: misión, método de enseñanza y profesores."
+      },
+      "languageSchoolFaq": {
+        "name": "Escuela de idiomas — Preguntas frecuentes",
+        "description": "Preguntas frecuentes sobre niveles, clases, precios y certificados."
+      },
+      "languageSchoolContact": {
+        "name": "Escuela de idiomas — Contacto",
+        "description": "Página de contacto con formulario y respuestas rápidas."
+      },
+      "musicAcademyHome": {
+        "name": "Academia de música — Inicio",
+        "description": "Página de inicio para escuelas de música y profesores de instrumento o canto en línea."
+      },
+      "musicAcademyAbout": {
+        "name": "Academia de música — Quiénes somos",
+        "description": "Página sobre la academia: misión, enfoque y profesores."
+      },
+      "musicAcademyFaq": {
+        "name": "Academia de música — Preguntas frecuentes",
+        "description": "Preguntas frecuentes sobre instrumentos, clases, precios y equipo."
+      },
+      "musicAcademyContact": {
+        "name": "Academia de música — Contacto",
+        "description": "Página de contacto con formulario y respuestas rápidas."
+      }
+    },
+    "pageTypes": {
+      "home": "Inicio",
+      "about": "Quiénes somos",
+      "contact": "Contacto",
+      "faq": "Preguntas frecuentes",
+      "terms": "Términos",
+      "events": "Eventos"
     }
   },
   "exercises": {

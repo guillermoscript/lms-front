@@ -74,6 +74,7 @@ interface BillingDashboardClientProps {
 export function BillingDashboardClient({ status, paymentRequests }: BillingDashboardClientProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.admin.billing.overview')
+  const tPending = useTranslations('dashboard.admin.billing.pendingRequests')
   const locale = useLocale()
   const [portalLoading, setPortalLoading] = useState(false)
   const [renewalLoading, setRenewalLoading] = useState(false)
@@ -272,10 +273,10 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconClock className="h-5 w-5" />
-              Pending Payment Requests
+              {tPending('title')}
             </CardTitle>
             <CardDescription>
-              Your bank transfer request{pendingRequests.length > 1 ? 's are' : ' is'} in the queue — our team will review and activate your plan once payment is confirmed.
+              {pendingRequests.length > 1 ? tPending('descriptionMany') : tPending('descriptionOne')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -288,10 +289,14 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">
-                        {req.platform_plans?.name || 'Unknown Plan'}
+                        {req.platform_plans?.name || tPending('unknownPlan')}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        ${req.amount}/{req.interval === 'yearly' ? 'year' : 'month'} &middot; Submitted {new Date(req.created_at).toLocaleDateString()}
+                        {tPending('submittedOn', {
+                          amount: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(req.amount),
+                          interval: req.interval === 'yearly' ? tPending('intervalYear') : tPending('intervalMonth'),
+                          date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(req.created_at)),
+                        })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -303,7 +308,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
                           className="text-xs text-primary hover:underline flex items-center gap-1"
                         >
                           <IconPhoto className="h-3 w-3" />
-                          View Proof
+                          {tPending('viewProof')}
                         </a>
                       )}
                       <Badge variant={
@@ -311,9 +316,9 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
                           : req.status === 'instructions_sent' ? 'outline'
                             : 'default'
                       }>
-                        {req.status === 'pending' && 'Awaiting review'}
-                        {req.status === 'instructions_sent' && 'Instructions sent'}
-                        {req.status === 'payment_received' && 'Payment received'}
+                        {req.status === 'pending' && tPending('statusPending')}
+                        {req.status === 'instructions_sent' && tPending('statusInstructionsSent')}
+                        {req.status === 'payment_received' && tPending('statusPaymentReceived')}
                         {!['pending', 'instructions_sent', 'payment_received'].includes(req.status) && req.status.replace(/_/g, ' ')}
                       </Badge>
                     </div>
@@ -321,16 +326,16 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
 
                   {/* Status hint */}
                   <p className="text-xs text-muted-foreground">
-                    {req.status === 'pending' && 'We\'ll send bank transfer instructions to your billing email shortly.'}
-                    {req.status === 'instructions_sent' && 'Check your email for bank transfer instructions. Once you\'ve transferred, upload proof below.'}
-                    {req.status === 'payment_received' && 'We\'ve received your payment and are confirming it. Your plan will be activated soon.'}
+                    {req.status === 'pending' && tPending('hintPending')}
+                    {req.status === 'instructions_sent' && tPending('hintInstructionsSent')}
+                    {req.status === 'payment_received' && tPending('hintPaymentReceived')}
                   </p>
 
                   {/* Proof upload for requests without proof */}
                   {!req.proof_url && (
                     <ProofUpload
                       onUpload={(file) => handleProofUpload(req.request_id, file)}
-                      label="Upload payment proof (optional — speeds up activation)"
+                      label={tPending('uploadProof')}
                       disabled={uploadingFor === req.request_id}
                     />
                   )}

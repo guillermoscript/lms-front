@@ -64,6 +64,19 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
     estimated_duration_minutes: initialData?.estimated_duration_minutes?.toString() || '',
   })
 
+  // Base UI's Select shows the raw value in the closed trigger unless it is
+  // given an items map to look the label up in, which is why the status field
+  // read "draft" instead of "Borrador" (#726).
+  const categoryItems = categories.map((category) => ({
+    value: category.id.toString(),
+    label: category.name,
+  }))
+  const statusItems = [
+    { value: 'draft', label: t('statusOptions.draft') },
+    { value: 'published', label: t('statusOptions.published') },
+    { value: 'archived', label: t('statusOptions.archived') },
+  ]
+
   // Check course limit on mount for new courses
   useEffect(() => {
     if (!initialData) {
@@ -308,6 +321,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
           <div className="space-y-2">
             <Label htmlFor="category">{t('categoryLabel')}</Label>
             <Select
+              items={categoryItems}
               value={formData.category_id || undefined}
               onValueChange={(value) =>
                 setFormData({ ...formData, category_id: value || '' })
@@ -329,6 +343,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
           <div className="space-y-2">
             <Label htmlFor="status">{t('statusLabel')}</Label>
             <Select
+              items={statusItems}
               value={formData.status}
               onValueChange={(value) =>
                 setFormData({ ...formData, status: value as 'draft' | 'published' | 'archived' })
@@ -338,9 +353,11 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
                 <SelectValue placeholder={t('statusPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">{t('statusOptions.draft')}</SelectItem>
-                <SelectItem value="published">{t('statusOptions.published')}</SelectItem>
-                <SelectItem value="archived">{t('statusOptions.archived')}</SelectItem>
+                {statusItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

@@ -1042,7 +1042,8 @@
       },
       "newCourse": {
         "title": "Create New Course",
-        "description": "Fill in the basic information about your course"
+        "description": "Fill in the basic information about your course",
+        "back": "Back"
       },
       "courseForm": {
         "details": "Course Details",
@@ -1860,7 +1861,32 @@
         "searchPlaceholder": "Search templates...",
         "loading": "Loading templates...",
         "noTemplates": "No templates found.",
-        "system": "System",
+        "system": {
+          "conversationPractice": {
+            "name": "Conversation Practice",
+            "description": "Interactive conversation practice for language learning"
+          },
+          "comprehensionCheck": {
+            "name": "Comprehension Check",
+            "description": "Verify understanding of lesson concepts"
+          },
+          "writingPractice": {
+            "name": "Writing Practice",
+            "description": "Writing evaluation with structured feedback"
+          },
+          "codeReviewAssistant": {
+            "name": "Code Review Assistant",
+            "description": "AI helps students debug and improve their code"
+          },
+          "essayEvaluation": {
+            "name": "Essay Evaluation",
+            "description": "Comprehensive essay grading with rubric"
+          },
+          "criticalThinkingGrader": {
+            "name": "Critical Thinking Grader",
+            "description": "Grade free-text answers requiring analysis"
+          }
+        },
         "editAction": "Edit",
         "duplicateAction": "Duplicate",
         "deleteAction": "Delete",
@@ -1878,6 +1904,11 @@
           "variables": "Variables",
           "created": "Created",
           "actions": "Actions"
+        },
+        "categories": {
+          "lessonTask": "Lesson task",
+          "exercise": "Exercise",
+          "examGrading": "Exam grading"
         }
       },
       "templateSelector": {
@@ -2478,11 +2509,115 @@
           "expired": "This payment request has expired. Start the upgrade again to get a fresh one.",
           "backToBilling": "Back to billing",
           "usdEquivalent": "≈ ${amount} USD"
+        },
+        "planComparison": {
+          "intervalGroupLabel": "Billing interval",
+          "monthly": "Monthly",
+          "yearly": "Yearly",
+          "yearlySaving": "Save ~17%",
+          "billedYearlyNote": "Billed once per year. Cancel at the end of your billing period.",
+          "billedMonthlyNote": "Billed monthly. Change plans when your school needs more room.",
+          "yourSelection": "Your selection",
+          "mostPopular": "Most popular",
+          "currentPlan": "Current plan",
+          "forever": "forever",
+          "perMonth": "/ month",
+          "billedYearly": "${price} billed yearly",
+          "billedMonthly": "Billed monthly",
+          "courses": "Courses",
+          "students": "Students",
+          "platformFee": "Platform fee",
+          "unlimited": "Unlimited",
+          "highlights": "Highlights",
+          "moreInComparison": "+ {count} more in full comparison",
+          "switchToYearly": "Switch to yearly billing",
+          "switchToMonthly": "Switch to monthly billing",
+          "changePaymentMethod": "Change payment method",
+          "cancelToDowngrade": "Cancel to downgrade",
+          "upgradeToPlan": "Upgrade to this plan",
+          "downgradeToPlan": "Downgrade to this plan",
+          "freePlan": "Free plan",
+          "openingCheckout": "Opening checkout...",
+          "choosePlan": "Choose plan",
+          "compareTitle": "Compare every feature",
+          "compareSubtitle": "See exactly what your school gets at each level.",
+          "featureColumn": "Feature",
+          "included": "Included",
+          "notIncluded": "Not included",
+          "features": {
+            "xp": "XP & Levels",
+            "levels": "Level System",
+            "streaks": "Streaks",
+            "leaderboard": "Leaderboard",
+            "achievements": "Achievements",
+            "store": "Point Store",
+            "community": "Community",
+            "certificates": "Certificates",
+            "analytics": "Analytics",
+            "ai_grading": "AI Auto-Grading",
+            "voice_exercises": "Voice Exercises",
+            "remove_branding": "Remove \"Powered by\" branding",
+            "custom_branding": "Custom Branding",
+            "custom_domain": "Custom Domain",
+            "white_label": "White-Label",
+            "priority_support": "Priority Support"
+          }
+        },
+        "paymentMethod": {
+          "title": "How would you like to pay?",
+          "planLine": "{plan}, billed {interval}.",
+          "intervalYearly": "yearly",
+          "intervalMonthly": "monthly",
+          "switchingNote": " Your current {provider} subscription is cancelled when the new one starts, so you are never billed twice.",
+          "currentMethod": "Current method",
+          "bankTransfer": "Bank transfer",
+          "bankTransferHint": "We send payment instructions and activate the plan once the transfer lands.",
+          "noAutomatic": "No automatic payment method is configured for this plan yet — bank transfer is the way to pay for it today.",
+          "cancel": "Cancel"
+        },
+        "manualTransfer": {
+          "submittedTitle": "Request submitted",
+          "submittedDescription": "Your upgrade request has been submitted. We'll send you bank transfer instructions shortly.",
+          "backToBilling": "Back to billing",
+          "title": "Bank transfer request",
+          "description": "Upgrade to {plan} ({interval}) for {amount} via bank transfer",
+          "stepsIntro": "After submitting this request:",
+          "step1": "We'll send bank transfer instructions to your billing email",
+          "step2": "Make the transfer and provide the reference number",
+          "step3": "Your plan will be activated once payment is confirmed",
+          "bankRefLabel": "Bank reference (optional)",
+          "bankRefPlaceholder": "e.g. Transfer confirmation number",
+          "bankRefHint": "If you've already made the transfer, enter the reference number here",
+          "proofLabel": "Payment proof (optional)",
+          "notesLabel": "Additional notes (optional)",
+          "notesPlaceholder": "Any additional information...",
+          "submitting": "Submitting...",
+          "submit": "Submit request",
+          "cancel": "Cancel",
+          "intervalYearly": "yearly",
+          "intervalMonthly": "monthly"
+        },
+        "pendingRequests": {
+          "title": "Pending payment requests",
+          "descriptionOne": "Your bank transfer request is in the queue — our team will review it and activate your plan once payment is confirmed.",
+          "descriptionMany": "Your bank transfer requests are in the queue — our team will review them and activate your plan once payment is confirmed.",
+          "unknownPlan": "Unknown plan",
+          "submittedOn": "{amount}/{interval} · Submitted {date}",
+          "intervalYear": "year",
+          "intervalMonth": "month",
+          "viewProof": "View proof",
+          "statusPending": "Awaiting review",
+          "statusInstructionsSent": "Instructions sent",
+          "statusPaymentReceived": "Payment received",
+          "hintPending": "We'll send bank transfer instructions to your billing email shortly.",
+          "hintInstructionsSent": "Check your email for bank transfer instructions. Once you've transferred, upload proof below.",
+          "hintPaymentReceived": "We've received your payment and are confirming it. Your plan will be activated soon.",
+          "uploadProof": "Upload payment proof (optional — speeds up activation)"
         }
       },
       "users": {
         "title": "User Management",
-        "description": "View and manage all platform users",
+        "description": "View and manage the people in your school",
         "backToDashboard": "Back to Dashboard",
         "searchPlaceholder": "Search by name, email, or ID...",
         "stats": {
@@ -3131,8 +3266,8 @@
         }
       },
       "settings": {
-        "title": "Platform Settings",
-        "description": "Configure your platform settings, email, payments, and enrollment policies.",
+        "title": "School settings",
+        "description": "Configure your school settings: email, payments and enrollment policies.",
         "errorTitle": "Error Loading Settings",
         "errorDesc": "Failed to load platform settings",
         "tabs": {
@@ -3730,7 +3865,7 @@
         },
         "new": {
           "title": "Create Product",
-          "description": "Set up a new product students can purchase",
+          "description": "Create a product and choose how you charge for it",
           "back": "Back to Products",
           "details": {
             "title": "Product Details",
@@ -3850,6 +3985,99 @@
           "restore": "Restore",
           "restoreSuccess": "\"{name}\" has been restored",
           "restoreError": "Couldn't restore product. Try again."
+        },
+        "wizard": {
+          "badgeEdit": "Edit mode",
+          "badgeNew": "New offering",
+          "stepProgress": "Step {current} of {total}",
+          "stepsNavLabel": "Product creation steps",
+          "steps": {
+            "source": {
+              "title": "Course",
+              "description": "Choose whether this offering starts from a new or existing course."
+            },
+            "basics": {
+              "title": "Basics",
+              "description": "Set the course details students and admins will recognize."
+            },
+            "pricing": {
+              "title": "Pricing",
+              "description": "Create a free course or configure a paid product."
+            },
+            "postRegistration": {
+              "title": "After purchase",
+              "description": "Add paid-only instructions students see after checkout."
+            },
+            "review": {
+              "title": "Review",
+              "description": "Check readiness and choose draft or publish."
+            }
+          },
+          "source": {
+            "legend": "Course source",
+            "newTitle": "Create new course",
+            "newDescription": "Create a course shell and optionally attach paid pricing.",
+            "existingTitle": "Use existing course",
+            "existingDescription": "Reuse a tenant course, including drafts being prepared for launch.",
+            "courseLabel": "Course",
+            "coursePlaceholder": "Select a course",
+            "selectedStatus": "Selected course status: {status}"
+          },
+          "basics": {
+            "titleLabel": "Title",
+            "titlePlaceholder": "e.g., Product Strategy Intensive",
+            "categoryLabel": "Category",
+            "categoryPlaceholder": "Select category",
+            "noCategories": "No categories are available yet."
+          },
+          "pricing": {
+            "legend": "Pricing mode",
+            "freeTitle": "Free",
+            "freeDescription": "Create a $0 product students enroll in with one click.",
+            "paidTitle": "Paid",
+            "paidDescription": "Create a product and link it to this course."
+          },
+          "postRegistration": {
+            "freeNotice": "Post-registration instructions are product-scoped, so they are available for paid offerings only in this version."
+          },
+          "review": {
+            "courseLabel": "Course",
+            "untitled": "Untitled course",
+            "newCourse": "New course",
+            "existingCourse": "Existing course",
+            "pricingLabel": "Pricing",
+            "noProvider": "No provider",
+            "noPaymentRequired": "No payment required",
+            "afterPurchaseLabel": "After purchase",
+            "notApplicable": "Not applicable",
+            "freeCourse": "Free course",
+            "optionalInstructions": "Optional instructions",
+            "steps": "{count, plural, one {# step} other {# steps}}",
+            "draftReady": "Draft can be saved",
+            "publishReady": "Ready to publish"
+          },
+          "backButton": "Back",
+          "nextButton": "Next",
+          "saveDraftButton": "Save draft",
+          "publishButton": "Publish",
+          "toasts": {
+            "published": "Offering published.",
+            "draftSaved": "Draft saved."
+          },
+          "errors": {
+            "generic": "Could not save this offering.",
+            "draftBlocked": "Add a title before saving.",
+            "publishBlocked": "Complete required setup first.",
+            "fields": {
+              "courseExistingCourseId": "Select a course.",
+              "courseTitle": "Enter a course title.",
+              "pricingPrice": "Enter a price greater than 0.",
+              "pricingCurrency": "Select a currency.",
+              "pricingPaymentProvider": "Select a payment method.",
+              "postRegistrationStepTitle": "Enter a step title.",
+              "postRegistrationStepUrl": "Enter a valid URL."
+            }
+          }
         }
       },
       "apiTokens": {
@@ -4681,6 +4909,17 @@
         "tooMany": "You can attach up to {count} images per message.",
         "unsupported": "{name} could not be read as an image, so it was not sent.",
         "tooLarge": "{name} is still too large to send after resizing."
+      }
+    },
+    "limitBanner": {
+      "atLimit": "You've reached your {resource} limit ({limit}). Upgrade your plan to add more.",
+      "approaching": "You're using {current} of {limit} {resource}. Consider upgrading for more capacity.",
+      "cutoffWarning": "If this is not resolved by {date}, all students will lose access to all courses.",
+      "upgrade": "Upgrade",
+      "dismiss": "Dismiss",
+      "resources": {
+        "courses": "courses",
+        "students": "students"
       }
     }
   },
@@ -5813,6 +6052,152 @@
       "legal": "Legal",
       "privacyPolicy": "Privacy Policy",
       "termsOfService": "Terms of Service"
+    },
+    "templates": {
+      "blank": {
+        "name": "Blank",
+        "description": "Start from scratch with an empty canvas."
+      },
+      "modernAcademy": {
+        "name": "Modern Academy",
+        "description": "A polished landing page with features, courses, testimonials, and CTA."
+      },
+      "minimal": {
+        "name": "Minimal",
+        "description": "A clean, simple landing page focused on courses."
+      },
+      "boldCreator": {
+        "name": "Bold Creator",
+        "description": "A high-energy page for solo creators and small teams."
+      },
+      "courseCatalog": {
+        "name": "Course Catalog",
+        "description": "Showcase your full course catalog with pricing."
+      },
+      "aboutUs": {
+        "name": "About Us",
+        "description": "Tell your story with team profiles and stats."
+      },
+      "contact": {
+        "name": "Contact",
+        "description": "Contact form with FAQ section."
+      },
+      "faq": {
+        "name": "FAQ",
+        "description": "Comprehensive FAQ page with multiple categories."
+      },
+      "freeCourseSchool": {
+        "name": "Free Course School",
+        "description": "Lead with a free course. Live stats, courses, reviews, instructors and pricing — all auto-filled from your data."
+      },
+      "businessCoachingHome": {
+        "name": "Business Coaching — Home",
+        "description": "High-conversion landing page for business, marketing, and entrepreneurship coaches."
+      },
+      "businessCoachingAbout": {
+        "name": "Business Coaching — About",
+        "description": "About page for a business coach: story, philosophy, and credentials."
+      },
+      "businessCoachingFaq": {
+        "name": "Business Coaching — FAQ",
+        "description": "FAQ page for a business coach covering programs, format, results, and pricing."
+      },
+      "businessCoachingContact": {
+        "name": "Business Coaching — Contact",
+        "description": "Contact and book-a-call page for a business coach, with form and quick answers."
+      },
+      "designSchoolHome": {
+        "name": "Design School — Home",
+        "description": "Landing page for design schools and creative course creators (UX/UI, graphic, illustration)."
+      },
+      "designSchoolAbout": {
+        "name": "Design School — About",
+        "description": "About page for a design school: mission, teaching approach, and mentors."
+      },
+      "designSchoolFaq": {
+        "name": "Design School — FAQ",
+        "description": "FAQ page for a design school covering courses, tools, portfolio, and pricing."
+      },
+      "designSchoolContact": {
+        "name": "Design School — Contact",
+        "description": "Contact page for a design school, with form and quick answers."
+      },
+      "fitnessStudioHome": {
+        "name": "Fitness Studio — Home",
+        "description": "Landing page for fitness coaches, yoga studios, and online workout programs."
+      },
+      "fitnessStudioAbout": {
+        "name": "Fitness Studio — About",
+        "description": "About page for a fitness studio: mission, philosophy, and coaches."
+      },
+      "fitnessStudioFaq": {
+        "name": "Fitness Studio — FAQ",
+        "description": "FAQ page for a fitness studio covering programs, equipment, pricing, and membership."
+      },
+      "fitnessStudioContact": {
+        "name": "Fitness Studio — Contact",
+        "description": "Contact page for a fitness studio, with form and quick answers."
+      },
+      "codeSchoolHome": {
+        "name": "Code School — Home",
+        "description": "Full landing page for coding bootcamps and programming schools."
+      },
+      "codeSchoolAbout": {
+        "name": "Code School — About",
+        "description": "About page for a coding school, with team, mission, and stats."
+      },
+      "codeSchoolFaq": {
+        "name": "Code School — FAQ",
+        "description": "FAQ page for a coding school covering courses, pricing, and career support."
+      },
+      "codeSchoolContact": {
+        "name": "Code School — Contact",
+        "description": "Contact page for a coding school, with form and common questions."
+      },
+      "codeSchoolCourses": {
+        "name": "Code School — Courses",
+        "description": "Course catalog page for a coding school, with learning paths and pricing."
+      },
+      "languageSchoolHome": {
+        "name": "Language School — Home",
+        "description": "Landing page for language academies: levels, native teachers, conversation practice, and pricing."
+      },
+      "languageSchoolAbout": {
+        "name": "Language School — About",
+        "description": "About page for a language academy: mission, teaching method, and teachers."
+      },
+      "languageSchoolFaq": {
+        "name": "Language School — FAQ",
+        "description": "FAQ page for a language academy covering levels, classes, pricing, and certificates."
+      },
+      "languageSchoolContact": {
+        "name": "Language School — Contact",
+        "description": "Contact page for a language academy, with form and quick answers."
+      },
+      "musicAcademyHome": {
+        "name": "Music Academy — Home",
+        "description": "Landing page for music schools and online instrument or vocal teachers."
+      },
+      "musicAcademyAbout": {
+        "name": "Music Academy — About",
+        "description": "About page for a music academy: mission, approach, and teachers."
+      },
+      "musicAcademyFaq": {
+        "name": "Music Academy — FAQ",
+        "description": "FAQ page for a music academy covering instruments, lessons, pricing, and equipment."
+      },
+      "musicAcademyContact": {
+        "name": "Music Academy — Contact",
+        "description": "Contact page for a music academy, with form and quick answers."
+      }
+    },
+    "pageTypes": {
+      "home": "Home",
+      "about": "About",
+      "contact": "Contact",
+      "faq": "FAQ",
+      "terms": "Terms",
+      "events": "Events"
     }
   },
   "exercises": {
