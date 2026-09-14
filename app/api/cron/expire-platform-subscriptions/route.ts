@@ -154,6 +154,10 @@ export async function GET(req: NextRequest) {
     .eq('state', 'pending_activation')
     .lt('expires_at', nowIso)
     .select('switch_id')
+    // PostgREST refuses a limited UPDATE without an order (PGRST109). The error
+    // was dropped, so no expired switch was ever abandoned and the one-open-
+    // per-tenant index locked the school out of every later switch (#479).
+    .order('switch_id')
     .limit(100)
   result.switchesAbandoned = abandonedSwitches?.length ?? 0
 

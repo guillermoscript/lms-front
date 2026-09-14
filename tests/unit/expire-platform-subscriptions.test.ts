@@ -55,6 +55,7 @@ function makeSupabase() {
     const preds: Predicate[] = []
     let cols = '*'
     let take = Infinity
+    let ordered = false
     let pending: { op: 'update'; values: Row } | null = null
 
     const rows = () => {
@@ -63,6 +64,10 @@ function makeSupabase() {
     }
 
     function settle() {
+      if (pending && take !== Infinity && !ordered) {
+        // Real PostgREST: PGRST109 "A 'limit' was applied without an explicit 'order'".
+        return { data: null, error: { code: 'PGRST109', message: 'limit without order' } }
+      }
       if (pending) {
         const changed = rows()
         for (const row of changed) Object.assign(row, pending.values)
@@ -110,6 +115,7 @@ function makeSupabase() {
         return b
       },
       order() {
+        ordered = true
         return b
       },
       limit(n: number) {
@@ -468,6 +474,22 @@ describe('expire-platform-subscriptions: #744 PayPal — cancel is final at the 
     expect(body).toMatchObject({ reminded: 0, graceStarted: 0, canceled: 0, downgraded: 0 })
     expect(downgraded).toEqual([])
     expect(sub.status).toBe('active')
+  })
+})
+
+describe('expire-platform-subscriptions: #479 expired switch abandonment', () => {
+  // The limited UPDATE had no order → PGRST109, dropped silently. An abandoned
+  // PayPal checkout then held the one-open-switch index forever.
+  it('abandons a pending switch past its expiry', async () => {
+    db.platform_subscription_switches.push(
+      { switch_id: 'sw-old', tenant_id: TENANT, state: 'pending_activation', expires_at: daysFromNow(-1) },
+      { switch_id: 'sw-live', tenant_id: 'other', state: 'pending_activation', expires_at: daysFromNow(1) },
+    )
+
+    const body = await (await GET(req())).json()
+
+    expect(body.switchesAbandoned).toBe(1)
+    expect(db.platform_subscription_switches.map((s) => s.state)).toEqual(['abandoned', 'pending_activation'])
   })
 })
 
