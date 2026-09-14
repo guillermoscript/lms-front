@@ -47,16 +47,12 @@
  * to be CREATED, and teardown is a delete-by-tenant_id.
  *
  * TWO BEHAVIOURS ASSERTED HERE COME FROM THE DISPATCHER, NOT FROM INTUITION:
- *   - Buyer binding EXISTS and fails CLOSED — on the ACTIVATION branches only
- *     (`payment.succeeded` / `subscription.activated`). `webhook-dispatch.ts:512-521`
- *     throws `metadata owner mismatch` unless `meta.custom_data.userId` and
- *     `.tenantId` both match the transaction row — so a mismatched event is a
- *     500 (the provider retries), not a silent 200, and the row stays pending.
- *     `refund.succeeded` has NO such guard: the LS `order_refunded` branch
- *     returns no `metadata` at all, and webhook-dispatch.ts:545-591 matches on
- *     `event.reference` (a sequential transaction id) alone. That gap is real
- *     and deliberately NOT covered here — a case for it would document a bug,
- *     not a behaviour, so it belongs with the fix.
+ *   - Buyer binding EXISTS and fails CLOSED — on activation AND refund. The
+ *     dispatcher throws `metadata owner mismatch` unless `meta.custom_data.userId`
+ *     and `.tenantId` both match the transaction row — so a mismatched event is
+ *     a 500 (the provider retries), not a silent 200, and nothing moves. Refunds
+ *     used to match on `event.reference` (a sequential transaction id) alone, so
+ *     one signed `order_refunded` could void another school's sale (#743).
  *   - A PARTIAL refund keeps the sale (#547). `apply_webhook_refund` only flips
  *     the status to `refunded` (and revokes entitlements) when the cumulative
  *     refund reaches `amount - 0.005`; below that the row stays `successful`
@@ -560,6 +556,36 @@ test.describe('Lemon Squeezy — a signed order settles and grants access (#740)
     // Claimed once and RELEASED, not re-claimed: `fail_webhook_event` clears the
     // lease without bumping the counter, so the provider's retry can claim it.
     expect(ledger[0].attempt_count).toBe(1)
+  })
+
+  test('a signed order_refunded naming a different buyer voids nothing (#743)', async ({ request }) => {
+    const admin = getAdmin()
+    const updatedAt = '2026-09-14T10:30:00.000Z'
+    const eventId = lsEventId('order_refunded', SETTLE_ORDER, updatedAt)
+    const body = orderRefunded({
+      orderId: SETTLE_ORDER,
+      updatedAt,
+      // A FULL refund — the case that would also revoke the student's access.
+      refundedCents: SALE_AMOUNT * 100,
+      // The SETTLED sale's reference, the right tenant, the WRONG buyer.
+      custom: { ...settleCustom, userId: SEEDED.owner.id },
+    })
+    const res = await postWebhook(request, body, sign(body, WEBHOOK_SECRET!))
+
+    expect(res.status(), await res.text()).toBe(500)
+    expect(await res.json()).toMatchObject({ error: 'Dispatch failed' })
+
+    const tx = await readTransaction(admin, transactionId)
+    expect(tx.status).toBe('successful')
+    expect(Number(tx.refunded_amount)).toBe(0)
+    const grants = await entitlementsOf(admin, SEEDED.student.id, productId)
+    expect(grants).toHaveLength((await coursesOf(admin, productId)).length)
+    for (const grant of grants) expect(grant.status).toBe('active')
+
+    const ledger = await ledgerRows(admin, eventId)
+    expect(ledger).toHaveLength(1)
+    expect(ledger[0].processed_at).toBeNull()
+    expect(ledger[0].error).toContain('owner mismatch')
   })
 
   test('a partial order_refunded records the slice and keeps the sale and the access', async ({ request }) => {

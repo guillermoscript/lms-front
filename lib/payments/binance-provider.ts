@@ -450,8 +450,13 @@ export class BinancePayProvider implements IPaymentProvider {
       return {
         type: 'refund.succeeded',
         providerEventId,
-        providerPaymentId: bizId,
+        // The ORDER's prepayId, not the refund's own id: checkout stored it on
+        // the transaction (provider_subscription_id), and with no
+        // passThroughInfo on this notification it is the only owner binding
+        // the dispatcher can check (#743).
+        providerPaymentId: String(refundInfo.prepayId ?? data.prepayId ?? bizId),
         reference,
+        ...(Object.keys(metadata).length ? { metadata } : {}),
         ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
         ...(currency ? { currency: String(currency).toLowerCase() } : {}),
         raw: payload,

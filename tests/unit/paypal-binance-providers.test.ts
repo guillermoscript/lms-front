@@ -121,6 +121,8 @@ describe('PayPalPaymentProvider.normalizeWebhookEvent', () => {
       }),
     )
     expect(event).toMatchObject({ type: 'refund.succeeded', reference: '42' })
+    // The dispatcher binds the refund to the sale's owner with these (#743).
+    expect(event?.metadata).toEqual({ userId: 'user-uuid', tenantId: 'tenant-uuid' })
   })
 
   it('returns null for unmodelled events, sales without a subscription, and bad JSON', async () => {
@@ -233,10 +235,13 @@ describe('BinancePayProvider.normalizeWebhookEvent', () => {
         bizType: 'PAY_REFUND',
         bizStatus: 'REFUND_SUCCESS',
         bizIdStr: '555',
-        data: JSON.stringify({ merchantTradeNo: '42' }),
+        data: JSON.stringify({ merchantTradeNo: '42', refundInfo: { prepayId: 'prepay-9' } }),
       }),
     )
-    expect(refund).toMatchObject({ type: 'refund.succeeded', reference: '42' })
+    // No passThroughInfo on a refund notification, so the ORDER's prepayId —
+    // what checkout stored on the row — is the owner binding (#743).
+    expect(refund).toMatchObject({ type: 'refund.succeeded', reference: '42', providerPaymentId: 'prepay-9' })
+    expect(refund?.metadata).toBeUndefined()
   })
 
   it('returns null for unknown bizTypes and bad JSON', async () => {

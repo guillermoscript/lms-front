@@ -773,6 +773,35 @@ test.describe('PayPal — a capture settles and grants access, from both entranc
     expect(ledger[0].attempt_count).toBe(1)
   })
 
+  test('a verified refund whose custom_id names a different buyer voids nothing (#743)', async ({ request }) => {
+    const admin = getAdmin()
+    const eventId = `WH-${ID_PREFIX}-refund-foreign`
+    const body = captureRefunded({
+      eventId,
+      refundId: `REF-${ID_PREFIX}-foreign`,
+      // The SETTLED sale's reference, the right tenant, the WRONG buyer — and a
+      // FULL refund, the case that would also revoke the student's access.
+      custom: customId(saleTransactionId, SEEDED.owner.id, QA.id),
+      value: SALE_AMOUNT,
+    })
+    const res = await postWebhook(request, body, transmissionHeaders(eventId))
+
+    expect(res.status(), await res.text()).toBe(500)
+    expect(await res.json()).toMatchObject({ error: 'Dispatch failed' })
+
+    const tx = await readTransaction(admin, saleTransactionId)
+    expect(tx.status).toBe('successful')
+    expect(Number(tx.refunded_amount)).toBe(0)
+    const grants = await entitlementsOf(admin, SEEDED.student.id, saleProductId)
+    expect(grants).toHaveLength(courseIds.length)
+    for (const grant of grants) expect(grant.status).toBe('active')
+
+    const ledger = await ledgerRows(admin, eventId)
+    expect(ledger).toHaveLength(1)
+    expect(ledger[0].processed_at).toBeNull()
+    expect(ledger[0].error).toContain('owner mismatch')
+  })
+
   test('a partial PAYMENT.CAPTURE.REFUNDED records the slice and keeps the sale and the access', async ({
     request,
   }) => {

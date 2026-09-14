@@ -672,8 +672,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
       }
 
       case 'PAYMENT.CAPTURE.REFUNDED': {
-        // Refund resources echo the capture's custom_id.
-        const { reference } = decodePayPalCustomId(resource.custom_id)
+        // Refund resources echo the capture's custom_id — including the
+        // userId/tenantId the dispatcher binds the refund to (#743).
+        const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
         // PayPal states refund money as a decimal STRING in major units
         // ('10.00' = ten dollars), so it needs parsing but no scaling. Carrying
         // it is what lets a partial refund subtract only its own slice instead
@@ -686,6 +687,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           providerEventId,
           providerPaymentId: resource.id,
           reference,
+          metadata,
           ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
           ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
