@@ -409,7 +409,7 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
 
   // Update request status
   const confirmedAt = new Date().toISOString()
-  const { error } = await supabase
+  const { data: confirmed, error } = await supabase
     .from('payment_requests')
     .update({
       status: 'payment_received',
@@ -419,10 +419,14 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
-    .eq('tenant_id', tenantId)
+    // The REQUEST's school, not the host the acting admin is on (#745): a super
+    // admin passes the read check from any tenant, and filtering by theirs
+    // matched nothing and "succeeded" silently.
+    .eq('tenant_id', request.tenant_id)
+    .select('request_id')
 
-  if (error) {
-    console.error('Failed to confirm payment:', error)
+  if (error || !confirmed?.length) {
+    console.error('Failed to confirm payment:', error ?? 'no row updated')
     throw new Error('Failed to confirm payment')
   }
 
@@ -532,7 +536,12 @@ export async function completeAndEnroll(requestId: number) {
       // the literal "manual - null" the Transactions table used to print (#727).
       payment_method: manualTransactionPaymentMethod(request.payment_method),
       status: 'successful',
-      tenant_id: tenantId,
+      // The REQUEST's school, never the acting admin's host (#745) — this row
+      // decides whose revenue, payout and fee snapshot the sale is.
+      tenant_id: request.tenant_id,
+      // Said explicitly rather than left to the column default (#746): a NULL
+      // provider silently drops out of any `.eq('payment_provider', 'manual')`.
+      payment_provider: 'manual',
     })
     .select()
     .single()
@@ -543,7 +552,7 @@ export async function completeAndEnroll(requestId: number) {
   }
 
   // Update payment request status
-  const { error: updateError } = await adminClient
+  const { data: completed, error: updateError } = await adminClient
     .from('payment_requests')
     .update({
       status: 'completed',
@@ -551,10 +560,11 @@ export async function completeAndEnroll(requestId: number) {
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', request.tenant_id)
+    .select('request_id')
 
-  if (updateError) {
-    console.error('Failed to complete payment request:', updateError)
+  if (updateError || !completed?.length) {
+    console.error('Failed to complete payment request:', updateError ?? 'no row updated')
     throw new Error('Failed to complete payment request')
   }
 

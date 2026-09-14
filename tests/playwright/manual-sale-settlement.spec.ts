@@ -33,9 +33,9 @@
  *     browser could name the price would be the whole lockdown undone.
  *   - The IDENTITY IS SERVER-DERIVED. `contact_name`/`contact_email` are read
  *     from the session and the profile, never from the client's fields.
- *   - A $0 PRODUCT IS REFUSED (#727). A free offering is stored as price 0 with
- *     provider `manual` (the wizard's NOT NULL default), so without the guard
- *     every free course would mint an unpayable payment request.
+ *   - A $0 PRODUCT NEVER REACHES THE FORM (#727, #749). A free offering is
+ *     stored as price 0 with provider `manual` (the wizard's NOT NULL default),
+ *     so without the guard every free course would mint an unpayable request.
  *   - The TENANT FILTER HOLDS on the request detail page: another school's
  *     admin gets bounced, not a form that could settle this sale.
  *
@@ -360,27 +360,20 @@ test.describe('Manual (offline) — a request an admin confirms becomes a sale a
     expect(await entitlementsOf(admin, SEEDED.student.id, saleProductId)).toHaveLength(0)
   })
 
-  test('a free product is refused instead of minting an unpayable request', async ({ browser }) => {
+  test('a free product never shows a payment form and mints no request', async ({ browser }) => {
     const admin = getAdmin()
     const page = await asStudent(browser)
 
-    // The page itself still renders the form for a $0 product — the refusal is
-    // `createPaymentRequest`'s, and it is the one that matters: a free offering
-    // is a `manual` product with price 0, so without this guard every giveaway
-    // would land in the admin's queue as a bill nobody can pay.
+    // A free offering is a `manual` product with price 0, so without a guard
+    // every giveaway would land in the admin's queue as a bill nobody can pay.
+    // The page sends the student to the product's one-click enrollment before
+    // any form exists (#749); `createPaymentRequest` still refuses a $0 product
+    // server-side for any caller that skips the page.
     await page.goto(`${QA_BASE}/${LOCALE}/checkout/manual?productId=${freeProductId}`, {
       waitUntil: 'domcontentloaded',
     })
-    await expect(page.getByTestId('manual-checkout-title')).toBeVisible({ timeout: 60_000 })
-    await domClick(page.getByTestId('payment-request-submit'))
-
-    // The toast carries the action's own message — matched on the half that
-    // cannot also be the product's name ("Manual Free Offering …" is on this
-    // page, so a /free/i matcher would pass without the guard existing at all).
-    await expect(page.getByText(/enroll directly from the product page/i).first()).toBeVisible({
-      timeout: 30_000,
-    })
-    await expect(page.getByTestId('payment-request-success')).toHaveCount(0)
+    await expect(page).toHaveURL(new RegExp(`/products/${freeProductId}(\\?|$)`), { timeout: 60_000 })
+    await expect(page.getByTestId('payment-request-submit')).toHaveCount(0)
     expect(await findRequest(admin, freeProductId)).toBeNull()
   })
 
@@ -467,15 +460,10 @@ test.describe('Manual (offline) — a request an admin confirms becomes a sale a
     // The split is stamped by the DB, not by the action (#512) — this is what
     // the school's revenue view and `getPayoutsOwed` both read back.
     expect(sale.school_percentage_snapshot).not.toBeNull()
-    // DOCUMENTING CURRENT BEHAVIOUR, not endorsing it: `completeAndEnroll`
-    // never sets `payment_provider`, and the column has no default, so a manual
-    // sale is a NULL-provider row. Nothing breaks today because every reader
-    // goes through `resolveProvider()` (lib/payments/revenue-share.ts), which
-    // coalesces "no provider, no Stripe intent" to `manual` — the same coalesce
-    // `get_platform_revenue` does in SQL. Any future reader that filters on the
-    // column directly will silently drop every offline sale, which is why this
-    // assertion is here to be read rather than to pass.
-    expect(sale.payment_provider).toBeNull()
+    // Said on the row, not inferred (#746): a NULL provider silently drops out
+    // of any reader that filters or groups on the column instead of going
+    // through `resolveProvider()`, and offline is most new schools' only rail.
+    expect(sale.payment_provider).toBe('manual')
 
     // Everything below is Postgres: after_transaction_insert →
     // trigger_manage_transactions → enroll_user, which loops ALL of
