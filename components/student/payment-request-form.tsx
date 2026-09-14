@@ -59,7 +59,7 @@ export function PaymentRequestForm({
     setLoading(true)
 
     try {
-      const request = await createPaymentRequest({
+      const { request, error } = await createPaymentRequest({
         productId: productId || undefined,
         planId: planId || undefined,
         // Identity is derived server-side from the authenticated user; these
@@ -69,6 +69,7 @@ export function PaymentRequestForm({
         contactPhone: formData.contactPhone.trim() || undefined,
         message: formData.message.trim() || undefined,
       })
+      if (error) throw new Error(error)
 
       // Upload proof if one was selected
       if (proofFile && request?.request_id) {

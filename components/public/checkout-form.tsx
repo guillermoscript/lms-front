@@ -371,23 +371,25 @@ export function CheckoutForm({
                 } else {
                     // Offline payment — works for both products and plans
                     if (productId) {
-                        await createPaymentRequest({
+                        const { error } = await createPaymentRequest({
                             productId,
                             contactName: offlineData.name,
                             contactEmail: offlineData.email,
                             contactPhone: offlineData.phone,
                             message: offlineData.message
                         });
+                        if (error) throw new Error(error);
                         toast.success(t('toasts.requestSent'));
                         router.push('/dashboard/student/payments');
                     } else if (planId) {
-                        await createPaymentRequest({
+                        const { error } = await createPaymentRequest({
                             planId: parseInt(planId),
                             contactName: offlineData.name,
                             contactEmail: offlineData.email,
                             contactPhone: offlineData.phone,
                             message: offlineData.message
                         });
+                        if (error) throw new Error(error);
                         toast.success(t('toasts.requestSent'));
                         router.push('/dashboard/student/payments');
                     } else {
