@@ -32,9 +32,12 @@ import { cancelMySubscription, reactivateMySubscription } from '@/app/actions/su
 export function ManageSubscription({
   subscriptionId,
   cancelAtPeriodEnd,
+  canResume = true,
 }: {
   subscriptionId: number
   cancelAtPeriodEnd: boolean
+  /** False where the provider's cancel is final (PayPal) — there is nothing to resume. */
+  canResume?: boolean
 }) {
   const t = useTranslations('dashboard.student.billing.subscription.manage')
   const router = useRouter()
@@ -72,6 +75,8 @@ export function ManageSubscription({
   }
 
   if (cancelAtPeriodEnd) {
+    // A final cancel has no resume; the page hint says what happens next.
+    if (!canResume) return null
     return (
       <Button
         variant="outline"
@@ -109,7 +114,7 @@ export function ManageSubscription({
 
           <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
             <IconAlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{t('confirmNote')}</span>
+            <span>{canResume ? t('confirmNote') : t('confirmNoteFinal')}</span>
           </div>
 
           <DialogFooter className="flex-col gap-2 sm:flex-row">

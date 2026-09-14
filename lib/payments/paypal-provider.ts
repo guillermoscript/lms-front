@@ -95,7 +95,7 @@ function apiBase(environment: 'sandbox' | 'live'): string {
   return override.replace(/\/+$/, '')
 }
 
-class PayPalApiError extends Error {
+export class PayPalApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -626,12 +626,17 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   async captureOrder(orderId: string): Promise<{
     captureId: string
     status: string
+    /** The CAPTURE's own status — `COMPLETED` is money, `PENDING` is not yet. */
+    captureStatus: string
     reference?: string
     metadata?: Record<string, string>
   }> {
     const json = await this.api(`/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       label: 'captureOrder',
+      // The default `return=minimal` body may omit purchase_units, and with it
+      // the capture and the custom_id the owner binding reads.
+      headers: { Prefer: 'return=representation' },
       body: JSON.stringify({}),
     })
 
@@ -645,6 +650,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     return {
       captureId: capture.id,
       status: capture.status ?? json.status ?? '',
+      captureStatus: capture.status ?? '',
       ...decoded,
     }
   }
@@ -653,6 +659,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   async getOrder(orderId: string): Promise<{
     status: string
     captureId?: string
+    captureStatus?: string
     reference?: string
     metadata?: Record<string, string>
   }> {
@@ -666,7 +673,32 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     return {
       status: json.status ?? '',
       captureId: capture?.id,
+      captureStatus: capture?.status,
       ...decoded,
+    }
+  }
+
+  /**
+   * A subscription's raw PayPal state plus the correlation PayPal holds for it.
+   * `getSubscription` collapses the status into our vocabulary; the stale-checkout
+   * reconciler needs PayPal's own (APPROVAL_PENDING vs APPROVED vs ACTIVE) and the
+   * custom_id to dispatch an activation whose webhook never arrived.
+   */
+  async getSubscriptionDetails(providerSubId: string): Promise<{
+    status: string
+    nextBillingTime?: Date
+    reference?: string
+    metadata?: Record<string, string>
+  }> {
+    const json = await this.api(`/v1/billing/subscriptions/${providerSubId}`, {
+      method: 'GET',
+      label: 'getSubscriptionDetails',
+    })
+    const nextBilling = json.billing_info?.next_billing_time
+    return {
+      status: json.status ?? '',
+      nextBillingTime: nextBilling ? new Date(nextBilling) : undefined,
+      ...decodePayPalCustomId(json.custom_id),
     }
   }
 
@@ -783,6 +815,26 @@ export class PayPalPaymentProvider implements IPaymentProvider {
         }
       }
 
+      // A capture PayPal refused after it was PENDING (payment review, eCheck).
+      // The capture route no longer settles a PENDING capture, so this is what
+      // releases the buyer's pending row instead of leaving it to the TTL.
+      case 'PAYMENT.CAPTURE.DENIED':
+      case 'PAYMENT.CAPTURE.DECLINED': {
+        const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
+        return {
+          type: 'payment.failed',
+          providerEventId,
+          providerPaymentId: resource.id,
+          reference,
+          metadata,
+          raw: payload,
+        }
+      }
+
+      // RE-ACTIVATED is a suspended subscription the payer (or PayPal's retry)
+      // brought back. Same shape and custom_id as ACTIVATED; both dispatchers
+      // treat an activation of the CURRENT subscription as "active again".
+      case 'BILLING.SUBSCRIPTION.RE-ACTIVATED':
       case 'BILLING.SUBSCRIPTION.ACTIVATED': {
         const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
         const nextBilling = resource.billing_info?.next_billing_time
@@ -839,6 +891,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
         if (!subscriptionId) return null // plain sale outside our subscription flow
 
         let periodEnd: Date | undefined
+        let subscriptionCustomId: string | undefined
         try {
           const sub = await this.api(`/v1/billing/subscriptions/${subscriptionId}`, {
             method: 'GET',
@@ -846,6 +899,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           })
           const nextBilling = sub?.billing_info?.next_billing_time
           periodEnd = nextBilling ? new Date(nextBilling) : undefined
+          subscriptionCustomId = sub?.custom_id
         } catch (err) {
           console.warn(
             `[paypal] could not fetch subscription ${subscriptionId} for renewal period end:`,
@@ -853,7 +907,16 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           )
         }
 
-        const { reference } = decodePayPalCustomId(resource.custom ?? resource.custom_id)
+        // The sale echoes the subscription's custom_id as `custom` (seen live);
+        // the subscription itself is the fallback. Carrying the decoded
+        // metadata lets each loop recognise its own renewal — the platform
+        // dispatcher drops a student's (`userId`) before any lookup — and
+        // resolves the school on a first-cycle sale that beats ACTIVATED.
+        const { reference, metadata } = decodePayPalCustomId(
+          resource.custom ?? resource.custom_id ?? subscriptionCustomId,
+        )
+        const value = Number.parseFloat(resource.amount?.total ?? resource.amount?.value)
+        const currency: string | undefined = resource.amount?.currency ?? resource.amount?.currency_code
         return {
           type: 'subscription.renewed',
           providerEventId,
@@ -861,6 +924,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           providerPaymentId: resource.id,
           periodEnd,
           reference,
+          metadata,
+          ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+          ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
         }
       }
@@ -891,7 +957,15 @@ export class PayPalPaymentProvider implements IPaymentProvider {
         }),
       })
     } catch (error) {
-      if (!(error instanceof PayPalApiError) || error.status !== 404) throw error
+      // Already gone is success. A second cancel of a CANCELLED (or EXPIRED)
+      // subscription is a 422 SUBSCRIPTION_STATUS_INVALID, not a 404 (seen
+      // live) — and it is the normal case once the payer has cancelled from
+      // their PayPal account, so treating it as a failure left a plan-switch
+      // cleanup retrying forever and blocking every later switch (#479).
+      const alreadyEnded =
+        error instanceof PayPalApiError &&
+        (error.status === 404 || (error.status === 422 && error.message.includes('SUBSCRIPTION_STATUS_INVALID')))
+      if (!alreadyEnded) throw error
     }
     return { mode: 'immediate' }
   }

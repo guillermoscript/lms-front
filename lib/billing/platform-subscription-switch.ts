@@ -37,7 +37,12 @@ export async function beginPlatformSubscriptionSwitch(
     .maybeSingle()
 
   if (sourceError) throw new Error(`Failed to read current subscription: ${sourceError.message}`)
-  if (!source || source.status !== 'active') return null
+  // `past_due` is a source too (#479): a school whose card or PayPal balance
+  // failed and that pays again — "Make payment now" — is replacing a
+  // subscription the provider still holds. Without a switch the replacement's
+  // activation fails the dispatcher's identity guard and is dropped, while the
+  // provider bills it every month.
+  if (!source || !['active', 'past_due'].includes(source.status)) return null
   // Same rail is a switch only where the provider cannot swap the plan in place
   // (#744) — see `supersedesOnSameRail`. Everywhere else it is either an
   // in-place change or a self-managed renewal, and neither has a source to

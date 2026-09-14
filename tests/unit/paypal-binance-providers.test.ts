@@ -222,6 +222,52 @@ describe('PayPalPaymentProvider.normalizeWebhookEvent', () => {
     expect(event?.metadata).toEqual({ userId: 'user-uuid', tenantId: 'tenant-uuid' })
   })
 
+  // A denied capture left the checkout pending with no signal (#479).
+  it('maps PAYMENT.CAPTURE.DENIED / DECLINED → payment.failed with owner metadata', async () => {
+    for (const ppType of ['PAYMENT.CAPTURE.DENIED', 'PAYMENT.CAPTURE.DECLINED']) {
+      const event = await provider.normalizeWebhookEvent(
+        JSON.stringify({ id: 'WH-D', event_type: ppType, resource: { id: 'CAP-D', custom_id: customId } }),
+      )
+      expect(event).toMatchObject({
+        type: 'payment.failed',
+        providerPaymentId: 'CAP-D',
+        reference: '42',
+        metadata: { userId: 'user-uuid', tenantId: 'tenant-uuid' },
+      })
+    }
+  })
+
+  it('maps BILLING.SUBSCRIPTION.RE-ACTIVATED like ACTIVATED', async () => {
+    const event = await provider.normalizeWebhookEvent(
+      JSON.stringify({
+        id: 'WH-R',
+        event_type: 'BILLING.SUBSCRIPTION.RE-ACTIVATED',
+        resource: { id: 'I-SUB1', custom_id: customId, billing_info: { next_billing_time: '2026-10-01T00:00:00Z' } },
+      }),
+    )
+    expect(event).toMatchObject({ type: 'subscription.activated', providerSubscriptionId: 'I-SUB1', reference: '42' })
+  })
+
+  // The sale echoes the subscription's custom_id as `custom` (seen live) — the
+  // owner binding needs it even when the subscription fetch fails.
+  it('decodes a renewal sale owner from resource.custom when the subscription fetch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+    const event = await provider.normalizeWebhookEvent(
+      JSON.stringify({
+        id: 'WH-S',
+        event_type: 'PAYMENT.SALE.COMPLETED',
+        resource: { id: 'S-2', billing_agreement_id: 'I-SUB1', custom: customId, amount: { total: '9.00', currency: 'USD' } },
+      }),
+    )
+    expect(event).toMatchObject({
+      type: 'subscription.renewed',
+      providerSubscriptionId: 'I-SUB1',
+      reference: '42',
+      metadata: { userId: 'user-uuid', tenantId: 'tenant-uuid' },
+    })
+    vi.unstubAllGlobals()
+  })
+
   it('returns null for unmodelled events, sales without a subscription, and bad JSON', async () => {
     expect(
       await provider.normalizeWebhookEvent(
@@ -366,7 +412,7 @@ describe('PROVIDER_CAPABILITIES sync', () => {
 })
 
 describe('PayPalPaymentProvider.cancelSubscription', () => {
-  function stubPayPal(cancelStatus: number) {
+  function stubPayPal(cancelStatus: number, body?: string) {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -377,10 +423,18 @@ describe('PayPalPaymentProvider.cancelSubscription', () => {
       .mockResolvedValueOnce({
         ok: cancelStatus >= 200 && cancelStatus < 300,
         status: cancelStatus,
-        text: async () => (cancelStatus === 404 ? 'missing' : 'provider failure'),
+        text: async () => body ?? (cancelStatus === 404 ? 'missing' : 'provider failure'),
       })
     vi.stubGlobal('fetch', fetchMock)
   }
+
+  // A second cancel (payer already cancelled in PayPal) is a 422, not a 404 —
+  // seen live. Throwing kept switch cleanup retrying forever (#479).
+  it('treats 422 SUBSCRIPTION_STATUS_INVALID as already canceled', async () => {
+    stubPayPal(422, '{"name":"UNPROCESSABLE_ENTITY","details":[{"issue":"SUBSCRIPTION_STATUS_INVALID"}]}')
+    const provider = new PayPalPaymentProvider('client', 'secret')
+    await expect(provider.cancelSubscription('sub-ended', true)).resolves.toEqual({ mode: 'immediate' })
+  })
 
   it('treats a structured HTTP 404 as already canceled', async () => {
     stubPayPal(404)

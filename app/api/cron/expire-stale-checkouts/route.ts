@@ -27,9 +27,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { getPaymentProvider } from '@/lib/payments'
-import type { PayPalPaymentProvider } from '@/lib/payments/paypal-provider'
-import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
+import { reconcilePayPalCheckout } from '@/lib/payments/paypal-reconcile'
 import { isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
@@ -58,96 +56,6 @@ interface StaleCheckout {
   product_id: number | null
   checkout_expires_at: string | null
   transaction_date: string
-}
-
-/**
- * Ask PayPal whether the order behind this checkout actually completed.
- *
- * Returns true when the payment was recovered and dispatched — the caller must
- * then leave the row alone, because the dispatcher has already flipped it.
- *
- * PayPal keeps an APPROVED order capturable for up to three days, well past our
- * TTL, which is the precise case this exists for: the buyer approved, the
- * redirect back to us never completed, and cancelling here would throw away a
- * payment we can still take. A COMPLETED order is one where our own capture
- * route succeeded but its dispatch did not.
- */
-async function reconcilePayPal(
-  admin: SupabaseClient,
-  row: StaleCheckout,
-): Promise<boolean> {
-  if (!row.provider_checkout_id) return false
-
-  let paypal: PayPalPaymentProvider
-  try {
-    paypal = getPaymentProvider('paypal') as PayPalPaymentProvider
-  } catch {
-    // Not configured on this deployment — fall through to plain expiry.
-    return false
-  }
-
-  let order: Awaited<ReturnType<PayPalPaymentProvider['getOrder']>>
-  try {
-    order = await paypal.getOrder(row.provider_checkout_id)
-  } catch (err) {
-    // A provider outage must not be read as "abandoned". Leave the row pending
-    // and let the next tick retry; a genuinely dead order stays dead.
-    console.error(
-      `[expire-stale-checkouts] paypal getOrder failed for order ${row.provider_checkout_id} (tx ${row.transaction_id}) — leaving pending:`,
-      err,
-    )
-    return true
-  }
-
-  if (order.status === 'APPROVED') {
-    try {
-      const captured = await paypal.captureOrder(row.provider_checkout_id)
-      await dispatchBillingEvent(
-        {
-          type: 'payment.succeeded',
-          providerEventId: `paypal-capture:${captured.captureId}`,
-          providerPaymentId: captured.captureId,
-          reference: captured.reference,
-          metadata: captured.metadata,
-          raw: { source: 'expire-stale-checkouts', orderId: row.provider_checkout_id },
-        },
-        { provider: 'paypal', admin },
-      )
-      return true
-    } catch (err) {
-      console.error(
-        `[expire-stale-checkouts] paypal capture/dispatch failed for tx ${row.transaction_id} — leaving pending:`,
-        err,
-      )
-      return true
-    }
-  }
-
-  if (order.status === 'COMPLETED' && order.captureId) {
-    try {
-      await dispatchBillingEvent(
-        {
-          type: 'payment.succeeded',
-          providerEventId: `paypal-capture:${order.captureId}`,
-          providerPaymentId: order.captureId,
-          reference: order.reference,
-          metadata: order.metadata,
-          raw: { source: 'expire-stale-checkouts', orderId: row.provider_checkout_id },
-        },
-        { provider: 'paypal', admin },
-      )
-      return true
-    } catch (err) {
-      console.error(
-        `[expire-stale-checkouts] paypal dispatch failed for completed order, tx ${row.transaction_id} — leaving pending:`,
-        err,
-      )
-      return true
-    }
-  }
-
-  // CREATED / VOIDED / PAYER_ACTION_REQUIRED — nothing was ever taken.
-  return false
 }
 
 export async function GET(req: NextRequest) {
@@ -194,7 +102,11 @@ export async function GET(req: NextRequest) {
       // interrogate, and Binance Pay already sends a terminal PAY_CLOSED that
       // the dispatcher turns into payment.failed — for both, a lapsed TTL with
       // no terminal event is as much as we will ever know.
-      if (await reconcilePayPal(admin, row)) {
+      //
+      // Only `dead` expires. `settled` was just dispatched, `in_flight` is money
+      // still moving, and `unknown` is PayPal not answering — none of those is
+      // an abandonment.
+      if ((await reconcilePayPalCheckout(admin, row)) !== 'dead') {
         recovered.push(row.transaction_id)
         continue
       }

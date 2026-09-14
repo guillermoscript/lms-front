@@ -25,7 +25,7 @@ import {
 } from '@tabler/icons-react'
 import { VerifyPaymentButton } from '@/components/student/verify-payment-button'
 import { ChangePlanDialog, type SwitchablePlan } from '@/components/student/change-plan-dialog'
-import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { PROVIDER_CAPABILITIES, cancelIsFinalAtProvider, type PaymentProvider } from '@/lib/payments/types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -405,13 +405,16 @@ export default async function StudentBillingPage() {
                       <IconInfoCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                       <span>
                         {activeSubscription.cancel_at_period_end
-                          ? t('subscription.manage.canceledHint')
+                          ? cancelIsFinalAtProvider(activeProvider)
+                            ? t('subscription.manage.canceledFinalHint')
+                            : t('subscription.manage.canceledHint')
                           : t('subscription.manage.cancelHint')}
                       </span>
                     </span>
                     <ManageSubscription
                       subscriptionId={activeSubscription.subscription_id}
                       cancelAtPeriodEnd={!!activeSubscription.cancel_at_period_end}
+                      canResume={!cancelIsFinalAtProvider(activeProvider)}
                     />
                   </div>
                 </div>

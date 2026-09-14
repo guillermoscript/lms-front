@@ -24,8 +24,12 @@ const tracked: { event: string; props: Row; ctx: Row }[] = []
 const dispatched: Row[] = []
 const paypalCalls: string[] = []
 
-let paypalOrder: { status: string; captureId?: string; reference?: string } = { status: 'CREATED' }
+let paypalOrder: { status: string; captureId?: string; captureStatus?: string; reference?: string } = {
+  status: 'CREATED',
+}
 let paypalGetThrows = false
+let paypalCaptureStatus = 'COMPLETED'
+let paypalSub: { status: string; nextBillingTime?: Date; reference?: string } | Error = { status: 'APPROVAL_PENDING' }
 
 type Predicate = (row: Row) => boolean
 
@@ -123,8 +127,13 @@ vi.mock('@/lib/payments', () => ({
         return Promise.resolve({
           captureId: 'cap_1',
           status: 'COMPLETED',
+          captureStatus: paypalCaptureStatus,
           reference: paypalOrder.reference,
         })
+      },
+      getSubscriptionDetails: (id: string) => {
+        paypalCalls.push(`getSubscriptionDetails:${id}`)
+        return paypalSub instanceof Error ? Promise.reject(paypalSub) : Promise.resolve(paypalSub)
       },
     }
   },
@@ -173,6 +182,8 @@ beforeEach(() => {
   paypalCalls.length = 0
   paypalOrder = { status: 'CREATED' }
   paypalGetThrows = false
+  paypalCaptureStatus = 'COMPLETED'
+  paypalSub = { status: 'APPROVAL_PENDING' }
   nextId = 1
   process.env.CRON_SECRET = 'cron-secret'
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost'
@@ -239,7 +250,7 @@ describe('expire-stale-checkouts cron', () => {
   // A capture our own return route already made, whose dispatch died. The order
   // is COMPLETED at PayPal and the money is taken — re-dispatch, never expire.
   it('re-dispatches a COMPLETED PayPal order whose settlement never landed', async () => {
-    paypalOrder = { status: 'COMPLETED', captureId: 'cap_9', reference: '1' }
+    paypalOrder = { status: 'COMPLETED', captureId: 'cap_9', captureStatus: 'COMPLETED', reference: '1' }
     seedCheckout({ payment_provider: 'paypal', provider_checkout_id: 'ORDER-2' })
     const res = await GET(req())
     expect(dispatched[0]).toMatchObject({ providerPaymentId: 'cap_9' })
@@ -254,6 +265,45 @@ describe('expire-stale-checkouts cron', () => {
     const res = await GET(req())
     expect(await res.json()).toMatchObject({ expired: 0 })
     expect(row.status).toBe('pending')
+  })
+
+  // eCheck / risk review: money is moving but not settled — neither enroll nor expire.
+  it('leaves a PayPal capture that came back PENDING alone', async () => {
+    paypalOrder = { status: 'APPROVED', reference: '1' }
+    paypalCaptureStatus = 'PENDING'
+    const row = seedCheckout({ payment_provider: 'paypal', provider_checkout_id: 'ORDER-5' })
+    const res = await GET(req())
+    expect(dispatched).toHaveLength(0)
+    expect(await res.json()).toMatchObject({ expired: 0 })
+    expect(row.status).toBe('pending')
+  })
+
+  // A plan row holds a Billing Subscriptions I-… id, not an order. Asking the
+  // Orders API 404'd, which read as an outage and kept the row pending forever.
+  it('expires an abandoned PayPal plan checkout via the Subscriptions API', async () => {
+    paypalSub = { status: 'APPROVAL_PENDING' }
+    const row = seedCheckout({ payment_provider: 'paypal', provider_checkout_id: 'I-ABANDON', plan_id: 5, product_id: null })
+    const res = await GET(req())
+    expect(paypalCalls).toEqual(['getSubscriptionDetails:I-ABANDON'])
+    expect(await res.json()).toMatchObject({ expired: 1 })
+    expect(row.status).toBe('canceled')
+  })
+
+  it('activates a PayPal plan checkout that is ACTIVE at PayPal but never landed', async () => {
+    const next = new Date('2027-01-01T00:00:00.000Z')
+    paypalSub = { status: 'ACTIVE', nextBillingTime: next, reference: '1' }
+    const row = seedCheckout({ payment_provider: 'paypal', provider_checkout_id: 'I-LIVE', plan_id: 5, product_id: null })
+    const res = await GET(req())
+    expect(dispatched[0]).toMatchObject({ type: 'subscription.activated', providerSubscriptionId: 'I-LIVE', periodEnd: next })
+    expect(await res.json()).toMatchObject({ recovered: 1, expired: 0 })
+    expect(row.status).toBe('pending')
+  })
+
+  it('expires a PayPal plan checkout PayPal no longer knows', async () => {
+    paypalSub = Object.assign(new Error('not found'), { status: 404 })
+    const row = seedCheckout({ payment_provider: 'paypal', provider_checkout_id: 'I-GONE', plan_id: 5, product_id: null })
+    await GET(req())
+    expect(row.status).toBe('canceled')
   })
 
   it('expires a PayPal order the buyer never approved', async () => {

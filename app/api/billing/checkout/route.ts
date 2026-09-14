@@ -105,9 +105,12 @@ export async function POST(req: NextRequest) {
       .eq('tenant_id', tenantId)
       .maybeSingle()
 
+    // `past_due` still holds a provider subscription (a suspended PayPal one, a
+    // Stripe one in dunning), so paying again replaces it rather than starting
+    // from nothing — see `beginPlatformSubscriptionSwitch` (#479).
     const liveSub =
       existingSub?.provider_subscription_id &&
-      existingSub.status === 'active' &&
+      (existingSub.status === 'active' || existingSub.status === 'past_due') &&
       existingSub.payment_provider !== 'manual'
         ? existingSub
         : null
@@ -163,7 +166,14 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         )
       }
-      if (liveSub.plan_id === plan.plan_id && liveSub.interval === interval && !liveSub.cancel_at_period_end) {
+      // A past-due school buying its own plan again is paying off the suspended
+      // subscription, not double-subscribing — let it through as a switch.
+      if (
+        liveSub.status === 'active' &&
+        liveSub.plan_id === plan.plan_id &&
+        liveSub.interval === interval &&
+        !liveSub.cancel_at_period_end
+      ) {
         return NextResponse.json(
           { error: 'You are already subscribed to this plan on this payment method.' },
           { status: 400 },

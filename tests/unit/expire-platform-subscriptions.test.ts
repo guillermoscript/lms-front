@@ -156,6 +156,21 @@ vi.mock('@/lib/billing/downgrade-tenant', () => ({
   },
 }))
 
+const providerCancels = vi.hoisted(() => ({ calls: [] as string[], fail: false }))
+
+vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/billing/platform-billing')>()
+  return {
+    ...actual,
+    getPlatformBillingProvider: () => ({
+      cancelSubscription: (id: string) => {
+        providerCancels.calls.push(id)
+        return providerCancels.fail ? Promise.reject(new Error('paypal 503')) : Promise.resolve({ mode: 'immediate' })
+      },
+    }),
+  }
+})
+
 import { GET } from '@/app/api/cron/expire-platform-subscriptions/route'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
@@ -211,6 +226,8 @@ beforeEach(() => {
   db.tenant_users.push({ tenant_id: TENANT, user_id: 'admin-1', role: 'admin', status: 'active' })
   emails.length = 0
   downgraded.length = 0
+  providerCancels.calls.length = 0
+  providerCancels.fail = false
 })
 
 describe('expire-platform-subscriptions: auth', () => {
@@ -451,5 +468,49 @@ describe('expire-platform-subscriptions: #744 PayPal — cancel is final at the 
     expect(body).toMatchObject({ reminded: 0, graceStarted: 0, canceled: 0, downgraded: 0 })
     expect(downgraded).toEqual([])
     expect(sub.status).toBe('active')
+  })
+})
+
+describe('expire-platform-subscriptions: #479 suspended PayPal school', () => {
+  it('cancels at PayPal, then downgrades once the dispatcher-opened grace lapsed (phase 3)', async () => {
+    seedSub({
+      payment_provider: 'paypal',
+      provider_subscription_id: 'I-SUSP',
+      status: 'past_due',
+      grace_period_end: daysFromNow(-1),
+      current_period_end: daysFromNow(-15),
+    })
+
+    const body = await (await GET(req())).json()
+
+    expect(providerCancels.calls).toEqual(['I-SUSP'])
+    expect(downgraded).toEqual([TENANT])
+    expect(body.downgraded).toBe(1)
+  })
+
+  it('skips the downgrade this pass when the PayPal cancel fails', async () => {
+    providerCancels.fail = true
+    seedSub({
+      payment_provider: 'paypal',
+      provider_subscription_id: 'I-SUSP',
+      status: 'past_due',
+      grace_period_end: daysFromNow(-1),
+    })
+
+    await GET(req())
+
+    expect(downgraded).toEqual([])
+  })
+
+  it('leaves a PayPal school still inside its grace window alone', async () => {
+    seedSub({
+      payment_provider: 'paypal',
+      provider_subscription_id: 'I-SUSP',
+      status: 'past_due',
+      grace_period_end: daysFromNow(5),
+    })
+    await GET(req())
+    expect(providerCancels.calls).toEqual([])
+    expect(downgraded).toEqual([])
   })
 })

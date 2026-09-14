@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { PROVIDER_CAPABILITIES, cancelIsFinalAtProvider, type PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   // 2. Have a current_period_end in the past (or end_date, whichever is later)
   const { data: expired, error } = await supabase
     .from('subscriptions')
-    .select('subscription_id, user_id, tenant_id, current_period_end, end_date, payment_provider')
+    .select('subscription_id, user_id, tenant_id, current_period_end, end_date, payment_provider, cancel_at_period_end')
     .eq('subscription_status', 'active')
     .or(`current_period_end.lt.${now},end_date.lt.${now}`)
 
@@ -76,7 +76,11 @@ export async function GET(req: NextRequest) {
   // This avoids expiring subs that were renewed but have a stale end_date.
   // Also skip push-renewal providers (their webhooks own expiry).
   const toExpire = expired.filter(sub => {
-    if (!isCronExpirable(sub.payment_provider)) return false
+    // A final-at-provider cancel (PayPal) left the paid period for us to end
+    // (#479): the webhook kept access instead of revoking it, and no further
+    // provider event will ever arrive for this subscription.
+    const appOwnsCancel = !!sub.cancel_at_period_end && cancelIsFinalAtProvider(sub.payment_provider)
+    if (!isCronExpirable(sub.payment_provider) && !appOwnsCancel) return false
     const periodEnd = sub.current_period_end ? new Date(sub.current_period_end) : null
     const endDate = sub.end_date ? new Date(sub.end_date) : null
     const cutoff = new Date(now)

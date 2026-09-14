@@ -23,7 +23,7 @@ vi.mock('@/lib/billing/downgrade-tenant', () => ({
   downgradeTenantToFreeIfCurrent: vi.fn(() => Promise.resolve(10)),
 }))
 
-import { dispatchPlatformBillingEvent } from '@/lib/billing/platform-webhook-dispatch'
+import { dispatchPlatformBillingEvent, PUSH_RAIL_GRACE_DAYS } from '@/lib/billing/platform-webhook-dispatch'
 import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 
 let db: Db
@@ -92,6 +92,44 @@ describe('subscription.canceled on stripe (supportsScheduledCancellation) keeps 
     await dispatchPlatformBillingEvent(cancelEvent(), { provider: 'stripe', admin: client() })
 
     expect(downgradeTenantToFreeIfCurrent).toHaveBeenCalledWith(expect.anything(), TENANT, 'stripe', 'I-1')
+  })
+})
+
+// A SUSPENDED PayPal subscription never sends another event, so without a
+// deadline the school kept its paid plan forever (#479).
+describe('subscription.past_due on paypal opens a grace window', () => {
+  it('sets grace_period_end ~PUSH_RAIL_GRACE_DAYS out on the transition', async () => {
+    await dispatchPlatformBillingEvent(
+      {
+        type: 'subscription.past_due',
+        providerSubscriptionId: 'I-1',
+        providerEventId: 'WH-SUSP',
+        metadata: { tenant_id: TENANT },
+        raw: {},
+      },
+      { provider: 'paypal', admin: client() },
+    )
+
+    expect(sub().status).toBe('past_due')
+    const graceMs = Date.parse(sub().grace_period_end as string) - Date.now()
+    expect(graceMs).toBeGreaterThan((PUSH_RAIL_GRACE_DAYS - 1) * DAY)
+    expect(graceMs).toBeLessThanOrEqual(PUSH_RAIL_GRACE_DAYS * DAY)
+  })
+
+  it('stripe past_due leaves grace to Stripe dunning', async () => {
+    db.platform_subscriptions[0].payment_provider = 'stripe'
+    await dispatchPlatformBillingEvent(
+      {
+        type: 'subscription.past_due',
+        providerSubscriptionId: 'I-1',
+        providerEventId: 'WH-PD',
+        metadata: { tenant_id: TENANT },
+        raw: {},
+      },
+      { provider: 'stripe', admin: client() },
+    )
+    expect(sub().status).toBe('past_due')
+    expect(sub().grace_period_end ?? null).toBeNull()
   })
 })
 
