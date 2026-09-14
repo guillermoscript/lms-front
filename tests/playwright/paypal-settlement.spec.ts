@@ -820,6 +820,31 @@ test.describe('PayPal — a capture settles and grants access, from both entranc
     expect(ledger[0].processed_at).not.toBeNull()
   })
 
+  test('an event type we do not model is acked, not retried forever', async ({ request }) => {
+    const admin = getAdmin()
+    // PayPal sends far more than the seven types the adapter maps — disputes,
+    // payouts, plan updates. `normalizeWebhookEvent` returns null for those and
+    // the route must ACK: answering anything else makes PayPal redeliver an
+    // event we will never model, and enough of those disable the endpoint for
+    // the ones we do.
+    const body = JSON.stringify({
+      id: `WH-${ID_PREFIX}-unmodelled`,
+      event_type: 'CUSTOMER.DISPUTE.CREATED',
+      resource: { custom_id: saleCustom, dispute_id: `PP-D-${RUN}` },
+    })
+    const res = await postWebhook(request, body, transmissionHeaders(`WH-${ID_PREFIX}-unmodelled`))
+    expect(res.status(), await res.text()).toBe(200)
+    expect(await res.json()).toMatchObject({ received: true, ignored: true })
+
+    // Normalisation happens BEFORE the claim, so an unmodelled event leaves no
+    // ledger row to redeliver against either.
+    expect(await ledgerRows(admin, `WH-${ID_PREFIX}-unmodelled`)).toHaveLength(0)
+    // And it certainly does not touch the settled sale it names.
+    const tx = await readTransaction(admin, saleTransactionId)
+    expect(tx.status).toBe('successful')
+    expect(Number(tx.refunded_amount)).toBeCloseTo(REFUND_SLICE, 2)
+  })
+
   // -------------------------------------------------------------------------
   // The OTHER entrance: the buyer's return from PayPal's approve page. No
   // signature, no `webhook_events` claim — authority comes from the capture

@@ -427,6 +427,15 @@ test.describe('Manual (offline) — a request an admin confirms becomes a sale a
     // later bounces has already given the course away.
     expect(await transactionsOf(admin, saleProductId)).toHaveLength(0)
     expect(await entitlementsOf(admin, SEEDED.student.id, saleProductId)).toHaveLength(0)
+
+    // And the door is shut where it actually matters — the app's own gate, not
+    // just the absence of rows. `requireCourseAccess` bounces a student with no
+    // entitlement back to the dashboard.
+    const student = await asStudent(browser)
+    await student.goto(`${QA_BASE}/${LOCALE}/dashboard/student/courses/${courseIds[0]}`, {
+      waitUntil: 'domcontentloaded',
+    })
+    await expect(student).toHaveURL(/\/dashboard\/student\/?$/, { timeout: 60_000 })
   })
 
   test('completing the request writes ONE sale and grants every mapped course', async ({ browser }) => {
@@ -494,6 +503,21 @@ test.describe('Manual (offline) — a request an admin confirms becomes a sale a
       .order('course_id')
     if (error) throw new Error(`could not read enrollments: ${error.message}`)
     expect(enrollments).toEqual(courseIds.map((course_id) => ({ course_id, status: 'active' })))
+
+    // The whole point of the money, proven through the gate the student meets:
+    // the same URL that bounced them one test ago now opens. Rows alone do not
+    // say this — `resolveCourseAccessState` reads entitlements AND the tenant's
+    // access cutoff, so a grant the platform has suspended still fails here.
+    const student = await asStudent(browser)
+    await student.goto(`${QA_BASE}/${LOCALE}/dashboard/student/courses/${courseIds[0]}`, {
+      waitUntil: 'domcontentloaded',
+    })
+    await expect(student).toHaveURL(new RegExp(`/dashboard/student/courses/${courseIds[0]}`), {
+      timeout: 60_000,
+    })
+    await expect(student.getByText(`Manual Sale Course A ${RUN}`).first()).toBeVisible({
+      timeout: 60_000,
+    })
 
     // A completed request offers no way to do any of it again — the three
     // action buttons are status-gated, and `completeAndEnroll` refuses a
