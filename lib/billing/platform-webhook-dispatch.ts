@@ -518,6 +518,10 @@ export async function dispatchPlatformBillingEvent(
     event.type === 'subscription.activated' &&
     (!stored?.provider_subscription_id || TERMINAL_STORED_STATUS.has(stored.status ?? '')) &&
     !!(event.metadata?.plan_id ?? event.metadata?.planId)
+  // The subset that replaces a DEAD row — a school coming back after churning.
+  // A live row without a provider id (Stripe checkout before its subscription
+  // event) is not one: its echoed metadata can be stale.
+  const isReturningActivation = isFreshActivation && TERMINAL_STORED_STATUS.has(stored?.status ?? '')
   if (
     !isSwitchActivation &&
     !isSameRailSelfManagedRenewal &&
@@ -620,7 +624,11 @@ export async function dispatchPlatformBillingEvent(
   // school moving from Starter to Pro would otherwise have its Pro payment
   // extend its Starter period.
   const isFirstActivation = !stored?.plan_id
-  const trustMetadataPlan = isFirstActivation || selfManaged || isSwitchActivation
+  // A fresh activation over a terminal row is a new subscription minted for
+  // this purchase (#479): its metadata is not stale. Reading the dead row's
+  // plan instead left a school that churned from Pro and came back on Starter
+  // with a Pro row and `tenants.plan = free`.
+  const trustMetadataPlan = isFirstActivation || isReturningActivation || selfManaged || isSwitchActivation
   const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
   // PayPal's `custom_id` has no room for the slug next to the ids it must carry
   // (#744), so a plan named only by id is resolved here. Without it the
@@ -750,7 +758,9 @@ export async function dispatchPlatformBillingEvent(
         // confirmManualPayment treats a confirmed transfer (#546 §1). Without
         // this the school pays for a month and the cron's cancel phase still
         // drops it to free at the end of it.
-        derivedPeriod
+        // A fresh subscription over a terminal row inherits nothing from the
+        // dead one's cancellation either.
+        derivedPeriod || isReturningActivation
         ? { cancel_at_period_end: false, canceled_at: null }
         : {}),
     // Paid means out of dunning. The cron reopens a window if the new period

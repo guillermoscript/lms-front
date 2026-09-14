@@ -133,6 +133,50 @@ describe('subscription.past_due on paypal opens a grace window', () => {
   })
 })
 
+// Seen live: a school downgraded after cancelling Pro subscribed to Starter on
+// PayPal. The row went active but kept Pro + the old cancel flag, and
+// tenants.plan stayed free.
+describe('returning school: fresh PayPal activation over a canceled row', () => {
+  it('takes the new plan from metadata, clears the old cancel, and sets tenants.plan', async () => {
+    db.platform_subscriptions[0] = {
+      ...db.platform_subscriptions[0],
+      plan_id: 'plan-pro',
+      status: 'canceled',
+      provider_subscription_id: 'I-OLD',
+      cancel_at_period_end: true,
+      canceled_at: new Date(Date.now() - DAY).toISOString(),
+      current_period_end: new Date(Date.now() - DAY).toISOString(),
+    }
+    db.platform_plans = [
+      { plan_id: 'plan-pro', slug: 'pro' },
+      { plan_id: 'plan-starter', slug: 'starter' },
+    ]
+    db.tenants = [{ id: TENANT, plan: 'free', billing_status: 'free' }]
+    const next = new Date(Date.now() + 30 * DAY)
+
+    await dispatchPlatformBillingEvent(
+      {
+        type: 'subscription.activated',
+        providerSubscriptionId: 'I-NEW',
+        providerEventId: 'WH-RETURN',
+        periodEnd: next,
+        metadata: { tenant_id: TENANT, plan_id: 'plan-starter', interval: 'monthly' },
+        raw: {},
+      },
+      { provider: 'paypal', admin: client() },
+    )
+
+    expect(sub()).toMatchObject({
+      status: 'active',
+      plan_id: 'plan-starter',
+      provider_subscription_id: 'I-NEW',
+      cancel_at_period_end: false,
+      canceled_at: null,
+    })
+    expect(db.tenants[0]).toMatchObject({ plan: 'starter', billing_status: 'active' })
+  })
+})
+
 describe('subscription.expired on paypal is never deferred', () => {
   it('downgrades immediately, even with a future period end', async () => {
     await dispatchPlatformBillingEvent(
