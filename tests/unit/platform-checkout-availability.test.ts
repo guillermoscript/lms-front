@@ -39,9 +39,17 @@ const planPrice = (overrides: Partial<PlatformPlanPriceInput> = {}): PlatformPla
 
 describe('evaluatePlatformCheckoutAvailability', () => {
   it('rejects a provider whose platform capability is disabled', () => {
+    // PayPal flipped to platform-capable in #744 — solana_subs is still the
+    // rail with no in-app cancel, so it stays the capability-gate example.
+    expect(
+      evaluatePlatformCheckoutAvailability({ provider: 'solana_subs', interval: 'monthly', price: price(), runtime }),
+    ).toMatchObject({ available: false, reason: 'capability' })
+  })
+
+  it('accepts a PayPal price now that platform checkout is enabled (#744)', () => {
     expect(
       evaluatePlatformCheckoutAvailability({ provider: 'paypal', interval: 'monthly', price: price(), runtime }),
-    ).toMatchObject({ available: false, reason: 'capability' })
+    ).toMatchObject({ available: true })
   })
 
   it.each([
@@ -94,14 +102,25 @@ describe('evaluatePlatformCheckoutAvailability', () => {
 })
 
 describe('plan purchasability uses executable methods', () => {
-  it('does not count a PayPal-only price as purchasable', () => {
-    const [summary] = summarizePlanPurchasability([plan], [planPrice({ paymentProvider: 'paypal' })], {
-      providerStatuses: { paypal: runtime },
+  it('does not count a binance_personal-only price as purchasable', () => {
+    // binance_personal pays a SCHOOL's own Pay ID, not the platform's — it can
+    // never be a platform checkout rail, unlike PayPal since #744.
+    const [summary] = summarizePlanPurchasability([plan], [planPrice({ paymentProvider: 'binance_personal' })], {
+      providerStatuses: { binance_personal: runtime },
     })
 
     expect(summary.isPurchasable).toBe(false)
     expect(summary.manualAvailable).toBe(true)
     expect(summary.providerDiagnostics[0].unavailable[0].reason).toBe('capability')
+  })
+
+  it('counts a PayPal price as purchasable now that its platform capability is on (#744)', () => {
+    const [summary] = summarizePlanPurchasability([plan], [planPrice({ paymentProvider: 'paypal' })], {
+      providerStatuses: { paypal: runtime },
+    })
+
+    expect(summary.isPurchasable).toBe(true)
+    expect(summary.automatedProviders.map((provider) => provider.provider)).toEqual(['paypal'])
   })
 
   it('keeps manual transfer separate from automated purchasability', () => {
@@ -155,6 +174,28 @@ describe('platform provider runtime status', () => {
     expect(getPlatformProviderRuntimeStatuses().stripe).toMatchObject({
       configured: false,
       ready: false,
+    })
+  })
+
+  it('does not mark PayPal configured without its platform webhook id (#744)', () => {
+    vi.stubEnv('PAYPAL_CLIENT_ID', 'client')
+    vi.stubEnv('PAYPAL_CLIENT_SECRET', 'secret')
+    vi.stubEnv('PAYPAL_PLATFORM_WEBHOOK_ID', '')
+
+    expect(getPlatformProviderRuntimeStatuses().paypal).toMatchObject({
+      configured: false,
+      ready: false,
+    })
+  })
+
+  it('marks PayPal configured once the platform webhook id is set', () => {
+    vi.stubEnv('PAYPAL_CLIENT_ID', 'client')
+    vi.stubEnv('PAYPAL_CLIENT_SECRET', 'secret')
+    vi.stubEnv('PAYPAL_PLATFORM_WEBHOOK_ID', 'WH-PLATFORM-1')
+
+    expect(getPlatformProviderRuntimeStatuses().paypal).toMatchObject({
+      configured: true,
+      ready: true,
     })
   })
 

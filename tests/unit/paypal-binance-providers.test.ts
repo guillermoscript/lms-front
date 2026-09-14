@@ -4,9 +4,12 @@ import {
   PayPalPaymentProvider,
   encodePayPalCustomId,
   decodePayPalCustomId,
+  encodePayPalPlatformCustomId,
+  PAYPAL_CUSTOM_ID_MAX_LENGTH,
 } from '@/lib/payments/paypal-provider'
 import { BinancePayProvider } from '@/lib/payments/binance-provider'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { SWITCH_METADATA_KEY } from '@/lib/billing/platform-subscription-switch'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -45,6 +48,100 @@ describe('encodePayPalCustomId / decodePayPalCustomId', () => {
     expect(decodePayPalCustomId(null)).toEqual({})
     expect(decodePayPalCustomId(undefined)).toEqual({})
     expect(decodePayPalCustomId('')).toEqual({})
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PayPal platform (school → platform) custom_id encode/decode (#744)
+// ---------------------------------------------------------------------------
+
+describe('encodePayPalPlatformCustomId / decodePayPalCustomId (platform loop)', () => {
+  const tenantId = '00000000-0000-0000-0000-000000000001'
+  const planId = '11111111-1111-1111-1111-111111111111'
+  const switchId = '22222222-2222-2222-2222-222222222222'
+
+  it('round-trips tenant_id/plan_id/interval without a switch id', () => {
+    const encoded = encodePayPalPlatformCustomId({ tenant_id: tenantId, plan_id: planId, interval: 'monthly' })
+    expect(encoded.startsWith('plt|')).toBe(true)
+    const decoded = decodePayPalCustomId(encoded)
+    expect(decoded.reference).toBe(`platform:${tenantId}:${planId}`)
+    expect(decoded.metadata).toEqual({ tenant_id: tenantId, plan_id: planId, interval: 'monthly' })
+  })
+
+  it('round-trips a pending switch id under the SWITCH_METADATA_KEY imported from platform-subscription-switch', () => {
+    // Pins the paypal-provider's own private packing key to the public
+    // constant the checkout route and dispatcher read (comment in
+    // paypal-provider.ts says a test does exactly this).
+    const encoded = encodePayPalPlatformCustomId({
+      tenant_id: tenantId,
+      plan_id: planId,
+      interval: 'yearly',
+      [SWITCH_METADATA_KEY]: switchId,
+    })
+    const decoded = decodePayPalCustomId(encoded)
+    expect(decoded.metadata?.interval).toBe('yearly')
+    expect(decoded.metadata?.[SWITCH_METADATA_KEY]).toBe(switchId)
+  })
+
+  it('stays within the 127-char limit at the worst case — three UUIDs packed together', () => {
+    const encoded = encodePayPalPlatformCustomId({
+      tenant_id: tenantId,
+      plan_id: planId,
+      interval: 'monthly',
+      [SWITCH_METADATA_KEY]: switchId,
+    })
+    expect(encoded.length).toBeLessThanOrEqual(PAYPAL_CUSTOM_ID_MAX_LENGTH)
+  })
+
+  it('throws rather than truncate a custom_id over the 127-char limit', () => {
+    const longPlanId = 'a'.repeat(100)
+    expect(() =>
+      encodePayPalPlatformCustomId({ tenant_id: tenantId, plan_id: longPlanId, interval: 'monthly' }),
+    ).toThrow(/127/)
+  })
+
+  it('throws when tenant_id is missing — never checkout with a half-formed correlation', () => {
+    expect(() => encodePayPalPlatformCustomId({ plan_id: planId })).toThrow(/tenant_id/)
+  })
+
+  it('a decoded platform id carries no userId/tenantId — the student owner-binding guard fails closed on it', () => {
+    const decoded = decodePayPalCustomId(encodePayPalPlatformCustomId({ tenant_id: tenantId, plan_id: planId }))
+    expect(decoded.metadata?.userId).toBeUndefined()
+    expect(decoded.metadata?.tenantId).toBeUndefined()
+  })
+
+  it('a decoded STUDENT id still carries no tenant_id/plan_id — the platform student-loop guard drops it', () => {
+    const decoded = decodePayPalCustomId(encodePayPalCustomId('42', { userId: 'u1', tenantId }))
+    expect(decoded.metadata?.tenant_id).toBeUndefined()
+    expect(decoded.metadata?.plan_id).toBeUndefined()
+    expect(decoded.metadata).toEqual({ userId: 'u1', tenantId })
+  })
+})
+
+describe('PayPalPaymentProvider.normalizeWebhookEvent — platform activation', () => {
+  it('BILLING.SUBSCRIPTION.ACTIVATED with a platform custom_id normalizes to tenant_id/plan_id/interval metadata', async () => {
+    const provider = new PayPalPaymentProvider('client', 'secret', 'wh-id', 'sandbox')
+    const tenantId = '00000000-0000-0000-0000-000000000001'
+    const planId = '11111111-1111-1111-1111-111111111111'
+    const customId = encodePayPalPlatformCustomId({ tenant_id: tenantId, plan_id: planId, interval: 'yearly' })
+
+    const event = await provider.normalizeWebhookEvent(
+      JSON.stringify({
+        id: 'WH-platform-1',
+        event_type: 'BILLING.SUBSCRIPTION.ACTIVATED',
+        resource: {
+          id: 'I-PLATFORM-1',
+          custom_id: customId,
+          billing_info: { next_billing_time: '2026-08-19T00:00:00Z' },
+        },
+      }),
+    )
+    expect(event).toMatchObject({
+      type: 'subscription.activated',
+      providerSubscriptionId: 'I-PLATFORM-1',
+      reference: `platform:${tenantId}:${planId}`,
+      metadata: { tenant_id: tenantId, plan_id: planId, interval: 'yearly' },
+    })
   })
 })
 
@@ -295,5 +392,109 @@ describe('PayPalPaymentProvider.cancelSubscription', () => {
     stubPayPal(422)
     const provider = new PayPalPaymentProvider('client', 'secret')
     await expect(provider.cancelSubscription('sub-live', true)).rejects.toThrow(/HTTP 422/)
+  })
+})
+
+describe('PayPalPaymentProvider.createCheckoutSession — platform vs. student custom_id packing (#744)', () => {
+  function stubSubscriptionCreate() {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ access_token: 'token', expires_in: 3600 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        text: async () =>
+          JSON.stringify({
+            id: 'I-NEW-SUB',
+            links: [{ rel: 'approve', href: 'https://paypal.example/approve' }],
+          }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it('a hosted (platform) subscription checkout posts a plt| custom_id and an encoded return_url', async () => {
+    const fetchMock = stubSubscriptionCreate()
+    const provider = new PayPalPaymentProvider('client', 'secret')
+
+    const session = await provider.createCheckoutSession({
+      mode: 'subscription',
+      hosted: true,
+      reference: 'unused-for-platform-packing',
+      providerPriceId: 'P-PLAN1',
+      amount: 29,
+      currency: 'usd',
+      successUrl: 'https://school.lvh.me:3000/es/dashboard/admin/billing?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: 'https://school.lvh.me:3000/es/dashboard/admin/billing/upgrade',
+      metadata: {
+        tenant_id: '00000000-0000-0000-0000-000000000001',
+        plan_id: '11111111-1111-1111-1111-111111111111',
+        interval: 'monthly',
+      },
+    })
+
+    expect(session.url).toBe('https://paypal.example/approve')
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)
+    expect(body.custom_id.startsWith('plt|')).toBe(true)
+    // A raw '{' is not a valid URI character — PayPal would reject the whole
+    // subscription rather than accept it and mangle the redirect later.
+    expect(body.application_context.return_url).not.toMatch(/[{}]/)
+    expect(body.application_context.return_url).toContain('%7BCHECKOUT_SESSION_ID%7D')
+  })
+
+  it('a non-hosted (student) subscription checkout still posts reference|userId|tenantId', async () => {
+    const fetchMock = stubSubscriptionCreate()
+    const provider = new PayPalPaymentProvider('client', 'secret')
+
+    await provider.createCheckoutSession({
+      mode: 'subscription',
+      providerPriceId: 'P-PLAN1',
+      amount: 29,
+      currency: 'usd',
+      reference: '99',
+      successUrl: 'https://school.lvh.me:3000/checkout/success',
+      metadata: { userId: 'u1', tenantId: '00000000-0000-0000-0000-000000000001' },
+    })
+
+    const body = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)
+    expect(body.custom_id).toBe('99|u1|00000000-0000-0000-0000-000000000001')
+  })
+
+  it('a hosted one_time checkout is refused — platform billing must be a subscription', async () => {
+    const provider = new PayPalPaymentProvider('client', 'secret')
+    await expect(
+      provider.createCheckoutSession({
+        mode: 'one_time',
+        hosted: true,
+        providerPriceId: 'PAYPAL-ONETIME:prod',
+        amount: 29,
+        currency: 'usd',
+        reference: 'x',
+      }),
+    ).rejects.toThrow(/must be a subscription/)
+  })
+})
+
+describe('PayPalPaymentProvider.verifyWebhook — fails closed with no webhook id', () => {
+  it('returns false and makes no network call when webhookId is the empty string', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    // '' is exactly what platformWebhookSecret() passes when
+    // PAYPAL_PLATFORM_WEBHOOK_ID is unset — must not fall back to
+    // PAYPAL_WEBHOOK_ID (`??`, not `||`, in the source).
+    const provider = new PayPalPaymentProvider('client', 'secret', '')
+    const ok = await provider.verifyWebhook('{}', {
+      'paypal-transmission-id': 't',
+      'paypal-transmission-time': 'x',
+      'paypal-transmission-sig': 's',
+      'paypal-cert-url': 'https://api.paypal.com/cert',
+      'paypal-auth-algo': 'SHA256withRSA',
+    })
+    expect(ok).toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

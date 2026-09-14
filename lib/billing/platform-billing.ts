@@ -59,6 +59,50 @@ export const PLATFORM_SELF_MANAGED_PROVIDERS: PaymentProvider[] = (
 ).filter((slug) => PROVIDER_CAPABILITIES[slug].selfManagedPeriod)
 
 /**
+ * Providers whose cancel-at-period-end the expiry cron carries out (phase 4).
+ *
+ * The self-managed rails above, plus every native-subscription rail that can
+ * carry a platform subscription but cannot SCHEDULE a cancellation (#744).
+ * PayPal's cancel is final the moment it is called, so the billing provider
+ * stops charging immediately while the school has already paid through
+ * `current_period_end`. The platform dispatcher keeps that paid period (its
+ * `subscription.canceled` branch) and nothing at the provider will ever end
+ * it — so the cron has to, exactly as it does for a bank transfer.
+ *
+ * Stripe and Lemon Squeezy schedule the end themselves and send their own
+ * terminal event at period end; they must stay out, or two writers would race
+ * the same downgrade.
+ */
+export const PLATFORM_APP_CANCELED_PROVIDERS: PaymentProvider[] = (
+  Object.keys(PROVIDER_CAPABILITIES) as PaymentProvider[]
+).filter((slug) => {
+  const caps = PROVIDER_CAPABILITIES[slug]
+  return (
+    caps.selfManagedPeriod ||
+    (caps.supportsPlatformBillingCheckout &&
+      caps.supportsNativeSubscriptions &&
+      !caps.supportsScheduledCancellation)
+  )
+})
+
+/**
+ * Whether a second checkout on the SAME native-subscription rail supersedes the
+ * live subscription instead of being refused (#744).
+ *
+ * A rail that can swap a price in place (`supportsPlanChange`) changes plan via
+ * `updateSubscription`, so a second subscription there is a double charge. A
+ * self-managed rail has no subscription to supersede — a second payment is a
+ * renewal. What is left is a provider that bills on its own schedule but has
+ * no swap: PayPal Billing Plans. There, a new subscription on the target plan,
+ * promoted through the switch machinery and followed by cancelling the old one,
+ * is the only way to change plan at all.
+ */
+export function supersedesOnSameRail(provider: string): boolean {
+  const caps = PROVIDER_CAPABILITIES[provider as PaymentProvider]
+  return !!caps && caps.supportsNativeSubscriptions && !caps.supportsPlanChange && !caps.selfManagedPeriod
+}
+
+/**
  * `webhook_events.provider` namespace for a platform-billing delivery.
  *
  * Platform billing may be registered for the SAME provider event types as the
@@ -83,6 +127,12 @@ export function platformWebhookNamespace(provider: string): string {
  */
 function platformWebhookSecret(provider: PaymentProvider): string | undefined {
   if (provider === 'stripe') return process.env.STRIPE_PLATFORM_WEBHOOK_SECRET
+  // PayPal verifies a delivery against the id of the webhook registration it
+  // was sent to, and the platform endpoint is a registration of its own (#744).
+  // An unset id becomes '' rather than undefined so the factory does NOT fall
+  // back to the student `PAYPAL_WEBHOOK_ID`: that id can never verify a
+  // delivery to this URL, and failing closed here needs no network call.
+  if (provider === 'paypal') return process.env.PAYPAL_PLATFORM_WEBHOOK_ID || ''
   return undefined
 }
 

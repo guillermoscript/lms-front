@@ -118,6 +118,16 @@ describe('supportsCustomerPortal / supportsProrationPreview (#604)', () => {
     }
   })
 
+  it('supportsScheduledCancellation is true exactly for stripe and lemonsqueezy (#744)', () => {
+    // Every other rail's cancel is either final at the provider (PayPal) or has
+    // no provider subscription to schedule against at all.
+    for (const slug of Object.keys(PROVIDER_CAPABILITIES) as PaymentProvider[]) {
+      expect(PROVIDER_CAPABILITIES[slug].supportsScheduledCancellation, slug).toBe(
+        slug === 'stripe' || slug === 'lemonsqueezy',
+      )
+    }
+  })
+
   it('quoting is never claimed without the ability to make the change', () => {
     // A quote for a swap we cannot perform would be a preview of nothing.
     for (const slug of Object.keys(PROVIDER_CAPABILITIES) as PaymentProvider[]) {

@@ -174,8 +174,14 @@ BINANCE_PAY_API_SECRET=
 SOLANA_RPC_URL=
 SOLANA_PLATFORM_WALLET=
 SOLANA_USDC_MINT=                               # Set = settle in USDC (recommended, no price oracle). Unset = settle in native SOL at the Pyth quote locked at checkout.
-# PayPal is coded but its platform-billing checkout is capability-disabled pending #479 —
-# no PAYPAL_* needed here; PayPal is still used for student→school payments (configured elsewhere in this file).
+# PayPal (#744): register a SECOND webhook in the PayPal app pointing at
+#   https://<domain>/api/billing/webhook/paypal
+# (events: BILLING.SUBSCRIPTION.ACTIVATED, .CANCELLED, .EXPIRED, .SUSPENDED,
+# .PAYMENT.FAILED, PAYMENT.SALE.COMPLETED) and set its id below. It shares
+# PAYPAL_CLIENT_ID/SECRET with the student webhook but NOT its webhook id —
+# PayPal signs each delivery over the id of the registration it went to.
+# Price rows: paste each Billing Plan id (P-…) under Platform → Plans.
+PAYPAL_PLATFORM_WEBHOOK_ID=
 
 # OpenAI (AI grading)
 OPENAI_API_KEY=sk-...

@@ -112,6 +112,22 @@ class PayPalApiError extends Error {
  */
 const ONE_TIME_PRICE_PREFIX = 'PAYPAL-ONETIME'
 
+/** PayPal rejects a `custom_id` longer than this rather than truncating it. */
+export const PAYPAL_CUSTOM_ID_MAX_LENGTH = 127
+
+/**
+ * First field of a school → platform `custom_id` (#744). A student reference is
+ * a numeric `transactions.transaction_id`, so the two shapes cannot collide.
+ */
+export const PAYPAL_PLATFORM_CUSTOM_ID_TAG = 'plt'
+
+/**
+ * `SWITCH_METADATA_KEY` from `lib/billing/platform-subscription-switch`, spelled
+ * out because importing it here would close an import cycle through
+ * `lib/payments`. A unit test pins the two together.
+ */
+const PLATFORM_SWITCH_METADATA_KEY = 'billing_switch_id'
+
 /** Pack reference|userId|tenantId into PayPal's single custom_id string (≤127 chars). */
 export function encodePayPalCustomId(
   reference: string,
@@ -120,12 +136,71 @@ export function encodePayPalCustomId(
   return [reference, metadata?.userId ?? '', metadata?.tenantId ?? ''].join('|')
 }
 
-/** Unpack custom_id back into the dispatcher's expected metadata shape. */
+/**
+ * Pack a school → platform subscription's correlation into `custom_id` (#744).
+ *
+ * The platform dispatcher needs `tenant_id`, `plan_id`, `interval` and — when
+ * the checkout replaces a live subscription — `billing_switch_id`. PayPal gives
+ * one 127-character string, which cannot hold them as JSON, so they are packed
+ * positionally behind a tag: `plt|<tenant uuid>|<plan uuid>|<m|y>|<switch uuid>`,
+ * 116 characters at most. `plan_slug` is deliberately left out; the dispatcher
+ * reads it from `platform_plans` by id.
+ *
+ * Throws rather than truncating: a clipped id would activate the wrong plan or
+ * none at all, after the school has already approved the subscription.
+ */
+export function encodePayPalPlatformCustomId(metadata?: Record<string, string>): string {
+  const tenantId = metadata?.tenant_id
+  const planId = metadata?.plan_id
+  if (!tenantId || !planId) {
+    throw new Error('PayPal platform checkout requires tenant_id and plan_id metadata')
+  }
+  const fields = [
+    PAYPAL_PLATFORM_CUSTOM_ID_TAG,
+    tenantId,
+    planId,
+    metadata?.interval === 'yearly' ? 'y' : 'm',
+    metadata?.[PLATFORM_SWITCH_METADATA_KEY] ?? '',
+  ]
+  if (fields.some((field) => field.includes('|'))) {
+    throw new Error('PayPal platform custom_id fields must not contain "|"')
+  }
+  const packed = fields.join('|')
+  if (packed.length > PAYPAL_CUSTOM_ID_MAX_LENGTH) {
+    throw new Error(
+      `PayPal platform custom_id is ${packed.length} characters; PayPal allows ${PAYPAL_CUSTOM_ID_MAX_LENGTH}`,
+    )
+  }
+  return packed
+}
+
+/**
+ * Unpack custom_id back into the dispatcher's expected metadata shape.
+ *
+ * The two loops get disjoint keys, and that is load-bearing: a platform id
+ * never yields `userId`/`tenantId` (so the student dispatcher's owner binding
+ * fails closed on it, and its non-numeric reference skips the transaction flip),
+ * and a student id never yields `tenant_id`/`plan_id` (so the platform
+ * dispatcher's student-loop guard drops it).
+ */
 export function decodePayPalCustomId(customId: string | undefined | null): {
   reference?: string
   metadata?: Record<string, string>
 } {
   if (!customId) return {}
+  if (customId.startsWith(`${PAYPAL_PLATFORM_CUSTOM_ID_TAG}|`)) {
+    const [, tenantId, planId, interval, switchId] = customId.split('|')
+    if (!tenantId || !planId) return {}
+    return {
+      reference: `platform:${tenantId}:${planId}`,
+      metadata: {
+        tenant_id: tenantId,
+        plan_id: planId,
+        interval: interval === 'y' ? 'yearly' : 'monthly',
+        ...(switchId ? { [PLATFORM_SWITCH_METADATA_KEY]: switchId } : {}),
+      },
+    }
+  }
   const [reference, userId, tenantId] = customId.split('|')
   if (!reference) return {}
   const metadata: Record<string, string> = {}
@@ -144,7 +219,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
-    supportsPlatformBillingCheckout: false,
+    supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -152,6 +227,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // no session URL we can mint for a school admin
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
     requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
@@ -446,7 +522,14 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * owner-binding guard can verify the originating buyer/tenant.
    */
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
-    const customId = encodePayPalCustomId(params.reference, params.metadata)
+    // `hosted` marks the school → platform loop (`CreateCheckoutParams.hosted`),
+    // whose correlation needs its own packing (#744).
+    if (params.hosted && params.mode !== 'subscription') {
+      throw new Error('PayPal platform billing checkout must be a subscription')
+    }
+    const customId = params.hosted
+      ? encodePayPalPlatformCustomId(params.metadata)
+      : encodePayPalCustomId(params.reference, params.metadata)
     const cancelUrl = params.cancelUrl ?? params.baseUrl ?? ''
 
     if (params.mode === 'subscription') {
@@ -463,7 +546,10 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           application_context: {
             user_action: 'SUBSCRIBE_NOW',
             shipping_preference: 'NO_SHIPPING',
-            return_url: params.successUrl,
+            // The platform success URL carries Stripe's `{CHECKOUT_SESSION_ID}`
+            // template, and a raw brace is not a valid URI character — encode
+            // it rather than let PayPal reject the whole subscription.
+            return_url: params.successUrl?.replace(/[{}]/g, (c) => (c === '{' ? '%7B' : '%7D')),
             cancel_url: cancelUrl,
           },
         }),
@@ -594,7 +680,10 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * registered in the developer dashboard — returns false when unset.
    */
   async verifyWebhook(rawBody: string, headers: Record<string, string>): Promise<boolean> {
-    const webhookId = this.webhookId || process.env.PAYPAL_WEBHOOK_ID
+    // `??`, not `||`: the platform endpoint passes '' when
+    // PAYPAL_PLATFORM_WEBHOOK_ID is unset, and must fail closed rather than
+    // fall back to the student registration's id (#744).
+    const webhookId = this.webhookId ?? process.env.PAYPAL_WEBHOOK_ID
     if (!webhookId) return false
 
     const h = (name: string) => headers[name] ?? headers[name.toLowerCase()]

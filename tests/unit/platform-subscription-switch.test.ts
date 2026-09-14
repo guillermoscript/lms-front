@@ -31,6 +31,7 @@ vi.mock('@/lib/billing/downgrade-tenant', () => ({
 }))
 
 import {
+  beginPlatformSubscriptionSwitch,
   reconcilePlatformSubscriptionSwitch,
 } from '@/lib/billing/platform-subscription-switch'
 import { dispatchPlatformBillingEvent } from '@/lib/billing/platform-webhook-dispatch'
@@ -68,6 +69,61 @@ beforeEach(() => {
   providerState.error = null
   providerState.calls = []
   vi.mocked(downgradeTenantToFreeIfCurrent).mockClear()
+})
+
+describe('beginPlatformSubscriptionSwitch — same-rail supersession (#744)', () => {
+  it('paypal → paypal returns a switch id and records the row — no in-place swap to fall back to', async () => {
+    const { db, admin } = setup({
+      current: {
+        subscription_id: 'ps-1',
+        tenant_id: TENANT,
+        plan_id: 'plan-old',
+        payment_provider: 'paypal',
+        provider_subscription_id: 'I-OLD',
+        current_period_end: '2026-09-01T00:00:00.000Z',
+        status: 'active',
+      },
+    })
+    const switchId = await beginPlatformSubscriptionSwitch({
+      admin,
+      tenantId: TENANT,
+      targetPlanId: 'plan-new',
+      targetProvider: 'paypal',
+      targetInterval: 'monthly',
+      initiatedBy: 'user-1',
+    })
+    expect(switchId).toBeTruthy()
+    expect(db.platform_subscription_switches[0]).toMatchObject({
+      source_payment_provider: 'paypal',
+      source_provider_subscription_id: 'I-OLD',
+      target_payment_provider: 'paypal',
+      target_plan_id: 'plan-new',
+    })
+  })
+
+  it('stripe → stripe returns null — an in-place swap has nothing to supersede', async () => {
+    const { db, admin } = setup({
+      current: {
+        subscription_id: 'ps-1',
+        tenant_id: TENANT,
+        plan_id: 'plan-old',
+        payment_provider: 'stripe',
+        provider_subscription_id: 'sub-1',
+        current_period_end: '2026-09-01T00:00:00.000Z',
+        status: 'active',
+      },
+    })
+    const switchId = await beginPlatformSubscriptionSwitch({
+      admin,
+      tenantId: TENANT,
+      targetPlanId: 'plan-new',
+      targetProvider: 'stripe',
+      targetInterval: 'monthly',
+      initiatedBy: 'user-1',
+    })
+    expect(switchId).toBeNull()
+    expect(db.platform_subscription_switches).toHaveLength(0)
+  })
 })
 
 describe('source cancellation reconciliation', () => {

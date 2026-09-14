@@ -7,9 +7,11 @@ import {
   platformWebhookNamespace,
   PLATFORM_SELF_MANAGED_PROVIDERS,
   PLATFORM_WEBHOOK_PROVIDERS,
+  PLATFORM_APP_CANCELED_PROVIDERS,
+  supersedesOnSameRail,
   type PlatformPriceRow,
 } from '@/lib/billing/platform-billing'
-import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 
 /**
  * `POST /api/billing/checkout` — the provider-agnostic replacement for
@@ -149,6 +151,27 @@ describe('platform billing capability', () => {
   it('namespaces the platform webhook ledger away from the student one', () => {
     expect(platformWebhookNamespace('stripe')).toBe('platform:stripe')
     expect(platformWebhookNamespace('stripe')).not.toBe('stripe')
+  })
+})
+
+describe('PLATFORM_APP_CANCELED_PROVIDERS / supersedesOnSameRail (#744)', () => {
+  it('is every self-managed rail plus paypal, and excludes the two scheduling rails', () => {
+    expect(PLATFORM_APP_CANCELED_PROVIDERS).toEqual(
+      expect.arrayContaining([...PLATFORM_SELF_MANAGED_PROVIDERS, 'paypal']),
+    )
+    // Stripe and Lemon Squeezy schedule their own end and emit their own
+    // terminal event — letting the cron end them too would race the downgrade.
+    expect(PLATFORM_APP_CANCELED_PROVIDERS).not.toContain('stripe')
+    expect(PLATFORM_APP_CANCELED_PROVIDERS).not.toContain('lemonsqueezy')
+    // solana_subs cannot be reached by the platform checkout at all.
+    expect(PLATFORM_APP_CANCELED_PROVIDERS).not.toContain('solana_subs')
+  })
+
+  it('supersedesOnSameRail is true only for paypal', () => {
+    expect(supersedesOnSameRail('paypal')).toBe(true)
+    for (const slug of ['stripe', 'lemonsqueezy', 'manual', 'binance', 'solana'] as PaymentProvider[]) {
+      expect(supersedesOnSameRail(slug), slug).toBe(false)
+    }
   })
 })
 
@@ -481,6 +504,69 @@ describe('POST /api/billing/checkout — switching payment method', () => {
     expect(res.status).toBe(400)
     expect((await res.json()).error).toContain('billing page')
     expect(state.checkoutCalls).toHaveLength(0)
+  })
+
+  it('begins a switch for a PayPal plan change on the SAME PayPal account (#744)', async () => {
+    // PayPal has no in-place swap (supportsPlanChange: false), so a plan change
+    // on the same rail IS a new checkout — supersedesOnSameRail('paypal') lets
+    // it through instead of the "change your plan from the billing page" 400.
+    state.prices = [price({ paymentProvider: 'paypal', providerPriceId: 'P-PLAN1' })]
+    state.providerStatuses.paypal = { enabled: true, configured: true, ready: true }
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      plan_id: 'plan-old-different',
+      interval: 'monthly',
+      cancel_at_period_end: false,
+      provider_subscription_id: 'I-OLD',
+      status: 'active',
+      payment_provider: 'paypal',
+    }
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'paypal', interval: 'monthly' }))
+    expect(res.status).toBe(200)
+    expect(state.writes.find((w) => w.table === 'platform_subscription_switches' && w.op === 'insert')?.values).toMatchObject({
+      source_payment_provider: 'paypal',
+      target_payment_provider: 'paypal',
+    })
+    expect(state.checkoutCalls[0].metadata).toMatchObject({ billing_switch_id: 'switch-1' })
+  })
+
+  it('refuses buying the SAME plan on the SAME PayPal account while it is still live', async () => {
+    state.prices = [price({ paymentProvider: 'paypal', providerPriceId: 'P-PLAN1' })]
+    state.providerStatuses.paypal = { enabled: true, configured: true, ready: true }
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      plan_id: PLAN_ID,
+      interval: 'monthly',
+      cancel_at_period_end: false,
+      provider_subscription_id: 'I-OLD',
+      status: 'active',
+      payment_provider: 'paypal',
+    }
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'paypal', interval: 'monthly' }))
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toContain('already subscribed to this plan')
+    expect(state.checkoutCalls).toHaveLength(0)
+  })
+
+  it('allows re-buying the same PayPal plan once cancel_at_period_end is set', async () => {
+    // The scheduled-cancel flag is the only way to resubscribe on a rail with
+    // no in-app reactivate — this IS how a lapsed PayPal school pays again.
+    state.prices = [price({ paymentProvider: 'paypal', providerPriceId: 'P-PLAN1' })]
+    state.providerStatuses.paypal = { enabled: true, configured: true, ready: true }
+    state.existingSub = {
+      subscription_id: 'ps-1',
+      plan_id: PLAN_ID,
+      interval: 'monthly',
+      cancel_at_period_end: true,
+      provider_subscription_id: 'I-OLD',
+      status: 'active',
+      payment_provider: 'paypal',
+    }
+
+    const res = await POST(makeReq({ planId: PLAN_ID, provider: 'paypal', interval: 'monthly' }))
+    expect(res.status).toBe(200)
   })
 
   it('lets a school on manual transfer start a card subscription', async () => {

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getPlatformBillingProvider } from '@/lib/billing/platform-billing'
+import { getPlatformBillingProvider, supersedesOnSameRail } from '@/lib/billing/platform-billing'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
 import type { CancellationResult, PaymentProvider } from '@/lib/payments/types'
 
@@ -37,7 +37,12 @@ export async function beginPlatformSubscriptionSwitch(
     .maybeSingle()
 
   if (sourceError) throw new Error(`Failed to read current subscription: ${sourceError.message}`)
-  if (!source || source.status !== 'active' || source.payment_provider === targetProvider) return null
+  if (!source || source.status !== 'active') return null
+  // Same rail is a switch only where the provider cannot swap the plan in place
+  // (#744) — see `supersedesOnSameRail`. Everywhere else it is either an
+  // in-place change or a self-managed renewal, and neither has a source to
+  // supersede.
+  if (source.payment_provider === targetProvider && !supersedesOnSameRail(targetProvider)) return null
 
   const switchId = crypto.randomUUID()
   const { data, error } = await admin

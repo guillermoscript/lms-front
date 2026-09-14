@@ -217,6 +217,21 @@ export interface ProviderCapabilities {
    */
   supportsProrationPreview: boolean
   /**
+   * Provider can SCHEDULE a subscription's end at the close of the paid period
+   * and keep billing nothing more (Stripe `cancel_at_period_end`, Lemon Squeezy
+   * `cancelled` → ends at `renews_at`), then send its own terminal event when it
+   * does.
+   *
+   * False for PayPal: `POST /v1/billing/subscriptions/{id}/cancel` is final and
+   * immediate, so `BILLING.SUBSCRIPTION.CANCELLED` arrives while the school
+   * still holds days it paid for. On such a rail the platform dispatcher keeps
+   * the paid period and the expiry cron ends it (`PLATFORM_APP_CANCELED_PROVIDERS`,
+   * #744), and a cancellation cannot be reactivated — there is nothing left at
+   * the provider to resume. False, and meaningless, on rails with no provider
+   * subscription at all.
+   */
+  supportsScheduledCancellation: boolean
+  /**
    * The platform takes its cut (`revenue_splits.platform_percentage`) on sales
    * through this provider.
    *
@@ -287,6 +302,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: true,
     supportsCustomerPortal: true, // billingPortal.sessions.create
     supportsProrationPreview: true, // invoices.createPreview
+    supportsScheduledCancellation: true, // cancel_at_period_end on the subscription
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false, // school's own Connect account
     requiresConnectedAccount: true, // Connect Express — per-tenant account with progressive KYC the school can abandon
@@ -295,7 +311,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
-    supportsPlatformBillingCheckout: false, // TODO(#479): flip once proven against real credentials
+    supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -303,6 +319,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: false,
     supportsCustomerPortal: false, // no session URL we can mint for a school admin
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // POST /cancel is final and immediate — the app keeps the paid period (#744)
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global PAYPAL_CLIENT_ID/SECRET — no per-tenant merchant onboarding
     requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
@@ -319,6 +336,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: true,
     supportsCustomerPortal: false, // portal is reached from LS's dashboard, not a URL we mint
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: true, // cancelSubscription schedules the end at renews_at
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global LS store — Merchant of Record, single platform-owned account
     requiresConnectedAccount: false, // Merchant of Record — the platform's own store sells on the school's behalf
@@ -339,6 +357,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: false,
     supportsCustomerPortal: false, // no hosted account page — the school manages the plan in-app
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false,
     bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false, // split on-chain in one tx (lib/payments/solana-split.ts)
     requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved
@@ -361,6 +380,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: false,
     supportsCustomerPortal: false, // delegation is on-chain; no provider-hosted page
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false,
     bearsPlatformFee: true, // platform wallet receives its slice on each pull
     settlesToPlatformAccount: false, // split on-chain per pull (lib/payments/solana-subscription-pull.ts)
     requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved
@@ -377,6 +397,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: false,
     supportsCustomerPortal: false, // bank transfer — nothing hosted to manage
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false,
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // bank transfer straight to the school's own account
     requiresConnectedAccount: false, // bank transfer to the school's own account — no provider onboarding at all
@@ -400,6 +421,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: false,
     supportsCustomerPortal: false, // Binance Pay has no subscription-management page for us to open
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false,
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true, // one global BINANCE_PAY_API_KEY/SECRET merchant account — no sub-merchant split
     requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
@@ -422,6 +444,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     supportsPlanChange: false,
     supportsCustomerPortal: false, // personal Pay account — no merchant portal at all
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false,
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false, // per-tenant Pay ID — straight to the school's own account
     requiresConnectedAccount: false, // the school's own Pay ID, saved in Settings — no onboarding flow

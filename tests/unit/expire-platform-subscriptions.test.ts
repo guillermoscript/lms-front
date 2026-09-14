@@ -415,3 +415,41 @@ describe('expire-platform-subscriptions: #610 every rail whose period we own', (
     expect(sub.status).toBe('active')
   })
 })
+
+describe('expire-platform-subscriptions: #744 PayPal — cancel is final at the provider, not scheduled', () => {
+  it('downgrades a cancel-flagged PayPal row once its paid period has ended (phase 4)', async () => {
+    // The dispatcher's `subscription.canceled` branch sets exactly this shape
+    // (cancel_at_period_end: true, plan/status untouched) rather than
+    // downgrading immediately — PLATFORM_APP_CANCELED_PROVIDERS is what ends it.
+    const sub = seedSub({
+      payment_provider: 'paypal',
+      status: 'active',
+      cancel_at_period_end: true,
+      current_period_end: daysFromNow(-1),
+    })
+
+    const body = await (await GET(req())).json()
+
+    expect(body.canceled).toBe(1)
+    expect(downgraded).toEqual([TENANT])
+    expect(sub.status).toBe('active') // the fake downgradeTenantToFree does not mutate the row itself
+  })
+
+  it('leaves an active, non-cancelled PayPal row alone in phases 2-3 — PayPal still renews and dunns itself', async () => {
+    const sub = seedSub({
+      payment_provider: 'paypal',
+      status: 'active',
+      cancel_at_period_end: false,
+      current_period_end: daysFromNow(-1),
+    })
+
+    const body = await (await GET(req())).json()
+
+    // Phases 1-3 stay PLATFORM_SELF_MANAGED_PROVIDERS-only; PayPal is not one,
+    // so a lapsed-but-not-cancelled row gets no reminder and no grace window —
+    // its own webhook (subscription.past_due / .expired) owns that.
+    expect(body).toMatchObject({ reminded: 0, graceStarted: 0, canceled: 0, downgraded: 0 })
+    expect(downgraded).toEqual([])
+    expect(sub.status).toBe('active')
+  })
+})

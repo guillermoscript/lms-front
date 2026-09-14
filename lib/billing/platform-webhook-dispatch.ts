@@ -352,6 +352,25 @@ export async function dispatchPlatformBillingEvent(
     return
   }
 
+  // The type guard above cannot see a student PLAN purchase: on PayPal and
+  // Lemon Squeezy it normalises to `subscription.activated`, the very type a
+  // platform activation uses. Its metadata is the student checkout's —
+  // `userId`, `tenantId` and `planId`, camelCase — which `resolveTenantId` and
+  // `isFreshActivation` both accept, so on a school with no
+  // `provider_subscription_id` (a bank-transfer school) it reached the upsert
+  // below with the student's plan id (#744).
+  //
+  // `userId` is the student checkout's owner-binding key and no platform
+  // checkout has ever set it; `tenant_id` is the platform checkout's key and no
+  // student checkout sets it. Renewals and cancels carry no metadata and still
+  // resolve by subscription identity.
+  if (event.metadata?.userId && !event.metadata?.tenant_id) {
+    console.log(
+      `[platform-webhook] ${event.type} on ${provider} carries student checkout metadata — ignoring`,
+    )
+    return
+  }
+
   const tenantId = await resolveTenantId(event, ctx)
   if (!tenantId) {
     console.warn(`[platform-webhook] ${event.type} on ${provider} resolved no tenant — ignoring`)
@@ -384,6 +403,47 @@ export async function dispatchPlatformBillingEvent(
           (superseded ? 'completed switch cleanup' : 'was ignored'),
       )
       return
+    }
+    // A rail whose cancel is final (PayPal, #744) sends CANCELLED the moment
+    // the school — or the payer, from their PayPal account — cancels, not when
+    // the period it paid for runs out. Downgrading here would take back days
+    // already paid for. Keep the plan, record the cancellation the way a
+    // scheduled one looks, and let the expiry cron's cancel phase end it at
+    // `current_period_end` (`PLATFORM_APP_CANCELED_PROVIDERS`). `expired` is
+    // not deferred: PayPal only sends it once the billing cycles are over.
+    if (
+      event.type === 'subscription.canceled' &&
+      !PROVIDER_CAPABILITIES[provider as PaymentProvider]?.supportsScheduledCancellation
+    ) {
+      const row = (await unwrap(
+        'platform_subscriptions lookup for final cancel',
+        admin
+          .from('platform_subscriptions')
+          .select('status, cancel_at_period_end, current_period_end')
+          .eq('tenant_id', tenantId)
+          .eq('payment_provider', provider)
+          .eq('provider_subscription_id', event.providerSubscriptionId)
+          .maybeSingle(),
+      )) as { status: string | null; cancel_at_period_end: boolean | null; current_period_end: string | null } | null
+      const paidThrough = row?.current_period_end ? new Date(row.current_period_end) : null
+      if (row?.status === 'active' && paidThrough && paidThrough.getTime() > new Date(now).getTime()) {
+        if (!row.cancel_at_period_end) {
+          await unwrap(
+            'platform_subscriptions final cancel keeps paid period',
+            admin
+              .from('platform_subscriptions')
+              .update({ cancel_at_period_end: true, canceled_at: now, updated_at: now })
+              .eq('tenant_id', tenantId)
+              .eq('payment_provider', provider)
+              .eq('provider_subscription_id', event.providerSubscriptionId),
+          )
+        }
+        console.log(
+          `[platform-webhook] ${event.type} on ${provider} for tenant ${tenantId} is final at the provider — ` +
+            `keeping the plan until ${row.current_period_end}`,
+        )
+        return
+      }
     }
     const platformFee = await downgradeTenantToFreeIfCurrent(
       admin,
@@ -535,9 +595,23 @@ export async function dispatchPlatformBillingEvent(
   const isFirstActivation = !stored?.plan_id
   const trustMetadataPlan = isFirstActivation || selfManaged || isSwitchActivation
   const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
-  const planSlug = trustMetadataPlan
+  // PayPal's `custom_id` has no room for the slug next to the ids it must carry
+  // (#744), so a plan named only by id is resolved here. Without it the
+  // subscription row would move to the new plan while `tenants.plan` — what
+  // every feature gate reads — stayed on the old one.
+  const metadataPlanSlug = trustMetadataPlan
     ? (event.metadata?.plan_slug ?? event.metadata?.planSlug)
     : undefined
+  const planSlug =
+    metadataPlanSlug ??
+    (planId
+      ? (
+          (await unwrap(
+            'platform_plans slug lookup',
+            admin.from('platform_plans').select('slug').eq('plan_id', planId).maybeSingle(),
+          )) as { slug: string } | null
+        )?.slug
+      : undefined)
   const interval = event.interval ?? mapInterval(event.metadata?.interval)
 
   // The plan the ROW must carry, which is a different question from `planId`

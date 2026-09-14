@@ -2453,6 +2453,7 @@
           "cancelSuccess": "Tu suscripción se cancelará al final de tu período de facturación",
           "cancelError": "Error al cancelar la suscripción",
           "reactivatePlan": "Reactivar plan",
+          "cancelFinalHint": "Este método de pago no permite deshacer una cancelación. Para mantener un plan de pago después de este periodo, elige un plan de nuevo.",
           "reactivateSuccess": "Tu suscripción continuará: se eliminó la cancelación programada",
           "reactivateError": "No se pudo reactivar la suscripción",
           "recheck": "Volver a comprobar",

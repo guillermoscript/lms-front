@@ -10,13 +10,15 @@ import { PLATFORM_WEBHOOK_PROVIDERS } from '@/lib/billing/platform-billing'
  * WHY THIS IS REACHABLE AND NOT THEORETICAL. `platformWebhookSecret()` gives
  * Stripe a second signing secret (`STRIPE_PLATFORM_WEBHOOK_SECRET`), so a
  * student event posted to `/api/billing/webhook/stripe` fails verification and
- * dies at the door. Every other rail — PayPal, Binance Pay, Lemon Squeezy —
- * signs BOTH loops with the one secret its factory branch reads, out of ONE
- * merchant account, under ONE webhook registration. Register
- * `/api/billing/webhook/<provider>` for school billing (which #610 tells
- * operators to do for Binance, and which the endpoint invites for PayPal by
- * existing at all) and that endpoint now also receives every student's course
- * purchase, correctly signed, and therefore verified.
+ * dies at the door. Every other rail bills both loops out of ONE merchant
+ * account. Binance Pay and Lemon Squeezy sign both with the one secret their
+ * factory branch reads. PayPal verifies the platform endpoint against its own
+ * registration id (`PAYPAL_PLATFORM_WEBHOOK_ID`, #744), but that does NOT
+ * separate the loops: PayPal delivers every event of the app to every
+ * registered URL, each signed for the registration it went to. Register
+ * `/api/billing/webhook/<provider>` for school billing and that endpoint also
+ * receives every student's course purchase, correctly signed, and therefore
+ * verified.
  *
  * WHAT THAT USED TO DO. `resolveTenantId` reads `metadata.tenant_id ??
  * metadata.tenantId`, and the student checkout puts exactly `tenantId` in
@@ -177,6 +179,29 @@ describe('the platform dispatcher refuses the student loop’s events', () => {
     expect(db.tenants[1].billing_status).toBe('free')
   })
 
+  it.each(['paypal', 'lemonsqueezy', 'binance'] as PaymentProvider[])(
+    'a student PLAN purchase on %s does not touch the school’s platform subscription either',
+    async (provider) => {
+      // The type guard above cannot see this one: a student's PLAN purchase on
+      // PayPal/Lemon Squeezy normalises to `subscription.activated` — the very
+      // type a platform activation uses — carrying the student checkout's
+      // camelCase metadata instead of the platform checkout's `tenant_id` (#744).
+      const before = snapshot()
+      await dispatchPlatformBillingEvent(
+        {
+          type: 'subscription.activated',
+          providerEventId: 'WH-student-plan-1',
+          providerSubscriptionId: 'I-STUDENT-1',
+          metadata: { userId: 'a1000000-0000-0000-0000-000000000001', tenantId: TENANT, planId: '42' },
+          raw: {},
+        },
+        { provider, admin: client() },
+      )
+      expect(sub()).toEqual(before)
+      expect(db.tenants[0].billing_status).toBe('past_due')
+    },
+  )
+
   it('still activates a real platform subscription on the same rail', async () => {
     // The guard is by event TYPE, not by provider — a genuine school → platform
     // activation on the very same PayPal account must still land, or the fix
@@ -204,21 +229,35 @@ describe('the platform dispatcher refuses the student loop’s events', () => {
   })
 })
 
-describe('which rails the platform webhook endpoint is open for', () => {
-  it('documents that PayPal has an endpoint it can never legitimately use', () => {
-    // NOT a passing invariant — a record of a known gap, so that closing it
-    // (either by giving PayPal a platform checkout or by dropping it from the
-    // list) fails here and gets read rather than silently changing the shape of
-    // the endpoint. `supportsPlatformBillingCheckout: false` means no school can
-    // start a PayPal platform checkout, so every event this endpoint receives
-    // for PayPal today is, by construction, from the other loop.
-    expect(PLATFORM_WEBHOOK_PROVIDERS).toContain('paypal')
-    expect(PROVIDER_CAPABILITIES.paypal.supportsPlatformBillingCheckout).toBe(false)
+describe('PayPal custom_id has no room for plan_slug — the dispatcher looks it up (#744)', () => {
+  it('sets tenants.plan from the plan_id when a fresh activation carries no slug', async () => {
+    await dispatchPlatformBillingEvent(
+      {
+        type: 'subscription.activated',
+        providerEventId: 'WH-platform-fresh-1',
+        providerSubscriptionId: 'I-PLATFORM-FRESH',
+        periodEnd: new Date(Date.now() + 30 * DAY),
+        // No plan_slug/planSlug — exactly what PayPal's packed custom_id yields.
+        metadata: { tenant_id: OTHER_TENANT, plan_id: PLAN_PRO, interval: 'monthly' },
+        raw: {},
+      },
+      { provider: 'paypal', admin: client() },
+    )
+    expect(db.tenants[1].plan).toBe('pro')
+    expect(db.platform_subscriptions.find((row) => row.tenant_id === OTHER_TENANT)).toMatchObject({
+      plan_id: PLAN_PRO,
+      status: 'active',
+    })
+  })
+})
 
-    // The rest of the list is coherent: every other rail exposed here can
-    // actually be paid on.
-    const others = PLATFORM_WEBHOOK_PROVIDERS.filter((slug) => slug !== 'paypal')
-    for (const slug of others) {
+describe('which rails the platform webhook endpoint is open for', () => {
+  it('exposes an endpoint only for rails that can actually be paid on (#744 closes the PayPal gap)', () => {
+    // PayPal used to be the one exception — an endpoint with no legitimate use,
+    // since supportsPlatformBillingCheckout was false. #744 gave it a platform
+    // checkout, so the list is now coherent with no carve-out: every rail
+    // exposed here can actually be paid on.
+    for (const slug of PLATFORM_WEBHOOK_PROVIDERS) {
       expect(PROVIDER_CAPABILITIES[slug].supportsPlatformBillingCheckout).toBe(true)
     }
   })
