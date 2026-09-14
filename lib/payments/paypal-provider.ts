@@ -40,6 +40,61 @@ import {
   CancellationResult,
 } from './types'
 
+const PAYPAL_HOSTS = {
+  live: 'https://api-m.paypal.com',
+  sandbox: 'https://api-m.sandbox.paypal.com',
+} as const
+
+/** `http(s)://` on 127.0.0.0/8, ::1 or localhost — nothing else can be a test stub. */
+function isLoopbackOrigin(value: string): boolean {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return false
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+  const host = url.hostname.replace(/^\[|\]$/g, '') // an IPv6 literal arrives bracketed
+  return host === 'localhost' || host === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)
+}
+
+let warnedNonLoopback = false
+
+/**
+ * PayPal's API host. Overridable so the settlement E2E can point the server at a
+ * local stub; production never sets it. Read PER CALL, not frozen into the
+ * instance, because the value must follow the server process's env — and
+ * `getPaymentProvider('paypal')` builds a fresh adapter per request anyway.
+ *
+ * LOOPBACK ONLY, and that is a security boundary, not tidiness: the first
+ * request this host receives is `POST /v1/oauth2/token` carrying
+ * `Basic base64(PAYPAL_CLIENT_ID:PAYPAL_CLIENT_SECRET)` — the platform's own
+ * merchant credential, good for charging and refunding every school's students.
+ * A stray non-loopback value (a copy-pasted Dokploy env, a leaked `.env.local`
+ * on a self-hosted install, a bad Actions variable) would hand it over on the
+ * first webhook. So anything that is not loopback is ignored (warned once) and
+ * we fall back to PayPal. A `NODE_ENV !== 'production'` guard would NOT work
+ * here: CI runs the spec against `next start`, i.e. NODE_ENV=production.
+ *
+ * A trailing slash is trimmed — every caller interpolates `${base}/v1/…`.
+ */
+function apiBase(environment: 'sandbox' | 'live'): string {
+  const fallback = PAYPAL_HOSTS[environment]
+  const override = process.env.PAYPAL_API_BASE
+  if (!override) return fallback
+  if (!isLoopbackOrigin(override)) {
+    if (!warnedNonLoopback) {
+      warnedNonLoopback = true
+      console.warn(
+        `[paypal] ignoring non-loopback PAYPAL_API_BASE (${override}) — using ${fallback}. ` +
+          'This override exists only to point the settlement E2E at a local stub; it must never be set on a deployed environment.',
+      )
+    }
+    return fallback
+  }
+  return override.replace(/\/+$/, '')
+}
+
 class PayPalApiError extends Error {
   constructor(
     message: string,
@@ -105,7 +160,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   private readonly clientId: string
   private readonly clientSecret: string
   private readonly webhookId: string | undefined
-  private readonly baseUrl: string
+  private readonly environment: 'sandbox' | 'live'
 
   private accessToken: string | null = null
   private tokenExpiresAt = 0
@@ -119,10 +174,12 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     this.clientId = clientId
     this.clientSecret = clientSecret
     this.webhookId = webhookId
-    this.baseUrl =
-      environment === 'live'
-        ? 'https://api-m.paypal.com'
-        : 'https://api-m.sandbox.paypal.com'
+    this.environment = environment
+  }
+
+  /** PayPal's host for this instance — see `apiBase` for the loopback-only test seam. */
+  private get baseUrl(): string {
+    return apiBase(this.environment)
   }
 
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number {

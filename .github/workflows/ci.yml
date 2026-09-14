@@ -132,6 +132,20 @@ jobs:
       # the Build step neither inlines it nor needs a Dockerfile ARG, and it must
       # never be set on a deployed environment.
       BINANCE_PAY_API_BASE: http://127.0.0.1:3099
+      # paypal-settlement.spec.ts hosts a stub of PayPal's OAuth,
+      # verify-webhook-signature and Orders v2 endpoints inside the Playwright
+      # process and points the APP at it with this override
+      # (lib/payments/paypal-provider.ts reads it per call). The three PAYPAL_*
+      # credentials above it are never checked by the stub — they exist only
+      # because getPaymentProvider('paypal') refuses to build the adapter
+      # without a client id and secret, and verifyWebhook fails closed without a
+      # webhook id. Drop this line and the spec skips "not set", which
+      # check-e2e-skips.mjs turns into a job failure. Server-runtime only, and it
+      # must never be set on a deployed environment.
+      PAYPAL_CLIENT_ID: ci_paypal_client_synthetic
+      PAYPAL_CLIENT_SECRET: ci_paypal_secret_synthetic
+      PAYPAL_WEBHOOK_ID: ci_paypal_webhook_synthetic
+      PAYPAL_API_BASE: http://127.0.0.1:3098
       SOLANA_RPC_URL: https://api.devnet.solana.com
       SOLANA_PLATFORM_WALLET: EqK4KJFiUoV53TrCt2kXHn8Ryg6fcSTuwaa9nNppqc2A
       SOLANA_USDC_MINT: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
@@ -163,7 +177,7 @@ jobs:
       # needs wildcard-ish hostnames. lvh.me resolves to 127.0.0.1 via public
       # DNS; pin the ones the specs use so a DNS hiccup cannot fail a run.
       - name: Pin lvh.me hostnames
-        run: echo "127.0.0.1 lvh.me default.lvh.me code-academy.lvh.me qa-binance-personal.lvh.me" | sudo tee -a /etc/hosts
+        run: echo "127.0.0.1 lvh.me default.lvh.me code-academy.lvh.me qa-binance-personal.lvh.me qa-manual-sale.lvh.me" | sudo tee -a /etc/hosts
 
       - uses: supabase/setup-cli@v1
         with:

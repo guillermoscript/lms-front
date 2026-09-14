@@ -98,7 +98,14 @@ export default defineConfig({
     // default here would make a REUSED `npm run dev` (reuseExistingServer, which
     // never receives this env) look configured when it is not. Empty string =
     // unset: the provider's `||` falls back to api.binance.com.
-    env: { BINANCE_PAY_API_BASE: process.env.BINANCE_PAY_API_BASE ?? '' },
+    //
+    // paypal-settlement.spec.ts needs the same treatment for the same reason —
+    // it stubs PayPal's OAuth, signature-verify and Orders v2 calls, and it is
+    // the APP that makes them.
+    env: {
+      BINANCE_PAY_API_BASE: process.env.BINANCE_PAY_API_BASE ?? '',
+      PAYPAL_API_BASE: process.env.PAYPAL_API_BASE ?? '',
+    },
   },
   projects: selectProjects([
     {

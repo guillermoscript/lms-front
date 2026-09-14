@@ -216,7 +216,7 @@ export function PaymentRequestForm({
   )
 
   const submitButton = (
-    <Button type="submit" disabled={loading} className="gap-2 px-6">
+    <Button data-testid="payment-request-submit" type="submit" disabled={loading} className="gap-2 px-6">
       {loading ? (
         <>
           <IconLoader2 className="h-4 w-4 animate-spin" />
