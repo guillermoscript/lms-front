@@ -326,6 +326,9 @@ export class LemonSqueezyProvider implements IPaymentProvider {
           providerEventId, // order_refunded:<orderId>:<updatedAt>
           providerPaymentId: subId,
           reference,
+          // LS echoes the checkout's custom_data on every order event; the
+          // dispatcher binds the refund to its userId/tenantId (#743).
+          metadata: customData,
           ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
           ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,

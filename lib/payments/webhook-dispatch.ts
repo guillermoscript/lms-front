@@ -578,12 +578,36 @@ export async function dispatchBillingEvent(
       const { data: tx } = await admin
         .from('transactions')
         .select(
-          'transaction_id, status, user_id, tenant_id, plan_id, product_id, amount, currency, refunded_amount',
+          'transaction_id, status, user_id, tenant_id, plan_id, product_id, amount, currency, refunded_amount, provider_subscription_id, provider_checkout_id',
         )
         .eq('transaction_id', txnId)
         .maybeSingle()
 
       if (!tx) throw new Error(`dispatch ${event.type}: transaction ${txnId} not found`)
+
+      // Owner binding (#743). PayPal, Lemon Squeezy and Binance sign BOTH money
+      // loops with one secret, and `reference` is a sequential id — without
+      // this a correctly signed refund could void another school's sale and
+      // revoke its student's access. Fails CLOSED, like the activation branches:
+      //   - echoed checkout metadata (PayPal custom_id, LS custom_data) must name
+      //     the row's own user AND tenant — a half-present pair is a mismatch;
+      //   - with none (Binance's refund notification drops passThroughInfo), the
+      //     event's payment id must be the one checkout stored on this row.
+      const meta = event.metadata ?? {}
+      if (meta.userId || meta.tenantId) {
+        if (meta.userId !== tx.user_id || meta.tenantId !== tx.tenant_id) {
+          throw new Error(
+            `dispatch ${event.type}: metadata owner mismatch for transaction ${txnId} — refusing to refund`,
+          )
+        }
+      } else {
+        const storedIds = [tx.provider_checkout_id, tx.provider_subscription_id].filter(Boolean)
+        if (!event.providerPaymentId || !storedIds.includes(event.providerPaymentId)) {
+          throw new Error(
+            `dispatch ${event.type}: no owner binding for transaction ${txnId} — refusing to refund`,
+          )
+        }
+      }
       if (tx.status === 'pending') {
         throw new Error(`dispatch ${event.type}: transaction ${txnId} is still pending`)
       }

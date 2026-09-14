@@ -148,9 +148,24 @@ export interface PaymentInstructionsData {
 }
 
 /**
- * Student creates a payment request for manual/offline payment
+ * Student creates a payment request for manual/offline payment.
+ *
+ * Refusals come back as `{ error }` instead of a throw: Next.js replaces a
+ * thrown Server Action error's message with a generic digest in production
+ * builds, so "This product is free…" would reach the student as "An error
+ * occurred" everywhere except `next dev`.
  */
-export async function createPaymentRequest(data: PaymentRequestFormData) {
+export async function createPaymentRequest(
+  data: PaymentRequestFormData,
+): Promise<{ request: Awaited<ReturnType<typeof insertPaymentRequest>>; error?: never } | { error: string; request?: never }> {
+  try {
+    return { request: await insertPaymentRequest(data) }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to create payment request' }
+  }
+}
+
+async function insertPaymentRequest(data: PaymentRequestFormData) {
   const supabase = await createClient()
   const userId = await getCurrentUserId()
   const tenantId = await getCurrentTenantId()

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsTeacher } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
+import { SEEDED, getAdmin } from './utils/plan-gate-fixtures'
 
 /**
  * P1 — Teacher Content CRUD Tests
@@ -21,6 +22,52 @@ import { BASE, LOCALE } from './utils/constants'
  */
 
 const COURSE_URL = `${BASE}/${LOCALE}/dashboard/teacher/courses/1001`
+
+/** Course 1001's lessons, per the seed. */
+const COURSE_LESSON_IDS = [1001, 1002]
+
+/**
+ * The students-tab test asserts the seeded student reads as `not_started`, and
+ * `classifyEngagement` (lib/analytics/student-progress.ts:232) returns that ONLY
+ * when `lastActivityAt` is null. Six sources feed that timestamp, and one of them
+ * is `lesson_views` — so merely OPENING a lesson page as student@e2etest.com,
+ * which `student-courses.spec.ts` does three times, flips the badge to `active`
+ * and fails a test that has nothing to do with lesson views.
+ *
+ * CI shards, so whether the two specs meet is an accident of how many tests exist;
+ * adding ten in #741 was enough to put them in the same shard and turn a latent
+ * landmine into a red build. Rather than depend on nobody touching the seeded
+ * student first, restore the state this spec documents.
+ *
+ * Scoped to course 1001 and this one user. `exam_submissions` and
+ * `exercise_completions` are deliberately NOT cleared — they are the seeded
+ * fixtures other specs assert on, and they cannot flip this badge without also
+ * breaking the `0 / 2` assertion above it, which would be a real failure worth
+ * seeing.
+ */
+async function clearSeededStudentActivity() {
+  const admin = getAdmin()
+  const wipe = async (what: string, run: PromiseLike<{ error: { message: string } | null }>) => {
+    const { error } = await run
+    if (error) throw new Error(`could not clear ${what}: ${error.message}`)
+  }
+  await wipe(
+    'lesson_views',
+    admin.from('lesson_views').delete().eq('user_id', SEEDED.student.id).in('lesson_id', COURSE_LESSON_IDS),
+  )
+  await wipe(
+    'lesson_completions',
+    admin.from('lesson_completions').delete().eq('user_id', SEEDED.student.id).in('lesson_id', COURSE_LESSON_IDS),
+  )
+  await wipe(
+    'lesson_checkpoint_attempts',
+    admin.from('lesson_checkpoint_attempts').delete().eq('user_id', SEEDED.student.id).in('lesson_id', COURSE_LESSON_IDS),
+  )
+  await wipe(
+    'practice_attempts',
+    admin.from('practice_attempts').delete().eq('user_id', SEEDED.student.id).eq('course_id', 1001),
+  )
+}
 
 test.describe('Teacher Content — Course Detail Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -58,6 +105,8 @@ test.describe('Teacher Content — Course Detail Page', () => {
 
   test('students tab shows per-student progress and opens the detail sheet (#647)', async ({ page }) => {
     test.setTimeout(60_000)
+    // Order-independence: see clearSeededStudentActivity's comment.
+    await clearSeededStudentActivity()
     await page.goto(COURSE_URL)
 
     // Seeded: student@e2etest.com is enrolled in 1001 with no completions.

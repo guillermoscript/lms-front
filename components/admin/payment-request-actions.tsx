@@ -144,6 +144,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
       {/* Pending Status: Send Instructions */}
       {request.status === 'pending' && (
         <Button
+          data-testid="payment-request-send-instructions"
           onClick={() => setInstructionsDialogOpen(true)}
           className="w-full"
           variant="default"
@@ -156,6 +157,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
       {/* Contacted Status: Confirm Payment */}
       {request.status === 'contacted' && (
         <Button
+          data-testid="payment-request-confirm-payment"
           onClick={() => setConfirmPaymentDialogOpen(true)}
           className="w-full"
           variant="default"
@@ -168,6 +170,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
       {/* Payment Received Status: Complete & Enroll */}
       {request.status === 'payment_received' && (
         <Button
+          data-testid="payment-request-complete"
           onClick={() => setCompleteDialogOpen(true)}
           className="w-full bg-green-600 hover:bg-green-700"
         >
@@ -242,7 +245,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
             <Button variant="outline" onClick={() => setInstructionsDialogOpen(false)} disabled={loading}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleSendInstructions} disabled={loading}>
+            <Button data-testid="payment-request-send-instructions-submit" onClick={handleSendInstructions} disabled={loading}>
               {loading ? t('common.sending') : t('common.send')}
             </Button>
           </DialogFooter>
@@ -275,7 +278,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
             <Button variant="outline" onClick={() => setConfirmPaymentDialogOpen(false)} disabled={loading}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleConfirmPayment} disabled={loading}>
+            <Button data-testid="payment-request-confirm-payment-submit" onClick={handleConfirmPayment} disabled={loading}>
               {loading ? t('common.confirming') : t('common.confirm')}
             </Button>
           </DialogFooter>
@@ -291,7 +294,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={loading}>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleComplete} disabled={loading}>
+            <AlertDialogAction data-testid="payment-request-complete-submit" onClick={handleComplete} disabled={loading}>
               {loading ? t('common.completing') : t('common.complete')}
             </AlertDialogAction>
           </AlertDialogFooter>

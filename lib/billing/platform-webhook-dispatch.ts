@@ -301,12 +301,56 @@ async function notifyPaymentFailed(
   }
 }
 
+/**
+ * Event types the SCHOOL → PLATFORM loop has no meaning for — they are the
+ * student → school loop's vocabulary (a course purchase, a failed card, a
+ * refund on a sale).
+ *
+ * This list is a security boundary, not tidiness. Stripe is the only provider
+ * with two separate registrations and two separate signing secrets
+ * (`platformWebhookSecret`), so a student event posted to the platform endpoint
+ * fails verification. Every OTHER rail signs both loops with the one secret its
+ * factory branch reads and bills both loops through one merchant account — so
+ * the moment an operator registers `/api/billing/webhook/<provider>` for
+ * PayPal, Binance or Lemon Squeezy, that endpoint also receives every student's
+ * course purchase, correctly signed.
+ *
+ * Those events then resolved a tenant (the student loop puts `tenantId` in
+ * provider metadata and `resolveTenantId` reads exactly that key) and fell
+ * through to `STATUS_BY_TYPE[event.type] ?? 'active'` — so a $5 course sale
+ * rewrote the SCHOOL's `platform_subscriptions` row: `status: 'active'`,
+ * `payment_provider` flipped to the student rail, `grace_period_end` and
+ * `renewal_reminder_sent_at` cleared. On a school paying by bank transfer that
+ * is a free plan forever: `expire-platform-subscriptions` only walks
+ * `PLATFORM_SELF_MANAGED_PROVIDERS`, and `paypal` is not one, so nothing would
+ * ever expire the row again.
+ *
+ * Dropping them here rather than at the route keeps the redelivery cron, the
+ * Solana verify path and any future caller behind the same rule.
+ */
+const STUDENT_LOOP_EVENT_TYPES = new Set<NormalizedBillingEvent['type']>([
+  'payment.succeeded',
+  'payment.failed',
+  'refund.succeeded',
+])
+
 export async function dispatchPlatformBillingEvent(
   event: NormalizedBillingEvent,
   ctx: PlatformDispatchContext,
 ): Promise<void> {
   const { provider, admin, revertToPrice, sendEmailFn = sendEmail } = ctx
   const now = new Date().toISOString()
+
+  if (STUDENT_LOOP_EVENT_TYPES.has(event.type)) {
+    // Ack, never throw: the delivery is legitimate, it simply belongs to the
+    // other loop, and a 500 would have the provider redeliver it forever.
+    // Platform activation arrives as `subscription.activated` on every rail —
+    // Binance's own adapter branches on `planId` to say so (#610).
+    console.log(
+      `[platform-webhook] ${event.type} on ${provider} belongs to the student loop — ignoring`,
+    )
+    return
+  }
 
   const tenantId = await resolveTenantId(event, ctx)
   if (!tenantId) {
