@@ -131,6 +131,13 @@ export async function upsertPlatformPlanPrice(input: {
   if (!providerPriceId && needsCatalogId) {
     throw new Error('Provider price ID is required')
   }
+  // A PayPal subscription is created against a Billing Plan (`P-…`). The
+  // catalog product it belongs to (`PROD-…`) sits one field away in the PayPal
+  // dashboard and looks just as plausible, but checkout would fail on it only
+  // after a school had picked the plan (#744).
+  if (provider === 'paypal' && providerPriceId && !/^P-[A-Z0-9]+$/.test(providerPriceId)) {
+    throw new Error('A PayPal price must be a Billing Plan id (P-…), not a product id')
+  }
 
   // `amount` is nullable on purpose (the migration's own note): on a non-USD
   // rail the provider may charge something that is not `platform_plans.price_*`,

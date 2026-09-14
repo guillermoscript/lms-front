@@ -116,6 +116,8 @@ NEXT_PUBLIC_APP_URL=http://lvh.me:3000
 |----------|----------|-------------|-----------------|---------|
 | `PAYPAL_CLIENT_ID` | Optional | PayPal REST API client ID. Only needed if `PAYMENT_PROVIDER=paypal`. | PayPal Developer Dashboard > My Apps & Credentials | `AaBbCcDd...` |
 | `PAYPAL_CLIENT_SECRET` | Optional | PayPal REST API secret. Only needed if `PAYMENT_PROVIDER=paypal`. | PayPal Developer Dashboard > My Apps & Credentials | `EeFfGgHh...` |
+| `PAYPAL_WEBHOOK_ID` | Optional | Id of the PayPal webhook registered for `/api/payments/webhook/paypal` (student → school). Required for PayPal subscription activation. | PayPal Developer Dashboard > My Apps & Credentials > Webhooks | `8PT597110X687430LKGECATA` |
+| `PAYPAL_PLATFORM_WEBHOOK_ID` | Optional | Id of a second PayPal webhook registered for `/api/billing/webhook/paypal` (school → platform billing, #744). PayPal is not offered for platform plans until it is set. | PayPal Developer Dashboard > My Apps & Credentials > Webhooks | `3VW612345A123456BWEBHOOK` |
 | `PAYMENT_PROVIDER` | Optional | Active payment provider. Defaults to `stripe`. | Set manually | `stripe`, `paypal`, or `manual` |
 
 ### MCP Server (AI Development Tooling)

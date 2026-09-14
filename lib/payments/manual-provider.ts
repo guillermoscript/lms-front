@@ -34,6 +34,7 @@ export class ManualPaymentProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // bank transfer — nothing hosted to manage
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
     requiresConnectedAccount: false, // bank transfer to the school's own account — no provider onboarding at all

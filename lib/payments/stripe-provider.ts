@@ -46,6 +46,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     supportsPlanChange: true,
     supportsCustomerPortal: true, // billingPortal.sessions.create
     supportsProrationPreview: true, // invoices.createPreview
+    supportsScheduledCancellation: true, // cancel_at_period_end on the subscription
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false,
     requiresConnectedAccount: true, // Connect Express — per-tenant account with progressive KYC the school can abandon

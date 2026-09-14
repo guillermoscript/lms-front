@@ -25,6 +25,7 @@ import {
   getActivePlanPrices,
   getPlatformBillingProvider,
   resolveCheckoutProvider,
+  supersedesOnSameRail,
 } from '@/lib/billing/platform-billing'
 import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     const { data: existingSub } = await adminClient
       .from('platform_subscriptions')
-      .select('subscription_id, provider_subscription_id, status, payment_provider')
+      .select('subscription_id, provider_subscription_id, status, payment_provider, plan_id, interval, cancel_at_period_end')
       .eq('tenant_id', tenantId)
       .maybeSingle()
 
@@ -148,11 +149,26 @@ export async function POST(req: NextRequest) {
     // subscription — it is how the school renews or moves plan at all, and
     // refusing it would leave a Binance/Solana subscriber with no way to pay
     // for their next month.
+    //
+    // Nor where the provider cannot swap the plan in place (#744). PayPal has
+    // no in-app plan change to send the school to, so a new PayPal subscription
+    // on the target plan IS the plan change: the switch recorded below promotes
+    // it on activation and cancels the old one. Buying the plan the school is
+    // already on is still a double charge, unless it has cancelled — then this
+    // is how it subscribes again.
     if (liveSub && liveSub.payment_provider === provider && capabilities.supportsNativeSubscriptions) {
-      return NextResponse.json(
-        { error: 'You already have an active subscription on this payment method. Change your plan from the billing page instead.' },
-        { status: 400 },
-      )
+      if (!supersedesOnSameRail(provider)) {
+        return NextResponse.json(
+          { error: 'You already have an active subscription on this payment method. Change your plan from the billing page instead.' },
+          { status: 400 },
+        )
+      }
+      if (liveSub.plan_id === plan.plan_id && liveSub.interval === interval && !liveSub.cancel_at_period_end) {
+        return NextResponse.json(
+          { error: 'You are already subscribed to this plan on this payment method.' },
+          { status: 400 },
+        )
+      }
     }
 
     // Pre-flight the target plan's limits on rails we cannot refund in-app.

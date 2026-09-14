@@ -53,6 +53,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     supportsPlanChange: true,
     supportsCustomerPortal: false, // portal is reached from LS's dashboard, not a URL we mint
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: true, // cancelSubscription schedules the end at renews_at
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
     requiresConnectedAccount: false, // Merchant of Record — the platform's own store sells on the school's behalf

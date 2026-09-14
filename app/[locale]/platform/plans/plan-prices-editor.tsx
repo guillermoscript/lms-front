@@ -358,7 +358,13 @@ export function PlanPricesEditor({
                   id={`price-id-${planId}`}
                   name={`provider-price-id-${planId}`}
                   className="font-mono text-xs"
-                  placeholder={catalogLess ? "No catalog — leave blank" : "price_1234…"}
+                  placeholder={
+                    catalogLess
+                      ? "No catalog — leave blank"
+                      : form.paymentProvider === "paypal"
+                        ? "P-… (Billing Plan id)"
+                        : "price_1234…"
+                  }
                   value={form.providerPriceId}
                   onChange={(e) => setForm((p) => ({ ...p, providerPriceId: e.target.value }))}
                   disabled={catalogLess}

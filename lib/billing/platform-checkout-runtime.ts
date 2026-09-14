@@ -12,7 +12,11 @@ const REQUIRED_ENV: Partial<Record<PaymentProvider, string[]>> = {
   // subscription would never activate when /api/billing/webhook/stripe cannot
   // verify the completion event.
   stripe: ['STRIPE_SECRET_KEY', 'STRIPE_PLATFORM_WEBHOOK_SECRET'],
-  paypal: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET'],
+  // Same reasoning as Stripe: PayPal activation is webhook-driven
+  // (BILLING.SUBSCRIPTION.ACTIVATED), and the platform endpoint is its own
+  // webhook registration with its own id (#744). Without it a school could
+  // approve a subscription that never activates.
+  paypal: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_PLATFORM_WEBHOOK_ID'],
   binance: ['BINANCE_PAY_API_KEY', 'BINANCE_PAY_API_SECRET'],
   lemonsqueezy: ['LEMONSQUEEZY_API_KEY', 'LEMONSQUEEZY_STORE_ID', 'LEMONSQUEEZY_WEBHOOK_SECRET'],
   solana: ['SOLANA_RPC_URL', 'SOLANA_PLATFORM_WALLET'],

@@ -12,7 +12,10 @@ import {
   REQUEST_TTL_DAYS,
   isRequestOpen,
 } from '@/lib/billing/payment-request-ttl'
-import { PLATFORM_SELF_MANAGED_PROVIDERS } from '@/lib/billing/platform-billing'
+import {
+  PLATFORM_APP_CANCELED_PROVIDERS,
+  PLATFORM_SELF_MANAGED_PROVIDERS,
+} from '@/lib/billing/platform-billing'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import {
@@ -38,9 +41,11 @@ export const runtime = 'nodejs'
  * subscription active forever: unreminded, ungraced and never downgraded.
  *
  * Rails that renew themselves (Stripe, Lemon Squeezy, PayPal) stay
- * webhook-driven and must NOT appear here — their expiry is decided by
+ * webhook-driven and must NOT appear in phases 1–3 — their expiry is decided by
  * /api/billing/webhook/[provider]. So does `solana_subs`, whose crank cron
- * charges it each period.
+ * charges it each period. The one exception is phase 4 for PayPal: its cancel
+ * is final at the provider, so the paid period left after it is ours to end
+ * (`PLATFORM_APP_CANCELED_PROVIDERS`, #744).
  *
  * Phases (all status-gated, so re-running is idempotent):
  *   0. Request TTL — open payment request past `expires_at` → `expired` + email.
@@ -318,10 +323,13 @@ export async function GET(req: NextRequest) {
   }
 
   // ---- Phase 4: explicit cancel-at-period-end (no renewal pause) ----
+  // Wider than phases 1–3: a PayPal cancel is final at PayPal, so the paid
+  // period the dispatcher kept has nobody else to end it (#744). Phases 1–3
+  // stay self-managed only — PayPal still renews, reminds and dunns itself.
   const { data: cancelSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
+    .in('payment_provider', PLATFORM_APP_CANCELED_PROVIDERS)
     .eq('status', 'active')
     .eq('cancel_at_period_end', true)
     .not('current_period_end', 'is', null)

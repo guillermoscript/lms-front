@@ -175,6 +175,7 @@ export class BinancePayProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // Binance Pay has no subscription-management page for us to open
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
     requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard

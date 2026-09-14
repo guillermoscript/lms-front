@@ -149,6 +149,7 @@ export class BinancePersonalProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // personal Pay account — no merchant portal at all
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
     requiresConnectedAccount: false, // the school's own Pay ID, saved in Settings — no onboarding flow

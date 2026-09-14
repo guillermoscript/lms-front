@@ -8,6 +8,7 @@ import { LimitReachedBanner } from '@/components/shared/limit-reached-banner'
 import { IconCreditCard, IconCalendar, IconAlertTriangle, IconRefresh, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 
 interface BillingOverviewProps {
   plan: string
@@ -68,6 +69,10 @@ export function BillingOverview({
   const now = new Date()
   const daysUntilEnd = periodEnd ? Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
   const isManualSub = subscription?.paymentProvider === 'manual'
+  // The provider billed on its own schedule and its cancel cannot be undone
+  // (PayPal, #744) — see `supportsScheduledCancellation`.
+  const providerCaps = subscription ? PROVIDER_CAPABILITIES[subscription.paymentProvider as PaymentProvider] : undefined
+  const cancelIsFinal = !!providerCaps?.supportsNativeSubscriptions && !providerCaps.supportsScheduledCancellation
   const isPastDue = billingStatus === 'past_due'
   const showRenewalWarning = isManualSub && !isPastDue && daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0
   const daysInGracePeriod = gracePeriodEnd ? Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
@@ -119,7 +124,11 @@ export function BillingOverview({
               {/* Cancelling used to be one-way — there was no reactivate action
                   anywhere in the UI, and re-checkout is blocked while the sub is
                   still active (#546 §1). */}
-              {!isFree && onReactivateClick && subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && (
+              {/* Only where the provider merely SCHEDULED the end. A PayPal
+                  cancel is final at PayPal (#744), so the action would refuse and
+                  the button could only fail — the upgrade link above is how that
+                  school subscribes again. */}
+              {!isFree && onReactivateClick && subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && !cancelIsFinal && (
                 <Button size="sm" variant="outline" onClick={onReactivateClick} disabled={reactivateLoading}>
                   <IconRefresh className="mr-2 h-4 w-4" />
                   {t('reactivatePlan')}
@@ -153,6 +162,9 @@ export function BillingOverview({
                       <p className="font-medium text-amber-700 dark:text-amber-400">
                         {t('cancelOnDate', { date: periodEnd.toLocaleDateString() })}
                       </p>
+                    )}
+                    {subscription?.cancelAtPeriodEnd && cancelIsFinal && (
+                      <p className="text-muted-foreground">{t('cancelFinalHint')}</p>
                     )}
                   </div>
                 </div>
