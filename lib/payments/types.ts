@@ -451,6 +451,19 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
   },
 }
 
+/**
+ * The provider renews by itself but its cancel is final the moment it is made
+ * (PayPal, #744/#479): no cancel-at-period-end to schedule, no way to undo it.
+ * The period already paid for is therefore the APP's to keep and to end — the
+ * CANCELLED webhook must not revoke access, a "resume" button must not appear,
+ * and the expiry cron (which otherwise leaves push-renewal rails to their
+ * webhooks) must close the subscription when that period runs out.
+ */
+export function cancelIsFinalAtProvider(provider: string | null | undefined): boolean {
+  const caps = provider ? PROVIDER_CAPABILITIES[provider as PaymentProvider] : undefined
+  return !!caps && caps.emitsRenewalWebhooks && caps.supportsNativeSubscriptions && !caps.supportsScheduledCancellation
+}
+
 /** Params for starting a payment (the missing "start a payment" abstraction). */
 export interface CreateCheckoutParams {
   /** One-time product purchase or a recurring plan subscription. */

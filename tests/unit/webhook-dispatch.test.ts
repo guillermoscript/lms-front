@@ -20,7 +20,12 @@ interface Recorder {
  * @param txStatus  what the `transactions` lookup (.maybeSingle()) returns:
  *                  a string → a row with that status; null → no row.
  */
-function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, unknown> = {}) {
+function makeFakeAdmin(
+  txStatus: string | null = null,
+  txExtra: Record<string, unknown> = {},
+  /** Per-table `.maybeSingle()` row, overriding the transaction-shaped default. */
+  byTable: Record<string, Record<string, unknown> | null> = {},
+) {
   const calls: Recorder = { from: [], selects: [], updates: [], rpc: [] }
   let rpcRefundedAmount = Number(txExtra.refunded_amount ?? 0)
   const appliedRefundEvents = new Set<string>()
@@ -38,7 +43,11 @@ function makeFakeAdmin(txStatus: string | null = null, txExtra: Record<string, u
       eq() {
         return builder
       },
+      limit() {
+        return builder
+      },
       maybeSingle() {
+        if (table in byTable) return Promise.resolve({ data: byTable[table], error: null })
         return Promise.resolve({
           data: txStatus === null ? null : { transaction_id: 1, status: txStatus, ...txExtra },
           error: null,
@@ -162,7 +171,7 @@ describe('dispatchBillingEvent', () => {
   })
 
   it('renewed with periodEnd → calls extend_subscription_period with ISO end', async () => {
-    const { admin, calls } = makeFakeAdmin()
+    const { admin, calls } = makeFakeAdmin(null, {}, { subscriptions: { subscription_id: 9 } })
     const periodEnd = new Date('2027-01-01T00:00:00.000Z')
     await dispatchBillingEvent(
       event('subscription.renewed', { providerSubscriptionId: 'sub_1', periodEnd }),
@@ -179,13 +188,90 @@ describe('dispatchBillingEvent', () => {
   })
 
   it('renewed WITHOUT periodEnd → no rpc, no write (cannot extend access)', async () => {
-    const { admin, calls } = makeFakeAdmin()
+    const { admin, calls } = makeFakeAdmin(null, {}, { subscriptions: { subscription_id: 9 } })
     await dispatchBillingEvent(event('subscription.renewed', { providerSubscriptionId: 'sub_1' }), {
       provider: PROVIDER,
       admin,
     })
     expect(calls.rpc).toHaveLength(0)
     expect(calls.updates).toHaveLength(0)
+  })
+
+  // PayPal sends the school's platform renewals to this endpoint too (#479).
+  // The period RPC raises on a missing row, so every school charge 500'd.
+  it('renewed for a subscription we never sold → acknowledged, no rpc', async () => {
+    const { admin, calls } = makeFakeAdmin(null, {}, { subscriptions: null })
+    await dispatchBillingEvent(
+      event('subscription.renewed', { providerSubscriptionId: 'I-SCHOOL', periodEnd: new Date('2027-01-01') }),
+      { provider: 'paypal', admin },
+    )
+    expect(calls.rpc).toHaveLength(0)
+    expect(calls.updates).toHaveLength(0)
+  })
+
+  // The first cycle's SALE.COMPLETED lands before ACTIVATED (seen live): throw
+  // so PayPal redelivers after the subscription row exists.
+  it('renewed for a checkout still awaiting activation → throws for redelivery', async () => {
+    const { admin, calls } = makeFakeAdmin('pending', {}, { subscriptions: null })
+    await expect(
+      dispatchBillingEvent(
+        event('subscription.renewed', { providerSubscriptionId: 'I-NEW', periodEnd: new Date('2027-01-01') }),
+        { provider: 'paypal', admin },
+      ),
+    ).rejects.toThrow(/not activated yet/)
+    expect(calls.rpc).toHaveLength(0)
+  })
+
+  // A PayPal cancel is final and arrives at cancel time, not period end. Writing
+  // `canceled` revoked the courses that second (seen live).
+  it('paypal canceled mid-period → schedules the end, keeps access', async () => {
+    const future = new Date(Date.now() + 10 * 86_400_000).toISOString()
+    const { admin, calls } = makeFakeAdmin(null, {}, {
+      subscriptions: {
+        subscription_id: 9,
+        subscription_status: 'active',
+        current_period_end: future,
+        end_date: future,
+        cancel_at_period_end: false,
+      },
+    })
+    await dispatchBillingEvent(event('subscription.canceled', { providerSubscriptionId: 'I-1' }), {
+      provider: 'paypal',
+      admin,
+    })
+    expect(calls.updates).toHaveLength(1)
+    expect(calls.updates[0].values).toMatchObject({ cancel_at_period_end: true, cancel_at: future })
+    expect(calls.updates[0].values.subscription_status).toBeUndefined()
+  })
+
+  it('paypal canceled again (already scheduled) → no write', async () => {
+    const future = new Date(Date.now() + 10 * 86_400_000).toISOString()
+    const { admin, calls } = makeFakeAdmin(null, {}, {
+      subscriptions: {
+        subscription_id: 9,
+        subscription_status: 'active',
+        current_period_end: future,
+        cancel_at_period_end: true,
+      },
+    })
+    await dispatchBillingEvent(event('subscription.canceled', { providerSubscriptionId: 'I-1' }), {
+      provider: 'paypal',
+      admin,
+    })
+    expect(calls.updates).toHaveLength(0)
+  })
+
+  it('paypal canceled after the paid period → writes canceled', async () => {
+    const past = new Date(Date.now() - 86_400_000).toISOString()
+    const { admin, calls } = makeFakeAdmin(null, {}, {
+      subscriptions: { subscription_id: 9, subscription_status: 'active', current_period_end: past },
+    })
+    await dispatchBillingEvent(event('subscription.canceled', { providerSubscriptionId: 'I-1' }), {
+      provider: 'paypal',
+      admin,
+    })
+    expect(calls.updates).toHaveLength(1)
+    expect(calls.updates[0].values.subscription_status).toBe('canceled')
   })
 
   it('renewed without a subId → no-op', async () => {

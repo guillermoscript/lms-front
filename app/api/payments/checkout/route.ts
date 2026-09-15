@@ -31,6 +31,7 @@ import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
 import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
 import { checkoutExpiresAt, isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
+import { reconcilePayPalCheckout } from '@/lib/payments/paypal-reconcile'
 import {
   findConflictingSubscription,
   PARALLEL_SUBSCRIPTION_CODE,
@@ -245,6 +246,53 @@ export async function POST(req: NextRequest) {
     // deliberately: it computes the identical number, and it keeps the rollback
     // migration a safe lever — drop the trigger and this path still snapshots.
     const adminClient = createAdminClient()
+
+    // The buyer's own leftover PayPal checkout for this same item (#479). A
+    // buyer who pressed "Cancel and return" on PayPal's page — or closed the
+    // tab — left a `pending` row inside transactions_unique_product /
+    // transactions_unique_plan, and every retry died on the insert below with a
+    // generic 500 until the 24h TTL lapsed (seen live). Ask PayPal what became
+    // of it: a dead checkout is released here, a paid one is settled, and one
+    // still in flight is reported instead of double-charging.
+    if (providerSlug === 'paypal') {
+      let leftoverQuery = adminClient
+        .from('transactions')
+        .select('transaction_id, provider_checkout_id, plan_id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+        .eq('payment_provider', 'paypal')
+        .limit(1)
+      leftoverQuery = planId
+        ? leftoverQuery.eq('plan_id', planId).is('product_id', null)
+        : leftoverQuery.eq('product_id', productId).is('plan_id', null)
+      const { data: leftover } = await leftoverQuery.maybeSingle()
+
+      if (leftover) {
+        const outcome = await reconcilePayPalCheckout(adminClient, leftover)
+        if (outcome === 'settled') {
+          return NextResponse.json(
+            { error: 'This purchase already went through.', code: 'ALREADY_PAID', transactionId: leftover.transaction_id },
+            { status: 409 },
+          )
+        }
+        if (outcome !== 'dead') {
+          return NextResponse.json(
+            { error: 'Your previous PayPal payment for this item is still processing. Try again in a few minutes.', code: 'CHECKOUT_IN_FLIGHT' },
+            { status: 409 },
+          )
+        }
+        // 'canceled', not 'failed' — see expire-stale-checkouts: a failed PLAN
+        // row runs cancel_subscription. Status-guarded against a webhook that
+        // settled it a moment ago.
+        await adminClient
+          .from('transactions')
+          .update({ status: 'canceled', expired_at: new Date().toISOString() })
+          .eq('transaction_id', leftover.transaction_id)
+          .eq('status', 'pending')
+      }
+    }
+
     const { data: revenueSplit } = await adminClient
       .from('revenue_splits')
       .select('school_percentage')

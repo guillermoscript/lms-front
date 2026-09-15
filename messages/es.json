@@ -289,6 +289,8 @@
             "reactivateWorking": "Reanudando…",
             "reactivateSuccess": "Tu suscripción se seguirá renovando.",
             "reactivateError": "No se pudo reanudar tu suscripción. Inténtalo de nuevo.",
+            "canceledFinalHint": "Tu suscripción no se renovará. Mantienes el acceso hasta que termine el periodo actual; después puedes suscribirte de nuevo.",
+            "confirmNoteFinal": "No se harán más cobros. No se puede deshacer: para continuar cuando termine el periodo, suscríbete de nuevo.",
             "providerWarning": "Guardamos tu solicitud, pero no pudimos confirmarla con tu proveedor de pago. Comunícate con tu institución para asegurarte de que se aplicó."
           },
           "revoke": {

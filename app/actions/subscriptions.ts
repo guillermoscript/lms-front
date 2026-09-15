@@ -16,6 +16,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
+import { cancelIsFinalAtProvider } from '@/lib/payments/types'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -171,6 +172,13 @@ export async function reactivateMySubscription(subscriptionId: number): Promise<
 
     if (!subscription.cancel_at_period_end) {
       return { success: false, error: 'not_scheduled' }
+    }
+
+    // A PayPal cancel cannot be undone at PayPal (#479). Clearing our flag here
+    // would show "renewing" on a subscription that will never bill again, and
+    // the student would silently lose access at the period end.
+    if (subscription.provider_subscription_id && cancelIsFinalAtProvider(subscription.payment_provider)) {
+      return { success: false, error: 'not_reactivatable' }
     }
 
     // Reverse the provider-side cancel first. If the provider can't reactivate

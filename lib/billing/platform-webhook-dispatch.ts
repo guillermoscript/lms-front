@@ -40,6 +40,15 @@ import {
   recordSupersededTerminalEvent,
   switchIdFromMetadata,
 } from '@/lib/billing/platform-subscription-switch'
+import { PLATFORM_APP_CANCELED_PROVIDERS } from '@/lib/billing/platform-billing'
+
+/**
+ * How long a push-renewal rail whose failed school stops talking to us
+ * (PayPal: SUSPENDED is the last event) keeps its plan. PayPal retries a
+ * failed charge twice at five-day intervals before suspending, so a shorter
+ * window would downgrade a school PayPal is still collecting from.
+ */
+export const PUSH_RAIL_GRACE_DAYS = 14
 
 /**
  * `platform_subscriptions.status` is CHECK-constrained
@@ -501,11 +510,18 @@ export async function dispatchPlatformBillingEvent(
     selfManaged &&
     stored?.payment_provider === provider &&
     !!event.providerSubscriptionId
+  // A terminal row is a fresh start whichever rail it ended on (#479): a school
+  // that churned from Stripe and later subscribes on PayPal still holds the
+  // dead `sub_…` id, and requiring the same provider dropped the PayPal
+  // activation as "non-current" while PayPal billed it every month.
   const isFreshActivation =
     event.type === 'subscription.activated' &&
-    (!stored?.provider_subscription_id ||
-      (stored.payment_provider === provider && TERMINAL_STORED_STATUS.has(stored.status ?? ''))) &&
+    (!stored?.provider_subscription_id || TERMINAL_STORED_STATUS.has(stored.status ?? '')) &&
     !!(event.metadata?.plan_id ?? event.metadata?.planId)
+  // The subset that replaces a DEAD row — a school coming back after churning.
+  // A live row without a provider id (Stripe checkout before its subscription
+  // event) is not one: its echoed metadata can be stale.
+  const isReturningActivation = isFreshActivation && TERMINAL_STORED_STATUS.has(stored?.status ?? '')
   if (
     !isSwitchActivation &&
     !isSameRailSelfManagedRenewal &&
@@ -537,11 +553,26 @@ export async function dispatchPlatformBillingEvent(
     // dispatching concurrently would BOTH pass a read-then-check against the
     // same 'active' snapshot. Only the update that actually flips the row wins
     // the right to notify.
+    //
+    // A rail in `PLATFORM_APP_CANCELED_PROVIDERS` (PayPal) opens a grace window
+    // here, on the transition (#479). PayPal retries a failed charge and then
+    // SUSPENDS the subscription — and a suspended subscription sends nothing
+    // more, ever. Without a deadline the school kept its paid plan, limits and
+    // lower fee for free until someone noticed; the expiry cron's phase 3
+    // downgrades it once this window closes, and a later successful sale
+    // clears the window (`grace_period_end: null` on every active write).
+    const opensGrace = (PLATFORM_APP_CANCELED_PROVIDERS as readonly string[]).includes(provider)
     const transitioned = (await unwrap(
       'platform_subscriptions past_due',
       admin
         .from('platform_subscriptions')
-        .update({ status, updated_at: now })
+        .update({
+          status,
+          updated_at: now,
+          ...(opensGrace
+            ? { grace_period_end: new Date(Date.parse(now) + PUSH_RAIL_GRACE_DAYS * 86_400_000).toISOString() }
+            : {}),
+        })
         .eq('tenant_id', tenantId)
         .neq('status', 'past_due')
         .select('tenant_id'),
@@ -593,7 +624,11 @@ export async function dispatchPlatformBillingEvent(
   // school moving from Starter to Pro would otherwise have its Pro payment
   // extend its Starter period.
   const isFirstActivation = !stored?.plan_id
-  const trustMetadataPlan = isFirstActivation || selfManaged || isSwitchActivation
+  // A fresh activation over a terminal row is a new subscription minted for
+  // this purchase (#479): its metadata is not stale. Reading the dead row's
+  // plan instead left a school that churned from Pro and came back on Starter
+  // with a Pro row and `tenants.plan = free`.
+  const trustMetadataPlan = isFirstActivation || isReturningActivation || selfManaged || isSwitchActivation
   const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
   // PayPal's `custom_id` has no room for the slug next to the ids it must carry
   // (#744), so a plan named only by id is resolved here. Without it the
@@ -723,7 +758,9 @@ export async function dispatchPlatformBillingEvent(
         // confirmManualPayment treats a confirmed transfer (#546 §1). Without
         // this the school pays for a month and the cron's cancel phase still
         // drops it to free at the end of it.
-        derivedPeriod
+        // A fresh subscription over a terminal row inherits nothing from the
+        // dead one's cancellation either.
+        derivedPeriod || isReturningActivation
         ? { cancel_at_period_end: false, canceled_at: null }
         : {}),
     // Paid means out of dunning. The cron reopens a window if the new period

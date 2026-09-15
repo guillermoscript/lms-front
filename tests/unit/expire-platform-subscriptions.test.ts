@@ -55,6 +55,7 @@ function makeSupabase() {
     const preds: Predicate[] = []
     let cols = '*'
     let take = Infinity
+    let ordered = false
     let pending: { op: 'update'; values: Row } | null = null
 
     const rows = () => {
@@ -63,6 +64,10 @@ function makeSupabase() {
     }
 
     function settle() {
+      if (pending && take !== Infinity && !ordered) {
+        // Real PostgREST: PGRST109 "A 'limit' was applied without an explicit 'order'".
+        return { data: null, error: { code: 'PGRST109', message: 'limit without order' } }
+      }
       if (pending) {
         const changed = rows()
         for (const row of changed) Object.assign(row, pending.values)
@@ -110,6 +115,7 @@ function makeSupabase() {
         return b
       },
       order() {
+        ordered = true
         return b
       },
       limit(n: number) {
@@ -155,6 +161,21 @@ vi.mock('@/lib/billing/downgrade-tenant', () => ({
     return Promise.resolve(3)
   },
 }))
+
+const providerCancels = vi.hoisted(() => ({ calls: [] as string[], fail: false }))
+
+vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/billing/platform-billing')>()
+  return {
+    ...actual,
+    getPlatformBillingProvider: () => ({
+      cancelSubscription: (id: string) => {
+        providerCancels.calls.push(id)
+        return providerCancels.fail ? Promise.reject(new Error('paypal 503')) : Promise.resolve({ mode: 'immediate' })
+      },
+    }),
+  }
+})
 
 import { GET } from '@/app/api/cron/expire-platform-subscriptions/route'
 
@@ -211,6 +232,8 @@ beforeEach(() => {
   db.tenant_users.push({ tenant_id: TENANT, user_id: 'admin-1', role: 'admin', status: 'active' })
   emails.length = 0
   downgraded.length = 0
+  providerCancels.calls.length = 0
+  providerCancels.fail = false
 })
 
 describe('expire-platform-subscriptions: auth', () => {
@@ -451,5 +474,65 @@ describe('expire-platform-subscriptions: #744 PayPal — cancel is final at the 
     expect(body).toMatchObject({ reminded: 0, graceStarted: 0, canceled: 0, downgraded: 0 })
     expect(downgraded).toEqual([])
     expect(sub.status).toBe('active')
+  })
+})
+
+describe('expire-platform-subscriptions: #479 expired switch abandonment', () => {
+  // The limited UPDATE had no order → PGRST109, dropped silently. An abandoned
+  // PayPal checkout then held the one-open-switch index forever.
+  it('abandons a pending switch past its expiry', async () => {
+    db.platform_subscription_switches.push(
+      { switch_id: 'sw-old', tenant_id: TENANT, state: 'pending_activation', expires_at: daysFromNow(-1) },
+      { switch_id: 'sw-live', tenant_id: 'other', state: 'pending_activation', expires_at: daysFromNow(1) },
+    )
+
+    const body = await (await GET(req())).json()
+
+    expect(body.switchesAbandoned).toBe(1)
+    expect(db.platform_subscription_switches.map((s) => s.state)).toEqual(['abandoned', 'pending_activation'])
+  })
+})
+
+describe('expire-platform-subscriptions: #479 suspended PayPal school', () => {
+  it('cancels at PayPal, then downgrades once the dispatcher-opened grace lapsed (phase 3)', async () => {
+    seedSub({
+      payment_provider: 'paypal',
+      provider_subscription_id: 'I-SUSP',
+      status: 'past_due',
+      grace_period_end: daysFromNow(-1),
+      current_period_end: daysFromNow(-15),
+    })
+
+    const body = await (await GET(req())).json()
+
+    expect(providerCancels.calls).toEqual(['I-SUSP'])
+    expect(downgraded).toEqual([TENANT])
+    expect(body.downgraded).toBe(1)
+  })
+
+  it('skips the downgrade this pass when the PayPal cancel fails', async () => {
+    providerCancels.fail = true
+    seedSub({
+      payment_provider: 'paypal',
+      provider_subscription_id: 'I-SUSP',
+      status: 'past_due',
+      grace_period_end: daysFromNow(-1),
+    })
+
+    await GET(req())
+
+    expect(downgraded).toEqual([])
+  })
+
+  it('leaves a PayPal school still inside its grace window alone', async () => {
+    seedSub({
+      payment_provider: 'paypal',
+      provider_subscription_id: 'I-SUSP',
+      status: 'past_due',
+      grace_period_end: daysFromNow(5),
+    })
+    await GET(req())
+    expect(providerCancels.calls).toEqual([])
+    expect(downgraded).toEqual([])
   })
 })

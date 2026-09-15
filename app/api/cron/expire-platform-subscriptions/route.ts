@@ -13,9 +13,11 @@ import {
   isRequestOpen,
 } from '@/lib/billing/payment-request-ttl'
 import {
+  getPlatformBillingProvider,
   PLATFORM_APP_CANCELED_PROVIDERS,
   PLATFORM_SELF_MANAGED_PROVIDERS,
 } from '@/lib/billing/platform-billing'
+import type { PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import {
@@ -152,6 +154,10 @@ export async function GET(req: NextRequest) {
     .eq('state', 'pending_activation')
     .lt('expires_at', nowIso)
     .select('switch_id')
+    // PostgREST refuses a limited UPDATE without an order (PGRST109). The error
+    // was dropped, so no expired switch was ever abandoned and the one-open-
+    // per-tenant index locked the school out of every later switch (#479).
+    .order('switch_id')
     .limit(100)
   result.switchesAbandoned = abandonedSwitches?.length ?? 0
 
@@ -275,18 +281,40 @@ export async function GET(req: NextRequest) {
   }
 
   // ---- Phase 3: downgrade after grace (unless a renewal is pending) ----
+  // Also PayPal (#479): its dispatcher opens the grace window on a failed or
+  // suspended charge, because a SUSPENDED subscription never sends another
+  // event and would otherwise keep its plan forever.
   const { data: expiredSubs } = await supabase
     .from('platform_subscriptions')
-    .select(SUB_SELECT)
-    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
+    .select(`${SUB_SELECT}, provider_subscription_id`)
+    .in('payment_provider', [...PLATFORM_SELF_MANAGED_PROVIDERS, ...PLATFORM_APP_CANCELED_PROVIDERS])
     .eq('status', 'past_due')
     .not('grace_period_end', 'is', null)
     .lt('grace_period_end', nowIso)
 
-  for (const sub of (expiredSubs as SubRow[] | null) || []) {
+  for (const sub of (expiredSubs as (SubRow & { provider_subscription_id: string | null })[] | null) || []) {
     // A school that only just entered grace gets the full window, never a
     // same-pass downgrade.
     if (graceStartedNow.has(sub.tenant_id)) continue
+
+    // End it at the provider BEFORE taking the plan away: a suspended PayPal
+    // subscription can still be re-activated from the payer's account, and a
+    // charge after the downgrade would buy nothing. A failed cancel skips the
+    // school this pass — the next run retries — rather than downgrading while
+    // the provider may still bill.
+    if (
+      sub.payment_provider &&
+      PLATFORM_APP_CANCELED_PROVIDERS.includes(sub.payment_provider as PaymentProvider) &&
+      sub.provider_subscription_id
+    ) {
+      try {
+        const provider = getPlatformBillingProvider(sub.payment_provider as PaymentProvider)
+        await provider.cancelSubscription?.(sub.provider_subscription_id, true)
+      } catch (err) {
+        console.error('expire-platform-subscriptions: provider cancel before downgrade failed', sub.tenant_id, err)
+        continue
+      }
+    }
 
     // Pause the downgrade only for a renewal request that is still OPEN — an
     // unpaid one lapses at its TTL (phase 0 above) and stops holding the plan.
