@@ -120,7 +120,7 @@ export default async function ExamsPage({ params }: PageProps) {
         <div className="space-y-3 sm:space-y-4 flex-1 min-w-0">
           <BreadcrumbComponent links={breadcrumbLinks} />
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-brand-tint text-brand-text flex items-center justify-center shrink-0">
               <IconCertificate className="h-6 w-6 sm:h-7 sm:w-7" />
             </div>
             <div className="min-w-0">

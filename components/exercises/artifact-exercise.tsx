@@ -147,8 +147,8 @@ export default function ArtifactExercise({
   const taskPanel = (
     <div className="space-y-4">
       {rateLimited && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] px-4 py-3">
-          <p className="flex items-center gap-2.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+          <p className="flex items-center gap-2.5 text-sm font-semibold text-warning">
             <IconAlertTriangle size={16} className="shrink-0" aria-hidden="true" />
             {t('rateLimited')}
           </p>
@@ -160,7 +160,7 @@ export default function ArtifactExercise({
           className="flex items-center gap-3 rounded-xl border bg-muted/30 px-4 py-3"
           role="status"
         >
-          <IconLoader2 size={16} className="animate-spin text-primary shrink-0" aria-hidden="true" />
+          <IconLoader2 size={16} className="animate-spin text-brand-text shrink-0" aria-hidden="true" />
           <p className="text-sm font-medium">{t('evaluating')}</p>
         </div>
       )}

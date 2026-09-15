@@ -43,9 +43,9 @@ export function NotificationsSummary({ notifications }: NotificationsSummaryProp
 
     const getTypeStyles = (type: string) => {
         switch (type) {
-            case 'message': return "bg-blue-500/10 text-blue-600";
-            case 'alert': return "bg-red-500/10 text-red-600";
-            default: return "bg-indigo-500/10 text-indigo-600";
+            case 'message': return "bg-brand-tint text-brand-text";
+            case 'alert': return "bg-destructive/10 text-destructive";
+            default: return "bg-brand-tint text-brand-text";
         }
     };
 
@@ -54,13 +54,13 @@ export function NotificationsSummary({ notifications }: NotificationsSummaryProp
             <CardHeader className="bg-card pb-4 border-b border-muted/30">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                        <div className="p-2 rounded-lg bg-brand-tint text-brand-text">
                             <IconBell size={18} />
                         </div>
                         <CardTitle className="text-xl font-black">{t('title')}</CardTitle>
                     </div>
                     {notifications.length > 5 && (
-                        <Button variant="link" size="sm" className="text-primary font-bold">
+                        <Button variant="link" size="sm" className="text-brand-text font-bold">
                             {t('viewAll')}
                         </Button>
                     )}
@@ -89,7 +89,7 @@ export function NotificationsSummary({ notifications }: NotificationsSummaryProp
                                         <div className="h-2 w-2 rounded-full bg-primary" />
                                     )}
                                 </div>
-                                <p className="text-sm font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                                <p className="text-sm font-bold text-foreground leading-snug group-hover:text-brand-text transition-colors">
                                     {notif.message}
                                 </p>
                                 {notif.shrot_message && (

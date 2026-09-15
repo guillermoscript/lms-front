@@ -44,7 +44,7 @@ export function CourseProgressCard({ course }: CourseProgressCardProps) {
           {/* Content */}
           <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col justify-between">
             <div className="space-y-1.5">
-              <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+              <h3 className="text-base font-bold text-foreground group-hover:text-brand-text transition-colors line-clamp-1">
                 {course.title}
               </h3>
               {course.description && (

@@ -8,7 +8,7 @@ import { IconInfoCircle } from '@tabler/icons-react'
  * What the student has to do. One card, shared by every exercise engine —
  * each used to carry its own near-identical copy.
  *
- * The heading is `foreground`, not `text-primary`: tenants override that token,
+ * The heading is `foreground`, not `text-brand-text`: tenants override that token,
  * so 10px uppercase text in it cannot be guaranteed to clear AA. The icon keeps
  * the accent, since non-text UI only needs 3:1.
  */
@@ -22,7 +22,7 @@ export default function ExerciseBrief({ instructions }: { instructions: string }
     <div className="lg:rounded-xl lg:border lg:bg-card lg:overflow-hidden">
       <div className="hidden lg:block px-5 py-3 border-b bg-muted/40">
         <h2 className="font-semibold text-xs flex items-center gap-2 uppercase tracking-wider">
-          <IconInfoCircle size={14} className="text-primary" aria-hidden="true" />
+          <IconInfoCircle size={14} className="text-brand-text" aria-hidden="true" />
           {t('instructions')}
         </h2>
       </div>

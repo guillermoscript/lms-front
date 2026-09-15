@@ -2,7 +2,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { KIT_CORNERS, KIT_FONT_VARIABLES } from '@/lib/themes/kit'
+import { contrastRatio, mixOklch } from '@/lib/color/contrast'
+import { KIT_CORNERS, KIT_FONT_VARIABLES, KIT_SURFACES } from '@/lib/themes/kit'
 import { cn } from '@/lib/utils'
 
 /**
@@ -112,6 +113,71 @@ describe('globals.css tokens', () => {
     expect(globals).toMatch(
       /h1,\s*h2,\s*h3,\s*\[data-slot="card-title"\]\s*\{\s*font-family: var\(--font-heading\);/,
     )
+  })
+})
+
+describe('status and brand tokens (#764)', () => {
+  const darkBlock = ruleBody(globals, '.dark')
+  const value = (block: string, name: string) => block.match(new RegExp(`\\s${name}: ([^;]+);`))?.[1]
+
+  const SWEEP_TOKENS = [
+    'success',
+    'success-foreground',
+    'warning',
+    'warning-foreground',
+    'destructive-foreground',
+    'brand',
+    'brand-text',
+    'brand-tint',
+  ]
+
+  it('registers each token as a colour utility with a light and a dark default', () => {
+    for (const token of SWEEP_TOKENS) {
+      expect(themeBlock, token).toContain(`--color-${token}: var(--${token});`)
+      expect(value(rootBlock, `--${token}`), `:root --${token}`).toBeTruthy()
+      expect(value(darkBlock, `--${token}`), `.dark --${token}`).toBeTruthy()
+    }
+  })
+
+  it('backs every @theme colour with an unlayered :root value', () => {
+    // `bg-success` compiles to var(--success); with no value it is transparent.
+    const colors = [...themeBlock.matchAll(/--color-[\w-]+: var\((--[\w-]+)\);/g)].map(([, name]) => name)
+    expect(colors.length).toBeGreaterThan(20)
+    for (const name of colors) expect(value(rootBlock, name), name).toBeTruthy()
+  })
+
+  it('keeps status colours readable on every kit surface and the platform palette', () => {
+    // Status colours are the platform's, so they must hold on any theme a school
+    // picks: as text on background, card, muted and their own /15 tint, and as a
+    // fill under their foreground.
+    const platform = {
+      light: { background: value(rootBlock, '--background')!, card: value(rootBlock, '--card')!, muted: value(rootBlock, '--muted')! },
+      dark: { background: value(darkBlock, '--background')!, card: value(darkBlock, '--card')!, muted: value(darkBlock, '--muted')! },
+    }
+    const surfaces = [platform, ...Object.values(KIT_SURFACES)]
+    for (const mode of ['light', 'dark'] as const) {
+      const block = mode === 'light' ? rootBlock : darkBlock
+      for (const status of ['success', 'warning', 'destructive']) {
+        const color = value(block, `--${status}`)!
+        const ink = value(block, `--${status}-foreground`)!
+        expect(contrastRatio(ink, color), `${mode} ${status} fill`).toBeGreaterThanOrEqual(4.5)
+        for (const s of surfaces.map((set) => set[mode])) {
+          const tint = mixOklch(s.card, color, 0.15)!
+          for (const bg of [s.background, s.card, s.muted, tint]) {
+            expect(contrastRatio(color, bg), `${mode} ${status} on ${bg}`).toBeGreaterThanOrEqual(4.5)
+          }
+        }
+      }
+    }
+  })
+
+  it('keeps the platform brand-text readable on background, card, muted and brand-tint', () => {
+    for (const block of [rootBlock, darkBlock]) {
+      const text = value(block, '--brand-text')!
+      for (const bg of ['--background', '--card', '--muted', '--brand-tint']) {
+        expect(contrastRatio(text, value(block, bg)!), bg).toBeGreaterThanOrEqual(4.5)
+      }
+    }
   })
 })
 

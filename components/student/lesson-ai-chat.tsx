@@ -234,12 +234,12 @@ function InnerLessonAIChat({
             {/* Mobile launcher — replaces the embedded chat below the sm breakpoint */}
             <div className={cn("sm:hidden px-3 pb-4", mobileOpen && "hidden")}>
                 {isCompleted ? (
-                    <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 space-y-2.5">
+                    <div className="rounded-xl border border-success/20 bg-success/5 p-3 space-y-2.5">
                         <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 bg-green-500 rounded-lg shrink-0">
-                                <IconCheck className="h-4 w-4 text-white stroke-[3]" />
+                            <div className="p-1.5 bg-success rounded-lg shrink-0">
+                                <IconCheck className="h-4 w-4 text-success-foreground stroke-[3]" />
                             </div>
-                            <p className="text-sm font-bold text-green-700 dark:text-green-400">
+                            <p className="text-sm font-bold text-success">
                                 {t('successHeader')}
                             </p>
                         </div>
@@ -293,8 +293,8 @@ function InnerLessonAIChat({
                 {/* Mobile overlay header */}
                 {mobileOpen && (
                     <div className="sm:hidden flex items-center gap-3 px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] bg-primary/[0.03] shrink-0">
-                        <div className="p-1.5 bg-primary/10 rounded-lg shrink-0">
-                            <IconSparkles className="h-4 w-4 text-primary" />
+                        <div className="p-1.5 bg-brand-tint rounded-lg shrink-0">
+                            <IconSparkles className="h-4 w-4 text-brand-text" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold leading-tight">{t('mobile.title')}</p>
@@ -318,17 +318,17 @@ function InnerLessonAIChat({
                 {/* Completion Banner - Positioned at bottom, doesn't block messages */}
                 {isCompleted && (
                     <div className="absolute bottom-0 left-0 right-0 z-50 p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
-                        <div className="pointer-events-auto bg-emerald-600 dark:bg-emerald-700 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 space-y-3 sm:space-y-4 animate-in slide-in-from-bottom duration-500 motion-reduce:animate-none">
+                        <div className="pointer-events-auto bg-success rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 space-y-3 sm:space-y-4 animate-in slide-in-from-bottom duration-500 motion-reduce:animate-none">
                             {/* Success Header */}
                             <div className="flex items-center gap-3 sm:gap-4">
                                 <div className="shrink-0 p-2 sm:p-3 bg-white/15 rounded-full">
-                                    <IconCheck className="h-6 w-6 sm:h-8 sm:w-8 text-white stroke-[3]" />
+                                    <IconCheck className="h-6 w-6 sm:h-8 sm:w-8 text-success-foreground stroke-[3]" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-base sm:text-xl font-bold text-white">
+                                    <h3 className="text-base sm:text-xl font-bold text-success-foreground">
                                         {t('successHeader')} 🎉
                                     </h3>
-                                    <p className="text-white/90 text-xs sm:text-sm">
+                                    <p className="text-success-foreground/90 text-xs sm:text-sm">
                                         {t('successDescription')}
                                     </p>
                                 </div>
@@ -337,18 +337,18 @@ function InnerLessonAIChat({
                             {/* Stats + Action in a row on mobile */}
                             <div className="flex items-center gap-2 sm:gap-3">
                                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20 text-center">
-                                    <div className="text-lg sm:text-2xl font-bold text-white">
+                                    <div className="text-lg sm:text-2xl font-bold text-success-foreground">
                                         {messages.length}
                                     </div>
-                                    <div className="text-[10px] sm:text-xs text-white/80">
+                                    <div className="text-[10px] sm:text-xs text-success-foreground/80">
                                         {t('stats.messages')}
                                     </div>
                                 </div>
                                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20 text-center">
-                                    <div className="text-lg sm:text-2xl font-bold text-white flex items-center justify-center">
+                                    <div className="text-lg sm:text-2xl font-bold text-success-foreground flex items-center justify-center">
                                         <IconTrophy className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
-                                    <div className="text-[10px] sm:text-xs text-white/80">
+                                    <div className="text-[10px] sm:text-xs text-success-foreground/80">
                                         {t('stats.taskCompleted')}
                                     </div>
                                 </div>
@@ -356,7 +356,7 @@ function InnerLessonAIChat({
                                     onClick={handleRestart}
                                     disabled={isRestarting}
                                     variant="secondary"
-                                    className="flex-1 h-full min-h-[52px] sm:min-h-[60px] bg-white text-green-600 hover:bg-white/90 font-semibold text-xs sm:text-sm rounded-lg"
+                                    className="flex-1 h-full min-h-[52px] sm:min-h-[60px] bg-success-foreground text-success hover:bg-success-foreground/90 font-semibold text-xs sm:text-sm rounded-lg"
                                 >
                                     {isRestarting ? (
                                         <IconRotateClockwise2 className="h-4 w-4 animate-spin" />
@@ -398,13 +398,13 @@ function InnerLessonAIChat({
                                             if (toolInvocation.toolName === 'markLessonCompleted') {
                                                 if (toolInvocation.state === 'result') {
                                                     return (
-                                                        <div key={toolInvocation.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl sm:rounded-2xl text-green-700 dark:text-green-400 text-sm shadow-sm ring-1 ring-inset ring-green-500/10">
+                                                        <div key={toolInvocation.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-5 bg-success/10 border border-success/20 rounded-xl sm:rounded-2xl text-success text-sm shadow-sm ring-1 ring-inset ring-success/10">
                                                             <div className="flex items-start gap-3 sm:gap-4">
-                                                                <div className="p-2 bg-green-500 rounded-lg shadow-lg shadow-green-500/20">
-                                                                    <IconCheck className="h-5 w-5 text-white" />
+                                                                <div className="p-2 bg-success rounded-lg shadow-lg">
+                                                                    <IconCheck className="h-5 w-5 text-success-foreground" />
                                                                 </div>
                                                                 <div className="space-y-1">
-                                                                    <p className="font-bold text-base text-green-900 dark:text-green-300">{t('targetAchieved')}</p>
+                                                                    <p className="font-bold text-base text-success">{t('targetAchieved')}</p>
                                                                     <p className="opacity-90 leading-relaxed text-sm">{(toolInvocation.result as { feedback?: string })?.feedback}</p>
                                                                 </div>
                                                             </div>
@@ -489,7 +489,7 @@ function InnerLessonAIChat({
                                                 type="button"
                                                 variant="outline"
                                                 size="icon"
-                                                className="h-8 w-8 shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
+                                                className="h-8 w-8 shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-brand-text hover:border-primary/30"
                                                 onClick={handleRestart}
                                                 disabled={isRestarting || isLoading}
                                                 title={t('tooltips.restart')}
@@ -503,7 +503,7 @@ function InnerLessonAIChat({
                                         )}
 
                                         {isCompleted && (
-                                            <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-success bg-success/10 px-3 py-1.5 rounded-full border border-success/20 shadow-sm animate-in fade-in zoom-in duration-300">
                                                 <IconCheck size={14} className="stroke-[3]" />
                                                 <span>{t('successHeader')}</span>
                                             </div>

@@ -63,8 +63,8 @@ export function FillInTheBlank({ segments, explanation, className }: FillInTheBl
               className={cn(
                 'inline-block w-28 border-b-2 bg-transparent px-1 py-0.5 text-center text-sm outline-none transition-colors',
                 !checked && 'border-muted-foreground/30 focus:border-primary',
-                checked && isCorrect && 'border-green-500 text-green-700 dark:text-green-400',
-                checked && isCorrect === false && 'border-red-500 text-red-700 dark:text-red-400'
+                checked && isCorrect && 'border-success text-success',
+                checked && isCorrect === false && 'border-destructive text-destructive'
               )}
               aria-label={`Espacio en blanco ${blankIndices.indexOf(index) + 1}`}
             />
@@ -88,8 +88,8 @@ export function FillInTheBlank({ segments, explanation, className }: FillInTheBl
               className={cn(
                 'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
                 allCorrect
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                  ? 'bg-success/10 text-success'
+                  : 'bg-destructive/10 text-destructive'
               )}
               role="status"
             >

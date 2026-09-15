@@ -87,8 +87,8 @@ export function Ordering({ items, explanation, className }: OrderingProps) {
                 'flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition-colors',
                 !checked && !isSelected && 'hover:bg-muted/50',
                 isSelected && 'ring-2 ring-primary bg-primary/5',
-                checked && results[index] && 'border-green-500 bg-green-50 dark:bg-green-950',
-                checked && results[index] === false && 'border-red-500 bg-red-50 dark:bg-red-950',
+                checked && results[index] && 'border-success bg-success/10',
+                checked && results[index] === false && 'border-destructive bg-destructive/10',
                 checked && 'cursor-default'
               )}
             >
@@ -96,8 +96,8 @@ export function Ordering({ items, explanation, className }: OrderingProps) {
                 className={cn(
                   'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium',
                   !checked && 'bg-muted text-muted-foreground',
-                  checked && results[index] && 'bg-green-500 text-white',
-                  checked && results[index] === false && 'bg-red-500 text-white'
+                  checked && results[index] && 'bg-success text-success-foreground',
+                  checked && results[index] === false && 'bg-destructive text-destructive-foreground'
                 )}
               >
                 {checked && results[index] ? (
@@ -133,8 +133,8 @@ export function Ordering({ items, explanation, className }: OrderingProps) {
               className={cn(
                 'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
                 allCorrect
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                  ? 'bg-success/10 text-success'
+                  : 'bg-destructive/10 text-destructive'
               )}
               role="status"
             >

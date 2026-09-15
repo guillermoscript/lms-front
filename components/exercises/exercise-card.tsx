@@ -29,9 +29,9 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
     const TypeIcon = config.icon;
 
     const difficultyColor = {
-        easy: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-        medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-        hard: "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20",
+        easy: "bg-success/10 text-success border-success/20",
+        medium: "bg-warning/10 text-warning border-warning/20",
+        hard: "bg-destructive/10 text-destructive border-destructive/20",
     }[exercise.difficulty_level as string] || "bg-muted text-muted-foreground border-border";
 
     return (
@@ -39,7 +39,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
             <Card className="h-full hover:shadow-lg hover:border-primary/20 active:scale-[0.98] transition-all duration-200 overflow-hidden relative">
                 {isCompleted && (
                     <div className="absolute top-3 right-3 z-10">
-                        <div className="bg-emerald-500 text-white p-1 rounded-full shadow-md">
+                        <div className="bg-success text-success-foreground p-1 rounded-full shadow-md">
                             <IconCheck size={12} stroke={4} />
                         </div>
                     </div>
@@ -49,7 +49,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                     <div className="flex items-start justify-between mb-3">
                         <div className={cn(
                             "p-2.5 rounded-xl transition-transform duration-200",
-                            isCompleted ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary group-hover:scale-110"
+                            isCompleted ? "bg-success/10 text-success" : "bg-brand-tint text-brand-text group-hover:scale-110"
                         )}>
                             <TypeIcon size={20} />
                         </div>
@@ -59,7 +59,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                     </div>
 
                     <div className="space-y-1.5">
-                        <h3 className="font-bold text-base leading-tight group-hover:text-primary transition-colors line-clamp-2">
+                        <h3 className="font-bold text-base leading-tight group-hover:text-brand-text transition-colors line-clamp-2">
                             {exercise.title}
                         </h3>
                         <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed min-h-[32px]">
@@ -83,7 +83,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
                         <IconChevronRight
                             size={16}
                             stroke={3}
-                            className="text-primary/40 sm:text-primary/0 sm:group-hover:text-primary transition-all sm:group-hover:translate-x-0.5"
+                            className="text-brand-text/40 sm:text-brand-text/0 sm:group-hover:text-brand-text transition-all sm:group-hover:translate-x-0.5"
                         />
                     </div>
                 </CardContent>

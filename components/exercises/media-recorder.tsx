@@ -321,7 +321,7 @@ export function MediaRecorderComponent({
         <div className="flex items-center justify-between text-sm">
           <span className={cn(
             'font-mono font-bold tabular-nums',
-            state === 'recording' ? 'text-rose-500' : 'text-muted-foreground'
+            state === 'recording' ? 'text-destructive' : 'text-muted-foreground'
           )}>
             {state === 'recording' ? '⏺ ' : ''}{formatTime(elapsed)}
           </span>
@@ -335,7 +335,7 @@ export function MediaRecorderComponent({
       {state === 'countdown' && (
         <div className="flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-primary/20 bg-primary/[0.03]">
           <div className="text-center">
-            <div className="text-5xl font-black text-primary tabular-nums">{countdown}</div>
+            <div className="text-5xl font-black text-brand-text tabular-nums">{countdown}</div>
             <p className="mt-1 text-xs text-muted-foreground">{t('getReady')}</p>
           </div>
         </div>
@@ -391,7 +391,7 @@ export function MediaRecorderComponent({
           <Button
             onClick={stopRecording}
             variant="outline"
-            className="gap-2 flex-1 border-rose-500/30 text-rose-600 hover:bg-rose-500/5"
+            className="gap-2 flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
             size="lg"
             disabled={isBelowMin}
           >

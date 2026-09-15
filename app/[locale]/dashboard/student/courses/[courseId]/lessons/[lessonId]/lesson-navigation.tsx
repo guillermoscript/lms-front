@@ -294,14 +294,14 @@ export function LessonNavigation({
   return (
     <>
     {certificateCode && (
-      <div className="shrink-0 border-t border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 px-3 py-2 sm:px-4 sm:py-3">
+      <div className="shrink-0 border-t border-success/30 bg-success/10 px-3 py-2 sm:px-4 sm:py-3">
         <div className="flex items-center justify-center gap-3 max-w-3xl mx-auto">
-          <IconCertificate className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+          <IconCertificate className="h-5 w-5 text-success shrink-0" />
+          <span className="text-sm font-semibold text-success">
             {t('certificateBanner')}
           </span>
           <Link href={`/verify/${certificateCode}`}>
-            <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold gap-1.5">
+            <Button variant="outline" size="sm" className="border-success/30 text-success hover:bg-success/20 font-semibold gap-1.5">
               <IconCertificate className="h-3.5 w-3.5" />
               {t('view')}
             </Button>
@@ -345,7 +345,7 @@ export function LessonNavigation({
           size="sm"
           className={cn(
             'gap-2 px-5 font-semibold transition-all duration-300 max-sm:h-10',
-            completed && 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-500/20'
+            completed && 'bg-success/10 text-success hover:bg-success/20 border border-success/20'
           )}
         >
           {loading ? (

@@ -273,7 +273,7 @@ export function VideoRecorderComponent({
         {/* Recording indicator */}
         {state === 'recording' && (
           <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" />
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" />
             <span className="text-xs font-mono font-bold text-white tabular-nums">
               {formatTime(elapsed)}
             </span>
@@ -345,7 +345,7 @@ export function VideoRecorderComponent({
           <Button
             onClick={stopRecording}
             variant="outline"
-            className="gap-2 flex-1 border-rose-500/30 text-rose-600 hover:bg-rose-500/5"
+            className="gap-2 flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
             size="lg"
             disabled={isBelowMin}
           >

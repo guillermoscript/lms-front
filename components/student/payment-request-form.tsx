@@ -108,8 +108,8 @@ export function PaymentRequestForm({
             : 'flex min-h-[420px] flex-col items-center justify-center rounded-xl border border-border bg-card px-6 py-16 text-center'
         }
       >
-        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10">
-          <IconCheck className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
+          <IconCheck className="h-7 w-7 text-success" />
         </div>
         <h3 className="text-xl font-bold">{t('successTitle')}</h3>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
@@ -145,7 +145,7 @@ export function PaymentRequestForm({
       {instructions && (
         <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
           <div className="flex items-center gap-2">
-            <IconInfoCircle className="h-4 w-4 text-primary" />
+            <IconInfoCircle className="h-4 w-4 text-brand-text" />
             <p className="text-sm font-semibold">{t('howToPayTitle')}</p>
           </div>
           <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">

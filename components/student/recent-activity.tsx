@@ -50,8 +50,8 @@ export function RecentActivity({ submissions }: RecentActivityProps) {
                 key={submission.submission_id}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent/50 transition-colors"
               >
-                <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <IconCircleCheck className="w-4 h-4 text-emerald-500" />
+                <div className="w-9 h-9 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                  <IconCircleCheck className="w-4 h-4 text-success" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold truncate">

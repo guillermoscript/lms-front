@@ -179,7 +179,7 @@ export default async function StudentPaymentsPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <IconReceipt className="w-6 h-6 text-primary" />
+          <IconReceipt className="w-6 h-6 text-brand-text" />
           <h1 className="text-3xl font-bold tracking-tight" data-testid="payments-title">{t('title')}</h1>
         </div>
         <p className="text-muted-foreground">{t('subtitle')}</p>

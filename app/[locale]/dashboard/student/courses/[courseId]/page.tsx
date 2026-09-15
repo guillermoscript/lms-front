@@ -207,7 +207,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               <div className="pt-2 space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
-                    <span className="text-2xl font-black text-primary">{progressPercent}%</span>
+                    <span className="text-2xl font-black text-brand-text">{progressPercent}%</span>
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('courseProgress')}</p>
                   </div>
                   <span className="text-xs font-bold bg-muted px-2 py-1 rounded-md text-muted-foreground">
@@ -277,8 +277,8 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                   <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 md:p-6">
                     <div
                       className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${isCompleted
-                          ? 'bg-emerald-500/20 text-emerald-600'
-                          : 'bg-background text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary shadow-sm border'
+                          ? 'bg-success/20 text-success'
+                          : 'bg-background text-muted-foreground group-hover:bg-brand-tint group-hover:text-brand-text shadow-sm border'
                         }`}
                     >
                       {isCompleted ? (
@@ -291,7 +291,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base sm:text-lg group-hover:text-primary transition-colors truncate">
+                      <h3 className="font-bold text-base sm:text-lg group-hover:text-brand-text transition-colors truncate">
                         {lesson.title}
                       </h3>
                       {lesson.description ? (
@@ -314,11 +314,11 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
                     <div className="hidden sm:block">
                       {isCompleted ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 font-bold px-3 py-1">
+                        <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20 font-bold px-3 py-1">
                           {t('completed')}
                         </Badge>
                       ) : (
-                        <Button variant="ghost" size="sm" className="font-bold text-primary group-hover:bg-primary group-hover:text-white">
+                        <Button variant="ghost" size="sm" className="font-bold text-brand-text group-hover:bg-primary group-hover:text-primary-foreground">
                           {t('study')}
                         </Button>
                       )}
@@ -326,7 +326,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                     <div className="sm:hidden">
                       <IconPlayerPlay className={cn(
                         "h-5 w-5 transition-transform group-hover:scale-110",
-                        isCompleted ? "text-emerald-600" : "text-primary"
+                        isCompleted ? "text-success" : "text-brand-text"
                       )} />
                     </div>
                   </CardContent>

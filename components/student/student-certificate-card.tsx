@@ -101,7 +101,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                         </h3>
                                         <Badge
                                             variant="outline"
-                                            className="text-[9px] uppercase tracking-widest font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shrink-0"
+                                            className="text-[9px] uppercase tracking-widest font-bold text-success bg-success/10 border-success/20 shrink-0"
                                         >
                                             <IconShieldCheck size={9} className="mr-0.5" />
                                             {t('verified')}

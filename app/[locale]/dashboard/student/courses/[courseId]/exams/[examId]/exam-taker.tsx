@@ -209,7 +209,7 @@ export function ExamTaker({
         {/* Top bar with stats and timer */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-4 z-20">
           <div className="bg-background/80 backdrop-blur-md border border-muted-foreground/10 rounded-2xl p-4 flex flex-1 items-center gap-6 shadow-xl">
-            <div className="p-3 rounded-xl bg-primary/10 text-primary">
+            <div className="p-3 rounded-xl bg-brand-tint text-brand-text">
               <IconFileText size={20} />
             </div>
             <div className="flex-1 space-y-1">
@@ -226,7 +226,7 @@ export function ExamTaker({
           {timeLeft !== null && (
             <div className={cn(
               "p-4 rounded-2xl flex items-center gap-3 shadow-xl border animate-pulse-subtle",
-              timeLeft < 300 ? "bg-red-500 text-white border-red-400" : "bg-card text-foreground border-muted-foreground/10"
+              timeLeft < 300 ? "bg-destructive text-destructive-foreground border-destructive/70" : "bg-card text-foreground border-muted-foreground/10"
             )}>
               <IconClock className={cn("h-5 w-5", timeLeft < 300 ? "text-white" : "text-muted-foreground")} />
               <div className="flex flex-col -space-y-1">
@@ -254,7 +254,7 @@ export function ExamTaker({
 
             <div className="flex-1 p-8 md:p-12 flex flex-col items-center justify-center max-w-3xl mx-auto w-full">
               <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.2em] text-sm">
+                <div className="flex items-center gap-3 text-brand-text font-black uppercase tracking-[0.2em] text-sm">
                   <span className="h-[1px] w-8 bg-current opacity-20" />
                   {t('question', { number: currentQuestionIndex + 1 })}
                 </div>
@@ -360,7 +360,7 @@ export function ExamTaker({
               <Button
                 size="lg"
                 data-testid="exam-finish-submit"
-                className="h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
+                className="h-14 px-10 font-bold bg-success text-success-foreground hover:bg-success/90 hover:shadow-xl hover:shadow-success/20 gap-2 transition-all"
                 onClick={handleSubmit}
                 disabled={submitting}
               >

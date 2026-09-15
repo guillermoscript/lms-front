@@ -68,7 +68,7 @@ export function BrowseCourseCard({
           {/* Enrolled badge */}
           {isEnrolled && (
             <div className="absolute top-3 right-3">
-              <Badge className="gap-1 bg-green-500 hover:bg-green-600">
+              <Badge className="gap-1 bg-success text-success-foreground hover:bg-success/90">
                 <IconCheck className="w-3 h-3" />
                 {t('enrolled')}
               </Badge>
@@ -79,7 +79,7 @@ export function BrowseCourseCard({
 
       <CardHeader className="pb-3">
         <Link href={courseLink}>
-          <h3 className="font-semibold text-lg line-clamp-2 hover:text-primary transition-colors">
+          <h3 className="font-semibold text-lg line-clamp-2 hover:text-brand-text transition-colors">
             {course.title}
           </h3>
         </Link>

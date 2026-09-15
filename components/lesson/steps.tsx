@@ -37,7 +37,7 @@ export function Step({ title, children, className }: StepProps) {
   return (
     <div className={cn('relative', className)}>
       {/* Número del paso */}
-      <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-bold text-primary">
+      <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-bold text-brand-text">
         {currentStep}
       </div>
 
@@ -61,7 +61,7 @@ interface NumberedStepProps extends StepProps {
 export function NumberedStep({ number, title, children, className }: NumberedStepProps) {
   return (
     <div className={cn('relative', className)}>
-      <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-bold text-primary">
+      <div className="absolute -left-[calc(1.5rem+1px)] flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-bold text-brand-text">
         {number}
       </div>
 

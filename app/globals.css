@@ -27,6 +27,14 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-brand: var(--brand);
+  --color-brand-text: var(--brand-text);
+  --color-brand-tint: var(--brand-tint);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -95,7 +103,21 @@
   --muted-foreground: oklch(0.552 0.016 285.938);
   --accent: oklch(0.52 0.105 223.128);
   --accent-foreground: oklch(0.984 0.019 200.873);
-  --destructive: oklch(0.577 0.245 27.325);
+  /* Status colours (#764) are the platform's, never a school's: a theme kit
+     does not set them. Each reads at AA as text on background, card, muted and
+     its own /15 tint on every kit surface, and under its -foreground as a fill. */
+  --destructive: oklch(0.51 0.2 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.47 0.12 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.5 0.12 60);
+  --warning-foreground: oklch(0.99 0 0);
+  /* Brand roles a theme kit derives (lib/themes/kit.ts). These defaults are the
+     platform palette for a school with no theme: brand-text is AA text on
+     background, card and brand-tint; brand-tint is a soft panel fill. */
+  --brand: oklch(0.52 0.105 223.128);
+  --brand-text: oklch(0.47 0.1 223);
+  --brand-tint: oklch(0.96 0.02 223);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
@@ -141,6 +163,14 @@
   --accent: oklch(0.45 0.085 224.283);
   --accent-foreground: oklch(0.984 0.019 200.873);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.2 0.02 262);
+  --success: oklch(0.78 0.15 158);
+  --success-foreground: oklch(0.2 0.02 262);
+  --warning: oklch(0.83 0.15 80);
+  --warning-foreground: oklch(0.2 0.02 262);
+  --brand: oklch(0.45 0.085 224.283);
+  --brand-text: oklch(0.78 0.1 215);
+  --brand-tint: oklch(0.26 0.03 223);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
