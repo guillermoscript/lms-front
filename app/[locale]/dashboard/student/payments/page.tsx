@@ -63,6 +63,10 @@ export default async function StudentPaymentsPage() {
       product:products (
         product_id,
         name
+      ),
+      plan:plans (
+        plan_id,
+        plan_name
       )
     `)
     .eq('user_id', userId)
@@ -99,13 +103,20 @@ export default async function StudentPaymentsPage() {
     stepsByProduct.set(row.product_id, list)
   }
 
+  // A manual request buys either a product or a plan (`product_id` NULL), so
+  // name it by whichever it references — same fallback as the detail page.
+  const itemName = (request: { product: unknown; plan: unknown }) =>
+    (request.product as { name?: string } | null)?.name ||
+    (request.plan as { plan_name?: string } | null)?.plan_name ||
+    t('unknownProduct')
+
   const completedWithSteps = (paymentRequests || [])
     .filter((request) => request.status === 'completed')
     .map((request) => {
       const product = request.product as { product_id?: number; name?: string } | null
       return {
         requestId: request.request_id,
-        productName: product?.name || t('unknownProduct'),
+        productName: itemName(request),
         steps: product?.product_id ? stepsByProduct.get(product.product_id) || [] : [],
       }
     })
@@ -231,11 +242,10 @@ export default async function StudentPaymentsPage() {
                 <TableBody>
                   {paymentRequests.map((request) => {
                     const statusBadge = getStatusBadge(request.status)
-                    const product = request.product as { product_id?: number; name?: string } | null
 
                     return (
                       <TableRow key={request.request_id}>
-                        <TableCell className="font-medium max-w-[200px] truncate">{product?.name || t('unknownProduct')}</TableCell>
+                        <TableCell className="font-medium max-w-[200px] truncate">{itemName(request)}</TableCell>
                         <TableCell>
                           {formatAmount(request.payment_amount, request.payment_currency)}
                         </TableCell>
@@ -283,14 +293,13 @@ export default async function StudentPaymentsPage() {
           <div className="md:hidden space-y-4">
             {paymentRequests.map((request) => {
               const statusBadge = getStatusBadge(request.status)
-              const product = request.product as { product_id?: number; name?: string } | null
 
               return (
                 <Card key={request.request_id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">{product?.name || t('unknownProduct')}</CardTitle>
+                        <CardTitle className="text-base truncate">{itemName(request)}</CardTitle>
                         <CardDescription className="mt-1">
                           {formatDateTime(request.created_at)}
                         </CardDescription>

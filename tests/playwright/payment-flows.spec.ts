@@ -64,6 +64,75 @@ test.describe('Payment Flows', () => {
 })
 
 /**
+ * Plan-based manual payment requests — issue #757.
+ *
+ * A manual request buys either a product or a plan; a plan request has
+ * `product_id = NULL`. The list page joined only `products`, so every plan
+ * request read "Unknown Product" on both the desktop table and the mobile
+ * cards. The rows are seeded `cancelled` so they never collide with the
+ * open-request unique indexes other specs rely on.
+ */
+test.describe('Student payments list names plan requests (#757)', () => {
+  const PLAN_NAME = 'Code Academy Pro Annual'
+  const PRODUCT_NAME = 'Python Mastery Bundle'
+  const admin = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+  const requestIds: number[] = []
+
+  test.beforeAll(async () => {
+    const base = {
+      user_id: 'a1000000-0000-0000-0000-000000000004', // alice@student.com
+      tenant_id: '00000000-0000-0000-0000-000000000002', // Code Academy
+      contact_name: 'Alice 757',
+      contact_email: 'alice@student.com',
+      status: 'cancelled',
+    }
+    const { data, error } = await admin
+      .from('payment_requests')
+      .insert([
+        { ...base, plan_id: 2002, product_id: null },
+        { ...base, product_id: 2001, plan_id: null },
+      ])
+      .select('request_id')
+    if (error) throw new Error(`seed payment_requests: ${error.message}`)
+    requestIds.push(...data.map((row) => row.request_id))
+  })
+
+  test.afterAll(async () => {
+    if (requestIds.length) {
+      await admin.from('payment_requests').delete().in('request_id', requestIds)
+    }
+  })
+
+  for (const viewport of [
+    { name: 'desktop', width: 1280, height: 900 },
+    { name: 'mobile', width: 390, height: 844 },
+  ]) {
+    test(`shows the plan name, not "Unknown Product" (${viewport.name})`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      await loginAsTenantStudent(page)
+      await page.goto(`${TENANT_BASE}/en/dashboard/student/payments`)
+      await expect(page.getByTestId('payments-page')).toBeVisible()
+
+      if (process.env.QA_SHOTS_DIR) {
+        await page.screenshot({
+          path: `${process.env.QA_SHOTS_DIR}/payments-${viewport.name}.png`,
+          fullPage: true,
+        })
+      }
+
+      // Only one of the two layouts is displayed at a given width.
+      await expect(page.getByText(PLAN_NAME, { exact: true }).filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText(PRODUCT_NAME, { exact: true }).filter({ visible: true }).first()).toBeVisible()
+      await expect(page.getByText('Unknown Product', { exact: true }).filter({ visible: true })).toHaveCount(0)
+    })
+  }
+})
+
+/**
  * Abandoned Stripe onboarding — issue #606.
  *
  * `tenants.stripe_account_id` is written the moment the Express account is
