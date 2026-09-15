@@ -3,19 +3,25 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
+import { TenantCssVarsServer } from '@/components/tenant/tenant-css-vars-server'
 import {
-  TenantCssVarsServer,
-  resolvePresetVars,
-} from '@/components/tenant/tenant-css-vars-server'
-import { deriveKitStructure, deriveKitVars } from '@/lib/themes/kit'
-import { getPresetById, type CSSVariableMap, type StoredPreset } from '@/lib/themes/presets'
+  KIT_LIGHT_INK,
+  KIT_SURFACES,
+  KIT_THEME_IDS,
+  KIT_THEMES,
+  deriveKitStructure,
+  deriveKitVars,
+  type CSSVariableMap,
+  type StoredKitTheme,
+} from '@/lib/themes/kit'
 
 const ROOT = resolve(__dirname, '../..')
 
 type Props = Parameters<typeof TenantCssVarsServer>[0]
 const render = (props: Props) => renderToStaticMarkup(createElement(TenantCssVarsServer, props))
+const kit = (theme: StoredKitTheme['theme'], brand: string): StoredKitTheme => ({ type: 'kit', theme, brand })
 
-/** Same serialisation the component used on master, for building expectations. */
+/** The component's serialisation, for building expectations from the engine. */
 const block = (selector: string, vars: CSSVariableMap) =>
   `${selector} {\n    ${Object.entries(vars).map(([k, v]) => `${k}: ${v};`).join('\n    ')}\n  }\n`
 
@@ -26,124 +32,73 @@ function ruleBody(html: string, selector: string): string {
   return html.slice(start, html.indexOf('}', start))
 }
 
-describe('resolvePresetVars', () => {
-  it('curated returns the curated preset variables', () => {
-    const preset = getPresetById('default')
-    expect(preset).toBeTruthy()
-    const { light, dark } = resolvePresetVars({ type: 'curated', id: 'default' })
-    expect(light).toBe(preset!.variables.light)
-    expect(dark).toBe(preset!.variables.dark)
-  })
+/** `--name: value;` declarations in a rule body, as a map. */
+function declarations(body: string): CSSVariableMap {
+  return Object.fromEntries([...body.matchAll(/(--[\w-]+): ([^;]+);/g)].map(([, k, v]) => [k, v]))
+}
 
-  it('unknown curated id resolves to nothing', () => {
-    expect(resolvePresetVars({ type: 'curated', id: 'does-not-exist' })).toEqual({
-      light: undefined,
-      dark: undefined,
-    })
-  })
-
-  it('custom returns its stored variables', () => {
-    const variables = { light: { '--primary': 'red' }, dark: { '--primary': 'blue' } }
-    const { light, dark } = resolvePresetVars({ type: 'custom', id: 'custom-x', variables })
-    expect(light).toBe(variables.light)
-    expect(dark).toBe(variables.dark)
-  })
-
-  it('kit derives its variables from theme + brand', () => {
-    expect(resolvePresetVars({ type: 'kit', theme: 'andina', brand: '#9A3F2C' })).toEqual(
-      deriveKitVars('andina', '#9A3F2C'),
-    )
+describe('TenantCssVarsServer — no theme', () => {
+  it('renders nothing, so the platform palette in globals.css applies', () => {
+    expect(render({ theme: null })).toBe('')
+    expect(render({ theme: undefined })).toBe('')
+    expect(render({})).toBe('')
   })
 })
 
-describe('TenantCssVarsServer — kit preset', () => {
-  const kitPreset: StoredPreset = {
-    type: 'kit',
-    theme: 'andina',
-    brand: '#9A3F2C',
-    radius: '1rem',
-    fontFamily: 'Lora',
-  }
-  const html = render({ themePreset: kitPreset, primaryColor: '#7c3aed', secondaryColor: '#fde047' })
+describe('TenantCssVarsServer — kit theme', () => {
+  const html = render({ theme: kit('andina', '#9A3F2C') })
+  const { light, dark } = deriveKitVars('andina', '#9A3F2C')
+  const structure = deriveKitStructure('andina')
 
-  it('emits the derived vars in a :root and a .dark block', () => {
-    const { light, dark } = deriveKitVars('andina', '#9A3F2C')
-    const rootBody = ruleBody(html, ':root')
-    const darkBody = ruleBody(html, '.dark')
-    expect(rootBody).toContain('--brand:')
-    expect(darkBody).toContain('--brand:')
-    for (const [k, v] of Object.entries(light)) expect(rootBody).toContain(`${k}: ${v};`)
-    for (const [k, v] of Object.entries(dark)) expect(darkBody).toContain(`${k}: ${v};`)
+  it('writes one <style>: :root = light colours + fonts and corners, .dark = dark colours', () => {
+    expect(html).toBe(`<style>${block(':root', { ...light, ...structure })}${block('  .dark', dark)}</style>`)
   })
 
-  it('emits the theme fonts and corners once, in the :root block', () => {
-    const structure = deriveKitStructure('andina')
-    const rootBody = ruleBody(html, ':root')
-    const darkBody = ruleBody(html, '.dark')
-    expect(Object.keys(structure)).toEqual(
-      expect.arrayContaining(['--font-sans', '--font-heading', '--radius', '--radius-button', '--radius-card', '--radius-input']),
-    )
-    for (const [k, v] of Object.entries(structure)) {
-      expect(rootBody).toContain(`${k}: ${v};`)
-      expect(darkBody).not.toContain(`${k}:`)
+  it('declares exactly the kit variables and nothing from the legacy model', () => {
+    const root = declarations(ruleBody(html, ':root'))
+    const darkVars = declarations(ruleBody(html, '.dark'))
+    expect(Object.keys(root).sort()).toEqual([...Object.keys(light), ...Object.keys(structure)].sort())
+    expect(Object.keys(darkVars).sort()).toEqual(Object.keys(dark).sort())
+    // Fonts and corners are mode-independent: emitted once, on :root.
+    for (const key of Object.keys(structure)) expect(darkVars, key).not.toHaveProperty(key)
+    expect(html).not.toContain('--secondary-brand')
+    expect(html).not.toContain('<link')
+    expect(html.match(/<style>/g)).toHaveLength(1)
+  })
+
+  it('pins what a student of an Andina · Terracota school gets', () => {
+    const root = declarations(ruleBody(html, ':root'))
+    expect(root['--brand']).toBe('#9A3F2C')
+    expect(root['--primary']).toBe('#9A3F2C')
+    expect(root['--primary-foreground']).toBe(KIT_LIGHT_INK)
+    expect(root['--background']).toBe(KIT_SURFACES.warm.light.background)
+    expect(root['--font-heading']).toBe('var(--font-lora), ui-serif, Georgia, serif')
+    expect(root['--font-sans']).toBe('var(--font-public-sans), ui-sans-serif, system-ui, sans-serif')
+    expect(root).not.toHaveProperty('--font-mono')
+    expect(root['--radius']).toBe('0.625rem')
+    expect(root['--radius-button']).toBe('8px')
+    expect(root['--radius-card']).toBe('10px')
+    expect(root['--radius-input']).toBe('8px')
+
+    const darkVars = declarations(ruleBody(html, '.dark'))
+    expect(darkVars['--brand']).toBe('#9A3F2C')
+    expect(darkVars['--primary']).toBe('#9A3F2C')
+    expect(darkVars['--background']).toBe(KIT_SURFACES.warm.dark.background)
+  })
+
+  it("renders every theme from the engine's output", () => {
+    for (const id of KIT_THEME_IDS) {
+      const brand = KIT_THEMES[id].swatches[0].hex
+      const vars = deriveKitVars(id, brand)
+      expect(render({ theme: kit(id, brand) }), id).toBe(
+        `<style>${block(':root', { ...vars.light, ...deriveKitStructure(id) })}${block('  .dark', vars.dark)}</style>`,
+      )
     }
   })
 
-  it('ignores the legacy primary_color, radius and font overrides', () => {
-    expect(html).not.toContain('--primary: #7c3aed')
-    expect(html).not.toContain('#7c3aed')
-    expect(html).not.toContain('<link')
-    expect(html).not.toContain('--radius: 1rem')
-    expect(html).not.toContain('"Lora"')
-  })
-
-  it('still applies the secondary brand colour', () => {
-    expect(html).toContain('--secondary-brand: #fde047;')
-  })
-})
-
-// Outputs captured from master before the kit branch landed. Curated, custom
-// and no-preset rendering must stay byte-identical.
-describe('TenantCssVarsServer — legacy presets unchanged', () => {
-  it('custom preset', () => {
-    expect(
-      render({
-        themePreset: {
-          type: 'custom',
-          id: 'custom-x',
-          variables: { light: { '--primary': 'red' }, dark: { '--primary': 'blue' } },
-        },
-      }),
-    ).toBe('<style>:root {\n    --primary: red;\n  }\n  .dark {\n    --primary: blue;\n  }\n</style>')
-  })
-
-  it('no preset + primaryColor', () => {
-    expect(render({ themePreset: null, primaryColor: '#7c3aed' })).toBe(
-      '<style>:root {\n    --primary: #7c3aed;\n    --sidebar-primary: #7c3aed;\n    --ring: #7c3aed;\n    --primary-foreground: #ffffff;\n    --sidebar-primary-foreground: #ffffff;\n  }\n</style>',
-    )
-  })
-
-  it('nothing to emit renders nothing', () => {
-    expect(render({})).toBe('')
-  })
-
-  it('curated + radius + font + primaryColor appends the legacy override block', () => {
-    const preset = getPresetById('default')!
-    const fontVars = { '--radius': '1rem', '--font-sans': '"Lora", sans-serif' }
-    const expected =
-      '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&amp;display=swap"/>' +
-      '<style>' +
-      block(':root', { ...preset.variables.light, ...fontVars }) +
-      block('  .dark', { ...preset.variables.dark, ...fontVars }) +
-      ':root {\n    --primary: #7c3aed;\n    --sidebar-primary: #7c3aed;\n    --ring: #7c3aed;\n    --primary-foreground: #ffffff;\n    --sidebar-primary-foreground: #ffffff;\n    --secondary-brand: #fde047;\n  }\n' +
-      '</style>'
-    expect(
-      render({
-        themePreset: { type: 'curated', id: 'default', radius: '1rem', fontFamily: 'Lora' },
-        primaryColor: '#7c3aed',
-        secondaryColor: '#fde047',
-      }),
-    ).toBe(expected)
+  it('renders the theme it is given; the plan gate runs before it, in the layout', () => {
+    const custom = render({ theme: kit('luz', '#E53935') })
+    expect(declarations(ruleBody(custom, ':root'))['--brand']).toBe('#E53935')
   })
 })
 
