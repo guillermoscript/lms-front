@@ -100,7 +100,7 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
                 disabled={!canAfford || isPurchasing}
                 variant={canAfford ? "default" : "secondary"}
                 className={cn(
-                    "w-full rounded-xl font-bold h-9 text-xs transition-all duration-300",
+                    "w-full font-bold h-9 text-xs transition-all duration-300",
                     canAfford && "bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/20"
                 )}
             >

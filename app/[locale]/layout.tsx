@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProgress } from "@/components/shared/route-progress";
@@ -16,18 +15,13 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
 import type { StoredPreset } from '@/lib/themes/presets';
+import { fontVariables } from '@/lib/themes/fonts';
+import { defaultThemeFor } from '@/lib/themes/kit';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
 import { OpenPanelComponent } from '@openpanel/nextjs';
 import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
 import { getSessionReplayConfig } from '@/lib/analytics/replay';
 import { hasPlanFeature } from '@/lib/plans/server';
-
-const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export async function generateMetadata({
   params,
@@ -162,6 +156,12 @@ export default async function RootLayout({
       : null,
   } : null;
 
+  // A dark theme kit (Kódigo) opens dark for a visitor who has not picked a
+  // mode (#762). defaultTheme, never forcedTheme: the mode toggle keeps working
+  // and a stored choice still wins. Read from the gated preset above, so a
+  // school below Business never gets a dark default on the platform palette.
+  const defaultTheme = defaultThemeFor(tenantInfo?.theme_preset);
+
   // Product analytics. Renders nothing at all — no script tag, no network —
   // unless a client id is configured AND the environment is one we track
   // (production, or an explicit non-production opt-in). Tenant and locale are
@@ -178,7 +178,7 @@ export default async function RootLayout({
     : undefined;
 
   return (
-    <html lang={locale} className={notoSans.variable} suppressHydrationWarning>
+    <html lang={locale} className={fontVariables} suppressHydrationWarning>
       <head>
         <TenantCssVarsServer
           themePreset={tenantInfo?.theme_preset}
@@ -186,13 +186,11 @@ export default async function RootLayout({
           secondaryColor={tenantInfo?.secondary_color}
         />
       </head>
-      <body
-        className={`${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme={defaultTheme}
             enableSystem
             disableTransitionOnChange
           >

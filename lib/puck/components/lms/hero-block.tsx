@@ -140,7 +140,7 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
                 <Button
                   size="lg"
                   variant="secondary"
-                  className="h-12 px-8 text-base font-semibold rounded-xl"
+                  className="h-12 px-8 text-base font-semibold"
                 >
                   {primaryCtaLabel}
                 </Button>
@@ -157,7 +157,7 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 px-8 text-base font-semibold rounded-xl border-[var(--block-accent-foreground,#fff)]/30 bg-[var(--block-accent-foreground,#fff)]/10 text-[var(--block-accent-foreground,#fff)] backdrop-blur-sm hover:bg-[var(--block-accent-foreground,#fff)]/20 hover:text-[var(--block-accent-foreground,#fff)]"
+                  className="h-12 px-8 text-base font-semibold border-[var(--block-accent-foreground,#fff)]/30 bg-[var(--block-accent-foreground,#fff)]/10 text-[var(--block-accent-foreground,#fff)] backdrop-blur-sm hover:bg-[var(--block-accent-foreground,#fff)]/20 hover:text-[var(--block-accent-foreground,#fff)]"
                 >
                   {secondaryCtaLabel}
                 </Button>

@@ -54,7 +54,7 @@ export const Banner: ComponentConfig<BannerProps> = {
           <div
             role={role}
             className={cn(
-              'px-6 py-4 border rounded-xl font-medium text-[0.9375rem] text-center',
+              'px-6 py-4 border rounded-card font-medium text-[0.9375rem] text-center',
               bannerClasses[bannerStyle]
             )}
           >

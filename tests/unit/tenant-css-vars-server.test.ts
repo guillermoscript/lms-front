@@ -7,7 +7,7 @@ import {
   TenantCssVarsServer,
   resolvePresetVars,
 } from '@/components/tenant/tenant-css-vars-server'
-import { deriveKitVars } from '@/lib/themes/kit'
+import { deriveKitStructure, deriveKitVars } from '@/lib/themes/kit'
 import { getPresetById, type CSSVariableMap, type StoredPreset } from '@/lib/themes/presets'
 
 const ROOT = resolve(__dirname, '../..')
@@ -76,12 +76,25 @@ describe('TenantCssVarsServer — kit preset', () => {
     for (const [k, v] of Object.entries(dark)) expect(darkBody).toContain(`${k}: ${v};`)
   })
 
+  it('emits the theme fonts and corners once, in the :root block', () => {
+    const structure = deriveKitStructure('andina')
+    const rootBody = ruleBody(html, ':root')
+    const darkBody = ruleBody(html, '.dark')
+    expect(Object.keys(structure)).toEqual(
+      expect.arrayContaining(['--font-sans', '--font-heading', '--radius', '--radius-button', '--radius-card', '--radius-input']),
+    )
+    for (const [k, v] of Object.entries(structure)) {
+      expect(rootBody).toContain(`${k}: ${v};`)
+      expect(darkBody).not.toContain(`${k}:`)
+    }
+  })
+
   it('ignores the legacy primary_color, radius and font overrides', () => {
     expect(html).not.toContain('--primary: #7c3aed')
     expect(html).not.toContain('#7c3aed')
     expect(html).not.toContain('<link')
-    expect(html).not.toContain('--radius')
-    expect(html).not.toContain('--font-sans')
+    expect(html).not.toContain('--radius: 1rem')
+    expect(html).not.toContain('"Lora"')
   })
 
   it('still applies the secondary brand colour', () => {

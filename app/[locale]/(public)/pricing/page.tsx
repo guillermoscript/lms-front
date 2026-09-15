@@ -123,7 +123,7 @@ export default async function PricingPage({
                             </div>
                             <div className="pt-4">
                                 <Link href="/courses">
-                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white px-8 rounded-xl h-12 font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-600/20">
+                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white px-8 h-12 font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-600/20">
                                         {t('empty.backToCourses')}
                                         <ArrowRight className="ml-2 w-4 h-4" />
                                     </Button>

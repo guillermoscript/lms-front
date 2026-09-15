@@ -67,7 +67,7 @@ export function DashboardSummary({
                             </div>
 
                             {nextLesson && (
-                                <Button className="bg-white text-indigo-950 hover:bg-indigo-50 rounded-2xl h-14 px-8 font-black gap-2 shrink-0 shadow-xl transition-all hover:translate-y-[-2px]">
+                                <Button className="bg-white text-indigo-950 hover:bg-indigo-50 h-14 px-8 font-black gap-2 shrink-0 shadow-xl transition-all hover:translate-y-[-2px]">
                                     {t('continueLearning')}
                                     <IconArrowRight size={18} />
                                 </Button>

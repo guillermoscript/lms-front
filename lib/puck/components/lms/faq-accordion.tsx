@@ -60,7 +60,7 @@ export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
               {items.map((item, i) => (
                 <details
                   key={i}
-                  className="group border border-border rounded-xl overflow-hidden transition-colors open:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
+                  className="group border border-border rounded-card overflow-hidden transition-colors open:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
                 >
                   <summary className="flex items-center justify-between gap-4 p-4 px-5 font-semibold text-[0.9375rem] text-foreground cursor-pointer list-none hover:bg-muted/50 transition-colors group-open:text-[var(--block-accent)] [&::-webkit-details-marker]:hidden">
                     <span className="break-words">{item.question}</span>

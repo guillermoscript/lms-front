@@ -177,7 +177,7 @@ export function WeeklyLeague() {
                                 key={row.user_id}
                                 className={cn(
                                     "flex items-center gap-3 p-2 rounded-xl",
-                                    row.is_me && "bg-accent ring-1 ring-primary/20"
+                                    row.is_me && "bg-primary/10 ring-1 ring-primary/20"
                                 )}
                             >
                                 <div className="flex items-center justify-center w-6 text-xs font-bold text-muted-foreground">

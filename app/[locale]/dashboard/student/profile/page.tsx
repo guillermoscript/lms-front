@@ -382,7 +382,7 @@ export default async function ProfilePage() {
                                                 </div>
                                             ))}
                                         </div>
-                                        <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
+                                        <Button variant="outline" className="w-full h-10 font-semibold">
                                             {t('manageSubscription')}
                                         </Button>
                                     </>
@@ -390,7 +390,7 @@ export default async function ProfilePage() {
                                     <>
                                         <p className="text-sm text-muted-foreground">{t('noActiveSubscription')}</p>
                                         <Link href="/pricing">
-                                            <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
+                                            <Button variant="outline" className="w-full h-10 font-semibold">
                                                 {t('viewPlans')}
                                             </Button>
                                         </Link>

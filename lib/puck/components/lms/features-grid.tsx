@@ -82,7 +82,7 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
               {items.map((item, i) => (
                 <div
                   key={i}
-                  className="group text-center p-8 rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
+                  className="group text-center p-8 rounded-card border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
                 >
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--block-accent)_10%,transparent)] text-3xl transition-colors duration-300 group-hover:bg-[color-mix(in_srgb,var(--block-accent)_16%,transparent)]">
                     <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:scale-110">{item.icon}</span>

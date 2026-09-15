@@ -171,8 +171,8 @@ export function getBaseColor(id: BaseColorId) {
 export const CURATED_PRESETS: ThemePreset[] = [
   {
     id: 'default',
-    name: 'Default',
-    description: 'Purple — the original platform theme',
+    name: 'Original',
+    description: 'Violet — the platform’s first palette',
     previewColors: ['#7c3aed', '#9f67fa', '#c4b5fd'],
     variables: {
       light: {

@@ -245,7 +245,7 @@ function InnerLessonAIChat({
                         </div>
                         <Button
                             variant="outline"
-                            className="w-full h-11 rounded-xl gap-2 font-semibold"
+                            className="w-full h-11 gap-2 font-semibold"
                             onClick={() => setMobileOpen(true)}
                         >
                             <IconMessageCircle className="h-4 w-4" />
@@ -255,7 +255,7 @@ function InnerLessonAIChat({
                 ) : (
                     <div className="space-y-2">
                         <Button
-                            className="w-full h-12 rounded-xl gap-2 text-base font-semibold shadow-sm"
+                            className="w-full h-12 gap-2 text-base font-semibold shadow-sm"
                             onClick={() => setMobileOpen(true)}
                         >
                             <IconSparkles className="h-5 w-5" />
@@ -489,7 +489,7 @@ function InnerLessonAIChat({
                                                 type="button"
                                                 variant="outline"
                                                 size="icon"
-                                                className="h-8 w-8 rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
+                                                className="h-8 w-8 shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
                                                 onClick={handleRestart}
                                                 disabled={isRestarting || isLoading}
                                                 title={t('tooltips.restart')}

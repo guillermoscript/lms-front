@@ -174,7 +174,7 @@ function InnerExerciseChat({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
                         onClick={handleRestart}
                         disabled={isRestarting || isLoading}
                         aria-label="Restart conversation"

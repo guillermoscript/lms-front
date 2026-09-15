@@ -68,6 +68,9 @@ rounded:
   lg: "10px"
   xl: "14px"
   2xl: "18px"
+  button: "8px"
+  card: "10px"
+  input: "8px"
 spacing:
   hairline-gap: "4px"
   tight: "8px"
@@ -81,7 +84,7 @@ components:
     backgroundColor: "{colors.slate-teal}"
     textColor: "{colors.on-teal}"
     typography: "{typography.label}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-primary-hover:
@@ -91,44 +94,44 @@ components:
     backgroundColor: "{colors.slate-teal}"
     textColor: "{colors.on-teal}"
     typography: "{typography.title}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 16px"
     height: "40px"
   button-outline:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-ghost:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-destructive:
     backgroundColor: "oklch(0.577 0.245 27.325 / 0.1)"
     textColor: "{colors.alert}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   input-default:
     backgroundColor: "oklch(0.92 0.004 286.32 / 0.2)"
     textColor: "{colors.ink}"
     typography: "{typography.body-staff}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.input}"
     padding: "2px 8px"
     height: "28px"
   card-default:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
     typography: "{typography.body-staff}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.card}"
     padding: "16px 0"
   card-sm:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.card}"
     padding: "12px 0"
 ---
 
@@ -142,7 +145,7 @@ A good classroom is not decorated. It is arranged. The walls recede, the light i
 
 The room has two arrangements. On **learner surfaces** (lesson, exercise, checkpoint, exam, browse) it is a reading room: generous, single-focus, one primary action visible, body type sized for a session that lasts an hour on a phone. On **staff surfaces** (analytics, grading, payouts, enrollment, platform panel) it is a desk: dense, comparative, scan-first, small type in exchange for seeing more at once. Same tokens, same components, two spacing registers. The component library defaults to the desk, so the reading room is always an explicit choice.
 
-The room is also rented. Every school overrides the primary color, the corner radius, and the body typeface through CSS custom properties, so nothing structural may depend on any of the three. What stays constant is the arrangement: the hierarchy, the density rules, the hairlines, the placement of the next action. Two schools must be recognizably the same product and recognizably different brands. This system explicitly rejects the generic shadcn template look (default zinc, identical icon-heading-text card grids, hero-metric rows), gamified candy (mascots, confetti, elastic motion, saturated reward badges), the cluttered enterprise LMS (Moodle, Blackboard, Canvas), and SaaS marketing cliché (gradient text, glassmorphic heroes, purple mesh).
+The room is also rented. Every school overrides the primary color, the corner radii, and the typefaces through CSS custom properties, so nothing structural may depend on any of them. What stays constant is the arrangement: the hierarchy, the density rules, the hairlines, the placement of the next action. Two schools must be recognizably the same product and recognizably different brands. This system explicitly rejects the generic shadcn template look (default zinc, identical icon-heading-text card grids, hero-metric rows), gamified candy (mascots, confetti, elastic motion, saturated reward badges), the cluttered enterprise LMS (Moodle, Blackboard, Canvas), and SaaS marketing cliché (gradient text, glassmorphic heroes, purple mesh).
 
 **Key Characteristics:**
 - Flat surfaces, hairline separation, shadows reserved for floating layers only
@@ -193,9 +196,11 @@ Together these five form the data-visualization ramp (`--chart-1` through `--cha
 
 **Body and UI Font:** Noto Sans (with `ui-sans-serif, system-ui, sans-serif`), bound to `--font-sans` and applied to `html`. Chosen for its Latin coverage and its even color at small sizes in both English and Spanish.
 **Mono Font:** Geist Mono, bound to `--font-mono`. Code blocks, inline code, IDs, and any fixed-width tabular figure.
-**Display:** the same Noto Sans at heavier weight. There is no separate display face.
+**Display:** `h1` to `h3` and card titles resolve through `--font-heading`, which is `--font-sans` unless a theme kit pairs a heading face. On the platform default there is no separate display face.
 
-**Character:** a single humanist sans doing all the work, differentiated by weight and size rather than by family. This is the typographic expression of "content over chrome": the interface has no typographic personality of its own, so the material supplies it. Geist Sans was previously loaded as `--font-geist-sans` with no consumer and has been removed; do not reintroduce a second sans. Display is Noto Sans at weight 700, and it must resolve through `--font-sans` so that a tenant overriding the body face gets a coherent pairing rather than their font against a hardcoded one.
+Every family is declared once with `next/font` in `lib/themes/fonts.ts`, and its variable (`--font-noto-sans`, `--font-geist-mono`, the kit families) sits on `<html>`, where `app/globals.css` maps the three roles onto them. A role declared on `:root` can only resolve a variable set on that same element, so a family variable on `<body>` is a bug.
+
+**Character:** a single humanist sans doing all the work, differentiated by weight and size rather than by family. This is the typographic expression of "content over chrome": the interface has no typographic personality of its own, so the material supplies it. Geist Sans was previously loaded as `--font-geist-sans` with no consumer and has been removed; do not reintroduce a second sans. Display is Noto Sans at weight 700, and it must resolve through `--font-heading` (never a named family) so that a tenant's type choice gets a coherent pairing rather than their font against a hardcoded one.
 
 ### Hierarchy
 
@@ -214,9 +219,9 @@ Together these five form the data-visualization ramp (`--chart-1` through `--cha
 
 **The Measure Rule.** Read prose is capped at 65ch and never exceeds 75ch. This is already enforced by `.prose { max-width: 65ch }` in `app/globals.css`; do not override it to fill a wide container. Empty space beside a column of text is correct.
 
-**The One Sans Rule.** There is exactly one sans in the system, bound to `--font-sans`, and every text role resolves through it. Display is that face at weight 700, not a second family. Adding a display or heading font is prohibited: it doubles the font payload for the mid-range-Android baseline, and because tenants override `--font-sans`, a hardcoded second face would pair a school's chosen font against one they never picked. Geist Mono is the only other family, and it earns its place by doing work no sans can do.
+**The One Sans Rule.** By default there is exactly one sans in the system, bound to `--font-sans`, and every text role resolves through it. Display is that face at weight 700, not a second family. The platform never adds a display or heading font of its own: it would double the font payload for the mid-range-Android baseline, and a hardcoded second face would pair a school's chosen font against one they never picked. The one sanctioned second face is a theme kit's heading pairing (`KIT_TYPE_PAIRINGS` in `lib/themes/kit.ts`), which the school chose as a pair and which arrives only through `--font-heading`. Noto Sans and Geist Mono stay preloaded for every school. Kit families are not: their `@font-face` rules ship in the root CSS on every route, but a font file downloads only when a school's theme renders text in it. Geist Mono is the only other platform family, and it earns its place by doing work no sans can do.
 
-**The Tenant Typeface Rule.** Tenants may override `--font-sans` entirely (`components/tenant/tenant-css-vars-server.tsx`). No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and `ch`-based widths outside the prose container are all prohibited.
+**The Tenant Typeface Rule.** Tenants may override `--font-sans`, `--font-heading` and, for a monospace pairing, `--font-mono` entirely (`components/tenant/tenant-css-vars-server.tsx`). No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and `ch`-based widths outside the prose container are all prohibited.
 
 ## 4. Elevation
 
@@ -246,7 +251,7 @@ Note for implementers: base-ui's `Button` has no `asChild` prop. Wrap `<Link>` a
 
 ### Buttons
 
-- **Shape:** softly rounded (8px, `rounded-md`); the `xs` and `icon-xs` sizes tighten to 6px (`rounded-sm`). All radii derive from `--radius: 0.625rem`, which tenants may override.
+- **Shape:** `rounded-button` (`--radius-button`, 8px by default); the `xs` and `icon-xs` sizes sit 2px tighter (6px). A theme kit sets it to 2px (sharp) or a full pill (round), so a `Button` never carries a stylistic `rounded-*` of its own; only an intentional circle (avatar trigger, floating action) may override it. Buttons, cards and inputs have their own tokens; menus, tabs, popovers, dialogs and tooltips stay on the shared `--radius` scale (`0.625rem` by default and under round corners, `2px` under sharp), so a round theme never turns them into pills.
 - **Sizes:** the staff register runs `xs` (20px) through `lg` (32px), with `default` at 28px and 12px text. The learner register uses `lg` at minimum, and learner primary actions should be raised to 40px with 14px text. Touch targets on learner surfaces never go below 40px.
 - **Primary:** filled Slate Teal with On Teal ink, at the tightest padding in the system (`px-2` at default size). It is small and saturated rather than large and soft.
 - **Hover:** primary drops to 80 percent opacity (`hover:bg-primary/80`). Outline and ghost fill with a muted tint. All transitions run on color and opacity only.
@@ -257,7 +262,7 @@ Note for implementers: base-ui's `Button` has no `asChild` prop. Wrap `<Link>` a
 
 ### Cards / Containers
 
-- **Corner Style:** 10px (`rounded-lg`).
+- **Corner Style:** `rounded-card` (`--radius-card`, 10px by default; 2px sharp, 20px round). The header, footer and bleed images use the matching `rounded-t-card` / `rounded-b-card`.
 - **Background:** Paper on light, Surface Slate on dark.
 - **Shadow Strategy:** none. `ring-1 ring-foreground/10` only. See Elevation.
 - **Internal Padding:** 16px (`px-4 py-4`) at default, 12px at `size="sm"`. Learner surfaces step up to 24px.
@@ -266,7 +271,7 @@ Note for implementers: base-ui's `Button` has no `asChild` prop. Wrap `<Link>` a
 
 ### Inputs / Fields
 
-- **Style:** 28px tall, hairline border, a 20 percent tint of the input color as fill (`bg-input/20`, `dark:bg-input/30`), 8px horizontal padding, 8px radius. Learner-facing forms step to 40px.
+- **Style:** 28px tall, hairline border, a 20 percent tint of the input color as fill (`bg-input/20`, `dark:bg-input/30`), 8px horizontal padding, `rounded-input` (`--radius-input`, 8px by default; 2px sharp, 14px round), shared by the textarea, select trigger, input group and combobox chips. Learner-facing forms step to 40px.
 - **Focus:** border shifts to ring color plus a 2px ring at 30 percent. No glow, no scale, no color flood.
 - **Error:** `aria-invalid` drives the styling, not a class. Destructive border plus a 20 percent destructive ring, paired with a text message. Color alone never marks a field invalid.
 - **Disabled:** 50 percent opacity, `cursor-not-allowed`, pointer events off.

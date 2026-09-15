@@ -314,7 +314,7 @@ function ClosedCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
             {q.type === 'fill_in_the_blank' && (
               <input
                 type="text"
-                className="flex h-10 w-full rounded-md border border-input bg-input/20 px-2 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:text-sm"
+                className="flex h-10 w-full rounded-input border border-input bg-input/20 px-2 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:text-sm"
                 placeholder={t('fillBlankPlaceholder')}
                 value={typeof answers[q.id] === 'string' ? (answers[q.id] as string) : ''}
                 disabled={result !== null}

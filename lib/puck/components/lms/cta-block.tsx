@@ -78,7 +78,7 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
                   <Button
                     size="lg"
                     variant={isGradient ? 'secondary' : 'default'}
-                    className="h-12 px-8 text-base font-semibold rounded-xl"
+                    className="h-12 px-8 text-base font-semibold"
                   >
                     {primaryCtaLabel}
                   </Button>
@@ -90,7 +90,7 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
                     size="lg"
                     variant="outline"
                     className={cn(
-                      'h-12 px-8 text-base font-semibold rounded-xl',
+                      'h-12 px-8 text-base font-semibold',
                       // #569: this outline button sits directly on the accent
                       // surface, so its border and hover wash follow the same
                       // derived foreground — a hardcoded white one disappears

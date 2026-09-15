@@ -11,7 +11,7 @@ export type ContactFormProps = {
   showMessage: boolean
 } & SectionSpacingProps
 
-const inputClasses = 'w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:shadow-sm text-[0.9375rem] transition-all duration-200'
+const inputClasses = 'w-full rounded-input border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:shadow-sm text-[0.9375rem] transition-all duration-200'
 
 export const ContactForm: ComponentConfig<ContactFormProps> = {
   label: 'Contact Form',
@@ -82,7 +82,7 @@ export const ContactForm: ComponentConfig<ContactFormProps> = {
               <Button
                 type="submit"
                 size="lg"
-                className="h-11 text-base font-semibold rounded-lg"
+                className="h-11 text-base font-semibold"
               >
                 {t('sendMessage')}
               </Button>
