@@ -193,7 +193,9 @@ test.describe('theme kit picker (#763)', () => {
     }
   })
 
-  test('the onboarding branding step saves a theme for a Free school', async ({ page }) => {
+  test('the onboarding branding step keeps the platform look on an untouched Next and saves a pick for a Free school', async ({
+    page,
+  }) => {
     test.setTimeout(120_000)
     await clearTheme()
     await loginAsTeacher(page, BASE)
@@ -217,6 +219,21 @@ test.describe('theme kit picker (#763)', () => {
       }
       await expect(picker).toBeVisible({ timeout: 2_000 })
     }).toPass({ timeout: 60_000 })
+
+    // Nothing stored yet: the step says so, and Next without a pick moves on
+    // WITHOUT writing — the school keeps the platform look. The picker only
+    // unmounts after a save resolves, so once it is gone the row is final.
+    await expect(page.getByTestId('theme-kit-status')).toBeVisible()
+    await press(page.getByTestId('theme-kit-save')) // "Next"
+    await expect(picker).toHaveCount(0)
+    expect(await storedTheme()).toBeNull()
+
+    // Back to the branding step; a real pick is saved on Next.
+    await page
+      .getByRole('button', { name: /back/i })
+      .first()
+      .evaluate((el: HTMLElement) => el.click())
+    await expect(picker).toBeVisible()
 
     await choose(page.getByTestId('theme-kit-theme-luz'))
     await choose(page.getByTestId('theme-kit-swatch-E4572E'))
