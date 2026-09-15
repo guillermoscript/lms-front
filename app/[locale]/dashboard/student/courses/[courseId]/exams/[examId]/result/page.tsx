@@ -201,22 +201,22 @@ export default async function ExamResultPage({ params }: PageProps) {
             <BreadcrumbComponent links={breadcrumbLinks} />
 
             {/* Score Header */}
-            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-5 sm:p-8 md:p-12 text-white shadow-2xl shadow-indigo-200">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-primary p-5 sm:p-8 md:p-12 text-primary-foreground shadow-2xl">
                 <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10">
                     <IconTrophy className="h-24 w-24 sm:h-[180px] sm:w-[180px]" stroke={1} />
                 </div>
 
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-8">
                     <div className="space-y-3 sm:space-y-4 text-center md:text-left">
-                        <Badge variant="outline" className="text-white border-white/30 bg-white/10 px-3 py-1">
+                        <Badge variant="outline" className="text-primary-foreground border-primary-foreground/30 bg-primary-foreground/10 px-3 py-1">
                             {t('completed')}
                         </Badge>
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-black">{examData.title}</h1>
-                        <p className="text-indigo-100 max-w-lg text-sm sm:text-base">{examData.description}</p>
+                        <p className="text-primary-foreground/80 max-w-lg text-sm sm:text-base">{examData.description}</p>
 
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 pt-2 sm:pt-4">
                             <div className="flex items-center gap-2">
-                                <div className="p-1.5 sm:p-2 rounded-lg bg-white/10">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-primary-foreground/10">
                                     <IconClock size={18} />
                                 </div>
                                 <span className="text-xs sm:text-sm font-medium">{t('completedOn', { date: format.dateTime(new Date(submission.submission_date), { dateStyle: 'long' }) })}</span>
@@ -224,7 +224,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 text-indigo-950 dark:text-white rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
+                    <div className="bg-card text-card-foreground rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
                         <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">{t('finalScore')}</span>
                         {/* Ungraded shows as ungraded, not as 0% (PRODUCT.md principle 5). */}
                         {score == null ? (
@@ -235,9 +235,9 @@ export default async function ExamResultPage({ params }: PageProps) {
                         ) : (
                             <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score)}%</div>
                         )}
-                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-3 sm:mt-4">
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-3 sm:mt-4">
                             <div
-                                className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-1000"
+                                className="h-full bg-primary transition-all duration-1000"
                                 style={{ width: `${score ?? 0}%` }}
                             />
                         </div>
@@ -247,14 +247,14 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {/* Review Status Banner */}
             {reviewStatus === 'pending_teacher_review' && (
-                <Card className="border-2 border-amber-200 dark:border-amber-800 shadow-lg overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+                <Card className="border-2 border-warning/30 shadow-lg overflow-hidden bg-warning/10">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-warning/15 rounded-xl text-warning shrink-0">
                             <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-amber-900 dark:text-amber-200">{t('pendingReview.title')}</h3>
-                            <p className="text-amber-800 dark:text-amber-300 text-sm">
+                            <h3 className="font-bold text-lg text-warning">{t('pendingReview.title')}</h3>
+                            <p className="text-warning text-sm">
                                 {t('pendingReview.description')}
                             </p>
                         </div>
@@ -263,14 +263,14 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {reviewStatus === 'ai_reviewed' && (
-                <Card className="border-2 border-green-200 dark:border-green-800 shadow-lg overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+                <Card className="border-2 border-success/30 shadow-lg overflow-hidden bg-success/10">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-green-100 dark:bg-green-900/40 rounded-xl text-green-600 dark:text-green-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-success/15 rounded-xl text-success shrink-0">
                             <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-green-900 dark:text-green-200">{t('aiReviewed.title')}</h3>
-                            <p className="text-green-800 dark:text-green-300 text-sm">
+                            <h3 className="font-bold text-lg text-success">{t('aiReviewed.title')}</h3>
+                            <p className="text-success text-sm">
                                 {t('aiReviewed.description')}
                             </p>
                         </div>
@@ -279,14 +279,14 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {reviewStatus === 'teacher_reviewed' && (
-                <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+                <Card className="border-2 border-primary/25 shadow-lg overflow-hidden bg-brand-tint">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-brand-tint rounded-xl text-brand-text shrink-0">
                             <IconUserCheck className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-blue-900 dark:text-blue-200">{t('teacherReviewed.title')}</h3>
-                            <p className="text-blue-800 dark:text-blue-300 text-sm">
+                            <h3 className="font-bold text-lg text-brand-text">{t('teacherReviewed.title')}</h3>
+                            <p className="text-brand-text text-sm">
                                 {t('teacherReviewed.description')}
                             </p>
                         </div>
@@ -296,19 +296,19 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {/* Certificate Banner */}
             {certificate && (
-                <Card className="border-2 border-emerald-200 dark:border-emerald-800 shadow-lg overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
+                <Card className="border-2 border-success/30 shadow-lg overflow-hidden bg-success/10">
                     <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-success/15 rounded-xl text-success shrink-0">
                             <IconCertificate className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-200">{t('certificate.title')}</h3>
-                            <p className="text-emerald-800 dark:text-emerald-300 text-sm">
+                            <h3 className="font-bold text-lg text-success">{t('certificate.title')}</h3>
+                            <p className="text-success text-sm">
                                 {t('certificate.description')}
                             </p>
                         </div>
                         <Link href={`/verify/${certificate.verification_code}`}>
-                            <Button variant="outline" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold gap-2 whitespace-nowrap">
+                            <Button variant="outline" className="border-success/30 text-success hover:bg-success/10 font-bold gap-2 whitespace-nowrap">
                                 <IconCertificate className="h-4 w-4" />
                                 {t('certificate.view')}
                             </Button>
@@ -319,10 +319,10 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {/* AI Analysis Section */}
             {showAiAnalysis && (
-                <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-                    <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-4 sm:p-6 text-white">
+                <Card className="border-2 border-primary/25 shadow-lg overflow-hidden bg-brand-tint">
+                    <CardHeader className="bg-primary p-4 sm:p-6 text-primary-foreground">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/20 rounded-lg shrink-0">
+                            <div className="p-2 bg-primary-foreground/20 rounded-lg shrink-0">
                                 <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                             </div>
                             <CardTitle className="text-base sm:text-xl font-bold">{t('aiAnalysis.title')}</CardTitle>
@@ -330,7 +330,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <div className="prose prose-lg dark:prose-invert max-w-none">
-                            <p className="text-gray-900 dark:text-gray-100 leading-relaxed font-medium text-base">
+                            <p className="text-foreground leading-relaxed font-medium text-base">
                                 {overallFeedback || t('aiAnalysis.fallback')}
                             </p>
                         </div>
@@ -362,10 +362,10 @@ export default async function ExamResultPage({ params }: PageProps) {
                             <Card key={question.question_id} className={cn(
                                 "border-2 transition-all duration-300",
                                 isFreeTextPending
-                                    ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20"
+                                    ? "border-warning/30 bg-warning/10"
                                     : isCorrect
-                                        ? "border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20"
-                                        : "border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20"
+                                        ? "border-success/30 bg-success/10"
+                                        : "border-destructive/30 bg-destructive/10"
                             )}>
                                 <CardHeader className="pb-3 border-b border-muted/10 px-4 sm:px-6">
                                     <div className="flex items-start justify-between gap-3 sm:gap-4">
@@ -379,10 +379,10 @@ export default async function ExamResultPage({ params }: PageProps) {
                                         <div className={cn(
                                             "p-1.5 sm:p-2 rounded-xl shrink-0",
                                             isFreeTextPending
-                                                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
+                                                ? "bg-warning/15 text-warning"
                                                 : isCorrect
-                                                    ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
-                                                    : "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400"
+                                                    ? "bg-success/15 text-success"
+                                                    : "bg-destructive/15 text-destructive"
                                         )}>
                                             {isFreeTextPending ? <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" /> : isCorrect ? <IconCheck className="h-5 w-5 sm:h-7 sm:w-7" /> : <IconX className="h-5 w-5 sm:h-7 sm:w-7" />}
                                         </div>
@@ -400,18 +400,18 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 return (
                                                     <div key={opt.option_id} className={cn(
                                                         "p-3.5 sm:p-5 rounded-xl border-2 transition-all",
-                                                        isSelected && isOptionCorrect && "border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40 shadow-md",
-                                                        isSelected && !isOptionCorrect && "border-red-500 dark:border-red-600 bg-red-100 dark:bg-red-900/40 shadow-md",
-                                                        !isSelected && isOptionCorrect && "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
-                                                        !isSelected && !isOptionCorrect && "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"
+                                                        isSelected && isOptionCorrect && "border-success bg-success/15 shadow-md",
+                                                        isSelected && !isOptionCorrect && "border-destructive bg-destructive/15 shadow-md",
+                                                        !isSelected && isOptionCorrect && "border-success/40 bg-success/10",
+                                                        !isSelected && !isOptionCorrect && "border-border bg-muted"
                                                     )}>
                                                         <div className="flex items-start sm:items-center justify-between gap-2">
                                                             <span className={cn(
                                                                 "font-bold text-sm sm:text-base",
-                                                                isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
-                                                                isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
-                                                                !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
-                                                                !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
+                                                                isSelected && isOptionCorrect && "text-success",
+                                                                isSelected && !isOptionCorrect && "text-destructive",
+                                                                !isSelected && isOptionCorrect && "text-success",
+                                                                !isSelected && !isOptionCorrect && "text-muted-foreground"
                                                             )}>{opt.option_text}</span>
                                                             {(isSelected || isOptionCorrect) && (
                                                                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
@@ -420,15 +420,15 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                                             className={cn(
                                                                                 "rounded-md font-bold text-[10px] sm:text-xs",
                                                                                 isOptionCorrect
-                                                                                    ? "bg-blue-600 dark:bg-blue-500 text-white"
-                                                                                    : "bg-red-600 dark:bg-red-500 text-white"
+                                                                                    ? "bg-success text-success-foreground"
+                                                                                    : "bg-destructive text-destructive-foreground"
                                                                             )}
                                                                         >
                                                                             {t('yourChoice')}
                                                                         </Badge>
                                                                     )}
                                                                     {isOptionCorrect && (
-                                                                        <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
+                                                                        <Badge className="bg-success text-success-foreground rounded-md font-bold text-[10px] sm:text-xs">
                                                                             {t('correct')}
                                                                         </Badge>
                                                                     )}
@@ -452,18 +452,18 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 return (
                                                     <div key={opt.option_id} className={cn(
                                                         "p-3.5 sm:p-5 rounded-xl border-2 transition-all",
-                                                        isSelected && isOptionCorrect && "border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40 shadow-md",
-                                                        isSelected && !isOptionCorrect && "border-red-500 dark:border-red-600 bg-red-100 dark:bg-red-900/40 shadow-md",
-                                                        !isSelected && isOptionCorrect && "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
-                                                        !isSelected && !isOptionCorrect && "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"
+                                                        isSelected && isOptionCorrect && "border-success bg-success/15 shadow-md",
+                                                        isSelected && !isOptionCorrect && "border-destructive bg-destructive/15 shadow-md",
+                                                        !isSelected && isOptionCorrect && "border-success/40 bg-success/10",
+                                                        !isSelected && !isOptionCorrect && "border-border bg-muted"
                                                     )}>
                                                         <div className="flex items-center justify-between gap-2">
                                                             <span className={cn(
                                                                 "font-bold text-base sm:text-lg",
-                                                                isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
-                                                                isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
-                                                                !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
-                                                                !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
+                                                                isSelected && isOptionCorrect && "text-success",
+                                                                isSelected && !isOptionCorrect && "text-destructive",
+                                                                !isSelected && isOptionCorrect && "text-success",
+                                                                !isSelected && !isOptionCorrect && "text-muted-foreground"
                                                             )}>{opt.option_text}</span>
                                                             {(isSelected || isOptionCorrect) && (
                                                                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
@@ -472,15 +472,15 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                                             className={cn(
                                                                                 "rounded-md font-bold text-[10px] sm:text-xs",
                                                                                 isOptionCorrect
-                                                                                    ? "bg-blue-600 dark:bg-blue-500 text-white"
-                                                                                    : "bg-red-600 dark:bg-red-500 text-white"
+                                                                                    ? "bg-success text-success-foreground"
+                                                                                    : "bg-destructive text-destructive-foreground"
                                                                             )}
                                                                         >
                                                                             {t('yourChoice')}
                                                                         </Badge>
                                                                     )}
                                                                     {isOptionCorrect && (
-                                                                        <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
+                                                                        <Badge className="bg-success text-success-foreground rounded-md font-bold text-[10px] sm:text-xs">
                                                                             {t('correct')}
                                                                         </Badge>
                                                                     )}
@@ -505,13 +505,13 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 <div className={cn(
                                                     "p-3.5 sm:p-5 rounded-xl border-2",
                                                     isPendingReview
-                                                        ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+                                                        ? "bg-warning/10 border-warning/30"
                                                         : isCorrect
-                                                            ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
-                                                            : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800"
+                                                            ? "bg-success/10 border-success/30"
+                                                            : "bg-brand-tint border-primary/25"
                                                 )}>
-                                                    <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-2">{t('yourSubmission')}</p>
-                                                    <p className="font-medium text-gray-900 dark:text-gray-100 text-base leading-relaxed">
+                                                    <p className="text-xs font-bold uppercase text-muted-foreground mb-2">{t('yourSubmission')}</p>
+                                                    <p className="font-medium text-foreground text-base leading-relaxed">
                                                         {answer?.answer_text || t('noAnswer')}
                                                     </p>
                                                 </div>
@@ -523,7 +523,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                             {t('points', { earned: questionScore.points_earned, possible: questionScore.points_possible })}
                                                         </Badge>
                                                         {hasTeacherOverride && (
-                                                            <Badge className="bg-blue-600 text-white font-bold gap-1">
+                                                            <Badge className="bg-primary text-primary-foreground font-bold gap-1">
                                                                 <IconUserCheck size={14} />
                                                                 {t('teacherReviewedBadge')}
                                                             </Badge>
@@ -532,12 +532,12 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 )}
 
                                                 {isPendingReview && (
-                                                    <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 dark:border-amber-600 p-3.5 sm:p-5 rounded-r-xl">
-                                                        <div className="flex items-center gap-2 font-bold mb-2 text-amber-900 dark:text-amber-300">
+                                                    <div className="bg-warning/10 border-l-4 border-warning p-3.5 sm:p-5 rounded-r-xl">
+                                                        <div className="flex items-center gap-2 font-bold mb-2 text-warning">
                                                             <IconHourglass size={20} />
                                                             <span>{t('questionPending.title')}</span>
                                                         </div>
-                                                        <p className="text-amber-800 dark:text-amber-200 text-sm leading-relaxed">
+                                                        <p className="text-warning text-sm leading-relaxed">
                                                             {t('questionPending.description')}
                                                         </p>
                                                     </div>
@@ -566,12 +566,12 @@ export default async function ExamResultPage({ params }: PageProps) {
                                         if (!feedbackText || stillPending) return null;
 
                                         return (
-                                            <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 dark:border-blue-500 p-3.5 sm:p-5 rounded-r-xl">
-                                                <div className="flex items-center gap-2 font-bold mb-2 text-blue-900 dark:text-blue-300">
+                                            <div className="bg-brand-tint border-l-4 border-primary p-3.5 sm:p-5 rounded-r-xl">
+                                                <div className="flex items-center gap-2 font-bold mb-2 text-brand-text">
                                                     {isTeacherFeedback ? <IconUserCheck size={20} /> : <IconMessageChatbot size={20} />}
                                                     <span>{isTeacherFeedback ? t('teacherFeedback') : t('aiFeedback')}</span>
                                                 </div>
-                                                <p className="text-blue-900 dark:text-blue-200 text-base leading-relaxed">{feedbackText}</p>
+                                                <p className="text-brand-text text-base leading-relaxed">{feedbackText}</p>
                                             </div>
                                         );
                                     })()}

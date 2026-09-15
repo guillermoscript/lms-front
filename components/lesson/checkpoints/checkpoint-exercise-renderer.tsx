@@ -173,8 +173,8 @@ function ResultAlert({
       className={cn(
         'rounded-lg border p-3 text-sm space-y-1.5',
         positive
-          ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'
-          : 'border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300'
+          ? 'border-success/30 bg-success/5 text-success'
+          : 'border-warning/30 bg-warning/5 text-warning'
       )}
       role="status"
     >
@@ -325,7 +325,7 @@ function ClosedCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps) {
               <p
                 className={cn(
                   'flex items-start gap-1.5 text-xs',
-                  pq.correct ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                  pq.correct ? 'text-success' : 'text-warning'
                 )}
               >
                 {pq.correct ? (
@@ -509,7 +509,7 @@ function ExternalCheckpointForm({ checkpoint }: CheckpointExerciseRendererProps)
         </Link>
       )}
 
-      {notCompleted && <p className="text-xs text-amber-600 dark:text-amber-400">{t('externalNotCompleted')}</p>}
+      {notCompleted && <p className="text-xs text-warning">{t('externalNotCompleted')}</p>}
       {error && <p className="text-xs text-destructive">{error}</p>}
       {result && <ResultAlert result={result} />}
 

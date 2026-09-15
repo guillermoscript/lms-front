@@ -117,7 +117,7 @@ export default async function StudentProgressPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <IconChartBar className="w-6 h-6 text-primary" />
+          <IconChartBar className="w-6 h-6 text-brand-text" />
           <h1 className="text-3xl font-bold tracking-tight" data-testid="progress-title">
             {t('title')}
           </h1>
@@ -151,7 +151,7 @@ export default async function StudentProgressPage() {
                     <p className="text-sm text-muted-foreground">{t('coursesEnrolled')}</p>
                     <p className="mt-2 text-3xl font-bold">{enrollments.length}</p>
                   </div>
-                  <IconBook className="h-10 w-10 text-blue-500" />
+                  <IconBook className="h-10 w-10 text-brand-text" />
                 </div>
               </CardContent>
             </Card>
@@ -162,7 +162,7 @@ export default async function StudentProgressPage() {
                     <p className="text-sm text-muted-foreground">{t('lessonsCompleted')}</p>
                     <p className="mt-2 text-3xl font-bold">{totalLessonsCompleted}</p>
                   </div>
-                  <IconCheckbox className="h-10 w-10 text-green-500" />
+                  <IconCheckbox className="h-10 w-10 text-brand-text" />
                 </div>
               </CardContent>
             </Card>
@@ -173,7 +173,7 @@ export default async function StudentProgressPage() {
                     <p className="text-sm text-muted-foreground">{t('examsCompleted')}</p>
                     <p className="mt-2 text-3xl font-bold">{totalExamsCompleted}</p>
                   </div>
-                  <IconClipboardCheck className="h-10 w-10 text-purple-500" />
+                  <IconClipboardCheck className="h-10 w-10 text-brand-text" />
                 </div>
               </CardContent>
             </Card>
@@ -184,7 +184,7 @@ export default async function StudentProgressPage() {
                     <p className="text-sm text-muted-foreground">{t('avgScore')}</p>
                     <p className="mt-2 text-3xl font-bold">{avgScore > 0 ? `${avgScore}%` : '—'}</p>
                   </div>
-                  <IconTrophy className="h-10 w-10 text-amber-500" />
+                  <IconTrophy className="h-10 w-10 text-brand-text" />
                 </div>
               </CardContent>
             </Card>

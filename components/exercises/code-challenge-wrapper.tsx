@@ -44,7 +44,7 @@ const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
         <Button
             onClick={handleSubmit}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            className="bg-success hover:bg-success/90 text-success-foreground gap-2"
         >
             {loading ? <span className="animate-spin text-lg">⌛</span> : <IconPlayerPlay size={18} />}
             Run & Verify
@@ -150,17 +150,17 @@ export default function CodeChallengeWrapper({
                 </SandpackProvider>
 
                 {isCompleted && (
-                    <div className="p-4 my-2 bg-green-50 border border-green-100 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+                    <div className="p-4 my-2 bg-success/10 border border-success/30 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
+                            <div className="h-10 w-10 bg-success/15 text-success rounded-full flex items-center justify-center shrink-0">
                                 <IconCheck size={24} />
                             </div>
                             <div>
-                                <h4 className="font-semibold text-green-900">Challenge Completed!</h4>
-                                <p className="text-sm text-green-700">Excellent work. You've successfully solved this coding challenge.</p>
+                                <h4 className="font-semibold text-success">Challenge Completed!</h4>
+                                <p className="text-sm text-success">Excellent work. You've successfully solved this coding challenge.</p>
                             </div>
                         </div>
-                        <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-100 gap-2 shrink-0 ml-4">
+                        <Button variant="outline" className="text-success border-success/30 hover:bg-success/10 gap-2 shrink-0 ml-4">
                             <IconRotateClockwise size={18} />
                             Next Activity
                         </Button>

@@ -106,7 +106,7 @@ export default async function BrowseCoursesPage({
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <IconSparkles className="w-6 h-6 text-primary" />
+          <IconSparkles className="w-6 h-6 text-brand-text" />
           <h1 className="text-3xl font-bold tracking-tight truncate" data-testid="browse-title">{t('title')}</h1>
         </div>
         <p className="text-muted-foreground">
@@ -116,12 +116,12 @@ export default async function BrowseCoursesPage({
 
       {/* Subscription Status */}
       {!activeSubscription ? (
-        <Alert className="mb-8 border-amber-500/20 bg-amber-500/10">
-          <IconAlertCircle className="h-4 w-4 text-amber-500" />
-          <AlertTitle className="text-amber-600 dark:text-amber-400 font-semibold">
+        <Alert className="mb-8 border-warning/20 bg-warning/10">
+          <IconAlertCircle className="h-4 w-4 text-warning" />
+          <AlertTitle className="text-warning font-semibold">
             {t('noSubscriptionTitle')}
           </AlertTitle>
-          <AlertDescription className="text-amber-600/90 dark:text-amber-400/90">
+          <AlertDescription className="text-warning/90">
             {t('noSubscriptionDesc')}
             <div className="mt-4">
               <Link href="/pricing">
@@ -134,8 +134,8 @@ export default async function BrowseCoursesPage({
           </AlertDescription>
         </Alert>
       ) : (
-        <Alert className="mb-8 border-primary/20 bg-primary/10">
-          <IconSparkles className="h-4 w-4 text-primary" />
+        <Alert className="mb-8 border-primary/20 bg-brand-tint">
+          <IconSparkles className="h-4 w-4 text-brand-text" />
           <AlertTitle className="font-semibold">{t('activeSubscriptionTitle')}</AlertTitle>
           <AlertDescription>
             {t('activeSubscriptionDesc', {

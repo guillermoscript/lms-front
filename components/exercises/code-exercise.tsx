@@ -33,11 +33,11 @@ export default function CodeExercise({
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
+                            <Badge variant="outline" className="bg-brand-tint text-brand-text border-primary/25">
                                 Coding Challenge
                             </Badge>
                             {isExerciseCompleted && (
-                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Completed</Badge>
+                                <Badge className="bg-success/10 text-success border-success/20">Completed</Badge>
                             )}
                         </div>
                         <h1 className="text-3xl font-bold tracking-tight">{exercise.title}</h1>

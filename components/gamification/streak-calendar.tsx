@@ -27,7 +27,7 @@ export function StreakCalendar() {
         <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
+                    <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                         <IconFlame size={18} fill={summary.streak.current > 0 ? "currentColor" : "none"} />
                     </div>
                     <h3 className="font-bold text-sm">{t('activeStreak')}</h3>
@@ -51,9 +51,9 @@ export function StreakCalendar() {
                             <div className={cn(
                                 "h-8 w-8 rounded-full flex items-center justify-center transition-all duration-300",
                                 isActive
-                                    ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/20"
+                                    ? "bg-primary text-primary-foreground shadow-lg"
                                     : isToday
-                                        ? "border-2 border-orange-500/50 text-orange-500"
+                                        ? "border-2 border-primary/50 text-brand-text"
                                         : "bg-muted text-muted-foreground/30"
                             )}>
                                 {isActive ? (
@@ -76,7 +76,7 @@ export function StreakCalendar() {
                                 key={i}
                                 className={cn(
                                     "h-2 w-2 rounded-full",
-                                    i < summary.streak.freezes_available ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]" : "bg-muted"
+                                    i < summary.streak.freezes_available ? "bg-primary" : "bg-muted"
                                 )}
                             />
                         ))}

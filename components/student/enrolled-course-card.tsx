@@ -110,7 +110,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
             />
           ) : (
             <div className="w-full h-full min-h-[140px] flex items-center justify-center bg-gradient-to-br from-primary/15 via-primary/5 to-transparent">
-              <IconBook2 className="w-10 h-10 text-primary/30" />
+              <IconBook2 className="w-10 h-10 text-brand-text/30" />
             </div>
           )}
 
@@ -119,7 +119,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
             <div
               className={cn(
                 "h-full transition-all duration-500",
-                isCompleted ? "bg-emerald-500" : "bg-primary"
+                isCompleted ? "bg-success" : "bg-primary"
               )}
               style={{ width: `${pct}%` }}
             />
@@ -128,7 +128,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
           {/* Status chip on thumbnail */}
           {isCompleted && (
             <div className="absolute top-2.5 left-2.5">
-              <div className="flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">
+              <div className="flex items-center gap-1 bg-success text-success-foreground text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">
                 <IconCheck size={10} stroke={3} />
                 {t('completed')}
               </div>
@@ -142,7 +142,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
             <div className="min-w-0 flex-1">
               <h3
                 data-testid={`course-title-${course.course_id}`}
-                className="font-bold text-base leading-snug line-clamp-1 group-hover:text-primary transition-colors"
+                className="font-bold text-base leading-snug line-clamp-1 group-hover:text-brand-text transition-colors"
               >
                 {course.title}
               </h3>
@@ -174,7 +174,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
                 data-testid={`course-progress-${course.course_id}`}
                 className={cn(
                   "ml-auto text-xs font-bold tabular-nums",
-                  isCompleted ? "text-emerald-600" : isInProgress ? "text-primary" : "text-muted-foreground"
+                  isCompleted ? "text-success" : isInProgress ? "text-brand-text" : "text-muted-foreground"
                 )}
               >
                 {pct}%
@@ -187,7 +187,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
                   isCompleted
-                    ? "bg-emerald-500"
+                    ? "bg-success"
                     : isInProgress
                       ? "bg-primary"
                       : "bg-muted-foreground/20"
@@ -198,13 +198,13 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
 
             {/* Next up / Expired / CTA */}
             {!access.hasAccess ? (
-              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-2 text-xs text-warning">
                 <IconAlertTriangle size={13} />
                 <span className="font-medium">{t('expired')}</span>
               </div>
             ) : nextLesson && !isCompleted ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <IconPlayerPlay size={12} className="text-primary shrink-0" />
+                <IconPlayerPlay size={12} className="text-brand-text shrink-0" />
                 <span className="truncate">{t('upNext')}: <span className="font-medium text-foreground">{nextLesson.title}</span></span>
               </div>
             ) : null}
@@ -213,12 +213,12 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
           {/* Action row */}
           <div className="flex items-center justify-end mt-3 pt-3 border-t border-border/50">
             {showRenew ? (
-              <span className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-warning">
                 <IconRefresh size={13} />
                 {t('renew')}
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-xs font-bold text-primary sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <span className="flex items-center gap-1 text-xs font-bold text-brand-text sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 {isCompleted ? t('review') : t('continue')}
                 <IconArrowRight size={13} className="sm:group-hover:translate-x-0.5 transition-transform" />
               </span>

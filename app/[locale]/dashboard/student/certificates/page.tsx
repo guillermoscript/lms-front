@@ -50,7 +50,7 @@ export default async function StudentCertificatesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="p-2 rounded-xl bg-brand-tint text-brand-text">
               <IconCertificate size={20} />
             </div>
             <h1 className="text-2xl font-black tracking-tight" data-testid="certificates-title">
@@ -76,7 +76,7 @@ export default async function StudentCertificatesPage() {
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                 <IconAward size={14} />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsTotal')}</span>
@@ -85,7 +85,7 @@ export default async function StudentCertificatesPage() {
           </div>
           <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                 <IconBook2 size={14} />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsCourses')}</span>
@@ -94,7 +94,7 @@ export default async function StudentCertificatesPage() {
           </div>
           <div className="rounded-xl border bg-card p-4">
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                 <IconTrophy size={14} />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsLatest')}</span>
@@ -109,8 +109,8 @@ export default async function StudentCertificatesPage() {
       {/* Certificates List */}
       {!certificates || certificates.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-muted-foreground/15 p-16 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-5">
-            <IconCertificate className="w-7 h-7 text-amber-500/60" />
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-tint flex items-center justify-center mb-5">
+            <IconCertificate className="w-7 h-7 text-brand-text" />
           </div>
           <h3 className="text-lg font-bold mb-2">{t('noCertificates')}</h3>
           <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto leading-relaxed">

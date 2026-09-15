@@ -151,8 +151,8 @@ function SectionHeader({
     subtitle,
     badge,
     action,
-    iconColor = 'text-primary',
-    iconBg = 'bg-primary/10',
+    iconColor = 'text-brand-text',
+    iconBg = 'bg-brand-tint',
 }: {
     icon: React.ReactNode
     title: string
@@ -204,12 +204,12 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                         />
                     ) : (
                         <div className="flex h-full w-full items-center justify-center bg-primary/5">
-                            <IconBook2 className="h-6 w-6 text-primary/40" />
+                            <IconBook2 className="h-6 w-6 text-brand-text/40" />
                         </div>
                     )}
                     {isCompleted && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/80">
-                            <IconCircleCheck className="h-7 w-7 text-white" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-success/80">
+                            <IconCircleCheck className="h-7 w-7 text-success-foreground" />
                         </div>
                     )}
                 </div>
@@ -217,10 +217,10 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                 {/* Info */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
                     <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+                        <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover:text-brand-text transition-colors">
                             {ec.course.title}
                         </p>
-                        <IconArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-0.5" />
+                        <IconArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-brand-text group-hover:translate-x-0.5 transition-all mt-0.5" />
                     </div>
 
                     <div className="space-y-1.5">
@@ -229,7 +229,7 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                             <div
                                 className={cn(
                                     "h-full rounded-full transition-all",
-                                    isCompleted ? "bg-emerald-500" : "bg-primary"
+                                    isCompleted ? "bg-success" : "bg-primary"
                                 )}
                                 style={{ width: `${ec.progress}%` }}
                             />
@@ -243,8 +243,8 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                             </span>
                             <span className={cn(
                                 "text-[11px] font-bold tabular-nums",
-                                isCompleted ? "text-emerald-600 dark:text-emerald-400"
-                                    : hasStarted ? "text-primary"
+                                isCompleted ? "text-success"
+                                    : hasStarted ? "text-brand-text"
                                         : "text-muted-foreground"
                             )}>
                                 {isCompleted ? labels.completed : hasStarted ? `${ec.progress}%` : labels.notStarted}
@@ -308,7 +308,7 @@ export default async function ProfilePage() {
                             <CardContent className="px-6 pb-6 pt-0 -mt-12 text-center relative">
                                 <Avatar className="h-24 w-24 mx-auto border-4 border-background shadow-xl">
                                     <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || 'Profile'} />
-                                    <AvatarFallback className="text-2xl font-black bg-primary/10 text-primary">
+                                    <AvatarFallback className="text-2xl font-black bg-brand-tint text-brand-text">
                                         {userInitial}
                                     </AvatarFallback>
                                 </Avatar>
@@ -332,7 +332,7 @@ export default async function ProfilePage() {
                                     </div>
                                     <div className="text-center">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{t('userStatus')}</p>
-                                        <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold">
+                                        <Badge variant="outline" className="text-success border-success/20 bg-success/10 font-bold">
                                             {t('active')}
                                         </Badge>
                                     </div>
@@ -361,7 +361,7 @@ export default async function ProfilePage() {
                         <Card className="border border-border bg-card overflow-hidden">
                             <CardHeader className="pb-2">
                                 <CardTitle className="flex items-center gap-2 text-base">
-                                    <IconCrown size={18} className="text-primary" />
+                                    <IconCrown size={18} className="text-brand-text" />
                                     {t('currentPlan')}
                                 </CardTitle>
                             </CardHeader>
@@ -377,7 +377,7 @@ export default async function ProfilePage() {
                                         <div className="space-y-1.5">
                                             {(subscription.plans?.features ?? '').split(',').filter(Boolean).slice(0, 3).map((f: string, i: number) => (
                                                 <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <IconCheck size={14} className="text-emerald-500 shrink-0" />
+                                                    <IconCheck size={14} className="text-success shrink-0" />
                                                     <span className="line-clamp-1">{f.trim()}</span>
                                                 </div>
                                             ))}
@@ -462,7 +462,7 @@ export default async function ProfilePage() {
                                 ) : (
                                     <div className="flex flex-col items-center justify-center py-12 text-center">
                                         <div className="h-14 w-14 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
-                                            <IconBook2 className="h-7 w-7 text-primary/30" />
+                                            <IconBook2 className="h-7 w-7 text-brand-text/30" />
                                         </div>
                                         <p className="font-semibold text-foreground">{t('noCoursesYet')}</p>
                                         <p className="text-sm text-muted-foreground mt-1 max-w-xs">
@@ -516,9 +516,9 @@ export default async function ProfilePage() {
                                                             <Badge variant="outline" className={cn(
                                                                 "font-bold uppercase text-[10px]",
                                                                 tx.status === 'successful'
-                                                                    ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
+                                                                    ? "text-success border-success/20 bg-success/10"
                                                                     : tx.status === 'pending'
-                                                                        ? "text-amber-600 dark:text-amber-400 border-amber-500/20 bg-amber-500/5"
+                                                                        ? "text-warning border-warning/20 bg-warning/10"
                                                                         : "text-muted-foreground border-border"
                                                             )}>
                                                                 {transactionStatusLabel(tx.status)}
@@ -566,8 +566,8 @@ export default async function ProfilePage() {
                             <SectionHeader
                                 icon={<IconTrophy size={20} />}
                                 title={t('achievementsTitle')}
-                                iconColor="text-amber-600 dark:text-amber-400"
-                                iconBg="bg-amber-500/10"
+                                iconColor="text-brand-text"
+                                iconBg="bg-brand-tint"
                             />
                             <AchievementGrid />
                         </div>

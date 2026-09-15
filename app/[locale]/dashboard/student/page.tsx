@@ -199,7 +199,7 @@ export default async function StudentDashboard() {
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold">{t('inProgressCourses')}</h2>
-                  <Link href="/dashboard/student/courses" className="text-sm text-primary hover:underline font-medium">
+                  <Link href="/dashboard/student/courses" className="text-sm text-brand-text hover:underline font-medium">
                     {tCommon('viewAll')}
                   </Link>
                 </div>
@@ -215,15 +215,15 @@ export default async function StudentDashboard() {
             {coursesCompleted.length > 0 && (
               <section className="space-y-4">
                 <h2 className="text-lg font-bold flex items-center gap-2">
-                  <IconCircleCheck size={20} className="text-emerald-500" />
+                  <IconCircleCheck size={20} className="text-success" />
                   {tCommon('completed')}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {coursesCompleted.slice(0, 4).map((course) => (
                     <Link key={course.course_id} href={`/dashboard/student/courses/${course.course_id}`}>
-                      <div className="bg-card border border-border rounded-xl p-3.5 sm:p-4 hover:border-emerald-500/30 active:border-emerald-500/30 transition-colors group">
-                        <h3 className="text-sm font-bold truncate group-hover:text-primary transition-colors">{course.title}</h3>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+                      <div className="bg-card border border-border rounded-xl p-3.5 sm:p-4 hover:border-success/30 active:border-success/30 transition-colors group">
+                        <h3 className="text-sm font-bold truncate group-hover:text-brand-text transition-colors">{course.title}</h3>
+                        <p className="text-xs text-success font-medium mt-1">
                           {course.totalLessons} {tCommon('lessonsCompleted')}
                         </p>
                       </div>
@@ -237,7 +237,7 @@ export default async function StudentDashboard() {
             {data.courses.length === 0 && (
               data.hasActiveSubscription ? (
                 <div className="bg-card border border-primary/20 rounded-2xl p-6 sm:p-10 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-tint text-brand-text">
                     <IconSparkles className="h-7 w-7" />
                   </div>
                   <h2 className="text-xl font-bold mb-2">

@@ -416,8 +416,8 @@ export default async function LessonPage({ params }: PageProps) {
                   {/* Task header */}
                   <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-primary/10 bg-primary/[0.03]">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-xl shrink-0">
-                        <IconSparkles className="h-5 w-5 text-primary" />
+                      <div className="p-2 bg-brand-tint rounded-xl shrink-0">
+                        <IconSparkles className="h-5 w-5 text-brand-text" />
                       </div>
                       <div>
                         <h3 className="font-bold text-sm sm:text-base text-foreground">{t('aiTutorTitle')}</h3>

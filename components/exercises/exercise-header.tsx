@@ -19,21 +19,21 @@ interface ExerciseHeaderProps {
  * Title block shared by every exercise engine.
  *
  * The difficulty inks are `-700 dark:-400`, not `-600`: measured against its
- * own `-500/10` tint, `text-amber-600` came out at 2.94:1, well under AA. Each
+ * own `-500/10` tint, amber-600 text came out at 2.94:1, well under AA. Each
  * engine used to carry its own copy of that table, so the failure shipped four
  * times over.
  */
 const DIFFICULTY: Record<string, { ink: string; icon: typeof IconFlame }> = {
   easy: {
-    ink: 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/25',
+    ink: 'text-success bg-success/10 border-success/25',
     icon: IconSparkles,
   },
   medium: {
-    ink: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/25',
+    ink: 'text-warning bg-warning/10 border-warning/25',
     icon: IconFlame,
   },
   hard: {
-    ink: 'text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/25',
+    ink: 'text-destructive bg-destructive/10 border-destructive/25',
     icon: IconFlame,
   },
 }
@@ -75,9 +75,8 @@ export default function ExerciseHeader({
           <Badge
             className={cn(
               chip,
-              // -700 on white, -400 on near-black: `bg-emerald-500` behind
-              // white text measured 2.47:1 before this.
-              'border-transparent bg-emerald-700 text-white dark:bg-emerald-400 dark:text-emerald-950'
+              // Solid fill token pairs foreground automatically in both themes.
+              'border-transparent bg-success text-success-foreground'
             )}
           >
             <IconCheck size={11} className="mr-1" aria-hidden="true" />
