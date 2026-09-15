@@ -52,14 +52,23 @@
  * make Playwright's NODE-side APIRequestContext resolve it by real DNS
  * (`--host-resolver-rules` is a chromium launch arg and does not apply here).
  *
+ * THE MONEY OWED (#748). PayPal settles into the PLATFORM's account, so every
+ * sale here is also a debt to the school, paid out by hand from
+ * `/platform/payouts`. Four tests follow that debt through the page the
+ * operator uses: owed at the sale's own split snapshot, shrunk by exactly a
+ * partial refund's slice, cleared by a recorded payout with no second one
+ * offered, and untouched by a settled manual sale. The unit tests for that
+ * arithmetic build their own inputs; these read the rows the webhook wrote.
+ *
  * ORDERING. Serial and desktop-only — each test builds on the previous one's DB
  * state, and every case that must observe a PENDING row gets its OWN product:
  * `transactions_unique_product` allows one live row per (user, product), and a
  * settled row can no longer assert "stays pending".
  */
 import { createServer, type IncomingMessage, type Server } from 'node:http'
-import { expect, test, type APIRequestContext } from '@playwright/test'
-import { BASE } from './utils/constants'
+import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { login } from './utils/auth'
+import { BASE, LOCALE } from './utils/constants'
 import {
   SEEDED,
   addMember,
@@ -114,8 +123,26 @@ const RUN = Date.now()
 /** Every synthesised PayPal id carries this so teardown can LIKE-match a crashed run's ledger rows. */
 const ID_PREFIX = `paypal-e2e-${RUN}`
 
-const SALE_AMOUNT = 59
+/**
+ * A `.99` price on purpose (#748): at a 70% split neither the sale's share
+ * (34.993) nor the share left after the refund (26.243) is whole cents, so the
+ * payout tests below only pass while `roundMoney` per transaction and the
+ * `MONEY_EPSILON` threshold both hold — the residue #547 fixed.
+ */
+const SALE_AMOUNT = 49.99
 const REFUND_SLICE = 12.5
+
+/**
+ * The school's split when the sale is made, and the one it is repriced to
+ * afterwards. Neither is the trigger's `80` default, and they differ, so a
+ * snapshot lost anywhere between the insert and `/platform/payouts` falls back
+ * to the CURRENT split and moves the owed figure.
+ */
+const SPLIT_AT_SALE = 70
+const SPLIT_AFTER_SALE = 55
+
+/** A settled offline sale on the same school — the platform never held that cash. */
+const MANUAL_SALE_AMOUNT = 41
 
 // `WH-…` is PayPal's own event id and the idempotency key the adapter passes
 // straight through as `providerEventId`.
@@ -369,7 +396,7 @@ async function readTransaction(admin: Admin, transactionId: number) {
   const { data, error } = await admin
     .from('transactions')
     .select(
-      'transaction_id, status, user_id, tenant_id, product_id, plan_id, amount, currency, refunded_amount, payment_provider, transaction_date',
+      'transaction_id, status, user_id, tenant_id, product_id, plan_id, amount, currency, refunded_amount, payment_provider, school_percentage_snapshot, transaction_date',
     )
     .eq('transaction_id', transactionId)
     .single()
@@ -422,6 +449,54 @@ async function successfulRowCount(admin: Admin, productId: number): Promise<numb
   return count ?? 0
 }
 
+/** `revenue_splits` has a UNIQUE tenant_id and a CHECK that the two halves sum to 100. */
+async function setSchoolSplit(admin: Admin, schoolPercentage: number) {
+  const { error } = await admin
+    .from('revenue_splits')
+    .upsert(
+      { tenant_id: QA.id, school_percentage: schoolPercentage, platform_percentage: 100 - schoolPercentage },
+      { onConflict: 'tenant_id' },
+    )
+  if (error) throw new Error(`could not set the school split to ${schoolPercentage}%: ${error.message}`)
+}
+
+// ---------------------------------------------------------------------------
+// The payout chain (#748). What the platform owes a school is computed from the
+// rows the settle path wrote, so it is read here the way the operator reads it:
+// as the super admin, on `/platform/payouts`. The expected figures are worked
+// out in cents below rather than imported from lib/payments/payouts-owed.ts —
+// an expectation computed by the code under test moves with it.
+// ---------------------------------------------------------------------------
+
+const PLATFORM_PAYOUTS_URL = `${BASE}/${LOCALE}/platform/payouts`
+
+const usd = (amount: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+
+/** One sale's share for the school: what was kept, at that sale's split, rounded to whole cents. */
+function shareOf(amount: number, refunded: number, schoolPercentage: number): number {
+  const keptCents = Math.round(amount * 100) - Math.round(refunded * 100)
+  return Math.round((keptCents * schoolPercentage) / 100) / 100
+}
+
+/** Base-ui Buttons intermittently swallow a Playwright click; a DOM click always lands. */
+async function domClick(locator: Locator) {
+  await locator.first().waitFor({ state: 'visible', timeout: 30_000 })
+  await locator.first().evaluate((el) => (el as HTMLElement).click())
+}
+
+/** This school's USD row. The page sums every tenant, so nothing is matched by formatted text alone. */
+function payoutRow(page: Page): Locator {
+  return page.locator(`[data-testid="payout-row"][data-tenant-id="${QA.id}"][data-currency="usd"]`)
+}
+
+async function openPlatformPayouts(page: Page) {
+  // Cookies are per host, so the super admin signs in on the platform domain.
+  await login(page, SEEDED.owner.email, SEEDED.owner.password, BASE)
+  await page.goto(PLATFORM_PAYOUTS_URL, { waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('platform-payouts')).toBeVisible({ timeout: 60_000 })
+}
+
 /**
  * Everything this spec creates, children before parents. Safe on a clean
  * database, and it also runs FIRST in `beforeAll` — that is what makes a second
@@ -453,6 +528,9 @@ async function teardown() {
   await wipe('transactions', admin.from('transactions').delete().eq('tenant_id', QA.id))
   await wipe('product_courses', admin.from('product_courses').delete().eq('tenant_id', QA.id))
   await wipe('products', admin.from('products').delete().eq('tenant_id', QA.id))
+  // Not part of destroyQaTenant's cascade either.
+  await wipe('payouts', admin.from('payouts').delete().eq('tenant_id', QA.id))
+  await wipe('revenue_splits', admin.from('revenue_splits').delete().eq('tenant_id', QA.id))
   // entitlements / enrollments / courses / tenant_users / tenants.
   await destroyQaTenant(admin, QA)
 }
@@ -486,6 +564,9 @@ test.describe('PayPal — a capture settles and grants access, from both entranc
     await createQaTenant(admin, QA, 'free')
     await addMember(admin, QA.id, SEEDED.owner.id, 'admin')
     await addMember(admin, QA.id, SEEDED.student.id, 'student')
+    // Before any transaction exists: `set_transaction_split_snapshot()` stamps
+    // the split on INSERT, so this is the rate every sale below is owed at.
+    await setSchoolSplit(admin, SPLIT_AT_SALE)
 
     // TWO courses on the sold product: `enroll_user` loops `product_courses`,
     // and a one-course fixture cannot tell a loop from a single insert.
@@ -743,6 +824,34 @@ test.describe('PayPal — a capture settles and grants access, from both entranc
     expect(grants.every((row) => row.status === 'active')).toBe(true)
   })
 
+  test('the settled sale is owed to the school at its own snapshot, not at today’s split (#748)', async ({
+    page,
+  }) => {
+    const admin = getAdmin()
+    const tx = await readTransaction(admin, saleTransactionId)
+    expect(tx.status).toBe('successful')
+    // Stamped when the pending row was inserted, and kept through the webhook's
+    // settle update — which changed `payment_provider`, the one update the
+    // trigger lets fill a snapshot, so it had every chance to be re-stamped.
+    expect(Number(tx.school_percentage_snapshot)).toBe(SPLIT_AT_SALE)
+
+    // Reprice the school AFTER the sale, as a plan change does. From here on a
+    // transaction without its snapshot is owed at 55%, and the figure below moves.
+    await setSchoolSplit(admin, SPLIT_AFTER_SALE)
+
+    const owed = shareOf(Number(tx.amount), 0, SPLIT_AT_SALE)
+    expect(owed).toBe(34.99) // 49.99 × 70% = 34.993; at 55% it would be 27.49
+
+    await openPlatformPayouts(page)
+    const row = payoutRow(page)
+    await expect(row).toHaveCount(1, { timeout: 15_000 })
+    await expect(row.getByTestId('payout-providers-cell')).toHaveText('PayPal')
+    await expect(row.getByTestId('payout-collected-cell')).toHaveText(usd(SALE_AMOUNT))
+    await expect(row.getByTestId('payout-paid-cell')).toHaveText(usd(0))
+    await expect(row.getByTestId('payout-owed-cell')).toHaveText(usd(owed))
+    await expect(row.getByTestId('mark-paid-btn')).toBeEnabled()
+  })
+
   test('a verified event whose custom_id names a different buyer refuses to settle', async ({ request }) => {
     const admin = getAdmin()
     const body = captureCompleted({
@@ -847,6 +956,139 @@ test.describe('PayPal — a capture settles and grants access, from both entranc
     expect(ledger).toHaveLength(1)
     expect(ledger[0]).toMatchObject({ event_type: 'refund.succeeded', error: null })
     expect(ledger[0].processed_at).not.toBeNull()
+  })
+
+  test('a partial refund takes only its slice off the balance, not the whole sale (#748)', async ({ page }) => {
+    const admin = getAdmin()
+    const tx = await readTransaction(admin, saleTransactionId)
+    expect(tx.status).toBe('successful')
+    const refunded = Number(tx.refunded_amount)
+    expect(refunded).toBeCloseTo(REFUND_SLICE, 2)
+    expect(Number(tx.school_percentage_snapshot)).toBe(SPLIT_AT_SALE)
+
+    const owed = shareOf(Number(tx.amount), refunded, SPLIT_AT_SALE)
+    // (49.99 − 12.50) × 70% = 26.243. Counting the whole sale would still read
+    // $34.99; dropping it (a full refund's treatment) would read $0.00.
+    expect(owed).toBe(26.24)
+
+    await openPlatformPayouts(page)
+    const row = payoutRow(page)
+    await expect(row).toHaveCount(1, { timeout: 15_000 })
+    await expect(row.getByTestId('payout-collected-cell')).toHaveText(usd(SALE_AMOUNT - REFUND_SLICE))
+    await expect(row.getByTestId('payout-owed-cell')).toHaveText(usd(owed))
+    // Nothing was paid out before the refund, so there is nothing to claw back.
+    await expect(row.getByTestId('payout-clawback-cell')).toHaveText('—')
+  })
+
+  test('marking the balance paid records one payout, settles the row and offers no second payout (#748)', async ({
+    page,
+  }) => {
+    const admin = getAdmin()
+    const owed = shareOf(SALE_AMOUNT, REFUND_SLICE, SPLIT_AT_SALE)
+
+    await openPlatformPayouts(page)
+    const row = payoutRow(page)
+    await expect(row.getByTestId('payout-owed-cell')).toHaveText(usd(owed), { timeout: 15_000 })
+
+    // Re-pressed until the dialog opens: a press that lands before hydration
+    // does nothing, and pressing an already-open trigger only re-opens it.
+    const dialog = page.getByTestId('mark-paid-dialog')
+    await expect
+      .poll(
+        async () => {
+          await domClick(row.getByTestId('mark-paid-btn'))
+          return dialog.isVisible()
+        },
+        { timeout: 30_000, intervals: [500, 1000] },
+      )
+      .toBe(true)
+
+    // The dialog proposes exactly the balance, so no mismatch warning stands in
+    // the way — if one did, the dialog would stay open and the next line fails.
+    await expect(dialog.getByTestId('mark-paid-amount-input')).toHaveValue(owed.toFixed(2))
+    await domClick(dialog.getByTestId('confirm-mark-paid-btn'))
+    await expect(dialog).toBeHidden({ timeout: 30_000 })
+
+    const { data: payouts, error } = await admin
+      .from('payouts')
+      .select('amount, currency, status, payout_method, recorded_by, paid_at, idempotency_key')
+      .eq('tenant_id', QA.id)
+    if (error) throw new Error(`could not read payouts: ${error.message}`)
+    expect(payouts).toHaveLength(1)
+    expect(payouts![0]).toMatchObject({
+      currency: 'usd',
+      status: 'paid',
+      payout_method: 'manual',
+      recorded_by: SEEDED.owner.id,
+    })
+    expect(Number(payouts![0].amount)).toBe(owed)
+    expect(payouts![0].paid_at).not.toBeNull()
+    expect(payouts![0].idempotency_key).toBeTruthy()
+
+    // A fresh render, not the dialog's `router.refresh()`.
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('platform-payouts')).toBeVisible({ timeout: 60_000 })
+    await expect(row.getByTestId('payout-paid-cell')).toHaveText(usd(owed), { timeout: 15_000 })
+    await expect(row.getByTestId('payout-owed-cell')).toHaveText(usd(0))
+    await expect(row.getByTestId('payout-overpaid-cell')).toHaveText('—')
+    // LOAD-BEARING: unrounded, the school is still owed 26.243 − 26.24 = 0.003,
+    // which renders as $0.00. Only per-sale rounding plus the MONEY_EPSILON
+    // threshold keep this button from inviting a second payout no operator can
+    // actually make.
+    await expect(row.getByTestId('mark-paid-btn')).toBeDisabled()
+  })
+
+  test('a settled manual sale on the same school is never owed by the platform (#748)', async ({ page }) => {
+    const admin = getAdmin()
+    const { data: product, error: productError } = await admin
+      .from('products')
+      .insert({
+        name: `Manual Bundle ${RUN}`,
+        description: 'Manual sale fixture',
+        price: MANUAL_SALE_AMOUNT,
+        currency: 'usd',
+        status: 'active',
+        payment_provider: 'manual',
+        tenant_id: QA.id,
+      })
+      .select('product_id')
+      .single()
+    if (productError) throw new Error(`could not insert the manual product: ${productError.message}`)
+
+    // The row `completeAndEnroll` writes when an admin confirms an offline sale —
+    // manual-sale-settlement.spec.ts drives that flow through the real pages.
+    // Written directly here because the question is only what the payouts
+    // reader does with it: the school took this cash itself, so the platform
+    // owes nothing for it, whatever the split says.
+    const { data: sale, error: saleError } = await admin
+      .from('transactions')
+      .insert({
+        user_id: SEEDED.student.id,
+        product_id: product.product_id,
+        plan_id: null,
+        amount: MANUAL_SALE_AMOUNT,
+        currency: 'usd',
+        status: 'successful',
+        payment_method: 'Bank Transfer',
+        payment_provider: 'manual',
+        tenant_id: QA.id,
+      })
+      .select('status, school_percentage_snapshot')
+      .single()
+    if (saleError) throw new Error(`could not insert the manual sale: ${saleError.message}`)
+    // It carries a snapshot like any sale — the exclusion must come from the
+    // provider, not from a missing rate.
+    expect(sale).toMatchObject({ status: 'successful' })
+    expect(Number(sale.school_percentage_snapshot)).toBe(SPLIT_AFTER_SALE)
+
+    await openPlatformPayouts(page)
+    const row = payoutRow(page)
+    await expect(row).toHaveCount(1, { timeout: 15_000 })
+    // Counted, it would read "PayPal, manual", $78.49 collected and $22.55 owed.
+    await expect(row.getByTestId('payout-providers-cell')).toHaveText('PayPal')
+    await expect(row.getByTestId('payout-collected-cell')).toHaveText(usd(SALE_AMOUNT - REFUND_SLICE))
+    await expect(row.getByTestId('payout-owed-cell')).toHaveText(usd(0))
+    await expect(row.getByTestId('mark-paid-btn')).toBeDisabled()
   })
 
   test('an event type we do not model is acked, not retried forever', async ({ request }) => {

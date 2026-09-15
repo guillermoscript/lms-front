@@ -238,19 +238,26 @@ export default async function PlatformPayoutsPage({
                 </thead>
                 <tbody className="divide-y divide-border">
                   {rows.map((r) => (
-                    <tr key={`${r.tenantId}-${r.currency}`}>
+                    <tr
+                      key={`${r.tenantId}-${r.currency}`}
+                      data-testid="payout-row"
+                      data-tenant-id={r.tenantId}
+                      data-currency={r.currency}
+                    >
                       <td className={cn(TD, 'font-medium')}>{r.tenantName}</td>
                       <td className={cn(TD, 'uppercase text-muted-foreground')}>{r.currency}</td>
-                      <td className={cn(TD, 'text-muted-foreground')}>
+                      <td className={cn(TD, 'text-muted-foreground')} data-testid="payout-providers-cell">
                         {Object.keys(r.byProvider).length === 0
                           ? '—'
                           : Object.keys(r.byProvider).map((p) => PROVIDER_LABEL[p] ?? p).join(', ')}
                       </td>
-                      <td className={cn(TD, 'text-right tabular-nums')}>{formatMoney(r.grossCollected, r.currency, locale)}</td>
+                      <td className={cn(TD, 'text-right tabular-nums')} data-testid="payout-collected-cell">
+                        {formatMoney(r.grossCollected, r.currency, locale)}
+                      </td>
                       <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>
                         {r.schoolPercentage}%
                       </td>
-                      <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')}>
+                      <td className={cn(TD, 'text-right tabular-nums text-muted-foreground')} data-testid="payout-paid-cell">
                         {formatMoney(r.alreadyPaid, r.currency, locale)}
                       </td>
                       <ClawbackCell
@@ -264,6 +271,7 @@ export default async function PlatformPayoutsPage({
                           'text-right font-medium tabular-nums',
                           r.netOwed > 0 && 'text-amber-700 dark:text-amber-400',
                         )}
+                        data-testid="payout-owed-cell"
                       >
                         {formatMoney(r.netOwed, r.currency, locale)}
                       </td>
