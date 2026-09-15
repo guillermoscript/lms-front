@@ -8,7 +8,8 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+  --font-mono: var(--font-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,6 +47,9 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --radius-button: var(--radius-button);
+  --radius-card: var(--radius-card);
+  --radius-input: var(--radius-input);
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   @keyframes marquee {
@@ -73,6 +77,13 @@
     background-position: calc(100% + var(--shiny-width)) 0;}}}
 
 :root {
+  /* Type roles (#762). next/font sets each family's variable on <html>
+     (lib/themes/fonts.ts) and a theme kit reassigns the roles. @theme inline
+     registers these names self-referentially, so these unlayered values are
+     what the utilities and preflight actually resolve. */
+  --font-sans: var(--font-noto-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
@@ -98,6 +109,14 @@
   --chart-4: oklch(0.52 0.105 223.128);
   --chart-5: oklch(0.45 0.085 224.283);
   --radius: 0.625rem;
+  /* Per-component corners (#762) behind rounded-button / rounded-card /
+     rounded-input. Registered self-referentially like the type roles, so
+     without these unlayered defaults every one of them resolves to 0. The
+     defaults are the pre-kit corners (button and input rounded-md, card
+     rounded-lg) and follow a legacy --radius override; a theme kit sets them. */
+  --radius-button: calc(var(--radius) - 2px);
+  --radius-card: var(--radius);
+  --radius-input: calc(var(--radius) - 2px);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.609 0.126 221.723);
@@ -153,6 +172,13 @@
   }
   html {
     @apply font-sans;
+  }
+  /* A theme kit may pair a heading face (#762); otherwise this is --font-sans. */
+  h1,
+  h2,
+  h3,
+  [data-slot="card-title"] {
+    font-family: var(--font-heading);
   }
 }
 

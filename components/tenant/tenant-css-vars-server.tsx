@@ -1,5 +1,5 @@
 import { readableOn } from '@/lib/color/contrast'
-import { deriveKitVars } from '@/lib/themes/kit'
+import { deriveKitStructure, deriveKitVars } from '@/lib/themes/kit'
 import { getPresetById, FONT_OPTIONS, type StoredPreset, type CSSVariableMap } from '@/lib/themes/presets'
 
 /**
@@ -47,7 +47,7 @@ export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor 
 
   // A kit preset owns its brand colour, corners and type pairing, so the
   // legacy radius/font overrides and the legacy primary_color override do not
-  // apply to it (corners/type are wired in phase 2, #762).
+  // apply to it.
   const isKit = themePreset?.type === 'kit'
   const radius = isKit ? undefined : themePreset?.radius
   const fontFamily = isKit ? undefined : themePreset?.fontFamily
@@ -60,6 +60,9 @@ export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor 
       const lightVars = { ...light }
       if (radius) lightVars['--radius'] = radius
       if (fontFamily) lightVars['--font-sans'] = `"${fontFamily}", sans-serif`
+      // A kit's fonts and corners are the same in both modes, and `.dark` sits
+      // on the same <html> as :root, so they are emitted once, here.
+      if (themePreset.type === 'kit') Object.assign(lightVars, deriveKitStructure(themePreset.theme))
       css += `:root {\n    ${cssVarsToString(lightVars)}\n  }\n`
     }
 
