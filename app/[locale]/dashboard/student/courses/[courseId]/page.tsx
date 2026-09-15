@@ -226,7 +226,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-3 sm:pt-4">
                 {nextLesson && (
                   <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
-                    <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl shadow-md hover:shadow-lg active:shadow-lg transition-all">
+                    <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold shadow-md hover:shadow-lg active:shadow-lg transition-all">
                       <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
                       {completedCount > 0 ? t('continue') : t('startNow')}
                     </Button>
@@ -234,7 +234,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 )}
                 {exerciseCount > 0 && (
                   <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl border-2">
+                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
                       <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                       {t('exercises', { count: exerciseCount })}
                     </Button>
@@ -242,7 +242,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 )}
                 {examCount > 0 && (
                   <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl border-2">
+                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
                       <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                       {t('exams', { count: examCount })}
                     </Button>
@@ -318,7 +318,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                           {t('completed')}
                         </Badge>
                       ) : (
-                        <Button variant="ghost" size="sm" className="font-bold text-primary group-hover:bg-primary group-hover:text-white rounded-lg">
+                        <Button variant="ghost" size="sm" className="font-bold text-primary group-hover:bg-primary group-hover:text-white">
                           {t('study')}
                         </Button>
                       )}

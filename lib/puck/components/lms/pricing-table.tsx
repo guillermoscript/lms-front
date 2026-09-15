@@ -119,7 +119,7 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
                 <div
                   key={i}
                   className={cn(
-                    'relative p-8 rounded-xl transition-all duration-300 hover:-translate-y-1',
+                    'relative p-8 rounded-card transition-all duration-300 hover:-translate-y-1',
                     plan.highlighted
                       ? 'border-2 border-primary bg-primary text-primary-foreground shadow-lg hover:shadow-xl'
                       : 'border border-border bg-card text-foreground hover:shadow-md'
@@ -167,7 +167,7 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
                     <Button
                       size="lg"
                       variant={plan.highlighted ? 'secondary' : 'default'}
-                      className="w-full h-10 text-sm font-semibold rounded-lg"
+                      className="w-full h-10 text-sm font-semibold"
                     >
                       {plan.ctaLabel}
                     </Button>

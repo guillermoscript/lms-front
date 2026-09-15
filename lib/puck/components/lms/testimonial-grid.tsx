@@ -80,7 +80,7 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
               {resolvedItems.map((item, i) => (
                 <div
                   key={i}
-                  className="p-6 rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                  className="p-6 rounded-card border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                 >
                   <div className="flex gap-1 mb-4">
                     <span aria-hidden="true" className="flex gap-1">

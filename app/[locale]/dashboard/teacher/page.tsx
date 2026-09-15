@@ -339,12 +339,12 @@ export default async function TeacherDashboard() {
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link href={`/dashboard/teacher/courses/${course.course_id}`}>
-                        <Button size="icon-xs" variant="ghost" className="rounded-full" aria-label={t('courses.editCourse')}>
+                        <Button size="icon-xs" variant="ghost" aria-label={t('courses.editCourse')}>
                           <IconEdit size={14} />
                         </Button>
                       </Link>
                       <Link href={`/dashboard/teacher/courses/${course.course_id}/preview`} prefetch={false}>
-                        <Button size="icon-xs" variant="ghost" className="rounded-full" aria-label={t('courses.previewCourse')}>
+                        <Button size="icon-xs" variant="ghost" aria-label={t('courses.previewCourse')}>
                           <IconEye size={14} />
                         </Button>
                       </Link>

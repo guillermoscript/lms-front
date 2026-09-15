@@ -146,7 +146,7 @@ export default function PricingClient({
                                         </div>
 
                                         {(() => {
-                                            const ctaClass = `w-full h-14 rounded-2xl font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
+                                            const ctaClass = `w-full h-14 font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
                                                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
                                                 : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
                                                 }`;

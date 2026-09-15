@@ -105,7 +105,7 @@ export function CourseCard({ course }: CourseCardProps) {
                 </CardContent>
 
                 <CardFooter className="px-5 pb-5 pt-0 mt-auto">
-                    <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium h-9 rounded-lg border border-zinc-700/50">
+                    <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium h-9 border border-zinc-700/50">
                         {t('viewCourse')}
                     </Button>
                 </CardFooter>

@@ -193,7 +193,7 @@ export function ExamTaker({
           <h2 className="text-2xl font-bold mb-2">{t('noQuestionsTitle')}</h2>
           <p className="text-muted-foreground mb-8 text-lg">{t('noQuestionsDescription')}</p>
           <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-            <Button variant="outline" className="rounded-2xl h-12 px-8 font-bold">
+            <Button variant="outline" className="h-12 px-8 font-bold">
               <IconChevronLeft className="mr-2 h-5 w-5" />
               {t('returnToAssessments')}
             </Button>
@@ -347,7 +347,7 @@ export function ExamTaker({
           <Button
             variant="ghost"
             size="lg"
-            className="rounded-2xl h-14 px-8 font-bold gap-2 text-muted-foreground hover:text-foreground"
+            className="h-14 px-8 font-bold gap-2 text-muted-foreground hover:text-foreground"
             onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
             disabled={currentQuestionIndex === 0}
           >
@@ -360,7 +360,7 @@ export function ExamTaker({
               <Button
                 size="lg"
                 data-testid="exam-finish-submit"
-                className="rounded-2xl h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
+                className="h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
                 onClick={handleSubmit}
                 disabled={submitting}
               >
@@ -374,7 +374,7 @@ export function ExamTaker({
             ) : (
               <Button
                 size="lg"
-                className="rounded-2xl h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
+                className="h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
               >
                 {t('nextQuestion')}

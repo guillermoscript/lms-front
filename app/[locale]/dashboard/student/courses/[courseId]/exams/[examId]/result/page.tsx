@@ -585,13 +585,13 @@ export default async function ExamResultPage({ params }: PageProps) {
             {/* Footer Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-6 sm:pt-10">
                 <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-                    <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-2xl gap-2 font-bold py-5 sm:py-6 px-6 sm:px-8">
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2 font-bold py-5 sm:py-6 px-6 sm:px-8">
                         <IconArrowLeft size={18} />
                         {t('viewAllAssessments')}
                     </Button>
                 </Link>
                 <Link href={`/dashboard/student/courses/${courseId}`}>
-                    <Button size="lg" className="w-full sm:w-auto rounded-2xl font-bold py-5 sm:py-6 px-6 sm:px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
+                    <Button size="lg" className="w-full sm:w-auto font-bold py-5 sm:py-6 px-6 sm:px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
                         {t('continueLearning')}
                     </Button>
                 </Link>

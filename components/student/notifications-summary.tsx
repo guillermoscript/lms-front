@@ -104,7 +104,7 @@ export function NotificationsSummary({ notifications }: NotificationsSummaryProp
             </CardContent>
             {notifications.length > 0 && (
                 <div className="p-4 bg-muted/10 border-t border-muted/30">
-                    <Button variant="outline" className="w-full rounded-xl gap-2 font-bold h-11">
+                    <Button variant="outline" className="w-full gap-2 font-bold h-11">
                         {t('markAllAsRead')}
                     </Button>
                 </div>

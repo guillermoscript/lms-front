@@ -139,7 +139,7 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
                   <Card
                     key={course.id}
                     {...(course.href ? { href: course.href } : {})}
-                    className="group block rounded-xl overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                    className="group block rounded-card overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
                   >
                     <div className="aspect-video overflow-hidden">
                       <img

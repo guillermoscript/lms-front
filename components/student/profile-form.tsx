@@ -109,7 +109,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 <Button
                     type="submit"
                     disabled={isPending}
-                    className="w-full md:w-auto px-8 rounded-xl h-10 font-semibold gap-2"
+                    className="w-full md:w-auto px-8 h-10 font-semibold gap-2"
                 >
                     {isPending ? (
                         <IconLoader2 size={18} className="animate-spin" />

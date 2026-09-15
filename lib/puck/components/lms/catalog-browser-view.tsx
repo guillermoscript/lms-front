@@ -80,7 +80,7 @@ export function CatalogBrowserView({ cards, columns, pageSize, showSearch, showP
                 setVisible(Math.max(1, pageSize))
               }}
               placeholder={t('searchCourses')}
-              className="w-full sm:max-w-xs rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full sm:max-w-xs rounded-input border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
           )}
           {showPriceFilter && (
@@ -116,7 +116,7 @@ export function CatalogBrowserView({ cards, columns, pageSize, showSearch, showP
               <Card
                 key={course.id}
                 {...(course.href ? { href: course.href } : {})}
-                className="group block rounded-xl overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                className="group block rounded-card overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
               >
                 <div className="aspect-video overflow-hidden">
                   <img
@@ -149,7 +149,7 @@ export function CatalogBrowserView({ cards, columns, pageSize, showSearch, showP
           <button
             type="button"
             onClick={() => setVisible((v) => v + Math.max(1, pageSize))}
-            className="rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            className="rounded-button border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             {t('loadMore')}
           </button>
