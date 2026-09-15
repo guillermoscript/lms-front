@@ -362,10 +362,10 @@ export default async function ExamResultPage({ params }: PageProps) {
                             <Card key={question.question_id} className={cn(
                                 "border-2 transition-all duration-300",
                                 isFreeTextPending
-                                    ? "border-warning/30 bg-warning/10"
+                                    ? "border-warning/40 bg-card"
                                     : isCorrect
-                                        ? "border-success/30 bg-success/10"
-                                        : "border-destructive/30 bg-destructive/10"
+                                        ? "border-success/40 bg-card"
+                                        : "border-destructive/40 bg-card"
                             )}>
                                 <CardHeader className="pb-3 border-b border-muted/10 px-4 sm:px-6">
                                     <div className="flex items-start justify-between gap-3 sm:gap-4">
