@@ -682,8 +682,7 @@ ON CONFLICT (user_id, tenant_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 INSERT INTO tenant_settings (tenant_id, setting_key, setting_value)
 VALUES
-  ('00000000-0000-0000-0000-000000000002', 'site_name',     '{"value":"Code Academy Pro"}'::jsonb),
-  ('00000000-0000-0000-0000-000000000002', 'primary_color', '{"value":"#7c3aed"}'::jsonb)
+  ('00000000-0000-0000-0000-000000000002', 'site_name',     '{"value":"Code Academy Pro"}'::jsonb)
 ON CONFLICT (tenant_id, setting_key) DO NOTHING;
 
 

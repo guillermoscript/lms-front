@@ -12,7 +12,7 @@ import {
   isFirstConnectedProvider,
 } from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
-import { isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
+import { SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit'
 
 /**
  * A `tenant_settings.setting_value` JSONB payload. Every setting is stored as
@@ -148,24 +148,14 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
 }
 
 /**
- * Settings that only a plan with `custom_branding` may write (#662). Logo,
- * favicon and site name are identity, not branding, and stay open to every
- * plan — see PRODUCT.md "Plan tiers".
+ * The school theme is written only by `applyKitTheme` (app/actions/admin/theme.ts),
+ * which validates the stored shape and gates a custom colour on
+ * `custom_branding`. A generic upsert here would skip both, so these actions
+ * refuse the key on every plan (#763).
  */
-const CUSTOM_BRANDING_KEYS = new Set(['primary_color', 'secondary_color', 'theme_preset'])
-
-async function refuseBrandingBelowPlan(
-  tenantId: string,
-  keys: string[]
-): Promise<SettingsResponse | null> {
-  if (!keys.some((k) => CUSTOM_BRANDING_KEYS.has(k))) return null
-  try {
-    await requirePlanFeature(tenantId, 'custom_branding')
-    return null
-  } catch (err) {
-    if (isPlanFeatureError(err)) return { success: false, error: planFeatureErrorMessage(err) }
-    throw err
-  }
+const THEME_KEY_REFUSAL: SettingsResponse = {
+  success: false,
+  error: 'The school theme is saved from Appearance, not from settings.',
 }
 
 /**
@@ -185,9 +175,9 @@ export async function updateSetting(
       return { success: false, error: 'Setting value must be an object' }
     }
 
+    if (key === SCHOOL_THEME_SETTING_KEY) return THEME_KEY_REFUSAL
+
     const tenantId = await getCurrentTenantId()
-    const brandingRefusal = await refuseBrandingBelowPlan(tenantId, [key])
-    if (brandingRefusal) return brandingRefusal
     const supabase = createAdminClient()
 
     const { data, error } = await supabase
@@ -223,9 +213,9 @@ export async function updateSettings(
       return { success: false, error: 'Unauthorized' }
     }
 
+    if (Object.keys(settings).includes(SCHOOL_THEME_SETTING_KEY)) return THEME_KEY_REFUSAL
+
     const tenantId = await getCurrentTenantId()
-    const brandingRefusal = await refuseBrandingBelowPlan(tenantId, Object.keys(settings))
-    if (brandingRefusal) return brandingRefusal
     const supabase = createAdminClient()
 
     const rows = Object.entries(settings).map(([key, value]) => ({
@@ -292,8 +282,6 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       enrollment_expiration_days: { value: 365 },
       course_capacity_enabled: { enabled: false },
       logo_url: { value: '' },
-      primary_color: { value: '#2563eb' },
-      secondary_color: { value: '#7c3aed' },
       favicon_url: { value: '' },
     }
 
@@ -804,7 +792,7 @@ export async function getAllSettingsByCategory(): Promise<CategorySettingsRespon
     const categoryMap: Record<string, string> = {
       site_name: 'general', site_description: 'general', contact_email: 'general',
       support_email: 'general', timezone: 'general', maintenance_mode: 'general',
-      logo_url: 'general', favicon_url: 'general', primary_color: 'general', secondary_color: 'general',
+      logo_url: 'general', favicon_url: 'general',
       smtp_host: 'email', smtp_port: 'email', smtp_username: 'email', smtp_password: 'email',
       smtp_from_email: 'email', smtp_from_name: 'email', email_notifications: 'email',
       stripe_enabled: 'payment', paypal_enabled: 'payment', binance_enabled: 'payment', binance_personal_enabled: 'payment',

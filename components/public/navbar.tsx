@@ -29,7 +29,7 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
             .from('tenant_settings')
             .select('setting_key, setting_value')
             .eq('tenant_id', tenant.id)
-            .in('setting_key', ['site_name', 'logo_url', 'primary_color']);
+            .in('setting_key', ['site_name', 'logo_url']);
         if (tsData) {
             brandingOverrides = tsData.reduce((acc: Record<string, any>, s) => {
                 acc[s.setting_key] = s.setting_value?.value;
@@ -54,7 +54,6 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
 
     const brandName = brandingOverrides.site_name || tenant?.name || t('brand');
     const logoUrl = brandingOverrides.logo_url || tenant?.logo_url;
-    const logoColor = brandingOverrides.primary_color || tenant?.primary_color || '#3B82F6';
     const platformLogo = '/brand/logo-mark.svg';
 
     return (
@@ -69,11 +68,9 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                         ) : isMainPlatform ? (
                             <img src={platformLogo} alt={brandName} className="w-8 h-8" />
                         ) : (
-                            <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: logoColor }}
-                            >
-                                <span className="font-bold text-white">{brandName[0]?.toUpperCase()}</span>
+                            // The school's theme colour, via the tokens the layout resolved (#763).
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+                                <span className="font-bold text-primary-foreground">{brandName[0]?.toUpperCase()}</span>
                             </div>
                         )}
                         <span className="font-bold text-lg text-foreground tracking-tight">

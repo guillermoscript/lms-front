@@ -397,10 +397,10 @@
 ### 4.15 Appearance/Branding
 - [ ] Navigate to `/dashboard/admin/appearance`
 - [ ] Upload logo
-- [ ] Set primary/secondary colors
-- [ ] Save → theme applied across school
-- [ ] Verify CSS custom properties update
-- [ ] Dark/light mode still works with custom colors
+- [ ] Pick a theme and one of its six colours (every plan); a custom hex needs Business+
+- [ ] Save look → theme applied across school
+- [ ] Verify CSS custom properties update (`--primary`, `--font-heading`)
+- [ ] Dark/light mode still works with the theme
 
 ### 4.16 Landing Page Builder (Starter+ Plan)
 - [ ] Navigate to `/dashboard/admin/landing-page`
@@ -719,7 +719,8 @@ Verify features are properly gated by plan:
 | [ ] Point Store | blocked | blocked | [ ] works | [ ] works |
 | [ ] AI Auto-Grading | blocked | blocked | [ ] works | [ ] works |
 | [ ] Advanced Analytics | blocked | blocked | [ ] works | [ ] works |
-| [ ] Custom Branding | blocked | blocked | blocked | [ ] works |
+| [ ] Theme kit (theme + recommended colour) | [ ] works | [ ] works | [ ] works | [ ] works |
+| [ ] Custom brand colour | blocked | blocked | blocked | [ ] works |
 
 ---
 
