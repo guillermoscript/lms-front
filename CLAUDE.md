@@ -58,7 +58,7 @@ Default tenant ID (single-tenant fallback): `00000000-0000-0000-0000-00000000000
 
 ```typescript
 import { getUserRole } from '@/lib/supabase/get-user-role'
-const role = await getUserRole()  // tenant_users row is authoritative; falls back to JWT tenant_role/user_role only if no active membership
+const role = await getUserRole()  // tenant_users row is authoritative; falls back to JWT tenant_role/user_role only if no active membership AND the JWT tenant_id is this tenant
 ```
 
 After a tenant switch, **always call `supabase.auth.refreshSession()`** to get updated claims.
@@ -197,7 +197,7 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - **`createAdminClient()`** lives in `@/lib/supabase/admin`, NOT `@/lib/supabase/server`.
 - **Button component** uses `@base-ui/react` — no `asChild` prop. Wrap `<Link>` around `<Button>` instead.
 - **Stripe API v2025 types** need `any` casts for `Subscription`/`Invoice` objects.
-- **`getUserRole()` checks `tenant_users` first** (authoritative), resolving the user via the `x-user-id` header — no extra `getUser()` call. It only falls back to `getSession()`-derived JWT claims (`tenant_role`/`user_role`) when there's no active membership row.
+- **`getUserRole()` checks `tenant_users` first** (authoritative), resolving the user via the `x-user-id` header — no extra `getUser()` call. It only falls back to `getSession()`-derived JWT claims (`tenant_role`/`user_role`) when there's no active membership row AND the token's `tenant_id` is the current tenant — the hook stamps `tenant_role` for the user's home school, and proxy.ts skips membership checks on public routes, so trusting the claim on another subdomain handed out that school's admin actions (#763).
 - **`isSuperAdmin()`** queries the `super_admins` table directly — does not trust JWT claims.
 - **API routes** get tenant context via `proxy.ts` too — `x-tenant-id` is set for `/api/*` routes.
 - **`enroll_user()` RPC** loops through ALL courses per product via `product_courses` (FOR loop).
