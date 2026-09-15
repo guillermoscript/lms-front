@@ -3,23 +3,56 @@ import { describe, expect, it } from 'vitest'
 import { AA_CONTRAST, contrastRatio, mixOklch, parseColor, rgbToOklch, toHex } from '@/lib/color/contrast'
 import {
   DEFAULT_KIT_THEME,
+  KIT_CORNERS,
   KIT_DARK_INK,
+  KIT_FONT_VARIABLES,
   KIT_LIGHT_INK,
+  KIT_SURFACE_IDS,
+  KIT_SURFACES,
   KIT_THEME_IDS,
   KIT_THEMES,
+  KIT_TYPE_PAIRINGS,
+  deriveKitStructure,
   deriveKitVars,
   isKitThemeId,
+  kitDefaultMode,
   normalizeKitBrand,
   type KitThemeId,
 } from '@/lib/themes/kit'
 
 /**
- * Issue #761 — the theme kit engine. Every theme × brand × mode the engine can
- * emit has to clear WCAG AA for the pairs the UI actually paints.
+ * Issues #761 and #762 — the theme kit engine. Every theme × brand × mode the
+ * engine can emit has to clear WCAG AA for the pairs the UI actually paints,
+ * and the surface a theme sits on must never move with the brand.
  */
 
 const MODES = ['light', 'dark'] as const
 const NON_TEXT_CONTRAST = 3
+
+/** The tokens a surface set owns. None of them may depend on the brand. */
+const SURFACE_KEYS = [
+  '--background',
+  '--foreground',
+  '--card',
+  '--card-foreground',
+  '--popover',
+  '--popover-foreground',
+  '--muted',
+  '--muted-foreground',
+  '--secondary',
+  '--secondary-foreground',
+  '--accent',
+  '--accent-foreground',
+  '--border',
+  '--input',
+  '--sidebar',
+  '--sidebar-foreground',
+  '--sidebar-accent',
+  '--sidebar-accent-foreground',
+  '--sidebar-border',
+]
+
+const surfaceOf = (theme: KitThemeId) => KIT_SURFACES[KIT_THEMES[theme].surface]
 
 function assertReadable(theme: KitThemeId, brand: string, label: string) {
   const vars = deriveKitVars(theme, brand)
@@ -30,6 +63,11 @@ function assertReadable(theme: KitThemeId, brand: string, label: string) {
     expect(
       contrastRatio(v['--primary-foreground'], v['--primary']),
       `${at}: --primary-foreground on --primary (${v['--primary-foreground']} on ${v['--primary']})`
+    ).toBeGreaterThanOrEqual(AA_CONTRAST)
+
+    expect(
+      contrastRatio(v['--accent-foreground'], v['--accent']),
+      `${at}: --accent-foreground on --accent`
     ).toBeGreaterThanOrEqual(AA_CONTRAST)
 
     for (const surface of ['--background', '--card', '--brand-tint']) {
@@ -87,17 +125,27 @@ describe('theme kit data', () => {
     }
   })
 
+  it('defines four surface sets and seats each theme on its own', () => {
+    expect([...KIT_SURFACE_IDS].sort()).toEqual(Object.keys(KIT_SURFACES).sort())
+    expect(Object.fromEntries(KIT_THEME_IDS.map((id) => [id, KIT_THEMES[id].surface]))).toEqual({
+      estructura: 'cool',
+      andina: 'warm',
+      kodigo: 'dark',
+      luz: 'neutral',
+    })
+  })
+
   it('marks each surface set with the right mode', () => {
-    for (const id of KIT_THEME_IDS) {
-      expect(KIT_THEMES[id].surfaces.light.dark, id).toBe(false)
-      expect(KIT_THEMES[id].surfaces.dark.dark, id).toBe(true)
+    for (const id of KIT_SURFACE_IDS) {
+      expect(KIT_SURFACES[id].light.dark, id).toBe(false)
+      expect(KIT_SURFACES[id].dark.dark, id).toBe(true)
     }
   })
 
   it('keeps body and muted text readable on every surface', () => {
-    for (const id of KIT_THEME_IDS) {
+    for (const id of KIT_SURFACE_IDS) {
       for (const mode of MODES) {
-        const s = KIT_THEMES[id].surfaces[mode]
+        const s = KIT_SURFACES[id][mode]
         for (const [name, bg] of [
           ['background', s.background],
           ['card', s.card],
@@ -115,6 +163,15 @@ describe('theme kit data', () => {
       }
     }
   })
+
+  it('opens only Kódigo in dark mode', () => {
+    expect(Object.fromEntries(KIT_THEME_IDS.map((id) => [id, KIT_THEMES[id].defaultMode]))).toEqual({
+      estructura: 'system',
+      andina: 'system',
+      kodigo: 'dark',
+      luz: 'system',
+    })
+  })
 })
 
 describe('deriveKitVars — every swatch', () => {
@@ -124,13 +181,14 @@ describe('deriveKitVars — every swatch', () => {
         const vars = assertReadable(id, swatch, swatch)
         for (const mode of MODES) {
           const v = vars[mode]
+          const s = surfaceOf(id)[mode]
           const at = `${id} / ${swatch} / ${mode}`
           expect(v['--brand'], `${at}: --brand`).toBe(swatch)
           // Derived vars mirror each other.
-          expect(v['--foreground'], at).toBe(KIT_THEMES[id].surfaces[mode].foreground)
-          expect(v['--muted-foreground'], at).toBe(KIT_THEMES[id].surfaces[mode].mutedForeground)
-          expect(v['--accent'], at).toBe(v['--primary'])
-          expect(v['--accent-foreground'], at).toBe(v['--primary-foreground'])
+          expect(v['--foreground'], at).toBe(s.foreground)
+          expect(v['--muted-foreground'], at).toBe(s.mutedForeground)
+          expect(v['--accent'], at).toBe(s.muted)
+          expect(v['--accent-foreground'], at).toBe(s.foreground)
           expect(v['--sidebar-primary'], at).toBe(v['--primary'])
           expect(v['--sidebar-primary-foreground'], at).toBe(v['--primary-foreground'])
           expect(v['--ring'], at).toBe(v['--brand-text'])
@@ -141,13 +199,28 @@ describe('deriveKitVars — every swatch', () => {
     })
   }
 
+  it('never lets the brand move a surface token', () => {
+    for (const id of KIT_THEME_IDS) {
+      const base = deriveKitVars(id, KIT_THEMES[id].swatches[0])
+      for (const brand of [...KIT_THEMES[id].swatches, '#000000', '#FFFFFF', '#767676', '#FF0000']) {
+        const vars = deriveKitVars(id, brand)
+        for (const mode of MODES) {
+          for (const key of SURFACE_KEYS) {
+            expect(vars[mode][key], `${id} / ${brand} / ${mode}: ${key}`).toBe(base[mode][key])
+          }
+        }
+      }
+    }
+  })
+
   it('surfaces map onto the shadcn tokens', () => {
     const { light, dark } = deriveKitVars('andina', '#2F6B4F')
-    const s = KIT_THEMES.andina.surfaces
+    const s = KIT_SURFACES.warm
     expect(light['--background']).toBe(s.light.background)
     expect(light['--card']).toBe(s.light.card)
     expect(light['--popover']).toBe(s.light.card)
     expect(light['--secondary']).toBe(s.light.muted)
+    expect(light['--accent']).toBe(s.light.muted)
     expect(light['--input']).toBe(s.light.border)
     expect(light['--sidebar']).toBe(s.light.background)
     expect(dark['--sidebar']).toBe(s.dark.card)
@@ -165,12 +238,89 @@ describe('deriveKitVars — every swatch', () => {
     }
   })
 
-  it('emits no radius or font variables (phase 2 owns them)', () => {
+  it('emits colours only; fonts and corners come from deriveKitStructure', () => {
     const { light, dark } = deriveKitVars('luz', '#C2185B')
     for (const key of [...Object.keys(light), ...Object.keys(dark)]) {
-      expect(key).not.toBe('--radius')
+      expect(key.startsWith('--radius')).toBe(false)
       expect(key.startsWith('--font')).toBe(false)
     }
+  })
+})
+
+describe('deriveKitStructure', () => {
+  const stackOf = (variable: string) => new RegExp(`^var\\(${variable}\\), \\S`)
+
+  it("maps every theme's type pairing and corners onto the role tokens", () => {
+    for (const id of KIT_THEME_IDS) {
+      const vars = deriveKitStructure(id)
+      const type = KIT_TYPE_PAIRINGS[KIT_THEMES[id].typePairing]
+      const corners = KIT_CORNERS[KIT_THEMES[id].corners]
+
+      expect(vars['--font-sans'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.body]))
+      expect(vars['--font-heading'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.heading]))
+      if (type.mono) expect(vars['--font-mono'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.mono]))
+      else expect(vars, id).not.toHaveProperty('--font-mono')
+
+      expect(vars['--radius'], id).toBe(corners.base)
+      expect(vars['--radius-button'], id).toBe(corners.button)
+      expect(vars['--radius-card'], id).toBe(corners.card)
+      expect(vars['--radius-input'], id).toBe(corners.input)
+    }
+  })
+
+  it('spells out Estructura', () => {
+    expect(deriveKitStructure('estructura')).toEqual({
+      '--font-sans': 'var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif',
+      '--font-heading': 'var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif',
+      '--font-mono': 'var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace',
+      '--radius': '0.625rem',
+      '--radius-button': '8px',
+      '--radius-card': '10px',
+      '--radius-input': '8px',
+    })
+  })
+
+  it('gives a serif heading a serif fallback and keeps the platform mono for code', () => {
+    const andina = deriveKitStructure('andina')
+    expect(andina['--font-heading']).toBe('var(--font-lora), ui-serif, Georgia, serif')
+    expect(andina['--font-sans']).toBe('var(--font-public-sans), ui-sans-serif, system-ui, sans-serif')
+    expect(andina).not.toHaveProperty('--font-mono')
+  })
+
+  it('soft corners reproduce the platform defaults', () => {
+    // app/globals.css: --radius 0.625rem (10px), button/input = radius - 2px, card = radius.
+    expect(KIT_CORNERS.soft).toEqual({ base: '0.625rem', button: '8px', card: '10px', input: '8px' })
+  })
+
+  it('round keeps the platform base radius so menus, tabs and popovers do not change', () => {
+    const luz = deriveKitStructure('luz')
+    expect(luz['--radius']).toBe(KIT_CORNERS.soft.base)
+    expect(luz['--radius-button']).toBe('999px')
+    expect(luz['--radius-card']).toBe('20px')
+    expect(luz['--radius-input']).toBe('14px')
+  })
+
+  it('sharp tightens the base radius to match its 2px controls', () => {
+    const kodigo = deriveKitStructure('kodigo')
+    expect(kodigo['--radius']).toBe('0.125rem')
+    for (const key of ['--radius-button', '--radius-card', '--radius-input']) expect(kodigo[key]).toBe('2px')
+  })
+
+  it('treats an unknown theme as Estructura', () => {
+    for (const theme of ['nope', '', null, undefined, 42]) {
+      expect(deriveKitStructure(theme), String(theme)).toEqual(deriveKitStructure('estructura'))
+    }
+  })
+})
+
+describe('kitDefaultMode', () => {
+  it('is dark for Kódigo and system for every other theme', () => {
+    expect(kitDefaultMode('kodigo')).toBe('dark')
+    for (const id of ['estructura', 'andina', 'luz']) expect(kitDefaultMode(id), id).toBe('system')
+  })
+
+  it('treats an unknown theme as Estructura', () => {
+    for (const theme of ['Kodigo', '', null, undefined]) expect(kitDefaultMode(theme)).toBe('system')
   })
 })
 
