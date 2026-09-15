@@ -2,13 +2,18 @@
  * Shadcn-compatible theme presets for runtime tenant theming.
  *
  * Each preset defines the full set of CSS custom properties for both light
- * and dark modes. These are injected at runtime via TenantCssVars and are
- * fully compatible with the OKLCH color space used in globals.css.
+ * and dark modes. These are injected server-side via TenantCssVarsServer (one
+ * <style> carrying both `:root` and `.dark`) and are fully compatible with the
+ * OKLCH color space used in globals.css.
  *
  * Curated presets are built-in and always available.
  * Custom presets are fetched from the shadcn registry by preset code and
  * stored per-tenant in tenant_settings.
+ * Kit presets store only a theme id + brand colour; their variables are
+ * derived at render time by lib/themes/kit.ts.
  */
+
+import type { KitThemeId } from './kit'
 
 export type CSSVariableMap = Record<string, string>
 
@@ -862,12 +867,19 @@ export const RADIUS_OPTIONS = [
   { value: '1rem', label: 'XL', preview: '16px' },
 ] as const
 
+interface StoredPresetOverrides {
+  /** Custom border radius override (ignored for kit presets — the theme owns corners) */
+  radius?: string
+  /** Custom font family override (Google Font name; ignored for kit presets — the theme owns type) */
+  fontFamily?: string
+}
+
 /**
- * Stored in tenant_settings under key 'theme_preset'.
+ * Pre-kit preset shapes.
  * type: 'curated' → look up in CURATED_PRESETS by id.
  * type: 'custom'  → CSS vars stored inline (fetched from shadcn registry).
  */
-export interface StoredPreset {
+export interface LegacyStoredPreset extends StoredPresetOverrides {
   type: 'curated' | 'custom'
   id: string
   /** Only present for custom presets */
@@ -877,8 +889,27 @@ export interface StoredPreset {
   }
   /** Original shadcn preset code, for display purposes */
   presetCode?: string
-  /** Custom border radius override */
-  radius?: string
-  /** Custom font family override (Google Font name) */
-  fontFamily?: string
 }
+
+/**
+ * Theme kit preset (#761): a theme id plus one brand colour; every other
+ * variable is derived by deriveKitVars() in lib/themes/kit.ts.
+ * The never-present legacy fields keep `.id` / `.variables` / `.presetCode`
+ * readable on the union without narrowing.
+ */
+export interface KitStoredPreset extends StoredPresetOverrides {
+  type: 'kit'
+  theme: KitThemeId
+  /** '#RRGGBB'; anything else falls back to the theme's recommended swatch */
+  brand: string
+  id?: undefined
+  variables?: undefined
+  presetCode?: undefined
+}
+
+/**
+ * Stored in tenant_settings under key 'theme_preset'.
+ * type: 'curated' | 'custom' → LegacyStoredPreset.
+ * type: 'kit'                → KitStoredPreset (theme + brand, vars derived).
+ */
+export type StoredPreset = LegacyStoredPreset | KitStoredPreset

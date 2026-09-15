@@ -216,7 +216,7 @@ Together these five form the data-visualization ramp (`--chart-1` through `--cha
 
 **The One Sans Rule.** There is exactly one sans in the system, bound to `--font-sans`, and every text role resolves through it. Display is that face at weight 700, not a second family. Adding a display or heading font is prohibited: it doubles the font payload for the mid-range-Android baseline, and because tenants override `--font-sans`, a hardcoded second face would pair a school's chosen font against one they never picked. Geist Mono is the only other family, and it earns its place by doing work no sans can do.
 
-**The Tenant Typeface Rule.** Tenants may override `--font-sans` entirely (`components/tenant/tenant-css-vars.tsx`). No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and `ch`-based widths outside the prose container are all prohibited.
+**The Tenant Typeface Rule.** Tenants may override `--font-sans` entirely (`components/tenant/tenant-css-vars-server.tsx`). No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and `ch`-based widths outside the prose container are all prohibited.
 
 ## 4. Elevation
 

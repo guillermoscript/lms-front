@@ -17,6 +17,12 @@
  * `prefers-color-scheme` query rather than the `.dark` class the widget sets —
  * picking a surface in JS from `useViewTheme()` would drift out of sync with
  * the very card the text sits on.
+ *
+ * `oklch()`/`oklab()`/`lab()`/`lch()` are converted to real sRGB (issue #761).
+ *
+ * ⚠️ Mirror of `lib/color/contrast.ts` — the app cannot be imported from here.
+ * The code must stay identical to that file (only comments may differ);
+ * `tests/unit/contrast-mirror-parity.test.ts` at the repo root enforces it.
  */
 
 /** WCAG AA for normal-size text. */
@@ -32,10 +38,12 @@ export const CARD_LIGHT = "#ffffff";
 /** The card surface widgets paint in dark mode (`dark:bg-zinc-900`). */
 export const CARD_DARK = "#18181b";
 
-type Rgb = [number, number, number];
+/** An sRGB colour, each channel a float in 0..255. */
+export type Rgb = [number, number, number];
 
 const HEX = /^#([0-9a-f]{3,8})$/i;
 const FN = /^(rgba?|hsla?|oklch|oklab|lab|lch)\(([^)]*)\)$/i;
+const HUE_UNIT = /(deg|grad|rad|turn)$/;
 
 /**
  * The few CSS keywords worth resolving. `branding.tsx` allow-lists any bare
@@ -79,6 +87,26 @@ function num(token: string | undefined, scale = 1): number | null {
   return pct ? (n / 100) * scale : n;
 }
 
+/** A Lab-family component: `none` is 0, a percentage is relative to `scale`. */
+function component(token: string | undefined, scale: number): number | null {
+  return token === "none" ? 0 : num(token, scale);
+}
+
+/** A CSS hue in degrees: unitless, `deg`, `rad`, `grad` or `turn`; `none` is 0. */
+function hue(token: string | undefined): number | null {
+  if (!token) return null;
+  if (token === "none") return 0;
+  const unit = HUE_UNIT.exec(token)?.[1];
+  const raw = unit ? token.slice(0, -unit.length) : token;
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  if (unit === "rad") return (n * 180) / Math.PI;
+  if (unit === "grad") return n * 0.9;
+  if (unit === "turn") return n * 360;
+  return n;
+}
+
 function hslToRgb(h: number, s: number, l: number): Rgb {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const hp = (((h % 360) + 360) % 360) / 60;
@@ -94,14 +122,66 @@ function hslToRgb(h: number, s: number, l: number): Rgb {
   return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
 }
 
+/** Overflowing components (e.g. `1e308`) turn into NaN channels; treat them as unparseable. */
+function finite(rgb: Rgb): Rgb | null {
+  return rgb.every(Number.isFinite) ? rgb : null;
+}
+
+/** sRGB transfer function: linear light 0..1 to encoded 0..255, gamut-clipped. */
+function encode(linear: number): number {
+  const c = clamp(linear, 0, 1);
+  return (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055) * 255;
+}
+
+/** Inverse sRGB transfer function: encoded 0..255 to linear light 0..1. */
+function decode(channel255: number): number {
+  const c = channel255 / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+/** OKLab to sRGB (Björn Ottosson's matrices), clipped per channel. */
+function oklabToRgb(l: number, a: number, b: number): Rgb {
+  const l_ = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m_ = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s_ = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    encode(4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_),
+    encode(-1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_),
+    encode(-0.0041960863 * l_ - 0.7034186147 * m_ + 1.707614701 * s_),
+  ];
+}
+
+/**
+ * CIE Lab (D50, as CSS defines it) to sRGB: Lab → XYZ D50 → Bradford-adapted
+ * XYZ D65 → linear sRGB → sRGB gamma, clipped per channel.
+ */
+function labToRgb(l: number, a: number, b: number): Rgb {
+  const kappa = 24389 / 27;
+  const epsilon = 216 / 24389;
+  const fy = (l + 16) / 116;
+  const fx = fy + a / 500;
+  const fz = fy - b / 200;
+  const x = (fx ** 3 > epsilon ? fx ** 3 : (116 * fx - 16) / kappa) * 0.3457 / 0.3585;
+  const y = l > kappa * epsilon ? fy ** 3 : l / kappa;
+  const z = (fz ** 3 > epsilon ? fz ** 3 : (116 * fz - 16) / kappa) * (1 - 0.3457 - 0.3585) / 0.3585;
+
+  const x65 = 0.955473421488075 * x - 0.02309845494876471 * y + 0.06325924320057072 * z;
+  const y65 = -0.0283697093338637 * x + 1.0099953980813041 * y + 0.021041441191917323 * z;
+  const z65 = 0.012314014864481998 * x - 0.020507649298898964 * y + 1.330365926242124 * z;
+
+  return [
+    encode(3.2409699419045226 * x65 - 1.537383177570094 * y65 - 0.4986107602930034 * z65),
+    encode(-0.9692436362808796 * x65 + 1.8759675015077202 * y65 + 0.04155505740717559 * z65),
+    encode(0.05563007969699366 * x65 - 0.20397695888897652 * y65 + 1.0569715142428786 * z65),
+  ];
+}
+
 /**
  * Parse a CSS colour into sRGB 0-255.
  *
- * `oklch`/`oklab`/`lab`/`lch` are approximated by their lightness channel alone
- * (a grey of the same perceptual lightness). We only ever use the result to ask
- * "is this light or dark", and full colour-space conversion is far more code
- * than that question is worth. Returns `null` for anything unrecognised —
- * callers fall back rather than guess.
+ * `oklch`/`oklab`/`lab`/`lch` are converted for real and clipped to the sRGB
+ * gamut per channel. Alpha is dropped and `none` reads as 0. Returns `null`
+ * for anything unrecognised — callers fall back rather than guess.
  */
 export function parseColor(css: string | null | undefined): Rgb | null {
   const v = css?.trim().toLowerCase();
@@ -155,16 +235,94 @@ export function parseColor(css: string | null | undefined): Rgb | null {
     return hslToRgb(h, clamp(sv, 0, 1), clamp(lv, 0, 1));
   }
 
-  // oklch/oklab/lab/lch: first argument is lightness — 0..1 for the ok* forms,
-  // 0..100 for lab/lch, and a percentage in either.
-  const rawL = a[0];
-  const l = num(rawL, 1);
+  if (name === "oklab" || name === "oklch") {
+    // L is 0..1 (100% = 1); chroma and a/b percentages are relative to 0.4.
+    const l = component(a[0], 1);
+    if (l === null) return null;
+    if (name === "oklab") {
+      const ca = component(a[1], 0.4);
+      const cb = component(a[2], 0.4);
+      if (ca === null || cb === null) return null;
+      return finite(oklabToRgb(clamp(l, 0, 1), ca, cb));
+    }
+    const c = component(a[1], 0.4);
+    const h = hue(a[2]);
+    if (c === null || h === null) return null;
+    return finite(oklchToRgb(l, c, h));
+  }
+
+  // lab/lch: L is 0..100 (100% = 100); a/b percentages are relative to 125,
+  // chroma percentages to 150.
+  const l = component(a[0], 100);
   if (l === null) return null;
-  const isPct = rawL.endsWith("%");
-  const scale = isPct ? 1 : name === "lab" || name === "lch" ? 100 : 1;
-  const lightness = clamp(isPct ? l : l / scale, 0, 1);
-  const grey = lightness * 255;
-  return [grey, grey, grey];
+  if (name === "lab") {
+    const ca = component(a[1], 125);
+    const cb = component(a[2], 125);
+    if (ca === null || cb === null) return null;
+    return finite(labToRgb(clamp(l, 0, 100), ca, cb));
+  }
+  const c = component(a[1], 150);
+  const h = hue(a[2]);
+  if (c === null || h === null) return null;
+  const rad = (h * Math.PI) / 180;
+  const chroma = Math.max(0, c);
+  return finite(labToRgb(clamp(l, 0, 100), chroma * Math.cos(rad), chroma * Math.sin(rad)));
+}
+
+/** OKLCH (L 0..1, C ≥ 0, H degrees) to sRGB 0-255, clipped per channel. */
+export function oklchToRgb(l: number, c: number, h: number): Rgb {
+  const rad = (h * Math.PI) / 180;
+  const chroma = Math.max(0, c);
+  return oklabToRgb(clamp(l, 0, 1), chroma * Math.cos(rad), chroma * Math.sin(rad));
+}
+
+/** sRGB 0-255 to OKLCH: `[L 0..1, C ≥ 0, H degrees 0..360)`. */
+export function rgbToOklch(rgb: Rgb): [number, number, number] {
+  const r = decode(rgb[0]);
+  const g = decode(rgb[1]);
+  const b = decode(rgb[2]);
+  const l_ = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m_ = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s_ = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const l = 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_;
+  const oa = 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_;
+  const ob = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_;
+  const c = Math.sqrt(oa * oa + ob * ob);
+  const h = ((Math.atan2(ob, oa) * 180) / Math.PI + 360) % 360;
+  return [l, c, h];
+}
+
+/** Below this chroma a colour is treated as grey: its hue is noise. */
+const ACHROMATIC = 0.02;
+
+/**
+ * Mix two colours in OKLCH, returning `#rrggbb`. `t = 0` is `from`, `t = 1`
+ * is `to`. Lightness and chroma move linearly; hue takes the shorter arc, and a
+ * grey side borrows the other side's hue so mixing toward white or black keeps
+ * the colour's own hue instead of swinging through red. `null` when either
+ * input cannot be parsed.
+ */
+export function mixOklch(from: string, to: string, t: number): string | null {
+  const fromRgb = parseColor(from);
+  const toRgb = parseColor(to);
+  if (!fromRgb || !toRgb) return null;
+  if (t <= 0) return toHex(fromRgb);
+  if (t >= 1) return toHex(toRgb);
+
+  const [l1, c1, h1] = rgbToOklch(fromRgb);
+  const [l2, c2, h2] = rgbToOklch(toRgb);
+  let h: number;
+  if (c1 < ACHROMATIC) {
+    h = h2;
+  } else if (c2 < ACHROMATIC) {
+    h = h1;
+  } else {
+    let delta = h2 - h1;
+    if (delta > 180) delta -= 360;
+    else if (delta < -180) delta += 360;
+    h = h1 + delta * t;
+  }
+  return toHex(oklchToRgb(l1 + (l2 - l1) * t, c1 + (c2 - c1) * t, h));
 }
 
 /** WCAG 2.1 relative luminance, 0 (black) to 1 (white). */
@@ -185,6 +343,20 @@ export function contrastRatio(a: string, b: string): number {
   const lb = relativeLuminance(cb);
   const [hi, lo] = la > lb ? [la, lb] : [lb, la];
   return (hi + 0.05) / (lo + 0.05);
+}
+
+/** The ink with the highest contrast against `background`; ties go to the earlier ink. */
+export function pickInk(background: string, inks: readonly string[]): string {
+  let best = inks[0];
+  let bestRatio = -1;
+  for (const ink of inks) {
+    const ratio = contrastRatio(ink, background);
+    if (ratio > bestRatio) {
+      best = ink;
+      bestRatio = ratio;
+    }
+  }
+  return best;
 }
 
 /**
@@ -217,6 +389,42 @@ export function readableOn(background: string, fallback: string = LIGHT_INK): st
   return relativeLuminance(rgb) > 0.2 ? "#000000" : "#ffffff";
 }
 
+/**
+ * A filled button in `color` with legible ink — the brand keeps its ink and the
+ * *button* moves, the opposite of `readableOn()`.
+ *
+ * When one of the two branded inks already clears AA on `color`, the colour is
+ * returned untouched (the exact input string). Otherwise it is mixed in OKLCH
+ * in 2% steps toward black on a light surface (paired with the light ink) or
+ * toward white on a dark surface (paired with the dark ink) until the pair
+ * clears AA, so the button still reads as the brand. An unparseable colour
+ * comes back as-is with `readableOn()`'s fallback ink.
+ */
+export function readableButton(
+  color: string,
+  opts: { dark: boolean; lightInk: string; darkInk: string },
+): { background: string; ink: string; shifted: boolean } {
+  if (!parseColor(color)) {
+    return { background: color, ink: readableOn(color, opts.lightInk), shifted: false };
+  }
+
+  const ink = pickInk(color, [opts.lightInk, opts.darkInk]);
+  if (contrastRatio(ink, color) >= AA_CONTRAST) {
+    return { background: color, ink, shifted: false };
+  }
+
+  const target = opts.dark ? "#ffffff" : "#000000";
+  const shiftedInk = opts.dark ? opts.darkInk : opts.lightInk;
+  for (let step = 1; step <= 50; step++) {
+    const mixed = mixOklch(color, target, step / 50);
+    if (mixed && contrastRatio(shiftedInk, mixed) >= AA_CONTRAST) {
+      return { background: mixed, ink: shiftedInk, shifted: true };
+    }
+  }
+  // Only reachable with inks that cannot clear AA even on pure black/white.
+  return { background: target, ink: readableOn(target), shifted: true };
+}
+
 /** True when the surface is dark enough that we would write on it in white. */
 export function isDarkSurface(background: string): boolean {
   const rgb = parseColor(background);
@@ -241,13 +449,20 @@ export function withAlpha(color: string, pct: number): string {
  * the surface — in small steps, so the result still reads as their colour
  * instead of snapping to a flat ink. If even the extreme fails (an accent equal
  * to the surface), the plain readable ink wins: legible beats on-brand.
+ *
+ * Given a list of surfaces, a candidate has to clear AA on every one of them;
+ * the first surface decides the mixing direction and the fallback ink.
  */
-export function accentTextOn(accent: string, surface: string): string {
+export function accentTextOn(accent: string, surface: string | readonly string[]): string {
+  const surfaces: readonly string[] = typeof surface === "string" ? [surface] : surface;
   const accentRgb = parseColor(accent);
-  const surfaceRgb = parseColor(surface);
+  const surfaceRgb = parseColor(surfaces[0]);
   if (!accentRgb || !surfaceRgb) return accent;
+  if (surfaces.some((s) => !parseColor(s))) return accent;
 
-  if (contrastRatio(accent, surface) >= AA_CONTRAST) return accent;
+  const legible = (color: string) =>
+    surfaces.every((s) => contrastRatio(color, s) >= AA_CONTRAST);
+  if (legible(accent)) return accent;
 
   // Move away from the surface: lighten on a dark surface, darken on a light one.
   const target = relativeLuminance(surfaceRgb) > 0.45 ? [0, 0, 0] : [255, 255, 255];
@@ -258,9 +473,9 @@ export function accentTextOn(accent: string, surface: string): string {
       accentRgb[2] + (target[2] - accentRgb[2]) * (pct / 100),
     ];
     const hex = toHex(mixed);
-    if (contrastRatio(hex, surface) >= AA_CONTRAST) return hex;
+    if (legible(hex)) return hex;
   }
-  return readableOn(surface);
+  return readableOn(surfaces[0]);
 }
 
 function channel(n: number): string {
