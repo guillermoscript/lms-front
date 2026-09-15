@@ -16,7 +16,7 @@ import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
 import type { StoredPreset } from '@/lib/themes/presets';
 import { fontVariables } from '@/lib/themes/fonts';
-import { kitDefaultMode } from '@/lib/themes/kit';
+import { defaultThemeFor } from '@/lib/themes/kit';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
 import { OpenPanelComponent } from '@openpanel/nextjs';
 import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
@@ -160,10 +160,7 @@ export default async function RootLayout({
   // mode (#762). defaultTheme, never forcedTheme: the mode toggle keeps working
   // and a stored choice still wins. Read from the gated preset above, so a
   // school below Business never gets a dark default on the platform palette.
-  const defaultTheme =
-    tenantInfo?.theme_preset?.type === 'kit'
-      ? kitDefaultMode(tenantInfo.theme_preset.theme)
-      : 'system';
+  const defaultTheme = defaultThemeFor(tenantInfo?.theme_preset);
 
   // Product analytics. Renders nothing at all — no script tag, no network —
   // unless a client id is configured AND the environment is one we track

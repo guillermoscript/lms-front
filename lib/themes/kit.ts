@@ -17,7 +17,7 @@
 
 import { accentTextOn, mixOklch, readableButton } from '@/lib/color/contrast'
 
-import type { CSSVariableMap } from './presets'
+import type { CSSVariableMap, StoredPreset } from './presets'
 
 export const KIT_THEME_IDS = ['estructura', 'andina', 'kodigo', 'luz'] as const
 export type KitThemeId = (typeof KIT_THEME_IDS)[number]
@@ -364,4 +364,13 @@ export function deriveKitStructure(theme: unknown): CSSVariableMap {
 /** The next-themes `defaultTheme` for a kit theme; an unknown theme is Estructura's. */
 export function kitDefaultMode(theme: unknown): KitDefaultMode {
   return kitTheme(theme).defaultMode
+}
+
+/**
+ * The next-themes `defaultTheme` for a school's stored preset: its kit theme's
+ * default mode, or `'system'` for anything that is not a kit. Pass the
+ * plan-gated preset, so a school without custom branding never opens dark.
+ */
+export function defaultThemeFor(preset: StoredPreset | null | undefined): KitDefaultMode {
+  return preset?.type === 'kit' ? kitDefaultMode(preset.theme) : 'system'
 }

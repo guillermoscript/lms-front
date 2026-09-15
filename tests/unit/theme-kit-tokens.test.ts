@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { KIT_CORNERS, KIT_FONT_VARIABLES } from '@/lib/themes/kit'
@@ -24,11 +24,26 @@ const fontDeclarations = [...fontsSource.matchAll(/const (\w+) = (\w+)\(\{([\s\S
   ([, name, loader, options]) => ({ name, loader, options }),
 )
 
-/** The body of the first `<selector> {` rule, up to its first closing brace. */
+/** The body of the first `<selector> {` rule, nested blocks included. */
 function ruleBody(css: string, selector: string): string {
   const start = css.indexOf(`${selector} {`)
   if (start === -1) return ''
-  return css.slice(start, css.indexOf('}', start))
+  let depth = 0
+  for (let i = css.indexOf('{', start); i < css.length; i++) {
+    if (css[i] === '{') depth++
+    else if (css[i] === '}' && --depth === 0) return css.slice(start, i)
+  }
+  return css.slice(start)
+}
+
+function sourceFiles(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules' || name.startsWith('.')) continue
+    const path = join(dir, name)
+    if (statSync(path).isDirectory()) sourceFiles(path, out)
+    else if (/\.tsx?$/.test(name)) out.push(path)
+  }
+  return out
 }
 
 const themeBlock = ruleBody(globals, '@theme inline')
@@ -50,10 +65,13 @@ describe('next/font declarations (lib/themes/fonts.ts)', () => {
     }
   })
 
-  it('puts every declared family on <html>', () => {
+  it('puts every declared family on <html> and none on <body>', () => {
     const list = fontsSource.slice(fontsSource.indexOf('export const fontVariables'))
     for (const { name } of fontDeclarations) expect(list, name).toMatch(new RegExp(`\\b${name}\\b`))
     expect(layoutSource).toContain('<html lang={locale} className={fontVariables}')
+    // A role on :root cannot resolve a family variable set on <body>.
+    expect(layoutSource).toContain('<body className="antialiased">')
+    expect(layoutSource).not.toMatch(/\.variable\b/)
     expect(layoutSource).not.toContain('next/font')
   })
 
@@ -75,6 +93,7 @@ describe('globals.css tokens', () => {
   it('gives every self-referencing @theme token an unlayered :root value', () => {
     // Tailwind emits `--x: var(--x)` into @layer theme for these; without an
     // unlayered value the cycle wins and the utility resolves to nothing.
+    expect(themeBlock).toContain('@keyframes')
     const selfRefs = [...themeBlock.matchAll(/(--[\w-]+): var\(\1\);/g)].map(([, name]) => name)
     expect(selfRefs.length).toBeGreaterThanOrEqual(6)
     for (const name of selfRefs) expect(rootBlock, name).toMatch(new RegExp(`${name}: [^;]+;`))
@@ -113,13 +132,36 @@ describe('primitives read the per-component corner tokens', () => {
     expect(read('components/ui/textarea.tsx')).not.toMatch(/\brounded-md\b/)
   })
 
+  it('never glues a corner token to the next class', () => {
+    // `rounded-inputhas-[…]` is one unknown class: Tailwind emits nothing for it
+    // and both halves silently disappear (it collapsed PromptInput to 28px).
+    const glued = /rounded-(?:[tblr]-)?(?:button|card|input)(?=[\w[(])/
+    const hits = ['app', 'components', 'lib']
+      .flatMap((dir) => sourceFiles(join(ROOT, dir)))
+      .filter((file) => glued.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(ROOT, file))
+    expect(hits).toEqual([])
+    expect(glued.test('has-[textarea]:rounded-inputhas-[>x]:h-auto')).toBe(true)
+    expect(glued.test('rounded-input has-[>x]:h-auto')).toBe(false)
+  })
+
   it('lets a call-site rounded-* replace a corner token in cn()', () => {
     expect(cn('rounded-button', 'rounded-full')).toBe('rounded-full')
     expect(cn('rounded-card', 'rounded-2xl')).toBe('rounded-2xl')
     expect(cn('rounded-xl', 'rounded-card')).toBe('rounded-card')
     expect(cn('rounded-t-card', 'rounded-t-none')).toBe('rounded-t-none')
-    expect(cn('rounded-button', 'rounded-[calc(var(--radius-button)*0.75)]')).toBe(
-      'rounded-[calc(var(--radius-button)*0.75)]',
+    expect(cn('rounded-button', 'rounded-[calc(var(--radius-button)-2px)]')).toBe(
+      'rounded-[calc(var(--radius-button)-2px)]',
     )
+  })
+})
+
+describe('Kódigo dark default wiring (app/[locale]/layout.tsx)', () => {
+  it('passes the gated preset through defaultThemeFor and never forces a theme', () => {
+    expect(layoutSource).toContain('const defaultTheme = defaultThemeFor(tenantInfo?.theme_preset);')
+    expect(layoutSource).toContain('defaultTheme={defaultTheme}')
+    expect(layoutSource).not.toMatch(/\bforcedTheme\s*=/)
+    // tenantInfo.theme_preset is null below Business (custom_branding gate).
+    expect(layoutSource).toMatch(/theme_preset: customBranding\s*\?/)
   })
 })

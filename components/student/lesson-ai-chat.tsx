@@ -356,7 +356,7 @@ function InnerLessonAIChat({
                                     onClick={handleRestart}
                                     disabled={isRestarting}
                                     variant="secondary"
-                                    className="flex-1 h-full min-h-[52px] sm:min-h-[60px] bg-white text-green-600 hover:bg-white/90 font-semibold text-xs sm:text-sm"
+                                    className="flex-1 h-full min-h-[52px] sm:min-h-[60px] bg-white text-green-600 hover:bg-white/90 font-semibold text-xs sm:text-sm rounded-lg"
                                 >
                                     {isRestarting ? (
                                         <IconRotateClockwise2 className="h-4 w-4 animate-spin" />

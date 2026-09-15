@@ -12,6 +12,7 @@ import {
   KIT_THEME_IDS,
   KIT_THEMES,
   KIT_TYPE_PAIRINGS,
+  defaultThemeFor,
   deriveKitStructure,
   deriveKitVars,
   isKitThemeId,
@@ -19,6 +20,7 @@ import {
   normalizeKitBrand,
   type KitThemeId,
 } from '@/lib/themes/kit'
+import type { StoredPreset } from '@/lib/themes/presets'
 
 /**
  * Issues #761 and #762 — the theme kit engine. Every theme × brand × mode the
@@ -321,6 +323,31 @@ describe('kitDefaultMode', () => {
 
   it('treats an unknown theme as Estructura', () => {
     for (const theme of ['Kodigo', '', null, undefined]) expect(kitDefaultMode(theme)).toBe('system')
+  })
+})
+
+describe('defaultThemeFor (the layout reads its next-themes default from this)', () => {
+  it('opens a Kódigo kit dark', () => {
+    expect(defaultThemeFor({ type: 'kit', theme: 'kodigo', brand: '#F2B705' })).toBe('dark')
+  })
+
+  it('keeps every other preset, and no preset, on the system mode', () => {
+    for (const id of ['estructura', 'andina', 'luz'] as const) {
+      expect(defaultThemeFor({ type: 'kit', theme: id, brand: '#000000' }), id).toBe('system')
+    }
+    expect(defaultThemeFor({ type: 'curated', id: 'default' })).toBe('system')
+    expect(defaultThemeFor({ type: 'custom', id: 'x' })).toBe('system')
+    expect(defaultThemeFor(null)).toBe('system')
+    expect(defaultThemeFor(undefined)).toBe('system')
+  })
+
+  it('treats a malformed kit preset as Estructura, which is system', () => {
+    // tenant_settings is jsonb: what comes back is not guaranteed to match the type.
+    const stored = (value: unknown) => value as StoredPreset
+    expect(defaultThemeFor(stored({ type: 'kit' }))).toBe('system')
+    expect(defaultThemeFor(stored({ type: 'kit', theme: 'Kodigo' }))).toBe('system')
+    // A dark theme stored under a non-kit type never opens dark.
+    expect(defaultThemeFor(stored({ type: 'curated', id: 'x', theme: 'kodigo' }))).toBe('system')
   })
 })
 
