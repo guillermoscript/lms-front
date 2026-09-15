@@ -261,6 +261,7 @@ export async function POST(req: NextRequest) {
 
             if (authUser?.user?.email) {
               const email = authUser.user.email
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const productName = (txFull?.products as any)?.name || 'your course'
               const schoolName = tenantRow?.name || 'LMS Platform'
               const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
@@ -301,15 +302,27 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Status-guarded so a redelivery cannot emit a second failure, and the
-        // returned row supplies the buyer/tenant the event is attributed to
-        // without a separate read.
+        // A declined attempt does NOT touch the transaction (#756). Stripe sends
+        // this for every failed attempt, and the PaymentIntent stays payable
+        // (`requires_payment_method`), so:
+        //   - writing 'failed' to a PLAN row runs cancel_subscription in
+        //     trigger_manage_transactions, ending the subscription a renewing
+        //     buyer still holds after one declined card;
+        //   - writing any terminal status strands a retry that then succeeds on
+        //     the same PaymentIntent — payment_intent.succeeded only settles a
+        //     'pending' row, so the buyer would be charged with no access;
+        //   - delivery order is not guaranteed, so a late failed-attempt event
+        //     must never reach a row that already settled.
+        // An abandoned row is released to 'canceled' by the leftover check in
+        // create-payment-intent (#754) or the expire-stale-checkouts cron.
+        //
+        // The read only decides whether the failure is worth reporting: a
+        // settled or released row emits nothing.
         const { data: failed } = await getSupabaseAdmin()
           .from('transactions')
-          .update({ status: 'failed' })
-          .eq('transaction_id', parseInt(transactionId))
-          .neq('status', 'failed')
           .select('user_id, tenant_id, amount, currency, plan_id, product_id')
+          .eq('transaction_id', parseInt(transactionId))
+          .eq('status', 'pending')
           .maybeSingle()
 
         if (failed) {
@@ -331,7 +344,7 @@ export async function POST(req: NextRequest) {
           )
         }
 
-        console.log(`Transaction ${transactionId} marked as failed`)
+        console.log(`Transaction ${transactionId}: payment attempt failed (row left as-is)`)
       }
       break
     }
@@ -356,6 +369,7 @@ export async function POST(req: NextRequest) {
           }
 
           // Idempotency: only process if transaction is still successful (not already refunded)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if ((transaction as any).status !== 'successful') {
             console.log(`Transaction ${transaction.transaction_id} not in successful state — skipping refund`)
             break

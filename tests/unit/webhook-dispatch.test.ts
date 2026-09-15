@@ -546,16 +546,17 @@ describe('dispatchBillingEvent', () => {
     expect(calls.updates).toHaveLength(0)
   })
 
-  it('payment.failed with reference → flips the abandoned pending tx to failed (frees retry, #479)', async () => {
+  it('payment.failed with reference → flips the abandoned pending tx to canceled (frees retry, #479, #756)', async () => {
     // Binance PAY_CLOSED on an abandoned checkout: the pending transaction must
     // be cleared or transactions_unique_product/plan blocks the buyer's retry.
+    // 'canceled', never 'failed': a failed plan row runs cancel_subscription.
     const { admin, calls } = makeFakeAdmin('pending')
     await dispatchBillingEvent(event('payment.failed', { reference: '42', providerPaymentId: 'ord_1' }), {
       provider: 'binance',
       admin,
     })
     const txUpdate = calls.updates.find((u) => u.table === 'transactions')
-    expect(txUpdate?.values).toMatchObject({ status: 'failed' })
+    expect(txUpdate?.values).toEqual({ status: 'canceled' })
     expect(calls.rpc).toHaveLength(0)
   })
 

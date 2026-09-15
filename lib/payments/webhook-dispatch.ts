@@ -753,7 +753,10 @@ export async function dispatchBillingEvent(
       // transaction created at checkout must be cleared, or the partial unique
       // indexes transactions_unique_product / transactions_unique_plan
       // (WHERE status IN ('pending','successful')) keep blocking the buyer's
-      // retry purchase forever. Flip the referenced row → failed.
+      // retry purchase forever. Flip the referenced row → canceled, never
+      // failed: a failed PLAN row runs cancel_subscription in
+      // trigger_manage_transactions and would end the subscription a renewing
+      // buyer still holds (#624, #756).
       //
       // Idempotent + ordering-safe: the `.eq('status','pending')` guard means a
       // late PAY_CLOSED that races a PAY_SUCCESS (already flipped → successful)
@@ -773,7 +776,7 @@ export async function dispatchBillingEvent(
       // a second read.
       const { data: failed, error } = await admin
         .from('transactions')
-        .update({ status: 'failed' })
+        .update({ status: 'canceled' })
         .eq('transaction_id', txnId)
         .eq('status', 'pending')
         .select('transaction_id, user_id, tenant_id, amount, currency, plan_id, product_id')

@@ -467,9 +467,12 @@ export async function POST(req: NextRequest) {
     } catch (providerErr) {
       console.error('[payments/checkout] provider checkout failed:', providerErr)
       // Roll the pending transaction back so the unique index does not block a retry.
+      // 'canceled', never 'failed': a failed PLAN row runs cancel_subscription in
+      // trigger_manage_transactions, ending the subscription a renewing buyer
+      // still holds (#756).
       await supabase
         .from('transactions')
-        .update({ status: 'failed' })
+        .update({ status: 'canceled' })
         .eq('transaction_id', transaction.transaction_id)
       await track(
         ANALYTICS_EVENTS.PAYMENT_FAILED,
