@@ -7,7 +7,6 @@ import { AnalyticsUserBinder } from "@/components/analytics-user-binder";
 import { FeedbackButton } from "@/components/shared/feedback-button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
-import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
 import { TenantCssVarsServer } from "@/components/tenant/tenant-css-vars-server";
 import { getCurrentTenant, getCurrentUserId } from "@/lib/supabase/tenant";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -139,8 +138,8 @@ export default async function RootLayout({
   // Custom branding is a Business+ feature (#662). Below that the school's
   // logo and name still apply — a school must stay recognisable — but its
   // colours, theme preset, radius and font are ignored in favour of the
-  // platform palette. Both the server <style> and the client re-applier read
-  // from this object, so nulling the fields here gates both.
+  // platform palette. TenantCssVarsServer's <style> (the only writer of the
+  // theme vars) reads from this object, so nulling the fields here gates it.
   const customBranding = tenant ? await hasPlanFeature(tenant.id, 'custom_branding') : false;
 
   const tenantInfo = tenant ? {
@@ -198,7 +197,6 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TenantProvider tenant={tenantInfo}>
-              <TenantCssVars />
               {analyticsClientId ? (
                 <OpenPanelComponent
                   clientId={analyticsClientId}

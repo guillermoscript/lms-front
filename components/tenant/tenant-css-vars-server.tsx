@@ -1,14 +1,23 @@
 import { readableOn } from '@/lib/color/contrast'
+import { deriveKitVars } from '@/lib/themes/kit'
 import { getPresetById, FONT_OPTIONS, type StoredPreset, type CSSVariableMap } from '@/lib/themes/presets'
 
 /**
- * Resolves CSS variable maps from a StoredPreset.
- * Shared between server (inline <style>) and client (dark/light switching).
+ * Resolves the light and dark CSS variable maps for a StoredPreset.
+ * Consumed by TenantCssVarsServer, which emits both sets in one server
+ * <style> (`:root` + `.dark`) so a light/dark toggle needs no client re-apply.
+ *
+ * - kit     → derived from theme + brand colour (lib/themes/kit.ts)
+ * - curated → looked up in CURATED_PRESETS by id
+ * - custom  → the variables stored inline on the preset
  */
 export function resolvePresetVars(storedPreset: StoredPreset): {
   light?: CSSVariableMap
   dark?: CSSVariableMap
 } {
+  if (storedPreset.type === 'kit') {
+    return deriveKitVars(storedPreset.theme, storedPreset.brand)
+  }
   if (storedPreset.type === 'curated') {
     const preset = getPresetById(storedPreset.id)
     return { light: preset?.variables.light, dark: preset?.variables.dark }
@@ -36,22 +45,29 @@ interface Props {
 export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor }: Props) {
   let css = ''
 
+  // A kit preset owns its brand colour, corners and type pairing, so the
+  // legacy radius/font overrides and the legacy primary_color override do not
+  // apply to it (corners/type are wired in phase 2, #762).
+  const isKit = themePreset?.type === 'kit'
+  const radius = isKit ? undefined : themePreset?.radius
+  const fontFamily = isKit ? undefined : themePreset?.fontFamily
+
   if (themePreset) {
     const { light, dark } = resolvePresetVars(themePreset)
 
     // Build light mode vars
     if (light) {
       const lightVars = { ...light }
-      if (themePreset.radius) lightVars['--radius'] = themePreset.radius
-      if (themePreset.fontFamily) lightVars['--font-sans'] = `"${themePreset.fontFamily}", sans-serif`
+      if (radius) lightVars['--radius'] = radius
+      if (fontFamily) lightVars['--font-sans'] = `"${fontFamily}", sans-serif`
       css += `:root {\n    ${cssVarsToString(lightVars)}\n  }\n`
     }
 
     // Build dark mode vars
     if (dark) {
       const darkVars = { ...dark }
-      if (themePreset.radius) darkVars['--radius'] = themePreset.radius
-      if (themePreset.fontFamily) darkVars['--font-sans'] = `"${themePreset.fontFamily}", sans-serif`
+      if (radius) darkVars['--radius'] = radius
+      if (fontFamily) darkVars['--font-sans'] = `"${fontFamily}", sans-serif`
       css += `  .dark {\n    ${cssVarsToString(darkVars)}\n  }\n`
     }
   }
@@ -60,7 +76,7 @@ export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor 
   // always wins. Appended as the last :root rule so CSS cascade resolves to it.
   // These vars feed the primary accent surfaces used across the app + Puck blocks.
   const brandOverrides: string[] = []
-  if (primaryColor) {
+  if (primaryColor && !isKit) {
     brandOverrides.push(`--primary: ${primaryColor};`)
     brandOverrides.push(`--sidebar-primary: ${primaryColor};`)
     brandOverrides.push(`--ring: ${primaryColor};`)
@@ -86,8 +102,8 @@ export function TenantCssVarsServer({ themePreset, primaryColor, secondaryColor 
   if (!css) return null
 
   // Build font preload link if custom font is set
-  const fontLink = themePreset?.fontFamily
-    ? FONT_OPTIONS.find((f) => f.value === themePreset.fontFamily)
+  const fontLink = fontFamily
+    ? FONT_OPTIONS.find((f) => f.value === fontFamily)
     : null
 
   return (
