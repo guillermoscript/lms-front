@@ -2,7 +2,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, BookOpen, GraduationCap } from "lucide-react"
 import { type Tenant } from "@/lib/supabase/tenant"
-import { hasPlanFeature } from "@/lib/plans/server"
 import { getTranslations } from "next-intl/server"
 
 interface Product {
@@ -21,13 +20,11 @@ interface Props {
 
 export async function SchoolLandingPage({ tenant, products }: Props) {
   const t = await getTranslations('schoolLanding')
-  // Brand colour is `custom_branding` (Business+, #662); below that the public
-  // page uses the platform accent (`--primary`, the tenant theming token —
-  // never a hardcoded hue, #730) like the rest of the app. `color-mix()` (used
-  // below wherever this used to be a hex value with an alpha suffix) works
-  // the same whether `accentColor` ends up a real hex or a CSS var.
-  const accentColor =
-    ((await hasPlanFeature(tenant.id, 'custom_branding')) ? tenant.primary_color : '') || 'var(--primary)'
+  // The school's theme reaches this page as `--primary`: the root layout has
+  // already resolved the stored kit theme against the plan (#763), so there is
+  // no colour to look up here — and never a hardcoded hue (#730). `color-mix()`
+  // below derives the tints from the var.
+  const accentColor = 'var(--primary)'
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-hidden">
@@ -47,7 +44,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
 
             {/* School Logo */}
             <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-3xl font-black shadow-lg overflow-hidden"
+              className="w-20 h-20 rounded-2xl flex items-center justify-center text-primary-foreground text-3xl font-black shadow-lg overflow-hidden"
               style={{ backgroundColor: accentColor }}
             >
               {tenant.logo_url ? (
@@ -71,7 +68,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
             <div className="flex flex-wrap gap-4 justify-center pt-2">
               <Button
                 size="lg"
-                className="h-14 px-10 text-white font-bold text-lg transition-all duration-200 active:scale-95 border-0"
+                className="h-14 px-10 text-primary-foreground font-bold text-lg transition-all duration-200 active:scale-95 border-0"
                 style={{ backgroundColor: accentColor }}
                 render={<Link href="/auth/sign-up?next=/join-school" />}
               >
@@ -159,11 +156,11 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
       {/* ── Join CTA Strip ───────────────────────────────────── */}
       <section className="py-20 relative overflow-hidden" aria-label="Join call to action">
         <div className="container mx-auto px-4 md:px-6">
+          {/* A solid brand fill with its own ink: every theme swatch picks
+              --primary-foreground for AA on --primary, which a translucent
+              gradient over the dark page would not keep for light brands. */}
           <div
-            className="rounded-[2.5rem] p-12 md:p-16 text-center relative overflow-hidden"
-            style={{
-              background: `linear-gradient(135deg, color-mix(in oklch, ${accentColor} 87%, transparent), color-mix(in oklch, ${accentColor} 53%, transparent))`,
-            }}
+            className="rounded-[2.5rem] p-12 md:p-16 text-center relative overflow-hidden bg-primary"
           >
             <div
               className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
@@ -171,14 +168,14 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
             />
             <div className="relative z-10 max-w-2xl mx-auto space-y-6">
               <h2
-                className="text-3xl md:text-4xl font-black text-white tracking-tight"
+                className="text-3xl md:text-4xl font-black text-primary-foreground tracking-tight"
                 style={{ textWrap: "balance" } as React.CSSProperties}
               >
                 {t('ctaTitle', { name: tenant.name })}
               </h2>
               <Button
                 size="lg"
-                className="h-14 px-10 bg-white font-bold text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"
+                className="h-14 px-10 bg-primary-foreground hover:bg-primary-foreground/90 font-bold text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"
                 style={{ color: accentColor }}
                 render={<Link href="/auth/sign-up?next=/join-school" />}
               >

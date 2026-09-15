@@ -45,12 +45,16 @@ test.describe('Plan feature gates (#662)', () => {
     await expect(page.getByTestId('upgrade-nudge')).toHaveAttribute('data-feature', 'analytics')
 
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/appearance`)
-    const brandingNudges = page.getByTestId('upgrade-nudge').filter({ has: page.locator('[data-feature="custom_branding"]') })
-    await expect(page.locator('[data-testid="upgrade-nudge"][data-feature="custom_branding"]').first()).toBeVisible()
-    // Colour inputs are gone; logo stays editable on every plan.
-    await expect(page.locator('#primary_color')).toHaveCount(0)
+    // Themes and their recommended colours are open on every plan (#763); only
+    // a custom hex is nudged, in its own section, with no input behind it.
+    await expect(
+      page.locator('[data-testid="theme-kit-custom-color"] [data-testid="upgrade-nudge"][data-feature="custom_branding"]'),
+    ).toBeVisible()
+    await expect(page.getByTestId('theme-kit-theme-estructura')).toBeVisible()
+    await expect(page.getByTestId('theme-kit-custom-hex')).toHaveCount(0)
+    // Logo stays editable on every plan; the legacy colour field is gone.
     await expect(page.locator('#logo_url')).toBeVisible()
-    void brandingNudges
+    await expect(page.locator('#primary_color')).toHaveCount(0)
 
     const { data: course } = await admin
       .from('courses')
@@ -72,7 +76,20 @@ test.describe('Plan feature gates (#662)', () => {
 
     await page.goto(`${TENANT_BASE}/${LOCALE}/dashboard/admin/appearance`)
     await expect(page.locator('[data-testid="upgrade-nudge"]')).toHaveCount(0)
-    await expect(page.locator('#primary_color')).toBeVisible()
+    const customColor = page.getByTestId('theme-kit-custom-color')
+    await expect(customColor).toBeVisible()
+    // The hex field sits behind the "use a custom colour" toggle. Only press it
+    // while the field is hidden, so a retry never toggles it shut; a DOM click
+    // because a click can land before hydration attaches the handler.
+    const customHex = page.getByTestId('theme-kit-custom-hex')
+    await expect(async () => {
+      if (!(await customHex.isVisible())) {
+        await page
+          .getByTestId('theme-kit-custom-toggle')
+          .evaluate((el: HTMLElement) => el.click(), undefined, { timeout: 2_000 })
+      }
+      await expect(customHex).toBeVisible({ timeout: 2_000 })
+    }).toPass({ timeout: 30_000 })
   })
 
   test('public pricing table no longer sells API access', async ({ page }) => {

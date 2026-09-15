@@ -88,5 +88,5 @@ What a plan unlocks is `platform_plans.features`, enforced on the server by `lib
 
 Two more rules that are product decisions, not accidents:
 
-- **Custom branding (Business+) is colours, theme presets, radius and font.** A school's logo, favicon and name apply on every plan — a school must stay recognisable to its own students. Below Business the tenant's colours are ignored in favour of the platform palette.
+- **A school's look is open on every plan; only a custom brand colour is Business+.** Every plan picks one of the four kit themes and any of that theme's six recommended colours, and the logo, favicon and name apply on every plan — a school must stay recognisable to its own students. Fonts and corners come with the theme; there is no separate font or radius setting. A colour outside the theme's swatches is `custom_branding` (Business+): below that plan a stored custom colour renders as the theme's recommended colour, so the school keeps its theme. A school that never picked a theme renders the platform palette.
 - **The MCP server is open on every plan**, gated by role only. `api_access` is not a plan feature and does not appear in the pricing comparison.

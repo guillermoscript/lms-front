@@ -157,11 +157,12 @@ describe('primitives read the per-component corner tokens', () => {
 })
 
 describe('Kódigo dark default wiring (app/[locale]/layout.tsx)', () => {
-  it('passes the gated preset through defaultThemeFor and never forces a theme', () => {
-    expect(layoutSource).toContain('const defaultTheme = defaultThemeFor(tenantInfo?.theme_preset);')
+  it('passes the plan-resolved theme through defaultThemeFor and never forces a theme', () => {
+    expect(layoutSource).toContain('const defaultTheme = defaultThemeFor(tenantInfo?.theme);')
     expect(layoutSource).toContain('defaultTheme={defaultTheme}')
     expect(layoutSource).not.toMatch(/\bforcedTheme\s*=/)
-    // tenantInfo.theme_preset is null below Business (custom_branding gate).
-    expect(layoutSource).toMatch(/theme_preset: customBranding\s*\?/)
+    // tenantInfo.theme is the stored kit resolved against custom_branding (#763).
+    expect(layoutSource).toContain('theme: resolveSchoolTheme(')
+    expect(layoutSource).toMatch(/theme: resolveSchoolTheme\([^)]*\{ customBranding \}\)/)
   })
 })

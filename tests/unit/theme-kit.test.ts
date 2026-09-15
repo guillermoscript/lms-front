@@ -12,20 +12,27 @@ import {
   KIT_THEME_IDS,
   KIT_THEMES,
   KIT_TYPE_PAIRINGS,
+  SCHOOL_THEME_SETTING_KEY,
   defaultThemeFor,
   deriveKitStructure,
   deriveKitVars,
+  isKitSwatch,
   isKitThemeId,
+  kitButtonReadability,
   kitDefaultMode,
   normalizeKitBrand,
+  parseStoredKitTheme,
+  resolveSchoolTheme,
+  type KitButtonReadability,
   type KitThemeId,
+  type StoredKitTheme,
 } from '@/lib/themes/kit'
-import type { StoredPreset } from '@/lib/themes/presets'
 
 /**
- * Issues #761 and #762 — the theme kit engine. Every theme × brand × mode the
- * engine can emit has to clear WCAG AA for the pairs the UI actually paints,
- * and the surface a theme sits on must never move with the brand.
+ * Issues #761, #762 and #763 — the theme kit engine. Every theme × brand × mode
+ * the engine can emit has to clear WCAG AA for the pairs the UI actually
+ * paints, the surface a theme sits on must never move with the brand, and the
+ * stored choice is validated and plan-gated before anything renders it.
  */
 
 const MODES = ['light', 'dark'] as const
@@ -55,6 +62,8 @@ const SURFACE_KEYS = [
 ]
 
 const surfaceOf = (theme: KitThemeId) => KIT_SURFACES[KIT_THEMES[theme].surface]
+const hexesOf = (theme: KitThemeId) => KIT_THEMES[theme].swatches.map((swatch) => swatch.hex)
+const kit = (theme: KitThemeId, brand: string): StoredKitTheme => ({ type: 'kit', theme, brand })
 
 function assertReadable(theme: KitThemeId, brand: string, label: string) {
   const vars = deriveKitVars(theme, brand)
@@ -119,12 +128,47 @@ describe('theme kit data', () => {
     expect(DEFAULT_KIT_THEME).toBe('estructura')
   })
 
-  it('gives every theme exactly six #RRGGBB swatches', () => {
+  it('gives every theme exactly six distinct #RRGGBB swatches', () => {
     for (const id of KIT_THEME_IDS) {
       const { swatches } = KIT_THEMES[id]
       expect(swatches, id).toHaveLength(6)
-      for (const swatch of swatches) expect(swatch, `${id} ${swatch}`).toMatch(/^#[0-9A-F]{6}$/)
+      for (const swatch of swatches) expect(swatch.hex, `${id} ${swatch.name}`).toMatch(/^#[0-9A-F]{6}$/)
+      expect(new Set(hexesOf(id)).size, id).toBe(6)
     }
+  })
+
+  it('names every theme and swatch, since the picker shows them as-is in every locale', () => {
+    expect(Object.fromEntries(KIT_THEME_IDS.map((id) => [id, KIT_THEMES[id].name]))).toEqual({
+      estructura: 'Estructura',
+      andina: 'Andina',
+      kodigo: 'Kódigo',
+      luz: 'Luz',
+    })
+    for (const id of KIT_THEME_IDS) {
+      const names = KIT_THEMES[id].swatches.map((swatch) => swatch.name)
+      for (const name of names) {
+        expect(typeof name, id).toBe('string')
+        expect(name.trim(), id).not.toBe('')
+        expect(name, id).toBe(name.trim())
+      }
+      expect(new Set(names).size, `${id}: swatch names are unique`).toBe(6)
+    }
+  })
+
+  it('pins the recommended swatches and the ones the E2E spec picks', () => {
+    expect(Object.fromEntries(KIT_THEME_IDS.map((id) => [id, KIT_THEMES[id].swatches[0]]))).toEqual({
+      estructura: { hex: '#3A50B8', name: 'Tinta azul' },
+      andina: { hex: '#2F6B4F', name: 'Verde andino' },
+      kodigo: { hex: '#F2B705', name: 'Amarillo' },
+      luz: { hex: '#C2185B', name: 'Magenta' },
+    })
+    // tests/playwright/theme-kit-picker.spec.ts selects these by index 1.
+    expect(KIT_THEMES.andina.swatches[1]).toEqual({ hex: '#9A3F2C', name: 'Terracota' })
+    expect(KIT_THEMES.luz.swatches[1]).toEqual({ hex: '#E4572E', name: 'Coral' })
+  })
+
+  it('stores the choice under theme_preset', () => {
+    expect(SCHOOL_THEME_SETTING_KEY).toBe('theme_preset')
   })
 
   it('defines four surface sets and seats each theme on its own', () => {
@@ -179,13 +223,13 @@ describe('theme kit data', () => {
 describe('deriveKitVars — every swatch', () => {
   for (const id of KIT_THEME_IDS) {
     it(`${id}: all six swatches clear AA in light and dark`, () => {
-      for (const swatch of KIT_THEMES[id].swatches) {
-        const vars = assertReadable(id, swatch, swatch)
+      for (const { hex, name } of KIT_THEMES[id].swatches) {
+        const vars = assertReadable(id, hex, name)
         for (const mode of MODES) {
           const v = vars[mode]
           const s = surfaceOf(id)[mode]
-          const at = `${id} / ${swatch} / ${mode}`
-          expect(v['--brand'], `${at}: --brand`).toBe(swatch)
+          const at = `${id} / ${name} ${hex} / ${mode}`
+          expect(v['--brand'], `${at}: --brand`).toBe(hex)
           // Derived vars mirror each other.
           expect(v['--foreground'], at).toBe(s.foreground)
           expect(v['--muted-foreground'], at).toBe(s.mutedForeground)
@@ -195,7 +239,7 @@ describe('deriveKitVars — every swatch', () => {
           expect(v['--sidebar-primary-foreground'], at).toBe(v['--primary-foreground'])
           expect(v['--ring'], at).toBe(v['--brand-text'])
           expect(v['--sidebar-ring'], at).toBe(v['--brand-text'])
-          expect(v['--chart-4'], at).toBe(swatch)
+          expect(v['--chart-4'], at).toBe(hex)
         }
       }
     })
@@ -203,8 +247,8 @@ describe('deriveKitVars — every swatch', () => {
 
   it('never lets the brand move a surface token', () => {
     for (const id of KIT_THEME_IDS) {
-      const base = deriveKitVars(id, KIT_THEMES[id].swatches[0])
-      for (const brand of [...KIT_THEMES[id].swatches, '#000000', '#FFFFFF', '#767676', '#FF0000']) {
+      const base = deriveKitVars(id, KIT_THEMES[id].swatches[0].hex)
+      for (const brand of [...hexesOf(id), '#000000', '#FFFFFF', '#767676', '#FF0000']) {
         const vars = deriveKitVars(id, brand)
         for (const mode of MODES) {
           for (const key of SURFACE_KEYS) {
@@ -260,8 +304,9 @@ describe('deriveKitStructure', () => {
 
       expect(vars['--font-sans'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.body]))
       expect(vars['--font-heading'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.heading]))
+      // Always set, so a scoped preview never inherits the saved theme's mono.
       if (type.mono) expect(vars['--font-mono'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.mono]))
-      else expect(vars, id).not.toHaveProperty('--font-mono')
+      else expect(vars['--font-mono'], id).toMatch(stackOf('--font-geist-mono'))
 
       expect(vars['--radius'], id).toBe(corners.base)
       expect(vars['--radius-button'], id).toBe(corners.button)
@@ -286,7 +331,7 @@ describe('deriveKitStructure', () => {
     const andina = deriveKitStructure('andina')
     expect(andina['--font-heading']).toBe('var(--font-lora), ui-serif, Georgia, serif')
     expect(andina['--font-sans']).toBe('var(--font-public-sans), ui-sans-serif, system-ui, sans-serif')
-    expect(andina).not.toHaveProperty('--font-mono')
+    expect(andina['--font-mono']).toBe('var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace')
   })
 
   it('soft corners reproduce the platform defaults', () => {
@@ -327,27 +372,212 @@ describe('kitDefaultMode', () => {
 })
 
 describe('defaultThemeFor (the layout reads its next-themes default from this)', () => {
-  it('opens a Kódigo kit dark', () => {
-    expect(defaultThemeFor({ type: 'kit', theme: 'kodigo', brand: '#F2B705' })).toBe('dark')
+  it('opens a Kódigo theme dark', () => {
+    expect(defaultThemeFor(kit('kodigo', '#F2B705'))).toBe('dark')
   })
 
-  it('keeps every other preset, and no preset, on the system mode', () => {
+  it('keeps every other theme, and no theme, on the system mode', () => {
     for (const id of ['estructura', 'andina', 'luz'] as const) {
-      expect(defaultThemeFor({ type: 'kit', theme: id, brand: '#000000' }), id).toBe('system')
+      expect(defaultThemeFor(kit(id, '#000000')), id).toBe('system')
     }
-    expect(defaultThemeFor({ type: 'curated', id: 'default' })).toBe('system')
-    expect(defaultThemeFor({ type: 'custom', id: 'x' })).toBe('system')
     expect(defaultThemeFor(null)).toBe('system')
     expect(defaultThemeFor(undefined)).toBe('system')
   })
 
-  it('treats a malformed kit preset as Estructura, which is system', () => {
-    // tenant_settings is jsonb: what comes back is not guaranteed to match the type.
-    const stored = (value: unknown) => value as StoredPreset
+  it('follows the plan-resolved theme: Kódigo with a locked custom colour still opens dark', () => {
+    const resolved = resolveSchoolTheme(kit('kodigo', '#123456'), { customBranding: false })
+    expect(defaultThemeFor(resolved)).toBe('dark')
+    // A legacy row resolves to nothing, whatever it claims to be.
+    const legacy = resolveSchoolTheme({ type: 'curated', id: 'x', theme: 'kodigo' }, { customBranding: true })
+    expect(legacy).toBeNull()
+    expect(defaultThemeFor(legacy)).toBe('system')
+  })
+
+  it('treats a malformed theme as Estructura, which is system', () => {
+    // A cast stands in for a value that skipped resolveSchoolTheme.
+    const stored = (value: unknown) => value as StoredKitTheme
     expect(defaultThemeFor(stored({ type: 'kit' }))).toBe('system')
     expect(defaultThemeFor(stored({ type: 'kit', theme: 'Kodigo' }))).toBe('system')
-    // A dark theme stored under a non-kit type never opens dark.
-    expect(defaultThemeFor(stored({ type: 'curated', id: 'x', theme: 'kodigo' }))).toBe('system')
+  })
+})
+
+describe('isKitSwatch', () => {
+  it("accepts each of a theme's own swatches, whatever the case or padding", () => {
+    for (const id of KIT_THEME_IDS) {
+      for (const hex of hexesOf(id)) {
+        expect(isKitSwatch(id, hex), `${id} ${hex}`).toBe(true)
+        expect(isKitSwatch(id, ` ${hex.toLowerCase()} `), `${id} ${hex} lowercase`).toBe(true)
+      }
+    }
+  })
+
+  it("treats another theme's swatch or a near miss as a custom colour", () => {
+    expect(isKitSwatch('andina', '#3A50B8')).toBe(false) // Estructura's Tinta azul
+    expect(isKitSwatch('kodigo', '#9A3F2C')).toBe(false) // Andina's Terracota
+    expect(isKitSwatch('andina', '#9A3F2D')).toBe(false)
+    expect(isKitSwatch('luz', '')).toBe(false)
+    // Bosque / Verde andino is shared by Estructura and Andina, and a swatch of both.
+    expect(isKitSwatch('estructura', '#2F6B4F')).toBe(true)
+    expect(isKitSwatch('andina', '#2F6B4F')).toBe(true)
+  })
+})
+
+describe('parseStoredKitTheme', () => {
+  it('accepts a kit with a known theme and a #RRGGBB brand, uppercasing the brand', () => {
+    expect(parseStoredKitTheme({ type: 'kit', theme: 'andina', brand: '#9A3F2C' })).toEqual(kit('andina', '#9A3F2C'))
+    expect(parseStoredKitTheme({ type: 'kit', theme: 'luz', brand: ' #e4572e ' })).toEqual(kit('luz', '#E4572E'))
+    // A custom colour is valid data; whether it renders is the plan's call.
+    expect(parseStoredKitTheme({ type: 'kit', theme: 'kodigo', brand: '#123456' })).toEqual(kit('kodigo', '#123456'))
+  })
+
+  it('keeps only the three fields, dropping anything else stored alongside', () => {
+    const parsed = parseStoredKitTheme({
+      type: 'kit',
+      theme: 'andina',
+      brand: '#9A3F2C',
+      radius: '1rem',
+      fontFamily: 'Lora',
+      variables: { light: { '--primary': 'red' } },
+    })
+    expect(parsed).toEqual(kit('andina', '#9A3F2C'))
+    expect(Object.keys(parsed!).sort()).toEqual(['brand', 'theme', 'type'])
+  })
+
+  it('rejects anything else as null, since tenant admins can write the jsonb directly', () => {
+    const malformed: unknown[] = [
+      null,
+      undefined,
+      'andina',
+      42,
+      true,
+      [],
+      {},
+      ['kit', 'andina', '#9A3F2C'],
+      // The legacy shapes the kit replaced.
+      { type: 'curated', id: 'default' },
+      { type: 'custom', id: 'custom-x', variables: { light: {}, dark: {} } },
+      { type: 'curated', theme: 'andina', brand: '#9A3F2C' },
+      { theme: 'andina', brand: '#9A3F2C' },
+      // Kit with a bad theme.
+      { type: 'kit', brand: '#9A3F2C' },
+      { type: 'kit', theme: 'Andina', brand: '#9A3F2C' },
+      { type: 'kit', theme: 'kódigo', brand: '#F2B705' },
+      { type: 'kit', theme: 42, brand: '#9A3F2C' },
+      // Kit with a bad brand.
+      { type: 'kit', theme: 'andina' },
+      { type: 'kit', theme: 'andina', brand: null },
+      { type: 'kit', theme: 'andina', brand: 42 },
+      { type: 'kit', theme: 'andina', brand: '' },
+      { type: 'kit', theme: 'andina', brand: '#fff' },
+      { type: 'kit', theme: 'andina', brand: '9A3F2C' },
+      { type: 'kit', theme: 'andina', brand: '#9A3F2C0' },
+      { type: 'kit', theme: 'andina', brand: '#12345G' },
+      { type: 'kit', theme: 'andina', brand: 'red' },
+      { type: 'kit', theme: 'andina', brand: 'oklch(0.5 0.1 30)' },
+    ]
+    for (const value of malformed) expect(parseStoredKitTheme(value), JSON.stringify(value)).toBeNull()
+  })
+})
+
+describe('resolveSchoolTheme (the plan gate at render time)', () => {
+  const FREE = { customBranding: false }
+  const BUSINESS = { customBranding: true }
+
+  it('renders every theme with any of its swatches on every plan', () => {
+    for (const id of KIT_THEME_IDS) {
+      for (const hex of hexesOf(id)) {
+        expect(resolveSchoolTheme(kit(id, hex), FREE), `${id} ${hex} free`).toEqual(kit(id, hex))
+        expect(resolveSchoolTheme(kit(id, hex), BUSINESS), `${id} ${hex} business`).toEqual(kit(id, hex))
+      }
+    }
+    expect(resolveSchoolTheme({ type: 'kit', theme: 'andina', brand: '#9a3f2c' }, FREE)).toEqual(kit('andina', '#9A3F2C'))
+  })
+
+  it('keeps the theme but falls back to its recommended swatch for a custom colour below Business', () => {
+    expect(resolveSchoolTheme(kit('luz', '#E53935'), FREE)).toEqual(kit('luz', '#C2185B'))
+    expect(resolveSchoolTheme(kit('kodigo', '#767676'), FREE)).toEqual(kit('kodigo', '#F2B705'))
+    // Another theme's swatch is a custom colour for this one.
+    expect(resolveSchoolTheme(kit('andina', '#3A50B8'), FREE)).toEqual(kit('andina', '#2F6B4F'))
+  })
+
+  it('renders a custom colour as stored with custom_branding', () => {
+    expect(resolveSchoolTheme(kit('luz', '#E53935'), BUSINESS)).toEqual(kit('luz', '#E53935'))
+    expect(resolveSchoolTheme({ type: 'kit', theme: 'andina', brand: '#3a50b8' }, BUSINESS)).toEqual(kit('andina', '#3A50B8'))
+  })
+
+  it('is null (the platform palette) for nothing stored or anything malformed, on every plan', () => {
+    for (const value of [null, undefined, {}, { type: 'curated', id: 'default' }, { type: 'kit', theme: 'nope', brand: '#9A3F2C' }, { type: 'kit', theme: 'andina', brand: 'red' }]) {
+      expect(resolveSchoolTheme(value, FREE), JSON.stringify(value)).toBeNull()
+      expect(resolveSchoolTheme(value, BUSINESS), JSON.stringify(value)).toBeNull()
+    }
+  })
+
+  it('does not mutate the stored value it is given', () => {
+    const stored = kit('luz', '#E53935')
+    resolveSchoolTheme(stored, FREE)
+    expect(stored).toEqual(kit('luz', '#E53935'))
+  })
+})
+
+describe('kitButtonReadability (the picker\'s readability line)', () => {
+  // Computed with the real engine; judged on each theme's default mode.
+  const EXPECTED: Record<KitThemeId, KitButtonReadability[]> = {
+    estructura: ['light-ink', 'light-ink', 'light-ink', 'light-ink', 'light-ink', 'light-ink'],
+    andina: ['light-ink', 'light-ink', 'light-ink', 'light-ink', 'light-ink', 'light-ink'],
+    kodigo: ['dark-ink', 'dark-ink', 'dark-ink', 'dark-ink', 'dark-ink', 'dark-ink'],
+    luz: ['light-ink', 'dark-ink', 'light-ink', 'light-ink', 'dark-ink', 'dark-ink'],
+  }
+
+  it('reads white or dark ink for every recommended swatch, never a shifted shade', () => {
+    for (const id of KIT_THEME_IDS) {
+      expect(hexesOf(id).map((hex) => kitButtonReadability(id, hex)), id).toEqual(EXPECTED[id])
+      for (const hex of hexesOf(id)) {
+        // Unshifted means the button is the swatch itself, in both modes.
+        const vars = deriveKitVars(id, hex)
+        expect(vars.light['--primary'], `${id} ${hex} light`).toBe(hex)
+        expect(vars.dark['--primary'], `${id} ${hex} dark`).toBe(hex)
+      }
+    }
+    expect(kitButtonReadability('andina', '#9A3F2C')).toBe('light-ink')
+  })
+
+  it('matches the ink the button actually gets', () => {
+    for (const id of KIT_THEME_IDS) {
+      const mode = KIT_THEMES[id].defaultMode === 'dark' ? 'dark' : 'light'
+      for (const hex of hexesOf(id)) {
+        const ink = deriveKitVars(id, hex)[mode]['--primary-foreground']
+        expect(ink, `${id} ${hex}`).toBe(kitButtonReadability(id, hex) === 'dark-ink' ? KIT_DARK_INK : KIT_LIGHT_INK)
+      }
+    }
+  })
+
+  it('shifts a custom colour deeper on a light theme', () => {
+    const brand = '#E53935'
+    expect(kitButtonReadability('luz', brand)).toBe('shifted-deeper')
+    expect(kitButtonReadability('estructura', brand)).toBe('shifted-deeper')
+    const { light } = deriveKitVars('luz', brand)
+    expect(light['--primary']).not.toBe(brand)
+    expect(light['--primary-foreground']).toBe(KIT_LIGHT_INK)
+    const lightness = (c: string) => rgbToOklch(parseColor(c)!)[0]
+    expect(lightness(light['--primary'])).toBeLessThan(lightness(brand))
+  })
+
+  it('shifts a custom colour lighter on Kódigo, which opens dark', () => {
+    const brand = '#767676'
+    expect(kitButtonReadability('kodigo', brand)).toBe('shifted-lighter')
+    const { dark } = deriveKitVars('kodigo', brand)
+    expect(dark['--primary']).not.toBe(brand)
+    expect(dark['--primary-foreground']).toBe(KIT_DARK_INK)
+    const lightness = (c: string) => rgbToOklch(parseColor(c)!)[0]
+    expect(lightness(dark['--primary'])).toBeGreaterThan(lightness(brand))
+  })
+
+  it('normalizes its input like the rest of the engine', () => {
+    expect(kitButtonReadability('kodigo', '#f2b705')).toBe('dark-ink')
+    // Bad brand = the theme's recommended swatch; unknown theme = Estructura.
+    expect(kitButtonReadability('kodigo', 'yellow')).toBe(kitButtonReadability('kodigo', '#F2B705'))
+    expect(kitButtonReadability('nope', '#767676')).toBe('shifted-deeper')
+    expect(kitButtonReadability(null, null)).toBe('light-ink')
   })
 })
 
@@ -413,10 +643,11 @@ describe('deriveKitVars — normalization', () => {
 
   it("falls back to the theme's first swatch for a bad brand", () => {
     for (const id of KIT_THEME_IDS) {
-      const expected = deriveKitVars(id, KIT_THEMES[id].swatches[0])
+      const recommended = KIT_THEMES[id].swatches[0].hex
+      const expected = deriveKitVars(id, recommended)
       for (const brand of ['red', '#fff', 'oklch(0.5 0.1 30)', null, 42, undefined, '#12345G']) {
         expect(deriveKitVars(id, brand), `${id} / ${String(brand)}`).toEqual(expected)
-        expect(normalizeKitBrand(id, brand)).toBe(KIT_THEMES[id].swatches[0])
+        expect(normalizeKitBrand(id, brand)).toBe(recommended)
       }
     }
   })

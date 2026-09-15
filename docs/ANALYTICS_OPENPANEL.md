@@ -552,7 +552,7 @@ Mostly covered by Loops B and E. Additions:
 
 | Surface | Pri | Events |
 |---|---|---|
-| `/appearance` (theming) | P1 | `theme_customized` `{preset, custom}` — a **strong activation proxy**: an owner who brands their school is invested |
+| `/appearance` (theming) | P1 | `theme_customized` `{theme, custom, change}` — a **strong activation proxy**: an owner who brands their school is invested |
 | `/users`, `/enrollments` | P1 | `student_invited`, `invite_link_copied` — how schools actually grow their roster |
 | `/community/moderation` | P2 | `moderation_action_taken` `{action}` — moderation load per school |
 | `/notifications/templates` | P2 | `notification_template_edited` |

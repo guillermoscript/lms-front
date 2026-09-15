@@ -11,7 +11,7 @@ import { FEATURE_REQUIRED_PLAN, PLAN_FEATURE_LABELS, PLAN_PRICES, type PlanFeatu
  * Extra one-line explanation for tiered features, keyed into
  * `featureGate.*` — e.g. what "basic" analytics leaves out.
  */
-export type UpgradeNudgeHint = 'analyticsBasic' | 'certificatesBasic' | 'brandingLocked'
+export type UpgradeNudgeHint = 'analyticsBasic' | 'certificatesBasic' | 'customColorLocked'
 
 interface UpgradeNudgeProps {
   feature: keyof PlanFeatures | string

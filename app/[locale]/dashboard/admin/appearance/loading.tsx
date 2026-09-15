@@ -1,7 +1,8 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** Mirrors dashboard/admin/appearance/page.tsx: header w/ breadcrumb + title,
- * two-column grid — theme preview left, theme + branding cards right. */
+/** Mirrors dashboard/admin/appearance/page.tsx: header with breadcrumb and
+ * title; the theme kit picker (panel beside the phone preview on xl, the school
+ * page preview below from md); then the logo and favicon card. */
 export default function Loading() {
   return (
     <div className="min-h-screen bg-background" aria-busy="true">
@@ -13,37 +14,54 @@ export default function Loading() {
         </div>
       </header>
 
-      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[1fr,400px]">
-          {/* Preview */}
-          <div className="order-2 lg:order-1">
-            <Skeleton className="h-[480px] w-full rounded-xl" />
-          </div>
-
-          {/* Theme controls + Branding */}
-          <div className="order-1 space-y-6 lg:order-2">
-            <div className="rounded-xl border p-5 space-y-4">
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-48" />
-              </div>
+      <main className="mx-auto container flex flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,400px)_minmax(0,1fr)]">
+          {/* Picker panel */}
+          <div className="flex flex-col gap-5 rounded-card p-5 ring-1 ring-foreground/10">
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-3 w-16" />
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-15 w-full rounded-lg" />
+              ))}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-3 w-16" />
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                  <Skeleton key={i} className="h-22 w-full rounded-lg" />
                 ))}
               </div>
+              <Skeleton className="h-12 w-full rounded-lg" />
             </div>
-
-            <div className="rounded-xl border p-5 space-y-4">
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-56" />
-              </div>
-              <Skeleton className="h-9 w-full rounded-md" />
-              <Skeleton className="h-9 w-full rounded-md" />
-              <Skeleton className="h-24 w-full rounded-md" />
-            </div>
+            <Skeleton className="h-10 w-full rounded-button" />
           </div>
+
+          {/* Lesson on a phone */}
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-[760px] w-full max-w-[390px] rounded-[2rem]" />
+          </div>
+
+          {/* School page */}
+          <div className="hidden flex-col gap-2 md:flex xl:col-span-2">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-[640px] w-full rounded-xl" />
+          </div>
+        </div>
+
+        {/* Logo and favicon */}
+        <div className="flex max-w-2xl flex-col gap-4 rounded-card p-5 ring-1 ring-foreground/10">
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+          <Skeleton className="h-9 w-full rounded-input" />
+          <Skeleton className="h-9 w-full rounded-input" />
         </div>
       </main>
     </div>

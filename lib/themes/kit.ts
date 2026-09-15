@@ -1,13 +1,16 @@
 /**
- * Theme kit engine (issues #761, #762; epic #766).
+ * Theme kit engine (issues #761, #762, #763; epic #766).
  *
  * A school picks one of four themes and one brand colour; everything else —
  * surfaces, button ink, accent text, tint, focus ring, chart ramp, type
  * pairing, corners, default light/dark mode — is derived here so every
  * combination clears WCAG AA in light and dark mode.
  *
- * Stored as `{ type: 'kit', theme, brand }` in `tenant_settings.theme_preset`
- * (see `StoredPreset` in `./presets`) and resolved by `TenantCssVarsServer`.
+ * The kit is the only theming model: a school's choice is stored as
+ * `{ type: 'kit', theme, brand }` under `tenant_settings.theme_preset`
+ * (`StoredKitTheme`), resolved against the plan by `resolveSchoolTheme` and
+ * written as CSS variables by `TenantCssVarsServer`. No row means the platform
+ * palette in `app/globals.css`.
  *
  * Derived colours are concrete hex computed in TypeScript rather than CSS
  * `color-mix()`: the unit tests can assert the real contrast ratios, and phase
@@ -17,7 +20,8 @@
 
 import { accentTextOn, mixOklch, readableButton } from '@/lib/color/contrast'
 
-import type { CSSVariableMap, StoredPreset } from './presets'
+/** CSS custom property name → value, e.g. `{ '--primary': '#3A50B8' }`. */
+export type CSSVariableMap = Record<string, string>
 
 export const KIT_THEME_IDS = ['estructura', 'andina', 'kodigo', 'luz'] as const
 export type KitThemeId = (typeof KIT_THEME_IDS)[number]
@@ -47,15 +51,24 @@ export interface KitSurfaceSet {
   dark: KitSurface
 }
 
+export interface KitSwatch {
+  /** `#RRGGBB`, uppercase. */
+  hex: string
+  /** A proper name from the design canvas, shown as-is in every locale. */
+  name: string
+}
+
 export interface KitTheme {
   id: KitThemeId
+  /** A proper name, shown as-is in every locale. */
+  name: string
   surface: KitSurfaceId
   /** Never forced: the mode toggle still switches to the other half of the surface set. */
   defaultMode: KitDefaultMode
   typePairing: KitTypePairingId
   corners: KitCornerStyle
-  /** Six `#RRGGBB` brand swatches; the first is the recommended one. */
-  swatches: readonly string[]
+  /** Six recommended brand colours; the first is the recommended one. */
+  swatches: readonly KitSwatch[]
 }
 
 /** Ink on a filled brand button when the button is dark. */
@@ -161,35 +174,67 @@ export const KIT_SURFACES: Record<KitSurfaceId, KitSurfaceSet> = {
 export const KIT_THEMES: Record<KitThemeId, KitTheme> = {
   estructura: {
     id: 'estructura',
+    name: 'Estructura',
     surface: 'cool',
     defaultMode: 'system',
     typePairing: 'structured',
     corners: 'soft',
-    swatches: ['#3A50B8', '#0E7C86', '#2F6B4F', '#6B3FA0', '#B5462F', '#2B2F3A'],
+    swatches: [
+      { hex: '#3A50B8', name: 'Tinta azul' },
+      { hex: '#0E7C86', name: 'Petróleo' },
+      { hex: '#2F6B4F', name: 'Bosque' },
+      { hex: '#6B3FA0', name: 'Ciruela' },
+      { hex: '#B5462F', name: 'Ladrillo' },
+      { hex: '#2B2F3A', name: 'Grafito' },
+    ],
   },
   andina: {
     id: 'andina',
+    name: 'Andina',
     surface: 'warm',
     defaultMode: 'system',
     typePairing: 'classic',
     corners: 'soft',
-    swatches: ['#2F6B4F', '#9A3F2C', '#1F4E79', '#8A6414', '#5B3A6E', '#5A3A2A'],
+    swatches: [
+      { hex: '#2F6B4F', name: 'Verde andino' },
+      { hex: '#9A3F2C', name: 'Terracota' },
+      { hex: '#1F4E79', name: 'Añil' },
+      { hex: '#8A6414', name: 'Ocre' },
+      { hex: '#5B3A6E', name: 'Quinoa' },
+      { hex: '#5A3A2A', name: 'Cacao' },
+    ],
   },
   kodigo: {
     id: 'kodigo',
+    name: 'Kódigo',
     surface: 'dark',
     defaultMode: 'dark',
     typePairing: 'plain',
     corners: 'sharp',
-    swatches: ['#F2B705', '#3DDC97', '#4CC9F0', '#FF7A3D', '#C8A2FF', '#FF5C8A'],
+    swatches: [
+      { hex: '#F2B705', name: 'Amarillo' },
+      { hex: '#3DDC97', name: 'Terminal' },
+      { hex: '#4CC9F0', name: 'Cian' },
+      { hex: '#FF7A3D', name: 'Naranja' },
+      { hex: '#C8A2FF', name: 'Lila' },
+      { hex: '#FF5C8A', name: 'Rosa' },
+    ],
   },
   luz: {
     id: 'luz',
+    name: 'Luz',
     surface: 'neutral',
     defaultMode: 'system',
     typePairing: 'friendly',
     corners: 'round',
-    swatches: ['#C2185B', '#E4572E', '#7B2CBF', '#0077B6', '#1F9D8F', '#F4A261'],
+    swatches: [
+      { hex: '#C2185B', name: 'Magenta' },
+      { hex: '#E4572E', name: 'Coral' },
+      { hex: '#7B2CBF', name: 'Violeta' },
+      { hex: '#0077B6', name: 'Océano' },
+      { hex: '#1F9D8F', name: 'Turquesa' },
+      { hex: '#F4A261', name: 'Durazno' },
+    ],
   },
 }
 
@@ -264,8 +309,64 @@ export function normalizeKitBrand(theme: KitThemeId, brand: unknown): string {
     const trimmed = brand.trim()
     if (BRAND_HEX.test(trimmed)) return trimmed.toUpperCase()
   }
-  return KIT_THEMES[theme].swatches[0]
+  return KIT_THEMES[theme].swatches[0].hex
 }
+
+/** Whether `brand` is one of `theme`'s six recommended swatches (case-insensitive). */
+export function isKitSwatch(theme: KitThemeId, brand: string): boolean {
+  const hex = brand.trim().toUpperCase()
+  return KIT_THEMES[theme].swatches.some((swatch) => swatch.hex === hex)
+}
+
+// ─── The stored choice ──────────────────────────────────────────────────────
+
+/** The `tenant_settings.setting_key` holding a school's theme. */
+export const SCHOOL_THEME_SETTING_KEY = 'theme_preset'
+
+/**
+ * A school's theme as stored in `tenant_settings.setting_value`. `type` keeps
+ * the jsonb self-describing; `brand` is `#RRGGBB` uppercase and is either one
+ * of the theme's swatches or a custom colour (Business+).
+ */
+export interface StoredKitTheme {
+  type: 'kit'
+  theme: KitThemeId
+  brand: string
+}
+
+/**
+ * Validates a raw `setting_value`. Anything that is not a kit with a known
+ * theme and a `#RRGGBB` brand is `null` — the jsonb can be written by any
+ * tenant admin under RLS, so nothing downstream trusts its shape.
+ */
+export function parseStoredKitTheme(value: unknown): StoredKitTheme | null {
+  if (!value || typeof value !== 'object') return null
+  const { type, theme, brand } = value as Record<string, unknown>
+  if (type !== 'kit' || !isKitThemeId(theme) || typeof brand !== 'string') return null
+  const hex = brand.trim()
+  if (!BRAND_HEX.test(hex)) return null
+  return { type: 'kit', theme, brand: hex.toUpperCase() }
+}
+
+/**
+ * The theme a school actually renders with: its stored choice, gated by plan.
+ * Every plan gets its theme and a recommended swatch; a custom brand colour
+ * needs `custom_branding`, and without it the school keeps its theme on that
+ * theme's recommended swatch. `null` (nothing valid stored) means the platform
+ * palette. This is the enforcement point — the server action checks the same
+ * rule, but only for writes that go through it.
+ */
+export function resolveSchoolTheme(
+  value: unknown,
+  { customBranding }: { customBranding: boolean }
+): StoredKitTheme | null {
+  const stored = parseStoredKitTheme(value)
+  if (!stored) return null
+  if (customBranding || isKitSwatch(stored.theme, stored.brand)) return stored
+  return { ...stored, brand: KIT_THEMES[stored.theme].swatches[0].hex }
+}
+
+// ─── Derivation ─────────────────────────────────────────────────────────────
 
 function deriveMode(s: KitSurface, brand: string): CSSVariableMap {
   const btn = readableButton(brand, {
@@ -287,9 +388,8 @@ function deriveMode(s: KitSurface, brand: string): CSSVariableMap {
     '--muted-foreground': s.mutedForeground,
     '--secondary': s.muted,
     '--secondary-foreground': s.foreground,
-    // The highlight fill of menu, select and combobox items. Neutral, as in
-    // most curated presets: a brand fill under foreground text is unreadable
-    // for a dark brand in light mode.
+    // The highlight fill of menu, select and combobox items. Neutral: a brand
+    // fill under foreground text is unreadable for a dark brand in light mode.
     '--accent': s.muted,
     '--accent-foreground': s.foreground,
     '--border': s.border,
@@ -339,11 +439,16 @@ function fontStack(family: KitFontFamily): string {
   return `var(${KIT_FONT_VARIABLES[family]}), ${FONT_GENERIC[family]}`
 }
 
+/** The platform monospace (`app/globals.css`), for pairings without their own. */
+const PLATFORM_MONO_STACK = 'var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace'
+
 /**
  * The mode-independent variables for a theme: its type pairing mapped onto
- * `--font-sans` / `--font-heading` (and `--font-mono` when the pairing has a
- * real monospace), and its corner style mapped onto `--radius` plus the
- * per-component radius tokens. An unknown theme is Estructura.
+ * `--font-sans` / `--font-heading` / `--font-mono` (the platform monospace
+ * when the pairing has none), and its corner style mapped onto `--radius` plus
+ * the per-component radius tokens. The map is complete, so an element scoped
+ * to it — the picker's preview — never inherits a role from the saved theme on
+ * `:root`. An unknown theme is Estructura.
  */
 export function deriveKitStructure(theme: unknown): CSSVariableMap {
   const t = kitTheme(theme)
@@ -352,13 +457,33 @@ export function deriveKitStructure(theme: unknown): CSSVariableMap {
   const vars: CSSVariableMap = {
     '--font-sans': fontStack(type.body),
     '--font-heading': fontStack(type.heading),
+    '--font-mono': type.mono ? fontStack(type.mono) : PLATFORM_MONO_STACK,
   }
-  if (type.mono) vars['--font-mono'] = fontStack(type.mono)
   vars['--radius'] = corners.base
   vars['--radius-button'] = corners.button
   vars['--radius-card'] = corners.card
   vars['--radius-input'] = corners.input
   return vars
+}
+
+/**
+ * How a filled brand button stays readable, for the picker's readability line:
+ * white ink, dark ink, or a shade shifted deeper (light surface) / lighter
+ * (dark surface) because neither ink reaches AA on the colour as picked.
+ * Judged on the surface students first see — the theme's default mode.
+ */
+export type KitButtonReadability = 'light-ink' | 'dark-ink' | 'shifted-deeper' | 'shifted-lighter'
+
+export function kitButtonReadability(theme: unknown, brand: unknown): KitButtonReadability {
+  const t = kitTheme(theme)
+  const s = KIT_SURFACES[t.surface][t.defaultMode === 'dark' ? 'dark' : 'light']
+  const btn = readableButton(normalizeKitBrand(t.id, brand), {
+    dark: s.dark,
+    lightInk: KIT_LIGHT_INK,
+    darkInk: KIT_DARK_INK,
+  })
+  if (btn.shifted) return s.dark ? 'shifted-lighter' : 'shifted-deeper'
+  return btn.ink === KIT_DARK_INK ? 'dark-ink' : 'light-ink'
 }
 
 /** The next-themes `defaultTheme` for a kit theme; an unknown theme is Estructura's. */
@@ -367,10 +492,10 @@ export function kitDefaultMode(theme: unknown): KitDefaultMode {
 }
 
 /**
- * The next-themes `defaultTheme` for a school's stored preset: its kit theme's
- * default mode, or `'system'` for anything that is not a kit. Pass the
- * plan-gated preset, so a school without custom branding never opens dark.
+ * The next-themes `defaultTheme` for a school: its theme's default mode, or
+ * `'system'` on the platform palette. Pass the plan-resolved theme
+ * (`resolveSchoolTheme`), the same value the CSS variables come from.
  */
-export function defaultThemeFor(preset: StoredPreset | null | undefined): KitDefaultMode {
-  return preset?.type === 'kit' ? kitDefaultMode(preset.theme) : 'system'
+export function defaultThemeFor(theme: StoredKitTheme | null | undefined): KitDefaultMode {
+  return theme ? kitDefaultMode(theme.theme) : 'system'
 }

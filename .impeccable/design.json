@@ -450,7 +450,7 @@
       },
       {
         "name": "The One Sans Rule",
-        "body": "There is exactly one sans in the system, bound to --font-sans, and every text role resolves through it. Display is that face at weight 700, not a second family. Adding a display or heading font is prohibited: it doubles the font payload for the mid-range-Android baseline, and because tenants override --font-sans, a hardcoded second face would pair a school's chosen font against one they never picked. Geist Mono is the only other family, and it earns its place by doing work no sans can do. Geist Sans was previously loaded with no consumer and has been removed.",
+        "body": "By default there is exactly one sans in the system, bound to --font-sans, and every text role resolves through it. Display is that face at weight 700, not a second family. The platform never adds a display or heading font of its own: it would double the font payload for the mid-range-Android baseline, and a hardcoded second face would clash with the pairing a school's theme brings. The heading font is per theme: each kit theme carries a type pairing (KIT_TYPE_PAIRINGS in lib/themes/kit.ts) whose heading face arrives only through --font-heading, and a school gets it by picking the theme, never by picking a font. Noto Sans and Geist Mono stay preloaded for every school. Kit families are not: their @font-face rules ship in the root CSS on every route, but a font file downloads only when a school's theme renders text in it. Geist Mono is the only other platform family, and it earns its place by doing work no sans can do.",
         "section": "typography"
       },
       {

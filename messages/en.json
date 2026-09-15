@@ -2236,71 +2236,7 @@
       },
       "appearance": {
         "title": "Appearance",
-        "description": "Customize how your school looks. Changes apply to all students and teachers immediately.",
-        "theme": {
-          "title": "Theme",
-          "description": "Pick a color theme, font, and border radius. Or enter a preset code from shadcn/ui.",
-          "shuffle": "Shuffle",
-          "shuffleHint": "Randomly combine a color theme, font, and border radius",
-          "shuffleSuccess": "Shuffled: {theme} + {font} + {radius} radius — reload to see",
-          "shuffleFailed": "Some changes failed — try again",
-          "colorTheme": "Color Theme",
-          "borderRadius": "Border Radius",
-          "borderRadiusHint": "Controls the roundness of buttons, cards, inputs, and other elements.",
-          "fontFamily": "Font Family",
-          "fontFamilyHint": "Choose a font for your school. All fonts are loaded from Google Fonts.",
-          "customCode": "Custom Preset Code",
-          "customCodeHint": "Enter a preset code from <link>shadcn/ui create</link>. The full theme (colors, radius, font) will be applied from the preset.",
-          "customCodePlaceholder": "e.g. a1D4cMfA",
-          "customCodeActive": "Active: {code}",
-          "apply": "Apply",
-          "reset": "Reset",
-          "resetTitle": "Reset to Default",
-          "resetDescription": "Revert to the platform's default purple theme",
-          "applySuccess": "Theme applied — reload to see the full effect",
-          "applyFailed": "Failed to apply preset",
-          "customApplySuccess": "Custom preset applied — reload to see the full effect",
-          "customApplyFailed": "Failed to apply custom preset",
-          "radiusSuccess": "Border radius updated — reload to see the full effect",
-          "radiusFailed": "Failed to update radius",
-          "fontSuccess": "Font updated — reload to see the full effect",
-          "fontFailed": "Failed to update font",
-          "resetSuccess": "Theme reset to default",
-          "resetFailed": "Failed to reset theme"
-        },
-        "preview": {
-          "title": "Live Preview",
-          "courseTitle": "Introduction to Design",
-          "courseDescription": "Learn the fundamentals of UI/UX design",
-          "published": "Published",
-          "lessons": "12 lessons",
-          "complete": "{value}% complete",
-          "components": "Components",
-          "componentsDescription": "Buttons, inputs, and badges",
-          "primary": "Primary",
-          "secondary": "Secondary",
-          "outline": "Outline",
-          "delete": "Delete",
-          "emailLabel": "Email address",
-          "emailPlaceholder": "student@example.com",
-          "notifications": "Notifications",
-          "assignmentGraded": "Assignment graded",
-          "achievementUnlocked": "Achievement unlocked",
-          "newStudentEnrolled": "New student enrolled",
-          "timeAgo2m": "2m ago",
-          "timeAgo1h": "1h ago",
-          "timeAgo3h": "3h ago",
-          "dashboardStats": "Dashboard Stats",
-          "dashboardStatsDescription": "Your school at a glance",
-          "students": "Students",
-          "courses": "Courses",
-          "revenue": "Revenue",
-          "completion": "Completion"
-        },
-        "settingsLink": {
-          "title": "Open Appearance Editor",
-          "description": "Color themes, fonts, border radius, and live preview"
-        }
+        "description": "Customize how your school looks. Changes apply to all students and teachers immediately."
       },
       "error": {
         "title": "Admin panel error",
@@ -2366,7 +2302,7 @@
           "configureSchoolDesc": "Set your school name and basic details.",
           "configureSchoolTime": "~1 min",
           "brandSchool": "Brand your school",
-          "brandSchoolDesc": "Pick a theme, colors, and fonts. Optional — the defaults look great.",
+          "brandSchoolDesc": "Pick a theme and a colour for your school. Optional: the platform look works too.",
           "brandSchoolTime": "~2 min",
           "connectPayments": "Set up how you get paid",
           "connectPaymentsDesc": "Choose manual payments, Stripe, or another available provider.",
@@ -3314,8 +3250,8 @@
             "description": "Configure course enrollment rules and student access policies"
           },
           "branding": {
-            "title": "Branding Settings",
-            "description": "Customize your platform's visual identity — logo, colors, and favicon"
+            "title": "Logo and favicon",
+            "description": "Your school's logo and browser tab icon. They apply on every plan."
           },
           "solanaWallet": {
             "title": "Solana Wallet",
@@ -3451,13 +3387,7 @@
             "logoUrlHint": "URL of your platform logo (recommended: 200x50px PNG or SVG)",
             "faviconUrl": "Favicon URL",
             "faviconUrlPlaceholder": "https://example.com/favicon.ico",
-            "faviconUrlHint": "URL of your browser tab icon (recommended: 32x32px ICO or PNG)",
-            "primaryColor": "Primary Color",
-            "primaryColorHint": "Main brand color used for buttons, links, and accents",
-            "secondaryColor": "Secondary Color",
-            "secondaryColorHint": "Secondary brand color used for highlights and gradients",
-            "preview": "Preview",
-            "previewHint": "See how your branding looks"
+            "faviconUrlHint": "URL of your browser tab icon (recommended: 32x32px ICO or PNG)"
           },
           "enrollment": {
             "auto": "Auto Enrollment",
@@ -5345,7 +5275,7 @@
       "title": "Welcome, {name}!",
       "description": "Let's set up your online school in just a few steps. You'll be ready to create courses in under 5 minutes.",
       "step1": "Name your school and tell students what you teach",
-      "step2": "Choose a color theme, font, and style for your school",
+      "step2": "Pick a theme and a brand color for your school",
       "step3": "Create your first course and start teaching",
       "getStarted": "Let's Get Started"
     },
@@ -5360,15 +5290,8 @@
       "descriptionHint": "A short description for your school's landing page"
     },
     "branding": {
-      "title": "Brand Your School",
-      "description": "Pick a color theme, font, and border radius for your school",
-      "shuffle": "Shuffle",
-      "shuffleHint": "Random theme + font + radius",
-      "colorTheme": "Color Theme",
-      "borderRadius": "Border Radius",
-      "font": "Font",
-      "back": "Back",
-      "next": "Next"
+      "title": "Choose Your School's Look",
+      "description": "Pick a theme and a brand color. You can change both anytime in Appearance."
     },
     "payment": {
       "title": "Payment Setup",
@@ -5391,7 +5314,9 @@
       "title": "You're All Set!",
       "description": "Your school is configured and ready to go. What would you like to do next?",
       "createCourse": "Create Your First Course",
-      "goToDashboard": "Go to Dashboard"
+      "goToDashboard": "Go to Dashboard",
+      "theme": "Theme",
+      "themeDefault": "Platform default"
     },
     "complete": {
       "success": "School setup complete! Welcome aboard.",
@@ -5590,7 +5515,6 @@
     "startingAt": "Starting at ${price}/month",
     "analyticsBasic": "Revenue reporting, CSV export and per-course confusion hotspots are part of Advanced analytics.",
     "certificatesBasic": "Custom colours, logo, signature image and QR code are part of Custom certificates. Basic certificates use the platform design.",
-    "brandingLocked": "Colours, theme presets and fonts follow the platform palette on your plan. Your logo and school name still apply.",
     "features": {
       "leaderboard": "Leaderboard",
       "achievements": "Achievements",
@@ -5605,7 +5529,8 @@
       "custom_domain": "Custom Domain",
       "white_label": "White-Label",
       "priority_support": "Priority Support"
-    }
+    },
+    "customColorLocked": "Use any brand color, not only the six recommended for your theme."
   },
   "limits": {
     "approaching": "You're using {current} of {limit} {resource}. Consider upgrading for more.",
@@ -6441,7 +6366,7 @@
       "failedSave": "Failed to save",
       "failedPublish": "Failed to publish",
       "branding": "Branding",
-      "brandingDescription": "Logo, favicon, and brand colors. Changes apply across every page on your site.",
+      "brandingDescription": "Logo and favicon. Your theme and brand color are set on the Appearance page.",
       "status": {
         "draft": "draft",
         "published": "published"
@@ -7285,6 +7210,100 @@
       "subtitle": "Create your own branded school today. Free to start, no credit card required.",
       "primary": "Create your free school",
       "secondary": "Learn more"
+    }
+  },
+  "themeKit": {
+    "title": "Choose your school's look",
+    "description": "Pick a theme, then one of its colors. Every combination is checked for readability.",
+    "platformDefault": "Your school uses the platform default look until you save a theme.",
+    "themeLabel": "Theme",
+    "colorLabel": "Color",
+    "colorFor": "for {theme}",
+    "recommended": "Recommended",
+    "spec": "{surface} · {corners} · {fonts}",
+    "fontPair": "{heading} + {body}",
+    "surfaces": {
+      "cool": "Cool",
+      "warm": "Warm",
+      "neutral": "Neutral",
+      "dark": "Dark"
+    },
+    "corners": {
+      "sharp": "sharp",
+      "soft": "soft",
+      "round": "round"
+    },
+    "readability": {
+      "lightInk": "White text on buttons. Readable at AA.",
+      "darkInk": "This color is light, so buttons use dark text. Readable at AA.",
+      "shiftedDeeper": "Buttons use a deeper shade of this color so white text stays readable.",
+      "shiftedLighter": "Buttons use a lighter shade of this color so dark text stays readable."
+    },
+    "custom": {
+      "open": "Use a custom color instead",
+      "close": "Use a recommended color instead",
+      "label": "Custom color",
+      "pickerLabel": "Pick a custom color",
+      "invalid": "Enter the color as #RRGGBB, for example #3A50B8."
+    },
+    "save": "Save look",
+    "saving": "Saving…",
+    "saved": "Your school's look is saved.",
+    "saveFailed": "Couldn't save the look",
+    "reset": "Reset to platform default",
+    "resetting": "Resetting…",
+    "resetDone": "Your school is back on the platform default look.",
+    "resetFailed": "Couldn't reset the look",
+    "back": "Back",
+    "next": "Next",
+    "preview": {
+      "lessonCaption": "Lesson · phone",
+      "schoolCaption": "School page · desktop",
+      "schoolFallback": "Your school",
+      "lesson": {
+        "module": "Module 2 · Cash flow",
+        "progress": "{done} / {total}",
+        "title": "Selling isn't getting paid",
+        "body": "A sale on credit is income the day you invoice, but the cash arrives weeks later. That gap is what leaves businesses that sell well without cash.",
+        "keyIdeaLabel": "Key idea",
+        "keyIdea": "Cash flow records money when it comes in or goes out, not when you invoice.",
+        "checkpoint": "Checkpoint {current} of {total}",
+        "question": "You sell $500 on 30-day credit. When does that money enter your cash flow?",
+        "optionA": "Today, when you issue the invoice",
+        "optionB": "In 30 days, when the customer pays",
+        "optionC": "Never, because it's credit",
+        "check": "Check answer"
+      },
+      "school": {
+        "navCourses": "Courses",
+        "navAbout": "About us",
+        "navSignIn": "Sign in",
+        "navCta": "Browse courses",
+        "kicker": "Finance for freelancers",
+        "tagline": "Clear finances for your business",
+        "subtitle": "Short courses with real exercises, checkpoints in every lesson and a certificate when you finish.",
+        "start": "Start for free",
+        "syllabus": "See the syllabus",
+        "featuredMeta": "Featured course · 8 lessons",
+        "featuredTitle": "Accounting for entrepreneurs",
+        "outline1Title": "Your first balance sheet",
+        "outline1Kind": "Lesson",
+        "outline2Title": "Build your cash flow",
+        "outline2Kind": "Exercise",
+        "outline3Title": "Taxes without fear",
+        "outline3Kind": "Exam",
+        "syllabusPreview": "Syllabus preview",
+        "coursesHeading": "Courses",
+        "seeAll": "See all",
+        "course1Title": "Accounting for entrepreneurs",
+        "course1Meta": "8 lessons · Certificate",
+        "course2Title": "Cash flow without fear",
+        "course2Meta": "5 lessons · Certificate",
+        "course3Title": "Taxes for freelancers",
+        "course3Meta": "6 lessons · Certificate",
+        "footerPayments": "Pay by card, PayPal or bank transfer",
+        "footerCertificate": "Verifiable certificate when you finish"
+      }
     }
   }
 }

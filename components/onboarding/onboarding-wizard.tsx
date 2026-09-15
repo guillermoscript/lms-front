@@ -16,7 +16,9 @@ import {
 import { completeOnboarding } from '@/app/actions/onboarding'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
-import { OnboardingAppearanceStep } from './onboarding-appearance-step'
+import { ThemeKitPicker } from '@/components/theme-kit/theme-kit-picker'
+import { KIT_THEMES, resolveSchoolTheme, type StoredKitTheme } from '@/lib/themes/kit'
+import { cn } from '@/lib/utils'
 import {
   GraduationCap,
   Palette,
@@ -35,13 +37,23 @@ interface OnboardingWizardProps {
   userId: string
   userName: string
   currentSettings: Record<string, { value?: string } | undefined>
+  /** The school's saved theme, unresolved (`getSchoolTheme()`); null = platform palette. */
+  storedTheme: StoredKitTheme | null
+  /** Whether the plan includes `custom_branding`. */
+  customBranding: boolean
   redirectTo?: string
 }
 
 const ALL_STEPS = ['welcome', 'school', 'branding', 'payment', 'ready'] as const
 type Step = typeof ALL_STEPS[number]
 
-export default function OnboardingWizard({ userName, currentSettings, redirectTo = '/dashboard/admin' }: OnboardingWizardProps) {
+export default function OnboardingWizard({
+  userName,
+  currentSettings,
+  storedTheme,
+  customBranding,
+  redirectTo = '/dashboard/admin',
+}: OnboardingWizardProps) {
   const router = useRouter()
   const t = useTranslations('onboarding')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -60,6 +72,17 @@ export default function OnboardingWizard({ userName, currentSettings, redirectTo
   const [isConnectingStripe, setIsConnectingStripe] = useState(false)
 
   const stepIndex = (STEPS as readonly Step[]).indexOf(currentStep)
+
+  // The picker refreshes the route after it saves, so `storedTheme` is already
+  // the new choice by the Ready step. Resolved like the layout, so the summary
+  // names what the school actually renders on its plan.
+  const renderedTheme = resolveSchoolTheme(storedTheme, { customBranding })
+  const themeSummary = renderedTheme
+    ? `${KIT_THEMES[renderedTheme.theme].name} · ${
+        KIT_THEMES[renderedTheme.theme].swatches.find((s) => s.hex === renderedTheme.brand)?.name ??
+        renderedTheme.brand
+      }`
+    : t('ready.themeDefault')
 
   function goNext() {
     const nextIndex = stepIndex + 1
@@ -117,7 +140,8 @@ export default function OnboardingWizard({ userName, currentSettings, redirectTo
   }
 
   return (
-    <div className="w-full max-w-2xl">
+    // The branding step is wider: the picker sets its phone preview beside the controls.
+    <div className={cn('w-full', currentStep === 'branding' ? 'max-w-4xl' : 'max-w-2xl')}>
       {/* Progress Indicator */}
       <div className="flex items-center justify-center gap-2 mb-8">
         {STEPS.map((step, i) => (
@@ -252,14 +276,23 @@ export default function OnboardingWizard({ userName, currentSettings, redirectTo
               </div>
               <div>
                 <CardTitle className="text-xl text-white">{t('branding.title')}</CardTitle>
-                <CardDescription className="text-zinc-400">
-                  Pick a color theme, font, and border radius for your school
-                </CardDescription>
+                <CardDescription className="text-zinc-400">{t('branding.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <OnboardingAppearanceStep onComplete={goNext} onBack={goBack} />
+            {/* This shell is still hardcoded dark (#764) while the picker is
+                token-styled: the dark scope hands it the dark palette, and
+                text-foreground re-resolves the ink the Card set in light tokens. */}
+            <div className="dark text-foreground">
+              <ThemeKitPicker
+                variant="onboarding"
+                stored={storedTheme}
+                customBranding={customBranding}
+                onContinue={goNext}
+                onBack={goBack}
+              />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -386,9 +419,11 @@ export default function OnboardingWizard({ userName, currentSettings, redirectTo
                 <span className="text-zinc-500 text-sm">{t('school.nameLabel')}</span>
                 <span className="text-white font-medium">{schoolName || 'My School'}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">Theme</span>
-                <span className="text-white text-sm">Customized via Appearance</span>
+              <div className="flex justify-between items-center gap-4">
+                <span className="text-zinc-500 text-sm">{t('ready.theme')}</span>
+                <span className="text-white text-sm text-right" data-testid="onboarding-ready-theme">
+                  {themeSummary}
+                </span>
               </div>
             </div>
 

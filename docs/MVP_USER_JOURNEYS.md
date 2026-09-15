@@ -53,7 +53,7 @@ School Landing → Browse Courses → Join School → Confirm Email → Join Flo
 
 | Story | Route | Description |
 |-------|-------|-------------|
-| View school landing page | `/` on school subdomain | School logo, name, "Join [School]" CTA, published courses grid, join CTA strip — uses school's `primary_color`. Optionally a Puck-built custom landing page |
+| View school landing page | `/` on school subdomain | School logo, name, "Join [School]" CTA, published courses grid, join CTA strip — coloured by the school's theme (`--primary`). Optionally a Puck-built custom landing page |
 | Browse school's courses | `/courses` | All published courses for that school |
 | View course details | `/courses/[id]` | Lesson list, pricing card, enrollment button |
 | Compare school's plans | `/pricing` | Per-school subscription plans |
@@ -269,7 +269,7 @@ Login → Dashboard → View Stats → Check Analytics → Manage Revenue
 | Story | Route | Description |
 |-------|-------|-------------|
 | General settings | `/dashboard/admin/settings` (General tab) | Site name, description, contact email, timezone, maintenance mode |
-| Branding settings | `/dashboard/admin/settings` (Branding tab) | Logo, colors, brand customization |
+| Branding settings | `/dashboard/admin/appearance` | Logo and favicon card below the theme picker (theme and brand colour are chosen in the picker above it) |
 | Email settings | `/dashboard/admin/settings` (Email tab) | SMTP configuration, sender details |
 | Payment settings | `/dashboard/admin/settings` (Payment tab) | Stripe keys, currency, payment methods |
 | Enrollment settings | `/dashboard/admin/settings` (Enrollment tab) | Auto-enrollment rules, capacity limits |

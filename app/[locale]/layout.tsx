@@ -14,9 +14,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
-import type { StoredPreset } from '@/lib/themes/presets';
 import { fontVariables } from '@/lib/themes/fonts';
-import { defaultThemeFor } from '@/lib/themes/kit';
+import { defaultThemeFor, resolveSchoolTheme, SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit';
 import { getSeoContext, ogImageUrl } from '@/lib/seo';
 import { OpenPanelComponent } from '@openpanel/nextjs';
 import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
@@ -90,7 +89,7 @@ const getTenantSettings = unstable_cache(
       .from('tenant_settings')
       .select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
-      .in('setting_key', ['site_name', 'logo_url', 'primary_color', 'secondary_color', 'favicon_url', 'theme_preset']);
+      .in('setting_key', ['site_name', 'logo_url', 'favicon_url', SCHOOL_THEME_SETTING_KEY]);
     return settings ?? [];
   },
   ['tenant-settings-branding'],
@@ -119,7 +118,7 @@ export default async function RootLayout({
 
   // Load tenant settings for branding overrides (use admin client to bypass RLS
   // since these are public tenant configuration, not user-specific data)
-  // setting_value is jsonb: `{ value: string }` for branding keys, a StoredPreset for theme_preset
+  // setting_value is jsonb: `{ value: string }` for branding keys, a StoredKitTheme for theme_preset
   let tenantSettings: Record<string, { value?: string } | undefined> = {};
   if (tenant) {
     const settings = await getTenantSettings(tenant.id);
@@ -129,11 +128,11 @@ export default async function RootLayout({
     }, {});
   }
 
-  // Custom branding is a Business+ feature (#662). Below that the school's
-  // logo and name still apply — a school must stay recognisable — but its
-  // colours, theme preset, radius and font are ignored in favour of the
-  // platform palette. TenantCssVarsServer's <style> (the only writer of the
-  // theme vars) reads from this object, so nulling the fields here gates it.
+  // Every plan renders its theme kit and recommended colours; a custom brand
+  // colour is Business+ (`custom_branding`, #763) and falls back to the theme's
+  // recommended swatch below that. Logo and name apply on every plan — a school
+  // must stay recognisable. TenantCssVarsServer (the only writer of the theme
+  // vars) and the default light/dark mode both read this one resolved value.
   const customBranding = tenant ? await hasPlanFeature(tenant.id, 'custom_branding') : false;
 
   const tenantInfo = tenant ? {
@@ -141,26 +140,15 @@ export default async function RootLayout({
     slug: tenant.slug,
     name: tenantSettings.site_name?.value || tenant.name,
     logo_url: tenantSettings.logo_url?.value || tenant.logo_url,
-    // Empty string = "no override": TenantCssVarsServer only writes the brand
-    // vars when the value is truthy, so the platform palette applies.
-    primary_color: customBranding
-      ? tenantSettings.primary_color?.value || tenant.primary_color
-      : '',
-    secondary_color: customBranding
-      ? tenantSettings.secondary_color?.value || tenant.secondary_color
-      : '',
     plan: tenant.plan,
     settings: tenantSettings,
-    theme_preset: customBranding
-      ? ((tenantSettings.theme_preset as unknown as StoredPreset | undefined) ?? null)
-      : null,
+    theme: resolveSchoolTheme(tenantSettings[SCHOOL_THEME_SETTING_KEY], { customBranding }),
   } : null;
 
   // A dark theme kit (Kódigo) opens dark for a visitor who has not picked a
   // mode (#762). defaultTheme, never forcedTheme: the mode toggle keeps working
-  // and a stored choice still wins. Read from the gated preset above, so a
-  // school below Business never gets a dark default on the platform palette.
-  const defaultTheme = defaultThemeFor(tenantInfo?.theme_preset);
+  // and a stored choice still wins.
+  const defaultTheme = defaultThemeFor(tenantInfo?.theme);
 
   // Product analytics. Renders nothing at all — no script tag, no network —
   // unless a client id is configured AND the environment is one we track
@@ -180,11 +168,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} className={fontVariables} suppressHydrationWarning>
       <head>
-        <TenantCssVarsServer
-          themePreset={tenantInfo?.theme_preset}
-          primaryColor={tenantInfo?.primary_color}
-          secondaryColor={tenantInfo?.secondary_color}
-        />
+        <TenantCssVarsServer theme={tenantInfo?.theme} />
       </head>
       <body className="antialiased">
         <NextIntlClientProvider messages={messages}>
