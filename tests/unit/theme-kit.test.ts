@@ -304,8 +304,9 @@ describe('deriveKitStructure', () => {
 
       expect(vars['--font-sans'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.body]))
       expect(vars['--font-heading'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.heading]))
+      // Always set, so a scoped preview never inherits the saved theme's mono.
       if (type.mono) expect(vars['--font-mono'], id).toMatch(stackOf(KIT_FONT_VARIABLES[type.mono]))
-      else expect(vars, id).not.toHaveProperty('--font-mono')
+      else expect(vars['--font-mono'], id).toMatch(stackOf('--font-geist-mono'))
 
       expect(vars['--radius'], id).toBe(corners.base)
       expect(vars['--radius-button'], id).toBe(corners.button)
@@ -330,7 +331,7 @@ describe('deriveKitStructure', () => {
     const andina = deriveKitStructure('andina')
     expect(andina['--font-heading']).toBe('var(--font-lora), ui-serif, Georgia, serif')
     expect(andina['--font-sans']).toBe('var(--font-public-sans), ui-sans-serif, system-ui, sans-serif')
-    expect(andina).not.toHaveProperty('--font-mono')
+    expect(andina['--font-mono']).toBe('var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace')
   })
 
   it('soft corners reproduce the platform defaults', () => {

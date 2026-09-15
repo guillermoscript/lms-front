@@ -108,8 +108,10 @@ export async function resetSchoolTheme(): Promise<ThemeActionResult> {
 }
 
 /**
- * The current school's stored theme, validated but NOT plan-resolved: the
- * picker shows what was saved, and resolves it against the plan itself.
+ * The current school's stored theme, validated but NOT plan-resolved. Callers
+ * resolve it with `resolveSchoolTheme` for display; the raw value is kept so a
+ * custom colour masked by the current plan survives in the row and returns on
+ * upgrade.
  */
 export async function getSchoolTheme(): Promise<StoredKitTheme | null> {
   const tenantId = await getCurrentTenantId()

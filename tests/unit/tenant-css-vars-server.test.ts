@@ -74,7 +74,7 @@ describe('TenantCssVarsServer — kit theme', () => {
     expect(root['--background']).toBe(KIT_SURFACES.warm.light.background)
     expect(root['--font-heading']).toBe('var(--font-lora), ui-serif, Georgia, serif')
     expect(root['--font-sans']).toBe('var(--font-public-sans), ui-sans-serif, system-ui, sans-serif')
-    expect(root).not.toHaveProperty('--font-mono')
+    expect(root['--font-mono']).toBe('var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace')
     expect(root['--radius']).toBe('0.625rem')
     expect(root['--radius-button']).toBe('8px')
     expect(root['--radius-card']).toBe('10px')

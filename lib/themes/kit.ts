@@ -439,11 +439,16 @@ function fontStack(family: KitFontFamily): string {
   return `var(${KIT_FONT_VARIABLES[family]}), ${FONT_GENERIC[family]}`
 }
 
+/** The platform monospace (`app/globals.css`), for pairings without their own. */
+const PLATFORM_MONO_STACK = 'var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace'
+
 /**
  * The mode-independent variables for a theme: its type pairing mapped onto
- * `--font-sans` / `--font-heading` (and `--font-mono` when the pairing has a
- * real monospace), and its corner style mapped onto `--radius` plus the
- * per-component radius tokens. An unknown theme is Estructura.
+ * `--font-sans` / `--font-heading` / `--font-mono` (the platform monospace
+ * when the pairing has none), and its corner style mapped onto `--radius` plus
+ * the per-component radius tokens. The map is complete, so an element scoped
+ * to it — the picker's preview — never inherits a role from the saved theme on
+ * `:root`. An unknown theme is Estructura.
  */
 export function deriveKitStructure(theme: unknown): CSSVariableMap {
   const t = kitTheme(theme)
@@ -452,8 +457,8 @@ export function deriveKitStructure(theme: unknown): CSSVariableMap {
   const vars: CSSVariableMap = {
     '--font-sans': fontStack(type.body),
     '--font-heading': fontStack(type.heading),
+    '--font-mono': type.mono ? fontStack(type.mono) : PLATFORM_MONO_STACK,
   }
-  if (type.mono) vars['--font-mono'] = fontStack(type.mono)
   vars['--radius'] = corners.base
   vars['--radius-button'] = corners.button
   vars['--radius-card'] = corners.card
