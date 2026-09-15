@@ -212,7 +212,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                             {t('completed')}
                         </Badge>
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-black">{examData.title}</h1>
-                        <p className="text-primary-foreground/80 max-w-lg text-sm sm:text-base">{examData.description}</p>
+                        <p className="text-primary-foreground max-w-lg text-sm sm:text-base">{examData.description}</p>
 
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 pt-2 sm:pt-4">
                             <div className="flex items-center gap-2">
