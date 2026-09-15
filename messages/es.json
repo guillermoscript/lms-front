@@ -2236,71 +2236,7 @@
       },
       "appearance": {
         "title": "Apariencia",
-        "description": "Personaliza la apariencia de tu escuela. Los cambios se aplican a todos los estudiantes y profesores de inmediato.",
-        "theme": {
-          "title": "Tema",
-          "description": "Elige un tema de color, fuente y radio de borde. O ingresa un código de preset de shadcn/ui.",
-          "shuffle": "Aleatorio",
-          "shuffleHint": "Combina aleatoriamente un tema de color, fuente y radio de borde",
-          "shuffleSuccess": "Aleatorio: {theme} + {font} + {radius} radio — recarga para ver",
-          "shuffleFailed": "Algunos cambios fallaron — intenta de nuevo",
-          "colorTheme": "Tema de Color",
-          "borderRadius": "Radio de Borde",
-          "borderRadiusHint": "Controla la redondez de botones, tarjetas, inputs y otros elementos.",
-          "fontFamily": "Familia de Fuente",
-          "fontFamilyHint": "Elige una fuente para tu escuela. Todas las fuentes se cargan de Google Fonts.",
-          "customCode": "Código de Preset Personalizado",
-          "customCodeHint": "Ingresa un código de preset de <link>shadcn/ui create</link>. El tema completo (colores, radio, fuente) se aplicará del preset.",
-          "customCodePlaceholder": "ej. a1D4cMfA",
-          "customCodeActive": "Activo: {code}",
-          "apply": "Aplicar",
-          "reset": "Restablecer",
-          "resetTitle": "Restablecer a Predeterminado",
-          "resetDescription": "Volver al tema púrpura predeterminado de la plataforma",
-          "applySuccess": "Tema aplicado — recarga para ver el efecto completo",
-          "applyFailed": "Error al aplicar el preset",
-          "customApplySuccess": "Preset personalizado aplicado — recarga para ver el efecto completo",
-          "customApplyFailed": "Error al aplicar el preset personalizado",
-          "radiusSuccess": "Radio de borde actualizado — recarga para ver el efecto completo",
-          "radiusFailed": "Error al actualizar el radio",
-          "fontSuccess": "Fuente actualizada — recarga para ver el efecto completo",
-          "fontFailed": "Error al actualizar la fuente",
-          "resetSuccess": "Tema restablecido al predeterminado",
-          "resetFailed": "Error al restablecer el tema"
-        },
-        "preview": {
-          "title": "Vista Previa en Vivo",
-          "courseTitle": "Introducción al Diseño",
-          "courseDescription": "Aprende los fundamentos del diseño UI/UX",
-          "published": "Publicado",
-          "lessons": "12 lecciones",
-          "complete": "{value}% completado",
-          "components": "Componentes",
-          "componentsDescription": "Botones, inputs y etiquetas",
-          "primary": "Primario",
-          "secondary": "Secundario",
-          "outline": "Contorno",
-          "delete": "Eliminar",
-          "emailLabel": "Correo electrónico",
-          "emailPlaceholder": "estudiante@ejemplo.com",
-          "notifications": "Notificaciones",
-          "assignmentGraded": "Tarea calificada",
-          "achievementUnlocked": "Logro desbloqueado",
-          "newStudentEnrolled": "Nuevo estudiante inscrito",
-          "timeAgo2m": "hace 2m",
-          "timeAgo1h": "hace 1h",
-          "timeAgo3h": "hace 3h",
-          "dashboardStats": "Estadísticas del Panel",
-          "dashboardStatsDescription": "Tu escuela de un vistazo",
-          "students": "Estudiantes",
-          "courses": "Cursos",
-          "revenue": "Ingresos",
-          "completion": "Finalización"
-        },
-        "settingsLink": {
-          "title": "Abrir Editor de Apariencia",
-          "description": "Temas de color, fuentes, radio de borde y vista previa en vivo"
-        }
+        "description": "Personaliza la apariencia de tu escuela. Los cambios se aplican a todos los estudiantes y profesores de inmediato."
       },
       "error": {
         "title": "Error del panel de administración",
@@ -2366,7 +2302,7 @@
           "configureSchoolDesc": "Define el nombre y los datos básicos de tu escuela.",
           "configureSchoolTime": "~1 min",
           "brandSchool": "Dale identidad a tu escuela",
-          "brandSchoolDesc": "Elige un tema, colores y tipografía. Opcional — los valores por defecto lucen muy bien.",
+          "brandSchoolDesc": "Elige un tema y un color para tu escuela. Es opcional: el estilo de la plataforma también funciona.",
           "brandSchoolTime": "~2 min",
           "connectPayments": "Configura cómo recibir pagos",
           "connectPaymentsDesc": "Elige pagos manuales, Stripe u otro proveedor disponible.",
@@ -3314,8 +3250,8 @@
             "description": "Configura las reglas de inscripción a cursos y políticas de acceso de estudiantes"
           },
           "branding": {
-            "title": "Ajustes de Marca",
-            "description": "Personaliza la identidad visual de tu plataforma — logo, colores y favicon"
+            "title": "Logo y favicon",
+            "description": "El logo y el ícono de la pestaña del navegador de tu escuela. Se aplican en todos los planes."
           },
           "solanaWallet": {
             "title": "Wallet de Solana",
@@ -3451,13 +3387,7 @@
             "logoUrlHint": "URL del logo de tu plataforma (recomendado: 200x50px PNG o SVG)",
             "faviconUrl": "URL del Favicon",
             "faviconUrlPlaceholder": "https://ejemplo.com/favicon.ico",
-            "faviconUrlHint": "URL del icono de la pestaña del navegador (recomendado: 32x32px ICO o PNG)",
-            "primaryColor": "Color Primario",
-            "primaryColorHint": "Color principal usado para botones, enlaces y acentos",
-            "secondaryColor": "Color Secundario",
-            "secondaryColorHint": "Color secundario usado para destacados y degradados",
-            "preview": "Vista Previa",
-            "previewHint": "Mira cómo se ve tu marca"
+            "faviconUrlHint": "URL del icono de la pestaña del navegador (recomendado: 32x32px ICO o PNG)"
           },
           "enrollment": {
             "auto": "Inscripción Automática",
@@ -5345,7 +5275,7 @@
       "title": "¡Bienvenido, {name}!",
       "description": "Configuremos tu escuela online en unos pocos pasos. Estarás listo para crear cursos en menos de 5 minutos.",
       "step1": "Nombra tu escuela y cuenta a los estudiantes qué enseñas",
-      "step2": "Elige un tema de color, fuente y estilo para tu escuela",
+      "step2": "Elige un tema y un color de marca para tu escuela",
       "step3": "Crea tu primer curso y empieza a enseñar",
       "getStarted": "Empecemos"
     },
@@ -5360,15 +5290,8 @@
       "descriptionHint": "Una breve descripción para la página de inicio de tu escuela"
     },
     "branding": {
-      "title": "Personaliza Tu Escuela",
-      "description": "Elige un tema de color, fuente y radio de borde para tu escuela",
-      "shuffle": "Aleatorio",
-      "shuffleHint": "Tema + fuente + radio aleatorio",
-      "colorTheme": "Tema de Color",
-      "borderRadius": "Radio de Borde",
-      "font": "Fuente",
-      "back": "Atrás",
-      "next": "Siguiente"
+      "title": "Elige el Estilo de Tu Escuela",
+      "description": "Elige un tema y un color de marca. Puedes cambiar ambos cuando quieras en Apariencia."
     },
     "payment": {
       "title": "Configuración de Pagos",
@@ -5391,7 +5314,9 @@
       "title": "¡Todo Listo!",
       "description": "Tu escuela está configurada y lista. ¿Qué te gustaría hacer ahora?",
       "createCourse": "Crear Tu Primer Curso",
-      "goToDashboard": "Ir al Panel"
+      "goToDashboard": "Ir al Panel",
+      "theme": "Tema",
+      "themeDefault": "Predeterminado de la plataforma"
     },
     "complete": {
       "success": "¡Configuración completa! Bienvenido a bordo.",
@@ -5590,7 +5515,6 @@
     "startingAt": "Desde ${price}/mes",
     "analyticsBasic": "Los reportes de ingresos, la exportación CSV y los puntos de confusión por curso son parte de Analíticas avanzadas.",
     "certificatesBasic": "Colores personalizados, logo, imagen de firma y código QR son parte de Certificados personalizados. Los certificados básicos usan el diseño de la plataforma.",
-    "brandingLocked": "Los colores, presets de tema y fuentes siguen la paleta de la plataforma en tu plan. Tu logo y el nombre de la escuela sí se aplican.",
     "features": {
       "leaderboard": "Tabla de posiciones",
       "achievements": "Logros",
@@ -5605,7 +5529,8 @@
       "custom_domain": "Dominio personalizado",
       "white_label": "Marca blanca",
       "priority_support": "Soporte prioritario"
-    }
+    },
+    "customColorLocked": "Usa cualquier color de marca, no solo los seis recomendados para tu tema."
   },
   "limits": {
     "approaching": "Estás usando {current} de {limit} {resource}. Considera actualizar para más.",
@@ -7285,6 +7210,100 @@
       "subtitle": "Crea hoy tu propia escuela con tu marca. Empieza gratis, sin tarjeta de crédito.",
       "primary": "Crea tu escuela gratis",
       "secondary": "Conoce más"
+    }
+  },
+  "themeKit": {
+    "title": "Elige el estilo de tu escuela",
+    "description": "Elige un tema y luego uno de sus colores. Revisamos que cada combinación se lea bien.",
+    "platformDefault": "Tu escuela usa el estilo predeterminado de la plataforma hasta que guardes un tema.",
+    "themeLabel": "Tema",
+    "colorLabel": "Color",
+    "colorFor": "para {theme}",
+    "recommended": "Recomendado",
+    "spec": "{surface} · {corners} · {fonts}",
+    "fontPair": "{heading} + {body}",
+    "surfaces": {
+      "cool": "Frío",
+      "warm": "Cálido",
+      "neutral": "Neutro",
+      "dark": "Oscuro"
+    },
+    "corners": {
+      "sharp": "recto",
+      "soft": "suave",
+      "round": "redondo"
+    },
+    "readability": {
+      "lightInk": "Texto blanco en los botones. Legible según AA.",
+      "darkInk": "Este color es claro, así que los botones usan texto oscuro. Legible según AA.",
+      "shiftedDeeper": "Los botones usan un tono más oscuro de este color para que el texto blanco se lea bien.",
+      "shiftedLighter": "Los botones usan un tono más claro de este color para que el texto oscuro se lea bien."
+    },
+    "custom": {
+      "open": "Usar un color personalizado",
+      "close": "Usar un color recomendado",
+      "label": "Color personalizado",
+      "pickerLabel": "Elegir un color personalizado",
+      "invalid": "Escribe el color como #RRGGBB, por ejemplo #3A50B8."
+    },
+    "save": "Guardar estilo",
+    "saving": "Guardando…",
+    "saved": "Guardamos el estilo de tu escuela.",
+    "saveFailed": "No pudimos guardar el estilo",
+    "reset": "Volver al estilo de la plataforma",
+    "resetting": "Restableciendo…",
+    "resetDone": "Tu escuela volvió al estilo predeterminado de la plataforma.",
+    "resetFailed": "No pudimos restablecer el estilo",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "preview": {
+      "lessonCaption": "Lección · celular",
+      "schoolCaption": "Página de la escuela · escritorio",
+      "schoolFallback": "Tu escuela",
+      "lesson": {
+        "module": "Módulo 2 · Flujo de caja",
+        "progress": "{done} / {total}",
+        "title": "Vender no es cobrar",
+        "body": "Una venta a crédito es ingreso el día que facturas, pero el efectivo llega semanas después. Esa distancia es la que deja sin caja a negocios que venden bien.",
+        "keyIdeaLabel": "Idea clave",
+        "keyIdea": "El flujo de caja registra el dinero cuando entra o sale, no cuando se factura.",
+        "checkpoint": "Checkpoint {current} de {total}",
+        "question": "Vendes $500 a crédito a 30 días. ¿Cuándo entra ese dinero a tu flujo de caja?",
+        "optionA": "Hoy, al emitir la factura",
+        "optionB": "En 30 días, cuando el cliente paga",
+        "optionC": "Nunca, porque es crédito",
+        "check": "Comprobar respuesta"
+      },
+      "school": {
+        "navCourses": "Cursos",
+        "navAbout": "Sobre nosotros",
+        "navSignIn": "Iniciar sesión",
+        "navCta": "Ver cursos",
+        "kicker": "Finanzas para independientes",
+        "tagline": "Finanzas claras para tu negocio",
+        "subtitle": "Cursos cortos con ejercicios reales, checkpoints en cada lección y certificado al terminar.",
+        "start": "Empezar gratis",
+        "syllabus": "Ver el temario",
+        "featuredMeta": "Curso destacado · 8 lecciones",
+        "featuredTitle": "Contabilidad para emprendedores",
+        "outline1Title": "Tu primer balance",
+        "outline1Kind": "Lección",
+        "outline2Title": "Arma tu flujo de caja",
+        "outline2Kind": "Ejercicio",
+        "outline3Title": "Impuestos sin miedo",
+        "outline3Kind": "Examen",
+        "syllabusPreview": "Vista previa del temario",
+        "coursesHeading": "Cursos",
+        "seeAll": "Ver todos",
+        "course1Title": "Contabilidad para emprendedores",
+        "course1Meta": "8 lecciones · Certificado",
+        "course2Title": "Flujo de caja sin miedo",
+        "course2Meta": "5 lecciones · Certificado",
+        "course3Title": "Impuestos para independientes",
+        "course3Meta": "6 lecciones · Certificado",
+        "footerPayments": "Paga con tarjeta, PayPal o transferencia",
+        "footerCertificate": "Certificado verificable al terminar"
+      }
     }
   }
 }
