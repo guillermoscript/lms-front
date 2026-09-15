@@ -1,15 +1,15 @@
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import OnboardingWizard from '@/components/onboarding/onboarding-wizard'
+import { getSchoolTheme } from '@/app/actions/admin/theme'
+import { hasPlanFeature } from '@/lib/plans/server'
 
 export default async function OnboardingPage({
   searchParams,
 }: {
   searchParams: Promise<{ plan?: string; interval?: string }>
 }) {
-  const t = await getTranslations('onboarding')
   const { plan, interval } = await searchParams
 
   const supabase = await createClient()
@@ -49,11 +49,17 @@ export default async function OnboardingPage({
   // The wizard is optional now — setup is driven by the dashboard checklist,
   // so already-onboarded users may revisit this page freely.
 
-  // Get current tenant settings
-  const { data: settings } = await supabase
-    .from('tenant_settings')
-    .select('setting_key, setting_value')
-    .in('setting_key', ['site_name', 'site_description', 'logo_url', 'primary_color', 'secondary_color'])
+  // The theme is read unresolved: the picker resolves it against the plan
+  // itself, so it can show what was saved.
+  const [{ data: settings }, storedTheme, customBranding] = await Promise.all([
+    supabase
+      .from('tenant_settings')
+      .select('setting_key, setting_value')
+      .eq('tenant_id', tenantId)
+      .in('setting_key', ['site_name', 'site_description', 'logo_url']),
+    getSchoolTheme(),
+    hasPlanFeature(tenantId, 'custom_branding'),
+  ])
 
   const currentSettings = settings?.reduce((acc: Record<string, { value?: string } | undefined>, s) => {
     acc[s.setting_key] = s.setting_value as { value?: string } | undefined
@@ -65,6 +71,8 @@ export default async function OnboardingPage({
       userId={user.id}
       userName={profile?.full_name || user.email?.split('@')[0] || ''}
       currentSettings={currentSettings}
+      storedTheme={storedTheme}
+      customBranding={customBranding}
       redirectTo={redirectTo}
     />
   )
