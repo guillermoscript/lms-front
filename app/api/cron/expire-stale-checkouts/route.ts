@@ -28,7 +28,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { reconcilePayPalCheckout } from '@/lib/payments/paypal-reconcile'
-import { isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
+import type Stripe from 'stripe'
+import { isExpirableCheckoutProvider } from '@/lib/payments/checkout-expiry'
+import { abandonStripeCheckout } from '@/lib/payments/stripe-reconcile'
+import { getStripe } from '@/lib/stripe'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 
@@ -50,6 +53,8 @@ interface StaleCheckout {
   tenant_id: string
   payment_provider: string | null
   provider_checkout_id: string | null
+  stripe_payment_intent_id: string | null
+  provider_subscription_id: string | null
   amount: number | null
   currency: string | null
   plan_id: number | null
@@ -71,7 +76,7 @@ export async function GET(req: NextRequest) {
   const { data: stale, error } = await admin
     .from('transactions')
     .select(
-      'transaction_id, user_id, tenant_id, payment_provider, provider_checkout_id, amount, currency, plan_id, product_id, checkout_expires_at, transaction_date',
+      'transaction_id, user_id, tenant_id, payment_provider, provider_checkout_id, stripe_payment_intent_id, provider_subscription_id, amount, currency, plan_id, product_id, checkout_expires_at, transaction_date',
     )
     .eq('status', 'pending')
     .not('checkout_expires_at', 'is', null)
@@ -87,15 +92,32 @@ export async function GET(req: NextRequest) {
   const rows = (stale ?? []) as StaleCheckout[]
 
   // Belt and braces: `checkout_expires_at` is only ever written for hosted
-  // rails, but the capability is the contract, so re-assert it here rather than
-  // trusting that no other writer ever sets the column.
-  const candidates = rows.filter(row => isHostedCheckoutProvider(row.payment_provider))
+  // rails and Stripe Elements, but re-assert it here rather than trusting that
+  // no other writer ever sets the column.
+  const candidates = rows.filter(row => isExpirableCheckoutProvider(row.payment_provider))
 
   const recovered: number[] = []
   const expired: StaleCheckout[] = []
   let expiredCount = 0
+  let stripe: Stripe | null = null
 
   for (const row of candidates) {
+    if (row.payment_provider === 'stripe') {
+      // A card form nobody came back to (#754). Stripe never tells us, so ask:
+      // a still-payable PaymentIntent / incomplete subscription is canceled at
+      // Stripe first, so a stale tab cannot pay a row we are about to expire.
+      // Only `dead` expires; money in motion or Stripe not answering waits.
+      try {
+        stripe ??= getStripe()
+      } catch {
+        recovered.push(row.transaction_id)
+        continue
+      }
+      if ((await abandonStripeCheckout(stripe, row)) !== 'dead') {
+        recovered.push(row.transaction_id)
+        continue
+      }
+    }
     if (row.payment_provider === 'paypal') {
       // PayPal is the one rail here with a queryable order and a capture window
       // that outlives our TTL. Lemon Squeezy hands back no checkout id we can

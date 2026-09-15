@@ -5300,6 +5300,7 @@
     "stripe": {
       "preparing": "Preparing secure payment…",
       "initError": "Couldn't start the card payment. Please try again.",
+      "inFlight": "A payment for this item is already in progress. Try again in a few minutes.",
       "unavailableTitle": "Card payments unavailable",
       "tryManual": "Pay another way",
       "payButton": "Pay {price}",

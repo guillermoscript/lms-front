@@ -31,6 +31,28 @@ let paypalGetThrows = false
 let paypalCaptureStatus = 'COMPLETED'
 let paypalSub: { status: string; nextBillingTime?: Date; reference?: string } | Error = { status: 'APPROVAL_PENDING' }
 
+// Stripe rail (#754): a card form nobody came back to. `getStripe()` is
+// gettable-and-throwable so a missing STRIPE_SECRET_KEY can be simulated the
+// same way the cron actually hits it — caught and recovered, not a 500.
+let stripeGetThrows = false
+let piRetrieve: (id: string) => unknown = () => Promise.resolve({ status: 'canceled' })
+const piCancelCalls: string[] = []
+let piCancelThrows = false
+const stripeFake = {
+  paymentIntents: {
+    retrieve: (id: string) => Promise.resolve(piRetrieve(id)).then(v => v as never),
+    cancel: (id: string) => {
+      piCancelCalls.push(id)
+      if (piCancelThrows) return Promise.reject(new Error('cannot cancel'))
+      return Promise.resolve({})
+    },
+  },
+  subscriptions: {
+    retrieve: () => Promise.reject(new Error('not stubbed')),
+    cancel: () => Promise.reject(new Error('not stubbed')),
+  },
+}
+
 type Predicate = (row: Row) => boolean
 
 function makeSupabase() {
@@ -113,6 +135,13 @@ vi.mock('@/lib/payments/webhook-dispatch', () => ({
   },
 }))
 
+vi.mock('@/lib/stripe', () => ({
+  getStripe: () => {
+    if (stripeGetThrows) throw new Error('STRIPE_SECRET_KEY is not set in environment variables')
+    return stripeFake
+  },
+}))
+
 vi.mock('@/lib/payments', () => ({
   getPaymentProvider: (slug: string) => {
     if (slug !== 'paypal') throw new Error('not configured')
@@ -184,6 +213,10 @@ beforeEach(() => {
   paypalGetThrows = false
   paypalCaptureStatus = 'COMPLETED'
   paypalSub = { status: 'APPROVAL_PENDING' }
+  stripeGetThrows = false
+  piRetrieve = () => Promise.resolve({ status: 'canceled' })
+  piCancelCalls.length = 0
+  piCancelThrows = false
   nextId = 1
   process.env.CRON_SECRET = 'cron-secret'
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost'
@@ -330,5 +363,59 @@ describe('expire-stale-checkouts cron', () => {
     seedCheckout()
     const res = await GET(req())
     expect(await res.json()).toMatchObject({ scanned: 2, expired: 2, stale_pending: 0 })
+  })
+
+  // The Stripe Elements rail (#754): the card route inserts its pending row
+  // BEFORE the buyer sees the form and Stripe sends nothing when the tab is
+  // closed, so Stripe rows now carry checkout_expires_at and are candidates
+  // here too — reconciled against the live Stripe object, not just expired
+  // blindly (the same "reconcile before expiring" contract as PayPal).
+  describe('Stripe rail', () => {
+    it('cancels a still-payable PaymentIntent at Stripe AND expires the row to canceled', async () => {
+      piRetrieve = () =>
+        Promise.resolve({
+          status: 'requires_payment_method',
+          client_secret: 'cs_1',
+          amount: 4900,
+          currency: 'usd',
+          transfer_data: null,
+          application_fee_amount: 0,
+        })
+      const row = seedCheckout({
+        payment_provider: 'stripe',
+        stripe_payment_intent_id: 'pi_stale_1',
+        provider_subscription_id: null,
+      })
+      const res = await GET(req())
+      expect(piCancelCalls).toEqual(['pi_stale_1'])
+      expect(await res.json()).toMatchObject({ expired: 1, recovered: 0 })
+      expect(row.status).toBe('canceled')
+      expect(row.expired_at).toBeTypeOf('string')
+    })
+
+    it('leaves a Stripe row whose PaymentIntent already succeeded pending — counted recovered', async () => {
+      piRetrieve = () => Promise.resolve({ status: 'succeeded' })
+      const row = seedCheckout({
+        payment_provider: 'stripe',
+        stripe_payment_intent_id: 'pi_stale_2',
+        provider_subscription_id: null,
+      })
+      const res = await GET(req())
+      expect(piCancelCalls).toEqual([]) // in_flight is never released
+      expect(await res.json()).toMatchObject({ recovered: 1, expired: 0 })
+      expect(row.status).toBe('pending')
+    })
+
+    it('leaves the row pending when getStripe() throws (no STRIPE_SECRET_KEY)', async () => {
+      stripeGetThrows = true
+      const row = seedCheckout({
+        payment_provider: 'stripe',
+        stripe_payment_intent_id: 'pi_stale_3',
+        provider_subscription_id: null,
+      })
+      const res = await GET(req())
+      expect(await res.json()).toMatchObject({ recovered: 1, expired: 0 })
+      expect(row.status).toBe('pending')
+    })
   })
 })

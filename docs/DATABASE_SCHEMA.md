@@ -579,12 +579,16 @@ settlement figures decide what the buyer owes, so they are derived from
 transactions_unique_product  UNIQUE (user_id, product_id)
   WHERE plan_id IS NULL AND status IN ('pending','successful')
 transactions_unique_plan     UNIQUE (user_id, plan_id)
-  WHERE product_id IS NULL AND status IN ('pending','successful')
+  WHERE product_id IS NULL AND status = 'pending'                  -- pending only since #754
 transactions_provider_charge_id_unique  UNIQUE (payment_provider, provider_charge_id)
   WHERE provider_charge_id IS NOT NULL AND status = 'successful'   -- webhook/Solana idempotency
 ```
 
-Failed payments fall outside the predicate, so retries are allowed.
+Failed and canceled payments fall outside the predicates, so retries are allowed. The plan index
+covers only `pending` (#754): a plan is bought again every period (after it ends, a manual
+renewal, a crypto re-payment), so settled plan rows legitimately repeat, while one open checkout
+per student per plan is still enforced. Settled sales are never archived to make room — every
+revenue reader counts `status = 'successful'`.
 
 #### `payment_requests`
 Manual/offline payment requests. Tenant-scoped.
@@ -595,8 +599,14 @@ Manual/offline payment requests. Tenant-scoped.
 | `tenant_id` | UUID FK → tenants | NOT NULL |
 | `user_id` | UUID FK → profiles | Student requesting |
 | `product_id` | INTEGER FK → products | |
-| `status` | VARCHAR(50) | `pending`, `instructions_sent`, `payment_received`, `confirmed` |
+| `plan_id` | INTEGER FK → plans | |
+| `status` | VARCHAR(20) | `pending`, `contacted`, `payment_received`, `completed`, `cancelled` |
 | `created_at` | TIMESTAMPTZ | |
+
+One **open** request per student per item (#754): `payment_requests_open_product_unique` /
+`payment_requests_open_plan_unique` cover `status IN ('pending','contacted','payment_received')`.
+`createPaymentRequest` returns the existing open request instead of inserting, so the indexes only
+settle two inserts that race.
 
 ---
 
