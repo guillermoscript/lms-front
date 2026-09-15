@@ -238,9 +238,15 @@ describe('the gated call sites', () => {
    * before taking the native-subscription path. It predates #606 and is not
    * what the capability replaces. Pinning it exactly means a NEW comparison
    * still fails the test.
+   *
+   * #754 moved that comparison into `isNativeSubscription` (the leftover-checkout
+   * check needs it before the insert) and added its twin: a leftover pending row
+   * from another rail is refused before the Stripe API is asked about it. Both
+   * are rail identity on the Stripe-only route, not readiness gating.
    */
   const KNOWN_LEGACY = new Set([
-    "if (planId && planPaymentProvider === 'stripe' && planProviderPriceId) {",
+    "const isNativeSubscription = !!(planId && planPaymentProvider === 'stripe' && planProviderPriceId)",
+    "if (leftover.payment_provider !== 'stripe') {",
   ])
 
   it.each(GATED_FILES)('%s branches on capability, not on the provider name', (file) => {

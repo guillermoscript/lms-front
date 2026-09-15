@@ -165,6 +165,29 @@ export async function createPaymentRequest(
   }
 }
 
+/** Statuses in which a request is still being worked (mirrors the partial unique indexes). */
+const OPEN_PAYMENT_REQUEST_STATUSES = ['pending', 'contacted', 'payment_received']
+
+async function findOpenPaymentRequest(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  tenantId: string,
+  data: PaymentRequestFormData,
+) {
+  let query = supabase
+    .from('payment_requests')
+    .select()
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .in('status', OPEN_PAYMENT_REQUEST_STATUSES)
+    .limit(1)
+  query = data.productId
+    ? query.eq('product_id', data.productId).is('plan_id', null)
+    : query.eq('plan_id', data.planId!).is('product_id', null)
+  const { data: request } = await query.maybeSingle()
+  return request
+}
+
 async function insertPaymentRequest(data: PaymentRequestFormData) {
   const supabase = await createClient()
   const userId = await getCurrentUserId()
@@ -249,6 +272,13 @@ async function insertPaymentRequest(data: PaymentRequestFormData) {
     paymentCurrency = plan.currency || 'usd'
   }
 
+  // One open request per student per item (#754). A double-click or a retry
+  // used to leave the admin with duplicate requests, and confirming the second
+  // one failed. Returning the open request makes the call idempotent; the
+  // partial unique indexes only settle two inserts racing past this read.
+  const existing = await findOpenPaymentRequest(supabase, userId, tenantId, data)
+  if (existing) return existing
+
   // Create payment request
   const { data: request, error } = await supabase
     .from('payment_requests')
@@ -269,6 +299,10 @@ async function insertPaymentRequest(data: PaymentRequestFormData) {
     .single()
 
   if (error) {
+    if (error.code === '23505') {
+      const winner = await findOpenPaymentRequest(supabase, userId, tenantId, data)
+      if (winner) return winner
+    }
     console.error('Failed to create payment request:', error)
     throw new Error('Failed to create payment request')
   }

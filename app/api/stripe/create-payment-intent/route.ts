@@ -8,6 +8,12 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { getPaymentProvider } from '@/lib/payments'
 import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
+import { checkoutExpiryFrom } from '@/lib/payments/checkout-expiry'
+import {
+  inspectStripeCheckout,
+  releaseStripeCheckout,
+  stripeCheckoutMatches,
+} from '@/lib/payments/stripe-reconcile'
 import {
   findConflictingSubscription,
   PARALLEL_SUBSCRIPTION_CODE,
@@ -18,6 +24,11 @@ import {
   READINESS_CODE,
   READINESS_MESSAGE,
 } from '@/lib/payments/tenant-payment-readiness'
+
+const CHECKOUT_IN_FLIGHT_CODE = 'CHECKOUT_IN_FLIGHT'
+/** English fallback; the card form shows translated copy for this code. */
+const CHECKOUT_IN_FLIGHT_MESSAGE =
+  'A payment for this item is already in progress. Try again in a few minutes.'
 
 export async function POST(req: NextRequest) {
   try {
@@ -174,6 +185,92 @@ export async function POST(req: NextRequest) {
     const platformPercentage = resolvePlatformPercentage(split)
     const platformFee = Math.round((amount * platformPercentage) / 100)
 
+    const isNativeSubscription = !!(planId && planPaymentProvider === 'stripe' && planProviderPriceId)
+    const adminClient = createAdminClient()
+
+    // The buyer's own leftover checkout for this same item (#754). The pending
+    // row below is inserted BEFORE the card form renders, so a buyer who closed
+    // the tab left it inside transactions_unique_product /
+    // transactions_unique_plan, Stripe sent nothing (payment_failed needs a card
+    // attempt), and every retry died on the insert with a 500. Ask Stripe what
+    // became of it: a still-payable checkout on the same terms is handed back,
+    // a dead or outdated one is released, and money in motion is reported
+    // instead of charging twice.
+    let leftoverQuery = adminClient
+      .from('transactions')
+      .select('transaction_id, payment_provider, stripe_payment_intent_id, provider_subscription_id, transaction_date')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'pending')
+      .limit(1)
+    leftoverQuery = planId
+      ? leftoverQuery.eq('plan_id', planId).is('product_id', null)
+      : leftoverQuery.eq('product_id', productId).is('plan_id', null)
+    const { data: leftover, error: leftoverError } = await leftoverQuery.maybeSingle()
+
+    if (leftoverError) {
+      console.error('Leftover checkout lookup error:', leftoverError)
+      return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+    }
+
+    if (leftover) {
+      if (leftover.payment_provider !== 'stripe') {
+        return NextResponse.json(
+          { error: CHECKOUT_IN_FLIGHT_MESSAGE, code: CHECKOUT_IN_FLIGHT_CODE },
+          { status: 409 },
+        )
+      }
+
+      const stripe = getStripe()
+      const state = await inspectStripeCheckout(stripe, leftover)
+
+      if (
+        state.outcome === 'payable' &&
+        stripeCheckoutMatches(
+          state,
+          isNativeSubscription
+            ? {
+                kind: 'subscription',
+                priceId: planProviderPriceId!,
+                destination: destinationAccount,
+                applicationFeePercent: platformPercentage > 0 ? platformPercentage : 0,
+              }
+            : {
+                kind: 'payment_intent',
+                amount,
+                currency,
+                destination: destinationAccount,
+                applicationFeeAmount: platformFee,
+              },
+        )
+      ) {
+        return NextResponse.json({
+          clientSecret: state.clientSecret,
+          transactionId: leftover.transaction_id,
+        })
+      }
+
+      const released =
+        state.outcome === 'dead' ||
+        (state.outcome === 'payable' && (await releaseStripeCheckout(stripe, leftover)))
+      if (!released) {
+        return NextResponse.json(
+          { error: CHECKOUT_IN_FLIGHT_MESSAGE, code: CHECKOUT_IN_FLIGHT_CODE },
+          { status: 409 },
+        )
+      }
+
+      // 'canceled', never 'failed': a failed PLAN row runs cancel_subscription
+      // in trigger_manage_transactions, which would end the subscription a
+      // renewing buyer still holds (#624). Status-guarded against a webhook that
+      // settled the row a moment ago.
+      await adminClient
+        .from('transactions')
+        .update({ status: 'canceled', expired_at: new Date().toISOString() })
+        .eq('transaction_id', leftover.transaction_id)
+        .eq('status', 'pending')
+    }
+
     // Create transaction record (pending).
     //
     // The ADMIN client, since #538: `authenticated` no longer holds an INSERT grant
@@ -183,7 +280,7 @@ export async function POST(req: NextRequest) {
     // session, `tenantId` from the x-tenant-id header, and `amount` / `currency`
     // are derived from the tenant-scoped `plans` / `products` read above on the
     // user-scoped client, so a caller cannot reference another tenant's catalogue.
-    const { data: transaction, error: txError } = await createAdminClient()
+    const { data: transaction, error: txError } = await adminClient
       .from('transactions')
       .insert({
         user_id: user.id,
@@ -194,9 +291,21 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: 'stripe',
         tenant_id: tenantId,
+        // Lets the stale-checkout cron release a card form nobody came back to
+        // (#754); a returning buyer is handled by the leftover check above.
+        checkout_expires_at: checkoutExpiryFrom(),
       })
       .select('transaction_id')
       .single()
+
+    if (txError?.code === '23505') {
+      // Lost a race: a concurrent request, or a webhook that settled the
+      // leftover between the check above and this insert.
+      return NextResponse.json(
+        { error: CHECKOUT_IN_FLIGHT_MESSAGE, code: CHECKOUT_IN_FLIGHT_CODE },
+        { status: 409 },
+      )
+    }
 
     if (txError || !transaction) {
       console.error('Transaction creation error:', txError)
@@ -230,12 +339,12 @@ export async function POST(req: NextRequest) {
     // stored at creation and renewals/cancels are webhook-driven. Legacy/manual
     // plans (no recurring provider_price_id) fall through to the one-time
     // PaymentIntent path below, unchanged.
-    if (planId && planPaymentProvider === 'stripe' && planProviderPriceId) {
+    if (isNativeSubscription) {
       try {
         const provider = getPaymentProvider('stripe')
         const session = await provider.createCheckoutSession!({
           mode: 'subscription',
-          providerPriceId: planProviderPriceId,
+          providerPriceId: planProviderPriceId!,
           amount,
           currency,
           reference: transaction.transaction_id.toString(),
@@ -252,7 +361,10 @@ export async function POST(req: NextRequest) {
 
         // Persist the Stripe subscription id; the handle_new_subscription trigger
         // copies it onto the subscriptions row when the first invoice succeeds.
-        await supabase
+        // Admin client: the leftover check above reads this id to find the
+        // Stripe object again (#754), so a silently failed write would strand a
+        // still-payable subscription behind a row that looks objectless.
+        await adminClient
           .from('transactions')
           .update({ provider_subscription_id: session.providerRef })
           .eq('transaction_id', transaction.transaction_id)
@@ -267,10 +379,13 @@ export async function POST(req: NextRequest) {
         })
       } catch (subErr) {
         console.error('Subscription creation error:', subErr)
-        // Roll the pending transaction back so the unique index doesn't block a retry.
-        await supabase
+        // Roll the pending transaction back so the unique index doesn't block a
+        // retry. 'canceled', not 'failed': a failed plan row runs
+        // cancel_subscription, which would end a renewing buyer's live
+        // subscription over an error on our side (#754).
+        await adminClient
           .from('transactions')
-          .update({ status: 'failed' })
+          .update({ status: 'canceled' })
           .eq('transaction_id', transaction.transaction_id)
         await track(
           ANALYTICS_EVENTS.PAYMENT_FAILED,
@@ -316,8 +431,9 @@ export async function POST(req: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams as any)
 
-    // Save payment intent ID for refund tracking
-    await supabase
+    // Save payment intent ID for refund tracking, and so the leftover check can
+    // find this PaymentIntent again (#754) — admin client for the same reason.
+    await adminClient
       .from('transactions')
       .update({ stripe_payment_intent_id: paymentIntent.id })
       .eq('transaction_id', transaction.transaction_id)

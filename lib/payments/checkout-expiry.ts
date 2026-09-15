@@ -43,15 +43,33 @@ export function isHostedCheckoutProvider(provider: string | null | undefined): b
 }
 
 /**
- * The `checkout_expires_at` to store at creation time, or null for a rail that
- * settles in-band (Stripe Elements confirms client-side, Solana Pay is polled
- * by our own verify endpoint, manual is an offline payment request). A null
- * here is what keeps the reconciler's queue index scoped to hosted rails.
+ * Providers whose abandoned checkout the stale-checkout cron may release: every
+ * hosted rail, plus Stripe Elements (#754). The card route inserts its pending
+ * row before the buyer sees the form and Stripe sends nothing when the tab is
+ * closed, so it has the same hazard without redirecting anywhere. Stripe is
+ * named, not a capability, because the cron asks the Stripe API directly
+ * (lib/payments/stripe-reconcile.ts) — the property only holds for that rail.
+ */
+export function isExpirableCheckoutProvider(provider: string | null | undefined): boolean {
+  return isHostedCheckoutProvider(provider) || provider === 'stripe'
+}
+
+/** The TTL deadline counted from `now`. */
+export function checkoutExpiryFrom(now: Date = new Date()): string {
+  return new Date(now.getTime() + checkoutTtlMinutes() * 60_000).toISOString()
+}
+
+/**
+ * The `checkout_expires_at` to store at creation time for the unified checkout
+ * route, or null for a rail that settles in-band there (Solana Pay is polled by
+ * our own verify endpoint, manual is an offline payment request). Stripe
+ * Elements never goes through that route; its own route stamps
+ * `checkoutExpiryFrom()` directly.
  */
 export function checkoutExpiresAt(
   provider: string | null | undefined,
   now: Date = new Date(),
 ): string | null {
   if (!isHostedCheckoutProvider(provider)) return null
-  return new Date(now.getTime() + checkoutTtlMinutes() * 60_000).toISOString()
+  return checkoutExpiryFrom(now)
 }

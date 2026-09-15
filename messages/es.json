@@ -5300,6 +5300,7 @@
     "stripe": {
       "preparing": "Preparando el pago seguro…",
       "initError": "No se pudo iniciar el pago con tarjeta. Inténtalo de nuevo.",
+      "inFlight": "Ya hay un pago en curso para este artículo. Inténtalo de nuevo en unos minutos.",
       "unavailableTitle": "Pagos con tarjeta no disponibles",
       "tryManual": "Pagar de otra forma",
       "payButton": "Pagar {price}",

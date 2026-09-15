@@ -26,6 +26,8 @@ import {
 const READINESS_MESSAGE_KEY: Record<string, string> = {
     [PAYMENTS_NOT_CONNECTED_CODE]: 'stripe.schoolNotConnected',
     [PAYMENTS_ONBOARDING_INCOMPLETE_CODE]: 'stripe.schoolSetupIncomplete',
+    // A leftover checkout for this item is still settling (#754).
+    CHECKOUT_IN_FLIGHT: 'stripe.inFlight',
 };
 
 interface StripePaymentFormProps {

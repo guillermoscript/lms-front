@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   checkoutExpiresAt,
   isHostedCheckoutProvider,
+  isExpirableCheckoutProvider,
+  checkoutExpiryFrom,
   checkoutTtlMinutes,
   DEFAULT_CHECKOUT_TTL_MINUTES,
 } from '@/lib/payments/checkout-expiry'
@@ -66,6 +68,43 @@ describe('hosted checkout TTL', () => {
   it.each(['0', '-5', 'soon', ''])('ignores the nonsense override %o', value => {
     process.env.CHECKOUT_TTL_MINUTES = value
     expect(checkoutTtlMinutes()).toBe(DEFAULT_CHECKOUT_TTL_MINUTES)
+  })
+})
+
+describe('isExpirableCheckoutProvider (issue #754 — the cron\'s own candidate set)', () => {
+  // Every hosted-redirect rail, PLUS stripe: a card form nobody came back to
+  // has the same "we may never hear about it" hazard, without a redirect.
+  it.each(['stripe', 'paypal', 'lemonsqueezy', 'binance'])('%s is expirable', provider => {
+    expect(isExpirableCheckoutProvider(provider)).toBe(true)
+  })
+
+  // Solana settles in-band via its own verify endpoint, manual is an offline
+  // payment request, and null/missing means no provider at all — none of them
+  // may ever enter the cron's candidate set.
+  it.each(['solana', 'solana_subs', 'manual', null, undefined])('%s is NOT expirable', provider => {
+    expect(isExpirableCheckoutProvider(provider)).toBe(false)
+  })
+
+  // Stripe is carved out by name (the cron asks the Stripe API directly), not
+  // by the hosted-checkout capability — it never redirects, so it is not a
+  // "hosted checkout" provider even though the cron does reconcile it.
+  it('stripe is expirable without being a hosted-checkout provider', () => {
+    expect(isHostedCheckoutProvider('stripe')).toBe(false)
+    expect(isExpirableCheckoutProvider('stripe')).toBe(true)
+  })
+})
+
+describe('checkoutExpiresAt vs checkoutExpiryFrom for Stripe (#754)', () => {
+  // checkoutExpiresAt is the unified-checkout-route helper, gated on
+  // supportsHostedCheckout — Stripe Elements never goes through that route, so
+  // it must still report null there even though it is now expirable.
+  it('checkoutExpiresAt("stripe") stays null — the card route stamps checkoutExpiryFrom() itself', () => {
+    expect(checkoutExpiresAt('stripe')).toBeNull()
+  })
+
+  it('checkoutExpiryFrom(now) is exactly now + the TTL', () => {
+    const now = new Date('2026-09-15T00:00:00.000Z')
+    expect(checkoutExpiryFrom(now)).toBe('2026-09-16T00:00:00.000Z')
   })
 })
 
