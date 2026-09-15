@@ -6366,7 +6366,7 @@
       "failedSave": "Error al guardar",
       "failedPublish": "Error al publicar",
       "branding": "Marca",
-      "brandingDescription": "Logo, favicon y colores de marca. Los cambios se aplican a todas las páginas de tu sitio.",
+      "brandingDescription": "Logo y favicon. El tema y el color de marca se eligen en Apariencia.",
       "status": {
         "draft": "borrador",
         "published": "publicado"

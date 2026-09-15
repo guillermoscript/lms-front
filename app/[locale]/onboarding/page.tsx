@@ -49,8 +49,9 @@ export default async function OnboardingPage({
   // The wizard is optional now — setup is driven by the dashboard checklist,
   // so already-onboarded users may revisit this page freely.
 
-  // The theme is read unresolved: the picker resolves it against the plan
-  // itself, so it can show what was saved.
+  // The theme is read unresolved so plan resolution happens in one place (the
+  // picker and wizard, via resolveSchoolTheme) and a custom colour the plan
+  // masks stays in the row instead of being rewritten here.
   const [{ data: settings }, storedTheme, customBranding] = await Promise.all([
     supabase
       .from('tenant_settings')

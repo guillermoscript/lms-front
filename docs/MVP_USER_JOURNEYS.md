@@ -269,7 +269,7 @@ Login → Dashboard → View Stats → Check Analytics → Manage Revenue
 | Story | Route | Description |
 |-------|-------|-------------|
 | General settings | `/dashboard/admin/settings` (General tab) | Site name, description, contact email, timezone, maintenance mode |
-| Branding settings | `/dashboard/admin/settings` (Branding tab) | Logo and favicon (theme and brand colour live on `/dashboard/admin/appearance`) |
+| Branding settings | `/dashboard/admin/appearance` | Logo and favicon card below the theme picker (theme and brand colour are chosen in the picker above it) |
 | Email settings | `/dashboard/admin/settings` (Email tab) | SMTP configuration, sender details |
 | Payment settings | `/dashboard/admin/settings` (Payment tab) | Stripe keys, currency, payment methods |
 | Enrollment settings | `/dashboard/admin/settings` (Enrollment tab) | Auto-enrollment rules, capacity limits |

@@ -1,6 +1,6 @@
 'use client'
 
-import { useDeferredValue, useId, useState, useTransition, type KeyboardEvent, type ReactNode } from 'react'
+import { useDeferredValue, useId, useRef, useState, useTransition, type KeyboardEvent, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -123,10 +123,16 @@ function onRadioGroupKeyDown(event: KeyboardEvent<HTMLElement>, pick: (index: nu
 const RADIO_CLASS =
   'outline-hidden transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-foreground motion-reduce:transition-none'
 
+// Unavailable footer buttons use aria-disabled, not disabled: a disabled button
+// drops keyboard focus to the page, and Save turns unavailable the moment it is
+// pressed. The handlers return early instead.
+const ARIA_DISABLED_CLASS = 'aria-disabled:pointer-events-none aria-disabled:opacity-50'
+
 export function ThemeKitPicker({ stored, customBranding, variant, onContinue, onBack }: ThemeKitPickerProps) {
   const t = useTranslations('themeKit')
   const router = useRouter()
   const baseId = useId()
+  const saveRef = useRef<HTMLButtonElement>(null)
 
   const [initial] = useState(() => initialSelection(stored, customBranding))
   const [theme, setTheme] = useState<KitThemeId>(initial.theme)
@@ -136,6 +142,8 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
   // what is live instead of six swatches with none selected.
   const [customOpen, setCustomOpen] = useState(() => customAllowed && !isKitSwatch(initial.theme, initial.brand))
   const [customInput, setCustomInput] = useState(initial.brand)
+  // Whether the admin picked anything yet; only onboarding with nothing stored reads it.
+  const [touched, setTouched] = useState(false)
   const [pendingAction, setPendingAction] = useState<'save' | 'reset' | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -150,11 +158,16 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
   const customInvalid = customActive && parseHexInput(customInput) === null
   const readability = kitButtonReadability(theme, brand)
   const swatchIndex = kit.swatches.findIndex((swatch) => swatch.hex === brand)
-  // With nothing stored students see the platform palette, so saving even the
-  // untouched default selection is a real change: the picker shows it as chosen.
-  const changed = stored ? stored.theme !== theme || stored.brand !== brand : true
+  // Compared against what students see, the stored row resolved against the
+  // plan, so a custom colour the plan masks neither enables Save nor gets
+  // overwritten by an untouched Next. With nothing stored, the admin page counts
+  // saving the shown default as a real choice; onboarding writes only once
+  // something was picked, so an untouched Next keeps the platform palette.
+  const saved = resolveSchoolTheme(stored, { customBranding })
+  const changed = saved ? saved.theme !== theme || saved.brand !== brand : variant === 'admin' || touched
   const saving = isPending && pendingAction === 'save'
   const resetting = isPending && pendingAction === 'reset'
+  const saveBlocked = isPending || customInvalid || !changed
 
   const ids = {
     themeLabel: `${baseId}-theme`,
@@ -175,15 +188,22 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
     })
   }
 
+  // Re-choosing the checked option (click, Enter or Space) is a no-op: it must
+  // not snap the colour back to the recommended swatch or count as a pick.
   function pickTheme(id: KitThemeId) {
+    if (id === theme) return
     setTheme(id)
     setBrand(KIT_THEMES[id].swatches[0].hex)
     setCustomOpen(false)
+    setTouched(true)
   }
 
   function pickSwatch(hex: string) {
+    // A swatch matching the custom colour still closes the open custom field.
+    if (hex === brand && !customOpen) return
     setBrand(hex)
     setCustomOpen(false)
+    setTouched(true)
   }
 
   function toggleCustom() {
@@ -199,7 +219,9 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
   function changeCustom(value: string) {
     setCustomInput(value)
     const hex = parseHexInput(value)
-    if (hex) setBrand(hex)
+    if (!hex) return
+    setBrand(hex)
+    setTouched(true)
   }
 
   function save(then?: () => void) {
@@ -216,6 +238,11 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
     })
   }
 
+  function saveLook() {
+    if (saveBlocked) return
+    save()
+  }
+
   function handleNext() {
     if (!changed) {
       onContinue?.()
@@ -225,6 +252,7 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
   }
 
   function reset() {
+    if (isPending) return
     setPendingAction('reset')
     startTransition(async () => {
       const result = await resetSchoolTheme()
@@ -239,12 +267,24 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
         setBrand(fallback.brand)
         setCustomInput(fallback.brand)
         setCustomOpen(false)
+        setTouched(false)
       })
+      // Reset unmounts once the refresh reports nothing stored; hand focus to
+      // Save first so a keyboard user is not dropped back to the top of the page.
+      saveRef.current?.focus()
       router.refresh()
     })
   }
 
   const spinner = <Loader2 data-icon="inline-start" aria-hidden className="animate-spin motion-reduce:animate-none" />
+
+  // Without it the pre-selected card reads as the look students already see.
+  const platformDefaultStatus =
+    stored === null ? (
+      <p data-testid="theme-kit-status" className="text-xs/relaxed text-muted-foreground">
+        {t('platformDefault')}
+      </p>
+    ) : null
 
   const themeGroup = (
     <div className="flex flex-col gap-2.5">
@@ -439,6 +479,7 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
         className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,340px)]"
       >
         <div className="flex flex-col gap-6">
+          {platformDefaultStatus}
           {controls}
           <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
             <button
@@ -479,20 +520,17 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
             <h2>{t('title')}</h2>
           </CardTitle>
           <CardDescription className="text-sm/relaxed">{t('description')}</CardDescription>
-          {stored === null ? (
-            <p data-testid="theme-kit-status" className="text-xs/relaxed text-muted-foreground">
-              {t('platformDefault')}
-            </p>
-          ) : null}
+          {platformDefaultStatus}
         </CardHeader>
         <CardContent className="flex flex-col gap-6 px-5">{controls}</CardContent>
         <CardFooter className="flex-col items-stretch gap-2 border-t px-5">
           <button
+            ref={saveRef}
             type="button"
             data-testid="theme-kit-save"
-            onClick={() => save()}
-            disabled={isPending || customInvalid || !changed}
-            className={cn(buttonVariants({ size: 'lg' }), 'h-10 w-full text-sm font-semibold')}
+            onClick={saveLook}
+            aria-disabled={saveBlocked}
+            className={cn(buttonVariants({ size: 'lg' }), 'h-10 w-full text-sm font-semibold', ARIA_DISABLED_CLASS)}
           >
             {saving ? spinner : null}
             {saving ? t('saving') : t('save')}
@@ -502,8 +540,8 @@ export function ThemeKitPicker({ stored, customBranding, variant, onContinue, on
               type="button"
               data-testid="theme-kit-reset"
               onClick={reset}
-              disabled={isPending}
-              className={cn(buttonVariants({ variant: 'ghost', size: 'lg' }), 'h-9 w-full text-sm')}
+              aria-disabled={isPending}
+              className={cn(buttonVariants({ variant: 'ghost', size: 'lg' }), 'h-9 w-full text-sm', ARIA_DISABLED_CLASS)}
             >
               {resetting ? spinner : null}
               {resetting ? t('resetting') : t('reset')}
