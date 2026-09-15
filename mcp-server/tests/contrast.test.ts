@@ -7,9 +7,14 @@ import {
   LIGHT_INK,
   accentTextOn,
   contrastRatio,
+  mixOklch,
+  oklchToRgb,
   parseColor,
+  pickInk,
+  readableButton,
   readableOn,
   relativeLuminance,
+  rgbToOklch,
   withAlpha,
 } from '../views/shared/contrast'
 
@@ -49,13 +54,28 @@ describe('parseColor', () => {
     expect(white.map(Math.round)).toEqual([255, 255, 255])
   })
 
-  it('approximates oklch/lab by lightness, so light and dark are still distinguishable', () => {
-    const dark = parseColor('oklch(0.2 0.05 293)')!
-    const light = parseColor('oklch(0.95 0.05 293)')!
-    expect(relativeLuminance(dark)).toBeLessThan(relativeLuminance(light))
+  it('converts oklch/oklab/lab/lch to real sRGB (issue #761)', () => {
+    const near = (css: string, want: [number, number, number]) => {
+      const got = parseColor(css)!
+      got.forEach((c, i) => expect(Math.abs(c - want[i]), `${css}[${i}]`).toBeLessThanOrEqual(1.5))
+    }
+    near('oklch(0.627955 0.257683 29.2339)', [255, 0, 0])
+    near('oklch(0.866440 0.294827 142.4953)', [0, 255, 0])
+    near('oklch(0.452014 0.313214 264.0520)', [0, 0, 255])
+    near('oklab(0.627955 0.224863 0.125846)', [255, 0, 0])
+    near('lab(54.2917 80.8125 69.8851)', [255, 0, 0])
+    near('lch(54.2917 106.839 40.8526)', [255, 0, 0])
+    // Percentages, `none`, hue units and alpha.
+    near('oklch(62.7955% 64.42075% 0.0812053turn / 0.5)', [255, 0, 0])
+    expect(parseColor('oklch(0.5 none none)')).toEqual(parseColor('oklch(0.5 0 0)'))
     // lab lightness is 0..100, not 0..1 — a mid value must not read as black.
     expect(relativeLuminance(parseColor('lab(90 20 20)')!)).toBeGreaterThan(0.5)
     expect(relativeLuminance(parseColor('oklch(90% 0.05 293)')!)).toBeGreaterThan(0.5)
+    // Out-of-gamut input is clipped, never out of range.
+    for (const c of parseColor('oklch(0.7 0.4 150)')!) {
+      expect(c).toBeGreaterThanOrEqual(0)
+      expect(c).toBeLessThanOrEqual(255)
+    }
   })
 
   it('resolves the common keywords and refuses everything else', () => {
@@ -152,6 +172,47 @@ describe('accentTextOn', () => {
 
   it('returns the input untouched when it cannot be parsed', () => {
     expect(accentTextOn('var(--primary)', CARD_DARK)).toBe('var(--primary)')
+  })
+})
+
+describe('OKLCH helpers (issue #761)', () => {
+  it('round-trips rgbToOklch / oklchToRgb', () => {
+    const [l, c, h] = rgbToOklch([58, 80, 184])
+    oklchToRgb(l, c, h).forEach((ch, i) => expect(ch).toBeCloseTo([58, 80, 184][i], 3))
+  })
+
+  it('mixOklch returns hex endpoints and null on bad input', () => {
+    expect(mixOklch('#3A50B8', '#ffffff', 0)).toBe('#3a50b8')
+    expect(mixOklch('#3A50B8', '#ffffff', 1)).toBe('#ffffff')
+    expect(mixOklch('#3A50B8', '#000000', 0.5)).toMatch(/^#[0-9a-f]{6}$/)
+    expect(mixOklch('var(--x)', '#ffffff', 0.5)).toBeNull()
+  })
+
+  it('pickInk picks the higher contrast, ties to the earlier ink', () => {
+    expect(pickInk('#ffffff', [LIGHT_INK, DARK_INK])).toBe(DARK_INK)
+    expect(pickInk('#ffffff', ['black', '#000000'])).toBe('black')
+  })
+
+  it('readableButton keeps a legible brand and shifts one in the band', () => {
+    const opts = { lightInk: 'oklch(0.99 0 0)', darkInk: 'oklch(0.2 0.02 262)' }
+    expect(readableButton('#3A50B8', { ...opts, dark: false })).toEqual({
+      background: '#3A50B8',
+      ink: opts.lightInk,
+      shifted: false,
+    })
+    for (const dark of [false, true]) {
+      const r = readableButton('#767676', { ...opts, dark })
+      expect(r.shifted).toBe(true)
+      expect(r.ink).toBe(dark ? opts.darkInk : opts.lightInk)
+      expect(contrastRatio(r.ink, r.background)).toBeGreaterThanOrEqual(AA_CONTRAST)
+    }
+  })
+
+  it('accentTextOn clears AA on every surface in a list', () => {
+    const surfaces = ['#ffffff', '#fafafa', '#dde3f7']
+    const ink = accentTextOn('#4f63c9', surfaces)
+    for (const s of surfaces) expect(contrastRatio(ink, s)).toBeGreaterThanOrEqual(AA_CONTRAST)
+    expect(accentTextOn('#fde047', [CARD_LIGHT])).toBe(accentTextOn('#fde047', CARD_LIGHT))
   })
 })
 
