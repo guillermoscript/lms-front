@@ -63,8 +63,8 @@ export default function ExerciseResultSummary({
       className={cn(
         'rounded-xl border p-5 space-y-5',
         passed
-          ? 'border-emerald-500/30 bg-emerald-500/[0.04]'
-          : 'border-amber-500/30 bg-amber-500/[0.04]',
+          ? 'border-success/30 bg-success/10'
+          : 'border-warning/30 bg-warning/10',
         className
       )}
       aria-label={t('title')}
@@ -75,9 +75,9 @@ export default function ExerciseResultSummary({
         <div className="min-w-0">
           <h3 className="font-semibold text-sm flex items-center gap-2">
             {passed ? (
-              <IconCheck size={16} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+              <IconCheck size={16} className="text-success shrink-0" />
             ) : (
-              <IconTarget size={16} className="text-amber-700 dark:text-amber-400 shrink-0" />
+              <IconTarget size={16} className="text-warning shrink-0" />
             )}
             {t('title')}
           </h3>
@@ -92,7 +92,7 @@ export default function ExerciseResultSummary({
               <span
                 className={cn(
                   'text-2xl font-bold tabular-nums tracking-tight',
-                  passed ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'
+                  passed ? 'text-success' : 'text-foreground'
                 )}
               >
                 {Math.round(score)}
@@ -106,8 +106,8 @@ export default function ExerciseResultSummary({
             className={cn(
               'font-semibold px-2.5',
               passed
-                ? 'bg-emerald-700 text-white dark:bg-emerald-400 dark:text-emerald-950'
-                : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/40'
+                ? 'bg-success text-success-foreground'
+                : 'bg-warning/10 text-warning border-warning/40'
             )}
           >
             {passed ? tArtifact('passed') : tArtifact('failed')}
@@ -117,12 +117,12 @@ export default function ExerciseResultSummary({
 
       {feedback && (
         <div className="space-y-2">
-          {/* The label is foreground, not `text-primary`: primary is overridden
+          {/* The label is foreground, not `text-brand-text`: primary is overridden
               per tenant, so small text in it cannot be guaranteed to clear AA
               (the default hue measured 3.35:1 in dark). The icon keeps the
               accent — non-text UI only needs 3:1. */}
           <p className="text-xs font-semibold flex items-center gap-1.5">
-            <IconSparkles size={13} className="text-primary" aria-hidden="true" />
+            <IconSparkles size={13} className="text-brand-text" aria-hidden="true" />
             {tAudio('aiFeedback')}
           </p>
           <p className={cn('text-sm leading-relaxed whitespace-pre-wrap', PROSE)}>{feedback}</p>
@@ -131,7 +131,7 @@ export default function ExerciseResultSummary({
 
       {strengths.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">
+          <p className="text-xs font-semibold text-success mb-2">
             {tAudio('strengths')}
           </p>
           <ul className="space-y-1.5">
@@ -139,7 +139,7 @@ export default function ExerciseResultSummary({
               <li key={i} className={cn('flex items-start gap-2 text-sm', PROSE)}>
                 <IconCheck
                   size={14}
-                  className="mt-1 shrink-0 text-emerald-700 dark:text-emerald-400"
+                  className="mt-1 shrink-0 text-success"
                   aria-hidden="true"
                 />
                 {item}
@@ -151,7 +151,7 @@ export default function ExerciseResultSummary({
 
       {improvements.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">
+          <p className="text-xs font-semibold text-warning mb-2">
             {tAudio('improvements')}
           </p>
           <ul className="space-y-1.5">
@@ -160,7 +160,7 @@ export default function ExerciseResultSummary({
               <li key={i} className={cn('flex items-start gap-2 text-sm', PROSE)}>
                 <IconArrowNarrowRight
                   size={14}
-                  className="mt-1 shrink-0 text-amber-700 dark:text-amber-400"
+                  className="mt-1 shrink-0 text-warning"
                   aria-hidden="true"
                 />
                 {item}

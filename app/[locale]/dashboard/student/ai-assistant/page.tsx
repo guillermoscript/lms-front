@@ -31,7 +31,7 @@ export default async function StudentAiAssistantPage() {
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               {(['item1', 'item2', 'item3', 'item4', 'item5'] as const).map((key) => (
                 <li key={key} className="flex items-start gap-2">
-                  <IconCircleCheck className="size-4 mt-0.5 shrink-0 text-primary" />
+                  <IconCircleCheck className="size-4 mt-0.5 shrink-0 text-brand-text" />
                   <span>{t(`whatYouCanDo.${key}`)}</span>
                 </li>
               ))}

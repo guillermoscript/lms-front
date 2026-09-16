@@ -28,7 +28,7 @@ export function MiniLeaderboard() {
             <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-border flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-500">
+                        <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                             <IconTrophy size={18} />
                         </div>
                         <h3 className="font-bold text-sm tracking-tight">{t('leaderboardTitle')}</h3>
@@ -69,7 +69,7 @@ export function MiniLeaderboard() {
         <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-500">
+                    <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                         <IconTrophy size={18} />
                     </div>
                     <h3 className="font-bold text-sm tracking-tight">{t('leaderboardTitle')}</h3>

@@ -84,9 +84,9 @@ export default function ExerciseWorkspace({
             // Icon, not a colored dot: pass state may not be carried by color
             // alone, and the shapes match the ones on the result card itself.
             icon: resultPassed ? (
-              <IconCheck size={14} className="text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+              <IconCheck size={14} className="text-success" aria-hidden="true" />
             ) : (
-              <IconTarget size={14} className="text-amber-700 dark:text-amber-400" aria-hidden="true" />
+              <IconTarget size={14} className="text-warning" aria-hidden="true" />
             ),
           },
         ]

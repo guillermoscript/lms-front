@@ -117,7 +117,7 @@ export default async function ExamReviewPage({ params }: PageProps) {
           <div className="flex items-center justify-center gap-8">
             <div className="text-center">
               <div className="mb-2 flex items-center justify-center">
-                <IconTrophy className="h-8 w-8 text-primary" />
+                <IconTrophy className="h-8 w-8 text-brand-text" />
               </div>
               <div className="text-4xl font-bold">
                 {score ? `${Number(score.score).toFixed(0)}%` : 'Pending'}
@@ -126,7 +126,7 @@ export default async function ExamReviewPage({ params }: PageProps) {
             </div>
             <div className="h-16 w-px bg-border" />
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary">
+              <div className="text-4xl font-bold text-brand-text">
                 {correctAnswers}/{totalQuestions}
               </div>
               <p className="text-sm text-muted-foreground">Correct Answers</p>
@@ -204,11 +204,11 @@ export default async function ExamReviewPage({ params }: PageProps) {
                           key={option.option_id}
                           className={`rounded-lg border p-3 ${
                             isSelected && isOptionCorrect
-                              ? 'border-green-500 bg-green-50 dark:bg-green-950'
+                              ? 'border-success bg-success/10'
                               : isSelected && !isOptionCorrect
-                              ? 'border-red-500 bg-red-50 dark:bg-red-950'
+                              ? 'border-destructive bg-destructive/10'
                               : isOptionCorrect
-                              ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/50'
+                              ? 'border-success/50 bg-success/5'
                               : ''
                           }`}
                         >
@@ -221,7 +221,7 @@ export default async function ExamReviewPage({ params }: PageProps) {
                                 </Badge>
                               )}
                               {isOptionCorrect && (
-                                <Badge className="bg-green-500 text-xs">
+                                <Badge className="bg-success text-success-foreground text-xs">
                                   Correct
                                 </Badge>
                               )}
@@ -256,7 +256,7 @@ export default async function ExamReviewPage({ params }: PageProps) {
                 {/* AI Feedback for this question */}
                 {answer?.feedback && (
                   <div className="mt-4 rounded-lg border-l-4 border-primary bg-primary/5 p-3">
-                    <p className="text-sm font-medium text-primary mb-1">AI Feedback</p>
+                    <p className="text-sm font-medium text-brand-text mb-1">AI Feedback</p>
                     <p className="text-sm text-muted-foreground">{answer.feedback}</p>
                   </div>
                 )}

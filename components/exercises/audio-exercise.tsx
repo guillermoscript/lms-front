@@ -90,13 +90,13 @@ function AttemptCounter({
       className={cn(
         'rounded-xl border-2 px-4 py-3 flex items-center justify-between gap-3 transition-colors',
         isLow
-          ? 'border-amber-500/30 bg-amber-500/[0.04]'
+          ? 'border-warning/30 bg-warning/10'
           : 'border-border/50 bg-muted/20'
       )}
     >
       <span className={cn(
         'text-xs font-semibold tracking-wide',
-        isLow ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'
+        isLow ? 'text-warning' : 'text-muted-foreground'
       )}>
         {t('attemptsUsedOf', { used, max })}
       </span>
@@ -108,7 +108,7 @@ function AttemptCounter({
               'h-2 w-2 rounded-full transition-all duration-300',
               i < used
                 ? isLow
-                  ? 'bg-amber-500 scale-100'
+                  ? 'bg-warning scale-100'
                   : 'bg-primary scale-100'
                 : 'bg-muted-foreground/20 scale-90'
             )}
@@ -132,7 +132,7 @@ function RetryPanel({
   const pointsAway = Math.max(0, passingScore - Math.round(score))
 
   return (
-    <div className="rounded-2xl border-2 border-primary/15 bg-gradient-to-br from-primary/[0.04] to-primary/[0.01] p-6 space-y-5">
+    <div className="rounded-2xl border-2 border-primary/15 bg-primary/5 p-6 space-y-5">
       <div className="flex items-center justify-between">
         {/* Out of 100, not out of the pass mark: "64 / 70" reads as 91% when
             64 is a failure. The threshold is metadata, and `pointsAway` below
@@ -144,7 +144,7 @@ function RetryPanel({
           <span className="text-lg font-semibold text-muted-foreground tabular-nums">/ 100</span>
         </div>
         <div className="rounded-full border-2 border-primary/20 bg-primary/5 p-2.5">
-          <IconTarget size={20} className="text-primary" />
+          <IconTarget size={20} className="text-brand-text" />
         </div>
       </div>
 
@@ -178,20 +178,20 @@ function CollapsibleFeedbackSummary({
   if (improvements.length === 0 && !focus_next) return null
 
   return (
-    <div className="rounded-xl border-2 border-amber-500/15 bg-amber-500/[0.03] overflow-hidden">
+    <div className="rounded-xl border-2 border-warning/30 bg-warning/10 overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-500/[0.03] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-warning/10 transition-colors"
       >
-        <span className="text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 flex items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-widest text-warning flex items-center gap-2">
           <IconAlertTriangle size={13} />
           {t('improvementFocus')}
         </span>
         {open ? (
-          <IconChevronUp size={14} className="text-amber-600/60" />
+          <IconChevronUp size={14} className="text-warning/60" />
         ) : (
-          <IconChevronDown size={14} className="text-amber-600/60" />
+          <IconChevronDown size={14} className="text-warning/60" />
         )}
       </button>
 
@@ -201,7 +201,7 @@ function CollapsibleFeedbackSummary({
             <ul className="space-y-1.5">
               {improvements.map((imp, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                  <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                  <span className="mt-0.5 shrink-0 text-warning">•</span>
                   {imp}
                 </li>
               ))}
@@ -209,8 +209,8 @@ function CollapsibleFeedbackSummary({
           )}
 
           {focus_next && (
-            <div className="rounded-lg bg-primary/[0.05] border border-primary/10 px-3 py-2.5">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary mb-1">
+            <div className="rounded-lg bg-primary/5 border border-primary/10 px-3 py-2.5">
+              <p className="text-xs font-bold uppercase tracking-widest text-brand-text mb-1">
                 {t('focusNext')}
               </p>
               <p className="text-sm text-foreground/80">{focus_next}</p>
@@ -237,28 +237,28 @@ function CompletionSummary({
     : undefined
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.06] to-emerald-500/[0.02] p-6 space-y-4">
+    <div className="rounded-2xl border-2 border-success/30 bg-success/10 p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+          <h3 className="font-bold text-success flex items-center gap-2">
             <IconTrophy size={18} />
             {t('completedScore')}
           </h3>
           {dateStr && (
-            <p className="text-xs text-emerald-600/70 dark:text-emerald-400/60 mt-1">
+            <p className="text-xs text-success/70 mt-1">
               {t('completedOn', { date: dateStr })}
             </p>
           )}
         </div>
         <div className="flex items-baseline gap-1">
-          <span className="text-4xl font-black tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400">
+          <span className="text-4xl font-black tabular-nums tracking-tight text-success">
             {Math.round(score)}
           </span>
-          <span className="text-lg font-bold text-emerald-600/40">/</span>
-          <span className="text-lg font-bold text-emerald-600/60 tabular-nums">100</span>
+          <span className="text-lg font-bold text-success/40">/</span>
+          <span className="text-lg font-bold text-success/60 tabular-nums">100</span>
         </div>
       </div>
-      <p className="text-sm text-emerald-600/80 dark:text-emerald-400/70">
+      <p className="text-sm text-success/80">
         {t('exerciseMarkedComplete')}
       </p>
     </div>
@@ -449,8 +449,8 @@ export default function AudioExercise({
       {!isUnlimited && passed !== true && <AttemptCounter used={attemptsUsed} max={maxDaily} />}
 
       {dailyLimitReached && passed !== true && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] px-4 py-3">
-          <p className="flex items-center gap-2.5 text-sm font-semibold text-amber-800 dark:text-amber-300">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+          <p className="flex items-center gap-2.5 text-sm font-semibold text-warning">
             <IconAlertTriangle size={16} className="shrink-0" aria-hidden="true" />
             {t('dailyLimitReached')}
           </p>
@@ -475,7 +475,7 @@ export default function AudioExercise({
       {showRecorder && !dailyLimitReached && (
         <div className="rounded-xl border bg-card p-5">
           <h3 className="mb-4 text-sm font-semibold flex items-center gap-2">
-            <IconMicrophone size={16} className="text-primary" aria-hidden="true" />
+            <IconMicrophone size={16} className="text-brand-text" aria-hidden="true" />
             {t('recordYourResponse')}
           </h3>
 
@@ -487,7 +487,7 @@ export default function AudioExercise({
 
           {submitState === 'analyzing' && (
             <div className="mb-4 flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3" role="status">
-              <IconLoader2 size={16} className="animate-spin text-primary shrink-0" aria-hidden="true" />
+              <IconLoader2 size={16} className="animate-spin text-brand-text shrink-0" aria-hidden="true" />
               <div>
                 <p className="text-sm font-medium">{t('analyzing')}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{t('analyzingDescription')}</p>
@@ -530,7 +530,7 @@ export default function AudioExercise({
       {evaluation && !showRecorder && (
         <div className="rounded-xl border bg-card p-5">
           <h3 className="mb-5 text-sm font-semibold flex items-center gap-2">
-            <IconSparkles size={16} className="text-primary" aria-hidden="true" />
+            <IconSparkles size={16} className="text-brand-text" aria-hidden="true" />
             {t('aiFeedback')}
           </h3>
           <SpeechFeedback
@@ -643,13 +643,13 @@ function SubmissionHistoryRow({
               className={cn(
                 'text-[10px] font-bold px-2 py-0',
                 didPass
-                  ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
-                  : 'border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10'
+                  ? 'border-success/30 text-success bg-success/10'
+                  : 'border-warning/30 text-warning bg-warning/10'
               )}
             >
               {Math.round(score)}/100
             </Badge>
-            {didPass && <IconCheck size={14} className="text-emerald-500" />}
+            {didPass && <IconCheck size={14} className="text-success" />}
           </div>
           <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
             <span>{date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>

@@ -96,8 +96,8 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
 
                     {/* Badge indicator */}
                     {isEarned && (
-                        <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-green-500 flex items-center justify-center border-2 border-background shadow-sm">
-                            <IconCheck size={12} className="text-white stroke-[4]" />
+                        <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-success flex items-center justify-center border-2 border-background shadow-sm">
+                            <IconCheck size={12} className="text-success-foreground stroke-[4]" />
                         </div>
                     )}
                 </div>
@@ -106,7 +106,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
                     <div className="flex items-center justify-between mb-1">
                         <span className={cn(
                             "text-[10px] font-bold uppercase tracking-widest",
-                            isEarned ? "text-primary" : "text-muted-foreground"
+                            isEarned ? "text-brand-text" : "text-muted-foreground"
                         )}>
                             {t(`achievements.${achievement.tier}`)}
                         </span>
@@ -116,7 +116,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
                             </span>
                         )}
                     </div>
-                    <h4 className="font-bold text-sm leading-tight mb-1 truncate group-hover:text-primary transition-colors">
+                    <h4 className="font-bold text-sm leading-tight mb-1 truncate group-hover:text-brand-text transition-colors">
                         {achievement.title}
                     </h4>
                     <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
@@ -128,11 +128,11 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
             {/* Rewards Tooltip-like section */}
             <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-3">
                 <div className="flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                     <span className="text-[10px] font-bold text-muted-foreground">{achievement.xp_reward} XP</span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-cyan-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
                     <span className="text-[10px] font-bold text-muted-foreground">{Math.floor(achievement.xp_reward / 10)} {t('coins')}</span>
                 </div>
             </div>
@@ -140,7 +140,7 @@ function AchievementCard({ achievement }: { achievement: Achievement }) {
             {/* Background Decorative element */}
             <div className={cn(
                 "absolute -bottom-2 -right-2 opacity-[0.03] transition-transform group-hover:scale-150 duration-700",
-                isEarned ? "text-primary" : "text-muted-foreground"
+                isEarned ? "text-brand-text" : "text-muted-foreground"
             )}>
                 <IconAward size={80} />
             </div>

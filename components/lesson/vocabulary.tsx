@@ -85,7 +85,7 @@ export function Vocabulary({
               <button
                 type="button"
                 onClick={handlePlayAudio}
-                className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                className="flex size-8 items-center justify-center rounded-full bg-brand-tint text-brand-text hover:bg-primary hover:text-primary-foreground transition-colors"
                 aria-label={isPlaying ? 'Pausar audio' : 'Reproducir pronunciación'}
               >
                 {isPlaying ? (

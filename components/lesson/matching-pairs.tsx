@@ -151,8 +151,8 @@ export function MatchingPairs({ pairs, explanation, className }: MatchingPairsPr
                   !checked && !color && !isSelected && 'hover:bg-muted/50',
                   isSelected && 'ring-2 ring-primary',
                   color && color,
-                  checked && results[termIdx] && 'border-green-500',
-                  checked && results[termIdx] === false && 'border-red-500',
+                  checked && results[termIdx] && 'border-success',
+                  checked && results[termIdx] === false && 'border-destructive',
                   checked && 'cursor-default'
                 )}
               >
@@ -205,8 +205,8 @@ export function MatchingPairs({ pairs, explanation, className }: MatchingPairsPr
               className={cn(
                 'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
                 allCorrect
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                  ? 'bg-success/10 text-success'
+                  : 'bg-destructive/10 text-destructive'
               )}
               role="status"
             >

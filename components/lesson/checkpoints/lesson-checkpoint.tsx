@@ -51,10 +51,10 @@ export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
             className={cn(
               'flex size-7 shrink-0 items-center justify-center rounded-full',
               didNotPass
-                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                ? 'bg-warning/10 text-warning'
                 : isCompleted
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-primary/10 text-primary'
+                  ? 'bg-success/10 text-success'
+                  : 'bg-brand-tint text-brand-text'
             )}
           >
             {didNotPass ? (
@@ -78,7 +78,7 @@ export function LessonCheckpoint({ checkpointId }: LessonCheckpointProps) {
                   variant="secondary"
                   className={cn(
                     'text-[0.625rem]',
-                    didNotPass && 'bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                    didNotPass && 'bg-warning/10 text-warning'
                   )}
                 >
                   {checkpoint.latestAttempt?.score !== null && checkpoint.latestAttempt?.score !== undefined

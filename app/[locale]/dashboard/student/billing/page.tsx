@@ -102,19 +102,19 @@ function getTransactionStatusMeta(status: TransactionStatus): {
       return {
         variant: 'default',
         icon: <IconCheck className="w-3 h-3" />,
-        className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+        className: 'bg-success/10 text-success border-success/30',
       }
     case 'pending':
       return {
         variant: 'secondary',
         icon: <IconClock className="w-3 h-3" />,
-        className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+        className: 'bg-warning/10 text-warning border-warning/30',
       }
     case 'refunded':
       return {
         variant: 'secondary',
         icon: <IconRefresh className="w-3 h-3" />,
-        className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+        className: 'bg-muted text-muted-foreground border-border',
       }
     case 'failed':
     case 'canceled':
@@ -123,7 +123,7 @@ function getTransactionStatusMeta(status: TransactionStatus): {
       return {
         variant: 'destructive',
         icon: <IconX className="w-3 h-3" />,
-        className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800',
+        className: 'bg-destructive/10 text-destructive border-destructive/30',
       }
   }
 }
@@ -137,12 +137,12 @@ function getSubscriptionStatusMeta(status: SubscriptionStatus): {
     case 'renewed':
       return {
         variant: 'default',
-        className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+        className: 'bg-success/10 text-success border-success/30',
       }
     case 'past_due':
       return {
         variant: 'secondary',
-        className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+        className: 'bg-warning/10 text-warning border-warning/30',
       }
     case 'canceled':
     case 'expired':
@@ -308,7 +308,7 @@ export default async function StudentBillingPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <IconCreditCard className="w-6 h-6 text-primary" />
+          <IconCreditCard className="w-6 h-6 text-brand-text" />
           <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
         </div>
         <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
@@ -345,7 +345,7 @@ export default async function StudentBillingPage() {
                   still grants access during the provider's retry window, so say
                   so instead of rendering it as if nothing were wrong. */}
               {isPastDue && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
+                <div className="flex items-start gap-2 rounded-md bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-warning">
                   <IconAlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>{t('subscription.pastDueNotice')}</span>
                 </div>
@@ -367,7 +367,7 @@ export default async function StudentBillingPage() {
               )}
               {/* Cancel-at-period-end notice */}
               {activeSubscription.cancel_at_period_end && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
+                <div className="flex items-start gap-2 rounded-md bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-warning">
                   <IconAlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>
                     {t('subscription.cancelAtPeriodEndNotice', {
@@ -578,7 +578,7 @@ export default async function StudentBillingPage() {
                                 href={`/api/invoices/${req.invoice_number}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 rounded-sm text-xs text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="inline-flex items-center gap-1 rounded-sm text-xs text-brand-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 aria-label={t('offline.downloadInvoiceLabel', { number: req.invoice_number })}
                               >
                                 <IconDownload className="w-3.5 h-3.5" />
@@ -600,7 +600,7 @@ export default async function StudentBillingPage() {
           {/* Link back to the detailed payments page */}
           <p className="mt-2 text-xs text-muted-foreground">
             {t('offline.managePaymentsNote')}{' '}
-            <Link href="/dashboard/student/payments" className="text-primary hover:underline focus-visible:underline outline-none">
+            <Link href="/dashboard/student/payments" className="text-brand-text hover:underline focus-visible:underline outline-none">
               {t('offline.managePaymentsLink')}
             </Link>
           </p>

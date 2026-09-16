@@ -177,7 +177,7 @@ export function WeeklyLeague() {
                                 key={row.user_id}
                                 className={cn(
                                     "flex items-center gap-3 p-2 rounded-xl",
-                                    row.is_me && "bg-primary/10 ring-1 ring-primary/20"
+                                    row.is_me && "bg-brand-tint ring-1 ring-primary/20"
                                 )}
                             >
                                 <div className="flex items-center justify-center w-6 text-xs font-bold text-muted-foreground">
@@ -200,14 +200,14 @@ export function WeeklyLeague() {
                                 {inPromoteZone && (
                                     <IconArrowUp
                                         size={14}
-                                        className="text-emerald-500 shrink-0"
+                                        className="text-success shrink-0"
                                         aria-label={t("league.promoteZone")}
                                     />
                                 )}
                                 {inDemoteZone && (
                                     <IconArrowDown
                                         size={14}
-                                        className="text-red-500 shrink-0"
+                                        className="text-destructive shrink-0"
                                         aria-label={t("league.demoteZone")}
                                     />
                                 )}

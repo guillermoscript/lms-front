@@ -21,9 +21,9 @@ function ScoreCircle({ score, label, passingScore }: { score: number; label: str
   const offset = circumference - (score / 100) * circumference
 
   const color =
-    score >= 80 ? 'text-emerald-700 dark:text-emerald-400 stroke-emerald-600' :
-    score >= 60 ? 'text-amber-700 dark:text-amber-400 stroke-amber-500' :
-    'text-rose-500 stroke-rose-500'
+    score >= 80 ? 'text-success stroke-success' :
+    score >= 60 ? 'text-warning stroke-warning' :
+    'text-destructive stroke-destructive'
 
   // Threshold marker in un-rotated SVG space (parent CSS -rotate-90 handles visual positioning)
   // Arc fills clockwise from 3 o'clock (0°) in SVG coords
@@ -85,8 +85,8 @@ function MetricBadge({ label, value, good }: { label: string; value: string | nu
     <div className="flex flex-col items-center gap-1 rounded-xl border bg-card px-4 py-3 text-center min-w-[80px]">
       <span className={cn(
         'text-lg font-black tabular-nums',
-        good === true ? 'text-emerald-700 dark:text-emerald-400' :
-        good === false ? 'text-amber-700 dark:text-amber-400' :
+        good === true ? 'text-success' :
+        good === false ? 'text-warning' :
         'text-foreground'
       )}>
         {value}
@@ -108,26 +108,26 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
       {/* Pass/fail banner */}
       {passed !== undefined && (
         passed ? (
-          <div className="rounded-2xl border-2 border-emerald-500/20 bg-emerald-500/[0.05] p-5">
+          <div className="rounded-2xl border-2 border-success/30 bg-success/10 p-5">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-emerald-500/10 p-2">
-                <IconCheck size={20} className="text-emerald-700 dark:text-emerald-400" />
+              <div className="rounded-full bg-success/15 p-2">
+                <IconCheck size={20} className="text-success" />
               </div>
               <div>
-                <h3 className="font-bold text-emerald-700 dark:text-emerald-400">{t('passed')}</h3>
-                <p className="text-sm text-emerald-800 dark:text-emerald-300">{t('passedMessage')}</p>
+                <h3 className="font-bold text-success">{t('passed')}</h3>
+                <p className="text-sm text-success">{t('passedMessage')}</p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border-2 border-amber-500/20 bg-amber-500/[0.05] p-5">
+          <div className="rounded-2xl border-2 border-warning/30 bg-warning/10 p-5">
             <div className="flex items-center gap-3">
-              <div className="rounded-full bg-amber-500/10 p-2">
-                <IconAlertTriangle size={20} className="text-amber-700 dark:text-amber-400" />
+              <div className="rounded-full bg-warning/15 p-2">
+                <IconAlertTriangle size={20} className="text-warning" />
               </div>
               <div>
-                <h3 className="font-bold text-amber-700 dark:text-amber-400">{t('notPassed')}</h3>
-                <p className="text-sm text-amber-800 dark:text-amber-300">
+                <h3 className="font-bold text-warning">{t('notPassed')}</h3>
+                <p className="text-sm text-warning">
                   {t('notPassedMessage', { score: passingScore ?? 70 })}
                 </p>
               </div>
@@ -164,14 +164,14 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
 
       {/* Strengths */}
       {strengths.length > 0 && (
-        <div className="rounded-2xl border-2 border-emerald-500/15 bg-emerald-500/[0.03] p-5">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+        <div className="rounded-2xl border-2 border-success/30 bg-success/10 p-5">
+          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-success flex items-center gap-2">
             {t('strengths')}
           </h3>
           <ul className="space-y-2">
             {strengths.map((s, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                <span className="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-400">•</span>
+                <span className="mt-0.5 shrink-0 text-success">•</span>
                 {s}
               </li>
             ))}
@@ -181,14 +181,14 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
 
       {/* Improvements */}
       {improvements.length > 0 && (
-        <div className="rounded-2xl border-2 border-amber-500/15 bg-amber-500/[0.03] p-5">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 flex items-center gap-2">
+        <div className="rounded-2xl border-2 border-warning/30 bg-warning/10 p-5">
+          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-warning flex items-center gap-2">
             {t('improvements')}
           </h3>
           <ul className="space-y-2">
             {improvements.map((imp, i) => (
               <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                <span className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-400">•</span>
+                <span className="mt-0.5 shrink-0 text-warning">•</span>
                 {imp}
               </li>
             ))}
@@ -218,7 +218,7 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
               <span
                 key={i}
                 className={cn(
-                  seg.type === 'filler' && 'rounded px-0.5 bg-orange-500/15 text-orange-800 dark:text-orange-300 font-medium',
+                  seg.type === 'filler' && 'rounded px-0.5 bg-warning/15 text-warning font-medium',
                   seg.type === 'long_pause' && 'rounded px-1 bg-muted text-muted-foreground text-xs font-mono'
                 )}
               >
@@ -228,7 +228,7 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
           </div>
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded bg-orange-500/30" />
+              <span className="inline-block h-2.5 w-2.5 rounded bg-warning/30" />
               {t('fillerWord')}
             </span>
             <span className="flex items-center gap-1.5">

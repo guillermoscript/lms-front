@@ -152,8 +152,8 @@ function InnerExerciseChat({
             {/* Chat Header */}
             <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-muted/30">
                 <div className="flex items-center gap-2 sm:gap-2.5">
-                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary/10">
-                        <IconSparkles size={14} className="sm:size-4 text-primary" aria-hidden="true" />
+                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-brand-tint">
+                        <IconSparkles size={14} className="sm:size-4 text-brand-text" aria-hidden="true" />
                     </div>
                     <div>
                         <h3 className="text-xs sm:text-sm font-bold leading-none">AI Coach</h3>
@@ -164,7 +164,7 @@ function InnerExerciseChat({
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                     {isCompleted && (
-                        <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] font-bold text-emerald-600 bg-emerald-500/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-emerald-500/20">
+                        <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] font-bold text-success bg-success/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-success/20">
                             <IconCheck size={10} className="sm:size-3 stroke-[3]" aria-hidden="true" />
                             <span className="hidden sm:inline">Completed</span>
                             <span className="sm:hidden">Done</span>
@@ -189,8 +189,8 @@ function InnerExerciseChat({
                 <ConversationContent className="gap-4 sm:gap-8 p-3 sm:p-4">
                     {messages.length === 0 && (
                         <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-1 sm:p-4 md:p-6 text-center">
-                            <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center mb-2 sm:mb-4">
-                                <IconRobot className="h-5 w-5 sm:h-7 sm:w-7 text-primary/60" aria-hidden="true" />
+                            <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-brand-tint flex items-center justify-center mb-2 sm:mb-4">
+                                <IconRobot className="h-5 w-5 sm:h-7 sm:w-7 text-brand-text/60" aria-hidden="true" />
                             </div>
                             <h3 className="text-sm sm:text-lg font-bold text-foreground mb-1 sm:mb-1.5">
                                 Hi {firstName}!
@@ -216,13 +216,13 @@ function InnerExerciseChat({
                                     if (part.type === 'tool-markExerciseCompleted') {
                                         if (part.state === 'output-available') {
                                             return (
-                                                <div key={part.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
+                                                <div key={part.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-success/10 border border-success/20 rounded-xl text-success text-xs sm:text-sm">
                                                     <div className="flex items-start gap-2 sm:gap-3">
-                                                        <div className="p-1 sm:p-1.5 bg-emerald-500 rounded-lg shrink-0">
-                                                            <IconCheck className="h-3 w-3 sm:h-4 sm:w-4 text-white" aria-hidden="true" />
+                                                        <div className="p-1 sm:p-1.5 bg-success rounded-lg shrink-0">
+                                                            <IconCheck className="h-3 w-3 sm:h-4 sm:w-4 text-success-foreground" aria-hidden="true" />
                                                         </div>
                                                         <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                                                            <p className="font-bold text-emerald-900 dark:text-emerald-300 text-sm sm:text-base">Exercise Mastered!</p>
+                                                            <p className="font-bold text-success text-sm sm:text-base">Exercise Mastered!</p>
                                                             <p className="opacity-90 leading-relaxed">{(part.output as { feedback?: string } | undefined)?.feedback}</p>
                                                         </div>
                                                     </div>
