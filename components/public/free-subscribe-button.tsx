@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useTransition, type ComponentProps } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { IconLoader2 } from '@tabler/icons-react'
@@ -17,6 +17,8 @@ interface FreeSubscribeProps {
     /** Auto-fire once when the URL carries ?subscribe=<planId> and the user is signed in. */
     autoFire?: boolean
     className?: string
+    /** Button variant, threaded from the pricing CTA so both CTAs match (#764). */
+    variant?: ComponentProps<typeof Button>['variant']
 }
 
 function useFreeSubscription(planId: number) {
@@ -44,6 +46,7 @@ export function FreeSubscribeButton({
     isAuthenticated,
     autoFire = false,
     className,
+    variant,
 }: FreeSubscribeProps) {
     const t = useTranslations('pricing')
 
@@ -60,29 +63,30 @@ export function FreeSubscribeButton({
                     href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}
                     className="block"
                 >
-                    <Button className={className}>{t('subscribeFree')}</Button>
+                    <Button variant={variant} className={className}>{t('subscribeFree')}</Button>
                 </Link>
                 <AlreadyHaveAccountLink
                     next={anonymousNext}
                     testId={`subscribe-free-login-${planId}`}
-                    className="text-zinc-400"
-                    linkClassName="text-blue-400"
+                    linkClassName="text-brand-text"
                 />
             </div>
         )
     }
 
-    return <FreeSubscribeTrigger planId={planId} autoFire={autoFire} className={className} />
+    return <FreeSubscribeTrigger planId={planId} autoFire={autoFire} className={className} variant={variant} />
 }
 
 function FreeSubscribeTrigger({
     planId,
     autoFire,
     className,
+    variant,
 }: {
     planId: number
     autoFire: boolean
     className?: string
+    variant?: ComponentProps<typeof Button>['variant']
 }) {
     const t = useTranslations('pricing')
     const { subscribe, isPending } = useFreeSubscription(planId)
@@ -97,6 +101,7 @@ function FreeSubscribeTrigger({
     return (
         <Button
             type="button"
+            variant={variant}
             className={className}
             onClick={subscribe}
             disabled={isPending}

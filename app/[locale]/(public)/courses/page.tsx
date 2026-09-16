@@ -155,15 +155,15 @@ export default async function CoursesPage({
         : null;
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-zinc-100">
+        <div className="min-h-screen bg-background text-foreground">
             {catalogStructuredData && <JsonLd data={catalogStructuredData} />}
             <div className="container mx-auto py-16 px-4 md:px-8">
                 {/* Header */}
                 <div className="mb-12 space-y-4 max-w-2xl">
-                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white text-balance">
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">
                         {t('title')}
                     </h1>
-                    <p className="text-zinc-400 text-lg leading-relaxed">
+                    <p className="text-muted-foreground text-lg leading-relaxed">
                         {t('description')}
                     </p>
                 </div>
@@ -176,7 +176,7 @@ export default async function CoursesPage({
                 />
 
                 {/* Results count */}
-                <div className="mb-8 text-sm text-zinc-400">
+                <div className="mb-8 text-sm text-muted-foreground">
                     {t('toolbar.showing', { count: enrichedCourses.length })}
                 </div>
 
@@ -188,15 +188,15 @@ export default async function CoursesPage({
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-32 bg-zinc-900/20 rounded-2xl border border-dashed border-zinc-800 flex flex-col items-center gap-6">
-                        <div className="p-6 bg-zinc-800/30 rounded-full border border-zinc-700/30">
-                            <Search className="w-12 h-12 text-zinc-500" aria-hidden="true" />
+                    <div className="text-center py-32 bg-muted/30 rounded-2xl border border-dashed border-border flex flex-col items-center gap-6">
+                        <div className="p-6 bg-muted rounded-full border border-border">
+                            <Search className="w-12 h-12 text-muted-foreground" aria-hidden="true" />
                         </div>
                         <div className="space-y-2">
-                            <h2 className="text-2xl font-bold text-zinc-200 text-balance">
+                            <h2 className="text-2xl font-bold text-foreground text-balance">
                                 {hasActiveFilters ? tSearch('noResults') : t('emptyState.title')}
                             </h2>
-                            <p className="text-zinc-400 text-base max-w-sm mx-auto">
+                            <p className="text-muted-foreground text-base max-w-sm mx-auto">
                                 {!hasActiveFilters && t('emptyState.description')}
                             </p>
                         </div>

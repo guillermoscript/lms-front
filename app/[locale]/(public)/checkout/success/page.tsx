@@ -122,8 +122,8 @@ async function SuccessCard({ primaryHref }: { primaryHref: string }) {
 
 function SuccessIcon() {
   return (
-    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
-      <IconCircleCheckFilled className="h-9 w-9 text-emerald-600 dark:text-emerald-400" />
+    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+      <IconCircleCheckFilled className="h-9 w-9 text-success" />
     </div>
   )
 }

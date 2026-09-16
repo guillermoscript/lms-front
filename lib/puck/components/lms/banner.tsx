@@ -11,10 +11,10 @@ export type BannerProps = {
 
 const bannerClasses: Record<string, string> = {
   brand: 'bg-[var(--block-accent)] text-[var(--block-accent-foreground)] border-transparent',
-  info: 'bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800',
-  warning: 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800',
-  success: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800',
-  urgent: 'bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800',
+  info: 'bg-brand-tint text-brand-text border-primary/25',
+  warning: 'bg-warning/10 text-warning border-warning/30',
+  success: 'bg-success/10 text-success border-success/30',
+  urgent: 'bg-destructive/10 text-destructive border-destructive/30',
 }
 
 export const Banner: ComponentConfig<BannerProps> = {

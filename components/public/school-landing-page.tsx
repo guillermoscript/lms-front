@@ -27,14 +27,14 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
   const accentColor = 'var(--primary)'
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0A0A] overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-background overflow-hidden">
       {/* Background glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10" aria-hidden="true">
         <div
           className="absolute top-[-10%] right-[-10%] w-[700px] h-[700px] rounded-full blur-[140px]"
           style={{ backgroundColor: `color-mix(in oklch, ${accentColor} 8%, transparent)` }}
         />
-        <div className="absolute bottom-[30%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[30%] left-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
       </div>
 
       {/* ── Hero ─────────────────────────────────────────────── */}
@@ -55,13 +55,13 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
             </div>
 
             <h1
-              className="text-5xl lg:text-7xl font-black tracking-tight text-white leading-[1.05]"
+              className="text-5xl lg:text-7xl font-black tracking-tight text-foreground leading-[1.05]"
               style={{ textWrap: "balance" } as React.CSSProperties}
             >
               {tenant.name}
             </h1>
 
-            <p className="text-xl text-zinc-400 max-w-xl leading-relaxed font-medium">
+            <p className="text-xl text-muted-foreground max-w-xl leading-relaxed font-medium">
               {t('tagline')}
             </p>
 
@@ -78,7 +78,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
               <Button
                 size="lg"
                 variant="outline"
-                className="h-14 px-10 bg-zinc-900/50 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800/80 text-lg backdrop-blur-sm transition-all duration-200"
+                className="h-14 px-10 text-lg backdrop-blur-sm transition-all duration-200"
                 render={<Link href="/auth/login" />}
               >
                 {t('alreadyMember')}
@@ -91,20 +91,20 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
       {/* ── Courses Grid ─────────────────────────────────────── */}
       <section className="py-24 relative" aria-label="Available courses">
         <div className="container mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">{t('availableCourses')}</h2>
+          <h2 className="text-3xl font-bold text-foreground text-center mb-12">{t('availableCourses')}</h2>
 
           {products.length === 0 ? (
             <div className="text-center py-20">
-              <BookOpen className="w-12 h-12 text-zinc-700 mx-auto mb-4" aria-hidden="true" />
-              <p className="text-zinc-500 text-lg">{t('coursesComingSoon')}</p>
-              <p className="text-zinc-600 text-sm mt-2">{t('checkBackLater')}</p>
+              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
+              <p className="text-muted-foreground text-lg">{t('coursesComingSoon')}</p>
+              <p className="text-muted-foreground/70 text-sm mt-2">{t('checkBackLater')}</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {products.map((product) => (
                 <article
                   key={product.product_id}
-                  className="bg-zinc-900/40 border border-zinc-800/50 rounded-2xl overflow-hidden hover:bg-zinc-800/40 hover:border-zinc-700/50 transition-all duration-200 group flex flex-col"
+                  className="bg-card border border-border rounded-2xl overflow-hidden hover:bg-muted/50 hover:border-primary/25 transition-all duration-200 group flex flex-col"
                 >
                   {product.image ? (
                     <div className="aspect-video overflow-hidden">
@@ -124,14 +124,14 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                   )}
 
                   <div className="p-6 flex flex-col flex-1">
-                    <h3 className="text-white font-bold text-base mb-2 line-clamp-2">{product.name}</h3>
+                    <h3 className="text-card-foreground font-bold text-base mb-2 line-clamp-2">{product.name}</h3>
                     {product.description && (
-                      <p className="text-zinc-500 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">
+                      <p className="text-muted-foreground text-sm leading-relaxed mb-4 line-clamp-3 flex-1">
                         {product.description}
                       </p>
                     )}
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-zinc-800">
-                      <span className="text-white font-bold">
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-border">
+                      <span className="text-card-foreground font-bold">
                         {product.price === 0 || product.price === null
                           ? t('free')
                           : `${product.currency?.toUpperCase() ?? 'USD'} $${parseFloat(String(product.price)).toFixed(2)}`
@@ -139,8 +139,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
                       </span>
                       <Link
                         href={`/courses/${product.product_id}`}
-                        className="text-sm font-semibold flex items-center gap-1 transition-colors duration-200"
-                        style={{ color: accentColor }}
+                        className="text-sm font-semibold flex items-center gap-1 text-brand-text transition-colors duration-200"
                       >
                         {t('view')} <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
                       </Link>
@@ -158,12 +157,12 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
         <div className="container mx-auto px-4 md:px-6">
           {/* A solid brand fill with its own ink: every theme swatch picks
               --primary-foreground for AA on --primary, which a translucent
-              gradient over the dark page would not keep for light brands. */}
+              gradient over the page behind it would not keep for light brands. */}
           <div
             className="rounded-[2.5rem] p-12 md:p-16 text-center relative overflow-hidden bg-primary"
           >
             <div
-              className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
+              className="absolute top-0 right-0 w-80 h-80 bg-primary-foreground/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
               aria-hidden="true"
             />
             <div className="relative z-10 max-w-2xl mx-auto space-y-6">
@@ -173,6 +172,9 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
               >
                 {t('ctaTitle', { name: tenant.name })}
               </h2>
+              {/* The drop shadow below stays a black tint: a shadow is neither a
+                  surface nor a foreground, and 20% black reads correctly under
+                  any brand fill, so it must not follow the theme. */}
               <Button
                 size="lg"
                 className="h-14 px-10 bg-primary-foreground hover:bg-primary-foreground/90 font-bold text-lg shadow-xl shadow-black/20 active:scale-95 transition-all duration-200 border-0"

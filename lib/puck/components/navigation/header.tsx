@@ -123,6 +123,13 @@ export const Header: ComponentConfig<HeaderProps> = {
         )}
       >
         <div className="mx-auto max-w-screen-xl flex items-center justify-between px-6 py-3">
+          {/* The literal white ink on the logo and the nav links below is content colour,
+              kept on purpose: it applies only when the creator opted into
+              `transparent: true`, i.e. the header floats over their own hero image, where a
+              theme token would be invisible. Known limitation: a transparent header over a
+              LIGHT hero has no dark-ink option — tracked as a follow-up (an explicit
+              "Overlay text" field). Every shipped template sets `transparent: false`, so no
+              seeded page is affected. */}
           {/* Logo */}
           <a href="/" className="flex items-center gap-2 no-underline">
             {logo ? (

@@ -28,9 +28,9 @@ export function CourseCard({ course }: CourseCardProps) {
 
     return (
         <Link href={`/courses/${course.course_id}`} className="block group">
-            <Card className="flex flex-col overflow-hidden bg-[#18181b]/60 border-zinc-800/50 hover:border-zinc-600 transition-colors duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm h-full">
+            <Card className="flex flex-col overflow-hidden hover:ring-foreground/20 transition-all duration-200 shadow-lg hover:shadow-xl h-full">
                 {/* Image */}
-                <div className="relative aspect-video w-full overflow-hidden bg-zinc-900">
+                <div className="relative aspect-video w-full overflow-hidden bg-muted">
                     {course.thumbnail_url ? (
                         <img
                             src={course.thumbnail_url}
@@ -41,24 +41,28 @@ export function CourseCard({ course }: CourseCardProps) {
                             loading="lazy"
                         />
                     ) : (
-                        <div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950">
-                            <BookOpen className="w-10 h-10 text-zinc-700" aria-hidden="true" />
+                        <div className="flex h-full items-center justify-center bg-muted">
+                            <BookOpen className="w-10 h-10 text-muted-foreground" aria-hidden="true" />
                         </div>
                     )}
 
-                    {/* Category badge */}
+                    {/* Category badge — floats over the uploaded thumbnail, so the
+                        black scrim, white ink and white hairline stay hardcoded:
+                        they sit on arbitrary photography, not on a themed surface. */}
                     {course.category && (
                         <div className="absolute top-3 left-3">
-                            <span className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-medium text-zinc-100 border border-white/10">
+                            <span className="bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md text-xs font-medium text-white border border-white/10">
                                 {course.category.name}
                             </span>
                         </div>
                     )}
 
-                    {/* Price badge */}
+                    {/* Price badge — the paid branch is the same overlay-on-image
+                        scrim as the category badge and stays hardcoded for the same
+                        reason; the free branch is a status, so it is tokenised. */}
                     <div className="absolute top-3 right-3">
                         <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${isFree
-                                ? 'bg-emerald-600/90 text-white border-emerald-500/30'
+                                ? 'bg-success text-success-foreground border-success/30'
                                 : 'bg-black/70 backdrop-blur-md text-white border-white/10'
                             }`}>
                             {priceDisplay}
@@ -68,13 +72,13 @@ export function CourseCard({ course }: CourseCardProps) {
 
                 <CardContent className="flex-1 p-5 space-y-3">
                     {/* Title */}
-                    <h3 className="line-clamp-2 text-base font-semibold text-zinc-100 group-hover:text-cyan-400 transition-colors duration-150 leading-snug text-pretty">
+                    <h3 className="line-clamp-2 text-base font-semibold group-hover:text-brand-text transition-colors duration-150 leading-snug text-pretty">
                         {course.title}
                     </h3>
 
                     {/* Description */}
                     {course.description && (
-                        <p className="line-clamp-2 text-sm text-zinc-400 leading-relaxed">
+                        <p className="line-clamp-2 text-sm text-muted-foreground leading-relaxed">
                             {course.description}
                         </p>
                     )}
@@ -82,13 +86,13 @@ export function CourseCard({ course }: CourseCardProps) {
                     {/* Meta: author + lessons */}
                     <div className="flex items-center justify-between gap-2 pt-1">
                         {course.author && (
-                            <div className="flex items-center gap-2 text-xs text-zinc-400 min-w-0">
-                                <div className="w-5 h-5 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+                                <div className="w-5 h-5 rounded-full bg-muted overflow-hidden flex-shrink-0">
                                     {course.author.avatar_url ? (
                                         <img src={course.author.avatar_url} alt="" width={20} height={20} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <User className="w-3 h-3 text-zinc-500" aria-hidden="true" />
+                                            <User className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
                                         </div>
                                     )}
                                 </div>
@@ -96,7 +100,7 @@ export function CourseCard({ course }: CourseCardProps) {
                             </div>
                         )}
                         {course.lessonCount > 0 && (
-                            <div className="flex items-center gap-1.5 text-xs text-zinc-400 flex-shrink-0">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-shrink-0">
                                 <BookOpen className="w-3.5 h-3.5" aria-hidden="true" />
                                 <span>{t('lessons', { count: course.lessonCount })}</span>
                             </div>
@@ -105,7 +109,7 @@ export function CourseCard({ course }: CourseCardProps) {
                 </CardContent>
 
                 <CardFooter className="px-5 pb-5 pt-0 mt-auto">
-                    <Button className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-medium h-9 border border-zinc-700/50">
+                    <Button variant="secondary" className="w-full text-xs font-medium h-9">
                         {t('viewCourse')}
                     </Button>
                 </CardFooter>

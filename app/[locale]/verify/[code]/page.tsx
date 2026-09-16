@@ -12,6 +12,7 @@ import {
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getSeoContext, ogImageUrl } from '@/lib/seo'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 
 interface PageProps {
     params: Promise<{ code: string; locale: string }>
@@ -108,19 +109,19 @@ export default async function VerificationPage({ params }: PageProps) {
 
     if (error || !certificate) {
         return (
-            <div className="min-h-screen bg-[#f7f5f2] dark:bg-[#1a1917] flex items-center justify-center p-4">
+            <div className="min-h-screen bg-background flex items-center justify-center p-4">
                 <div className="max-w-sm w-full text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 mb-6">
-                        <IconShieldX size={32} className="text-red-500 dark:text-red-400" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10 mb-6">
+                        <IconShieldX size={32} className="text-destructive" />
                     </div>
-                    <h1 className="text-2xl font-semibold text-[#3a3632] dark:text-[#d4cfc8] mb-3">
+                    <h1 className="text-2xl font-semibold text-foreground mb-3">
                         {t('notFound.title')}
                     </h1>
-                    <p className="text-sm text-[#8a8578] dark:text-[#7a756e] mb-8 leading-relaxed">
+                    <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
                         {t('notFound.description')}
                     </p>
                     <Link href="/">
-                        <Button variant="outline" className="border-[#ddd8d2] dark:border-[#3a3836] text-[#3a3632] dark:text-[#d4cfc8]">
+                        <Button variant="outline">
                             {t('notFound.returnHome')}
                         </Button>
                     </Link>
@@ -130,8 +131,7 @@ export default async function VerificationPage({ params }: PageProps) {
     }
 
     const isRevoked = !!certificate.revoked_at
-    const primaryColor = certificate.certificate_templates?.design_settings?.primary_color || '#1a5632'
-    const secondaryColor = certificate.certificate_templates?.design_settings?.secondary_color || '#0f2b1a'
+    const primaryColor = certificate.certificate_templates?.design_settings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color
 
     const courseTitle =
         certificate.courses?.title ||
@@ -160,11 +160,8 @@ export default async function VerificationPage({ params }: PageProps) {
     const sigTitle = certificate.certificate_templates?.signature_title || null
 
     return (
-        <div className="min-h-screen bg-[#f7f5f2] dark:bg-[#1a1917]">
-            {!isRevoked && (
-                <style>{`.cert-student-name { color: ${secondaryColor}; } .dark .cert-student-name { color: #d4cfc8; }`}</style>
-            )}
-            {/* Ambient background texture */}
+        <div className="min-h-screen bg-background">
+            {/* Ambient background texture — the certificate template's own colour (content) */}
             <div
                 className="fixed inset-0 opacity-[0.015] dark:opacity-[0.03] pointer-events-none"
                 style={{
@@ -177,34 +174,34 @@ export default async function VerificationPage({ params }: PageProps) {
                 {/* Header — verification status */}
                 <header className="text-center mb-12">
                     {isRevoked ? (
-                        <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 mb-6">
-                            <IconShieldX size={18} className="text-red-600 dark:text-red-400" />
-                            <span className="text-sm font-medium text-red-700 dark:text-red-400 tracking-wide">
+                        <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-destructive/10 border border-destructive/30 mb-6">
+                            <IconShieldX size={18} className="text-destructive" />
+                            <span className="text-sm font-medium text-destructive tracking-wide">
                                 {t('certificateRevoked')}
                             </span>
                         </div>
                     ) : (
-                        <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 mb-6">
-                            <IconShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400" />
-                            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400 tracking-wide">
+                        <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-success/10 border border-success/30 mb-6">
+                            <IconShieldCheck size={18} className="text-success" />
+                            <span className="text-sm font-medium text-success tracking-wide">
                                 {t('verifiedCredential')}
                             </span>
                         </div>
                     )}
 
                     <h1
-                        className={`text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] mb-3${isRevoked ? '' : ' cert-student-name'}`}
+                        className={`text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.1] mb-3${isRevoked ? '' : ' text-brand-text'}`}
                     >
                         {studentName}
                     </h1>
 
-                    <p className="text-lg text-[#6b6560] dark:text-[#9a948c]">
-                        {t('completed')} <span className="font-medium text-[#3a3632] dark:text-[#d4cfc8]">{courseTitle}</span>
+                    <p className="text-lg text-muted-foreground">
+                        {t('completed')} <span className="font-medium text-foreground">{courseTitle}</span>
                     </p>
                 </header>
 
                 {/* Main credential card */}
-                <div className="relative bg-white dark:bg-[#222220] rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.04),0_16px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.15),0_16px_40px_rgba(0,0,0,0.2)]">
+                <div className="relative bg-card border border-border rounded-xl overflow-hidden shadow-xl">
 
                     {/* Top accent — thin gradient line */}
                     <div
@@ -225,6 +222,7 @@ export default async function VerificationPage({ params }: PageProps) {
                                 />
                             ) : (
                                 <div
+                                    /* White initials: the foreground of the certificate template's own colour (content), not a theme surface */
                                     className="h-11 w-11 rounded-lg flex items-center justify-center text-white font-semibold text-sm"
                                     style={{ backgroundColor: primaryColor }}
                                 >
@@ -232,8 +230,8 @@ export default async function VerificationPage({ params }: PageProps) {
                                 </div>
                             )}
                             <div>
-                                <p className="font-medium text-[#3a3632] dark:text-[#d4cfc8]">{issuerName}</p>
-                                <p className="text-sm text-[#8a8578] dark:text-[#7a756e]">{t('issuingOrganization')}</p>
+                                <p className="font-medium text-foreground">{issuerName}</p>
+                                <p className="text-sm text-muted-foreground">{t('issuingOrganization')}</p>
                             </div>
                         </div>
 
@@ -253,26 +251,26 @@ export default async function VerificationPage({ params }: PageProps) {
                             )}
 
                             {/* Verification code — monospaced, with visual emphasis */}
-                            <div className="pt-6 border-t border-[#eae6e1] dark:border-[#333330]">
+                            <div className="pt-6 border-t border-border">
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
-                                        <p className="text-xs font-medium text-[#8a8578] dark:text-[#7a756e] uppercase tracking-wider mb-1.5">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
                                             {t('verificationId')}
                                         </p>
-                                        <p className="font-mono text-sm text-[#3a3632] dark:text-[#d4cfc8] tracking-wider">
+                                        <p className="font-mono text-sm text-foreground tracking-wider">
                                             {certificate.verification_code}
                                         </p>
                                     </div>
                                     <div className="mt-4">
                                         {isRevoked ? (
-                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-950/30">
-                                                <IconX size={14} className="text-red-500" />
-                                                <span className="text-xs font-medium text-red-600 dark:text-red-400">{t('revoked')}</span>
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10">
+                                                <IconX size={14} className="text-destructive" />
+                                                <span className="text-xs font-medium text-destructive">{t('revoked')}</span>
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30">
-                                                <IconCheck size={14} className="text-emerald-500" />
-                                                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t('valid')}</span>
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10">
+                                                <IconCheck size={14} className="text-success" />
+                                                <span className="text-xs font-medium text-success">{t('valid')}</span>
                                             </div>
                                         )}
                                     </div>
@@ -290,10 +288,7 @@ export default async function VerificationPage({ params }: PageProps) {
                         rel="noopener noreferrer"
                         className="flex-1"
                     >
-                        <Button
-                            className="w-full h-11 font-medium gap-2 text-white border-0"
-                            style={{ backgroundColor: primaryColor }}
-                        >
+                        <Button className="w-full h-11 font-medium gap-2">
                             <IconDownload size={16} />
                             {certificate.pdf_url ? t('downloadPdf') : t('viewCertificate')}
                         </Button>
@@ -303,7 +298,7 @@ export default async function VerificationPage({ params }: PageProps) {
                             href={`/dashboard/student/courses/${certificate.courses!.course_id}`}
                             className="flex-1"
                         >
-                            <Button variant="outline" className="w-full h-11 font-medium gap-2 border-[#ddd8d2] dark:border-[#3a3836] text-[#3a3632] dark:text-[#d4cfc8] hover:bg-[#f0ece7] dark:hover:bg-[#2a2927]">
+                            <Button variant="outline" className="w-full h-11 font-medium gap-2">
                                 <IconExternalLink size={16} />
                                 {t('viewCourse')}
                             </Button>
@@ -313,7 +308,7 @@ export default async function VerificationPage({ params }: PageProps) {
 
                 {/* Footer */}
                 <footer className="mt-16 text-center">
-                    <p className="text-xs text-[#b0aaa2] dark:text-[#5a5650]">
+                    <p className="text-xs text-muted-foreground">
                         {t('footerText', { date: issuedDate })}
                     </p>
                 </footer>
@@ -325,8 +320,8 @@ export default async function VerificationPage({ params }: PageProps) {
 function VerifyRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-baseline justify-between gap-4">
-            <span className="text-sm text-[#8a8578] dark:text-[#7a756e] shrink-0">{label}</span>
-            <span className="text-sm font-medium text-[#3a3632] dark:text-[#d4cfc8] text-right">{value}</span>
+            <span className="text-sm text-muted-foreground shrink-0">{label}</span>
+            <span className="text-sm font-medium text-foreground text-right">{value}</span>
         </div>
     )
 }

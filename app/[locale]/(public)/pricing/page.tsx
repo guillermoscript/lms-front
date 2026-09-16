@@ -93,37 +93,37 @@ export default async function PricingPage({
     const yearlyPlans = sanitizedPlans.filter(p => p.duration_in_days === 365);
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white font-sans">
+        <div className="min-h-screen bg-background text-foreground font-sans">
             <div className="container py-24 px-4 md:px-6 relative mx-auto">
                 {/* Background Glow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[500px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[500px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
                 {/* Header */}
                 <div className="flex flex-col items-center space-y-6 text-center mb-20 relative z-10">
-                    <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-tight" data-testid="pricing-title">
+                    <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-foreground leading-tight" data-testid="pricing-title">
                         {t('title')}
                     </h1>
-                    <p className="max-w-[750px] text-zinc-400 text-lg md:text-xl leading-relaxed">
+                    <p className="max-w-[750px] text-muted-foreground text-lg md:text-xl leading-relaxed">
                         {t('description')}
                     </p>
                 </div>
 
                 {sanitizedPlans.length === 0 ? (
-                    <div className="relative max-w-2xl mx-auto px-6 py-16 text-center bg-zinc-900/40 border border-zinc-800 rounded-[2rem] backdrop-blur-sm overflow-hidden group">
-                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/15 transition-colors" />
+                    <div className="relative max-w-2xl mx-auto px-6 py-16 text-center bg-card border border-border rounded-[2rem] overflow-hidden group">
+                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/15 transition-colors" />
                         <div className="relative z-10 flex flex-col items-center gap-6">
-                            <div className="w-16 h-16 bg-zinc-800/50 rounded-2xl flex items-center justify-center border border-zinc-700/50 shadow-xl">
-                                <PackageSearch className="w-8 h-8 text-blue-400" />
+                            <div className="w-16 h-16 bg-brand-tint rounded-2xl flex items-center justify-center border border-primary/25 shadow-xl">
+                                <PackageSearch className="w-8 h-8 text-brand-text" />
                             </div>
                             <div className="space-y-3">
-                                <h3 className="text-2xl font-bold text-white">{t('empty.title')}</h3>
-                                <p className="text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                                <h3 className="text-2xl font-bold text-foreground">{t('empty.title')}</h3>
+                                <p className="text-muted-foreground max-w-sm mx-auto leading-relaxed">
                                     {t('empty.description')}
                                 </p>
                             </div>
                             <div className="pt-4">
                                 <Link href="/courses">
-                                    <Button className="bg-blue-600 hover:bg-blue-500 text-white px-8 h-12 font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-600/20">
+                                    <Button className="px-8 h-12 font-semibold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-primary/20">
                                         {t('empty.backToCourses')}
                                         <ArrowRight className="ml-2 w-4 h-4" />
                                     </Button>
@@ -146,20 +146,20 @@ export default async function PricingPage({
                 {/* FAQ Section */}
                 <div className="max-w-4xl mx-auto mt-40">
                     <div className="flex flex-col items-center gap-4 mb-12">
-                        <div className="bg-zinc-900/80 border border-zinc-800 px-4 py-1.5 rounded-full flex items-center gap-2 text-zinc-400 text-sm font-medium">
-                            <HelpCircle className="w-4 h-4 text-blue-400" />
+                        <div className="bg-card border border-border px-4 py-1.5 rounded-full flex items-center gap-2 text-muted-foreground text-sm font-medium">
+                            <HelpCircle className="w-4 h-4 text-brand-text" />
                             {t('faq.title')}
                         </div>
-                        <h2 className="text-3xl md:text-4xl font-bold text-center text-white">{t('faq.title')}</h2>
+                        <h2 className="text-3xl md:text-4xl font-bold text-center text-foreground">{t('faq.title')}</h2>
                     </div>
 
                     <div className="grid md:grid-cols-1 gap-4">
                         {Object.entries(t.raw('faq.questions')).map(([key, question]) => (
-                            <div key={key} className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 flex justify-between items-center group cursor-default hover:bg-zinc-900/50 hover:border-zinc-700 transition-all duration-300">
+                            <div key={key} className="bg-card border border-border rounded-2xl p-6 flex justify-between items-center group cursor-default hover:bg-muted hover:border-primary/25 transition-all duration-300">
                                 <div className="space-y-1">
-                                    <p className="font-bold text-zinc-200 text-lg">{question as string}</p>
+                                    <p className="font-bold text-foreground text-lg">{question as string}</p>
                                 </div>
-                                <div className="h-8 w-8 rounded-full border border-zinc-700 flex items-center justify-center text-zinc-500 group-hover:border-zinc-500 group-hover:text-zinc-300 transition-colors">
+                                <div className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-muted-foreground group-hover:border-primary/40 group-hover:text-foreground transition-colors">
                                     <ArrowRight className="w-4 h-4" />
                                 </div>
                             </div>

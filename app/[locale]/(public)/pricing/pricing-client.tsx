@@ -77,9 +77,9 @@ export default function PricingClient({
         <>
             {/* Pricing Toggle */}
             {(monthlyPlans.length > 0 || yearlyPlans.length > 0) && (
-                <div className="flex items-center justify-center space-x-6 mt-12 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800 w-fit mx-auto shadow-xl backdrop-blur-sm">
+                <div className="flex items-center justify-center space-x-6 mt-12 bg-card/80 p-1.5 rounded-2xl border border-border w-fit mx-auto shadow-xl backdrop-blur-sm">
                     <span
-                        className={`text-sm font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${!isYearly ? "text-white bg-zinc-800 shadow-lg" : "text-zinc-500 hover:text-zinc-400"}`}
+                        className={`text-sm font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${!isYearly ? "text-foreground bg-muted shadow-lg" : "text-muted-foreground hover:text-foreground"}`}
                         onClick={() => setIsYearly(false)}
                     >
                         {t('monthly')}
@@ -87,16 +87,15 @@ export default function PricingClient({
                     <Switch
                         checked={isYearly}
                         onCheckedChange={setIsYearly}
-                        className="data-[state=checked]:bg-blue-600"
                     />
                     <div className="flex items-center gap-2">
                         <span
-                            className={`text-sm font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${isYearly ? "text-white bg-zinc-800 shadow-lg" : "text-zinc-500 hover:text-zinc-400"}`}
+                            className={`text-sm font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${isYearly ? "text-foreground bg-muted shadow-lg" : "text-muted-foreground hover:text-foreground"}`}
                             onClick={() => setIsYearly(true)}
                         >
                             {t('yearly')}
                         </span>
-                        <span className="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">
+                        <span className="bg-brand-tint text-brand-text text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-primary/25">
                             {t('save', { percent: 20 })}
                         </span>
                     </div>
@@ -115,41 +114,41 @@ export default function PricingClient({
                         <div key={`${plan.plan_id}-${index}`} className="relative h-full">
                             {isPopular && (
                                 <div className="absolute -top-4 inset-x-0 flex justify-center z-20">
-                                    <div className="bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.1em] shadow-xl shadow-blue-600/20 border border-blue-500">
+                                    <div className="bg-primary text-primary-foreground text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.1em] shadow-xl shadow-primary/20 border border-primary-foreground/20">
                                         {t('mostPopular')}
                                     </div>
                                 </div>
                             )}
 
-                            <Card className={`h-full flex flex-col bg-zinc-900/40 backdrop-blur-md border-[1.5px] transition-all duration-500 rounded-[2.5rem] group overflow-hidden ${isPopular
-                                ? "border-blue-500/50 shadow-2xl shadow-blue-600/10 lg:scale-[1.05] z-10 bg-zinc-900/60"
-                                : "border-zinc-800/80 hover:border-zinc-700 hover:bg-zinc-900/60"
+                            <Card className={`h-full flex flex-col border-[1.5px] transition-all duration-500 rounded-[2.5rem] group overflow-hidden ${isPopular
+                                ? "border-primary/50 shadow-2xl shadow-primary/10 lg:scale-[1.05] z-10"
+                                : "border-border hover:border-primary/25 hover:bg-muted/30"
                                 }`}>
                                 <CardHeader className="p-8 pb-4">
                                     <div className="flex flex-col gap-1">
-                                        <CardTitle className="text-2xl font-black text-white tracking-tight">{plan.plan_name}</CardTitle>
-                                        <CardDescription className="text-zinc-500 text-sm font-medium h-12 leading-relaxed">{plan.description}</CardDescription>
+                                        <CardTitle className="text-2xl font-black text-foreground tracking-tight">{plan.plan_name}</CardTitle>
+                                        <CardDescription className="text-muted-foreground text-sm font-medium h-12 leading-relaxed">{plan.description}</CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="flex-1 px-8 pb-10">
                                     <div className="mb-10">
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-6xl font-black text-white tracking-tighter">
+                                            <span className="text-6xl font-black text-foreground tracking-tighter">
                                                 ${plan.price}
                                             </span>
-                                            <span className="text-zinc-500 font-bold text-lg">
+                                            <span className="text-muted-foreground font-bold text-lg">
                                                 /{plan.duration_in_days === 30 ? t('mo') : plan.duration_in_days === 365 ? t('yr') : t('free')}
                                             </span>
                                         </div>
-                                        <div className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mt-2">
+                                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">
                                             {plan.duration_in_days === 365 ? t('billedYearly') : t('billedMonthly')}
                                         </div>
 
                                         {(() => {
-                                            const ctaClass = `w-full h-14 font-black transition-all hover:scale-[1.02] active:scale-[0.98] ${isPopular
-                                                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/30 border-t border-blue-400'
-                                                : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700/50'
-                                                }`;
+                                            const ctaClass = 'w-full h-14 font-black transition-all hover:scale-[1.02] active:scale-[0.98]';
+                                            // The fill comes from Button's own variants, so it follows the
+                                            // school's theme instead of a hardcoded blue/zinc pair (#764).
+                                            const ctaVariant = isPopular ? 'default' : 'secondary';
                                             // Already subscribed: show the current plan, or a one-click
                                             // switch to another same-provider plan (#463), instead of a
                                             // fresh checkout that would double-subscribe.
@@ -157,7 +156,7 @@ export default function PricingClient({
                                                 if (plan.plan_id === currentPlanId) {
                                                     return (
                                                         <div className="mt-10">
-                                                            <Button disabled className={`${ctaClass} opacity-60`} data-testid="current-plan">
+                                                            <Button disabled variant={ctaVariant} className={`${ctaClass} opacity-60`} data-testid="current-plan">
                                                                 {t('currentPlan')}
                                                             </Button>
                                                         </div>
@@ -167,6 +166,7 @@ export default function PricingClient({
                                                     return (
                                                         <div className="mt-10">
                                                             <Button
+                                                                variant={ctaVariant}
                                                                 className={ctaClass}
                                                                 onClick={() => handleSwitch(plan.plan_id)}
                                                                 disabled={pending}
@@ -187,6 +187,7 @@ export default function PricingClient({
                                                             planId={plan.plan_id}
                                                             isAuthenticated={isAuthenticated}
                                                             autoFire={subscribePlanId === plan.plan_id}
+                                                            variant={ctaVariant}
                                                             className={ctaClass}
                                                         />
                                                     </div>
@@ -200,7 +201,7 @@ export default function PricingClient({
                                                     }
                                                     className="block mt-10"
                                                 >
-                                                    <Button className={ctaClass}>
+                                                    <Button variant={ctaVariant} className={ctaClass}>
                                                         {t('getStarted')}
                                                     </Button>
                                                 </Link>
@@ -209,11 +210,11 @@ export default function PricingClient({
                                     </div>
                                     <ul className="space-y-4 m-0 p-0">
                                         {parsedFeatures?.map((feature: string, i: number) => (
-                                            <li key={i} className="flex items-center text-zinc-300 list-none group/item">
-                                                <div className="h-6 w-6 bg-blue-500/10 rounded-full flex items-center justify-center mr-4 flex-shrink-0 border border-blue-500/20 group-hover/item:bg-blue-500/20 transition-colors">
-                                                    <Check className="h-3.5 w-3.5 text-blue-400" />
+                                            <li key={i} className="flex items-center text-foreground list-none group/item">
+                                                <div className="h-6 w-6 bg-brand-tint rounded-full flex items-center justify-center mr-4 flex-shrink-0 border border-primary/25 group-hover/item:bg-primary/20 transition-colors">
+                                                    <Check className="h-3.5 w-3.5 text-brand-text" />
                                                 </div>
-                                                <span className="text-sm font-medium leading-none text-zinc-300">
+                                                <span className="text-sm font-medium leading-none text-foreground">
                                                     {feature}
                                                 </span>
                                             </li>
