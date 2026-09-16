@@ -107,7 +107,7 @@ export function StripePaymentForm({
     if (error) {
         return (
             <div className="space-y-4">
-                <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-xs leading-relaxed text-warning">
                     <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     <div className="space-y-1">
                         <p className="font-medium">{t('stripe.unavailableTitle')}</p>

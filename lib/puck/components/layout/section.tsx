@@ -34,6 +34,10 @@ const themeMap: Record<string, string> = {
   transparent: '',
 }
 
+// Content colour, deliberately NOT a theme token: this is a darkening scrim over a
+// creator-supplied background image or gradient whose luminance we cannot know. A
+// token (e.g. `bg-foreground/NN`) would invert to white in dark mode and wash the
+// image out — the opposite of what an overlay control is for.
 const overlayMap: Record<number, string> = {
   10: 'bg-black/10',
   20: 'bg-black/20',

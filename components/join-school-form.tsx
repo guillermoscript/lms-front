@@ -71,19 +71,19 @@ export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
           <h4 className="font-medium text-sm">{t('benefitsTitle')}</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-4 w-4 text-success" />
               {t('benefitCourses')}
             </li>
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-4 w-4 text-success" />
               {t('benefitProgress')}
             </li>
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-4 w-4 text-success" />
               {t('benefitExams')}
             </li>
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
+              <Check className="h-4 w-4 text-success" />
               {t('benefitCommunity')}
             </li>
           </ul>

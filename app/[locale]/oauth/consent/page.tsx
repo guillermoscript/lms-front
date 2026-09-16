@@ -122,7 +122,7 @@ export default async function OAuthConsentPage({
               <ul className="mt-1 space-y-1">
                 {authDetails.scope.split(" ").map((scope: string) => (
                   <li key={scope} className="flex items-center gap-2 text-sm">
-                    <span className="text-green-500">✓</span>
+                    <span className="text-success">✓</span>
                     {scope}
                   </li>
                 ))}
@@ -131,8 +131,8 @@ export default async function OAuthConsentPage({
           )}
         </div>
 
-        <div className="mb-4 rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
-          <p className="text-xs text-yellow-700 dark:text-yellow-300">
+        <div className="mb-4 rounded-md border border-warning/30 bg-warning/10 p-3">
+          <p className="text-xs text-warning">
             {t("signedInAs")} <strong>{user.email}</strong> ({currentTenant?.role ?? globalRole})
             {currentTenant && memberships.length === 1 && (
               <> {t("connectingTo")} <strong>{currentTenant.name}</strong></>

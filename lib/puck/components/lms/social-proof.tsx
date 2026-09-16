@@ -58,7 +58,7 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
               <div
                 key={i}
                 className={cn(
-                  'size-9 rounded-full border-2 border-background flex items-center justify-center text-xs font-semibold bg-primary/20 text-primary',
+                  'size-9 rounded-full border-2 border-background flex items-center justify-center text-xs font-semibold bg-brand-tint text-brand-text',
                   i > 0 && '-ml-2'
                 )}
               >
@@ -75,7 +75,7 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
                   key={i}
                   className={cn(
                     'text-base',
-                    i < displayRating ? 'text-amber-500' : 'text-muted-foreground/30'
+                    i < displayRating ? 'text-warning' : 'text-muted-foreground/30'
                   )}
                 >
                   ★

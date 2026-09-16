@@ -479,13 +479,17 @@ export function CheckoutForm({
                         <div className="flex flex-col items-center gap-4 text-center">
                             <p className="text-sm font-medium">{t('payment.binancePersonalTitle')}</p>
                             {instructionsQr && (
+                                /* The QR keeps an explicit white plate + quiet zone on every
+                                   theme — its modules are black and inverted or tinted quiet
+                                   zones fail on a meaningful share of phone scanners. Content
+                                   colour, not chrome: do not tokenise it. */
                                 /* eslint-disable-next-line @next/next/no-img-element */
                                 <img
                                     src={instructionsQr}
                                     alt="Binance Pay ID QR"
                                     width={240}
                                     height={240}
-                                    className="rounded-lg border border-border"
+                                    className="rounded-lg border border-border bg-white p-2 box-content"
                                 />
                             )}
                             <div className="w-full space-y-3 text-left">
@@ -537,7 +541,7 @@ export function CheckoutForm({
                                 {t('payment.binancePersonalWaiting')}
                             </p>
                             {instructionsAmbiguous && (
-                                <p className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                                <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[11px] leading-relaxed text-warning">
                                     <IconAlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                                     {t('payment.binancePersonalReview')}
                                 </p>
@@ -546,13 +550,17 @@ export function CheckoutForm({
                     ) : solanaQr ? (
                         <div className="flex flex-col items-center gap-3 text-center">
                             <p className="text-sm font-medium">{t('payment.solanaScan')}</p>
+                            {/* The QR keeps an explicit white plate + quiet zone on every
+                                theme — its modules are black and inverted or tinted quiet
+                                zones fail on a meaningful share of phone scanners. Content
+                                colour, not chrome: do not tokenise it. */}
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={solanaQr}
                                 alt="Solana Pay QR"
                                 width={240}
                                 height={240}
-                                className="rounded-lg border border-border"
+                                className="rounded-lg border border-border bg-white p-2 box-content"
                             />
                             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
@@ -601,7 +609,7 @@ export function CheckoutForm({
                                 </div>
                             )}
                             {subsNeedsWallet && (
-                                <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                                <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-xs leading-relaxed text-warning">
                                     <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                                     <div className="space-y-1.5">
                                         <p>{t('payment.subsDesktopOnly')}</p>

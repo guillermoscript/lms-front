@@ -89,7 +89,7 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
                           key={s}
                           className={cn(
                             'text-base',
-                            s < item.rating ? 'text-amber-500' : 'text-muted-foreground/30'
+                            s < item.rating ? 'text-warning' : 'text-muted-foreground/30'
                           )}
                         >
                           ★

@@ -247,74 +247,74 @@ export default async function CourseDetailsPage(props: {
     });
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans">
+        <div className="min-h-screen bg-background text-foreground font-sans">
             <JsonLd data={structuredData} />
             {/* Breadcrumbs */}
-            <nav aria-label="Breadcrumb" className="bg-[#18181b]/50 border-b border-zinc-800">
-                <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-sm text-zinc-400">
-                    <Link href="/" className="hover:text-cyan-400 transition-colors duration-150">{t('breadcrumbs.home')}</Link>
+            <nav aria-label="Breadcrumb" className="bg-muted/50 border-b border-border">
+                <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Link href="/" className="hover:text-brand-text transition-colors duration-150">{t('breadcrumbs.home')}</Link>
                     <ChevronRight className="w-3 h-3" aria-hidden="true" />
-                    <Link href="/courses" className="hover:text-cyan-400 transition-colors duration-150">{t('breadcrumbs.courses')}</Link>
+                    <Link href="/courses" className="hover:text-brand-text transition-colors duration-150">{t('breadcrumbs.courses')}</Link>
                     {course.category && (
                         <>
                             <ChevronRight className="w-3 h-3" aria-hidden="true" />
-                            <span className="text-zinc-300">{course.category.name}</span>
+                            <span className="text-foreground">{course.category.name}</span>
                         </>
                     )}
                     <ChevronRight className="w-3 h-3" aria-hidden="true" />
-                    <span className="text-cyan-400 truncate max-w-[200px]" aria-current="page">{course.title}</span>
+                    <span className="text-brand-text truncate max-w-[200px]" aria-current="page">{course.title}</span>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <div className="bg-[#18181b] border-b border-zinc-800 py-12 lg:py-16">
+            <div className="bg-muted border-b border-border py-12 lg:py-16">
                 <div className="container mx-auto px-4">
                     <div className="max-w-4xl">
                         {course.category && (
-                            <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 mb-4">
+                            <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-brand-tint text-brand-text border border-primary/25 mb-4">
                                 {course.category.name}
                             </span>
                         )}
 
-                        <h1 className="text-3xl lg:text-5xl font-bold mb-4 tracking-tight leading-tight text-white text-balance">
+                        <h1 className="text-3xl lg:text-5xl font-bold mb-4 tracking-tight leading-tight text-foreground text-balance">
                             {course.title}
                         </h1>
 
                         {course.description && (
-                            <p className="text-lg text-zinc-300 mb-8 leading-relaxed max-w-3xl text-pretty">
+                            <p className="text-lg text-foreground/80 mb-8 leading-relaxed max-w-3xl text-pretty">
                                 {course.description}
                             </p>
                         )}
 
-                        <div className="flex flex-wrap items-center gap-6 text-sm text-zinc-300">
+                        <div className="flex flex-wrap items-center gap-6 text-sm text-foreground/80">
                             {averageRating !== null && (
                                 <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-amber-400">{averageRating.toFixed(1)}</span>
+                                    <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
                                     <StarRating rating={averageRating} />
-                                    <span className="text-zinc-400">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                                    <span className="text-muted-foreground">{t('socialProof.reviewCount', { count: reviewCount })}</span>
                                 </div>
                             )}
                             {studentCount > 0 && (
                                 <div className="flex items-center gap-1.5">
-                                    <Users className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                    <Users className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                     <span>{t('socialProof.students', { count: studentCount })}</span>
                                 </div>
                             )}
                             {totalLessons > 0 && (
                                 <div className="flex items-center gap-1.5">
-                                    <BookOpen className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                    <BookOpen className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                     <span>{t('hero.lessons', { count: totalLessons })}</span>
                                 </div>
                             )}
                             {hasDuration && (
                                 <div className="flex items-center gap-1.5">
-                                    <Clock className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                    <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                     <span>{t('hero.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
                                 </div>
                             )}
                             {formattedDate && (
                                 <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                    <Calendar className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                     <span>{t('hero.published', { date: formattedDate })}</span>
                                 </div>
                             )}
@@ -322,16 +322,16 @@ export default async function CourseDetailsPage(props: {
 
                         {instructor && (
                             <div className="mt-8 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
+                                <div className="w-10 h-10 rounded-full bg-background overflow-hidden">
                                     {instructor.avatar_url ? (
                                         <img src={instructor.avatar_url} alt={instructor.name} width={40} height={40} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <User className="w-5 h-5 text-zinc-500" aria-hidden="true" />
+                                            <User className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                                         </div>
                                     )}
                                 </div>
-                                <span className="text-zinc-200">{t('hero.createdBy', { name: instructor.name })}</span>
+                                <span className="text-foreground">{t('hero.createdBy', { name: instructor.name })}</span>
                             </div>
                         )}
                     </div>
@@ -346,15 +346,15 @@ export default async function CourseDetailsPage(props: {
 
                         {/* What you'll learn */}
                         {whatYoullLearn.length > 0 && (
-                            <section className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-                                <h2 className="text-2xl font-bold mb-6 text-white text-balance">{t('sections.whatYoullLearn')}</h2>
+                            <section className="bg-card border border-border rounded-xl p-8">
+                                <h2 className="text-2xl font-bold mb-6 text-foreground text-balance">{t('sections.whatYoullLearn')}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                     {whatYoullLearn.map((item: string, i: number) => (
                                         <div key={i} className="flex gap-3">
                                             <div className="mt-0.5 flex-shrink-0">
-                                                <CheckCircle2 className="w-4 h-4 text-cyan-400" aria-hidden="true" />
+                                                <CheckCircle2 className="w-4 h-4 text-brand-text" aria-hidden="true" />
                                             </div>
-                                            <span className="text-zinc-200 text-sm leading-relaxed">{item}</span>
+                                            <span className="text-foreground text-sm leading-relaxed">{item}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -364,9 +364,9 @@ export default async function CourseDetailsPage(props: {
                         {/* Course Content */}
                         <section>
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-bold text-white">{t('sections.content.title')}</h2>
+                                <h2 className="text-2xl font-bold text-foreground">{t('sections.content.title')}</h2>
                             </div>
-                            <div className="text-sm text-zinc-300 mb-4 flex gap-3">
+                            <div className="text-sm text-muted-foreground mb-4 flex gap-3">
                                 <span>{t('sections.content.lectures', { count: lessons.length })}</span>
                                 {hasDuration && (
                                     <>
@@ -378,11 +378,11 @@ export default async function CourseDetailsPage(props: {
 
                             {lessons.length > 0 ? (
                                 <Accordion className="w-full space-y-3">
-                                    <AccordionItem value="lessons" className="border border-zinc-800 bg-zinc-900/30 rounded-lg px-4 overflow-hidden">
+                                    <AccordionItem value="lessons" className="border border-border bg-card rounded-lg px-4 overflow-hidden">
                                         <AccordionTrigger className="hover:no-underline py-4">
                                             <div className="flex items-center gap-4 text-left">
-                                                <span className="font-bold text-white">{t('sections.content.allLessons')}</span>
-                                                <span className="text-xs text-zinc-400 font-normal">{t('sections.content.lectures', { count: lessons.length })}</span>
+                                                <span className="font-bold text-foreground">{t('sections.content.allLessons')}</span>
+                                                <span className="text-xs text-muted-foreground font-normal">{t('sections.content.lectures', { count: lessons.length })}</span>
                                             </div>
                                         </AccordionTrigger>
                                         <AccordionContent className="pb-4 space-y-1">
@@ -391,23 +391,23 @@ export default async function CourseDetailsPage(props: {
                                                     <Link
                                                         key={lesson.id}
                                                         href={`/courses/${params.id}/lessons/${lesson.id}`}
-                                                        className="flex items-center justify-between gap-3 p-3 rounded-md hover:bg-zinc-800/50 transition-colors duration-150 group"
+                                                        className="flex items-center justify-between gap-3 p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 group"
                                                     >
                                                         <div className="flex items-center gap-3 min-w-0">
-                                                            <span className="text-xs text-zinc-400 font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
-                                                            <PlayCircle className="w-4 h-4 text-cyan-400 flex-shrink-0" aria-hidden="true" />
-                                                            <span className="text-sm text-zinc-200 truncate group-hover:text-cyan-400 transition-colors duration-150">{lesson.title}</span>
+                                                            <span className="text-xs text-muted-foreground font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
+                                                            <PlayCircle className="w-4 h-4 text-brand-text flex-shrink-0" aria-hidden="true" />
+                                                            <span className="text-sm text-foreground truncate group-hover:text-brand-text transition-colors duration-150">{lesson.title}</span>
                                                         </div>
-                                                        <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-cyan-400 border border-cyan-500/30 bg-cyan-500/10 rounded-full px-2 py-0.5">
+                                                        <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand-text border border-primary/25 bg-brand-tint rounded-full px-2 py-0.5">
                                                             {t('sections.content.previewBadge')}
                                                         </span>
                                                     </Link>
                                                 ) : (
-                                                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-md hover:bg-zinc-800/50 transition-colors duration-150">
+                                                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150">
                                                         <div className="flex items-center gap-3 min-w-0">
-                                                            <span className="text-xs text-zinc-400 font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
-                                                            <BookOpen className="w-4 h-4 text-zinc-400 flex-shrink-0" aria-hidden="true" />
-                                                            <span className="text-sm text-zinc-200 truncate">{lesson.title}</span>
+                                                            <span className="text-xs text-muted-foreground font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
+                                                            <BookOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+                                                            <span className="text-sm text-foreground truncate">{lesson.title}</span>
                                                         </div>
                                                     </div>
                                                 )
@@ -416,7 +416,7 @@ export default async function CourseDetailsPage(props: {
                                     </AccordionItem>
                                 </Accordion>
                             ) : (
-                                <div className="text-center py-8 text-zinc-400">
+                                <div className="text-center py-8 text-muted-foreground">
                                     {t('sections.content.noLessons')}
                                 </div>
                             )}
@@ -425,25 +425,25 @@ export default async function CourseDetailsPage(props: {
                         {/* What students say */}
                         {recentReviews.length > 0 && (
                             <section>
-                                <h2 className="text-2xl font-bold mb-2 text-white">{t('socialProof.title')}</h2>
+                                <h2 className="text-2xl font-bold mb-2 text-foreground">{t('socialProof.title')}</h2>
                                 {averageRating !== null && (
-                                    <div className="flex items-center gap-2 text-sm text-zinc-300 mb-6">
-                                        <span className="font-bold text-amber-400">{averageRating.toFixed(1)}</span>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+                                        <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
                                         <StarRating rating={averageRating} />
-                                        <span className="text-zinc-400">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                                        <span className="text-muted-foreground">{t('socialProof.reviewCount', { count: reviewCount })}</span>
                                     </div>
                                 )}
                                 <div className="space-y-4">
                                     {recentReviews.map((review) => (
-                                        <div key={review.reviewId} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-6">
+                                        <div key={review.reviewId} className="bg-card border border-border rounded-xl p-6">
                                             <div className="flex flex-wrap items-center gap-3 mb-3">
-                                                <span className="font-bold text-white text-sm">{review.reviewerName}</span>
+                                                <span className="font-bold text-foreground text-sm">{review.reviewerName}</span>
                                                 <StarRating rating={review.rating} starClassName="w-3.5 h-3.5" />
-                                                <span className="text-xs text-zinc-500">
+                                                <span className="text-xs text-muted-foreground">
                                                     {new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(review.createdAt))}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-zinc-300 leading-relaxed">{review.reviewText}</p>
+                                            <p className="text-sm text-foreground leading-relaxed">{review.reviewText}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -453,8 +453,8 @@ export default async function CourseDetailsPage(props: {
                         {/* About */}
                         {course.description && (
                             <section className="space-y-6">
-                                <h2 className="text-2xl font-bold text-white">{t('sections.about')}</h2>
-                                <div className="text-zinc-300 text-base leading-relaxed whitespace-pre-line">
+                                <h2 className="text-2xl font-bold text-foreground">{t('sections.about')}</h2>
+                                <div className="text-foreground text-base leading-relaxed whitespace-pre-line">
                                     {course.description}
                                 </div>
                             </section>
@@ -463,21 +463,21 @@ export default async function CourseDetailsPage(props: {
                         {/* Instructor */}
                         {instructor && (
                             <section>
-                                <h2 className="text-2xl font-bold mb-8 text-white">{t('sections.instructor.title')}</h2>
-                                <div className="flex items-start gap-5 bg-zinc-900/40 border border-zinc-800 rounded-xl p-6">
-                                    <div className="w-20 h-20 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0 ring-2 ring-zinc-700">
+                                <h2 className="text-2xl font-bold mb-8 text-foreground">{t('sections.instructor.title')}</h2>
+                                <div className="flex items-start gap-5 bg-card border border-border rounded-xl p-6">
+                                    <div className="w-20 h-20 rounded-full bg-muted overflow-hidden flex-shrink-0 ring-2 ring-border">
                                         {instructor.avatar_url ? (
                                             <img src={instructor.avatar_url} alt={instructor.name} width={80} height={80} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
-                                                <User className="w-8 h-8 text-zinc-500" aria-hidden="true" />
+                                                <User className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
                                             </div>
                                         )}
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="text-lg font-bold text-white">{instructor.name}</div>
+                                        <div className="text-lg font-bold text-foreground">{instructor.name}</div>
                                         {instructor.bio && (
-                                            <p className="text-zinc-300 leading-relaxed mt-3 text-sm">
+                                            <p className="text-muted-foreground leading-relaxed mt-3 text-sm">
                                                 {instructor.bio}
                                             </p>
                                         )}
@@ -490,7 +490,7 @@ export default async function CourseDetailsPage(props: {
                     {/* Right Column: Sticky Pricing Card */}
                     <div className="lg:col-span-1">
                         <div className="sticky top-8 space-y-6">
-                            <Card className="bg-[#18181b] border-zinc-800 shadow-2xl overflow-hidden">
+                            <Card className="shadow-2xl overflow-hidden">
                                 {/* Thumbnail */}
                                 <div className="relative aspect-video">
                                     {course.thumbnail_url ? (
@@ -499,32 +499,32 @@ export default async function CourseDetailsPage(props: {
                                             alt={course.title}
                                             width={400}
                                             height={225}
-                                            className="w-full h-full object-cover brightness-75"
+                                            className="w-full h-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
-                                            <PlayCircle className="w-16 h-16 text-zinc-600" aria-hidden="true" />
+                                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                                            <PlayCircle className="w-16 h-16 text-muted-foreground" aria-hidden="true" />
                                         </div>
                                     )}
                                 </div>
 
                                 <CardContent className="p-6 space-y-6">
                                     {/* Price */}
-                                    <div className="text-3xl font-bold text-white">{priceDisplay}</div>
+                                    <div className="text-3xl font-bold">{priceDisplay}</div>
 
                                     {/* Social proof */}
                                     {(averageRating !== null || studentCount > 0) && (
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-300">
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
                                             {averageRating !== null && (
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className="font-bold text-amber-400">{averageRating.toFixed(1)}</span>
+                                                    <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
                                                     <StarRating rating={averageRating} starClassName="w-3.5 h-3.5" />
-                                                    <span className="text-zinc-400 text-xs">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                                                    <span className="text-muted-foreground text-xs">{t('socialProof.reviewCount', { count: reviewCount })}</span>
                                                 </div>
                                             )}
                                             {studentCount > 0 && (
                                                 <div className="flex items-center gap-1.5">
-                                                    <Users className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                                    <Users className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                                     <span className="text-xs">{t('socialProof.students', { count: studentCount })}</span>
                                                 </div>
                                             )}
@@ -546,13 +546,12 @@ export default async function CourseDetailsPage(props: {
                                                 <AlreadyHaveAccountLink
                                                     next={anonymousNext}
                                                     testId="course-enroll-login"
-                                                    className="text-zinc-400"
-                                                    linkClassName="text-cyan-400"
+                                                    linkClassName="text-brand-text"
                                                 />
                                             </div>
                                         ) : hasAccess ? (
                                             <Link href={`/dashboard/student/courses/${course.course_id}`}>
-                                                <Button data-testid="course-go-to-course" className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
+                                                <Button data-testid="course-go-to-course" className="w-full h-11 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm">
                                                     {t('pricing.goToCourse')}
                                                 </Button>
                                             </Link>
@@ -574,8 +573,8 @@ export default async function CourseDetailsPage(props: {
 
                                         {!hasAccess && !isFree && !planCoversCourse && (
                                             <div className="text-center">
-                                                <span className="text-zinc-400 text-xs">{t('pricing.or')}</span>
-                                                <Link href="/pricing" className="block text-cyan-400 hover:underline text-sm mt-1">
+                                                <span className="text-muted-foreground text-xs">{t('pricing.or')}</span>
+                                                <Link href="/pricing" className="block text-brand-text hover:underline text-sm mt-1">
                                                     {t('pricing.subscription')}
                                                 </Link>
                                             </div>
@@ -583,31 +582,31 @@ export default async function CourseDetailsPage(props: {
                                     </div>
 
                                     {/* Includes */}
-                                    <div className="space-y-4 border-t border-zinc-800 pt-6">
-                                        <div className="font-bold text-sm text-white">{t('pricing.includes.title')}</div>
+                                    <div className="space-y-4 border-t border-border pt-6">
+                                        <div className="font-bold text-sm">{t('pricing.includes.title')}</div>
                                         <div className="space-y-3">
                                             {totalLessons > 0 && (
-                                                <div className="flex items-center gap-3 text-sm text-zinc-200">
-                                                    <BookOpen className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                                <div className="flex items-center gap-3 text-sm text-foreground">
+                                                    <BookOpen className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                                     <span>{t('pricing.includes.lessons', { count: totalLessons })}</span>
                                                 </div>
                                             )}
                                             {hasDuration && (
-                                                <div className="flex items-center gap-3 text-sm text-zinc-200">
-                                                    <Clock className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                                <div className="flex items-center gap-3 text-sm text-foreground">
+                                                    <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                                     <span>{t('pricing.includes.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-3 text-sm text-zinc-200">
-                                                <Infinity className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                            <div className="flex items-center gap-3 text-sm text-foreground">
+                                                <Infinity className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                                 <span>{t('pricing.includes.lifetime')}</span>
                                             </div>
-                                            <div className="flex items-center gap-3 text-sm text-zinc-200">
-                                                <Smartphone className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                            <div className="flex items-center gap-3 text-sm text-foreground">
+                                                <Smartphone className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                                 <span>{t('pricing.includes.mobile')}</span>
                                             </div>
-                                            <div className="flex items-center gap-3 text-sm text-zinc-200">
-                                                <Award className="w-4 h-4 text-zinc-400" aria-hidden="true" />
+                                            <div className="flex items-center gap-3 text-sm text-foreground">
+                                                <Award className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                                 <span>{t('pricing.includes.certificate')}</span>
                                             </div>
                                         </div>

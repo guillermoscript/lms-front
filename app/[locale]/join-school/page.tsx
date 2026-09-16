@@ -52,10 +52,10 @@ export default async function JoinSchoolPage({
   if (!tenant) {
     return (
       <div className="container mx-auto py-12 max-w-md">
-        <Card className="border-red-200 bg-red-50">
+        <Card className="bg-destructive/10 ring-destructive/30">
           <CardHeader>
-            <CardTitle className="text-red-900">{t('notFoundTitle')}</CardTitle>
-            <CardDescription className="text-red-700">{t('notFoundDescription')}</CardDescription>
+            <CardTitle className="text-destructive">{t('notFoundTitle')}</CardTitle>
+            <CardDescription className="text-destructive">{t('notFoundDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/">
@@ -84,18 +84,18 @@ export default async function JoinSchoolPage({
   if (membership) {
     return (
       <div className="container mx-auto py-12 max-w-md">
-        <Card className="border-green-200 bg-green-50">
+        <Card className="bg-success/10 ring-success/30">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <CardTitle className="text-green-900">{t('memberTitle')}</CardTitle>
+              <CheckCircle className="h-6 w-6 text-success" />
+              <CardTitle className="text-success">{t('memberTitle')}</CardTitle>
             </div>
-            <CardDescription className="text-green-700">
+            <CardDescription className="text-success">
               {t('memberDescription', { school: tenant.name })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-green-800">
+            <p className="text-sm text-success">
               {t('memberBody', { school: tenant.name })}
             </p>
             <div className="flex gap-2">
@@ -128,8 +128,8 @@ export default async function JoinSchoolPage({
     <div className="container mx-auto py-12 max-w-2xl">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <School className="h-8 w-8 text-primary" />
+          <div className="h-16 w-16 rounded-full bg-brand-tint flex items-center justify-center">
+            <School className="h-8 w-8 text-brand-text" />
           </div>
         </div>
         <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
@@ -139,9 +139,9 @@ export default async function JoinSchoolPage({
       </div>
 
       {otherMemberships && otherMemberships.length > 0 && (
-        <Card className="mb-6 border-blue-200 bg-blue-50">
+        <Card className="mb-6 bg-brand-tint ring-primary/25">
           <CardHeader>
-            <CardTitle className="text-sm text-blue-900">{t('otherSchoolsTitle')}</CardTitle>
+            <CardTitle className="text-sm text-brand-text">{t('otherSchoolsTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -154,13 +154,13 @@ export default async function JoinSchoolPage({
                   ? membership.tenants[0]
                   : membership.tenants
                 return (
-                  <li key={membership.tenant_id} className="text-sm text-blue-800">
+                  <li key={membership.tenant_id} className="text-sm text-brand-text">
                     • {school?.name || t('unknownSchool')}
                   </li>
                 )
               })}
             </ul>
-            <p className="text-xs text-blue-700 mt-3">{t('otherSchoolsHint')}</p>
+            <p className="text-xs text-brand-text mt-3">{t('otherSchoolsHint')}</p>
           </CardContent>
         </Card>
       )}
