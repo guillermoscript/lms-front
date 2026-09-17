@@ -269,6 +269,25 @@ max_frequency = "5s"
 enabled = true
 uri = "pg-functions://postgres/app_private/custom_access_token_hook"
 
+# Send Email hook (#776): brands sign-up/magic-link/recovery/invite/email-change
+# emails per school via app/api/auth/send-email-hook/route.ts, instead of
+# GoTrue's default templates. LEFT DISABLED LOCALLY on purpose:
+#   1. Enabling it means GoTrue stops sending its own emails to Inbucket for
+#      EVERY Auth flow on this local project — the hook becomes the only path.
+#   2. The route delivers through this app's Mailgun-backed sendEmail(), which
+#      is unset in local .env.local (see .env.example) — so with the hook on
+#      and no MAILGUN_* vars, sign-up/reset emails go nowhere (not Inbucket,
+#      not Mailgun) and the auth request itself fails once sendEmail() returns
+#      false, since the route reports that failure back to GoTrue.
+# To try it locally: set MAILGUN_API_KEY/MAILGUN_DOMAIN (a Mailgun sandbox
+# domain works) and SEND_EMAIL_HOOK_SECRET in .env.local, uncomment below,
+# then `supabase stop && supabase start` to reload config.toml — do NOT do
+# this against the shared local Supabase instance other agents/tests use.
+# [auth.hook.send_email]
+# enabled = true
+# uri = "http://host.docker.internal:3000/api/auth/send-email-hook"
+# secrets = "env(SEND_EMAIL_HOOK_SECRET)"
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 [auth.sms.twilio]
 enabled = false
