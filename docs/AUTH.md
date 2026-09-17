@@ -532,10 +532,19 @@ supabase.auth.onAuthStateChange((event, session) => {
 1. Go to Authentication -> Settings
 2. Toggle "Enable email confirmations"
 
-### Custom Email Templates
-1. Go to Authentication -> Email Templates
-2. Customize "Confirm signup" template
-3. Use `{{ .ConfirmationURL }}` for confirmation link
+### Branded Auth Emails (Send Email Hook, #776)
+
+Sign-up confirmation, magic link, recovery, invite and email-change no longer
+use GoTrue's default templates or the dashboard's Email Templates page — once
+Authentication → Hooks → Send Email is enabled in the hosted project, GoTrue
+POSTs the OTP payload to `app/api/auth/send-email-hook/route.ts` instead,
+which resolves the school (from the `redirect_to` subdomain, else the user's
+own tenant membership, else the platform palette), renders
+`lib/email/templates/auth-otp.ts` with `school-brand-parts.ts`, and sends
+through the existing Mailgun-backed `sendEmail()`. The link it builds always
+points at `/auth/confirm` (below), never Supabase's hosted `/auth/v1/verify`.
+Disabled locally — see `supabase/config.toml`'s `[auth.hook.send_email]`
+comment for why and how to turn it on.
 
 ### Handling Confirmation Callback
 

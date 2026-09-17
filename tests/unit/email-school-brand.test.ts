@@ -14,6 +14,7 @@ import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
 import { paymentRequestExpiredTemplate } from '@/lib/email/templates/payment-request-expired'
 import { planDowngradedTemplate } from '@/lib/email/templates/plan-downgraded'
 import { renewalReminderTemplate } from '@/lib/email/templates/renewal-reminder'
+import { authOtpTemplate } from '@/lib/email/templates/auth-otp'
 
 /**
  * Issue #765 — the 7 school-branded transactional emails carry the school's
@@ -114,6 +115,15 @@ function renderAll(brand: SchoolBrand): Record<string, { subject: string; html: 
       },
       'en'
     ),
+    // Issue #776 — Supabase Auth's own emails (sign-up confirm, magic link,
+    // recovery, invite, email-change), rendered by the Send Email hook.
+    authOtpSignup: authOtpTemplate({
+      kind: 'signup',
+      schoolName: brand.name,
+      actionUrl: 'https://school.example.com/auth/confirm?token_hash=abc&type=signup&next=%2F',
+      locale: 'en',
+      brand,
+    }),
   }
 }
 
@@ -126,6 +136,7 @@ const TEMPLATES_WITH_HEADING = [
   'paymentInstructions',
   'dailyDigest',
   'streakNudge',
+  'authOtpSignup',
 ]
 
 describe.each(BRANDS)('school-branded emails — %s', (_label, brand) => {
