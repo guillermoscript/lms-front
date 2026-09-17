@@ -1,8 +1,34 @@
 import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import { getCurrentTenant, type Tenant } from '@/lib/supabase/tenant'
+import { normalizeLogoUrl } from '@/lib/themes/brand-outputs'
 
 const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'LMS Platform'
+
+/**
+ * Platform favicon, served from `public/` as plain static files (issue #778).
+ * They used to live under `app/` (favicon.ico + icon.svg), Next's file-based
+ * icon convention — but that convention *always* injects its own `<link
+ * rel="icon">` tags in addition to whatever `generateMetadata` returns, so a
+ * school's `favicon_url` rendered alongside the platform icon instead of
+ * replacing it. Moving the files to `public/` keeps them reachable at the
+ * same URLs while putting `icons` in full control of the tag(s) rendered.
+ */
+const PLATFORM_FAVICON_ICONS: NonNullable<Metadata['icons']> = [
+  { url: '/icon.svg', type: 'image/svg+xml' },
+  { url: '/favicon.ico', sizes: 'any' },
+]
+
+/**
+ * Resolves the `<link rel="icon">` metadata for the current tenant: the
+ * school's `tenant_settings.favicon_url` when it is a valid http(s) URL
+ * (reusing the same guard emails/certificates trust, since this is free text
+ * an admin typed), otherwise the platform's own icon files.
+ */
+export function resolveFaviconIcons(faviconUrlSetting: unknown): NonNullable<Metadata['icons']> {
+  const normalized = normalizeLogoUrl(faviconUrlSetting)
+  return normalized ? [{ url: normalized }] : PLATFORM_FAVICON_ICONS
+}
 
 /**
  * Absolute base URL of the current request (tenant subdomain aware).
