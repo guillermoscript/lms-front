@@ -3,8 +3,12 @@
  * Generates PNG/SVG badge images with "baked" Open Badges metadata
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import { createCanvas, loadImage, registerFont } from 'canvas';
+import { headingFontPath } from '@/lib/themes/brand-fonts';
+import type { KitHeadingFont } from '@/lib/themes/brand-outputs';
+import type { ResolvedCertificateDesign } from './default-design';
 
 // =====================================================
 // Types
@@ -16,8 +20,27 @@ export interface BadgeImageData {
     issuedDate: Date;
     issuerName: string;
     issuerLogo?: string;
-    badgeColor?: string;
-    credential: any; // Open Badges 3.0 credential JSON
+    /** Resolved by `resolveCertificateDesign()` — the school brand for the default design, the template's own colours for a custom one. */
+    design: ResolvedCertificateDesign;
+    credential: Record<string, unknown>; // Open Badges 3.0 credential JSON
+}
+
+/**
+ * Registers `Kit <family>` (bold weight only — the course title is the one
+ * bold badge label) once per process. No-op when the file is missing on disk.
+ */
+const registeredHeadingFamilies = new Set<string>();
+
+function ensureHeadingFontRegistered(family: KitHeadingFont): string | null {
+    const canvasFamily = `Kit ${family}`;
+    if (registeredHeadingFamilies.has(canvasFamily)) return canvasFamily;
+
+    const bold = headingFontPath(family, 700);
+    if (!bold) return null;
+
+    registerFont(bold, { family: canvasFamily, weight: '700' });
+    registeredHeadingFamilies.add(canvasFamily);
+    return canvasFamily;
 }
 
 // =====================================================
@@ -33,15 +56,19 @@ export async function generateBadgeImage(
 ): Promise<Buffer> {
     const width = 400;
     const height = 400;
+    const { design } = data;
+    const headingFamily = design.headingFont ? ensureHeadingFontRegistered(design.headingFont) : null;
 
     // Create canvas
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Background
+    // Background — a school-branded badge gradients into `deep`; a custom
+    // template keeps its fixed navy second stop exactly as it always has (its
+    // `design_settings` never carried a second badge colour).
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, data.badgeColor || '#1a73e8');
-    gradient.addColorStop(1, '#0d47a1');
+    gradient.addColorStop(0, design.primary);
+    gradient.addColorStop(1, design.schoolBranded ? design.secondary : '#0d47a1');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
@@ -57,7 +84,7 @@ export async function generateBadgeImage(
     // Inner circle
     ctx.beginPath();
     ctx.arc(width / 2, height / 2, 130, 0, Math.PI * 2);
-    ctx.strokeStyle = data.badgeColor || '#1a73e8';
+    ctx.strokeStyle = design.primary;
     ctx.lineWidth = 3;
     ctx.stroke();
 
@@ -78,9 +105,10 @@ export async function generateBadgeImage(
         }
     }
 
-    // Course Title (truncated)
-    ctx.fillStyle = '#1a1a2e';
-    ctx.font = 'bold 18px Arial';
+    // Course Title (truncated) — brand-coloured TEXT uses `accentText`; a
+    // custom template keeps its fixed ink exactly as it always has.
+    ctx.fillStyle = design.schoolBranded ? design.accentText : '#1a1a2e';
+    ctx.font = headingFamily ? `bold 18px "${headingFamily}"` : 'bold 18px Arial';
     ctx.textAlign = 'center';
     const truncatedTitle = truncateText(data.courseTitle, 20);
     ctx.fillText(truncatedTitle, width / 2, height / 2 + 20);
@@ -119,7 +147,7 @@ export async function generateBadgeImage(
  */
 export async function bakeMetadataIntoPNG(
     imageBuffer: Buffer,
-    credential: any
+    credential: Record<string, unknown>
 ): Promise<Buffer> {
     try {
         // Convert credential to JSON string
@@ -153,7 +181,7 @@ export async function bakeMetadataIntoPNG(
 export async function generateAndUploadBadge(
     data: BadgeImageData,
     certificateId: string,
-    supabaseClient: any
+    supabaseClient: SupabaseClient
 ): Promise<string> {
     try {
         // Generate badge image
@@ -206,14 +234,14 @@ function truncateText(text: string, maxLength: number): string {
  */
 export async function extractMetadataFromPNG(
     imageBuffer: Buffer
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
     try {
         const metadata = await sharp(imageBuffer).metadata();
 
         if (metadata.exif) {
             // Parse EXIF data to extract ImageDescription
             // This is a simplified version - full implementation would parse EXIF binary
-            const description = (metadata as any).exif?.ImageDescription;
+            const description = (metadata as { exif?: { ImageDescription?: string } }).exif?.ImageDescription;
             if (description) {
                 return JSON.parse(description);
             }

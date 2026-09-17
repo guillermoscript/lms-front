@@ -25,6 +25,7 @@ const CertificateTemplateForm = dynamic(
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCertificateTier } from '@/lib/plans/server'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 
 interface PageProps {
     params: Promise<{ courseId: string }>
@@ -59,6 +60,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
 
     // Free plan = basic certificates: the platform design only (#662).
     const certificateTier = await getCertificateTier(tenantId)
+    const brand = await getSchoolBrand(tenantId)
 
     const { data: template } = await supabase
         .from('certificate_templates')
@@ -97,6 +99,7 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
                 tenantId={tenantId}
                 initialData={template}
                 certificateTier={certificateTier === 'custom' ? 'custom' : 'basic'}
+                brand={brand.outputs}
             />
         </div>
     )

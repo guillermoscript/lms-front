@@ -12,7 +12,8 @@ import {
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { getSeoContext, ogImageUrl } from '@/lib/seo'
-import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
+import { resolveCertificateDesign } from '@/lib/certificates/default-design'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 
 interface PageProps {
     params: Promise<{ code: string; locale: string }>
@@ -131,11 +132,18 @@ export default async function VerificationPage({ params }: PageProps) {
     }
 
     const isRevoked = !!certificate.revoked_at
-    const primaryColor = certificate.certificate_templates?.design_settings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color
+    const brand = await getSchoolBrand(certificate.tenant_id)
+    const design = resolveCertificateDesign(certificate.certificate_templates?.design_settings, brand.outputs)
+    const primaryColor = design.primary
+    // The filled avatar badge below needs a fill+ink pair guaranteed to read —
+    // `design.primary` alone (D3: decorative only) isn't. A custom template's
+    // own colour keeps the white ink it always rendered with.
+    const badgeBg = design.schoolBranded ? brand.outputs.button : design.primary
+    const badgeInk = design.schoolBranded ? brand.outputs.buttonInk : '#FFFFFF'
 
     const courseTitle =
         certificate.courses?.title ||
-        (certificate.credential_json as any)?.credentialSubject?.achievement?.name ||
+        (certificate.credential_json as { credentialSubject?: { achievement?: { name?: string } } } | null)?.credentialSubject?.achievement?.name ||
         'Course'
     const courseStillExists = !!certificate.courses?.course_id
 
@@ -222,9 +230,9 @@ export default async function VerificationPage({ params }: PageProps) {
                                 />
                             ) : (
                                 <div
-                                    /* White initials: the foreground of the certificate template's own colour (content), not a theme surface */
-                                    className="h-11 w-11 rounded-lg flex items-center justify-center text-white font-semibold text-sm"
-                                    style={{ backgroundColor: primaryColor }}
+                                    /* The certificate design's own fill+ink (content), not a theme surface */
+                                    className="h-11 w-11 rounded-lg flex items-center justify-center font-semibold text-sm"
+                                    style={{ backgroundColor: badgeBg, color: badgeInk }}
                                 >
                                     {issuerName.substring(0, 2).toUpperCase()}
                                 </div>

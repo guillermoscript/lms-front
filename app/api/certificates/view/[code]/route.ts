@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateCertificateHTML } from '@/lib/certificate-generator'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
+import { resolveCertificateDesign } from '@/lib/certificates/default-design'
 
 export async function GET(
   _request: NextRequest,
@@ -58,6 +60,7 @@ export async function GET(
     const score = certificate.completion_data?.averageExamScore ?? undefined
 
     const template = certificate.certificate_templates
+    const brand = await getSchoolBrand(certificate.tenant_id)
     const html = generateCertificateHTML({
       certificateNumber: certificate.verification_code,
       studentName,
@@ -65,11 +68,11 @@ export async function GET(
       completionDate: new Date(certificate.issued_at),
       score,
       issuerName,
-      designSettings: template?.design_settings,
+      design: resolveCertificateDesign(template?.design_settings, brand.outputs),
       signatureName: template?.signature_name,
       signatureTitle: template?.signature_title,
       signatureImageUrl: template?.signature_image_url,
-      logoUrl: template?.logo_url,
+      logoUrl: template?.logo_url || template?.design_settings?.logo_url,
     })
 
     // Increment view count (fire-and-forget)

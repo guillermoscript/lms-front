@@ -11,6 +11,7 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { CertificatePreview } from '@/components/teacher/certificate-preview'
 import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -78,11 +79,12 @@ export default async function CertificatesPage({ params }: PageProps) {
   const template = templateRes.data
   const certificates = certsRes.data || []
   const enrollments = enrollmentsRes.data || []
+  const brand = await getSchoolBrand(tenantId)
 
   // Students who don't have certificates yet
-  const certifiedUserIds = new Set(certificates.map((c: any) => c.user_id))
+  const certifiedUserIds = new Set(certificates.map((c) => c.user_id))
   const uncertifiedEnrollments = enrollments.filter(
-    (e: any) => !certifiedUserIds.has(e.user_id ?? e.profiles?.id)
+    (e) => !certifiedUserIds.has(e.user_id ?? e.profiles?.id)
   )
 
   return (
@@ -183,6 +185,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                     secondary_color: '#1E40AF',
                     show_qr_code: true,
                   }}
+                  brand={brand.outputs}
                 />
               </div>
               <div className="space-y-3 px-1">
@@ -278,7 +281,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                     </thead>
                     <tbody>
                       {certificates.length > 0 ? (
-                        certificates.map((cert: any) => (
+                        certificates.map((cert) => (
                           <tr
                             key={cert.certificate_id}
                             className="border-b last:border-0 hover:bg-muted/20 transition-colors"
@@ -344,7 +347,7 @@ export default async function CertificatesPage({ params }: PageProps) {
               <Card>
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    {uncertifiedEnrollments.map((enrollment: any) => {
+                    {uncertifiedEnrollments.map((enrollment) => {
                       const profile = enrollment.profiles
                       return (
                         <div

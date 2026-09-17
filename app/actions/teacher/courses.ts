@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/email/send'
 import { isMailerConfigured } from '@/lib/email/status'
 import { courseRemovedTemplate } from '@/lib/email/templates/course-removed'
 import { bestEffortLocale } from '@/lib/i18n/best-effort-locale'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
@@ -416,8 +417,8 @@ export async function deleteCourse(courseId: number) {
     notification.recipients = enrollments?.length ?? 0
 
     if (notification.recipients > 0 && notification.mailerConfigured) {
-      const [{ data: tenantRow }, locale, authUsers] = await Promise.all([
-        adminClient.from('tenants').select('name').eq('id', tenantId).single(),
+      const [brand, locale, authUsers] = await Promise.all([
+        getSchoolBrand(tenantId),
         bestEffortLocale(),
         // One round-trip per student, but in parallel — `auth.admin` has no
         // "get users by ids", and `listUsers` pages the whole instance.
@@ -427,11 +428,15 @@ export async function deleteCourse(courseId: number) {
       ])
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+      // One template built once and reused for every recipient below — the
+      // brand is the school's, not the student's, so there is nothing to
+      // resolve per recipient.
       const template = courseRemovedTemplate({
         courseTitle: course.title,
-        schoolName: tenantRow?.name || 'LMS Platform',
+        schoolName: brand.name || 'LMS Platform',
         browseUrl: `${appUrl}/dashboard/student/browse`,
         locale,
+        brand,
       })
 
       const recipients = authUsers

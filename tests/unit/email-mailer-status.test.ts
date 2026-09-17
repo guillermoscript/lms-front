@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { isMailerConfigured, getMailerStatus } from '@/lib/email/status'
 import { courseRemovedTemplate, resolveCourseRemovedLocale } from '@/lib/email/templates/course-removed'
+import { platformSchoolBrand } from '@/lib/themes/school-brand'
 
 /**
  * Issue #676 — surface mailer configuration state (no secret values) and
@@ -78,6 +79,7 @@ describe('courseRemovedTemplate', () => {
     courseTitle: 'Intro to Algebra',
     schoolName: 'Test School',
     browseUrl: 'https://school.example.com/dashboard/student/browse',
+    brand: platformSchoolBrand('tenant-1', 'Test School'),
   }
 
   it('produces English copy with the course title and school in the subject', () => {

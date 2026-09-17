@@ -23,7 +23,7 @@ export function CertificateTemplateForm(props: CertificateTemplateFormProps) {
 
 function CertificateTemplateFormShell() {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
-    const { formData, isLoading, handleSubmit, goBack } = useCertificateTemplate()
+    const { formData, isLoading, handleSubmit, goBack, brand } = useCertificateTemplate()
 
     return (
         <div className="grid gap-8 lg:grid-cols-5">
@@ -69,6 +69,7 @@ function CertificateTemplateFormShell() {
                         templateName={formData.template_name}
                         issuerName={formData.issuer_name}
                         designSettings={formData.design_settings}
+                        brand={brand}
                         signatureName={formData.signature_name}
                         signatureTitle={formData.signature_title}
                         signatureImageUrl={formData.signature_image_url}

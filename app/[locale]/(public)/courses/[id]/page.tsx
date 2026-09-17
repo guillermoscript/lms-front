@@ -43,7 +43,7 @@ export async function generateMetadata(props: { params: Promise<{ id: string; lo
     const [supabase, tenantId] = await Promise.all([createClient(), getCurrentTenantId()]);
     const { data: course } = await supabase
         .from("courses")
-        .select("title, description, thumbnail_url")
+        .select("title, description")
         .eq("course_id", parseInt(id))
         .eq("tenant_id", tenantId)
         .eq("status", "published")
@@ -55,12 +55,15 @@ export async function generateMetadata(props: { params: Promise<{ id: string; lo
         ? course.description.replace(/\s+/g, ' ').trim().slice(0, 160)
         : t('courses.description');
 
+    // The branded course card (issue #765) always wins over the raw thumbnail:
+    // it carries the school's logo/brand/heading font, and falls back to a
+    // brand-only card when the course has no thumbnail.
     return buildPageMetadata({
         title: course.title,
         description,
         path: `/courses/${id}`,
         locale,
-        image: course.thumbnail_url || undefined,
+        ogParams: { type: 'course', courseId: id },
         ogBadge: t('courses.badge'),
     });
 }

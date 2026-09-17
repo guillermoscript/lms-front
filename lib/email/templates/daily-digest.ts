@@ -1,4 +1,6 @@
 import type { DigestLocale } from '@/lib/notifications/daily-digest'
+import type { SchoolBrand } from '@/lib/themes/school-brand'
+import { escapeHtml, schoolButton, schoolHeadingStyle, schoolLogoHeader } from './school-brand-parts'
 
 export interface DailyDigestEmailData {
   schoolName: string
@@ -9,6 +11,7 @@ export interface DailyDigestEmailData {
   /** Streak to warn about; 0 = no streak line. */
   streak: number
   actionUrl: string
+  brand: SchoolBrand
 }
 
 export interface StreakNudgeEmailData {
@@ -16,6 +19,7 @@ export interface StreakNudgeEmailData {
   firstName: string
   streak: number
   actionUrl: string
+  brand: SchoolBrand
 }
 
 const DIGEST_COPY = {
@@ -56,22 +60,21 @@ const NUDGE_COPY = {
   },
 } as const
 
-function layout(schoolName: string, inner: string): string {
+function layout(brand: SchoolBrand, schoolName: string, inner: string): string {
   return `<!DOCTYPE html>
 <html>
 <body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
+  ${schoolLogoHeader(brand)}
 ${inner}
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-  <p style="color:#999;font-size:12px">${schoolName}</p>
+  <p style="color:#999;font-size:12px">${escapeHtml(schoolName)}</p>
 </body>
 </html>`
 }
 
-function ctaButton(url: string, label: string): string {
+function ctaButton(brand: SchoolBrand, url: string, label: string): string {
   return `<p style="text-align:center;margin:32px 0">
-    <a href="${url}" style="background:#2563eb;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">
-      ${label}
-    </a>
+    ${schoolButton(brand, url, label)}
   </p>`
 }
 
@@ -88,13 +91,14 @@ export function dailyDigestEmailTemplate(
   return {
     subject: copy.subject(data.schoolName),
     html: layout(
+      data.brand,
       data.schoolName,
-      `  <h2>${copy.greeting(data.firstName)}</h2>
+      `  <h2 style="${schoolHeadingStyle(data.brand)}">${copy.greeting(data.firstName)}</h2>
   <p>${copy.intro}</p>
   <ul style="padding-left:20px">
 ${list}
   </ul>
-${ctaButton(data.actionUrl, copy.cta)}
+${ctaButton(data.brand, data.actionUrl, copy.cta)}
   <p style="color:#666;font-size:13px">${copy.footer}</p>`
     ),
   }
@@ -108,10 +112,11 @@ export function streakNudgeEmailTemplate(
   return {
     subject: copy.subject(data.streak),
     html: layout(
+      data.brand,
       data.schoolName,
-      `  <h2>🔥 ${copy.subject(data.streak)}</h2>
+      `  <h2 style="${schoolHeadingStyle(data.brand)}">🔥 ${copy.subject(data.streak)}</h2>
   <p>${copy.body(data.firstName, data.streak)}</p>
-${ctaButton(data.actionUrl, copy.cta)}`
+${ctaButton(data.brand, data.actionUrl, copy.cta)}`
     ),
   }
 }

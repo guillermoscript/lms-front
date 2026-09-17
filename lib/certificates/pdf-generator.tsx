@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
     Document,
     Page,
@@ -12,11 +13,15 @@ import {
     View,
     Image,
     StyleSheet,
+    Font,
     pdf,
     Svg,
     Ellipse,
 } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
+import { headingFontPath } from '@/lib/themes/brand-fonts';
+import type { KitHeadingFont } from '@/lib/themes/brand-outputs';
+import type { ResolvedCertificateDesign } from './default-design';
 
 // =====================================================
 // Types
@@ -35,24 +40,39 @@ export interface CertificatePDFData {
     signatureTitle?: string;
     signatureImage?: string;
     score?: number;
-    designConfig?: DesignConfig;
+    /** Resolved by `resolveCertificateDesign()` — the school brand for the default design, the template's own colours for a custom one. */
+    design: ResolvedCertificateDesign;
+    /** From the template's `design_settings.show_qr_code` — defaults to true. */
+    showQrCode?: boolean;
+    logoUrl?: string;
 }
 
-export interface DesignConfig {
-    backgroundColor?: string;
-    primaryColor?: string;
-    secondary_color?: string;
-    fontFamily?: string;
-    borderStyle?: string;
-    layout?: string;
-    includeQRCode?: boolean;
-    show_qr_code?: boolean;
-    includeVerificationUrl?: boolean;
-    logo_url?: string;
-    customText?: {
-        header?: string;
-        footer?: string;
-    };
+/**
+ * Registers `Kit <family>` once per process per family, so repeated PDF
+ * generations don't re-register (and don't re-read the font files). No-op
+ * when either weight's file is missing on disk.
+ */
+const registeredHeadingFamilies = new Set<string>();
+
+
+function ensureHeadingFontRegistered(family: KitHeadingFont): string | null {
+    const pdfFamily = `Kit ${family}`;
+    if (registeredHeadingFamilies.has(pdfFamily)) return pdfFamily;
+
+    const regular = headingFontPath(family, 400);
+    const bold = headingFontPath(family, 700);
+    if (!regular || !bold) return null;
+
+    // The kit families ship no italic file — only weight varies here.
+    Font.register({
+        family: pdfFamily,
+        fonts: [
+            { src: regular, fontWeight: 400 },
+            { src: bold, fontWeight: 700 },
+        ],
+    });
+    registeredHeadingFamilies.add(pdfFamily);
+    return pdfFamily;
 }
 
 // =====================================================
@@ -93,9 +113,27 @@ const GuillocheSVG: React.FC<{ color: string; width: number; height: number }> =
 // Styles
 // =====================================================
 
-const createStyles = (config?: DesignConfig) => {
-    const primary = config?.primaryColor || '#1a5632';
-    const secondary = config?.secondary_color || '#0f2b1a';
+// Exported so a unit test can assert a custom template's colours actually
+// reach the stylesheet without rendering a full PDF (issue #765 — this file
+// used to ignore a custom template's primary_color and always draw green).
+export const createStyles = (design: ResolvedCertificateDesign, headingFamily: string | null) => {
+    // Decorative strokes and fills. Before #765 a custom template's PDF ignored
+    // its own primary_color (camelCase/snake_case mismatch) and always drew
+    // green; the resolver now hands every renderer the template's real colour.
+    const primary = design.primary;
+    // Brand-coloured TEXT (never the raw `primary`/`secondary` swatch — see
+    // `resolveCertificateDesign`): a school-branded certificate reads every
+    // label and headline in the one AA-safe `accentText`; a custom template
+    // keeps its own two-tone split (primary for small caps,
+    // secondary for the headline ink) exactly as it always has.
+    const smallText = design.schoolBranded ? design.accentText : primary;
+    const bigText = design.schoolBranded ? design.accentText : design.secondary;
+    // The kit heading families ship no italic file — only the platform's
+    // built-in Helvetica gets the italic title treatment.
+    const titleFontFamily = headingFamily ?? 'Helvetica';
+    const titleFontStyle = headingFamily ? undefined : ('italic' as const);
+    const headingBoldFamily = headingFamily ?? 'Helvetica-Bold';
+    const headingBoldWeight = headingFamily ? 700 : undefined;
 
     return StyleSheet.create({
         page: {
@@ -170,7 +208,7 @@ const createStyles = (config?: DesignConfig) => {
         sealMonogram: {
             fontSize: 16,
             fontFamily: 'Helvetica-Bold',
-            color: primary,
+            color: smallText,
             letterSpacing: 1.5,
         },
         logoImage: {
@@ -184,15 +222,15 @@ const createStyles = (config?: DesignConfig) => {
             fontFamily: 'Helvetica',
             letterSpacing: 4,
             textTransform: 'uppercase',
-            color: primary,
+            color: smallText,
             marginBottom: 8,
         },
         // Title
         title: {
             fontSize: 36,
-            fontFamily: 'Helvetica',
-            fontStyle: 'italic',
-            color: secondary,
+            fontFamily: titleFontFamily,
+            fontStyle: titleFontStyle,
+            color: bigText,
             marginBottom: 4,
         },
         // Decorative rule under title
@@ -213,8 +251,9 @@ const createStyles = (config?: DesignConfig) => {
         // Student name
         studentName: {
             fontSize: 32,
-            fontFamily: 'Helvetica-Bold',
-            color: secondary,
+            fontFamily: headingBoldFamily,
+            fontWeight: headingBoldWeight,
+            color: bigText,
             marginBottom: 6,
         },
         // Flourish decoration
@@ -245,8 +284,9 @@ const createStyles = (config?: DesignConfig) => {
         // Course name
         courseName: {
             fontSize: 18,
-            fontFamily: 'Helvetica-Bold',
-            color: secondary,
+            fontFamily: headingBoldFamily,
+            fontWeight: headingBoldWeight,
+            color: bigText,
             marginBottom: 14,
             textAlign: 'center',
         },
@@ -270,7 +310,7 @@ const createStyles = (config?: DesignConfig) => {
         scoreValue: {
             fontSize: 20,
             fontFamily: 'Helvetica-Bold',
-            color: secondary,
+            color: bigText,
         },
         // Footer
         footer: {
@@ -348,8 +388,9 @@ const createStyles = (config?: DesignConfig) => {
 // =====================================================
 
 const CertificateDocument: React.FC<{ data: CertificatePDFData; qrCodeDataUrl?: string }> = ({ data, qrCodeDataUrl }) => {
-    const styles = createStyles(data.designConfig);
-    const primary = data.designConfig?.primaryColor || '#1a5632';
+    const headingFamily = data.design.headingFont ? ensureHeadingFontRegistered(data.design.headingFont) : null;
+    const styles = createStyles(data.design, headingFamily);
+    const primary = data.design.primary;
 
     const formattedDate = data.completionDate.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -359,7 +400,7 @@ const CertificateDocument: React.FC<{ data: CertificatePDFData; qrCodeDataUrl?: 
 
     const signerName = data.signatureName || data.issuerName;
     const signerTitle = data.signatureTitle || 'Official Issuer';
-    const showQr = data.designConfig?.includeQRCode !== false && data.designConfig?.show_qr_code !== false;
+    const showQr = data.showQrCode !== false;
     const issuerMonogram = data.issuerName.substring(0, 3).toUpperCase();
 
     return (
@@ -380,8 +421,8 @@ const CertificateDocument: React.FC<{ data: CertificatePDFData; qrCodeDataUrl?: 
                 <View style={styles.content}>
                     {/* Organization seal / logo */}
                     <View style={styles.sealContainer}>
-                        {data.issuerLogo || data.designConfig?.logo_url ? (
-                            <Image src={data.issuerLogo || data.designConfig?.logo_url || ''} style={styles.logoImage} />
+                        {data.issuerLogo || data.logoUrl ? (
+                            <Image src={data.issuerLogo || data.logoUrl || ''} style={styles.logoImage} />
                         ) : (
                             <View style={styles.sealRing}>
                                 <Text style={styles.sealMonogram}>{issuerMonogram}</Text>
@@ -516,7 +557,7 @@ export async function generateCertificatePDF(
 export async function generateAndUploadPDF(
     data: CertificatePDFData,
     certificateId: string,
-    supabaseClient: any
+    supabaseClient: SupabaseClient
 ): Promise<string> {
     try {
         // Generate PDF
