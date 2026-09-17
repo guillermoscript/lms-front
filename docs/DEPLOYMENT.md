@@ -196,10 +196,6 @@ EMAIL_FROM=noreply@lmsplatform.com
 CERTIFICATE_ENCRYPTION_KEY=your-32-char-key
 CERTIFICATE_ISSUER_NAME=Your Platform Name
 
-# Company
-COMPANY_NAME=Your Company
-COMPANY_EMAIL=hello@lmsplatform.com
-
 # Cron
 CRON_SECRET=your-random-secret-here
 ```

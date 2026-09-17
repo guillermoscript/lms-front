@@ -1,9 +1,32 @@
 /**
  * Invoice Generator
- * Generates PDF invoices for manual payments
+ * Generates PDF invoices for manual payments.
+ *
+ * The issuer is the invoice's own school (issue #777), not the platform: a
+ * student's invoice must read the tenant's name, logo and brand colour the
+ * same way certificates do (#765) — never `process.env.COMPANY_*`, which
+ * printed "LMS Platform" on every school's invoice regardless of tenant.
  */
 
-interface InvoiceData {
+import { formatCurrency } from '@/lib/currency'
+import { normalizeLogoUrl } from '@/lib/themes/brand-outputs'
+import type { SchoolBrand } from '@/lib/themes/school-brand'
+
+/** The invoice issuer — resolved from the invoice's own tenant via `getInvoiceConfig`. */
+export interface InvoiceIssuer {
+  name: string
+  logoUrl: string | null
+  address?: string
+  email?: string
+  phone?: string
+  /** Literal `#RRGGBB` outputs from `deriveBrandOutputs` — safe to drop into inline styles. */
+  brand: string
+  brandText: string
+  button: string
+  buttonInk: string
+}
+
+export interface InvoiceData {
   invoiceNumber: string
   invoiceDate: Date
   dueDate?: Date
@@ -19,11 +42,8 @@ interface InvoiceData {
   price: number
   currency: string
 
-  // Company details (from env or config)
-  companyName: string
-  companyAddress?: string
-  companyEmail?: string
-  companyPhone?: string
+  // The school issuing this invoice
+  issuer: InvoiceIssuer
 
   // Payment details
   paymentMethod?: string
@@ -33,7 +53,16 @@ interface InvoiceData {
   notes?: string
 }
 
-import { formatCurrency } from '@/lib/currency'
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  }
+  return text.replace(/[&<>"']/g, (char) => map[char])
+}
 
 /**
  * Generate invoice HTML
@@ -59,7 +88,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice ${data.invoiceNumber}</title>
+  <title>Invoice ${escapeHtml(data.invoiceNumber)}</title>
   <style>
     * {
       margin: 0;
@@ -81,16 +110,24 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       justify-content: space-between;
       margin-bottom: 40px;
       padding-bottom: 20px;
-      border-bottom: 3px solid #000;
+      border-bottom: 3px solid ${data.issuer.brand};
     }
 
     .company {
       flex: 1;
     }
 
+    .company-logo {
+      display: block;
+      max-height: 40px;
+      width: auto;
+      margin-bottom: 10px;
+    }
+
     .company h1 {
       font-size: 28px;
       margin-bottom: 10px;
+      color: ${data.issuer.brandText};
     }
 
     .company p {
@@ -104,7 +141,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 
     .invoice-details h2 {
       font-size: 32px;
-      color: #000;
+      color: ${data.issuer.brandText};
       margin-bottom: 10px;
     }
 
@@ -212,15 +249,16 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 <body>
   <div class="header">
     <div class="company">
-      <h1>${data.companyName}</h1>
-      ${data.companyAddress ? `<p>${data.companyAddress}</p>` : ''}
-      ${data.companyEmail ? `<p>Email: ${data.companyEmail}</p>` : ''}
-      ${data.companyPhone ? `<p>Phone: ${data.companyPhone}</p>` : ''}
+      ${data.issuer.logoUrl ? `<img class="company-logo" src="${escapeHtml(data.issuer.logoUrl)}" alt="${escapeHtml(data.issuer.name)}" />` : ''}
+      <h1>${escapeHtml(data.issuer.name)}</h1>
+      ${data.issuer.address ? `<p>${escapeHtml(data.issuer.address)}</p>` : ''}
+      ${data.issuer.email ? `<p>Email: ${escapeHtml(data.issuer.email)}</p>` : ''}
+      ${data.issuer.phone ? `<p>Phone: ${escapeHtml(data.issuer.phone)}</p>` : ''}
     </div>
 
     <div class="invoice-details">
       <h2>INVOICE</h2>
-      <p><strong>Invoice #:</strong> ${data.invoiceNumber}</p>
+      <p><strong>Invoice #:</strong> ${escapeHtml(data.invoiceNumber)}</p>
       <p><strong>Date:</strong> ${formattedDate}</p>
       ${formattedDueDate ? `<p><strong>Due Date:</strong> ${formattedDueDate}</p>` : ''}
     </div>
@@ -229,9 +267,9 @@ export function generateInvoiceHTML(data: InvoiceData): string {
   <div class="parties">
     <div class="party">
       <h3>Bill To:</h3>
-      <p><strong>${data.studentName}</strong></p>
-      <p>${data.studentEmail}</p>
-      ${data.studentPhone ? `<p>${data.studentPhone}</p>` : ''}
+      <p><strong>${escapeHtml(data.studentName)}</strong></p>
+      <p>${escapeHtml(data.studentEmail)}</p>
+      ${data.studentPhone ? `<p>${escapeHtml(data.studentPhone)}</p>` : ''}
     </div>
   </div>
 
@@ -245,14 +283,14 @@ export function generateInvoiceHTML(data: InvoiceData): string {
     <tbody>
       <tr>
         <td>
-          <strong>${data.productName}</strong>
-          ${data.productDescription ? `<br><span style="color: #666; font-size: 14px;">${data.productDescription}</span>` : ''}
+          <strong>${escapeHtml(data.productName)}</strong>
+          ${data.productDescription ? `<br><span style="color: #666; font-size: 14px;">${escapeHtml(data.productDescription)}</span>` : ''}
         </td>
-        <td class="text-right">${formattedPrice}</td>
+        <td class="text-right">${escapeHtml(formattedPrice)}</td>
       </tr>
       <tr class="total-row">
         <td><strong>Total</strong></td>
-        <td class="text-right"><strong>${formattedPrice}</strong></td>
+        <td class="text-right"><strong>${escapeHtml(formattedPrice)}</strong></td>
       </tr>
     </tbody>
   </table>
@@ -260,21 +298,21 @@ export function generateInvoiceHTML(data: InvoiceData): string {
   ${data.paymentInstructions ? `
   <div class="payment-info">
     <h3>Payment Instructions</h3>
-    <p>${data.paymentInstructions.replace(/\n/g, '<br>')}</p>
-    ${data.paymentMethod ? `<p><strong>Payment Method:</strong> ${data.paymentMethod}</p>` : ''}
+    <p>${escapeHtml(data.paymentInstructions).replace(/\r?\n/g, '<br>')}</p>
+    ${data.paymentMethod ? `<p><strong>Payment Method:</strong> ${escapeHtml(data.paymentMethod)}</p>` : ''}
   </div>
   ` : ''}
 
   ${data.notes ? `
   <div class="notes">
     <p><strong>Notes:</strong></p>
-    <p>${data.notes}</p>
+    <p>${escapeHtml(data.notes)}</p>
   </div>
   ` : ''}
 
   <div class="footer">
     <p>Thank you for your business!</p>
-    <p>This invoice was generated automatically by ${data.companyName}</p>
+    <p>This invoice was generated automatically by ${escapeHtml(data.issuer.name)}</p>
   </div>
 </body>
 </html>
@@ -282,13 +320,22 @@ export function generateInvoiceHTML(data: InvoiceData): string {
 }
 
 /**
- * Generate invoice configuration
+ * Resolves the invoice issuer from the invoice's own school brand (#777) — the
+ * same `deriveBrandOutputs` colours certificates and transactional emails use
+ * (#765), never `process.env.COMPANY_*`. A school with no theme falls back to
+ * `tenants.name` and the platform teal, exactly like `getSchoolBrand` does.
+ *
+ * There is no `tenant_settings` key today for a school's own invoicing
+ * address/email/phone, so those stay empty until one exists — nothing here
+ * invents a column.
  */
-export function getInvoiceConfig() {
+export function getInvoiceConfig(brand: SchoolBrand): InvoiceIssuer {
   return {
-    companyName: process.env.COMPANY_NAME || 'LMS Platform',
-    companyAddress: process.env.COMPANY_ADDRESS || '',
-    companyEmail: process.env.COMPANY_EMAIL || '',
-    companyPhone: process.env.COMPANY_PHONE || '',
+    name: brand.name || 'School',
+    logoUrl: normalizeLogoUrl(brand.logoUrl),
+    brand: brand.outputs.brand,
+    brandText: brand.outputs.brandText,
+    button: brand.outputs.button,
+    buttonInk: brand.outputs.buttonInk,
   }
 }
