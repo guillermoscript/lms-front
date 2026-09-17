@@ -174,7 +174,7 @@ export default async function PlatformBillingPage({
                     </td>
                     <td className={cn(TD, 'text-muted-foreground')}>
                       <span className="capitalize">{req.platform_plans?.name || '—'}</span>
-                      <span className="text-muted-foreground/70"> · {req.interval}</span>
+                      <span className="text-muted-foreground"> · {req.interval}</span>
                     </td>
                     <td className={cn(TD, 'text-right font-medium tabular-nums')}>
                       {fmt(req.amount)}
@@ -208,7 +208,7 @@ export default async function PlatformBillingPage({
                     </td>
                     <td className={cn(TD, 'text-xs text-muted-foreground')}>
                       <RelativeTime value={req.created_at} />
-                      <span className="block text-[11px] text-muted-foreground/70 tabular-nums">
+                      <span className="block text-[11px] text-muted-foreground tabular-nums">
                         {req.created_at ? format(new Date(req.created_at), 'MMM d, yyyy') : ''}
                       </span>
                     </td>

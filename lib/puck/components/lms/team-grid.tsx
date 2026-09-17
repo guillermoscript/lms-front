@@ -93,7 +93,7 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
                 <h3 className="font-semibold text-base text-foreground mb-1 truncate">{m.name}</h3>
                 <p className="text-sm text-[var(--block-accent)] font-medium mb-2 truncate">{m.role}</p>
                 {m.bio && (
-                  <p className="text-[0.8125rem] text-muted-foreground/70 leading-relaxed line-clamp-3">{m.bio}</p>
+                  <p className="text-[0.8125rem] text-muted-foreground leading-relaxed line-clamp-3">{m.bio}</p>
                 )}
               </div>
             ))}

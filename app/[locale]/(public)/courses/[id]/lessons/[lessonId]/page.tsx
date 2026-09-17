@@ -97,7 +97,7 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
             <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
                 {/* Lesson header */}
                 <header>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
                         {course.title}
                     </p>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-balance">

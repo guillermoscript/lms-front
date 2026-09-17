@@ -17,7 +17,7 @@ export function CompletionCriteriaSection() {
                 <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
                     <IconChecklist className="h-4 w-4 text-brand-text" />
                 </div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                     {t('completionCriteria')}
                 </h2>
             </div>

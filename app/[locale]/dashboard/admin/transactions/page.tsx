@@ -119,7 +119,7 @@ export default async function AdminTransactionsPage({
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue)}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.totalRevenueDesc')}
                   </p>
                 </div>
@@ -138,7 +138,7 @@ export default async function AdminTransactionsPage({
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(pendingAmount)}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.pendingDesc')}
                   </p>
                 </div>
@@ -155,7 +155,7 @@ export default async function AdminTransactionsPage({
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.failed')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{failedCount}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.failedDesc')}
                   </p>
                 </div>

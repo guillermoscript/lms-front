@@ -297,7 +297,7 @@ export default async function LessonPage({ params }: PageProps) {
             <div className="flex items-center justify-between max-w-3xl mx-auto">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t('lessonIndex', { count: lesson.sequence })}
                   </span>
                 </div>
@@ -351,7 +351,7 @@ export default async function LessonPage({ params }: PageProps) {
           <div className="flex items-center justify-between max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t('lessonIndex', { count: lesson.sequence })}
                 </span>
                 {isCurrentLessonCompleted && <LessonCompletionBadge />}
@@ -428,7 +428,7 @@ export default async function LessonPage({ params }: PageProps) {
 
                   {/* Task description — plain block, the chat below is the interactive card */}
                   <div className="px-4 py-3 sm:px-5 sm:py-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5 sm:mb-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5 sm:mb-2">
                       {t('currentTask')}
                     </h4>
                     <TaskInstructions text={aiTask.task_instructions} />

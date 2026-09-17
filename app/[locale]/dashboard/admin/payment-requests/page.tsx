@@ -107,7 +107,7 @@ export default async function PaymentRequestsPage({
             <CardContent className="p-5">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.pending')}</p>
               <p className="mt-2 text-2xl font-bold tracking-tight">{pendingCount}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {t('stats.pendingDesc')}
               </p>
             </CardContent>
@@ -117,7 +117,7 @@ export default async function PaymentRequestsPage({
             <CardContent className="p-5">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.contacted')}</p>
               <p className="mt-2 text-2xl font-bold tracking-tight">{contactedCount}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {t('stats.contactedDesc')}
               </p>
             </CardContent>
@@ -127,7 +127,7 @@ export default async function PaymentRequestsPage({
             <CardContent className="p-5">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.received')}</p>
               <p className="mt-2 text-2xl font-bold tracking-tight">{paymentReceivedCount}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {t('stats.receivedDesc')}
               </p>
             </CardContent>
@@ -137,7 +137,7 @@ export default async function PaymentRequestsPage({
             <CardContent className="p-5">
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.completed')}</p>
               <p className="mt-2 text-2xl font-bold tracking-tight">{completedCount}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground/70">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {t('stats.completedTotal', {
                   amount: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue)
                 })}

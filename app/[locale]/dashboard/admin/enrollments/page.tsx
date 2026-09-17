@@ -179,7 +179,7 @@ export default async function AdminEnrollmentsPage({
                               </Avatar>
                               <div className="min-w-0">
                                 <p className="font-medium whitespace-nowrap">{user?.full_name || t('table.unknown')}</p>
-                                <p className="text-[11px] text-muted-foreground/70">
+                                <p className="text-[11px] text-muted-foreground">
                                   {user?.email || '—'}
                                 </p>
                               </div>

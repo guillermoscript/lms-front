@@ -398,7 +398,7 @@ export default async function AdminDashboardPage({
                   {stat.title}
                 </p>
                 {stat.subtitle && (
-                  <p className="text-[11px] text-muted-foreground/60">
+                  <p className="text-[11px] text-muted-foreground">
                     {stat.subtitle}
                   </p>
                 )}

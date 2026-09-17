@@ -59,7 +59,7 @@ export function ExerciseAIConfigStep() {
           rows={5}
           className="border-muted bg-muted/30 transition-colors focus:bg-background"
         />
-        <p className="mt-1.5 text-xs text-muted-foreground/70">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           {t('studentInsHint')}
         </p>
       </div>

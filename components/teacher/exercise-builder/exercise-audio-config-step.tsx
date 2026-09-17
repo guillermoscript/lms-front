@@ -49,7 +49,7 @@ export function ExerciseAudioConfigStep() {
           rows={7}
           className="border-muted bg-muted/30 transition-colors focus:bg-background"
         />
-        <p className="mt-1.5 text-xs text-muted-foreground/70">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           {t('topicPromptHint')}
         </p>
       </div>
@@ -109,7 +109,7 @@ export function ExerciseAudioConfigStep() {
               onChange={(e) => updateField('passing_score', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
               className="h-10 border-muted bg-muted/30 text-center"
             />
-            <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
               {t('passingScoreHint')}
             </p>
           </div>
@@ -125,7 +125,7 @@ export function ExerciseAudioConfigStep() {
               onChange={(e) => updateField('max_daily_attempts', Math.max(0, parseInt(e.target.value) || 0))}
               className="h-10 border-muted bg-muted/30 text-center"
             />
-            <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
               {t('dailyAttemptsHint')}
             </p>
           </div>

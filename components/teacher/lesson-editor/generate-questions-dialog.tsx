@@ -310,7 +310,7 @@ export function GenerateQuestionsDialog() {
                             <span>{option}</span>
                           </label>
                         ))}
-                        <p className="text-[11px] text-muted-foreground/60">{t('optionsHint')}</p>
+                        <p className="text-[11px] text-muted-foreground">{t('optionsHint')}</p>
                       </div>
                     )}
 

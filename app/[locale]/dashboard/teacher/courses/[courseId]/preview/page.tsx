@@ -201,11 +201,11 @@ export default async function CoursePreviewPage({ params }: PageProps) {
                       </p>
                     ) : (
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           <IconClock size={12} />
                           {t('mins', { count: 15 })}
                         </span>
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           <IconBook size={12} />
                           {t('videoText')}
                         </span>

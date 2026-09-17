@@ -85,7 +85,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                     className="w-8 h-[1px] mx-auto mt-1.5 mb-1"
                                     style={{ background: `linear-gradient(90deg, transparent, ${primaryColor}60, transparent)` }}
                                 />
-                                <div className="text-[7px] text-muted-foreground/60 uppercase tracking-wider">
+                                <div className="text-[7px] text-muted-foreground uppercase tracking-wider">
                                     {formatDate(issuedDate, locale, { month: 'short', year: 'numeric' })}
                                 </div>
                             </div>
@@ -127,7 +127,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
 
                             {/* Verification code */}
                             <div className="flex items-center gap-2">
-                                <code className="text-[10px] font-mono text-muted-foreground/60 bg-muted/50 px-2 py-0.5 rounded">
+                                <code className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                                     {certificate.verification_code}
                                 </code>
                             </div>
