@@ -6125,8 +6125,6 @@ export type Database = {
           logo_url: string | null
           name: string
           plan: string | null
-          primary_color: string | null
-          secondary_color: string | null
           slug: string
           status: string | null
           stripe_account_id: string | null
@@ -6146,8 +6144,6 @@ export type Database = {
           logo_url?: string | null
           name: string
           plan?: string | null
-          primary_color?: string | null
-          secondary_color?: string | null
           slug: string
           status?: string | null
           stripe_account_id?: string | null
@@ -6167,8 +6163,6 @@ export type Database = {
           logo_url?: string | null
           name?: string
           plan?: string | null
-          primary_color?: string | null
-          secondary_color?: string | null
           slug?: string
           status?: string | null
           stripe_account_id?: string | null

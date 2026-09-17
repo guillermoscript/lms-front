@@ -71,20 +71,26 @@ const DEMO_BRANDS: Record<string, TenantBranding | null> = {
   ocean: {
     name: "Escuela Marea",
     logo_url: null,
-    primary_color: "#0369a1",
-    secondary_color: "#0891b2",
+    button: "#0369A1",
+    buttonInk: "#FCFCFC",
+    brandText: "#0369A1",
+    headingFont: null,
   },
   sunset: {
     name: "Academia Ocaso",
     logo_url: null,
-    primary_color: "#e11d48",
-    secondary_color: "#f97316",
+    button: "#E11D48",
+    buttonInk: "#FCFCFC",
+    brandText: "#E11D48",
+    headingFont: null,
   },
   forest: {
     name: "Instituto Verde",
     logo_url: null,
-    primary_color: "#15803d",
-    secondary_color: "#4d7c0f",
+    button: "#15803D",
+    buttonInk: "#FCFCFC",
+    brandText: "#15803D",
+    headingFont: null,
   },
 };
 
@@ -168,7 +174,7 @@ export function registerDemoTools(server: LmsServer): void {
           metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
           output: text(
             `[DEMO FIXTURE — not real data] ${demo.widget} · ${chosen.id}: ${chosen.label}${
-              branding ? ` · brand: ${branding.name} (${branding.primary_color})` : ""
+              branding ? ` · brand: ${branding.name} (${branding.button})` : ""
             }${input.lang ? ` · lang: ${input.lang}` : ""}\n\n${chosen.output}`
           ),
         });

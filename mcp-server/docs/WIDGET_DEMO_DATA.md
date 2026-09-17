@@ -48,21 +48,28 @@ Widget→host calls (`useCallTool`) still fail in this mode: `lms_grade_review`,
 
 ## School branding
 
-Widgets pick up the tenant's `primary_color` the way the app does, so a school's
-widgets match its dashboard.
+Widgets pick up the tenant's **theme kit** brand the way the app does (issue
+#779 — `tenants.primary_color` / `secondary_color` are gone, frozen since #763
+and dropped by migration `20260917150000_drop_tenants_legacy_colors.sql`), so
+a school's widgets match its dashboard.
 
-- **Server** — `src/branding.ts` reads `tenants.name / logo_url / primary_color /
-  secondary_color` on the caller's RLS-scoped client, cached 5 min per tenant.
-  `installToolGuards` (`src/register.ts`) attaches it to the `_meta` of any
-  result that has `structuredContent`, so every widget-rendering tool is themed
-  without touching its handler.
-- **Widget** — `resources/shared/branding.tsx` reads it from
-  `useWidget().metadata` and emits a `:root` ramp (`--brand-50 … --brand-950`)
-  derived from the one colour with `color-mix()`. Every widget renders `<Brand />`
-  in both its pending and loaded branches.
+- **Server** — `src/branding.ts` reads `tenant_settings.theme_preset` and the
+  `custom_branding` plan feature (`get_plan_features` RPC) on the caller's
+  RLS-scoped client, resolves the theme the same way the app does
+  (`resolveSchoolTheme`), and derives literal colours with `deriveWidgetBrand()`
+  (`views/shared/kit-brand.ts`, a mirror of `lib/themes/brand-outputs.ts`).
+  Cached 5 min per tenant. `installToolGuards` (`src/register.ts`) attaches the
+  result to the `_meta` of any result that has `structuredContent`, so every
+  widget-rendering tool is themed without touching its handler.
+- **Widget** — `views/shared/branding.tsx` reads it from `useWidget().metadata`
+  and emits a `:root` ramp (`--brand-50 … --brand-950`, plus `--brand-ink` /
+  `--brand-text`) derived from `button` (what the app's `--primary` resolves
+  to) with `color-mix()`. Every widget renders `<Brand />` in both its pending
+  and loaded branches.
 - **Styling** — accents are `bg-[var(--brand-600)]`, `text-[var(--brand-400)]`, …
-  With no tenant colour the component emits Tailwind's violet ramp, so an
-  unbranded school renders exactly as before.
+  With no theme kit (or no branding `_meta` at all) the component falls back to
+  the platform teal — the same `deriveWidgetBrand(null)` colour the app itself
+  defaults to.
 
 Two constraints worth knowing before you touch this:
 

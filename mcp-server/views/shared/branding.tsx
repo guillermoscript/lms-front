@@ -1,25 +1,34 @@
 import { useToolContext } from "mcp-use/react";
+import { deriveWidgetBrand } from "./kit-brand";
 
 /**
- * Tenant branding for widgets — the widget-side half of school theming.
+ * Tenant branding for widgets — the widget-side half of school theming
+ * (issue #779).
  *
- * The web app injects the school's colours as CSS custom properties in the page
- * head (`components/tenant/tenant-css-vars-server.tsx`). Widgets render in a
- * host iframe with no access to that, so the server sends the same values in
- * the tool result's `_meta` (see `src/branding.ts`) and `<BrandStyle>` writes
- * them into the widget document.
+ * The web app derives the school's theme kit colours and injects them as CSS
+ * custom properties in the page head (`TenantCssVarsServer`). Widgets render
+ * in a host iframe with no access to that, so the server resolves the same
+ * kit theme, derives literal colours with `deriveWidgetBrand()`
+ * (`./kit-brand.ts`), and sends them in the tool result's `_meta` (see
+ * `src/branding.ts`); `<BrandStyle>` writes them into the widget document.
  *
- * The ramp is derived from ONE colour (`tenants.primary_color`) with
- * `color-mix()` in oklab, which is close enough to Tailwind's own ramp to be
- * indistinguishable in the sizes widgets use it at, and needs no colour maths
- * in JS. When the tenant has no primary colour we emit nothing at all and the
- * `@theme inline` fallbacks in `styles.css` keep the platform violet.
+ * The `--brand-*` ramp is derived from ONE colour — `button`, the same value
+ * the app's `--primary` resolves to — with `color-mix()` in oklab, which is
+ * close enough to Tailwind's own ramp to be indistinguishable at the sizes
+ * widgets use it, and needs no colour maths in JS. `buttonInk` and `brandText`
+ * are also exposed as `--brand-ink` / `--brand-text` for widgets that want an
+ * exact AA-checked colour rather than a ramp shade. A tenant with no theme
+ * kit (or no branding at all — an unauthenticated demo call) renders the
+ * platform palette (teal), computed by the same `deriveWidgetBrand(null)`
+ * the server falls back to, so there is exactly one "no brand" colour.
  */
 export interface Branding {
   name?: string | null;
   logo_url?: string | null;
-  primary_color?: string | null;
-  secondary_color?: string | null;
+  button?: string | null;
+  buttonInk?: string | null;
+  brandText?: string | null;
+  headingFont?: string | null;
 }
 
 /** `_meta` key the server namespaces branding under. Keep in sync with src/branding.ts. */
@@ -40,10 +49,10 @@ export function useBranding(): Branding | null {
 /**
  * A CSS colour we are willing to interpolate and paste into a stylesheet.
  *
- * `primary_color` is tenant-controlled text that ends up inside a `<style>`
- * tag, so it is allow-listed rather than escaped: hex, rgb()/hsl()/oklch() with
- * numeric arguments, or a bare CSS keyword. Anything else (a `;`, a `}`, a
- * `url(`, an `expression(`) fails the test and branding is dropped.
+ * `button` / `buttonInk` / `brandText` are server-derived `#RRGGBB` values,
+ * not free text, but this stays as defense in depth: anything that is not
+ * hex, rgb()/hsl()/oklch() with numeric arguments, or a bare CSS keyword
+ * fails the test and is dropped rather than pasted into a `<style>` tag.
  */
 const SAFE_COLOR =
   /^(#[0-9a-f]{3,8}|(rgb|hsl|oklch|lab|lch|oklab)a?\([0-9a-z.,%/\s-]+\)|[a-z]+)$/i;
@@ -55,26 +64,12 @@ function safeColor(value: string | null | undefined): string | null {
 }
 
 /**
- * Tailwind's violet ramp, verbatim. This is the platform default, and it is
- * what every widget rendered before tenant theming existed — an unbranded
- * school must be pixel-identical to that.
- *
- * These have to be emitted, not left to a Tailwind fallback: widgets reference
- * the ramp as `bg-[var(--brand-600)]`, and an undefined custom property makes
- * the declaration invalid, i.e. an uncoloured surface.
+ * The platform palette (teal), from `deriveWidgetBrand(null)` — the same
+ * "no theme kit" colours `src/branding.ts` falls back to. Used both for a
+ * tenant with no theme kit and for a widget rendered with no branding `_meta`
+ * at all (no session, e.g. an unauthenticated demo call).
  */
-const DEFAULT_RAMP: Record<string, string> = {
-  50: "oklch(96.9% 0.016 293.756)",
-  100: "oklch(94.3% 0.029 294.588)",
-  200: "oklch(89.4% 0.057 293.283)",
-  300: "oklch(81.1% 0.111 293.571)",
-  400: "oklch(70.2% 0.183 293.541)",
-  500: "oklch(60.6% 0.25 292.717)",
-  600: "oklch(54.1% 0.281 293.009)",
-  700: "oklch(49.1% 0.27 292.581)",
-  900: "oklch(38% 0.189 293.745)",
-  950: "oklch(28.3% 0.141 291.089)",
-};
+const PLATFORM_BRAND = deriveWidgetBrand(null);
 
 /**
  * Derive the ramp from a single base colour.
@@ -105,14 +100,18 @@ function ramp(base: string): Record<string, string> {
  * Emit the brand ramp for this widget. Render once inside the widget root —
  * every widget does, in both its pending and loaded branches.
  *
- * Always renders: with no tenant colour it emits the platform violet, which is
- * what the `bg-[var(--brand-600)]` utilities resolve against.
+ * Always renders: with no branding at all, or a tenant on the platform
+ * palette, it emits the same teal `deriveWidgetBrand(null)` gives the server,
+ * which is what the `bg-[var(--brand-600)]` utilities resolve against.
  */
 export function BrandStyle({ branding }: { branding: Branding | null }) {
-  const base = safeColor(branding?.primary_color);
-  const vars = base ? ramp(base) : DEFAULT_RAMP;
+  const base = safeColor(branding?.button) ?? PLATFORM_BRAND.button;
+  const ink = safeColor(branding?.buttonInk) ?? PLATFORM_BRAND.buttonInk;
+  const text = safeColor(branding?.brandText) ?? PLATFORM_BRAND.brandText;
+  const vars = ramp(base);
   const body = Object.entries(vars)
     .map(([shade, value]) => `--brand-${shade}: ${value};`)
+    .concat([`--brand-ink: ${ink};`, `--brand-text: ${text};`])
     .join("\n  ");
   return <style>{`:root {\n  ${body}\n}`}</style>;
 }

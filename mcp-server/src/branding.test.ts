@@ -16,8 +16,10 @@ import { BRANDING_META_KEY } from "./branding.js";
 const BRANDING = {
   name: "Escuela Marea",
   logo_url: null,
-  primary_color: "#0369a1",
-  secondary_color: "#0891b2",
+  button: "#0369A1",
+  buttonInk: "#FCFCFC",
+  brandText: "#0369A1",
+  headingFont: null,
 };
 
 /** No auth in the handler context — the unauthenticated path. */

@@ -20,7 +20,7 @@ export const propsSchema = z.object({
   public_path: z.string(),
   preview_path: z.string(),
   preview_url: z.string().nullable(),
-  brand_color: z.string().nullable(), // tenants.primary_color — what var(--primary) resolves to
+  brand_color: z.string().nullable(), // theme kit's button colour — what var(--primary) resolves to
   sections: z.array(sectionSchema),
   warnings: z.array(z.string()),
 });
