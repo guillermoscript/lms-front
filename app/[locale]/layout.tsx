@@ -16,7 +16,7 @@ import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
 import { fontVariables } from '@/lib/themes/fonts';
 import { defaultThemeFor, resolveSchoolTheme, SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit';
-import { getSeoContext, ogImageUrl } from '@/lib/seo';
+import { getSeoContext, ogImageUrl, resolveFaviconIcons } from '@/lib/seo';
 import { OpenPanelComponent } from '@openpanel/nextjs';
 import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
 import { getSessionReplayConfig } from '@/lib/analytics/replay';
@@ -29,11 +29,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'seo' });
-  const { baseUrl, siteName } = await getSeoContext();
+  const { baseUrl, siteName, tenant } = await getSeoContext();
   const description = t('defaultDescription');
+
+  // Same cached lookup the layout body uses below (unstable_cache keyed by
+  // tenant.id, 60s TTL) — favicon_url rides along with the other branding
+  // settings already fetched per request, no extra query.
+  const faviconSetting = tenant
+    ? (await getTenantSettings(tenant.id)).find((s) => s.setting_key === 'favicon_url')?.setting_value
+    : undefined;
 
   return {
     metadataBase: new URL(baseUrl),
+    icons: resolveFaviconIcons((faviconSetting as { value?: string } | undefined)?.value),
     title: {
       default: siteName,
       template: `%s | ${siteName}`,
