@@ -42,10 +42,10 @@ export function ExerciseBuilderToolbar() {
               className={cn(
                 'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-colors',
                 step.complete
-                  ? 'bg-emerald-500/15 text-emerald-600'
+                  ? 'bg-success/15 text-success'
                   : activeStep === step.key
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground'
+                    ? 'bg-brand-tint text-brand-text'
+                    : 'bg-muted text-foreground'
               )}
             >
               {step.complete ? <IconCheck className="h-3 w-3" /> : i + 1}
@@ -76,7 +76,7 @@ export function ExerciseBuilderToolbar() {
           {loading ? (
             <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
           ) : saveSuccess ? (
-            <IconCheck className="h-3.5 w-3.5 text-emerald-500" />
+            <IconCheck className="h-3.5 w-3.5 text-success" />
           ) : (
             <IconDeviceFloppy className="h-3.5 w-3.5" />
           )}

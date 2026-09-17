@@ -98,7 +98,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   if (courseError || !course) {
     return (
       <div className="p-8">
-        <Card className="border-destructive">
+        <Card>
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
               <IconArrowLeft /> {t('notFound')}
@@ -127,7 +127,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   if (!isOwner && !isAdmin) {
     return (
       <div className="p-8">
-        <Card className="border-warning">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {t('accessDenied')}
@@ -273,7 +273,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                   </Button>
                 </Link>
                 <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
-                <Badge variant={course.status === 'published' ? 'default' : 'secondary'}>
+                <Badge variant={course.status === 'published' ? 'default' : 'secondary'} className={course.status === 'published' ? 'bg-success/10 text-success border-success/30' : ''}>
                   {t(`status.${course.status}`)}
                 </Badge>
               </div>
@@ -348,14 +348,14 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               {lessons.length > 0 ? (
                 lessons.map((lesson) => (
                   <Link key={lesson.id} href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer">
+                    <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-semibold text-sm">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
                             {lesson.sequence}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{lesson.title}</h3>
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
                             <div className="flex items-center gap-2 mt-0.5">
                               {lesson.status !== 'published' && (
                                 <Badge variant="secondary" className="text-[10px] h-4">
@@ -371,7 +371,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                             </div>
                           </div>
                         </div>
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -419,14 +419,14 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               {exercises.length > 0 ? (
                 exercises.map((exercise) => (
                   <Link key={exercise.id} href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-emerald-500/50 cursor-pointer">
+                    <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-tint text-brand-text shrink-0">
                             <IconTarget size={18} />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{exercise.title}</h3>
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{exercise.title}</h3>
                             <div className="flex flex-wrap items-center gap-2 mt-0.5">
                               <span className="text-xs text-muted-foreground capitalize">
                                 {(exercise.exercise_type || '').replace('_', ' ')}
@@ -446,7 +446,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                             </div>
                           </div>
                         </div>
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -489,14 +489,14 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               {exams.length > 0 ? (
                 exams.map((exam) => (
                   <Link key={exam.exam_id} href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-amber-500/50 cursor-pointer">
+                    <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
                             <IconFileText size={18} />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{exam.title}</h3>
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{exam.title}</h3>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <IconClock className="h-3 w-3" />
@@ -513,7 +513,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                             </div>
                           </div>
                         </div>
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -593,6 +593,9 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                       </div>
                       <div className="pt-2">
                         <div className="flex items-center gap-2">
+                          {/* The colour the school chose for its certificate, shown as
+                              itself — a swatch of a theme token would preview the
+                              wrong design. */}
                           <div
                             className="h-4 w-4 rounded-full border"
                             style={{ backgroundColor: certificateTemplate.design_settings?.primary_color }}

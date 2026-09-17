@@ -81,7 +81,7 @@ export function SortableBlock({
         )}
       >
         {/* Block type indicator strip */}
-        <div className={cn('absolute left-0 top-3 bottom-3 w-1 rounded-full', iconData?.bg || 'bg-muted')} />
+        <div className={cn('absolute left-0 top-3 bottom-3 w-1 rounded-full', iconData ? 'bg-primary/40' : 'bg-muted')} />
 
         {/* Header bar — visible on hover */}
         <div className="flex items-center gap-1 px-4 pt-2 pb-0 opacity-0 group-hover/block:opacity-100 transition-opacity duration-150">

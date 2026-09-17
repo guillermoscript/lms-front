@@ -60,8 +60,8 @@ export function ManualTransferForm({
     return (
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-            <IconCheck className="h-6 w-6 text-green-600" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+            <IconCheck className="h-6 w-6 text-success" />
           </div>
           <div className="text-center">
             <h3 className="font-semibold">{t('submittedTitle')}</h3>

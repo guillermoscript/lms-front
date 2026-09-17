@@ -67,11 +67,11 @@ interface VersionDiffPanelProps {
 function DiffStats({ additions, deletions }: { additions: number; deletions: number }) {
   return (
     <div className="flex items-center gap-3 text-xs font-medium">
-      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+      <span className="flex items-center gap-1 text-success">
         <IconPlus aria-hidden="true" className="h-3.5 w-3.5" />
         {additions}
       </span>
-      <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+      <span className="flex items-center gap-1 text-destructive">
         <IconMinus aria-hidden="true" className="h-3.5 w-3.5" />
         {deletions}
       </span>
@@ -93,7 +93,7 @@ function LineDiff({ oldText, newText }: { oldText: string; newText: string }) {
   return (
     <div className="space-y-2">
       <DiffStats additions={additions} deletions={deletions} />
-      <div className="font-mono text-[12px] leading-[1.6] rounded-lg border bg-[#1e1e2e] overflow-hidden">
+      <div className="font-mono text-[12px] leading-[1.6] rounded-lg border bg-muted/40 overflow-hidden">
         {diffs.map((part, i) => {
           const lines = part.value.split('\n').filter((_, idx, arr) =>
             idx < arr.length - 1 || arr[idx] !== ''
@@ -120,27 +120,27 @@ function LineDiff({ oldText, newText }: { oldText: string; newText: string }) {
               <div
                 key={`${i}-${lineIdx}`}
                 className={cn(
-                  'flex border-b border-white/5 last:border-b-0',
+                  'flex border-b last:border-b-0',
                   part.added
-                    ? 'bg-emerald-500/10'
+                    ? 'bg-success/10'
                     : part.removed
-                    ? 'bg-red-500/10'
+                    ? 'bg-destructive/10'
                     : 'bg-transparent'
                 )}
               >
                 {/* Line numbers */}
-                <div className="flex shrink-0 select-none text-[#585b70] border-r border-white/5">
+                <div className="flex shrink-0 select-none text-muted-foreground border-r">
                   <span className="w-10 px-2 text-right tabular-nums">{leftNum}</span>
-                  <span className="w-10 px-2 text-right tabular-nums border-l border-white/5">{rightNum}</span>
+                  <span className="w-10 px-2 text-right tabular-nums border-l">{rightNum}</span>
                 </div>
                 {/* Change indicator */}
                 <div className={cn(
                   'w-7 flex items-center justify-center shrink-0 font-bold text-xs',
                   part.added
-                    ? 'text-emerald-400 bg-emerald-500/15'
+                    ? 'text-success'
                     : part.removed
-                    ? 'text-red-400 bg-red-500/15'
-                    : 'text-[#585b70]'
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
                 )}>
                   {part.added ? '+' : part.removed ? '-' : ' '}
                 </div>
@@ -148,10 +148,10 @@ function LineDiff({ oldText, newText }: { oldText: string; newText: string }) {
                 <div className={cn(
                   'flex-1 px-4 py-0.5 whitespace-pre-wrap break-all',
                   part.added
-                    ? 'text-emerald-300'
+                    ? 'text-success'
                     : part.removed
-                    ? 'text-red-300'
-                    : 'text-[#cdd6f4]'
+                    ? 'text-destructive'
+                    : 'text-foreground'
                 )}>
                   {line || ' '}
                 </div>
@@ -170,23 +170,23 @@ function InlineValueDiff({ oldVal, newVal }: { oldVal: string; newVal: string })
     <div className="grid grid-cols-2 gap-3">
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <div className="w-2 h-2 rounded-full bg-destructive" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             {t('version')}
           </span>
         </div>
-        <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20 text-sm">
+        <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20 text-sm">
           <span className="line-through opacity-70">{oldVal || t('empty')}</span>
         </div>
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="w-2 h-2 rounded-full bg-success" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             {t('current')}
           </span>
         </div>
-        <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-sm">
+        <div className="p-4 rounded-lg bg-success/5 border border-success/20 text-sm">
           {newVal || t('empty')}
         </div>
       </div>
@@ -219,9 +219,9 @@ function DiffFieldSection({
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="flex w-full items-center justify-between p-3.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left group outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
         <div className="flex items-center gap-2.5">
-          <IconArrowsDiff aria-hidden="true" className="h-4 w-4 text-amber-500" />
+          <IconArrowsDiff aria-hidden="true" className="h-4 w-4 text-warning" />
           <span className="font-semibold text-sm">{label}</span>
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/30">
             {t('changed')}
           </span>
         </div>
@@ -402,11 +402,11 @@ export function VersionDiffPanel({
         {/* Legend */}
         <div className="pb-4 flex items-center gap-4 text-[11px]">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/40" />
+            <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/40" />
             <span className="text-muted-foreground">{t('removed')}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/40" />
+            <div className="w-3 h-3 rounded bg-success/20 border border-success/40" />
             <span className="text-muted-foreground">{t('added')}</span>
           </div>
           <div className="ml-auto text-muted-foreground">
@@ -457,11 +457,11 @@ export function VersionDiffPanel({
         {/* Legend */}
         <div className="px-5 pb-3 flex items-center gap-4 text-[11px]">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-red-500/20 border border-red-500/40" />
+            <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/40" />
             <span className="text-muted-foreground">{t('removed')}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/40" />
+            <div className="w-3 h-3 rounded bg-success/20 border border-success/40" />
             <span className="text-muted-foreground">{t('added')}</span>
           </div>
         </div>

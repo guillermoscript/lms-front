@@ -18,8 +18,8 @@ export function ExamQuestionAIGrading({ question: q }: ExamQuestionAIGradingProp
   return (
     <div className="space-y-4 pt-4 border-t bg-primary/5 p-4 rounded-lg border border-primary/20">
       <div className="flex items-center gap-2 mb-1">
-        <IconRobot className="h-4 w-4 text-primary" />
-        <span className="text-sm font-bold text-primary">{t('aiGradingNotice')}</span>
+        <IconRobot className="h-4 w-4 text-brand-text" />
+        <span className="text-sm font-bold text-brand-text">{t('aiGradingNotice')}</span>
       </div>
 
       <div className="space-y-2">
@@ -29,7 +29,7 @@ export function ExamQuestionAIGrading({ question: q }: ExamQuestionAIGradingProp
           onChange={(e) => updateQuestion(q.id, { grading_rubric: e.target.value })}
           placeholder={t('gradingRubricPlaceholder')}
           rows={2}
-          className="bg-white/80 dark:bg-white/10"
+          className="bg-card"
         />
         <p className="text-[10px] text-muted-foreground">{t('gradingRubricHint')}</p>
       </div>
@@ -41,7 +41,7 @@ export function ExamQuestionAIGrading({ question: q }: ExamQuestionAIGradingProp
           onChange={(e) => updateQuestion(q.id, { ai_grading_criteria: e.target.value })}
           placeholder={t('aiGradingCriteriaPlaceholder')}
           rows={3}
-          className="bg-white/80 dark:bg-white/10"
+          className="bg-card"
         />
         <p className="text-[10px] text-muted-foreground">{t('aiGradingCriteriaHint')}</p>
       </div>
@@ -56,7 +56,7 @@ export function ExamQuestionAIGrading({ question: q }: ExamQuestionAIGradingProp
             })
           }
           placeholder={t('expectedKeywordsPlaceholder')}
-          className="bg-white/80 dark:bg-white/10"
+          className="bg-card"
         />
         <p className="text-[10px] text-muted-foreground">{t('expectedKeywordsHint')}</p>
       </div>

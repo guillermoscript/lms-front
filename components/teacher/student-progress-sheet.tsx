@@ -184,7 +184,7 @@ export function StudentProgressSheet({
                           )}
                         >
                           {done ? (
-                            <IconCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                            <IconCheck className="mt-0.5 size-4 shrink-0 text-brand-text" aria-hidden />
                           ) : (
                             <IconCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" aria-hidden />
                           )}
@@ -220,7 +220,7 @@ export function StudentProgressSheet({
                       return (
                         <li key={e.id} className="flex items-start gap-2 px-2 py-1 text-sm">
                           {done ? (
-                            <IconCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                            <IconCheck className="mt-0.5 size-4 shrink-0 text-brand-text" aria-hidden />
                           ) : (
                             <IconCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" aria-hidden />
                           )}
@@ -251,10 +251,10 @@ export function StudentProgressSheet({
                         verdict = t('sheet.notAttempted')
                       } else if (r?.bestScore == null) {
                         verdict = t('sheet.ungraded')
-                        tone = 'text-amber-700 dark:text-amber-400'
+                        tone = 'text-warning'
                       } else if (r.passed) {
                         verdict = t('sheet.passed', { score: r.bestScore })
-                        tone = 'text-primary'
+                        tone = 'text-brand-text'
                       } else {
                         verdict = t('sheet.failed', { score: r.bestScore, threshold: EXAM_PASS_SCORE })
                         tone = 'text-destructive'
@@ -262,7 +262,7 @@ export function StudentProgressSheet({
                       return (
                         <li key={e.id} className="flex items-start gap-2 px-2 py-1 text-sm">
                           {r?.passed ? (
-                            <IconCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                            <IconCheck className="mt-0.5 size-4 shrink-0 text-brand-text" aria-hidden />
                           ) : attempts > 0 && r?.bestScore != null ? (
                             <IconAlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
                           ) : (

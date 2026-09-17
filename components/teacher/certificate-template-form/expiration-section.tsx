@@ -14,8 +14,8 @@ export function ExpirationSection() {
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                    <IconClock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
+                    <IconClock className="h-4 w-4 text-brand-text" />
                 </div>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
                     {t('expiration')}

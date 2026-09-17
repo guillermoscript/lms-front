@@ -159,7 +159,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                       {isDeactivated ? (
                         <Badge variant="destructive">{t('status.deactivated')}</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
+                        <Badge className="border-success/30 bg-success/10 text-success">
                           {t('status.active')}
                         </Badge>
                       )}

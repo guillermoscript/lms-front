@@ -14,8 +14,8 @@ interface VocabularyBlockEditorProps {
 export function VocabularyBlockEditor({ block, onChange }: VocabularyBlockEditorProps) {
   const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   return (
-    <div className="space-y-2 rounded-lg border bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
+    <div className="space-y-2 rounded-lg border bg-brand-tint p-3">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconBook className="h-4 w-4" />
         {t('blocks.vocabulary.label')}
       </div>

@@ -93,8 +93,8 @@ export default async function AdminPlansPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{plans?.length || 0}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconCalendar className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconCalendar className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -107,8 +107,8 @@ export default async function AdminPlansPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.monthly')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{monthlyCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconCalendar className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconCalendar className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -121,8 +121,8 @@ export default async function AdminPlansPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.yearly')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{yearlyCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
-                  <IconCalendar className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconCalendar className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>

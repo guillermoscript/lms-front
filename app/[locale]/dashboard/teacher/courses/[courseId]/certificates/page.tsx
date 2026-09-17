@@ -120,8 +120,8 @@ export default async function CertificatesPage({ params }: PageProps) {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                <IconAward className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
+                <IconAward className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{certificates.length}</p>
@@ -133,8 +133,8 @@ export default async function CertificatesPage({ params }: PageProps) {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                <IconUsers className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
+                <IconUsers className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{enrollments.length}</p>
@@ -146,13 +146,13 @@ export default async function CertificatesPage({ params }: PageProps) {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <IconShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
+                <IconShieldCheck className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">
                   {template ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">{t('certificates.stats.active')}</span>
+                    <span className="text-success">{t('certificates.stats.active')}</span>
                   ) : (
                     <span className="text-muted-foreground">{t('certificates.stats.none')}</span>
                   )}
@@ -200,6 +200,9 @@ export default async function CertificatesPage({ params }: PageProps) {
                     <p className="text-sm text-muted-foreground">{template.description}</p>
                   </div>
                 )}
+                {/* Swatches of the two colours the school chose for its
+                    certificate, shown as themselves — a theme token here would
+                    preview a design nobody picked. */}
                 <div className="flex items-center gap-3 pt-1">
                   <div className="flex items-center gap-2">
                     <div

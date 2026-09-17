@@ -32,14 +32,14 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-gradient-to-br from-teal-500/5 to-cyan-500/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-teal-600">
+    <div className="space-y-3 rounded-lg border bg-brand-tint p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconTextPlus className="h-4 w-4" />
         {t('blocks.fill-in-the-blank.label')}
       </div>
 
       <div className="space-y-2">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-foreground">
           {t('fillInTheBlank.segmentsLabel')}
         </span>
         {block.segments.map((segment, index) => (
@@ -47,8 +47,8 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
             <span className={cn(
               'text-xs shrink-0 rounded px-1.5 py-0.5',
               segment.type === 'blank'
-                ? 'bg-primary/10 text-primary font-medium'
-                : 'bg-muted text-muted-foreground'
+                ? 'bg-primary text-primary-foreground font-medium'
+                : 'bg-muted text-foreground'
             )}>
               {segment.type === 'blank' ? 'Blanco' : 'Texto'}
             </span>
@@ -98,7 +98,7 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
       </div>
 
       <div>
-        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
+        <span className="text-xs text-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}

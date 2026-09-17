@@ -312,13 +312,13 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
                           <td className="py-4">
                             <div className="flex items-center gap-3">
                               <div
-                                className={`w-2 h-2 rounded-full shrink-0 ${page.is_active ? 'bg-emerald-500' : 'bg-border'}`}
+                                className={`w-2 h-2 rounded-full shrink-0 ${page.is_active ? 'bg-success' : 'bg-border'}`}
                                 aria-hidden="true"
                               />
                               <div className="min-w-0">
                                 <p className="font-medium truncate">{page.name}</p>
                                 {page.is_active && (
-                                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                  <span className="text-xs font-medium text-success">
                                     {t('pageCard.live')}
                                   </span>
                                 )}

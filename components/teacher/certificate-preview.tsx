@@ -41,6 +41,15 @@ export function CertificatePreview({
     const mockDate = formatDate(SAMPLE_CERTIFICATE_DATE, locale, { dateStyle: 'long' })
     const mockCode = "VERIFY-MOCK-12345"
 
+    /*
+     * A facsimile of the *printed* certificate, not a themed screen. The paper and
+     * the neutral ink below are fixed because lib/certificate-generator.ts prints on
+     * fixed stock (its exact cream paper and warm-grey ink still differ from these
+     * shades), and every inline colour is the template's own design ink — the
+     * teacher's pick, or the platform default where the design is locked or unset.
+     * Both are content: the school theme must never recolour a printed document, and
+     * a dark surface would swallow a dark preset ink chosen against paper.
+     */
     return (
         <div className="relative overflow-hidden rounded-xl border-2 bg-white shadow-xl">
             {/* Decorative border */}

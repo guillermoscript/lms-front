@@ -20,7 +20,7 @@ type TaskState = 'none' | 'unsaved' | 'saved'
 
 const STATE_STYLES: Record<TaskState, string> = {
   none: 'text-muted-foreground',
-  unsaved: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+  unsaved: 'bg-warning/10 text-warning border-warning/20',
   saved: 'bg-muted text-foreground',
 }
 
@@ -48,8 +48,8 @@ export function LessonAITaskStep() {
     <div className="animate-in fade-in slide-in-from-left-2 duration-300">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
-            <IconRobot aria-hidden="true" className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+            <IconRobot aria-hidden="true" className="h-5 w-5 text-brand-text" />
           </div>
           <div className="max-w-prose">
             <h2 className="text-lg font-semibold tracking-tight">{t('aiTaskTitle')}</h2>
@@ -78,7 +78,7 @@ export function LessonAITaskStep() {
       </div>
 
       {willRemove && (
-        <p className="mb-6 flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+        <p className="mb-6 flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
           <IconAlertTriangle aria-hidden="true" className="mt-px h-4 w-4 shrink-0" />
           {t('aiTaskRemoveWarning')}
         </p>
@@ -112,7 +112,7 @@ export function LessonAITaskStep() {
               <Label htmlFor="ai_task_instructions" className="text-sm font-medium">
                 {t('aiGradingInsLabelShort')}
               </Label>
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
                 <IconEyeOff aria-hidden="true" className="h-3 w-3" />
                 {t('aiHiddenBadge')}
               </span>

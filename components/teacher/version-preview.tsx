@@ -9,7 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { IconChevronDown, IconVideo, IconRobot, IconFileText, IconClipboardList, IconTemplate, IconCode, IconEye } from '@tabler/icons-react'
+import { IconChevronDown, IconVideo, IconRobot, IconFileText, IconClipboardList, IconTemplate, IconCode, IconEye, IconCheck } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
 // Version content is MDX, so "rendered" has to compile it the way the lesson
@@ -33,15 +33,14 @@ function StatusBadge({ status }: { status: string | undefined }) {
   const t = useTranslations(PREVIEW_NS)
   if (!status) return null
   const colors: Record<string, string> = {
-    published: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-    draft: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+    published: 'bg-success/10 text-success border-success/30',
   }
   const known = status === 'published' || status === 'draft' || status === 'archived'
   return (
     <span className={cn(
       'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border',
       !known && 'capitalize',
-      colors[status] || 'bg-muted text-muted-foreground border-border'
+      colors[status] || 'bg-muted text-foreground border-border'
     )}>
       {known ? t(`status.${status}` as 'status.published') : status}
     </span>
@@ -235,7 +234,7 @@ function LessonPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
       {(taskPrompt || systemPrompt) && (
         <div className="space-y-4 pt-4 border-t">
           <div className="flex items-center gap-2">
-            <IconRobot className="h-4 w-4 text-violet-500" />
+            <IconRobot className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               {t('aiTaskConfig')}
             </span>
@@ -293,7 +292,7 @@ function ExamPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
               {questions.map((q, i) => (
                 <div key={i} className="rounded-lg border bg-muted/20 p-4 space-y-3">
                   <div className="flex items-start gap-3">
-                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-xs font-bold text-primary shrink-0">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-brand-tint text-xs font-bold text-brand-text shrink-0">
                       {i + 1}
                     </span>
                     <div className="min-w-0 flex-1 space-y-2">
@@ -311,14 +310,17 @@ function ExamPreview({ snapshot }: { snapshot: Record<string, unknown> }) {
                           className={cn(
                             'flex items-center gap-2.5 text-sm py-1.5 px-3 rounded-md',
                             o.is_correct
-                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium'
+                              ? 'bg-success/10 text-success font-medium'
                               : 'text-muted-foreground'
                           )}
                         >
-                          <div className={cn(
-                            'w-2 h-2 rounded-full shrink-0',
-                            o.is_correct ? 'bg-emerald-500' : 'bg-muted-foreground/30'
-                          )} />
+                          {o.is_correct ? (
+                            <IconCheck aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                          ) : (
+                            <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                              <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                            </div>
+                          )}
                           {o.option_text as string}
                         </div>
                       ))}
@@ -345,9 +347,9 @@ function ExercisePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
   const timeLimit = snapshot.time_limit as number | undefined
 
   const difficultyColors: Record<string, string> = {
-    beginner: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-    intermediate: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-    advanced: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+    easy: 'bg-success/10 text-success border-success/20',
+    medium: 'bg-warning/10 text-warning border-warning/20',
+    hard: 'bg-destructive/10 text-destructive border-destructive/20',
   }
 
   return (
@@ -375,7 +377,7 @@ function ExercisePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
         {difficultyLevel && (
           <span className={cn(
             'inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border capitalize',
-            difficultyColors[difficultyLevel] || 'bg-muted text-muted-foreground border-border'
+            difficultyColors[difficultyLevel] || 'bg-muted text-foreground border-border'
           )}>
             {difficultyLevel}
           </span>
@@ -408,7 +410,7 @@ function TemplatePreview({ snapshot }: { snapshot: Record<string, unknown> }) {
         <div className="flex items-start justify-between gap-4">
           <h3 className="text-xl font-bold tracking-tight leading-snug">{name || t('untitledTemplate')}</h3>
           {category && (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20 capitalize">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-brand-tint text-brand-text border-primary/20 capitalize">
               {category}
             </span>
           )}

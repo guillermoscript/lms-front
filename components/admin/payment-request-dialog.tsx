@@ -232,7 +232,7 @@ export function PaymentRequestDialog({
             {request.message && (
               <div className="mt-3 p-3 rounded-lg bg-muted">
                 <p className="text-sm font-medium mb-1">{t('dialog.details.messageTitle')}:</p>
-                <p className="text-sm text-muted-foreground">{request.message}</p>
+                <p className="text-sm text-foreground">{request.message}</p>
               </div>
             )}
           </div>
@@ -336,7 +336,7 @@ export function PaymentRequestDialog({
                 <Button
                   onClick={handleEnroll}
                   disabled={loading}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-success text-success-foreground hover:bg-success/90"
                 >
                   {t('dialog.actions.confirmEnroll')}
                 </Button>

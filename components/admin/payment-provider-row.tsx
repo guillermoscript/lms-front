@@ -41,9 +41,9 @@ interface PaymentProviderRowProps {
 }
 
 const STATUS_STYLES: Record<ProviderStatus, string> = {
-  // Green is conventional for "money can move" and, unlike the old amber card,
-  // never collides with a tenant's brand hue the way a warning tint did.
-  ready: 'border-transparent bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  // The success token, not the school's brand: whether a rail can take money is
+  // a platform fact and must read the same on every tenant.
+  ready: 'border-transparent bg-success/10 text-success',
   // The ONLY loud state on the page, and it is reachable only from
   // enabled && !configured — the state that silently loses sales.
   blocked: 'border-transparent bg-destructive/10 text-destructive',

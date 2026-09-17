@@ -223,7 +223,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                   </div>
                 ) : (
                   <div>
-                    <Badge variant="outline" className="mb-2 bg-green-50 text-green-700 border-green-200">
+                    <Badge className="mb-2 border-success/30 bg-success/10 text-success">
                       {t('statusActive')}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
@@ -261,6 +261,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                         </div>
                         <Badge
                           variant={enrollment.status === 'active' ? 'default' : 'secondary'}
+                          className={enrollment.status === 'active' ? 'bg-success/10 text-success border-success/30' : undefined}
                         >
                           {tu(`status.${enrollment.status}`) || enrollment.status}
                         </Badge>
@@ -285,7 +286,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                   <div className="space-y-3">
                     {recentActivity.map((activity: any, index: number) => (
                       <div key={index} className="flex items-start gap-3 text-sm">
-                        <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
+                        <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
                         <div className="flex-1">
                           <p className="font-medium">
                             {t('completed', { title: activity.lesson?.title })}
@@ -340,6 +341,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                                 ? 'secondary'
                                 : 'destructive'
                           }
+                          className={transaction.status === 'completed' || transaction.status === 'successful' ? 'bg-success/10 text-success border-success/30' : transaction.status === 'pending' ? 'bg-warning/10 text-warning border-warning/30' : undefined}
                         >
                           {tu(`status.${transaction.status}`) || transaction.status}
                         </Badge>

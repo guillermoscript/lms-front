@@ -340,7 +340,7 @@ export default async function AdminDashboardPage({
             {t('onboarding.wizardPrompt')}{' '}
             <Link
               href="/onboarding"
-              className="font-medium text-primary underline-offset-4 hover:underline"
+              className="font-medium text-brand-text underline-offset-4 hover:underline"
             >
               {t('onboarding.wizardLink')}
             </Link>
@@ -435,7 +435,7 @@ export default async function AdminDashboardPage({
                     className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-brand-text">
                         {(tu.profiles?.full_name || '?').charAt(0).toUpperCase()}
                       </div>
                       <p className="text-sm font-medium">{tu.profiles?.full_name || t('recentActivity.unknown')}</p>
@@ -504,9 +504,9 @@ export default async function AdminDashboardPage({
                               : 'destructive'
                         }
                         className={`text-[9px] ${transaction.status === 'successful'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                          ? 'bg-success/10 text-success border-success/30'
                           : transaction.status === 'pending'
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                            ? 'bg-warning/10 text-warning border-warning/30'
                             : ''
                           }`}
                       >

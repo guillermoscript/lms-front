@@ -64,8 +64,8 @@ export default async function RevenuePage() {
                         {t('transactionCount', { count: revenue.transactionCount })}
                       </p>
                     </div>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                      <IconCurrencyDollar className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                      <IconCurrencyDollar className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                     </div>
                   </div>
                 </CardContent>
@@ -89,8 +89,8 @@ export default async function RevenuePage() {
                         </p>
                       )}
                     </div>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                      <IconReceipt className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                      <IconReceipt className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                     </div>
                   </div>
                 </CardContent>
@@ -103,15 +103,15 @@ export default async function RevenuePage() {
                       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {t('netRevenue')}
                       </p>
-                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-emerald-600 dark:text-emerald-400">
+                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-foreground">
                         {formatCurrency(revenue.netRevenue, revenue.currency, locale)}
                       </p>
                       <p className="mt-1 text-[11px] text-muted-foreground/70">
                         {t('afterFees')}
                       </p>
                     </div>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                      <IconTrendingUp className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                      <IconTrendingUp className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                     </div>
                   </div>
                 </CardContent>

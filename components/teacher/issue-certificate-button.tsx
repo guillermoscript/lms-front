@@ -85,7 +85,7 @@ export function IssueCertificateButton({
             <Button
                 variant="ghost"
                 size={compact ? 'icon-sm' : 'sm'}
-                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
+                className="text-success"
                 disabled
                 aria-label={compact ? label : undefined}
                 title={compact ? label : undefined}
@@ -103,7 +103,7 @@ export function IssueCertificateButton({
             size={compact ? 'icon-sm' : 'sm'}
             onClick={handleIssue}
             disabled={isLoading}
-            className="hover:border-primary hover:text-primary"
+            className="hover:border-primary hover:text-brand-text"
             aria-label={compact ? label : undefined}
             title={compact ? label : undefined}
         >

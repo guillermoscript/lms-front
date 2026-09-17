@@ -149,14 +149,14 @@ export default function OnboardingWizard({
             <div
               className={`w-3 h-3 rounded-full transition-all ${
                 i <= stepIndex
-                  ? 'bg-blue-500 scale-110'
-                  : 'bg-zinc-700'
+                  ? 'bg-primary scale-110'
+                  : 'bg-muted-foreground'
               }`}
             />
             {i < STEPS.length - 1 && (
               <div
                 className={`w-12 h-0.5 transition-all ${
-                  i < stepIndex ? 'bg-blue-500' : 'bg-zinc-700'
+                  i < stepIndex ? 'bg-primary' : 'bg-muted-foreground'
                 }`}
               />
             )}
@@ -166,15 +166,15 @@ export default function OnboardingWizard({
 
       {/* Step: Welcome */}
       {currentStep === 'welcome' && (
-        <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <Card>
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto mb-4 w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center border border-blue-500/20">
-              <Sparkles className="w-8 h-8 text-blue-400" />
+            <div className="mx-auto mb-4 w-16 h-16 bg-brand-tint rounded-2xl flex items-center justify-center border border-primary/20">
+              <Sparkles className="w-8 h-8 text-brand-text" />
             </div>
-            <CardTitle className="text-3xl text-white">
+            <CardTitle className="text-3xl">
               {t('welcome.title', { name: userName })}
             </CardTitle>
-            <CardDescription className="text-zinc-400 text-lg mt-2">
+            <CardDescription className="text-lg mt-2">
               {t('welcome.description')}
             </CardDescription>
           </CardHeader>
@@ -185,11 +185,11 @@ export default function OnboardingWizard({
                 { icon: Palette, text: t('welcome.step2') },
                 { icon: Rocket, text: t('welcome.step3') },
               ].map(({ icon: Icon, text }, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-zinc-800/30 border border-zinc-800">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5 text-blue-400" />
+                <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/50 border border-border">
+                  <div className="w-10 h-10 rounded-lg bg-brand-tint flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-5 h-5 text-brand-text" />
                   </div>
-                  <p className="text-zinc-300">{text}</p>
+                  <p className="text-foreground">{text}</p>
                 </div>
               ))}
             </div>
@@ -197,7 +197,6 @@ export default function OnboardingWizard({
             <div className="flex justify-end pt-4">
               <Button
                 onClick={goNext}
-                className="bg-blue-600 hover:bg-blue-500 text-white"
                 size="lg"
               >
                 {t('welcome.getStarted')}
@@ -210,52 +209,49 @@ export default function OnboardingWizard({
 
       {/* Step: School Info */}
       {currentStep === 'school' && (
-        <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20">
-                <GraduationCap className="w-5 h-5 text-blue-400" />
+              <div className="w-10 h-10 bg-brand-tint rounded-xl flex items-center justify-center border border-primary/20">
+                <GraduationCap className="w-5 h-5 text-brand-text" />
               </div>
               <div>
-                <CardTitle className="text-xl text-white">{t('school.title')}</CardTitle>
-                <CardDescription className="text-zinc-400">{t('school.description')}</CardDescription>
+                <CardTitle className="text-xl">{t('school.title')}</CardTitle>
+                <CardDescription>{t('school.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="schoolName" className="text-zinc-300">{t('school.nameLabel')}</Label>
+              <Label htmlFor="schoolName">{t('school.nameLabel')}</Label>
               <Input
                 id="schoolName"
                 value={schoolName}
                 onChange={(e) => setSchoolName(e.target.value)}
                 placeholder={t('school.namePlaceholder')}
-                className="bg-zinc-800/50 border-zinc-700 text-white"
               />
-              <p className="text-sm text-zinc-500">{t('school.nameHint')}</p>
+              <p className="text-sm text-muted-foreground">{t('school.nameHint')}</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="schoolDescription" className="text-zinc-300">{t('school.descriptionLabel')}</Label>
+              <Label htmlFor="schoolDescription">{t('school.descriptionLabel')}</Label>
               <Textarea
                 id="schoolDescription"
                 value={schoolDescription}
                 onChange={(e) => setSchoolDescription(e.target.value)}
                 placeholder={t('school.descriptionPlaceholder')}
                 rows={3}
-                className="bg-zinc-800/50 border-zinc-700 text-white"
               />
-              <p className="text-sm text-zinc-500">{t('school.descriptionHint')}</p>
+              <p className="text-sm text-muted-foreground">{t('school.descriptionHint')}</p>
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="ghost" onClick={goBack} className="text-zinc-400 hover:text-white">
+              <Button variant="ghost" onClick={goBack} className="text-muted-foreground">
                 <ArrowLeft className="mr-2 w-4 h-4" />
                 {t('back')}
               </Button>
               <Button
                 onClick={goNext}
-                className="bg-blue-600 hover:bg-blue-500 text-white"
                 disabled={!schoolName.trim()}
               >
                 {t('next')}
@@ -268,57 +264,52 @@ export default function OnboardingWizard({
 
       {/* Step: Branding / Appearance */}
       {currentStep === 'branding' && (
-        <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center border border-purple-500/20">
-                <Palette className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 bg-brand-tint rounded-xl flex items-center justify-center border border-primary/20">
+                <Palette className="w-5 h-5 text-brand-text" />
               </div>
               <div>
-                <CardTitle className="text-xl text-white">{t('branding.title')}</CardTitle>
-                <CardDescription className="text-zinc-400">{t('branding.description')}</CardDescription>
+                <CardTitle className="text-xl">{t('branding.title')}</CardTitle>
+                <CardDescription>{t('branding.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {/* This shell is still hardcoded dark (#764) while the picker is
-                token-styled: the dark scope hands it the dark palette, and
-                text-foreground re-resolves the ink the Card set in light tokens. */}
-            <div className="dark text-foreground">
-              <ThemeKitPicker
-                variant="onboarding"
-                stored={storedTheme}
-                customBranding={customBranding}
-                onContinue={goNext}
-                onBack={goBack}
-              />
-            </div>
+            <ThemeKitPicker
+              variant="onboarding"
+              stored={storedTheme}
+              customBranding={customBranding}
+              onContinue={goNext}
+              onBack={goBack}
+            />
           </CardContent>
         </Card>
       )}
 
       {/* Step: Payment Setup */}
       {currentStep === 'payment' && (
-        <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center border border-green-500/20">
-                <CreditCard className="w-5 h-5 text-green-400" />
+              <div className="w-10 h-10 bg-brand-tint rounded-xl flex items-center justify-center border border-primary/20">
+                <CreditCard className="w-5 h-5 text-brand-text" />
               </div>
               <div>
-                <CardTitle className="text-xl text-white">{t('payment.title')}</CardTitle>
-                <CardDescription className="text-zinc-400">{t('payment.description')}</CardDescription>
+                <CardTitle className="text-xl">{t('payment.title')}</CardTitle>
+                <CardDescription>{t('payment.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Why Connect */}
-            <div className="rounded-xl border border-blue-800/50 bg-blue-900/20 p-5">
+            <div className="rounded-xl border border-primary/20 bg-brand-tint p-5">
               <div className="flex items-start gap-3 mb-3">
-                <DollarSign className="w-5 h-5 text-blue-400 mt-0.5" />
+                <DollarSign className="w-5 h-5 text-brand-text mt-0.5" />
                 <div>
-                  <h4 className="font-semibold text-white mb-1">{t('payment.whyTitle')}</h4>
-                  <p className="text-sm text-zinc-400">{t('payment.whyDescription')}</p>
+                  <h4 className="font-semibold mb-1">{t('payment.whyTitle')}</h4>
+                  <p className="text-sm text-foreground/80">{t('payment.whyDescription')}</p>
                 </div>
               </div>
               <ul className="space-y-2 ml-8">
@@ -328,8 +319,8 @@ export default function OnboardingWizard({
                   t('payment.benefit3'),
                   t('payment.benefit4'),
                 ].map((benefit, i) => (
-                  <li key={i} className="text-sm text-zinc-300 flex items-start">
-                    <span className="text-blue-400 mr-2">•</span>
+                  <li key={i} className="text-sm text-foreground flex items-start">
+                    <span className="text-brand-text mr-2">•</span>
                     <span>{benefit}</span>
                   </li>
                 ))}
@@ -337,19 +328,19 @@ export default function OnboardingWizard({
             </div>
 
             {/* Revenue Split Info */}
-            <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-800/20">
-              <h4 className="font-semibold text-white mb-3">{t('payment.revenueSplit')}</h4>
+            <div className="rounded-xl border border-border p-5 bg-muted/30">
+              <h4 className="font-semibold mb-3">{t('payment.revenueSplit')}</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="text-3xl font-bold text-emerald-400">80%</div>
-                  <div className="text-xs text-zinc-400 mt-1">{t('payment.yourRevenue')}</div>
+                <div className="text-center p-4 rounded-lg bg-success/10 border border-success/30">
+                  <div className="text-3xl font-bold text-success">80%</div>
+                  <div className="text-xs text-foreground mt-1">{t('payment.yourRevenue')}</div>
                 </div>
-                <div className="text-center p-4 rounded-lg bg-zinc-700/30 border border-zinc-700">
-                  <div className="text-3xl font-bold text-zinc-400">20%</div>
-                  <div className="text-xs text-zinc-500 mt-1">{t('payment.platformFee')}</div>
+                <div className="text-center p-4 rounded-lg bg-muted border border-border">
+                  <div className="text-3xl font-bold text-muted-foreground">20%</div>
+                  <div className="text-xs text-foreground mt-1">{t('payment.platformFee')}</div>
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 mt-3 text-center">
+              <p className="text-xs text-muted-foreground mt-3 text-center">
                 {t('payment.revenueSplitNote')}
               </p>
             </div>
@@ -361,7 +352,7 @@ export default function OnboardingWizard({
                   setIsConnectingStripe(true)
                   window.location.href = '/api/stripe/connect'
                 }}
-                className="w-full bg-[#635BFF] hover:bg-[#5851EA] text-white h-12"
+                className="w-full h-12"
                 disabled={isConnectingStripe}
                 size="lg"
               >
@@ -374,23 +365,22 @@ export default function OnboardingWizard({
               </Button>
 
               {/* Manual payments always work — skipping Stripe is a valid path, not a warning (#438) */}
-              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-zinc-800/40 border border-zinc-700">
-                <AlertCircle className="w-4 h-4 text-zinc-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-zinc-400">
+              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border">
+                <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-muted-foreground">
                   {t('payment.skipWarning')}
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-between pt-4 border-t border-zinc-800">
-              <Button variant="ghost" onClick={goBack} className="text-zinc-400 hover:text-white">
+            <div className="flex justify-between pt-4 border-t border-border">
+              <Button variant="ghost" onClick={goBack} className="text-muted-foreground">
                 <ArrowLeft className="mr-2 w-4 h-4" />
                 {t('back')}
               </Button>
               <Button
                 onClick={goNext}
                 variant="outline"
-                className="border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800"
               >
                 {t('payment.skipForNow')}
                 <ArrowRight className="ml-2 w-4 h-4" />
@@ -402,26 +392,26 @@ export default function OnboardingWizard({
 
       {/* Step: Ready */}
       {currentStep === 'ready' && (
-        <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm">
+        <Card>
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto mb-4 w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            <div className="mx-auto mb-4 w-16 h-16 bg-success/10 rounded-2xl flex items-center justify-center border border-success/30">
+              <CheckCircle2 className="w-8 h-8 text-success" />
             </div>
-            <CardTitle className="text-2xl text-white">{t('ready.title')}</CardTitle>
-            <CardDescription className="text-zinc-400 text-lg mt-2">
+            <CardTitle className="text-2xl">{t('ready.title')}</CardTitle>
+            <CardDescription className="text-lg mt-2">
               {t('ready.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-4">
             {/* Summary */}
-            <div className="rounded-xl border border-zinc-800 p-5 bg-zinc-800/20 space-y-3">
+            <div className="rounded-xl border border-border p-5 bg-muted/30 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 text-sm">{t('school.nameLabel')}</span>
-                <span className="text-white font-medium">{schoolName || 'My School'}</span>
+                <span className="text-muted-foreground text-sm">{t('school.nameLabel')}</span>
+                <span className="text-foreground font-medium">{schoolName || 'My School'}</span>
               </div>
               <div className="flex justify-between items-center gap-4">
-                <span className="text-zinc-500 text-sm">{t('ready.theme')}</span>
-                <span className="text-white text-sm text-right" data-testid="onboarding-ready-theme">
+                <span className="text-muted-foreground text-sm">{t('ready.theme')}</span>
+                <span className="text-foreground text-sm text-right" data-testid="onboarding-ready-theme">
                   {themeSummary}
                 </span>
               </div>
@@ -430,7 +420,7 @@ export default function OnboardingWizard({
             <div className="flex flex-col gap-3 pt-2">
               <Button
                 onClick={handleSkipToCreate}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white h-12 text-base"
+                className="w-full h-12 text-base"
                 disabled={isSubmitting}
                 size="lg"
               >
@@ -444,7 +434,7 @@ export default function OnboardingWizard({
               <Button
                 onClick={handleComplete}
                 variant="ghost"
-                className="w-full text-zinc-400 hover:text-white"
+                className="w-full text-muted-foreground"
                 disabled={isSubmitting}
               >
                 {t('ready.goToDashboard')}
@@ -454,7 +444,7 @@ export default function OnboardingWizard({
             <Button
               variant="ghost"
               onClick={goBack}
-              className="text-zinc-500 hover:text-zinc-300"
+              className="text-muted-foreground"
               size="sm"
             >
               <ArrowLeft className="mr-2 w-3 h-3" />

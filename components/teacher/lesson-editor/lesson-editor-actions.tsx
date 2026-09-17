@@ -28,7 +28,7 @@ export function LessonEditorActions({ layout }: { layout: ActionsLayout }) {
         {loading ? (
           <IconLoader2 className="h-3.5 w-3.5 motion-safe:animate-spin" />
         ) : saveSuccess ? (
-          <IconCheck className="h-3.5 w-3.5 text-emerald-500" />
+          <IconCheck className="h-3.5 w-3.5 text-success" />
         ) : (
           <IconDeviceFloppy className="h-3.5 w-3.5" />
         )}

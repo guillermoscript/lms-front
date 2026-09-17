@@ -63,7 +63,7 @@ export function LessonFunnel({
                 aria-label={labels.meter(step.title)}
               >
                 <div
-                  className={cn('h-full rounded-full', sharp ? 'bg-amber-500' : 'bg-primary/70')}
+                  className={cn('h-full rounded-full', sharp ? 'bg-warning' : 'bg-primary/70')}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -71,7 +71,7 @@ export function LessonFunnel({
             <span
               className={cn(
                 'w-10 text-right text-xs tabular-nums',
-                sharp ? 'font-semibold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'
+                sharp ? 'font-semibold text-warning' : 'text-muted-foreground'
               )}
               aria-hidden={drop === 0}
             >

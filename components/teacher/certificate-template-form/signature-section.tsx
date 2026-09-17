@@ -14,8 +14,8 @@ export function SignatureSection() {
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <IconSignature className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
+                    <IconSignature className="h-4 w-4 text-brand-text" />
                 </div>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
                     {t('signature')}
@@ -58,6 +58,8 @@ export function SignatureSection() {
                     <div className="flex items-center gap-3">
                         {formData.signature_image_url ? (
                             <div className="relative group">
+                                {/* Opaque light plate behind the scanned signature: black ink on transparency,
+                                    printed on the certificate's paper, not on a themed surface. */}
                                 <img
                                     src={formData.signature_image_url}
                                     alt="Signature"

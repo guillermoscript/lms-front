@@ -14,8 +14,8 @@ export function CertificateInfoSection() {
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <IconFileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
+                    <IconFileText className="h-4 w-4 text-brand-text" />
                 </div>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
                     {t('certificateInfo')}

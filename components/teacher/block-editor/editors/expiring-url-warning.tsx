@@ -17,7 +17,7 @@ export function ExpiringUrlWarning({ url, hint }: { url: string; hint: string })
   const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
   if (!isExpiringSignedUrl(url)) return null
   return (
-    <p className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+    <p className="flex items-start gap-1.5 text-xs text-warning">
       <IconAlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
       <span>{t('expiringUrl', { hint })}</span>
     </p>

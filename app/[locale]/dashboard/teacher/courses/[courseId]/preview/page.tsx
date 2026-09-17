@@ -124,7 +124,7 @@ export default async function CoursePreviewPage({ params }: PageProps) {
               <div className="pt-2 space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
-                    <span className="text-2xl font-black text-primary">0%</span>
+                    <span className="text-2xl font-black text-brand-text">0%</span>
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('courseProgress')}</p>
                   </div>
                   <span className="text-xs font-bold bg-muted px-2 py-1 rounded-md text-muted-foreground">
@@ -133,7 +133,7 @@ export default async function CoursePreviewPage({ params }: PageProps) {
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-muted border p-[2px]">
                   <div
-                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
                     style={{ width: '0%' }}
                   />
                 </div>
@@ -185,14 +185,14 @@ export default async function CoursePreviewPage({ params }: PageProps) {
             >
               <Card className="transition-all hover:border-primary/50 hover:shadow-md hover:-translate-y-1 rounded-2xl overflow-hidden border-2 border-transparent bg-muted/30">
                 <CardContent className="flex items-center gap-4 p-5 md:p-6">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary shadow-sm border transition-colors">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground group-hover:bg-brand-tint group-hover:text-brand-text shadow-sm border transition-colors">
                     <span className="text-lg font-black">
                       {lesson.sequence}
                     </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-lg group-hover:text-primary transition-colors truncate">
+                    <h3 className="font-bold text-lg group-hover:text-brand-text transition-colors truncate">
                       {lesson.title}
                     </h3>
                     {lesson.description ? (
@@ -214,12 +214,12 @@ export default async function CoursePreviewPage({ params }: PageProps) {
                   </div>
 
                   <div className="hidden sm:block">
-                    <Button variant="ghost" size="sm" className="font-bold text-primary group-hover:bg-primary group-hover:text-white">
+                    <Button variant="ghost" size="sm" className="font-bold text-brand-text group-hover:bg-primary group-hover:text-primary-foreground">
                       {t('study')}
                     </Button>
                   </div>
                   <div className="sm:hidden">
-                    <IconPlayerPlay className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+                    <IconPlayerPlay className="h-5 w-5 text-brand-text transition-transform group-hover:scale-110" />
                   </div>
                 </CardContent>
               </Card>

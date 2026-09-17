@@ -47,7 +47,7 @@ export function PreviewLessonSidebar({
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
+              className="h-full bg-success rounded-full transition-all duration-500 ease-out"
               style={{ width: '0%' }}
             />
           </div>
@@ -68,7 +68,7 @@ export function PreviewLessonSidebar({
                   className={cn(
                     'flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition-all group',
                     isActive
-                      ? 'bg-primary/10 text-primary'
+                      ? 'bg-brand-tint text-brand-text'
                       : 'hover:bg-muted text-muted-foreground hover:text-foreground'
                   )}
                 >

@@ -36,14 +36,15 @@ export function HotspotScopeBadge({
  * this", never merely "a couple of students struggled".
  */
 export function SeverityBar({ value, label }: { value: number; label: string }) {
-  // Amber is spelled out rather than themed: severity is a fixed diagnostic
-  // scale, and mapping its middle band onto the tenant's brand colour would
-  // make "moderately hard" look different in every school.
+  // The middle band uses the platform warning token, not the school's brand:
+  // severity is a fixed diagnostic scale, so "moderately hard" must look the
+  // same in every school. The number above the bar is the real signal; the bar
+  // only reinforces it.
   const tone =
     value >= 70
       ? 'bg-destructive'
       : value >= 40
-        ? 'bg-amber-500'
+        ? 'bg-warning'
         : 'bg-muted-foreground/60'
 
   return (

@@ -50,13 +50,15 @@ interface LessonResourcesManagerProps {
 }
 
 function getFileIcon(mimeType: string) {
-  if (mimeType === 'application/pdf') return <IconFileTypePdf className="h-5 w-5 text-red-500" />
+  // The glyph carries the format; the colour is the same for every file.
+  const className = 'h-5 w-5 text-muted-foreground'
+  if (mimeType === 'application/pdf') return <IconFileTypePdf className={className} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType === 'text/csv')
-    return <IconFileSpreadsheet className="h-5 w-5 text-emerald-500" />
+    return <IconFileSpreadsheet className={className} />
   if (mimeType.includes('word') || mimeType.includes('document'))
-    return <IconFileText className="h-5 w-5 text-blue-500" />
-  if (mimeType.startsWith('image/')) return <IconPhoto className="h-5 w-5 text-violet-500" />
-  return <IconFile className="h-5 w-5 text-muted-foreground" />
+    return <IconFileText className={className} />
+  if (mimeType.startsWith('image/')) return <IconPhoto className={className} />
+  return <IconFile className={className} />
 }
 
 function formatFileSize(bytes: number) {
@@ -239,7 +241,7 @@ export function LessonResourcesManager({
         />
         <div className="flex flex-col items-center gap-2">
           {uploading ? (
-            <IconLoader2 className="h-8 w-8 text-primary motion-safe:animate-spin" />
+            <IconLoader2 className="h-8 w-8 text-brand-text motion-safe:animate-spin" />
           ) : (
             <IconUpload className="h-8 w-8 text-muted-foreground/50" />
           )}

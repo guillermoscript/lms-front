@@ -38,18 +38,6 @@ const PAGE_TYPE_PRESETS = [
   { slug: 'events', icon: IconCalendar },
 ] as const
 
-const CATEGORY_COLORS: Record<string, string> = {
-  education: 'bg-primary/10 text-primary border-primary/20',
-  general: 'bg-muted/80 text-muted-foreground border-border',
-  creative: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
-  business: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  'code-school': 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
-  'language-school': 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
-  fitness: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-  music: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-500/20',
-  design: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-}
-
 export function TemplatePicker({ open, onClose, templates, onSelect, loading }: Props) {
   const [step, setStep] = useState<'slug' | 'template'>('slug')
   const [selectedSlug, setSelectedSlug] = useState('home')
@@ -151,7 +139,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                         }`}
                         onClick={() => { setSelectedSlug(preset.slug); setCustomSlug('') }}
                       >
-                        <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-brand-text' : 'text-muted-foreground'}`} />
                         <div className="min-w-0">
                           <p className="font-medium text-sm">{tPageTypes(preset.slug)}</p>
                           <p className="text-xs font-mono text-muted-foreground truncate">
@@ -173,7 +161,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                     }`}
                     onClick={() => setSelectedSlug('custom')}
                   >
-                    <IconFileText className={`w-4 h-4 shrink-0 ${selectedSlug === 'custom' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <IconFileText className={`w-4 h-4 shrink-0 ${selectedSlug === 'custom' ? 'text-brand-text' : 'text-muted-foreground'}`} />
                     <div className="min-w-0">
                       <p className="font-medium text-sm">{t('customSlug')}</p>
                       <p className="text-xs text-muted-foreground">{t('customSlugDescription')}</p>
@@ -213,7 +201,6 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
             <div className="flex-1 overflow-y-auto p-6 w-full min-h-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="list" aria-label="Templates">
                 {sorted.map((template) => {
-                  const catColor = CATEGORY_COLORS[template.category] || CATEGORY_COLORS.general
                   const count = getComponentCount(template.puck_data)
 
                   return (
@@ -238,7 +225,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                       <div className="flex-1 px-3 pb-3 space-y-1">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium text-sm">{templateName(template.name)}</h3>
-                          <Badge variant="outline" className={`text-xs px-1.5 py-0 ${catColor}`}>
+                          <Badge variant="outline" className="text-xs px-1.5 py-0">
                             {template.category}
                           </Badge>
                         </div>

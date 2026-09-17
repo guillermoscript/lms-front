@@ -21,8 +21,8 @@ export function ExerciseAIConfigStep() {
     <div className="animate-in fade-in slide-in-from-left-2 duration-300 ">
       {/* Header */}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/10">
-          <IconRobot className="h-5 w-5 text-violet-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-tint">
+          <IconRobot className="h-5 w-5 text-brand-text" />
         </div>
         <div>
           <h2 className="text-lg font-semibold tracking-tight">
@@ -45,7 +45,7 @@ export function ExerciseAIConfigStep() {
           </Label>
           <Badge
             variant="outline"
-            className="text-[10px] border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
+            className="text-[10px] border-success/30 bg-success/10 text-success"
           >
             <IconEye className="mr-1 h-2.5 w-2.5" />
             {t('visibleToStudents')}
@@ -77,31 +77,19 @@ export function ExerciseAIConfigStep() {
           </Label>
           <Badge
             variant="secondary"
-            className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+            className="text-[10px]"
           >
             {t('hiddenFromStudents')}
           </Badge>
         </div>
-        <div className="overflow-hidden rounded-xl border bg-[#1e1e2e]">
-          <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-4 py-2">
-            <div className="flex gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
-              <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
-              <div className="h-2.5 w-2.5 rounded-full bg-green-500/60" />
-            </div>
-            <span className="text-[10px] text-white/30 ml-1">
-              system_prompt
-            </span>
-          </div>
-          <Textarea
-            id="system_prompt"
-            value={formData.system_prompt}
-            onChange={(e) => updateField('system_prompt', e.target.value)}
-            placeholder={t('aiSystemPromptPlaceholder')}
-            rows={8}
-            className="rounded-none border-0 bg-transparent font-mono text-[13px] leading-6 text-[#cdd6f4] caret-[#89b4fa] placeholder:text-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
-          />
-        </div>
+        <Textarea
+          id="system_prompt"
+          value={formData.system_prompt}
+          onChange={(e) => updateField('system_prompt', e.target.value)}
+          placeholder={t('aiSystemPromptPlaceholder')}
+          rows={8}
+          className="font-mono text-[13px] leading-6 placeholder:text-muted-foreground/60"
+        />
       </div>
 
       {/* Template + Preview actions */}
