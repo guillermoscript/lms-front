@@ -97,7 +97,7 @@ export async function SchoolLandingPage({ tenant, products }: Props) {
             <div className="text-center py-20">
               <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
               <p className="text-muted-foreground text-lg">{t('coursesComingSoon')}</p>
-              <p className="text-muted-foreground/70 text-sm mt-2">{t('checkBackLater')}</p>
+              <p className="text-muted-foreground text-sm mt-2">{t('checkBackLater')}</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">

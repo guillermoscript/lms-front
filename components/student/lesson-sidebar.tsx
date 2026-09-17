@@ -110,7 +110,7 @@ export function LessonSidebar({
               <li key={lesson.id}>
                 {isLocked ? (
                   <div
-                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground/50 cursor-not-allowed"
+                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground cursor-not-allowed"
                     title={t('locked')}
                   >
                     {content}

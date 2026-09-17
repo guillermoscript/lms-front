@@ -100,7 +100,13 @@
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
+  /* #773: at the shadcn default (L 0.552) this read 4.39:1 on `muted`, 4.32:1
+     on `brand-tint` and 4.16:1 on the status /10 tints — under AA on every
+     panel fill the app actually uses it on. L 0.51 clears 4.5:1 on all of them
+     (worst case 4.96:1) and still sits lighter than the theme kits' own
+     mutedForeground (L 0.47, lib/themes/kit.ts), so a kit stays the more
+     contrasty of the two. The dark value already clears AA (5.66:1 worst). */
+  --muted-foreground: oklch(0.51 0.016 285.938);
   --accent: oklch(0.52 0.105 223.128);
   --accent-foreground: oklch(0.984 0.019 200.873);
   /* Status colours (#764) are the platform's, never a school's: a theme kit

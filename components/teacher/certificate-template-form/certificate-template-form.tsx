@@ -61,7 +61,7 @@ function CertificateTemplateFormShell() {
 
             {/* Preview side */}
             <div className="lg:col-span-2 lg:sticky lg:top-8 h-fit space-y-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70 px-1">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground px-1">
                     {t('preview.title')}
                 </h2>
                 <div className="scale-[0.8] origin-top transform-gpu">

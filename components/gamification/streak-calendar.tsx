@@ -54,7 +54,7 @@ export function StreakCalendar() {
                                     ? "bg-primary text-primary-foreground shadow-lg"
                                     : isToday
                                         ? "border-2 border-primary/50 text-brand-text"
-                                        : "bg-muted text-muted-foreground/30"
+                                        : "bg-muted text-muted-foreground"
                             )}>
                                 {isActive ? (
                                     <IconCheck size={14} className="stroke-[4]" />

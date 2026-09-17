@@ -84,7 +84,7 @@ export function EngagementMetrics({
               <p className="mt-3 text-2xl font-bold tracking-tight">{metric.value}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{metric.title}</p>
               {metric.subtitle && (
-                <p className="text-[11px] text-muted-foreground/60">{metric.subtitle}</p>
+                <p className="text-[11px] text-muted-foreground">{metric.subtitle}</p>
               )}
             </div>
           ))}

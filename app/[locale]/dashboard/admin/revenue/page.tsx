@@ -60,7 +60,7 @@ export default async function RevenuePage() {
                       <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                         {formatCurrency(revenue.totalRevenue, revenue.currency, locale)}
                       </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground/70">
+                      <p className="mt-1 text-[11px] text-muted-foreground">
                         {t('transactionCount', { count: revenue.transactionCount })}
                       </p>
                     </div>
@@ -84,7 +84,7 @@ export default async function RevenuePage() {
                       {/* Only when there is a fee to reduce AND a cheaper plan to
                           move to — never "upgrade to pay less" under $0.00 (#727). */}
                       {revenue.platformFees > 0 && revenue.canReduceFees && (
-                        <p className="mt-1 text-[11px] text-muted-foreground/70">
+                        <p className="mt-1 text-[11px] text-muted-foreground">
                           {t('upgradeToReduce')}
                         </p>
                       )}
@@ -106,7 +106,7 @@ export default async function RevenuePage() {
                       <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-foreground">
                         {formatCurrency(revenue.netRevenue, revenue.currency, locale)}
                       </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground/70">
+                      <p className="mt-1 text-[11px] text-muted-foreground">
                         {t('afterFees')}
                       </p>
                     </div>

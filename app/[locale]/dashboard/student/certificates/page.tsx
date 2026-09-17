@@ -79,7 +79,7 @@ export default async function StudentCertificatesPage() {
               <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                 <IconAward size={14} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsTotal')}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('statsTotal')}</span>
             </div>
             <p className="text-2xl font-black tabular-nums">{certificates.length}</p>
           </div>
@@ -88,7 +88,7 @@ export default async function StudentCertificatesPage() {
               <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                 <IconBook2 size={14} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsCourses')}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('statsCourses')}</span>
             </div>
             <p className="text-2xl font-black tabular-nums">{uniqueCourses.size}</p>
           </div>
@@ -97,7 +97,7 @@ export default async function StudentCertificatesPage() {
               <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                 <IconTrophy size={14} />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('statsLatest')}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('statsLatest')}</span>
             </div>
             <p className="text-sm font-bold truncate">
               {certificates[0]?.courses?.title || '-'}

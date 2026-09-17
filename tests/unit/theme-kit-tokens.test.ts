@@ -222,6 +222,85 @@ describe('primitives read the per-component corner tokens', () => {
   })
 })
 
+describe('muted helper text (#773)', () => {
+  const darkBlock = ruleBody(globals, '.dark')
+  const value = (block: string, name: string) => block.match(new RegExp(`\\s${name}: ([^;]+);`))?.[1]
+
+  it('keeps --muted-foreground at AA on every fill it is used on, platform and kit', () => {
+    // Helper captions sit on panels, not only on background: the shadcn default
+    // (L 0.552) read 4.39:1 on `muted` and 4.32:1 on `brand-tint`, which is what
+    // #773 was. Status /10 tints are the third fill — `bg-destructive/10` and
+    // friends carry a muted caption on the payment and payout screens.
+    const platform = {
+      light: {
+        background: value(rootBlock, '--background')!,
+        card: value(rootBlock, '--card')!,
+        muted: value(rootBlock, '--muted')!,
+        mutedForeground: value(rootBlock, '--muted-foreground')!,
+        brandTint: value(rootBlock, '--brand-tint')!,
+      },
+      dark: {
+        background: value(darkBlock, '--background')!,
+        card: value(darkBlock, '--card')!,
+        muted: value(darkBlock, '--muted')!,
+        mutedForeground: value(darkBlock, '--muted-foreground')!,
+        brandTint: value(darkBlock, '--brand-tint')!,
+      },
+    }
+
+    for (const mode of ['light', 'dark'] as const) {
+      const block = mode === 'light' ? rootBlock : darkBlock
+      const sets = [
+        platform[mode],
+        // A kit derives brand-tint as card mixed with the brand (lib/themes/kit.ts).
+        ...Object.values(KIT_SURFACES).map((set) => ({
+          ...set[mode],
+          brandTint: mixOklch(set[mode].card, value(block, '--brand')!, mode === 'dark' ? 0.22 : 0.12)!,
+        })),
+      ]
+      for (const s of sets) {
+        const statusTints = ['success', 'warning', 'destructive'].map(
+          (status) => mixOklch(s.card, value(block, `--${status}`)!, 0.1)!,
+        )
+        for (const bg of [s.background, s.card, s.muted, s.brandTint, ...statusTints]) {
+          expect(
+            contrastRatio(s.mutedForeground, bg),
+            `${mode} muted-foreground ${s.mutedForeground} on ${bg}`,
+          ).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    }
+  })
+
+  it('never fades muted text with an opacity modifier at caption sizes', () => {
+    // No opacity modifier survives AA on any surface: even /80 reads 3.28:1 on
+    // the platform light background and 4.17:1 on dark `muted`. A faded caption
+    // is therefore always a bug, not a tuning choice — it has to be a different
+    // token, not a translucent one. Icons may still fade; only text is checked.
+    const faded = /text-muted-foreground\/\d+/
+    const caption = /text-(?:xs|\[1[01]px\])/
+    // These variants colour something other than the element's own text — a
+    // placeholder, or `content` on a pseudo-element. axe-core does not evaluate
+    // either for contrast, and a `::before` separator has no node to hang
+    // aria-hidden on, so neither is in scope here.
+    const notOwnText = /(?:placeholder|before|after|selection|file):text-muted-foreground\/\d+/g
+    const hits: string[] = []
+    for (const dir of ['app', 'components', 'lib']) {
+      for (const file of sourceFiles(join(ROOT, dir))) {
+        const source = readFileSync(file, 'utf8')
+        if (!faded.test(source)) continue
+        source.split('\n').forEach((line, i) => {
+          // Both classes on one element: a faded caption. A faded icon sitting
+          // on a line of its own carries no size class and does not match.
+          const own = line.replace(notOwnText, '')
+          if (faded.test(own) && caption.test(own)) hits.push(`${relative(ROOT, file)}:${i + 1}`)
+        })
+      }
+    }
+    expect(hits).toEqual([])
+  })
+})
+
 describe('Kódigo dark default wiring (app/[locale]/layout.tsx)', () => {
   it('passes the plan-resolved theme through defaultThemeFor and never forces a theme', () => {
     expect(layoutSource).toContain('const defaultTheme = defaultThemeFor(tenantInfo?.theme);')

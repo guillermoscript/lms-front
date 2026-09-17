@@ -431,13 +431,13 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                               <span className="text-xs text-muted-foreground capitalize">
                                 {(exercise.exercise_type || '').replace('_', ' ')}
                               </span>
-                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                               <span className="text-xs text-muted-foreground capitalize">
                                 {t(`difficulty.${exercise.difficulty_level}`)}
                               </span>
                               {exercise.status !== 'published' && (
                                 <>
-                                  <span className="text-muted-foreground/30">·</span>
+                                  <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                                   <Badge variant="secondary" className="text-[10px] h-4">
                                     {t(`status.${exercise.status}`)}
                                   </Badge>
@@ -504,7 +504,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                               </span>
                               {exam.status !== 'published' && (
                                 <>
-                                  <span className="text-muted-foreground/30">·</span>
+                                  <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                                   <Badge variant="secondary" className="text-[10px] h-4">
                                     {t(`status.${exam.status}`)}
                                   </Badge>

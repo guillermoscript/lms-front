@@ -151,13 +151,13 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                           <span className="text-xs text-muted-foreground capitalize">
                             {exercise.exercise_type.replace('_', ' ')}
                           </span>
-                          <span className="text-muted-foreground/30">·</span>
+                          <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                           <span className="text-xs text-muted-foreground capitalize">
                             {t(`difficulty.${exercise.difficulty_level}`)}
                           </span>
                           {exercise.status !== 'published' && (
                             <>
-                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                               <Badge variant="secondary" className="text-[10px] h-4">
                                 {t(`status.${exercise.status}`)}
                               </Badge>
@@ -165,7 +165,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                           )}
                           {exercise.lesson && (
                             <>
-                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <IconBooks className="h-3 w-3" />
                                 <span className="truncate max-w-[120px]">{exercise.lesson.title}</span>
@@ -174,7 +174,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                           )}
                           {checkpointLessonsByExercise.has(exercise.id) && (
                             <>
-                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                               <Badge
                                 variant="outline"
                                 className="text-[10px] h-4 gap-1 bg-brand-tint border-primary/20 text-brand-text"
@@ -192,7 +192,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                           )}
                           {exercise.time_limit && (
                             <>
-                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <IconClock className="h-3 w-3" />
                                 {exercise.time_limit}m

@@ -99,7 +99,7 @@ export function SortableBlock({
           {/* Type label */}
           <div className="flex items-center gap-1.5 px-1">
             {TypeIcon && <TypeIcon className={cn('h-3 w-3', iconData?.color || 'text-muted-foreground')} />}
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {t(`blocks.${blockType}.label`)}
             </span>
           </div>

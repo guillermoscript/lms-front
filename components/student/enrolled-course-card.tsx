@@ -147,7 +147,7 @@ export function EnrolledCourseCard({ enrollment, userId, access }: EnrolledCours
                 {course.title}
               </h3>
               {enrolledDate && (
-                <p className="text-[11px] text-muted-foreground/60 mt-0.5 flex items-center gap-1">
+                <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
                   <IconClock size={10} />
                   {t('enrolled', { date: enrolledDate })}
                 </p>

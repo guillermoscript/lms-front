@@ -209,7 +209,7 @@ export default function PromptTemplatesPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="text-[11px] text-muted-foreground/70 line-clamp-1 mt-0.5">
+                      <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
                         {displayDescription(template.name, template.description, template.is_system)}
                       </div>
                     </TableCell>

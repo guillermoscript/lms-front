@@ -165,7 +165,7 @@ export default async function TeacherDashboard() {
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.totalCourses')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{totalCourses}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.totalLessons', { count: totalLessons })}
                   </p>
                 </div>
@@ -188,7 +188,7 @@ export default async function TeacherDashboard() {
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.activeStudents')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{totalStudents}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.acrossPublished')}
                   </p>
                 </div>
@@ -211,7 +211,7 @@ export default async function TeacherDashboard() {
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.submissions')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{totalPendingReviews}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.totalExams')}
                   </p>
                 </div>
@@ -238,7 +238,7 @@ export default async function TeacherDashboard() {
                       <div className="h-full bg-primary w-[65%] rounded-full" />
                     </div>
                   </div>
-                  <p className="mt-2 text-[11px] text-muted-foreground/70">
+                  <p className="mt-2 text-[11px] text-muted-foreground">
                     {t('stats.platformActivity')}
                   </p>
                 </div>

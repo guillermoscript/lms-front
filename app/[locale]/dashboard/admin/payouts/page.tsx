@@ -158,7 +158,7 @@ export default async function AdminPayoutsPage({
                   >
                     {formatByCurrency(totalPaidByCurrency, locale)}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.totalPaidDesc')}
                   </p>
                 </div>
@@ -179,7 +179,7 @@ export default async function AdminPayoutsPage({
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {pendingCount}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.pendingCountDesc')}
                   </p>
                 </div>
@@ -249,7 +249,7 @@ export default async function AdminPayoutsPage({
                         <TableCell className="text-xs text-muted-foreground">
                           {payout.payout_method === 'manual' ? t('method.manual') : t('method.stripeConnect')}
                           {payout.note && (
-                            <p className="mt-0.5 max-w-[16rem] text-[10px] text-muted-foreground/70">{payout.note}</p>
+                            <p className="mt-0.5 max-w-[16rem] text-[10px] text-muted-foreground">{payout.note}</p>
                           )}
                         </TableCell>
                         <TableCell className="text-xs tabular-nums text-muted-foreground">
@@ -265,7 +265,7 @@ export default async function AdminPayoutsPage({
                                 : payout.stripe_payout_id}
                             </code>
                           ) : (
-                            <span className="text-xs text-muted-foreground/60">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       </TableRow>

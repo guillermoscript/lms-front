@@ -170,7 +170,7 @@ export default async function CertificatesPage({ params }: PageProps) {
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Left: Template preview */}
         <div className="lg:col-span-2 space-y-5">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             {t('certificates.templatePreview')}
           </h2>
 
@@ -249,7 +249,7 @@ export default async function CertificatesPage({ params }: PageProps) {
           {/* Issued Certificates */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 {t('certificates.issued.title')}
               </h2>
               {certificates.length > 0 && (
@@ -341,7 +341,7 @@ export default async function CertificatesPage({ params }: PageProps) {
           {/* Issue to enrolled students */}
           {template && uncertifiedEnrollments.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 {t('certificates.eligibleStudents')}
               </h2>
               <Card>

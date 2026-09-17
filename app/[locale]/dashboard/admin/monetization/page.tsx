@@ -192,7 +192,7 @@ export default async function MonetizationPage() {
                     {platformPercentage}%
                   </Badge>
                 </div>
-                <p className="text-[11px] text-muted-foreground/70">
+                <p className="text-[11px] text-muted-foreground">
                   {t('split.platformFeeDesc')}
                 </p>
               </div>

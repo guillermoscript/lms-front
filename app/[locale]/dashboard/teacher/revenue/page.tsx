@@ -163,7 +163,7 @@ export default async function RevenuePage() {
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {stat.value}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">{stat.sub}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{stat.sub}</p>
                 </div>
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
                   <stat.icon className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
@@ -192,7 +192,7 @@ export default async function RevenuePage() {
               <div className="text-2xl font-bold tabular-nums text-muted-foreground">
                 ${platformFee.toFixed(2)}
               </div>
-              <p className="text-[11px] text-muted-foreground/70">
+              <p className="text-[11px] text-muted-foreground">
                 {t('split.platformFeeSub')}
               </p>
             </div>

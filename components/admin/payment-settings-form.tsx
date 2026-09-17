@@ -450,7 +450,7 @@ function ProviderGroup({
         <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
           {title}
         </h4>
-        <span className="text-xs text-muted-foreground/70">{description}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
       </div>
       <div className="space-y-2">{children}</div>
     </div>

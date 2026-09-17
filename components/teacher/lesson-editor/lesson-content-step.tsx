@@ -21,7 +21,7 @@ export function LessonContentStep() {
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {formData.title && (
-            <h2 className="text-lg font-semibold tracking-tight text-muted-foreground/80">
+            <h2 className="text-lg font-semibold tracking-tight text-muted-foreground">
               {formData.title}
             </h2>
           )}
@@ -29,7 +29,7 @@ export function LessonContentStep() {
 
         <div className="flex items-center gap-2">
           <GenerateQuestionsDialog />
-          <span className="text-xs text-muted-foreground/50 mr-1">
+          <span className="text-xs text-muted-foreground mr-1">
             {t('editorMode')}
           </span>
           <div data-tour="lesson-editor-mode" className="inline-flex items-center rounded-lg border bg-muted/40 p-0.5">
@@ -86,7 +86,7 @@ export function LessonContentStep() {
             onChange={(val) => updateField('content', val)}
             placeholder={t('contentPlaceholder') as string}
           />
-          <p className="mt-2 text-[11px] text-muted-foreground/50">
+          <p className="mt-2 text-[11px] text-muted-foreground">
             {t('contentHint')}
           </p>
         </div>
