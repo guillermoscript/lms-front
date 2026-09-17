@@ -95,15 +95,6 @@ NEXT_PUBLIC_APP_URL=http://lvh.me:3000
 | `CERTIFICATE_ENCRYPTION_KEY` | Optional | Secret key used to sign and verify certificate verification codes. Should be a random 32+ character string. | Generate with `openssl rand -hex 32` | `a1b2c3d4e5f6...` (64 hex chars) |
 | `CERTIFICATE_ISSUER_NAME` | Optional | Default issuer name on certificates. Falls back to `LMS Academy`. | Choose your own | `Your Platform Name` |
 
-### Company Info (Invoices / Emails)
-
-| Variable | Required | Description | Where to get it | Example |
-|----------|----------|-------------|-----------------|---------|
-| `COMPANY_NAME` | Optional | Company name shown on invoices. Defaults to `LMS Platform`. | Your business info | `Acme Education Inc.` |
-| `COMPANY_ADDRESS` | Optional | Company address for invoices. | Your business info | `123 Main St, City, Country` |
-| `COMPANY_EMAIL` | Optional | Contact email on invoices. | Your business info | `hello@yourdomain.com` |
-| `COMPANY_PHONE` | Optional | Contact phone on invoices. | Your business info | `+1 555 000 0000` |
-
 ### Cron Jobs
 
 | Variable | Required | Description | Where to get it | Example |
