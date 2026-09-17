@@ -71,11 +71,11 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
 
   const getExerciseIcon = (type: string) => {
     switch (type) {
-      case 'coding_challenge': return <IconCode className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
-      case 'quiz': return <IconBrain className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
-      case 'discussion': return <IconMessageCircle className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
+      case 'coding_challenge': return <IconCode className="h-4.5 w-4.5 text-brand-text" />
+      case 'quiz': return <IconBrain className="h-4.5 w-4.5 text-brand-text" />
+      case 'discussion': return <IconMessageCircle className="h-4.5 w-4.5 text-brand-text" />
       case 'essay':
-      default: return <IconFileText className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
+      default: return <IconFileText className="h-4.5 w-4.5 text-brand-text" />
     }
   }
 
@@ -137,14 +137,14 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
               transition={{ delay: idx * 0.04, duration: 0.25 }}
             >
               <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
-                <Card className="group transition-all duration-200 hover:shadow-md hover:border-emerald-500/50 cursor-pointer">
+                <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                   <CardContent className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40 shrink-0">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-tint shrink-0">
                         {getExerciseIcon(exercise.exercise_type)}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-medium group-hover:text-primary transition-colors truncate">
+                        <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">
                           {exercise.title}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 mt-0.5">
@@ -177,7 +177,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                               <span className="text-muted-foreground/30">·</span>
                               <Badge
                                 variant="outline"
-                                className="text-[10px] h-4 gap-1 border-teal-500/40 text-teal-600 dark:text-teal-400"
+                                className="text-[10px] h-4 gap-1 bg-brand-tint border-primary/20 text-brand-text"
                               >
                                 <IconChecklist className="h-3 w-3" />
                                 <span className="truncate max-w-[140px]">
@@ -202,7 +202,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
                         </div>
                       </div>
                     </div>
-                    <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0 ml-4" />
+                    <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0 ml-4" />
                   </CardContent>
                 </Card>
               </Link>

@@ -71,10 +71,10 @@ export function LessonEditorHeader() {
                 className={cn(
                   'flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold transition-colors',
                   step.complete
-                    ? 'bg-emerald-500/15 text-emerald-600'
+                    ? 'bg-success/15 text-success'
                     : activeStep === step.key
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-muted text-muted-foreground'
+                      ? 'bg-brand-tint text-brand-text'
+                      : 'bg-muted text-foreground'
                 )}
               >
                 {step.complete ? (
@@ -131,7 +131,7 @@ export function LessonEditorHeader() {
               'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-all',
               activeStep === step.key
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground'
+                : 'bg-muted text-foreground'
             )}
           >
             {step.complete && <IconCheck className="h-3 w-3" />}

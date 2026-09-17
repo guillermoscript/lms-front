@@ -23,8 +23,8 @@ export function ExerciseAudioConfigStep() {
     <div className="animate-in fade-in slide-in-from-left-2 duration-300  space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10">
-          <IconMicrophone className="h-5 w-5 text-rose-600" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-tint">
+          <IconMicrophone className="h-5 w-5 text-brand-text" />
         </div>
         <div>
           <h2 className="text-lg font-semibold tracking-tight">{t('audioSetupTitle')}</h2>
@@ -36,7 +36,7 @@ export function ExerciseAudioConfigStep() {
       <div>
         <Label htmlFor="topic_prompt" className="mb-2 flex items-center gap-2 text-sm font-medium">
           {t('topicPromptLabel')}
-          <Badge variant="outline" className="text-[10px] border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">
+          <Badge variant="outline" className="text-[10px] border-success/30 bg-success/10 text-success">
             <IconEye className="mr-1 h-2.5 w-2.5" />
             {t('visibleToStudents')}
           </Badge>

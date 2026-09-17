@@ -159,7 +159,7 @@ export default async function TeacherDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.3 }}
         >
-          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-blue-200 hover:shadow-md dark:hover:ring-blue-800">
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -169,8 +169,8 @@ export default async function TeacherDashboard() {
                     {t('stats.totalLessons', { count: totalLessons })}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                  <IconBook className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -182,7 +182,7 @@ export default async function TeacherDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-emerald-200 hover:shadow-md dark:hover:ring-emerald-800">
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -192,8 +192,8 @@ export default async function TeacherDashboard() {
                     {t('stats.acrossPublished')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconUsers className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                  <IconUsers className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -205,7 +205,7 @@ export default async function TeacherDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.3 }}
         >
-          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-amber-200 hover:shadow-md dark:hover:ring-amber-800">
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -215,8 +215,8 @@ export default async function TeacherDashboard() {
                     {t('stats.totalExams')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                  <IconFileText className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                  <IconFileText className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -228,22 +228,22 @@ export default async function TeacherDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.3 }}
         >
-          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-violet-200 hover:shadow-md dark:hover:ring-violet-800">
+          <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.quickActions')}</p>
                   <div className="mt-2 flex gap-2">
-                    <div className="h-1.5 w-full rounded-full bg-violet-100 dark:bg-violet-950/60 overflow-hidden">
-                      <div className="h-full bg-violet-500 w-[65%] rounded-full" />
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-primary w-[65%] rounded-full" />
                     </div>
                   </div>
                   <p className="mt-2 text-[11px] text-muted-foreground/70">
                     {t('stats.platformActivity')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
-                  <IconBolt className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                  <IconBolt className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -316,11 +316,11 @@ export default async function TeacherDashboard() {
                         {course.thumbnail_url ? (
                           <img src={course.thumbnail_url} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <IconBook className="h-5 w-5 text-primary/60" />
+                          <IconBook className="h-5 w-5 text-brand-text/70" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-sm font-medium group-hover:text-primary transition-colors line-clamp-1">{course.title}</h4>
+                        <h4 className="text-sm font-medium group-hover:text-brand-text transition-colors line-clamp-1">{course.title}</h4>
                         <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground mt-0.5">
                           <span className="flex items-center gap-1">
                             <IconUsers size={11} /> {course.enrollments?.length || 0}
@@ -330,7 +330,7 @@ export default async function TeacherDashboard() {
                           </span>
                           <Badge
                             variant={course.status === 'published' ? 'default' : 'outline'}
-                            className={`text-[9px] h-4 py-0 ${course.status === 'published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                            className={`text-[9px] h-4 py-0 ${course.status === 'published' ? 'bg-success/10 text-success border-success/30' : ''}`}
                           >
                             {t(`courses.status.${course.status}`)}
                           </Badge>
@@ -380,20 +380,20 @@ export default async function TeacherDashboard() {
                 recentEnrollments.map((activity, idx) => (
                   <div key={idx} className="flex items-start gap-3">
                     <div className="relative">
-                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden text-xs font-semibold text-primary">
+                      <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden text-xs font-semibold text-brand-text">
                         {activity.profiles?.avatar_url ? (
                           <img src={activity.profiles.avatar_url} alt="" className="h-full w-full object-cover" />
                         ) : (
                           (activity.profiles?.full_name || '?').charAt(0).toUpperCase()
                         )}
                       </div>
-                      <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                      <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success border-2 border-background" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm leading-snug">
                         {t.rich('activity.enrolledIn', {
                           userName: (chunks) => <span className="font-medium text-foreground">{activity.profiles?.full_name || t('activity.anonymous')}</span>,
-                          courseTitle: (chunks) => <span className="font-medium text-primary">{activity.courses?.title}</span>
+                          courseTitle: (chunks) => <span className="font-medium text-brand-text">{activity.courses?.title}</span>
                         })}
                       </p>
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
@@ -419,7 +419,7 @@ export default async function TeacherDashboard() {
             <div className="mt-6 rounded-xl bg-primary/[0.04] p-4 ring-1 ring-primary/10">
               <div className="flex items-center gap-2.5 mb-1.5">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-                  <IconChartBar size={14} className="text-primary" />
+                  <IconChartBar size={14} className="text-brand-text" />
                 </div>
                 <h4 className="text-sm font-semibold">{t('activity.growthTip')}</h4>
               </div>

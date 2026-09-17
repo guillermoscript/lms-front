@@ -94,9 +94,9 @@ export default async function AdminProductsPage() {
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
         {/* Non-blocking Connect nudge — manual selling works without it (#438) */}
         {!stripeConnected && (
-          <div className="mb-6 flex items-start gap-3 rounded-xl bg-blue-50 p-4 ring-1 ring-blue-200 dark:bg-blue-950/30 dark:ring-blue-800">
-            <IconInfoCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
-            <p className="text-sm text-blue-900 dark:text-blue-200">
+          <div className="mb-6 flex items-start gap-3 rounded-xl bg-brand-tint p-4 ring-1 ring-primary/20">
+            <IconInfoCircle className="mt-0.5 h-[18px] w-[18px] shrink-0 text-brand-text" strokeWidth={1.75} />
+            <p className="text-sm text-foreground">
               {t('connectNudge')}{' '}
               <Link
                 href="/dashboard/admin/settings?tab=payment"
@@ -117,8 +117,8 @@ export default async function AdminProductsPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{products?.length || 0}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconShoppingCart className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconShoppingCart className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -131,8 +131,8 @@ export default async function AdminProductsPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.active')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{activeCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconShoppingCart className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                  <IconShoppingCart className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -145,8 +145,8 @@ export default async function AdminProductsPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.archived')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{inactiveCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                  <IconArchive className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                  <IconArchive className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -169,7 +169,7 @@ export default async function AdminProductsPage() {
                         <div className="mt-2 flex items-center gap-2">
                           <Badge
                             variant={isActive ? 'default' : 'secondary'}
-                            className={`text-[10px] ${isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                            className={`text-[10px] ${isActive ? 'bg-success/10 text-success border-success/30' : ''}`}
                           >
                             {t(`card.status.${product.status}`)}
                           </Badge>

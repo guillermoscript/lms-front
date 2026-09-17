@@ -31,19 +31,19 @@ export function OrderingBlockEditor({ block, onChange }: OrderingBlockEditorProp
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-gradient-to-br from-rose-500/5 to-pink-500/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-rose-600">
+    <div className="space-y-3 rounded-lg border bg-brand-tint p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconSortAscending className="h-4 w-4" />
         {t('blocks.ordering.label')}
       </div>
 
       <div className="space-y-2">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-foreground">
           {t('ordering.hint')}
         </span>
         {block.items.map((item, index) => (
           <div key={index} className="flex items-center gap-2">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-100 text-xs font-medium text-rose-700 dark:bg-rose-900 dark:text-rose-200">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
               {index + 1}
             </span>
             <Input
@@ -77,7 +77,7 @@ export function OrderingBlockEditor({ block, onChange }: OrderingBlockEditorProp
       </Button>
 
       <div>
-        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
+        <span className="text-xs text-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}

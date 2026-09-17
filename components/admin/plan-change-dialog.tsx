@@ -157,7 +157,7 @@ export function PlanChangeDialog({ open, onOpenChange, target, onConfirmed }: Pl
           {preview.kind === 'blocked' && (
             <ul className="space-y-2">
               {preview.violations.map((v) => (
-                <li key={v.resource} className="flex items-start gap-2 rounded-md border border-amber-300/50 bg-amber-50 p-3 text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-200">
+                <li key={v.resource} className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-warning">
                   <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>
                     {v.resource === 'courses'

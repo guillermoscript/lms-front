@@ -233,7 +233,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
 
       {/* Manual Subscription Renewal Section */}
       {showRenewalSection && (
-        <Card className="border-yellow-200 dark:border-yellow-800">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconRefresh className="h-5 w-5" />
@@ -305,16 +305,17 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
                           href={req.proof_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                          className="text-xs text-brand-text hover:underline flex items-center gap-1"
                         >
                           <IconPhoto className="h-3 w-3" />
                           {tPending('viewProof')}
                         </a>
                       )}
-                      <Badge variant={
-                        req.status === 'pending' ? 'secondary'
-                          : req.status === 'instructions_sent' ? 'outline'
-                            : 'default'
+                      <Badge variant="outline" className={
+                        req.status === 'pending' ? 'border-warning/30 bg-warning/10 text-warning'
+                          : req.status === 'instructions_sent' ? 'border-border bg-muted text-foreground'
+                            : req.status === 'payment_received' ? 'border-primary/30 bg-brand-tint text-brand-text'
+                              : undefined
                       }>
                         {req.status === 'pending' && tPending('statusPending')}
                         {req.status === 'instructions_sent' && tPending('statusInstructionsSent')}

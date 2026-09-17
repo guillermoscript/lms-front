@@ -146,8 +146,8 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
                   <IconArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                <IconTemplate className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+              <div className="w-9 h-9 rounded-lg bg-brand-tint flex items-center justify-center">
+                <IconTemplate className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <DialogHeader className="p-0 space-y-0">
@@ -234,7 +234,7 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
                                 {template.description}
                               </p>
                             </div>
-                            <IconArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+                            <IconArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-brand-text transition-colors shrink-0 mt-0.5" />
                           </div>
                           {template.variables.variables.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 pt-3 border-t">
@@ -301,8 +301,8 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
                         </>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-                          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                            <IconCheck className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                          <div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center">
+                            <IconCheck className="h-7 w-7 text-success" />
                           </div>
                           <div className="space-y-1">
                             <p className="text-base font-medium">{t('noVariablesMsg')}</p>
@@ -321,12 +321,12 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
                       {selectedTemplate.task_description_template && (
                         <div className="space-y-2.5">
                           <Label className="text-sm font-semibold">{t('studentPreviewTitle')}</Label>
-                          <div className="rounded-xl border bg-[#1e1e2e] p-5">
-                            <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed text-[#cdd6f4]">
+                          <div className="rounded-xl border bg-muted/40 p-5">
+                            <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed">
                               {replaceVariables(selectedTemplate.task_description_template)}
                             </p>
                             {hasVariables && !allVariablesFilled && (
-                              <p className="text-xs text-amber-400/70 mt-4 italic border-t border-white/5 pt-3">
+                              <p className="text-xs text-warning mt-4 italic border-t pt-3">
                                 {t('fillAllVariables')}
                               </p>
                             )}
@@ -337,12 +337,12 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
                       {selectedTemplate.system_prompt_template && (
                         <div className="space-y-2.5">
                           <Label className="text-sm font-semibold">{t('aiPreviewTitle')}</Label>
-                          <div className="rounded-xl border bg-[#1e1e2e] p-5">
-                            <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed text-[#cdd6f4]">
+                          <div className="rounded-xl border bg-muted/40 p-5">
+                            <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed">
                               {replaceVariables(selectedTemplate.system_prompt_template)}
                             </p>
                             {hasVariables && !allVariablesFilled && (
-                              <p className="text-xs text-amber-400/70 mt-4 italic border-t border-white/5 pt-3">
+                              <p className="text-xs text-warning mt-4 italic border-t pt-3">
                                 {t('fillAllVariables')}
                               </p>
                             )}

@@ -14,8 +14,8 @@ export function CompletionCriteriaSection() {
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
-                    <IconChecklist className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
+                    <IconChecklist className="h-4 w-4 text-brand-text" />
                 </div>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
                     {t('completionCriteria')}
@@ -27,7 +27,7 @@ export function CompletionCriteriaSection() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">{t('minLessonCompletion')}</Label>
-                        <span className="text-sm font-mono font-medium tabular-nums text-primary">
+                        <span className="text-sm font-mono font-medium tabular-nums text-brand-text">
                             {formData.min_lesson_completion_pct}%
                         </span>
                     </div>
@@ -45,7 +45,7 @@ export function CompletionCriteriaSection() {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between">
                         <Label className="text-sm font-medium">{t('minExamPassScore')}</Label>
-                        <span className="text-sm font-mono font-medium tabular-nums text-primary">
+                        <span className="text-sm font-mono font-medium tabular-nums text-brand-text">
                             {formData.min_exam_pass_score}%
                         </span>
                     </div>

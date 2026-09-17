@@ -103,8 +103,8 @@ export default async function AdminCoursesPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{courses?.length || 0}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -117,8 +117,8 @@ export default async function AdminCoursesPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.published')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{publishedCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                  <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -131,8 +131,8 @@ export default async function AdminCoursesPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.drafts')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{draftCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                  <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>

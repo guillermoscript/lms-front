@@ -145,14 +145,14 @@ export function CheckpointBlockEditor({ block, onChange, checkpointContext }: Ch
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-gradient-to-br from-teal-500/5 to-cyan-500/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-teal-600">
+    <div className="space-y-3 rounded-lg border bg-brand-tint p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconChecklist className="h-4 w-4" />
         {t('title')}
       </div>
 
       {loading && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-foreground">
           <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
           {t('loading')}
         </div>
@@ -165,7 +165,7 @@ export function CheckpointBlockEditor({ block, onChange, checkpointContext }: Ch
               <p className="text-sm font-medium">{selected.exercise?.title || t('unknownExercise')}</p>
               {selected.label && <p className="text-xs text-muted-foreground">{selected.label}</p>}
               {selected.exercise?.exercise_type && (
-                <p className="mt-0.5 text-[11px] text-muted-foreground/70">{selected.exercise.exercise_type}</p>
+                <p className="mt-0.5 text-[11px] text-foreground">{selected.exercise.exercise_type}</p>
               )}
             </div>
             <button

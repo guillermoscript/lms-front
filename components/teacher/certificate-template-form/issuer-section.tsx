@@ -14,8 +14,8 @@ export function IssuerSection() {
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                    <IconBuilding className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
+                    <IconBuilding className="h-4 w-4 text-brand-text" />
                 </div>
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
                     {t('issuerDetails')}
@@ -57,6 +57,8 @@ export function IssuerSection() {
                     <div className="flex items-center gap-3">
                         {formData.logo_url ? (
                             <div className="relative group">
+                                {/* Opaque light plate behind the uploaded logo: the artwork is usually dark ink on
+                                    transparency, and it prints on the certificate's paper, not on a themed surface. */}
                                 <img
                                     src={formData.logo_url}
                                     alt="Logo"

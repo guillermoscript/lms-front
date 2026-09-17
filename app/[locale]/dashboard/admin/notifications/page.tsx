@@ -79,7 +79,7 @@ export default async function NotificationsPage() {
                   <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.total}</p>
                 </div>
-                <IconBell className="h-10 w-10 text-blue-500" />
+                <IconBell className="h-10 w-10 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -91,7 +91,7 @@ export default async function NotificationsPage() {
                   <p className="text-sm text-muted-foreground">{t('stats.sent')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.sent}</p>
                 </div>
-                <IconSend className="h-10 w-10 text-green-500" />
+                <IconSend className="h-10 w-10 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -103,7 +103,7 @@ export default async function NotificationsPage() {
                   <p className="text-sm text-muted-foreground">{t('stats.scheduled')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.scheduled}</p>
                 </div>
-                <IconClock className="h-10 w-10 text-orange-500" />
+                <IconClock className="h-10 w-10 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>
@@ -115,7 +115,7 @@ export default async function NotificationsPage() {
                   <p className="text-sm text-muted-foreground">{t('stats.drafts')}</p>
                   <p className="mt-2 text-3xl font-bold">{stats.draft}</p>
                 </div>
-                <IconFile className="h-10 w-10 text-gray-500" />
+                <IconFile className="h-10 w-10 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>

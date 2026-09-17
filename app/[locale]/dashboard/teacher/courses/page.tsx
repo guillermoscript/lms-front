@@ -80,7 +80,11 @@ export default async function TeacherCoursesPage() {
                         {t('filter')}
                     </Button>
                     <div className="h-6 w-px bg-border mx-0.5" />
-                    <Button variant="ghost" size="icon-sm" className="text-primary bg-primary/5" aria-label={t('grid')}>
+                    {/* the ghost Button variant has a built-in hover background/foreground override that would
+                        otherwise clear this active-view tint on hover. important-marked overrides are used
+                        because Tailwind emits same-specificity hover utilities in alphabetical order, which
+                        would put an unmarked override before the variant's own hover rule and lose the tie */}
+                    <Button variant="ghost" size="icon-sm" className="text-brand-text bg-brand-tint hover:!bg-brand-tint hover:!text-brand-text" aria-label={t('grid')}>
                         <IconLayoutGrid size={16} />
                     </Button>
                     <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={t('list')}>
@@ -112,13 +116,13 @@ export default async function TeacherCoursesPage() {
                                         />
                                     ) : (
                                         <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/5 to-primary/15">
-                                            <IconBook className="h-10 w-10 text-primary/30" />
+                                            <IconBook className="h-10 w-10 text-brand-text/40" />
                                         </div>
                                     )}
                                     <div className="absolute top-2.5 right-2.5">
                                         <Badge
                                             variant={course.status === 'published' ? 'default' : 'secondary'}
-                                            className={`text-[10px] backdrop-blur-sm ${course.status === 'published' ? 'bg-emerald-100/90 text-emerald-700 dark:bg-emerald-950/90 dark:text-emerald-400' : 'bg-background/80'}`}
+                                            className={`text-[10px] ${course.status === 'published' ? 'bg-success text-success-foreground' : 'bg-background/80 backdrop-blur-sm'}`}
                                         >
                                             {t(`status.${course.status}`)}
                                         </Badge>
@@ -126,7 +130,7 @@ export default async function TeacherCoursesPage() {
                                 </div>
 
                                 <CardHeader className="pb-2">
-                                    <CardTitle className="line-clamp-2 text-base leading-tight group-hover:text-primary transition-colors">
+                                    <CardTitle className="line-clamp-2 text-base leading-tight group-hover:text-brand-text transition-colors">
                                         {course.title}
                                     </CardTitle>
                                     {course.description && (
@@ -165,7 +169,7 @@ export default async function TeacherCoursesPage() {
                                             href={`/dashboard/teacher/courses/${course.course_id}`}
                                             className="flex-1"
                                         >
-                                            <Button variant="outline" size="sm" className="w-full gap-2 text-xs hover:text-primary hover:border-primary/40 transition-colors">
+                                            <Button variant="outline" size="sm" className="w-full gap-2 text-xs hover:text-brand-text hover:border-primary/40 transition-colors">
                                                 <IconEdit className="h-3.5 w-3.5" />
                                                 {t('edit')}
                                             </Button>

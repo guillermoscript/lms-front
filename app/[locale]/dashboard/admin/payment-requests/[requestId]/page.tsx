@@ -15,6 +15,7 @@ import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { PaymentRequestActions } from '@/components/admin/payment-request-actions'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { PAYMENT_REQUEST_STATUS_STYLES } from '@/lib/payments/payment-request-status'
 
 interface PageProps {
   params: Promise<{
@@ -94,42 +95,6 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
   ])
   const fmtDate = (value: string) => formatDateTime(value, { locale, timeZone })
 
-  // Get status badge variant
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'secondary'
-      case 'contacted':
-        return 'default'
-      case 'payment_received':
-        return 'outline'
-      case 'completed':
-        return 'default'
-      case 'cancelled':
-        return 'destructive'
-      default:
-        return 'secondary'
-    }
-  }
-
-  // Get status color for the badge
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-500'
-      case 'contacted':
-        return 'bg-blue-500'
-      case 'payment_received':
-        return 'bg-purple-500'
-      case 'completed':
-        return 'bg-green-500'
-      case 'cancelled':
-        return 'bg-red-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -151,8 +116,8 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                   {t('detail.title', { id: request.request_id })}
                 </h1>
                 <Badge
-                  variant={getStatusVariant(request.status)}
-                  className={`${getStatusColor(request.status)} text-white`}
+                  variant="outline"
+                  className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
                 >
                   {t(`status.${request.status}`)}
                 </Badge>
@@ -183,14 +148,14 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <IconMail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${request.contact_email}`} className="text-blue-600 hover:underline">
+                  <a href={`mailto:${request.contact_email}`} className="text-brand-text hover:underline">
                     {request.contact_email}
                   </a>
                 </div>
                 {request.contact_phone && (
                   <div className="flex items-center gap-2 text-sm">
                     <IconPhone className="h-4 w-4 text-muted-foreground" />
-                    <a href={`tel:${request.contact_phone}`} className="text-blue-600 hover:underline">
+                    <a href={`tel:${request.contact_phone}`} className="text-brand-text hover:underline">
                       {request.contact_phone}
                     </a>
                   </div>
@@ -202,7 +167,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
                   <Separator />
                   <div>
                     <p className="text-sm font-medium mb-2">{t('detail.studentMessage')}</p>
-                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                    <p className="text-sm text-foreground bg-muted p-3 rounded-lg">
                       {request.message}
                     </p>
                   </div>
@@ -279,7 +244,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
               {request.payment_instructions && (
                 <div>
                   <p className="text-sm font-medium mb-1">{t('detail.paymentInstructions')}</p>
-                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg whitespace-pre-wrap">
+                  <p className="text-sm text-foreground bg-muted p-3 rounded-lg whitespace-pre-wrap">
                     {request.payment_instructions}
                   </p>
                 </div>
@@ -326,7 +291,7 @@ export default async function PaymentRequestDetailPage({ params }: PageProps) {
               {request.admin_notes && (
                 <div>
                   <p className="text-sm font-medium mb-1">{t('detail.adminNotes')}</p>
-                  <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                  <p className="text-sm text-foreground bg-muted p-3 rounded-lg">
                     {request.admin_notes}
                   </p>
                 </div>

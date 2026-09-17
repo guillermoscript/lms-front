@@ -169,7 +169,7 @@ export function OnboardingChecklist({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
     >
-      <Card className="relative overflow-hidden border-primary/20 bg-primary/[0.02]">
+      <Card className="relative overflow-hidden bg-primary/[0.02]">
         <CardContent className="p-5">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
@@ -206,18 +206,18 @@ export function OnboardingChecklist({
               initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.35 }}
-              className="mb-4 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4"
+              className="mb-4 rounded-xl border border-success/30 bg-success/10 p-4"
               data-testid="onboarding-milestone"
             >
               <div className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
                   <IconConfetti className="size-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-emerald-950 dark:text-emerald-50">
+                  <p className="font-semibold text-foreground">
                     {milestone.title}
                   </p>
-                  <p className="mt-1 text-xs text-emerald-900/70 dark:text-emerald-100/70">
+                  <p className="mt-1 text-xs text-foreground/80">
                     {milestone.description}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -247,11 +247,11 @@ export function OnboardingChecklist({
 
           {nextStep && (
             <div
-              className="rounded-xl border border-primary/25 bg-background p-4 shadow-sm"
+              className="rounded-xl border border-primary/20 bg-background p-4 shadow-sm"
               data-testid="onboarding-next-step"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-text">
                   {t('nextAction')}
                 </p>
                 {nextStep.timeHint && (
@@ -362,7 +362,7 @@ export function OnboardingChecklist({
                   <p className="min-w-0 flex-1 text-xs font-medium line-through decoration-muted-foreground/50">
                     {step.label}
                   </p>
-                  <IconArrowRight className="size-3.5 shrink-0 opacity-50 transition-colors group-hover:text-primary" />
+                  <IconArrowRight className="size-3.5 shrink-0 opacity-50 transition-colors group-hover:text-brand-text" />
                 </Link>
               ))}
             </div>
@@ -396,7 +396,7 @@ export function OnboardingChecklist({
                         </p>
                       )}
                     </div>
-                    <IconArrowRight className="size-3.5 text-muted-foreground/50 transition-colors group-hover/step:text-primary" />
+                    <IconArrowRight className="size-3.5 text-muted-foreground/50 transition-colors group-hover/step:text-brand-text" />
                   </Link>
                 ))}
               </div>

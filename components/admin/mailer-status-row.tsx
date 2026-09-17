@@ -22,8 +22,8 @@ export async function MailerStatusRow({ status }: { status: MailerStatus }) {
       <Icon
         className={
           status.configured
-            ? 'mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400'
-            : 'mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400'
+            ? 'mt-0.5 h-5 w-5 shrink-0 text-success'
+            : 'mt-0.5 h-5 w-5 shrink-0 text-warning'
         }
         aria-hidden="true"
       />

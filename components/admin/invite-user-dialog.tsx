@@ -170,12 +170,12 @@ export function InviteUserDialog({ joinUrl }: InviteUserDialogProps) {
             data-email-sent={result.emailSent ? 'true' : 'false'}
           >
             {result.emailSent ? (
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
-                <IconCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
+                <IconCheck className="h-5 w-5 text-success" />
               </div>
             ) : (
-              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950">
-                <IconMailOff className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-warning/10">
+                <IconMailOff className="h-5 w-5 text-warning" />
               </div>
             )}
             <p className="text-sm font-medium" data-testid="invite-result-title">

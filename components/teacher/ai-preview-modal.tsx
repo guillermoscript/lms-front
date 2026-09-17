@@ -95,17 +95,17 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
             {/* Header */}
             <div className="px-6 py-4 border-b flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                  <IconRobot className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                <div className="w-9 h-9 rounded-lg bg-brand-tint flex items-center justify-center">
+                  <IconRobot className="h-5 w-5 text-brand-text" />
                 </div>
                 <div>
                   <h2 className="font-semibold text-base leading-none mb-0.5">{t('modalTitle')}</h2>
                   <p className="text-xs text-muted-foreground">{t('modalSubtitle')}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 rounded-lg border border-warning/30">
+                <div className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-warning">
                   {t('previewSession')}
                 </span>
               </div>

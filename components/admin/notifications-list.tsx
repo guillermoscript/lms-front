@@ -47,32 +47,32 @@ export default function NotificationsList({ notifications }: NotificationsListPr
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
       case 'announcement':
-        return 'bg-blue-500'
+        return 'bg-primary text-primary-foreground'
       case 'alert':
-        return 'bg-red-500'
+        return 'bg-destructive text-destructive-foreground'
       case 'success':
-        return 'bg-green-500'
+        return 'bg-success text-success-foreground'
       case 'warning':
-        return 'bg-yellow-500'
+        return 'bg-warning text-warning-foreground'
       case 'error':
-        return 'bg-red-600'
+        return 'bg-destructive text-destructive-foreground'
       default:
-        return 'bg-gray-500'
+        return 'bg-secondary text-secondary-foreground'
     }
   }
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'sent':
-        return 'bg-green-500'
+        return 'bg-success text-success-foreground'
       case 'scheduled':
-        return 'bg-orange-500'
+        return 'bg-warning text-warning-foreground'
       case 'draft':
-        return 'bg-gray-500'
+        return 'bg-secondary text-secondary-foreground'
       case 'cancelled':
-        return 'bg-red-500'
+        return 'bg-destructive text-destructive-foreground'
       default:
-        return 'bg-gray-500'
+        return 'bg-secondary text-secondary-foreground'
     }
   }
 
@@ -126,17 +126,17 @@ export default function NotificationsList({ notifications }: NotificationsListPr
               {/* Header */}
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold">{notification.title}</h3>
-                <Badge className={`${getTypeBadgeColor(notification.notification_type)} text-white`}>
+                <Badge className={getTypeBadgeColor(notification.notification_type)}>
                   {t(`types.${notification.notification_type}`)}
                 </Badge>
-                <Badge className={`${getStatusBadgeColor(notification.status)} text-white`}>
+                <Badge className={getStatusBadgeColor(notification.status)}>
                   {t(`list.status.${notification.status}`)}
                 </Badge>
                 {notification.priority === 'urgent' && (
                   <Badge variant="destructive">{t('priority.urgent')}</Badge>
                 )}
                 {notification.priority === 'high' && (
-                  <Badge className="bg-orange-500 text-white">{t('priority.high')}</Badge>
+                  <Badge className="border-warning/30 bg-warning/10 text-warning">{t('priority.high')}</Badge>
                 )}
               </div>
 

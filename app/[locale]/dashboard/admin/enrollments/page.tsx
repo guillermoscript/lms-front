@@ -110,8 +110,8 @@ export default async function AdminEnrollmentsPage({
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{enrollments?.length || 0}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconCertificate className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconCertificate className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -124,8 +124,8 @@ export default async function AdminEnrollmentsPage({
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.active')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{activeCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconClock className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                  <IconClock className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -138,8 +138,8 @@ export default async function AdminEnrollmentsPage({
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.completed')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{completedCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950/40">
-                  <IconCheck className="h-[18px] w-[18px] text-violet-600 dark:text-violet-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconCheck className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -199,7 +199,7 @@ export default async function AdminEnrollmentsPage({
                                     ? 'secondary'
                                     : 'outline'
                               }
-                              className={`text-[10px] ${enrollment.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                              className={`text-[10px] ${enrollment.status === 'active' ? 'bg-success/10 text-success border-success/30' : ''}`}
                             >
                               {enrollment.status === 'active' ? t('stats.active') : t('stats.completed')}
                             </Badge>

@@ -125,7 +125,7 @@ export function SubscriptionActions({
           {isActive && !cancelAtPeriodEnd && (
             <DropdownMenuItem
               onClick={() => setCancelDialogOpen(true)}
-              className="text-orange-600"
+              className="text-warning"
             >
               <IconX className="mr-2 h-4 w-4" />
               {t('actions.cancel')}
@@ -135,7 +135,7 @@ export function SubscriptionActions({
           {cancelAtPeriodEnd && (
             <DropdownMenuItem
               onClick={() => setReactivateDialogOpen(true)}
-              className="text-green-600"
+              className="text-success"
             >
               <IconRefresh className="mr-2 h-4 w-4" />
               {t('actions.reactivate')}

@@ -22,9 +22,9 @@ import {
 import { cn } from '@/lib/utils'
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  medium: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-  hard: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+  easy: 'bg-success/10 text-success border-success/20',
+  medium: 'bg-warning/10 text-warning border-warning/20',
+  hard: 'bg-destructive/10 text-destructive border-destructive/20',
 }
 
 export function ExerciseDetailsStep() {

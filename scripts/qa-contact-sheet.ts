@@ -13,11 +13,14 @@ import { chromium } from 'playwright'
 import { readdirSync, mkdirSync, existsSync, writeFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { execSync } from 'node:child_process'
 
 const THEMES = ['estructura', 'andina', 'kodigo', 'luz', 'platform']
 const MODES = ['light', 'dark']
 const CELL_W = 340
 const CELL_H = 560
+
+const BRANCH = process.env.SHEET_BRANCH ?? execSync("git rev-parse --abbrev-ref HEAD").toString().trim()
 
 function screensIn(dir: string): string[] {
   const names = new Set<string>()
@@ -57,7 +60,7 @@ function sheetHtml(screen: string, beforeDir: string, afterDir: string): string 
     .cell.missing { display: flex; align-items: center; justify-content: center; color: #999; font-style: italic; }
     .spacer { grid-column: 1; }
   </style>
-  <h1>${screen} — <code>master</code> vs <code>refactor/public-theme-tokens-764</code></h1>
+  <h1>${screen} — <code>master</code> vs <code>${BRANCH}</code></h1>
   <p class="sub">Every theme kit plus the no-kit platform default, light and dark. Top-anchored; cells are cropped to ${CELL_W}&times;${CELL_H}.</p>
   <div class="grid">
     <div class="spacer"></div>${head}

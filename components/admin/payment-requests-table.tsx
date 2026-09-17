@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PAYMENT_REQUEST_STATUS_STYLES } from '@/lib/payments/payment-request-status'
 import { PaymentRequestDialog } from './payment-request-dialog'
 
 interface PaymentRequest {
@@ -51,14 +52,6 @@ interface PaymentRequest {
 // Assuming PaymentRequestWithUser is equivalent to PaymentRequest for this context,
 // or that it's defined elsewhere. If not, this type will be undefined.
 type PaymentRequestWithUser = PaymentRequest;
-
-const statusColors = {
-  pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  contacted: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  payment_received: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  completed: 'bg-green-500/10 text-green-500 border-green-500/20',
-  cancelled: 'bg-red-500/10 text-red-500 border-red-500/20',
-}
 
 export function PaymentRequestsTable({
   requests,
@@ -129,7 +122,7 @@ export function PaymentRequestsTable({
                 <TableCell>
                   <Badge
                     variant="outline"
-                    className={statusColors[request.status as keyof typeof statusColors]}
+                    className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
                   >
                     {t(`status.${request.status}`)}
                   </Badge>

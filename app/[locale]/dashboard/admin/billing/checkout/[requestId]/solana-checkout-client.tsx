@@ -125,6 +125,10 @@ export function SolanaCheckoutClient({
             {qr ? (
               // A data: URL generated in the browser — next/image has nothing to
               // optimize here and would only round-trip it through the loader.
+              // The QR keeps an explicit white plate + quiet zone on every theme —
+              // its modules are black and inverted or tinted quiet zones fail on a
+              // meaningful share of phone scanners. Content colour, not chrome: do
+              // not tokenise it.
               // eslint-disable-next-line @next/next/no-img-element
               <img src={qr} alt={t('qrAlt')} className="size-[260px] rounded-lg border bg-white p-2" />
             ) : (
@@ -146,7 +150,7 @@ export function SolanaCheckoutClient({
             >
               {confirmed ? (
                 <>
-                  <IconCircleCheck aria-hidden className="size-4 text-primary" />
+                  <IconCircleCheck aria-hidden className="size-4 text-success" />
                   {t('confirmed')}
                 </>
               ) : (

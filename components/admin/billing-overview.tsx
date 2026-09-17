@@ -159,7 +159,7 @@ export function BillingOverview({
                       {subscription.interval === 'yearly' ? t('annualBilling') : t('monthlyBilling')}
                     </Badge>
                     {subscription?.cancelAtPeriodEnd && periodEnd && (
-                      <p className="font-medium text-amber-700 dark:text-amber-400">
+                      <p className="font-medium text-warning">
                         {t('cancelOnDate', { date: periodEnd.toLocaleDateString() })}
                       </p>
                     )}
@@ -175,7 +175,7 @@ export function BillingOverview({
           {upcomingPayment && formattedUpcomingAmount && !subscription?.cancelAtPeriodEnd && (
             <section aria-label={t('upcomingPayment')} className="flex flex-col gap-3 rounded-lg border bg-muted/25 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-brand-text" />
                 <div className="text-sm">
                   <p className="font-medium">{t('upcomingPayment')}</p>
                   <p className="mt-1 text-muted-foreground">
@@ -221,7 +221,7 @@ export function BillingOverview({
           )}
 
           {showRenewalWarning && (
-            <div className="flex items-start gap-3 rounded-md bg-yellow-50 dark:bg-yellow-950 p-4 text-sm text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-start gap-3 rounded-md border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
               <IconAlertTriangle className="h-5 w-5 mt-0.5 shrink-0" />
               <div className="space-y-1">
                 <p className="font-semibold">{t('renewalRequired')}</p>
@@ -237,8 +237,8 @@ export function BillingOverview({
                 nothing to recover from, and a permanent button would invite
                 clicks that can only ever report "no change" (#550). */}
             {accessCutoffAt && onRecheckClick && (
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-50 p-3 dark:bg-amber-950/20">
-                <p className="min-w-0 flex-1 text-sm text-pretty text-amber-900 dark:text-amber-100">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
+                <p className="min-w-0 flex-1 text-sm text-pretty text-warning">
                   {t('recheckDescription')}
                 </p>
                 <Button

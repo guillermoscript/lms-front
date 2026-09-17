@@ -59,29 +59,21 @@ export default async function MonetizationPage() {
       title: t('stats.totalRevenue'),
       value: formatCurrency(revenue.totalRevenue, revenue.currency),
       icon: IconCurrencyDollar,
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
     },
     {
       title: t('stats.activeProducts'),
       value: String(productCount ?? 0),
       icon: IconShoppingCart,
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      iconColor: 'text-blue-600 dark:text-blue-400',
     },
     {
       title: t('stats.activePlans'),
       value: String(planCount ?? 0),
       icon: IconCalendar,
-      bg: 'bg-violet-50 dark:bg-violet-950/40',
-      iconColor: 'text-violet-600 dark:text-violet-400',
     },
     {
       title: t('stats.activeSubscriptions'),
       value: String(subscriptionCount ?? 0),
       icon: IconCrown,
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
     },
   ]
 
@@ -91,48 +83,36 @@ export default async function MonetizationPage() {
       description: t('nav.productsDesc'),
       href: '/dashboard/admin/products',
       icon: IconShoppingCart,
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      iconColor: 'text-blue-600 dark:text-blue-400',
     },
     {
       title: t('nav.plans'),
       description: t('nav.plansDesc'),
       href: '/dashboard/admin/plans',
       icon: IconCalendar,
-      bg: 'bg-violet-50 dark:bg-violet-950/40',
-      iconColor: 'text-violet-600 dark:text-violet-400',
     },
     {
       title: t('nav.revenue'),
       description: t('nav.revenueDesc'),
       href: '/dashboard/admin/revenue',
       icon: IconTrendingUp,
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
     },
     {
       title: t('nav.transactions'),
       description: t('nav.transactionsDesc'),
       href: '/dashboard/admin/transactions',
       icon: IconReceipt,
-      bg: 'bg-orange-50 dark:bg-orange-950/40',
-      iconColor: 'text-orange-600 dark:text-orange-400',
     },
     {
       title: t('nav.subscriptions'),
       description: t('nav.subscriptionsDesc'),
       href: '/dashboard/admin/subscriptions',
       icon: IconCrown,
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
     },
     {
       title: t('nav.paymentRequests'),
       description: t('nav.paymentRequestsDesc'),
       href: '/dashboard/admin/payment-requests',
       icon: IconFileInvoice,
-      bg: 'bg-pink-50 dark:bg-pink-950/40',
-      iconColor: 'text-pink-600 dark:text-pink-400',
     },
   ]
 
@@ -156,37 +136,37 @@ export default async function MonetizationPage() {
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         {/* Stripe Connect Status */}
         {isStripeConnected ? (
-          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-5 ring-1 ring-emerald-200 dark:ring-emerald-800">
+          <div className="rounded-xl bg-success/10 p-5 ring-1 ring-success/30">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
-                <IconCheck className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/15">
+                <IconCheck className="h-[18px] w-[18px] text-success" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                <h3 className="text-sm font-semibold text-success">
                   {t('stripe.connected')}
                 </h3>
-                <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+                <p className="mt-0.5 text-xs text-success">
                   {t('stripe.connectedDesc')}
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-5 ring-1 ring-amber-200 dark:ring-amber-800">
+          <div className="rounded-xl bg-warning/10 p-5 ring-1 ring-warning/30">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
-                <IconAlertCircle className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/15">
+                <IconAlertCircle className="h-[18px] w-[18px] text-warning" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                <h3 className="text-sm font-semibold text-warning">
                   {t('stripe.notConnected')}
                 </h3>
-                <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                <p className="mt-0.5 text-xs text-warning">
                   {t('stripe.notConnectedDesc')}
                 </p>
                 <Link
                   href="/dashboard/admin/settings?tab=payment"
-                  className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 h-8 px-4 transition-colors"
+                  className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-warning text-warning-foreground hover:bg-warning/90 h-8 px-4 transition-colors"
                 >
                   {t('stripe.setup')}
                 </Link>
@@ -216,16 +196,16 @@ export default async function MonetizationPage() {
                   {t('split.platformFeeDesc')}
                 </p>
               </div>
-              <div className="rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 p-4 ring-1 ring-emerald-100 dark:ring-emerald-900/40 space-y-2">
+              <div className="rounded-xl bg-brand-tint p-4 ring-1 ring-primary/20 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-medium uppercase tracking-wider text-foreground">
                     {t('split.yourRevenue')}
                   </span>
-                  <Badge variant="default" className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                  <Badge variant="default" className="text-[10px]">
                     {schoolPercentage}%
                   </Badge>
                 </div>
-                <p className="text-[11px] text-muted-foreground/70">
+                <p className="text-[11px] text-foreground/70">
                   {t('split.yourRevenueDesc')}
                 </p>
               </div>
@@ -247,8 +227,8 @@ export default async function MonetizationPage() {
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} strokeWidth={1.75} />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                    <stat.icon className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                   </div>
                 </div>
               </CardContent>
@@ -265,8 +245,8 @@ export default async function MonetizationPage() {
                 <Card className="group transition-all duration-200 hover:shadow-md hover:ring-1 hover:ring-primary/20 h-full">
                   <CardContent className="p-5">
                     <div className="flex items-start gap-3">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${card.bg}`}>
-                        <card.icon className={`h-5 w-5 ${card.iconColor}`} strokeWidth={1.75} />
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                        <card.icon className="h-5 w-5 text-brand-text" strokeWidth={1.75} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">

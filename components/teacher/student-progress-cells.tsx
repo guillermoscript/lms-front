@@ -25,11 +25,11 @@ import type { EngagementStatus } from '@/lib/analytics/student-progress'
 const STATUS_STYLE: Record<EngagementStatus, { icon: typeof IconCircleCheck; className: string }> = {
   active: {
     icon: IconPlayerPlay,
-    className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    className: 'border-success/30 bg-success/10 text-success',
   },
   stalled: {
     icon: IconPlayerPause,
-    className: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    className: 'border-warning/30 bg-warning/10 text-warning',
   },
   not_started: {
     icon: IconCircleDashed,
@@ -37,7 +37,7 @@ const STATUS_STYLE: Record<EngagementStatus, { icon: typeof IconCircleCheck; cla
   },
   completed: {
     icon: IconCircleCheck,
-    className: 'border-primary/30 bg-primary/10 text-primary',
+    className: 'border-primary/20 bg-brand-tint text-brand-text',
   },
 }
 
@@ -117,7 +117,7 @@ export function CountCell({ done, total }: { done: number; total: number }) {
   if (total === 0) return <span className="text-muted-foreground">—</span>
   return (
     <span className="tabular-nums">
-      <span className={cn('font-medium', done === total && 'text-primary')}>{done}</span>
+      <span className={cn('font-medium', done === total && 'text-brand-text')}>{done}</span>
       <span className="text-muted-foreground"> / {total}</span>
     </span>
   )

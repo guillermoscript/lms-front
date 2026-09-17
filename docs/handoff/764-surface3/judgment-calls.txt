@@ -1,0 +1,555 @@
+
+===== T1-block-editor =====
+
+[T1-block-editor-1] components/teacher/block-editor/add-block-menu.tsx :: BLOCK_ICONS, lines 38-62
+Q: The block palette gives each of 23 block types its own hue. Collapsing them to one token pair makes the picker a grid of 23 identically tinted tiles distinguished only by glyph and label. Is the per-type hue chrome to sweep, or a scanning affordance worth preserving in a theme-aware form?
+   - A. Uniform color:'text-brand-text' / bg:'bg-brand-tint' for all 23 entries (92 -> 0, one mechanical edit)
+   - B. Five colours by BLOCK_GROUPS using the theme-aware chart tokens: bg-[color-mix(in_oklch,var(--chart-N)_12%,transparent)] + text-[var(--chart-N)] (also 92 -> 0 since token-built arbitrary values are not counted, but it restructures the map and repurposes data-series tokens)
+   - C. Uniform brand as in A except the structural types (text, heading, divider, table) take bg-muted / text-muted-foreground, roughly preserving today's neutral-vs-hued split
+REC: A — obvious over clever, and what an independently-surveyed sibling group would land on.
+WHY: 92 of this group's 142 occurrences, and the choice also repaints sortable-block.tsx's per-block accent strip (cross-file finding X-1).
+
+[T1-block-editor-2] components/teacher/block-editor/editors/code-block.tsx :: whole component, lines 38-67 (8 palette + 2 raw)
+Q: The code editor is a hardcoded GitHub-dark panel (bg-[#0d1117], bg-[#161b22]) with grey toolbar controls sized to it. Is that content (the Shiki syntax theme the learner will see) or staff chrome that should follow the school theme?
+   - A. Keep all 10 with a keep comment; baseline entry stays [8, 2]
+   - B. Tokenize the whole panel (bg-muted / bg-card / border / text-foreground / text-muted-foreground); entry deleted and the group reaches a true 0/0, at the cost of WYSIWYG and of diverging from the merged learner file
+   - C. Partial — keep the two hex fills, tokenize the toolbar. Explicitly do NOT pick: a light-mode border and text-muted-foreground on a pinned #161b22 is the worst of both.
+REC: A — surface 1 made exactly this call for the learner twin components/lesson/code-block.tsx, which still carries [9, 2]; the two files should not disagree about the same panel.
+WHY: It is the only file in the group that does not reach zero, so the PR description and the baseline diff have to justify it explicitly.
+
+[T1-block-editor-3] components/teacher/block-editor/editors/quiz-block.tsx (and ordering, checkpoint, fill-in-the-blank, flashcard-set, matching-pairs, vocabulary) :: the seven accent-card wrappers and their label rows (rule set G in the plan; 21 of 142 occurrences)
+Q: After the sweep all seven interactive-block editors are bg-brand-tint + text-brand-text. A teacher scrolling a lesson sees seven identically tinted cards where seven hues used to separate them. Brand tint, or a neutral recessed panel?
+   - A. bg-brand-tint + text-brand-text — the brief's own mapping for a brand-like hue, and it keeps 'this block is interactive' distinct from the plain bg-card text/heading/image editors that carry no wash
+   - B. bg-muted/30 + text-foreground — fully neutral, zero brand weight, but interactive blocks then read the same as any other panel and the school's colour never appears in the editor
+REC: A
+WHY: Seven files must agree, and whichever is chosen is the pattern other surface-3 groups will copy for their own accent cards.
+
+[T1-block-editor-4] components/teacher/block-editor/editors/flashcard-set-block.tsx (also vocabulary-block.tsx, ordering-block.tsx) :: flashcard-set-block.tsx:33-34, vocabulary-block.tsx:17-18, ordering-block.tsx:34-35 and :46
+Q: The status rule maps amber -> warning and rose -> destructive mechanically. Here the hue is decorative: a flashcard set is not a caution and an ordering block is not an error. Brand accent or status?
+   - A. Treat all three as brand accents, keeping status tokens reserved for real states
+   - B. Follow the hue literally: flashcards/vocabulary -> warning, ordering -> destructive
+REC: A
+WHY: B would put three fixed platform status colours on blocks that have no state, and would undercut the genuine warning this same group introduces in expiring-url-warning.tsx.
+
+[T1-block-editor-5] components/teacher/block-editor/editors/fill-in-the-blank-block.tsx :: segment-type chip ternary, lines 47-52
+Q: The chip distinguishes a 'blank' segment from a 'text' segment with bg-primary/10 text-primary vs bg-muted text-muted-foreground. The guard cannot see it (both are tokens), but text-primary on a primary tint is the AA trap the brief names, and once the card behind it becomes bg-brand-tint the two branches nearly merge. Does this ternary still read as two states?
+   - A. bg-primary text-primary-foreground vs bg-muted text-foreground — solid against neutral, unambiguous on every kit
+   - B. bg-card text-brand-text vs bg-muted text-muted-foreground — quieter, but on the no-kit default --card equals --background so the 'blank' chip loses its fill
+   - C. Leave as-is; it is outside the ratchet
+REC: A
+WHY: It is the one place in the group where a ternary's two branches could stop reading as two states after tokenization, and the brief names this exact anti-pattern.
+
+===== T2-grading =====
+
+[T2-grading-1] components/teacher/submission-review.tsx :: lines 221, 296-299, 312-315, 378-381 (blue AI panel vs purple teacher-override badge/editor/notes)
+Q: The file encodes a two-way distinction in hue: blue = the AI graded this, purple = a human teacher touched this. The obvious mapping sends BOTH brand-like hues to brand-tint/brand-text, and the AI panel and the override panel render stacked in the same card — they would become one undifferentiated tinted block. Do both collapse to brand, or does teacher-override go neutral?
+   - A. Both -> bg-brand-tint / text-brand-text / border-primary/25; rely on IconRobot vs IconPencil+IconUser and the bold heading to distinguish them (this is literally what #770 did to the learner feedback block, which toggles AI/teacher inside one brand-tint panel)
+   - B. AI -> bg-brand-tint / text-brand-text / border-primary/25; teacher override (badge 221, editor 312-315, notes 378-381) -> bg-muted/50 border-border, icons text-muted-foreground, headings text-foreground
+   - C. AI -> bg-primary/5 border-primary/15 (weaker), teacher -> bg-brand-tint (stronger) — same hue, two strengths
+REC: B — the two panels appear simultaneously in the same card, so identical tints read as one region; an editing form is chrome and belongs on a neutral surface, and both states keep their icon plus a bold label. C is the clever option and will not converge with sibling surveys.
+WHY: It is the only place in the group where a sweep can erase a real semantic distinction (machine grade vs human override) that a teacher uses to trust a score.
+
+[T2-grading-2] components/teacher/submission-review.tsx :: lines 181 and 189 (header score pair: text-blue-600 AI score, text-green-600 final score)
+Q: Is the final score a 'success', or just the authoritative number? Mapping green -> success paints a 30% final score in the success colour, which misuses a status token; but dropping the colour weakens the AI-vs-final contrast the header is built on.
+   - A. AI -> text-brand-text, final -> text-foreground (contrast carried by the existing label + weight, no status token lies)
+   - B. AI -> text-brand-text, final -> text-success (literal hue mapping, keeps the two-colour read)
+   - C. AI -> text-muted-foreground, final -> text-foreground (treat the pair as primary/secondary data, no colour at all)
+REC: A — the final score is data, not a status; the two labels ('AI score' / 'Final score') already distinguish them, and text-foreground vs text-brand-text still reads as two different things.
+WHY: Using success for an arbitrary percentage is the kind of token misuse the next surface will copy.
+
+[T2-grading-3] components/teacher/student-progress-cells.tsx, components/teacher/student-progress-sheet.tsx :: cells: STATUS_STYLE.completed line 40, CountCell line 120; sheet: lines 187, 223, 257, 265
+Q: Should the sweep also move `text-primary` (used as text/icon colour) to `text-brand-text`? The guard does not count text-primary, so this is scope beyond the ratchet — but the convention says never text-primary on a tint, and #770's commit message says 'text-primary on surfaces becomes text-brand-text'.
+   - A. Sweep all six sites to text-brand-text (matches #770, and brand-text is the shade the kit-token test proves AA on background/card/muted/brand-tint)
+   - B. Only fix the true violation — STATUS_STYLE.completed, which is text-primary on bg-primary/10 — and leave the plain-background text-primary/icons alone
+   - C. Leave all text-primary alone; this sweep is palette-only
+REC: A — it is the same rule #770 applied one surface earlier, and leaving the icons on primary means a light tenant brand can make the completion ticks unreadable. If the orchestrator wants a minimal diff, B is the safe floor.
+WHY: Sibling groups will hit the same question; an inconsistent answer leaves half the staff surface on primary text and half on brand-text.
+
+[T2-grading-4] components/teacher/exam-submissions-review.tsx :: line 129 (IconClock in the 'Pending' stat tile, text-amber-500)
+Q: The pending STATUS BADGE below is deliberately neutral (variant=outline, no colour), but the pending STAT TILE icon is amber. After the sweep the literal mapping makes the tile text-warning while the badge stays neutral — same state, two tones.
+   - A. text-warning (literal amber -> warning mapping; the pending queue is the actionable one)
+   - B. text-muted-foreground (match the neutral pending badge, so one state has one tone)
+   - C. Make both warning — recolour the pending badge too
+REC: A — lowest-surprise mapping, and the mismatch is pre-existing rather than introduced; C changes a state's meaning and should not ride along in a token sweep.
+WHY: Trivial visually, but it is the sort of inconsistency a reviewer will spot in the before/after shots and ask about.
+
+[T2-grading-5] components/teacher/submission-review.tsx :: lines 209-212 (question Card: isCorrect ? border-l-green-500 : border-l-red-500)
+Q: The sweep touches this line anyway (it is guard-invisible but still hardcoded). For an ungraded free-text question `is_correct` is null, so the card already shows the 'wrong' border before anyone has graded it. Fix the third state while here, or map the two branches and leave the lie?
+   - A. Straight map only: border-l-success / border-l-destructive, logic untouched (flag the lie as a follow-up)
+   - B. Add a neutral branch: isPendingReview ? 'border-l-border' : isCorrect ? 'border-l-success' : 'border-l-destructive' (isPendingReview is already computed at line 205)
+REC: B — one extra ternary arm on a line the sweep is already rewriting, and it stops the teacher's own ungraded answers being pre-marked wrong; the card already carries a 'Needs grading' badge, so the neutral border agrees with it. If the orchestrator wants a pure colour sweep, A with a follow-up issue.
+WHY: It is a correctness-of-meaning issue on the exact line being edited — deferring it means touching the line twice.
+
+===== T3-routes =====
+
+[T3-routes-1] app/[locale]/dashboard/teacher/revenue/page.tsx :: revenueStats array L88-131 plus its valueColor consumer at L172
+Q: Are the emerald 'your share' and amber 'pending payout' tiles status colours, or decoration on four equally-weighted counts?
+   - (a) all four to bg-brand-tint / text-brand-text / group-hover:ring-primary/20, valueColor key deleted
+   - (b) semantic split: your-share to success, pending-payout to warning, other two to brand
+   - (c) four distinct chart tokens --chart-1..4 at /10
+REC: (a). #770 hit the identical four-hue stat row on app/[locale]/dashboard/student/progress/page.tsx:151-187 and collapsed all four to text-brand-text. Neither figure is a state — a pending payout is the normal steady state of any school that sells anything, so rendering it as a warning cries wolf on every load.
+WHY: 26 of that file's 52 hits, and (b)/(c) would set a different precedent for every other stat row in surface 3.
+
+[T3-routes-2] app/[locale]/dashboard/teacher/revenue/page.tsx :: L196-229, the 'platform fee' / 'your revenue' panel pair
+Q: Grey-vs-green is the whole point of this panel pair; after tokenising do they still read as two distinct things, and is 'your revenue' brand or success?
+   - (a) platform fee keeps bg-muted/40, your revenue becomes bg-brand-tint + ring-primary/20 with text-brand-text value and badge
+   - (b) your revenue becomes bg-success/10 + border-success/30 with text-success
+   - (c) both become bg-muted/40, distinguished by badge and label only
+REC: (a). Muted vs the school's own tint survives on every kit, and 'your revenue' is a quantity, not an outcome — the three status tokens are reserved for states the platform asserts. (c) destroys the contrast the pair exists to make.
+WHY: First tinted-panel pair in the teacher surface; the admin revenue screens will copy whichever way it goes.
+
+[T3-routes-3] app/[locale]/dashboard/teacher/page.tsx :: L233-241, 'quick actions' stat card
+Q: The card draws a progress bar hardcoded at w-[65%] with no data behind it. Tokenise a bar that means nothing, or delete it?
+   - (a) tokenise only: track bg-muted, fill bg-primary, keep w-[65%]
+   - (b) delete the bar, keep label + caption
+   - (c) tokenise now, note the fake data for a follow-up issue
+REC: (c). A colour sweep that silently removes visible UI invites 'why did the dashboard change?' in review; tokenise and flag the hardcoded 65% in the PR body.
+WHY: 3 hits either way — the real question is whether this sweep is allowed to delete UI.
+
+[T3-routes-4] app/[locale]/dashboard/teacher/page.tsx :: L390, bg-emerald-500 presence dot on each recent-enrollment avatar
+Q: Unlabelled 12px green dot: status token, brand token, or delete?
+   - (a) bg-success
+   - (b) bg-primary
+   - (c) delete it — the row already says 'X enrolled in Y'
+REC: (a). One token, and --success stays green on every kit so the familiar online-dot reading survives. It is colour-only, but it adds nothing a sighted-only user would miss; the sentence beside it is the content.
+WHY: Sets whether decorative dots on the teacher surface take a status token or a brand one.
+
+[T3-routes-5] app/[locale]/dashboard/teacher/courses/[courseId]/page.tsx :: L354 (lessons/sky), L422+425 (exercises/emerald), L492+495 (exams/amber)
+Q: Three per-tab category accents collapse to one brand treatment — does the page lose useful wayfinding?
+   - (a) collapse all three to bg-brand-tint text-brand-text + hover:border-primary/50
+   - (b) keep three distinct hues via --chart-1 / --chart-3 / --chart-5
+   - (c) collapse only exercises and exams, leave lessons
+REC: (a). The three lists live in mutually exclusive tabs with their own headings and icons, and the lessons card has already drifted to hover:border-primary/50 while its siblings kept a palette hue — the distinction is not being maintained anyway. (b) repurposes chart tokens as UI accents, which no swept file does.
+WHY: The same three-way accent recurs on the exercises list page and likely on admin course screens; one answer should cover all of them.
+
+[T3-routes-6] app/[locale]/dashboard/teacher/courses/[courseId]/certificates/page.tsx :: L152-158, the template-status stat tile
+Q: Is 'certificate template configured' a success state or just a fact?
+   - (a) text-success for Active, text-muted-foreground for None
+   - (b) text-foreground for Active, text-muted-foreground for None — no status colour
+   - (c) text-brand-text for Active
+REC: (a). Same shape as the published/draft badge in the two other files, and the words Active/None carry the meaning without the colour. (b) is defensible and more conservative.
+WHY: Decides whether 'a thing is set up' counts as a status across the teacher surface.
+
+[T3-routes-7] app/[locale]/dashboard/teacher/courses/[courseId]/preview/page.tsx :: L136, shadow-[0_0_10px_rgba(var(--primary),0.5)]
+Q: This glow is dead CSS — --primary holds an oklch() value, so rgba() of it is invalid and the shadow has never rendered. The already-swept sibling app/[locale]/dashboard/student/courses/[courseId]/page.tsx:219 carries the identical dead class. Fix here, fix and flag, or leave?
+   - (a) leave both — the guard ignores it and the copies stay identical
+   - (b) fix this file only, to shadow-[0_0_10px_color-mix(in_oklch,var(--primary)_50%,transparent)], and let the pair drift
+   - (c) fix this file and report the sibling to whoever owns it
+   - (d) drop the shadow class entirely — it has never been seen
+REC: (c). One token makes the glow actually appear in the school's brand colour, which is the point of the epic, and flagging the sibling stops the pair silently diverging. Take (a) if the orchestrator wants a zero-visual-change sweep.
+WHY: The only place in this group where the sweep would change rendered output rather than preserve it.
+
+[T3-routes-8] app/[locale]/dashboard/teacher/courses/[courseId]/exercises/page.tsx :: getExerciseIcon(), L71-79
+Q: After the colour edit the four switch branches differ only by icon component. Leave the switch or simplify it to a lookup map?
+   - (a) leave the switch, change only the class string
+   - (b) replace with a Record<string, Icon> lookup plus one shared className
+REC: (a). A colour sweep should be reviewable as a colour sweep; the four branches already shared one colour before this change, so restructuring buys nothing and costs diff legibility.
+WHY: The brief names class-returning lookup maps as the highest-leverage edits, so the sweeping agent may be tempted to rewrite this helper — it should not.
+
+===== T4-versioning =====
+
+[T4-versioning-1] components/teacher/version-diff-panel.tsx :: lines 96, 123, 132, 134, 140-143, 151-154 (the LineDiff body)
+Q: Is the diff body a code-editor surface that legitimately stays a fixed dark theme, or is it chrome that should follow the school's theme?
+   - Tokenize: bg-[#1e1e2e] -> bg-muted/40, text-[#cdd6f4] -> text-foreground, text-[#585b70] -> text-muted-foreground, border-white/5 -> bare border-b/r/l, and the add/remove tints -> success/destructive. File lands at palette 0 / raw 0, no keeps.
+   - Keep the editor theme: leave the surface, both greys and the white-alpha rules AND the emerald/red drawn on them hardcoded, with one keep comment above line 95. File lands at palette 8 / raw 7.
+REC: Tokenize. The merged surface-1 keep (lesson-content.tsx prose-pre) is the backdrop for a syntax highlighter whose token colours are that same Catppuccin theme; this panel highlights nothing — it renders plain text coloured only by add/remove state, so the dark background is decoration, and a light-themed school gets a black slab in the middle of a white dialog.
+WHY: It is all-or-nothing per panel, not per class. success/warning/destructive flip with the page theme, so if the surface stays fixed-dark, light-mode text-success (a dark green, L 0.47) on #1e1e2e is roughly 2:1 and unreadable — keeping the surface forces keeping every colour on it. It also decides 7 of the file's 38 hits and, via the cross-file note, what markdown-field.tsx and exercise-ai-config-step.tsx must do.
+
+[T4-versioning-2] components/teacher/improved-template-selector.tsx :: lines 324-325 and 340-341 (both prompt preview panels)
+Q: Same question for the two prompt-preview panels: fixed editor surface, or themed panel?
+   - Tokenize to bg-muted/40 with inherited foreground, matching version-preview.tsx's ExpandableContent source view. File lands at palette 0 / raw 0.
+   - Keep the editor theme with a keep comment on each panel. File lands at palette 2 / raw 6.
+REC: Tokenize. These panels are labelled 'what the student sees' and 'what the AI sees' — prose, not code, with no highlighting — and the same feature already renders prompt source as bg-muted/40 font-mono one file over, so tokenizing makes the two views finally match.
+WHY: Same all-or-nothing contrast trap as T4-versioning-1 (the amber 'fill all variables' hint on those panels can only become text-warning if the surface stops being fixed-dark), and it is 10 of this file's 14 hits.
+
+[T4-versioning-3] components/teacher/version-preview.tsx :: difficultyColors map, lines 347-351
+Q: Should exercise difficulty (beginner/intermediate/advanced) borrow the fixed status triad, or is difficulty content that should read neutral?
+   - Map to the triad: success / warning / destructive, pixel-identical to today's emerald/amber/red.
+   - Make all three neutral (bg-muted text-muted-foreground border-border) and let the word carry the level.
+   - Map to the chart tokens var(--chart-N), which are theme-aware but not status.
+REC: Map to the triad. It preserves the existing visual exactly, the three colours are fixed platform colours so no school can break the scale, and the pill always prints the difficulty word so meaning is never colour-only.
+WHY: 'advanced' rendered in destructive red can read as an error state rather than a level, and whatever is chosen here should match how the other teacher and student surfaces render difficulty badges.
+
+[T4-versioning-4] components/teacher/version-preview.tsx :: lines 311-321, the exam correct-answer option row and its dot
+Q: The correct option is signalled by a green tint and a green dot with no icon and no label — should the sweep add an icon while it is recoloring, or recolour only?
+   - Add a check icon (e.g. IconCircleCheck) in place of / beside the dot so 'correct' survives without colour.
+   - Recolour only (bg-success/10 text-success, dot bg-success) and leave the a11y gap as it was.
+REC: Add the icon. The convention for this sweep is that every status keeps its icon or its text label, and this is the one place in the group where neither exists; it is a two-line change in a file already being touched.
+WHY: It is the only colour-only state in the group, it affects colour-blind teachers reviewing an old exam version, but it is strictly an addition beyond recolouring, so scope is the orchestrator's call.
+
+[T4-versioning-5] components/teacher/version-history-sheet.tsx :: lines 191-192, 312, 329
+Q: Is the amber accent on the history icon, the newest timeline dot and the LATEST badge a warning, or a decorative highlight that should become the school's brand?
+   - Brand: bg-brand-tint / text-brand-text for the chip and badge, bg-primary ring-primary/20 for the dot.
+   - Warning: bg-warning/10 / text-warning / bg-warning, keeping amber semantics as a fixed platform colour.
+REC: Brand. Nothing here is a caution — 'latest' is a highlight — and the selected-row branches are already primary/primary-foreground, so the brand reading keeps the sidebar one coherent colour story. The three-way dot ternary still reads as inverted / brand / muted, and a selected row never shows the brand dot, so there is no brand-on-brand clash.
+WHY: It sets the amber-accent precedent for the whole teacher surface; if sibling groups map decorative amber to warning instead, schools will see two different treatments of the same accent.
+
+[T4-versioning-6] components/teacher/version-diff-panel.tsx :: lines 222 and 224, the 'Changed' field marker
+Q: Amber here marks the third diff state (added / removed / modified) rather than an accent — warning, or brand?
+   - Warning: text-warning icon and bg-warning/10 text-warning border-warning/30 chip, keeping the green/amber/red diff triad intact.
+   - Brand: text-brand-text and bg-brand-tint text-brand-text, treating 'changed' as a neutral highlight.
+REC: Warning. In this panel green and red are already success and destructive, so amber completes a semantic triad rather than decorating; the chip also keeps its translated 'Changed' label.
+WHY: This resolves oppositely to T4-versioning-5 in the same group — same hue, different role — and the sweeping agent will otherwise be tempted to make both consistent for the wrong reason.
+
+[T4-versioning-7] components/teacher/preview-banner.tsx :: lines 16, 18, 23 — the whole file
+Q: Is a 'you are previewing this course as a student' band a warning state or a neutral informational band?
+   - Warning: bg-warning/10, text-warning, border-warning/40 — a fixed platform colour that never becomes the school's.
+   - Neutral: bg-muted with text-foreground, per the convention's full-width-band rule.
+   - Brand: bg-brand-tint / text-brand-text.
+REC: Warning. The band exists to say 'this is not the real thing' — a state, not decoration — and a fixed platform colour is exactly right for a message that must not be recoloured away by a school's theme. Brand is the wrong answer for the same reason.
+WHY: The convention says full-width bands go bg-muted, so a sweeping agent following the letter of the rule would neutralize the one band whose whole job is to be noticed.
+
+===== T5-builders =====
+
+[T5-builders-1] components/teacher/exercise-builder/exercise-ai-config-step.tsx :: lines 85-104 (the dark panel wrapping the system_prompt Textarea)
+Q: Is the fake code-editor shell around the AI system prompt content (a kept code skin) or chrome (decoration to delete)?
+   - A. Delete the shell entirely and render the system prompt as the plain token-styled mono textarea that lesson-ai-task-step.tsx L129-135 already uses for the identical field. Removes 3 palette + all 7 raw, needs no keep comment, and makes the two builders agree.
+   - B. Keep the skin but stop duplicating it: export the TERMINAL constant from components/teacher/lesson-editor/markdown-field.tsx and import it here, deleting only the three traffic-light dots. Removes 3 palette, keeps 7 raw as a justified keep in a second file.
+   - C. Leave the panel as-is and add a keep comment. Removes nothing.
+REC: A
+WHY: A system prompt is English prose addressed to the model, not code, so the code-editor metaphor is decoration rather than the content-is-code justification that saves markdown-field. The two AI-grading fields in this app already disagree visually (dark terminal here, plain mono field in the lesson editor) and A is the only option that converges them. It is also the single largest reduction in the group: 10 of the 12 remaining hits in this file.
+
+[T5-builders-2] components/teacher/exercise-builder/exercise-ai-config-step.tsx :: lines 78-83 (the amber 'hidden from students' badge)
+Q: Does 'hidden from students' read as a warning, or as a neutral visibility fact?
+   - A. Neutral: bg-muted text-muted-foreground border-transparent, matching the identical aiHiddenBadge chip in lesson-ai-task-step.tsx L115-118 (and optionally add its IconEyeOff).
+   - B. Warning: bg-warning/10 text-warning border-warning/20, keeping the amber emphasis the current design chose.
+REC: A
+WHY: It sets whether warning stays reserved for things that can go wrong. A sibling file in the same group already renders this exact concept as a neutral chip, so B leaves two screens disagreeing about the same badge; A also pairs correctly with the green 'visible to students' badge, which keeps the meaningful colour for the state a teacher must not get wrong.
+
+[T5-builders-3] components/teacher/exercise-builder/exercise-details-step.tsx :: DIFFICULTY_COLORS, lines 24-28
+Q: Difficulty is a heat scale (easy/medium/hard), not a status. Should it borrow success/warning/destructive, or become a single brand-coloured selection state?
+   - A. Map to status tokens: easy -> success, medium -> warning, hard -> destructive tints. Keeps three visually distinct steps and reads as a heat ramp.
+   - B. Make selection brand-neutral: the selected chip becomes bg-primary/10 text-primary (or bg-brand-tint text-brand-text) for all three and the translated label alone carries the difficulty.
+REC: A
+WHY: This is the biggest single edit in the group (12 of 12 hits in the file) and other surveyed groups will hit the same easy/medium/hard chips elsewhere in the teacher and student UI, so the answer needs to be the same everywhere. A abuses destructive slightly ('hard' is not an error) but reads naturally and preserves the three-way distinction; B is semantically cleaner but makes the selected chip look identical for all three difficulties, which is a real usability loss in a segmented control.
+
+[T5-builders-4] components/teacher/lesson-editor/markdown-field.tsx :: TERMINAL constant, lines 51-56, plus the isTerminal branches
+Q: The MDX editor's fixed dark skin genuinely stays. Should it stay as Tailwind arbitrary values inside TERMINAL (13 raw kept in the baseline), or move to --editor-* CSS custom properties in app/globals.css and be reached via bg-[var(--editor-surface)] (baseline goes to zero)?
+   - A. Keep the classes in TERMINAL with the keep comment; baseline for this file becomes [0, 13].
+   - B. Declare --editor-surface / --editor-text / --editor-caret / --editor-hairline (and the white-wash steps) in app/globals.css and reference them as arbitrary values built from vars, which the guard legitimately does not count; baseline entry disappears.
+REC: A
+WHY: B reaches a clean zero and centralises the skin, but it adds new global CSS variables that are NOT theme tokens and that a future reader will mistake for ones a school can override - and the brief explicitly says not to invent tokens. A leaves a visible, reviewed 13 in the baseline, which is exactly what the ratchet is for: a documented keep that a reviewer can see and argue with, rather than a detector bypass. Also note the same skin is duplicated in two files outside this group (improved-template-selector.tsx, version-diff-panel.tsx), so if B is chosen it should be an epic-level decision, not a per-group one.
+
+[T5-builders-5] components/teacher/lesson-resources-manager.tsx :: getFileIcon, lines 52-60
+Q: Are file-type icon hues (PDF red, spreadsheet green, Word blue, image violet) content - conventional format identity, like a brand colour - or chrome?
+   - A. Chrome: all four become text-muted-foreground, which is already what the fallback branch returns. The distinct glyphs carry the file type.
+   - B. Content: keep the four hues with a keep comment saying the colours are the file formats' own conventional identities.
+REC: A
+WHY: These four hues sit right next to the school's brand colour in the lesson editor and read as four unrelated brands; the glyphs (IconFileTypePdf vs IconFileSpreadsheet vs IconFileText vs IconPhoto) already distinguish the types without colour, so nothing is lost. B is defensible under the 'content, not chrome' carve-out and this same helper pattern likely recurs in other groups' file lists, so the answer should be fixed once.
+
+===== T6-certificates =====
+
+[T6-certificates-1] components/teacher/certificate-preview.tsx :: lines 45, 84, 89, 95, 118-119, 122, 127-129, 134-135, 143, 146 (bg-white + 14 gray-* classes)
+Q: Is the certificate preview chrome (a dashboard panel that should follow the school theme) or content (a facsimile of a printed document with fixed paper and ink)?
+   - A — keep as-is with keep comments; baseline stays [14,1]
+   - B — keep it a fixed document but express paper/ink as the generator's own palette constants via inline style; 0/0 and the mock finally matches the PDF
+   - C — full tokens: bg-card / text-foreground / text-muted-foreground / bg-border / border-border; 0/0
+REC: B. The artefact really is fixed: lib/certificate-generator.ts prints on #fffef9 stock with #3a3632 / #8a8578 / #c5bfb6 ink and takes only primary/secondary from the template. B keeps that truth, ends the palette classes and closes a fidelity gap. A is the zero-risk fallback; C is the one I would not take.
+WHY: The ink is user-picked against white paper: COLOR_PRESETS ships Slate #1E293B/#0F172A and Blue's secondary #1E40AF. Under C, on a dark card the course title (line 101) and both corner accents go invisible and the 'live preview' lies about the PDF the teacher sends. This file is 15 of the group's 45 hits, so the decision also decides whether the group reaches zero.
+
+[T6-certificates-2] all six certificate-template-form sections (RULE S1) :: design-section 22-23 and 39-40; issuer / signature / info / criteria / expiration lines 17-18
+Q: The six per-section icon chips use six different hues (amber, violet, emerald, blue, rose, orange) as pure decoration — brand tint, or neutral muted?
+   - bg-brand-tint + text-brand-text on all 7 sites
+   - bg-muted + text-muted-foreground on all 7 sites
+   - keep a per-section hue by mapping each to its nearest token (rejected)
+REC: bg-brand-tint + text-brand-text on all seven sites, dark: variants deleted.
+WHY: Mapping by hue would stamp warning on Design, success on Signature, destructive on Completion criteria and warning on Expiration — four false status signals on a settings form. The same chip pattern exists in at least five files owned by sibling groups (version-history-sheet, improved-template-selector, ai-preview-modal, lesson-ai-task-step, onboarding-wizard), so the choice here sets the convention for the surface.
+
+[T6-certificates-3] components/teacher/issue-certificate-button.tsx :: line 88, the isSuccess branch
+Q: Should the permanently-disabled 'Issued' button read as success, or simply as a spent control?
+   - text-success (keeps the completed-state signal)
+   - text-muted-foreground (disabled control, no status colour)
+REC: text-success, dropping all four hover variants (dead code — disabled is set on the next line). IconCheck plus t('issued') carry the meaning without colour, and compact mode keeps the label in aria-label/title.
+WHY: It is the only genuine status colour in the group; the wrong pick either invents a status or erases the 'already done' affordance teachers scan for in a dense student table.
+
+[T6-certificates-4] components/teacher/certificate-template-form/design-section.tsx :: lines 71 and 75, the overlapping preset swatch rings
+Q: border-white dark:border-gray-900 is the surface showing between two overlapping swatches — which surface token?
+   - border-card
+   - border-background
+REC: border-card: identical to today on the no-kit default (--card equals --background) and the form sits in a card.
+WHY: If a kit gives card and background different values, the wrong pick leaves a visible seam ring around every colour preset — the one control whose whole job is to show colour accurately.
+
+===== A1-money =====
+
+[A1-money-1] app/[locale]/dashboard/admin/monetization/page.tsx :: quickStats lines 57-86, navCards lines 88-137, render sites 250-251 and 268-269
+Q: Collapse ten bespoke tile hues (emerald/blue/violet/amber/orange/pink) to one brand tint, turning the monetization hub into a monochrome grid?
+   - (a) collapse all ten to bg-brand-tint + text-brand-text and delete the bg/iconColor object keys
+   - (b) keep differentiation by rotating --chart-1..5 via bg-[color-mix(in_oklch,var(--chart-N)_15%,transparent)] + text-[var(--chart-N)]
+   - (c) collapse the 4 stat tiles, keep the 6 nav hues
+REC: (a) — exact precedent in PR #770 (student/certificates/page.tsx:53,79,88,97 and student/courses/page.tsx:231,244 collapsed amber/emerald/primary to brand-tint); each card already differs by icon and title.
+WHY: 40 of this group's 132 palette classes, and it changes the visual identity of the admin money hub.
+
+[A1-money-2] app/[locale]/dashboard/admin/monetization/page.tsx :: lines 219-226 (revenue-split 'Your revenue' panel + its Badge)
+Q: Is the school's revenue share a success state or the brand-highlighted half of a neutral/highlighted pair?
+   - (a) bg-brand-tint + ring-primary/20, Badge reduced to variant="default" with no colour className
+   - (b) bg-success/10 + ring-success/30, Badge bg-success/15 text-success
+REC: (a) — the share is a fact, not a state; success stays reserved for state across the surface, and the muted/highlighted pairing is exactly brand tint's job.
+WHY: Sets whether 'money that is yours' reads as success green across the whole group; the same question recurs on revenue/page.tsx (A1-money-6).
+
+[A1-money-3] app/[locale]/dashboard/admin/monetization/page.tsx :: line 189 (the 'Set up Stripe' Link styled as a button inside the not-connected band)
+Q: Solid warning fill or solid brand fill for the CTA inside a warning band?
+   - (a) bg-warning text-warning-foreground hover:bg-warning/90
+   - (b) bg-primary text-primary-foreground hover:bg-primary/90
+REC: (a) — band cohesion and it matches components/exercises/exam-card.tsx:126.
+WHY: It is this file's only raw count (text-white); on a teal-branded school the two options read very differently.
+
+[A1-money-4] app/[locale]/dashboard/admin/payouts/page.tsx (also revenue/page.tsx and transactions/page.tsx) :: payouts 165-166 and 186-187; revenue 67-68, 92-93, 113-114; transactions 126-127, 145-146, 162-163
+Q: Do stat-card icon tiles keep a status colour when the metric is a status count, or does every tile become brand tint?
+   - (a) status tint where the metric IS a status count (pending -> warning, failed -> destructive), brand-tint for totals
+   - (b) bg-brand-tint + text-brand-text for all nine tiles
+   - (c) status tint for all nine, mapping 'money in' to success
+REC: (a) — pending/failed tiles carry IconClock/IconX and sit above tables using the same warning/destructive hues, so the tint is a real signal; totals are not states. Pick (b) if A1-money-1 goes to (a) and one rule everywhere is preferred.
+WHY: 18 palette classes across three files, and it decides whether an admin can spot pending/failed without reading.
+
+[A1-money-5] app/[locale]/dashboard/admin/payouts/page.tsx :: line 101, the 'processing' branch of statusBadge()
+Q: Blue maps to brand per the convention, but a status map whose other states are success/warning/destructive then mixes grammars — and on a green-branded school 'processing' and 'paid' could look alike.
+   - (a) bg-brand-tint text-brand-text border-primary/30
+   - (b) variant="secondary" with no colour className (neutral in-flight)
+   - (c) reuse the warning tint (collapses two distinct states — rejected)
+REC: (a) — keeps four distinct reads and every badge carries its translated label. (b) if brand colour should never encode a status.
+WHY: The one place in this group where the convention's blue->brand rule collides with status->fixed platform colours.
+
+[A1-money-6] app/[locale]/dashboard/admin/revenue/page.tsx :: line 106, the net-revenue figure (text-emerald-600 dark:text-emerald-400)
+Q: Does the headline net-revenue number keep a green 'money in' read?
+   - (a) text-foreground
+   - (b) text-success
+   - (c) text-brand-text
+REC: (a) — hierarchy already comes from the sibling 'Platform fees' figure being text-muted-foreground (line 81), and success stays a state word. (b) is AA-verified on card if green is wanted.
+WHY: The single most-looked-at number on the school's revenue page.
+
+[A1-money-7] app/[locale]/dashboard/admin/transactions/page.tsx :: lines 213-235, the Badge variant/className ternaries
+Q: After 'successful' becomes success-tinted, should 'pending' gain a warning tint so it matches payouts, invoices and the pending stat tile ten lines above?
+   - (a) add a branch: bg-warning/10 text-warning border-warning/30 for pending
+   - (b) leave pending on variant="secondary" (strictly minimal colour-only diff)
+REC: (a) — three money tables showing the same word in two different colours is the drift this epic exists to remove.
+WHY: Adds a code branch the guard does not require, so it needs an explicit yes.
+
+[A1-money-8] app/[locale]/dashboard/admin/monetization/page.tsx :: lines 168 and 184 (banner body copy under the status headings)
+Q: Does the banner body line stay in the status colour or drop to muted foreground?
+   - (a) text-success / text-warning to match the headings
+   - (b) heading in the status colour, body text-muted-foreground
+REC: (a) — matches student/courses/[courseId]/exams/[examId]/result/page.tsx:257,273 and is AA-verified on the tint by tests/unit/theme-kit-tokens.test.ts:160-168; (b)'s contrast on a status tint is not covered.
+WHY: 4 palette classes, and the two banners are the first thing an admin sees on the money hub.
+
+===== A2-commerce =====
+
+[A2-commerce-1] app/[locale]/dashboard/admin/products/page.tsx, subscriptions/page.tsx, enrollments/page.tsx, plans/page.tsx, courses/page.tsx :: products 120/134/148, subscriptions stats array 129-158, enrollments 113/127/141, plans 96/110/124, courses 106/120/134
+Q: What do the stat-card icon tiles become? Today: blue (total/revenue), emerald (active/published/monthly), amber (archived/drafts/cancelled), violet (completed/yearly), red (expired). 66 of this group's 87 occurrences.
+   - (a) Mechanical mapping: emerald -> bg-success/10 text-success, amber -> bg-warning/10 text-warning, red -> bg-destructive/10 text-destructive, blue & violet -> bg-brand-tint text-brand-text
+   - (b) Collapse every tile in a row to bg-brand-tint text-brand-text (the #770 certificates precedent, student/certificates/page.tsx:79-97, where amber/primary/emerald tiles all became one brand tile)
+   - (c) Hybrid: (a) on rows that genuinely report a lifecycle (subscriptions, products, courses, enrollments), (b) on plans where monthly/yearly are cadences, not states
+REC: (c), with (a) as the fallback if one rule is wanted for the whole surface. (a) alone puts bg-success/10 behind 'Monthly plans' and bg-warning/10 behind 'Draft courses' — claims the product is not making. Whichever is chosen, apply it to every tile identically and keep the wrapper-carries-the-token form (token on the div, icon colour class deleted, Tabler icons inherit currentColor).
+WHY: 66 of 87 occurrences, and the identical `h-9 w-9 shrink-0 ... rounded-lg ${stat.bg}` shape recurs in sibling groups (admin/monetization, admin/revenue, admin/payouts, admin/transactions, teacher/revenue). A split decision shows up as two different admin screens in the same nav.
+
+[A2-commerce-2] components/admin/course-status-actions.tsx :: line 102, IconCheck inside the Approve DropdownMenuItem
+Q: Should the Approve dropdown icon stay coloured at all, or go uncoloured like its Restore sibling?
+   - (a) text-success
+   - (b) drop the colour class entirely — only the destructive item is coloured, which is the DropdownMenuItem API's own convention, and t('approve') carries the meaning
+REC: (a). One-class edit, green->success is exactly the prescribed mapping, and the item already has a text label so nothing rests on colour. Take (b) only if dropdown items should be uniformly uncoloured across the whole staff surface.
+WHY: Sets the precedent for every other coloured dropdown-item icon on the staff surface, including components/admin/subscription-actions.tsx (text-orange-600 / text-green-600) in a sibling group.
+
+[A2-commerce-3] app/[locale]/dashboard/admin/products/page.tsx, subscriptions/page.tsx, enrollments/page.tsx :: products:170-175, subscriptions:291-302, enrollments:194-205 — the identical `isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''` override
+Q: Does the 'active' badge become a success tint, or should the override be deleted so the brand `variant="default"` stands?
+   - (a) Override to bg-success/10 text-success border-success/30, keeping the existing variant ternary (tailwind-merge makes the override win)
+   - (b) Delete the override entirely and let variant="default" (bg-primary text-primary-foreground) stand — which is already what plans/page.tsx:147 does for monthly/yearly
+REC: (a). Under (b) the 'Active' chip becomes the school's brand colour and collides with every other primary chip and button on the page, and on subscriptions it breaks the success/grey/destructive triad that mirrors subscription_status. The emerald was a deliberate departure from the brand; `success` preserves that intent on every kit.
+WHY: Three files must be edited identically in one pass — an admin sees 'Active' on products, subscriptions and enrollments in a single session.
+
+===== A3-payments =====
+
+[A3-payments-1] components/admin/payment-requests-table.tsx :: statusColors map, lines 55-61 (and the detail page via A3-payments-2)
+Q: `contacted` (blue) and `payment_received` (purple) are both brand-like hues, so the convention collapses them onto the same brand-tint/brand-text pill. How should the two in-flight lifecycle states stay distinguishable?
+   - A: contacted -> 'border-border bg-muted text-foreground', payment_received -> 'border-transparent bg-brand-tint text-brand-text' (five distinct fills: warning tint / neutral / brand tint / success tint / destructive tint)
+   - B: both -> bg-brand-tint text-brand-text, distinguished by adding a per-status icon, mirroring the student side's IconClock/IconMail/IconCreditCard/IconCheck/IconX
+   - C: contacted -> bg-brand-tint text-brand-text, payment_received -> solid bg-primary text-primary-foreground
+REC: A — keeps five visually distinct states with the smallest diff, and puts the brand tint on the state that is one click from done.
+WHY: This map is the only thing that tells an admin, scanning the All tab, which requests are waiting on them versus on the student.
+
+[A3-payments-2] components/admin/payment-requests-table.tsx + app/[locale]/dashboard/admin/payment-requests/[requestId]/page.tsx :: lines 55-61 and lines 115-131
+Q: Both screens render the same five statuses and already disagree. Should the swept map live in one new shared module, or be duplicated?
+   - A: extract to a new `lib/payments/payment-request-status.ts` exporting PAYMENT_REQUEST_STATUS_STYLES (pure strings, no 'use client', never enters the guard baseline)
+   - B: duplicate the literal in both files with a cross-reference comment
+   - C: export the map from payment-requests-table.tsx and import it into the server page
+REC: A — both consumers are in this group, and duplication is exactly what produced today's tint-vs-solid mismatch.
+WHY: Option A creates a file outside my assigned list, so the decision to add a module is the orchestrator's even though both callers are mine.
+
+[A3-payments-3] app/[locale]/dashboard/admin/payment-requests/[requestId]/page.tsx :: badge at lines 153-158
+Q: The detail header badge is currently a solid palette fill with white text while the table uses tints. After the sweep, tint pill or solid token fill?
+   - A: same tint map as the table — one status vocabulary across both screens, and the -white raw disappears with no replacement
+   - B: keep it solid — bg-success/bg-warning/bg-destructive with their -foreground tokens, bg-primary for payment_received, bg-muted text-foreground for contacted
+REC: A — consistency with the row the admin just clicked; B also leaves `contacted` as the odd arm, since no solid neutral token pairs cleanly.
+WHY: The detail header is where an admin confirms they are acting on the right request; a different colour language there weakens that confirmation.
+
+[A3-payments-4] components/admin/payment-request-actions.tsx + components/admin/payment-request-dialog.tsx :: line 175 and line 339
+Q: Should the Complete & Enroll button keep a distinct green (success token) or become the plain brand primary button?
+   - A: bg-success text-success-foreground hover:bg-success/90
+   - B: drop the override entirely and let it be the default primary button
+REC: A — the two earlier steps in the flow are already default primary buttons; this one was made green because it is the irreversible step that grants entitlements.
+WHY: This button calls completeAndEnroll -> enroll_user(); it is the money action on the manual rail, and it must be decided once for both call sites.
+
+[A3-payments-5] components/admin/subscription-actions.tsx :: line 128, the Cancel subscription dropdown item
+Q: Map orange to `text-warning`, or adopt the component's own destructive variant?
+   - A: className='text-warning' — straight application of the orange -> warning rule, keeping the two-step severity (red lives on the dialog's immediate-cancel button)
+   - B: <DropdownMenuItem variant='destructive'> — token colours plus matching focus states, but promotes the item to red
+REC: A — preserves the deliberate milder tone of an item that only opens a dialog, and is the most obvious mapping.
+WHY: Low visual stakes, but B is the component-native path and a reviewer is likely to ask why it was not taken.
+
+[A3-payments-6] app/[locale]/dashboard/admin/payment-requests/[requestId]/page.tsx + components/admin/payment-request-dialog.tsx :: page lines 205, 282, 329; dialog lines 233-235; (and manual-transfer-form lines 89-95)
+Q: text-muted-foreground inside bg-muted panels measures 4.39:1. Fix the contrast in this sweep, or keep the PR strictly to the ratchet?
+   - A: switch those four quoted-content panels to text-foreground on the same bg-muted, and leave the manual-transfer step list muted as scaffolding
+   - B: leave all of it — guard-invisible, so out of scope
+REC: A — the four panels hold the student's message, the instructions that were sent, and the admin's own notes, i.e. the text an admin must read verbatim to reconcile a transfer.
+WHY: It is the one AA defect in the group the guard cannot see, and it sits on the reconciliation text.
+
+[A3-payments-7] app/[locale]/dashboard/admin/billing/checkout/[requestId]/solana-checkout-client.tsx :: line 149, IconCircleCheck beside t('confirmed')
+Q: text-primary on the confirmation glyph — status colour, brand glyph, or leave it?
+   - A: text-success
+   - B: text-brand-text (the literal #770 rule for text-primary used as a surface glyph)
+   - C: leave it — the branch shows for a fraction of a second before router.push fires
+REC: A — it is a payment-confirmed state, and success is a fixed platform colour that never fades to a pale brand tint on a light-brand school.
+WHY: Smallest call in the group; listed only so the sweeping agent does not decide it silently.
+
+===== A4-billing-users =====
+
+[A4-billing-users-1] components/admin/billing-overview.tsx :: L162, the `cancelOnDate` line inside the subscription-interval card
+Q: Is "Your plan cancels on <date>" a warning, or an informational fact the admin themselves requested?
+   - (a) text-warning — literal translation of today's text-amber-700 dark:text-amber-400
+   - (b) text-foreground with font-medium kept — it is a stated fact, and the Reactivate button sits right next to it
+REC: (a) text-warning — the mechanical translation, and #771 preserved severity wherever before/after severity was arguable
+WHY: The same amber already marks two genuinely urgent states in this file (renewal overdue, access cutoff). If cancel-scheduled stays amber, three different urgencies collapse onto one colour.
+
+[A4-billing-users-2] components/admin/notifications-list.tsx :: L50, the `announcement` case of getTypeBadgeColor
+Q: Should the `announcement` notification type wear the school's brand colour, or stay neutral?
+   - (a) bg-primary text-primary-foreground — G3 mapping for a solid brand-hue fill (bg-blue-500 + text-white)
+   - (b) bg-secondary text-secondary-foreground — announcement is the neutral default type, so letting it wear the brand makes the calmest type the loudest chip
+REC: (a) bg-primary text-primary-foreground — the convention is unambiguous for solid brand-hue fills, and converging on the obvious mapping beats the taste argument
+WHY: For a school whose brand is red or amber, (a) makes `announcement` visually indistinguishable from `alert` and `warning` — the one place the school's colour collides with the fixed platform status colours.
+
+[A4-billing-users-3] components/admin/notifications-list.tsx :: L136-140, the urgent/high priority badges
+Q: After tokenising, `high` becomes a SOLID warning while `urgent` keeps variant="destructive", which is a TINT — the lesser priority shouts louder. Which weight wins?
+   - (a) make `high` a tint too: border-warning/30 bg-warning/10 text-warning (no variant)
+   - (b) keep `high` solid, leave `urgent` alone — smallest diff, ships the inverted weight
+   - (c) make both solid: urgent -> bg-destructive text-destructive-foreground, high -> bg-warning text-warning-foreground
+REC: (a) — type and status are the row's primary labels and stay solid; priority is a modifier and reads correctly as a tint
+WHY: Up to four chips sit on one line (type, status, priority). If all are solid the row becomes a colour bar and the notification title loses its hierarchy.
+
+[A4-billing-users-4] components/admin/users-table.tsx + app/[locale]/dashboard/admin/users/[userId]/page.tsx :: users-table.tsx L162 and users/[userId]/page.tsx L226 — the same 'active' badge in two places
+Q: Should the unremarkable 'active' user state be coloured at all, when 'deactivated' already carries variant="destructive"?
+   - (a) border-success/30 bg-success/10 text-success — literal translation, keeps the green/red pair an admin scanning the table already knows
+   - (b) plain variant="outline" with no colour — content over chrome; only the exceptional state is coloured
+REC: (a) — removing a colour is a visual-design change beyond a token sweep's remit, and the pair reads as a legend
+WHY: Must be decided once so the two files do not diverge; both get touched regardless, since the detail page's copy has no dark: classes and is dark-mode-broken today.
+
+[A4-billing-users-5] app/[locale]/dashboard/admin/notifications/page.tsx :: L82, L94, L106, L118 — the four stat-card icons (Total / Sent / Scheduled / Drafts)
+Q: Are these decorative stat icons chrome (uniform neutral) or status (semantic colours)?
+   - (a) semantic: text-brand-text / text-success / text-warning / text-muted-foreground
+   - (b) uniform text-muted-foreground on all four, matching the admin dashboard stat grid at app/[locale]/dashboard/admin/page.tsx:392 whose own comment reads "clean, no color noise"
+REC: (b) uniform text-muted-foreground — these are counts, not states; every card is already labelled, so the colour is pure decoration, and the sibling grid is the in-repo precedent
+WHY: Whichever wins becomes the pattern every other staff-surface stat grid in surface 3 follows, so it is worth deciding centrally rather than per-group.
+
+===== A5-landing =====
+
+[A5-landing-1] components/admin/landing-page/template-picker.tsx :: lines 41-51 (CATEGORY_COLORS), 216 (catColor), 241 (Badge)
+Q: Is the template-category badge's nine-hue colour coding content (a taxonomy users learn) or chrome?
+   - A: delete CATEGORY_COLORS entirely, render <Badge variant="outline"> (already fully tokenised) for every category
+   - B: keep a two-role tokenised map - education on bg-brand-tint text-brand-text border-brand-text/20, everything else bg-muted text-foreground border-border, with the existing general fallback
+   - C: map categories onto var(--chart-1..5) arbitrary values
+REC: A - delete the map. Only four category values exist in lib/puck/templates/index.ts (general x5, code-school x5, education x2, creative x1); business/language-school/fitness/music/design are dead keys, so the hue teaches nothing and the badge already prints the name.
+WHY: 28 of this group's 31 palette classes, and it decides whether the template grid shows the school's brand hue at all. Note that if B is chosen, the surviving education entry's text-primary-on-tint and general's text-muted-foreground-on-bg-muted (4.39:1 at 10px) both have to be corrected anyway.
+
+[A5-landing-2] components/admin/landing-page/landing-pages-client.tsx :: lines 356-361, status Badge variant ternary
+Q: The status badge uses variant='default' (solid bg-primary, the school's brand) for 'published', right beside a live dot that becomes success. Should a platform lifecycle state wear the brand fill?
+   - i: leave as-is (token-only, guard-clean)
+   - ii: published -> variant="outline" with bg-success/10 text-success border-success/30
+   - iii: published -> variant="secondary", draft -> variant="outline"
+REC: i - leave as-is. published (content state) and is_active (which page is served) are two different axes; two colour roles is a feature. Recorded so the 'no' is deliberate.
+WHY: It is the one remaining site in this group where a brand fill carries a status meaning, so it matters only if the orchestrator wants all lifecycle signals on the fixed status palette.
+
+[A5-landing-3] components/admin/landing-page/landing-pages-client.tsx :: line 315, live-dot ternary
+Q: After bg-emerald-500 -> bg-success the ternary reads bg-success : bg-border. Does an off-state dot in --border still read as a deliberate 'not live' on bg-card in both modes?
+   - keep bg-border
+   - bg-muted-foreground/30
+   - render no dot when inactive
+REC: Keep bg-border - already a token, and the row's meaning is carried by the 'Live' label and the status badge, not the dot (which is aria-hidden).
+WHY: Pure visual-QA call; only affects glanceability of the inactive row, not theming correctness.
+
+===== O1-wizard =====
+
+[O1-wizard-1] components/onboarding/onboarding-wizard.tsx :: line 364 (Connect Stripe button)
+Q: Does the Stripe Connect CTA keep Stripe's own brand purple (vendor identity = content), or become the theme's primary button?
+   - Tokenise: delete `bg-[#635BFF] hover:bg-[#5851EA] text-white`, keep the Button default (primary) — file ends 0/0
+   - Keep the vendor brand with a carefully-worded keep comment — file ends 0 palette / 3 raw
+REC: Tokenise. `components/admin/payment-settings-form.tsx:139` already renders the same `/api/stripe/connect` action as `bg-primary text-primary-foreground`, and the checklist's WhatsApp button (same file group) is a plain outline Button with only the brand icon — the icon and label carry the vendor.
+WHY: It is the only raw hex in the group; deciding 'keep' means the group cannot reach a clean 0/0 and needs a keep comment that must contain no literal utility class.
+
+[O1-wizard-2] app/[locale]/onboarding/layout.tsx :: layout line 13 + wizard rules 1 and 12 (lines 169/213/271/302/405 and 284-295)
+Q: Does onboarding stop being forced-dark and follow the school's theme/mode, or stay deliberately dark (expressed with tokens)?
+   - Follow the theme: band `bg-muted`, cards `bg-card`, delete the `dark text-foreground` wrapper around ThemeKitPicker
+   - Stay dark deliberately: put `dark` on the layout wrapper with `bg-background`, keep cards on `bg-card`, still delete the inner wrapper (token-legal, also 0/0)
+REC: Follow the theme. The wizard's own comment (lines 284-286) says the `dark` wrapper exists only because the shell is hardcoded dark, the branding step previews the theme the school just picked, and the route's error boundary (SegmentError) already renders a light token panel on that zinc gradient today.
+WHY: It is one decision spread over three files, and it must match `components/tenant/create-school-flow.tsx` / `app/[locale]/create-school/page.tsx` (another group) because create-school -> onboarding is one continuous flow.
+
+[O1-wizard-3] components/onboarding/onboarding-wizard.tsx :: lines 343-350 (80% / 20% revenue split tiles)
+Q: Is the emerald '80% your revenue' tile a status (success) or brand emphasis (brand-tint)?
+   - `bg-success/10 border-success/30 text-success` for 80%, `bg-muted border-border` + `text-foreground` for 20%
+   - `bg-brand-tint border-primary/20 text-brand-text` for 80%, `bg-muted` for 20%
+REC: success + muted. Green -> success is the stated mechanical mapping other agents will also apply, both tiles keep their text labels so nothing rests on colour, and brand-tint next to the brand-tinted 'why connect' panel above would flatten the contrast between the two tiles.
+WHY: The pair only works if the two branches still read as two distinct states after tokenisation; picking brand for the 80% tile makes it the same hue as the panel directly above it.
+
+[O1-wizard-4] components/onboarding/onboarding-wizard.tsx :: lines 305-306 (payment step header chip), against 171/216/274 and 407
+Q: Do the step-header icon chips all become one brand chip, or does each keep a semantic hue (green payment, emerald ready)?
+   - Uniform: every step-header chip becomes `bg-brand-tint text-brand-text border-primary/20`; only the Ready step's completion circle becomes success
+   - Semantic: payment chip -> success (money), ready chip -> success, others -> brand
+REC: Uniform brand chips, success reserved for the Ready step's CheckCircle2 circle. A success-coloured header on the payment step reads as 'Stripe is already connected', which is exactly the state the step is asking the user to reach.
+WHY: Status colours are fixed platform colours; spending `success` on decorative step chrome weakens it where it actually means done, and misreads as a completed state.
+
+[O1-wizard-5] components/shared/onboarding-checklist.tsx :: lines 217 and 220 (milestone title and description)
+Q: After the milestone panel becomes a success tint, does its ink stay coloured or become neutral?
+   - `text-foreground` for the title, `text-muted-foreground` for the description
+   - `text-success` for the title, `text-success/80` (or muted) for the description
+REC: Neutral ink. The tint plus the IconConfetti badge already carry the celebration, and neutral ink is the more legible half of a tinted panel; it also matches how the milestone renders on the already-swept student dashboard.
+WHY: This component renders on admin, teacher AND student dashboards, so its ink choice has to hold on three surfaces and in both modes.
+
+[O1-wizard-6] components/onboarding/onboarding-wizard.tsx :: lines 316-336 ('why connect' panel + its bullets)
+Q: Is the blue 'why connect Stripe' panel brand emphasis or neutral chrome?
+   - `bg-brand-tint border-primary/20` with `text-brand-text` icon and bullets
+   - `bg-muted/50 border-border` with `text-muted-foreground` icon and bullets
+REC: brand-tint. It is the persuasive panel of the step (the reason to connect), the blue here is emphasis rather than an information status, and #770/#771 consistently map emphasis panels to `bg-brand-tint` + `border-primary/20..25`.
+WHY: If it goes neutral it becomes indistinguishable from the skip-Stripe note directly below it, which is deliberately neutral (#438).
+
+===== O2-create-school =====
+
+[O2-create-school-1] components/tenant/create-school-flow.tsx :: lines 271 and 273 (step-indicator dot 1 fill and label 1 ink)
+Q: Does the completed step keep its green, giving the indicator three states (done / current / pending), or collapse to two (reached / pending) like the onboarding wizard already does on master?
+   - (a) Keep three: done bg-success + text-success, current bg-primary, pending bg-border + text-muted-foreground
+   - (b) Collapse to two: done and current both bg-primary, pending bg-border, all labels text-muted-foreground
+REC: (a) — the mechanical hue-preserving mapping; both labels are translated strings so nothing rests on colour, and the divergence from onboarding-wizard already exists on master.
+WHY: These are the only two multi-step indicators in the product. If one convention is wanted, (b) must also be applied to O1-wizard in the same PR.
+
+[O2-create-school-2] components/tenant/create-school-flow.tsx :: lines 419-420 (the Mail 'check your email' badge)
+Q: Is the check-your-email tile a status (success) or an informational step chip (brand)?
+   - (a) bg-success/10 + border-success/30 + text-success
+   - (b) bg-brand-tint + border-primary/20 + text-brand-text, matching the GraduationCap header badge
+REC: (a) — preserves the emerald and matches the 'signed in as' panel two steps later; the Mail icon and confirmTitle string carry the meaning either way.
+WHY: Must resolve the same way as O1-wizard's equivalent chip call — the two files are the same flow seen by the same user five minutes apart.
+
+[O2-create-school-3] components/tenant/create-school-flow.tsx :: lines 483-497 (slug input + .lmsplatform.com suffix addon)
+Q: Recolour the hand-rolled input/addon join in place, or replace it with the InputGroup primitive that is already imported and used in this same file?
+   - (a) Recolour in place: bg-muted + border-input + text-foreground on the span, keep rounded-r-none on the Input
+   - (b) Rebuild as InputGroup + InputGroupInput + InputGroupAddon align="inline-end" + InputGroupText
+REC: (a) for this PR — (b) is a structural refactor inside a colour sweep, changes the control height, and touches an element an E2E spec grabs by data-testid.
+WHY: (a) leaves a control whose corners never follow a kit's --radius-input while every other input on the screen does — visible on Kódigo. Worth a follow-up issue if (a) wins.
+
+[O2-create-school-4] components/tenant/create-school-flow.tsx :: line 257 (header brand-tint chip border)
+Q: Is the brand-tint chip border border-primary/20 or border-primary/25 across surface 3?
+   - (a) /20 — converges with the sibling O1-wizard plan
+   - (b) /25 — converges with the already-merged #771 course-detail chip
+REC: (a) /20, applied uniformly to every surface-3 group, since surface 3 ships as one PR and internal consistency beats matching one merged line.
+WHY: It is the only shape repeating across several surface-3 groups; deciding late means a reviewer diffing two files in the same PR sees two answers.
+
+[O2-create-school-5] app/[locale]/create-school/page.tsx :: whole group — page.tsx line 22 and the entire create-school-flow.tsx shell
+Q: Is /create-school product surface to be swept, or platform marketing that should be added to the guard's EXEMPT_PREFIXES like /platform-pricing and /creators?
+   - (a) Sweep it — it is `product` register per PRODUCT.md, it is already a tier-B screen in scripts/qa-staff-theme-matrix.ts, and both files are in the baseline
+   - (b) Exempt app/[locale]/create-school/ and leave the forced-dark design until the platform marketing redesign reaches it, keeping the visual handoff from /platform-pricing seamless
+REC: (a) — three independent signals (register list, matrix screen list, baseline membership) say sweep, and the page's job is a form, not a pitch.
+WHY: Decides whether this group produces a diff at all. (b) means editing EXEMPT_PREFIXES, which every other group's counts depend on. Under (a) the 'after' screenshot is a LIGHT page in light mode — that must be stated up front or it reads as a regression.

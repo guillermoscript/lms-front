@@ -30,8 +30,8 @@ export function FlashcardSetBlockEditor({ block, onChange }: FlashcardSetBlockEd
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-gradient-to-br from-amber-500/5 to-orange-500/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
+    <div className="space-y-3 rounded-lg border bg-brand-tint p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconCards className="h-4 w-4" />
         {t('blocks.flashcard-set.label')}
       </div>
@@ -39,7 +39,7 @@ export function FlashcardSetBlockEditor({ block, onChange }: FlashcardSetBlockEd
       <div className="space-y-2">
         {block.cards.map((card, index) => (
           <div key={index} className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-4 shrink-0">{index + 1}</span>
+            <span className="text-xs text-foreground w-4 shrink-0">{index + 1}</span>
             <Input
               value={card.front}
               onChange={(e) => updateCard(index, 'front', e.target.value)}

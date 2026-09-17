@@ -172,7 +172,7 @@ export function PaymentRequestActions({ request, defaultInstructions = '' }: Pay
         <Button
           data-testid="payment-request-complete"
           onClick={() => setCompleteDialogOpen(true)}
-          className="w-full bg-green-600 hover:bg-green-700"
+          className="w-full bg-success text-success-foreground hover:bg-success/90"
         >
           <IconCircleCheck className="mr-2 h-4 w-4" />
           {t('actions.completeEnroll')}

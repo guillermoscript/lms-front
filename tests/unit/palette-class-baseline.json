@@ -1,75 +1,7 @@
 {
-  "app/[locale]/create-school/page.tsx": [
-    0,
-    1
-  ],
-  "app/[locale]/dashboard/admin/billing/billing-dashboard-client.tsx": [
-    2,
-    0
-  ],
   "app/[locale]/dashboard/admin/billing/checkout/[requestId]/solana-checkout-client.tsx": [
     0,
     1
-  ],
-  "app/[locale]/dashboard/admin/categories/page.tsx": [
-    1,
-    0
-  ],
-  "app/[locale]/dashboard/admin/courses/page.tsx": [
-    12,
-    0
-  ],
-  "app/[locale]/dashboard/admin/enrollments/page.tsx": [
-    16,
-    0
-  ],
-  "app/[locale]/dashboard/admin/invoices/page.tsx": [
-    8,
-    0
-  ],
-  "app/[locale]/dashboard/admin/monetization/page.tsx": [
-    74,
-    1
-  ],
-  "app/[locale]/dashboard/admin/notifications/page.tsx": [
-    4,
-    0
-  ],
-  "app/[locale]/dashboard/admin/page.tsx": [
-    8,
-    0
-  ],
-  "app/[locale]/dashboard/admin/payment-requests/[requestId]/page.tsx": [
-    8,
-    1
-  ],
-  "app/[locale]/dashboard/admin/payouts/page.tsx": [
-    20,
-    0
-  ],
-  "app/[locale]/dashboard/admin/plans/page.tsx": [
-    12,
-    0
-  ],
-  "app/[locale]/dashboard/admin/products/page.tsx": [
-    24,
-    0
-  ],
-  "app/[locale]/dashboard/admin/revenue/page.tsx": [
-    14,
-    0
-  ],
-  "app/[locale]/dashboard/admin/subscriptions/page.tsx": [
-    20,
-    0
-  ],
-  "app/[locale]/dashboard/admin/transactions/page.tsx": [
-    16,
-    0
-  ],
-  "app/[locale]/dashboard/admin/users/[userId]/page.tsx": [
-    4,
-    0
   ],
   "app/[locale]/dashboard/student/courses/[courseId]/exams/[examId]/exam-taker.tsx": [
     0,
@@ -79,109 +11,9 @@
     0,
     3
   ],
-  "app/[locale]/dashboard/teacher/courses/[courseId]/certificates/page.tsx": [
-    11,
-    0
-  ],
-  "app/[locale]/dashboard/teacher/courses/[courseId]/exercises/page.tsx": [
-    14,
-    0
-  ],
-  "app/[locale]/dashboard/teacher/courses/[courseId]/page.tsx": [
-    14,
-    0
-  ],
-  "app/[locale]/dashboard/teacher/courses/[courseId]/preview/lessons/[lessonId]/preview-lesson-sidebar.tsx": [
-    1,
-    0
-  ],
-  "app/[locale]/dashboard/teacher/courses/[courseId]/preview/page.tsx": [
-    0,
-    1
-  ],
-  "app/[locale]/dashboard/teacher/courses/page.tsx": [
-    4,
-    0
-  ],
-  "app/[locale]/dashboard/teacher/page.tsx": [
-    32,
-    0
-  ],
-  "app/[locale]/dashboard/teacher/revenue/page.tsx": [
-    52,
-    1
-  ],
-  "app/[locale]/onboarding/layout.tsx": [
-    3,
-    0
-  ],
   "app/[locale]/verify/[code]/page.tsx": [
     0,
     1
-  ],
-  "components/admin/billing-overview.tsx": [
-    13,
-    0
-  ],
-  "components/admin/course-status-actions.tsx": [
-    2,
-    0
-  ],
-  "components/admin/invite-user-dialog.tsx": [
-    8,
-    0
-  ],
-  "components/admin/landing-page/landing-pages-client.tsx": [
-    3,
-    0
-  ],
-  "components/admin/landing-page/template-picker.tsx": [
-    28,
-    0
-  ],
-  "components/admin/mailer-status-row.tsx": [
-    4,
-    0
-  ],
-  "components/admin/manual-transfer-form.tsx": [
-    3,
-    0
-  ],
-  "components/admin/notifications-list.tsx": [
-    12,
-    3
-  ],
-  "components/admin/payment-provider-row.tsx": [
-    3,
-    0
-  ],
-  "components/admin/payment-request-actions.tsx": [
-    2,
-    0
-  ],
-  "components/admin/payment-request-dialog.tsx": [
-    2,
-    0
-  ],
-  "components/admin/payment-requests-table.tsx": [
-    15,
-    0
-  ],
-  "components/admin/plan-change-dialog.tsx": [
-    6,
-    0
-  ],
-  "components/admin/subscription-actions.tsx": [
-    2,
-    0
-  ],
-  "components/admin/usage-meter.tsx": [
-    5,
-    0
-  ],
-  "components/admin/users-table.tsx": [
-    6,
-    0
   ],
   "components/ai-elements/commit.tsx": [
     12,
@@ -291,10 +123,6 @@
     25,
     0
   ],
-  "components/onboarding/onboarding-wizard.tsx": [
-    87,
-    21
-  ],
   "components/platform-sidebar.tsx": [
     6,
     0
@@ -317,10 +145,6 @@
   ],
   "components/shared/limit-reached-banner.tsx": [
     5,
-    0
-  ],
-  "components/shared/onboarding-checklist.tsx": [
-    9,
     0
   ],
   "components/shared/verify-email-banner.tsx": [
@@ -355,181 +179,25 @@
     7,
     0
   ],
-  "components/teacher/ai-preview-modal.tsx": [
-    8,
-    0
-  ],
-  "components/teacher/analytics-cells.tsx": [
-    1,
-    0
-  ],
-  "components/teacher/block-editor/add-block-menu.tsx": [
-    92,
-    0
-  ],
-  "components/teacher/block-editor/editors/callout-block.tsx": [
-    12,
-    0
-  ],
-  "components/teacher/block-editor/editors/checkpoint-block.tsx": [
-    3,
-    0
-  ],
   "components/teacher/block-editor/editors/code-block.tsx": [
     8,
     2
-  ],
-  "components/teacher/block-editor/editors/expiring-url-warning.tsx": [
-    2,
-    0
-  ],
-  "components/teacher/block-editor/editors/fill-in-the-blank-block.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/block-editor/editors/flashcard-set-block.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/block-editor/editors/matching-pairs-block.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/block-editor/editors/ordering-block.tsx": [
-    7,
-    0
-  ],
-  "components/teacher/block-editor/editors/quiz-block.tsx": [
-    6,
-    1
-  ],
-  "components/teacher/block-editor/editors/vocabulary-block.tsx": [
-    3,
-    0
   ],
   "components/teacher/certificate-preview.tsx": [
     14,
     1
   ],
-  "components/teacher/certificate-template-form/certificate-info-section.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/certificate-template-form/completion-criteria-section.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/certificate-template-form/design-section.tsx": [
-    8,
-    2
-  ],
-  "components/teacher/certificate-template-form/expiration-section.tsx": [
-    3,
-    0
-  ],
   "components/teacher/certificate-template-form/issuer-section.tsx": [
-    3,
+    0,
     1
   ],
   "components/teacher/certificate-template-form/signature-section.tsx": [
-    3,
-    1
-  ],
-  "components/teacher/exam-builder/exam-question-ai-grading.tsx": [
     0,
-    6
-  ],
-  "components/teacher/exam-builder/exam-question-options.tsx": [
-    8,
     1
-  ],
-  "components/teacher/exam-submissions-review.tsx": [
-    15,
-    0
-  ],
-  "components/teacher/exercise-builder/exercise-ai-config-step.tsx": [
-    13,
-    7
-  ],
-  "components/teacher/exercise-builder/exercise-audio-config-step.tsx": [
-    6,
-    0
-  ],
-  "components/teacher/exercise-builder/exercise-builder-toolbar.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/exercise-builder/exercise-details-step.tsx": [
-    12,
-    0
-  ],
-  "components/teacher/improved-template-selector.tsx": [
-    8,
-    6
-  ],
-  "components/teacher/issue-certificate-button.tsx": [
-    6,
-    0
-  ],
-  "components/teacher/lesson-editor/generate-questions-dialog.tsx": [
-    1,
-    0
-  ],
-  "components/teacher/lesson-editor/lesson-ai-task-step.tsx": [
-    10,
-    0
-  ],
-  "components/teacher/lesson-editor/lesson-editor-actions.tsx": [
-    1,
-    0
-  ],
-  "components/teacher/lesson-editor/lesson-editor-header.tsx": [
-    2,
-    0
   ],
   "components/teacher/lesson-editor/markdown-field.tsx": [
-    3,
-    16
-  ],
-  "components/teacher/lesson-funnel.tsx": [
-    3,
-    0
-  ],
-  "components/teacher/lesson-resources-manager.tsx": [
-    4,
-    0
-  ],
-  "components/teacher/preview-banner.tsx": [
-    6,
-    0
-  ],
-  "components/teacher/student-progress-cells.tsx": [
-    8,
-    0
-  ],
-  "components/teacher/student-progress-sheet.tsx": [
-    2,
-    0
-  ],
-  "components/teacher/submission-review.tsx": [
-    62,
-    2
-  ],
-  "components/teacher/version-diff-panel.tsx": [
-    31,
-    7
-  ],
-  "components/teacher/version-history-sheet.tsx": [
-    8,
-    0
-  ],
-  "components/teacher/version-preview.tsx": [
-    29,
-    0
-  ],
-  "components/tenant/create-school-flow.tsx": [
-    69,
-    11
+    0,
+    13
   ],
   "components/tenant/tenant-switcher.tsx": [
     1,
