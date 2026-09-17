@@ -78,16 +78,16 @@ ON CONFLICT (slug) DO UPDATE SET
 -- Kept on the FREE plan on purpose: it's the baseline tenant for exercising plan-gating in
 -- local dev and E2E (free-plan upgrade nudges, the landing-builder paid gate, etc.). Use a
 -- paid tenant (e.g. Code Academy below, on `pro`) when you need gated features unlocked.
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'free', 'active', 'active')
+INSERT INTO tenants (id, slug, name, plan, status, billing_status)
+VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', 'free', 'active', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)
 -- On 'enterprise' (full plan, all features unlocked) so it's the go-to tenant
 -- for testing gated features; Default School stays on 'free' (all gates
 -- active) so upgrade-nudge / locked-feature UX is also covered. See #291.
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
-VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'enterprise', 'active', 'active')
+INSERT INTO tenants (id, slug, name, plan, status, billing_status)
+VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', 'enterprise', 'active', 'active')
 ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, billing_status = EXCLUDED.billing_status;
 
 

@@ -7,8 +7,6 @@ export interface Tenant {
   name: string
   domain: string | null
   logo_url: string | null
-  primary_color: string
-  secondary_color: string
   plan: string
   status: string
 }
@@ -114,7 +112,7 @@ export async function getUserTenants(userId: string): Promise<Array<Tenant & { r
 
   if (!data) return []
 
-  return data.map((tu: any) => ({
+  return (data as unknown as Array<{ role: string; tenant: Tenant }>).map((tu) => ({
     ...tu.tenant,
     role: tu.role,
   }))

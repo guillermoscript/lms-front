@@ -99,8 +99,6 @@ School/organization records.
 | `name` | VARCHAR(255) | |
 | `domain` | VARCHAR(255) | Custom domain |
 | `logo_url` | TEXT | |
-| `primary_color` | VARCHAR(7) | |
-| `secondary_color` | VARCHAR(7) | |
 | `plan` | VARCHAR(50) | Legacy — see `platform_subscriptions` |
 | `status` | VARCHAR(50) | `active`, etc. |
 | `stripe_account_id` | VARCHAR(255) | Stripe Connect (for student payments) |

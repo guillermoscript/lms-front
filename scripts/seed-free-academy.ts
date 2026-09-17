@@ -159,7 +159,7 @@ async function main() {
 
   // 1) Tenant (paid plan unlocks the landing builder).
   const { error: tErr } = await db.from('tenants').upsert(
-    { id: TENANT_ID, slug: 'free-academy', name: 'Free Academy', plan: 'pro', status: 'active', primary_color: '#7c3aed' },
+    { id: TENANT_ID, slug: 'free-academy', name: 'Free Academy', plan: 'pro', status: 'active' },
     { onConflict: 'id' }
   )
   if (tErr) throw new Error(`tenant: ${tErr.message}`)

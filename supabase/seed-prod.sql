@@ -152,8 +152,8 @@ ON CONFLICT (plan_id, payment_provider, interval) DO NOTHING;
 -- ---------------------------------------------------------------------------
 -- 2. DEFAULT TENANT
 -- ---------------------------------------------------------------------------
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'free', 'active')
+INSERT INTO tenants (id, slug, name, plan, status)
+VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', 'free', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 
