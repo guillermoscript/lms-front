@@ -1,3 +1,6 @@
+import type { SchoolBrand } from '@/lib/themes/school-brand'
+import { escapeHtml, schoolButton, schoolHeadingStyle, schoolLogoHeader } from './school-brand-parts'
+
 /**
  * "Here is how to pay" — sent to a student when the school saves payment
  * instructions on a manual (bank transfer / offline) request (issue #727).
@@ -52,14 +55,7 @@ export interface PaymentInstructionsEmailData {
   requestUrl: string
   /** Reader's locale; anything that is not Spanish falls back to English. */
   locale?: string | null
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+  brand: SchoolBrand
 }
 
 export function paymentInstructionsTemplate(
@@ -75,7 +71,8 @@ export function paymentInstructionsTemplate(
     html: `<!DOCTYPE html>
 <html>
 <body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
-  <h2 style="color:#2563eb">${copy.heading(item)}</h2>
+  ${schoolLogoHeader(data.brand)}
+  <h2 style="${schoolHeadingStyle(data.brand)}">${copy.heading(item)}</h2>
   <p>${copy.intro(school)}</p>
   <table style="border-collapse:collapse;margin:16px 0">
     <tr><td style="padding:4px 12px 4px 0;color:#666">${copy.amount}</td><td style="padding:4px 0"><strong>${escapeHtml(data.amountLabel)}</strong></td></tr>
@@ -85,9 +82,7 @@ export function paymentInstructionsTemplate(
   <div style="background:#f5f5f5;border-radius:6px;padding:16px;margin:16px 0;line-height:1.5">${instructions}</div>
   <p>${copy.afterPaying}</p>
   <p style="text-align:center;margin:32px 0">
-    <a href="${data.requestUrl}" style="background:#2563eb;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">
-      ${copy.cta}
-    </a>
+    ${schoolButton(data.brand, data.requestUrl, copy.cta)}
   </p>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
   <p style="color:#999;font-size:12px">${school}</p>

@@ -11,10 +11,6 @@
     0,
     3
   ],
-  "app/[locale]/verify/[code]/page.tsx": [
-    0,
-    1
-  ],
   "components/ai-elements/commit.tsx": [
     12,
     0

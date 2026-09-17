@@ -6,6 +6,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
 import { joinedSchoolTemplate } from '@/lib/email/templates/joined-school'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { isPlanLimitError, STUDENT_LIMIT_MESSAGE } from '@/lib/billing/plan-limit-error'
@@ -190,19 +191,18 @@ export async function joinCurrentSchool() {
   // needs to act on it: the member is already in, there is nothing to share.
   let emailSent = false
   try {
-    const { data: authUser } = await adminClient.auth.admin.getUserById(user.id)
-    const { data: tenantRow } = await adminClient
-      .from('tenants')
-      .select('name')
-      .eq('id', tenantId)
-      .single()
+    const [{ data: authUser }, brand] = await Promise.all([
+      adminClient.auth.admin.getUserById(user.id),
+      getSchoolBrand(tenantId),
+    ])
 
     if (authUser?.user?.email) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
       const template = joinedSchoolTemplate({
         studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
-        schoolName: tenantRow?.name || 'the school',
+        schoolName: brand.name || 'the school',
         dashboardUrl: `${appUrl}/dashboard/student`,
+        brand,
       })
       emailSent = await sendEmail({ to: authUser.user.email, ...template })
     }

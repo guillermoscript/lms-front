@@ -17,6 +17,7 @@ import { sendEmail } from '@/lib/email/send'
 import { dailyDigestEmailTemplate, streakNudgeEmailTemplate } from '@/lib/email/templates/daily-digest'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 
 export type DigestLocale = 'en' | 'es'
 export type DigestKind = 'daily_digest' | 'streak_nudge'
@@ -390,6 +391,9 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
     const dateStr = localDateStr(now, settings.timezone)
     const schoolName = tenant.name
     const actionUrl = `${tenantBaseUrl(tenant.slug)}/${settings.locale}/dashboard/student?src=digest`
+    // Once per tenant, not per recipient — every student in this tenant's
+    // batch gets the same school brand.
+    const brand = await getSchoolBrand(tenantId)
 
     const { data: templateRows } = await admin
       .from('notification_templates')
@@ -546,11 +550,12 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
                       goalsPending: candidate.goals_pending,
                       streak: streakAtRisk ? candidate.current_streak : 0,
                       actionUrl,
+                      brand,
                     },
                     settings.locale
                   )
                 : streakNudgeEmailTemplate(
-                    { schoolName, firstName: vars.first_name, streak: candidate.current_streak, actionUrl },
+                    { schoolName, firstName: vars.first_name, streak: candidate.current_streak, actionUrl, brand },
                     settings.locale
                   )
             emailSent = await sendEmail({ to: candidate.email, ...emailTemplate })

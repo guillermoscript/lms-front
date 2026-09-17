@@ -52,6 +52,8 @@ interface PageMetaInput {
   image?: string
   /** Uppercase pill label rendered on the generated OG card (ignored if `image` is set). */
   ogBadge?: string
+  /** Extra query params merged into the generated /api/og card, e.g. `{ type: 'course', courseId }` (ignored if `image` is set). */
+  ogParams?: Record<string, string | number | null | undefined>
   noIndex?: boolean
   ogType?: 'website' | 'article' | 'profile'
 }
@@ -66,7 +68,13 @@ export async function buildPageMetadata(input: PageMetaInput): Promise<Metadata>
   const description = input.description
   const image =
     input.image ??
-    ogImageUrl({ title: input.title, subtitle: description, site: siteName, badge: input.ogBadge })
+    ogImageUrl({
+      title: input.title,
+      subtitle: description,
+      site: siteName,
+      badge: input.ogBadge,
+      ...input.ogParams,
+    })
 
   const metadata: Metadata = {
     title: input.title,

@@ -11,6 +11,7 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { sendEmail } from '@/lib/email/send'
 import { certificateIssuedTemplate } from '@/lib/email/templates/certificate-issued'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
@@ -149,25 +150,20 @@ export async function POST(request: NextRequest) {
         const verifyUrl = `${appUrl}/verify/${result.certificateId}`
         try {
           const adminClient = createAdminClient()
-          const { data: authUser } = await adminClient.auth.admin.getUserById(studentId)
-          const { data: courseRow } = await supabase
-            .from('courses')
-            .select('title')
-            .eq('course_id', courseId)
-            .single()
-          const { data: tenantRow } = await adminClient
-            .from('tenants')
-            .select('name')
-            .eq('id', tenantId)
-            .single()
+          const [{ data: authUser }, { data: courseRow }, brand] = await Promise.all([
+            adminClient.auth.admin.getUserById(studentId),
+            supabase.from('courses').select('title').eq('course_id', courseId).single(),
+            getSchoolBrand(tenantId),
+          ])
 
           if (authUser?.user?.email && result.certificateId) {
             const template = certificateIssuedTemplate({
               studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
               courseTitle: courseRow?.title || 'the course',
-              schoolName: tenantRow?.name || 'LMS Platform',
+              schoolName: brand.name || 'LMS Platform',
               verifyUrl,
               downloadUrl: `${appUrl}/api/certificates/${result.certificateId}?format=pdf`,
+              brand,
             })
             emailSent = await sendEmail({ to: authUser.user.email, ...template })
           }
@@ -367,20 +363,19 @@ async function simplifiedIssuance(
   const verifyUrl = `${appUrl}/verify/${certificate.verification_code}`
   try {
     const adminClient = createAdminClient()
-    const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
-    const { data: tenantRow } = await adminClient
-      .from('tenants')
-      .select('name')
-      .eq('id', tenantId)
-      .single()
+    const [{ data: authUser }, brand] = await Promise.all([
+      adminClient.auth.admin.getUserById(userId),
+      getSchoolBrand(tenantId),
+    ])
 
     if (authUser?.user?.email) {
       const template = certificateIssuedTemplate({
         studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
         courseTitle: course?.title || 'the course',
-        schoolName: tenantRow?.name || 'LMS Platform',
+        schoolName: brand.name || 'LMS Platform',
         verifyUrl,
         downloadUrl: `${appUrl}/api/certificates/${certificate.certificate_id}?format=pdf`,
+        brand,
       })
       emailSent = await sendEmail({ to: authUser.user.email, ...template })
     }

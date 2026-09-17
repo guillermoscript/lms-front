@@ -1,3 +1,6 @@
+import type { SchoolBrand } from '@/lib/themes/school-brand'
+import { escapeHtml, schoolButton, schoolLogoHeader } from './school-brand-parts'
+
 /**
  * Sent to each enrolled student when a teacher deletes a course outright.
  *
@@ -12,6 +15,7 @@ export interface CourseRemovedEmailData {
   schoolName: string
   browseUrl: string
   locale?: string | null
+  brand: SchoolBrand
 }
 
 const COPY = {
@@ -35,14 +39,6 @@ export function resolveCourseRemovedLocale(locale: string | null | undefined): C
   return locale?.toLowerCase().startsWith('es') ? 'es' : 'en'
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 export function courseRemovedTemplate(data: CourseRemovedEmailData): { subject: string; html: string } {
   const copy = COPY[resolveCourseRemovedLocale(data.locale)]
   const course = escapeHtml(data.courseTitle)
@@ -53,12 +49,11 @@ export function courseRemovedTemplate(data: CourseRemovedEmailData): { subject: 
     html: `<!DOCTYPE html>
 <html>
 <body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
+  ${schoolLogoHeader(data.brand)}
   <p>${copy.greeting}</p>
   <p>${copy.body(course, school)}</p>
   <p style="text-align:center;margin:32px 0">
-    <a href="${data.browseUrl}" style="background:#2563eb;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">
-      ${copy.cta}
-    </a>
+    ${schoolButton(data.brand, data.browseUrl, copy.cta)}
   </p>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
   <p style="color:#999;font-size:12px">${school}</p>

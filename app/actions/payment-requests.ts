@@ -15,6 +15,7 @@ import { sendEmail } from '@/lib/email/send'
 import { bestEffortLocaleOr } from '@/lib/i18n/best-effort-locale'
 import { paymentInstructionsTemplate } from '@/lib/email/templates/payment-instructions'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { formatCurrency } from '@/lib/currency'
 import { formatDateTime } from '@/lib/format-date-time'
 import { getTenantTimeZone } from '@/lib/tenant-timezone'
@@ -107,9 +108,10 @@ async function emailPaymentInstructions(params: {
   try {
     if (!params.instructions.trim()) return false
 
-    const [{ data: authUser }, { data: tenant }, timeZone, locale] = await Promise.all([
+    const [{ data: authUser }, { data: tenant }, brand, timeZone, locale] = await Promise.all([
       adminClient.auth.admin.getUserById(studentUserId),
       adminClient.from('tenants').select('name, slug').eq('id', tenantId).single(),
+      getSchoolBrand(tenantId),
       getTenantTimeZone(tenantId),
       // The school's own UI language — the closest thing to the reader's that
       // this flow knows, since nothing stores a per-student locale. Sending a
@@ -121,7 +123,7 @@ async function emailPaymentInstructions(params: {
     if (!to) return false
 
     const template = paymentInstructionsTemplate({
-      schoolName: tenant?.name || 'Your school',
+      schoolName: brand.name || tenant?.name || 'Your school',
       itemName: params.itemName,
       amountLabel: formatCurrency(params.amount ?? 0, params.currency || 'usd'),
       paymentMethod: params.paymentMethod,
@@ -131,6 +133,7 @@ async function emailPaymentInstructions(params: {
         : null,
       requestUrl: `${await getTenantSiteUrl(tenant?.slug || 'app')}/dashboard/student/payments/${requestId}`,
       locale,
+      brand,
     })
     return await sendEmail({ to, ...template })
   } catch (err) {

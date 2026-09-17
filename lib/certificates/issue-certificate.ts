@@ -4,11 +4,21 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import type { Json } from '@/lib/database.types';
 import { generateAchievementCredential, signCredential } from './open-badges';
+import { getSchoolBrand } from '@/lib/themes/school-brand';
+import { resolveCertificateDesign } from './default-design';
 
 // =====================================================
 // Types
 // =====================================================
+
+/** `check_and_issue_certificate` RPC completion payload (stored as `completion_data`). */
+type CertificateCompletion = {
+    completedAt: string;
+    averageExamScore?: number | null;
+    [key: string]: Json | undefined;
+};
 
 export interface IssueCertificateResult {
     success: boolean;
@@ -178,7 +188,12 @@ export async function issueCertificate(
             throw insertError || new Error('Failed to insert certificate');
         }
 
-        // 11. Generate PDF certificate
+        // 11. Resolve the school brand — the default design's ink, never a
+        // custom template's own colours (#765).
+        const brand = await getSchoolBrand(template.course.tenant_id);
+        const design = resolveCertificateDesign(template.design_settings, brand.outputs);
+
+        // 12. Generate PDF certificate
         const verificationUrl = `${appUrl}/verify/${verificationCode}`;
 
         const { generateAndUploadPDF } = await import('./pdf-generator');
@@ -196,13 +211,14 @@ export async function issueCertificate(
                 signatureTitle: template.signature_title,
                 signatureImage: template.signature_image_url,
                 score: eligibility.completion.averageExamScore,
-                designConfig: template.design_settings,
+                design,
+                showQrCode: template.design_settings?.show_qr_code,
             },
             certificate.certificate_id,
             supabase
         );
 
-        // 12. Generate badge image
+        // 13. Generate badge image
         const { generateAndUploadBadge } = await import('./badge-generator');
         const badgeUrl = await generateAndUploadBadge(
             {
@@ -211,14 +227,14 @@ export async function issueCertificate(
                 issuedDate: issuedAt,
                 issuerName,
                 issuerLogo: template.logo_url,
-                badgeColor: template.design_settings?.primary_color,
+                design,
                 credential: signedCredential,
             },
             certificate.certificate_id,
             supabase
         );
 
-        // 13. Update certificate with file URLs
+        // 14. Update certificate with file URLs
         const { error: updateError } = await supabase
             .from('certificates')
             .update({
@@ -231,7 +247,7 @@ export async function issueCertificate(
             console.error('Failed to update certificate URLs:', updateError);
         }
 
-        // 14. Update issuer key usage
+        // 15. Update issuer key usage
         await supabase
             .from('issuer_keys')
             .update({
@@ -240,7 +256,7 @@ export async function issueCertificate(
             })
             .eq('key_id', issuerKey.key_id);
 
-        // 15. Send notification to student
+        // 16. Send notification to student
         await supabase.from('notifications').insert({
             user_id: userId,
             tenant_id: template.course.tenant_id,
@@ -274,7 +290,7 @@ export async function checkCertificateEligibility(
     courseId: number
 ): Promise<{
     eligible: boolean;
-    completion?: any;
+    completion?: CertificateCompletion;
     reason?: string;
 }> {
     try {

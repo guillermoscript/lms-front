@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { sendEmail } from '@/lib/email/send'
 import { enrollmentConfirmedTemplate } from '@/lib/email/templates/enrollment-confirmed'
+import { getSchoolBrand, platformSchoolBrand } from '@/lib/themes/school-brand'
 import { dispatchBillingEvent } from '@/lib/payments/webhook-dispatch'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
@@ -247,29 +248,32 @@ export async function POST(req: NextRequest) {
         // Send enrollment confirmation email
         if (txBefore?.user_id) {
           try {
-            const { data: authUser } = await getSupabaseAdmin().auth.admin.getUserById(txBefore.user_id)
-            const { data: txFull } = await getSupabaseAdmin()
-              .from('transactions')
-              .select('product_id, products(name)')
-              .eq('transaction_id', parseInt(transactionId))
-              .single()
-            const { data: tenantRow } = await getSupabaseAdmin()
-              .from('tenants')
-              .select('name')
-              .eq('id', tenantId || '')
-              .single()
+            // The TRANSACTION's own tenant_id, not the Connect-account lookup
+            // above: `tenantId` is null for a direct (non-Connect) charge, and
+            // the row itself always carries the school it belongs to (D2).
+            const brandTenantId = (txBefore.tenant_id as string | null) ?? tenantId
+            const [{ data: authUser }, { data: txFull }, brand] = await Promise.all([
+              getSupabaseAdmin().auth.admin.getUserById(txBefore.user_id),
+              getSupabaseAdmin()
+                .from('transactions')
+                .select('product_id, products(name)')
+                .eq('transaction_id', parseInt(transactionId))
+                .single(),
+              brandTenantId ? getSchoolBrand(brandTenantId) : platformSchoolBrand(''),
+            ])
 
             if (authUser?.user?.email) {
               const email = authUser.user.email
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const productName = (txFull?.products as any)?.name || 'your course'
-              const schoolName = tenantRow?.name || 'LMS Platform'
+              const schoolName = brand.name || 'LMS Platform'
               const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
               const template = enrollmentConfirmedTemplate({
                 studentName: authUser.user.user_metadata?.full_name || email,
                 courseTitle: productName,
                 schoolName,
                 dashboardUrl: `${appUrl}/dashboard/student/courses`,
+                brand,
               })
               await sendEmail({ to: email, ...template })
             }

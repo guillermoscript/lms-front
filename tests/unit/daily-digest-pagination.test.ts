@@ -9,6 +9,34 @@ vi.mock('@/lib/email/send', () => ({
   }),
 }))
 
+// The digest resolves the school brand once per tenant (issue #765). This
+// suite is about pagination, not branding, so stub it out rather than let
+// the real getSchoolBrand() hit createAdminClient() (no service-role key in
+// this test process) and fall back through its own logged error path.
+vi.mock('@/lib/themes/school-brand', () => ({
+  getSchoolBrand: vi.fn(async (tenantId: string) => ({
+    tenantId,
+    name: '',
+    logoUrl: null,
+    theme: null,
+    outputs: {
+      themeId: null,
+      brand: '#007595',
+      button: '#007595',
+      buttonInk: '#FFFFFF',
+      buttonBorder: '#007595',
+      brandText: '#007595',
+      tint: '#E6F2F5',
+      deep: '#003A49',
+      deepInk: '#FFFFFF',
+      deepMuted: '#B3D9E0',
+      paper: '#FFFFFF',
+      headingFont: null,
+      emailHeadingFontStack: 'Georgia, "Times New Roman", serif',
+    },
+  })),
+}))
+
 import { fetchDigestCandidates, runDailyDigest } from '@/lib/notifications/daily-digest'
 
 /**

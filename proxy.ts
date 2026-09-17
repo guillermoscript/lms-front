@@ -214,7 +214,10 @@ export default async function proxy(request: NextRequest) {
   // --- Tenant Resolution (runs for ALL routes including /api) ---
   const host = requestAuthority(request)
   const tenantSlug = getTenantSlugFromHost(host)
-    || request.headers.get('x-tenant-slug') // Dev override
+    // Dev override only — a caller-supplied header must never steer tenant
+    // resolution once this is a real deployment (e.g. the platform's own
+    // apex domain in production, where getTenantSlugFromHost returns null).
+    || (process.env.NODE_ENV !== 'production' ? request.headers.get('x-tenant-slug') : null)
   let tenantId = DEFAULT_TENANT_ID
 
   if (tenantSlug) {
@@ -527,7 +530,12 @@ export const config = {
     // Omitting the entry entirely means every analytics beacon gets
     // tenant/auth-checked and 307s to /join-school — which presents as
     // "no data", not as an error.
-    '/((?!_next/static|_next/image|favicon.ico|monitoring|api/op/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Font extensions are excluded too: /fonts/kit/*.ttf (the brand-kit
+    // heading font, issue #765) is a plain public/ asset with no [locale]
+    // route, so without this it gets swept into next-intl's locale redirect
+    // and 404s — silently dropping to the CSS fallback typeface everywhere
+    // it's linked via @font-face (lib/certificate-generator.ts).
+    '/((?!_next/static|_next/image|favicon.ico|monitoring|api/op/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ttf|woff|woff2)$).*)',
     '/.well-known/:path*',
   ],
 }

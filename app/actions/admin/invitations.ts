@@ -7,6 +7,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { isEmailVerified, EMAIL_NOT_VERIFIED_ERROR } from '@/lib/auth/require-verified-email'
 import { sendEmail } from '@/lib/email/send'
 import { invitationTemplate } from '@/lib/email/templates/invitation'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
@@ -98,17 +99,17 @@ export async function createInvitation({
   let emailSent = false
   if (sendEmailInvite) {
     try {
-      const { data: inviterProfile } = await adminClient
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userId)
-        .single()
+      const [{ data: inviterProfile }, brand] = await Promise.all([
+        adminClient.from('profiles').select('full_name').eq('id', userId).single(),
+        getSchoolBrand(tenantId),
+      ])
 
       const template = invitationTemplate({
-        schoolName: tenant?.name || 'the school',
+        schoolName: brand.name || tenant?.name || 'the school',
         inviterName: inviterProfile?.full_name || 'An administrator',
         role,
         joinUrl,
+        brand,
       })
 
       emailSent = await sendEmail({ to: email, ...template })

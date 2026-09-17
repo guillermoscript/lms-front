@@ -5,6 +5,9 @@
  * classical typography, and subtle guilloche patterns
  */
 
+import { KIT_HEADING_FONT_FILES } from './themes/brand-outputs'
+import type { ResolvedCertificateDesign } from './certificates/default-design'
+
 interface CertificateData {
   certificateNumber: string
   studentName: string
@@ -12,16 +15,17 @@ interface CertificateData {
   completionDate: Date
   score?: number | null
   issuerName?: string
-  designSettings?: {
-    primary_color?: string
-    secondary_color?: string
-    show_qr_code?: boolean
-    logo_url?: string
-  } | null
+  /** Resolved by `resolveCertificateDesign()` — the school brand for the default design, the template's own colours for a custom one. */
+  design: ResolvedCertificateDesign
   signatureName?: string | null
   signatureTitle?: string | null
   signatureImageUrl?: string | null
   logoUrl?: string | null
+}
+
+/** `public/fonts/kit/…` → the `/fonts/kit/…` URL Next.js serves it at. */
+function kitFontUrl(family: keyof typeof KIT_HEADING_FONT_FILES, weight: 400 | 700): string {
+  return KIT_HEADING_FONT_FILES[family][weight].replace(/^public/, '')
 }
 
 export function generateCertificateHTML(data: CertificateData): string {
@@ -31,10 +35,40 @@ export function generateCertificateHTML(data: CertificateData): string {
     day: 'numeric',
   })
 
-  const primaryColor = data.designSettings?.primary_color || '#1a5632'
-  const secondaryColor = data.designSettings?.secondary_color || '#0f2b1a'
+  const { design } = data
+  const primaryColor = design.primary
+  const secondaryColor = design.secondary
+  // Brand-coloured TEXT (never the raw swatch): a school-branded certificate
+  // reads every label and headline in the one AA-safe `accentText`; a custom
+  // template keeps its own two-tone split exactly as it always has.
+  const smallText = design.schoolBranded ? design.accentText : design.primary
+  const bigText = design.schoolBranded ? design.accentText : design.secondary
+
+  const headingFamily = design.headingFont
+  // The kit heading families ship no italic file — only the platform's
+  // built-in Cormorant Garamond gets the italic title treatment.
+  const headingFontFamilyCss = headingFamily
+    ? `'Kit ${headingFamily}', Georgia, sans-serif`
+    : `'Cormorant Garamond', 'Georgia', serif`
+  const titleFontStyle = headingFamily ? 'normal' : 'italic'
+  const fontFaceCss = headingFamily
+    ? `
+    @font-face {
+      font-family: 'Kit ${headingFamily}';
+      src: url('${kitFontUrl(headingFamily, 400)}') format('truetype');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Kit ${headingFamily}';
+      src: url('${kitFontUrl(headingFamily, 700)}') format('truetype');
+      font-weight: 700;
+      font-display: swap;
+    }`
+    : ''
+
   const issuer = escapeHtml(data.issuerName || 'LMS Platform')
-  const logoUrl = data.logoUrl || data.designSettings?.logo_url || ''
+  const logoUrl = data.logoUrl || ''
   const sigName = data.signatureName ? escapeHtml(data.signatureName) : ''
   const sigTitle = data.signatureTitle ? escapeHtml(data.signatureTitle) : ''
   const sigImageUrl = data.signatureImageUrl || ''
@@ -78,6 +112,7 @@ export function generateCertificateHTML(data: CertificateData): string {
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+${fontFaceCss}
 
     html, body {
       width: 100%; height: 100%;
@@ -228,10 +263,10 @@ export function generateCertificateHTML(data: CertificateData): string {
       display: flex; align-items: center; justify-content: center;
     }
     .seal-monogram {
-      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-family: ${headingFontFamilyCss};
       font-size: 20px;
       font-weight: 600;
-      color: ${primaryColor};
+      color: ${smallText};
       letter-spacing: 2px;
     }
     .org-logo {
@@ -246,17 +281,17 @@ export function generateCertificateHTML(data: CertificateData): string {
       font-weight: 500;
       letter-spacing: 5px;
       text-transform: uppercase;
-      color: ${primaryColor};
+      color: ${smallText};
       margin-bottom: 10px;
     }
 
     /* Main title */
     .cert-title {
-      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-family: ${headingFontFamilyCss};
       font-size: 48px;
       font-weight: 400;
-      font-style: italic;
-      color: ${secondaryColor};
+      font-style: ${titleFontStyle};
+      color: ${bigText};
       line-height: 1;
       margin-bottom: 4px;
     }
@@ -281,10 +316,10 @@ export function generateCertificateHTML(data: CertificateData): string {
 
     /* Student name — the hero element */
     .student-name {
-      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-family: ${headingFontFamilyCss};
       font-size: 42px;
       font-weight: 600;
-      color: ${secondaryColor};
+      color: ${bigText};
       line-height: 1.1;
       margin-bottom: 6px;
     }
@@ -320,10 +355,10 @@ export function generateCertificateHTML(data: CertificateData): string {
 
     /* Course title */
     .course-name {
-      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-family: ${headingFontFamilyCss};
       font-size: 24px;
       font-weight: 600;
-      color: ${secondaryColor};
+      color: ${bigText};
       margin-bottom: 18px;
     }
 
@@ -344,10 +379,10 @@ export function generateCertificateHTML(data: CertificateData): string {
       color: #8a8578;
     }
     .score-badge .score-value {
-      font-family: 'Cormorant Garamond', 'Georgia', serif;
+      font-family: ${headingFontFamilyCss};
       font-size: 26px;
       font-weight: 700;
-      color: ${secondaryColor};
+      color: ${bigText};
     }
 
     /* Footer signatures + date */
