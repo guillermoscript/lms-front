@@ -155,17 +155,22 @@ export const KIT_SURFACES: Record<KitSurfaceId, KitSurfaceSet> = {
     ),
   },
   dark: {
-    // The light variant a dark theme's mode toggle switches to. What it should
-    // look like is still an open owner decision on #766; the values are data
-    // only, so revising them touches nothing else.
+    // The light variant Kódigo's mode toggle switches to (#766, owner decision
+    // settled): a light terminal rather than a second neutral. It is the dark
+    // half read back — the page takes the dark surface's own ink (0.96) and the
+    // ink takes the dark surface's page colour (0.17), so the theme inverts
+    // instead of changing identity. Away from `cool`: the page sits a step
+    // deeper (0.965) so white cards read as panels over editor chrome, and the
+    // border is a step firmer (0.86) because Kódigo's sharp corners have no
+    // radius to describe an edge with.
     light: surface(
       false,
-      'oklch(0.98 0.004 260)',
+      'oklch(0.965 0.005 260)',
       'oklch(0.17 0.01 260)',
       'oklch(1 0 0)',
-      'oklch(0.955 0.005 260)',
-      'oklch(0.46 0.01 260)',
-      'oklch(0.9 0.008 260)'
+      'oklch(0.93 0.006 260)',
+      'oklch(0.44 0.012 260)',
+      'oklch(0.86 0.01 260)'
     ),
     dark: DARK_SET_DARK,
   },

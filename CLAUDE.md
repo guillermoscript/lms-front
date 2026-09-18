@@ -223,7 +223,7 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 Users span independent creators/solo educators and multi-staff schools, across LATAM and English-speaking markets (en/es). Brand personality: **minimal, elegant, focused** — content over chrome, no visual noise.
 
 - **Aesthetic:** clean, spacious, content-first; hierarchy via typography weight/size over color/ornament. References: Duolingo/Khan Academy, Teachable/Thinkific. Anti-references: cluttered enterprise dashboards, generic Bootstrap.
-- **Theme:** light + dark, tenant theming overrides primary/accent via CSS custom properties. Default primary is **teal-cyan** `oklch(0.52 0.105 223.128)` light / `oklch(0.45 0.085 224.283)` dark — hue ~223, not 293. Nothing may depend on that hue holding; tenants override it.
+- **Theme:** light + dark, tenant theming overrides primary/accent via CSS custom properties. The platform palette **is the theme kit's default theme** (#766): Estructura + **Tinta azul** `#3A50B8` (`oklch(0.476 0.166 270)`), same value in both modes, over Estructura's cool surfaces. `app/globals.css` holds `deriveKitVars('estructura', '#3A50B8')` verbatim — change it in `lib/themes/kit.ts` and paste, never by hand. Nothing may depend on that hue holding; tenants override it.
 - **Typography/icons:** Noto Sans (body), Geist Sans/Mono (UI/code); Tabler Icons + Lucide (outline style).
 - **Motion:** subtle, via `motion` lib; respect `prefers-reduced-motion`; convey state changes, not decoration.
 - **Principles:** content over chrome · obvious over clever · consistent structure across tenants (brand via color/logo, not layout) · WCAG AA by default · progressive disclosure (sheets/dialogs for detail).
