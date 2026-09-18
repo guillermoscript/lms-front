@@ -1,0 +1,11 @@
+import { deriveBrandOutputs } from '@/lib/themes/brand-outputs'
+import { KIT_THEMES, KIT_THEME_IDS } from '@/lib/themes/kit'
+import { contrastRatio } from '@/lib/color/contrast'
+const rows: string[] = []
+const show = (label: string, o: ReturnType<typeof deriveBrandOutputs>) => rows.push(`${label.padEnd(26)} brand ${o.brand} btn ${o.button}/${o.buttonInk} ${contrastRatio(o.button,o.buttonInk).toFixed(2)} text ${o.brandText} ${contrastRatio(o.brandText,'#fff').toFixed(2)}/${contrastRatio(o.brandText,o.tint).toFixed(2)} tint ${o.tint} deep ${o.deep} ${contrastRatio(o.deep,o.deepInk).toFixed(2)} muted ${o.deepMuted} ${contrastRatio(o.deep,o.deepMuted).toFixed(2)} ${o.headingFont}`)
+show('platform', deriveBrandOutputs(null))
+for (const id of KIT_THEME_IDS) for (const s of KIT_THEMES[id].swatches) show(`${id}/${s.name}`, deriveBrandOutputs({type:'kit',theme:id,brand:s.hex}))
+show('luz/#FFFF00 custom', deriveBrandOutputs({type:'kit',theme:'luz',brand:'#FFFF00'}))
+show('luz/#000000 custom', deriveBrandOutputs({type:'kit',theme:'luz',brand:'#000000'}))
+show('luz/#FFFFFF custom', deriveBrandOutputs({type:'kit',theme:'luz',brand:'#FFFFFF'}))
+console.log(rows.join('\n'))
