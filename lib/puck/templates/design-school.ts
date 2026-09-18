@@ -101,9 +101,9 @@ const homeTemplate: PuckTemplate = {
         title: 'From Our Students',
         subtitle: 'Designers who built portfolios and careers here.',
         items: [
-          { name: 'Elena V.', role: 'UX Designer at a startup', quote: 'I came in with zero design background. The project-based courses gave me a portfolio that landed my first UX role in five months.', rating: 5 },
-          { name: 'Kwame A.', role: 'Freelance Illustrator', quote: 'The mentor critiques pushed my work to a level I did not think I could reach. I am now taking paid client commissions.', rating: 5 },
-          { name: 'Yuki T.', role: 'Brand Designer', quote: 'Clear paths, real projects, honest feedback. I finally have a portfolio I am genuinely proud to show.', rating: 5 },
+          { name: 'Student name', role: 'What they design now', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'What they design now', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'What they design now', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('FaqAccordion', {
