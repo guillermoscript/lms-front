@@ -48,7 +48,7 @@ export function FillInTheBlankBlockEditor({ block, onChange }: FillInTheBlankBlo
               'text-xs shrink-0 rounded px-1.5 py-0.5',
               segment.type === 'blank'
                 ? 'bg-primary text-primary-foreground font-medium'
-                : 'bg-muted text-foreground'
+                : 'bg-card text-foreground'
             )}>
               {segment.type === 'blank' ? 'Blanco' : 'Texto'}
             </span>

@@ -489,7 +489,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                     required
                     disabled={loading}
                   />
-                  <span className="px-3 py-2 bg-muted border border-l-0 border-input rounded-r-md text-foreground text-sm whitespace-nowrap">
+                  <span className="px-3 py-2 bg-muted border border-l-0 border-input rounded-r-input text-foreground text-sm whitespace-nowrap">
                     .{process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'}
                   </span>
                 </div>

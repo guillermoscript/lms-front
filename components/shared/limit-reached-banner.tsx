@@ -38,7 +38,7 @@ export function LimitReachedBanner({ resource, current, limit, className, cutoff
       'flex items-center gap-3 rounded-md border px-4 py-3',
       isAtLimit
         ? 'border-destructive/50 bg-destructive/10 text-destructive'
-        : 'border-yellow-500/50 bg-yellow-50 text-yellow-800 dark:bg-yellow-950/20 dark:text-yellow-200',
+        : 'border-warning/50 bg-warning/10 text-warning',
       className
     )}>
       <IconAlertTriangle className="h-5 w-5 shrink-0" />

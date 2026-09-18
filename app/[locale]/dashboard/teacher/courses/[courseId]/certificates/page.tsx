@@ -12,6 +12,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { CertificatePreview } from '@/components/teacher/certificate-preview'
 import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
 import { getSchoolBrand } from '@/lib/themes/school-brand'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -180,11 +181,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                 <CertificatePreview
                   templateName={template.template_name}
                   issuerName={template.issuer_name}
-                  designSettings={template.design_settings || {
-                    primary_color: '#3B82F6',
-                    secondary_color: '#1E40AF',
-                    show_qr_code: true,
-                  }}
+                  designSettings={template.design_settings || DEFAULT_CERTIFICATE_DESIGN}
                   brand={brand.outputs}
                 />
               </div>
@@ -210,14 +207,14 @@ export default async function CertificatesPage({ params }: PageProps) {
                   <div className="flex items-center gap-2">
                     <div
                       className="h-4 w-4 rounded-full border"
-                      style={{ backgroundColor: template.design_settings?.primary_color || '#3B82F6' }}
+                      style={{ backgroundColor: template.design_settings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color }}
                     />
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{t('certificates.templates.primaryColor')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div
                       className="h-4 w-4 rounded-full border"
-                      style={{ backgroundColor: template.design_settings?.secondary_color || '#1E40AF' }}
+                      style={{ backgroundColor: template.design_settings?.secondary_color || DEFAULT_CERTIFICATE_DESIGN.secondary_color }}
                     />
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{t('certificates.templates.secondaryColor')}</span>
                   </div>

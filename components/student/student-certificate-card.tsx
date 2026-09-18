@@ -14,6 +14,7 @@ import {
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { formatDate } from '@/lib/format-date'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 import { SocialShareModal } from './social-share-modal'
 
 /** The slice of the `certificates` row (with its joins) the card reads. */
@@ -39,7 +40,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
     const designSettings = certificate.certificate_templates?.design_settings
-    const primaryColor = designSettings?.primary_color || '#3b82f6'
+    const primaryColor = designSettings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color
     const courseTitle = certificate.courses?.title || 'Course'
     const templateName = certificate.certificate_templates?.template_name
     const issuerName = certificate.certificate_templates?.issuer_name || 'LMS Academy'

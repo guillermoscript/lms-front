@@ -147,15 +147,15 @@ export default function OnboardingWizard({
         {STEPS.map((step, i) => (
           <div key={step} className="flex items-center">
             <div
-              className={`w-3 h-3 rounded-full transition-all ${
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${
                 i <= stepIndex
-                  ? 'bg-primary scale-110'
+                  ? 'bg-primary'
                   : 'bg-muted-foreground'
               }`}
             />
             {i < STEPS.length - 1 && (
               <div
-                className={`w-12 h-0.5 transition-all ${
+                className={`w-12 h-px transition-colors ${
                   i < stepIndex ? 'bg-primary' : 'bg-muted-foreground'
                 }`}
               />
@@ -331,11 +331,11 @@ export default function OnboardingWizard({
             <div className="rounded-xl border border-border p-5 bg-muted/30">
               <h4 className="font-semibold mb-3">{t('payment.revenueSplit')}</h4>
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 rounded-lg bg-success/10 border border-success/30">
-                  <div className="text-3xl font-bold text-success">80%</div>
+                <div className="text-center p-4 rounded-lg bg-brand-tint ring-1 ring-primary/20">
+                  <div className="text-3xl font-bold text-brand-text">80%</div>
                   <div className="text-xs text-foreground mt-1">{t('payment.yourRevenue')}</div>
                 </div>
-                <div className="text-center p-4 rounded-lg bg-muted border border-border">
+                <div className="text-center p-4 rounded-lg bg-muted/40">
                   <div className="text-3xl font-bold text-muted-foreground">20%</div>
                   <div className="text-xs text-foreground mt-1">{t('payment.platformFee')}</div>
                 </div>

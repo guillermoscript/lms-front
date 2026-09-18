@@ -4,7 +4,7 @@ import { IconAward, IconQrcode, IconShieldCheck } from '@tabler/icons-react'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatDate } from '@/lib/format-date'
 import type { BrandOutputs } from '@/lib/themes/brand-outputs'
-import { resolveCertificateDesign } from '@/lib/certificates/default-design'
+import { CERTIFICATE_PAPER_INK, resolveCertificateDesign } from '@/lib/certificates/default-design'
 
 interface CertificatePreviewProps {
     templateName: string
@@ -58,16 +58,26 @@ export function CertificatePreview({
     const headingFontFamily = design.headingFont ? 'var(--font-heading)' : 'Georgia, serif'
 
     /*
-     * A facsimile of the *printed* certificate, not a themed screen. The paper and
-     * the neutral ink below are fixed because lib/certificate-generator.ts prints on
-     * fixed stock (its exact cream paper and warm-grey ink still differ from these
-     * shades). The default design's ink is the school brand (#765); a customised
+     * A facsimile of the *printed* certificate, not a themed screen (T6-1,
+     * docs/handoff/764-surface3/DECISIONS.md). The paper and neutral ink below
+     * are the exact literals lib/certificate-generator.ts and
+     * lib/certificates/pdf-generator.tsx print with — see
+     * lib/certificates/default-design.ts's CERTIFICATE_PAPER_INK, the single
+     * source those two renderers already share — and this one reads it too, via
+     * `style`, because a hand-copied paper hex in a Tailwind arbitrary class is
+     * exactly the drift that made the
+     * preview disagree with the PDF in the first place (#774). That is not the
+     * detector bypass T5-4 rejects: no literal moved into `style`, the literals
+     * left the component entirely. The default design's ink is the school brand (#765); a customised
      * design keeps the teacher's own colours, unchanged. Both are content: the
      * school THEME must never recolour the printed paper itself, and a dark
      * surface would swallow a dark preset ink chosen against paper.
      */
     return (
-        <div className="relative overflow-hidden rounded-xl border-2 bg-white shadow-xl">
+        <div
+            className="relative overflow-hidden rounded-xl border-2 shadow-xl"
+            style={{ backgroundColor: CERTIFICATE_PAPER_INK.paper }}
+        >
             {/* Decorative border */}
             <div className="absolute inset-2 border-2 border-dashed rounded-lg pointer-events-none opacity-[0.08]"
                 style={{ borderColor: design.primary }}
@@ -106,18 +116,25 @@ export function CertificatePreview({
                     >
                         {t('preview.header')}
                     </h3>
-                    <p className="text-[11px] text-gray-400 tracking-wide">{t('preview.certifyThat')}</p>
+                    <p className="text-[11px] tracking-wide" style={{ color: CERTIFICATE_PAPER_INK.preamble }}>
+                        {t('preview.certifyThat')}
+                    </p>
                 </div>
 
-                {/* Student name */}
+                {/* Student name — the generator paints this in the design's own
+                    ink (.student-name → bigText), the same as the course title
+                    below; it is never fixed neutral text. */}
                 <div className="space-y-3 w-full">
-                    <h2 className="text-3xl font-bold text-gray-900" style={{ fontFamily: headingFontFamily }}>
+                    <h2
+                        className="text-3xl font-bold"
+                        style={{ color: bigText, fontFamily: headingFontFamily }}
+                    >
                         {mockStudentName}
                     </h2>
                     <div className="mx-auto w-32 h-px" style={{
                         background: `linear-gradient(90deg, transparent, ${design.primary}40, transparent)`
                     }} />
-                    <p className="text-sm text-gray-500 leading-relaxed">
+                    <p className="text-sm leading-relaxed" style={{ color: CERTIFICATE_PAPER_INK.description }}>
                         {t('preview.successfullyCompleted')}
                     </p>
                 </div>
@@ -130,7 +147,8 @@ export function CertificatePreview({
                     {templateName || t('preview.courseTitle')}
                 </h1>
 
-                {/* Signatures row */}
+                {/* Signatures row — keep: facsimile of the printed PDF's ink,
+                    see lib/certificate-generator.ts .footer-rule/.footer-name/.footer-label */}
                 <div className="w-full grid grid-cols-2 gap-8 pt-4 mt-2">
                     <div className="text-left space-y-1.5">
                         {signatureImageUrl ? (
@@ -140,24 +158,27 @@ export function CertificatePreview({
                                 className="h-8 w-auto object-contain mb-1"
                             />
                         ) : null}
-                        <div className="h-px w-full bg-gray-200" />
-                        <p className="font-semibold text-sm text-gray-800">
+                        <div className="h-px w-full" style={{ backgroundColor: CERTIFICATE_PAPER_INK.footerRule }} />
+                        <p className="font-semibold text-sm" style={{ color: CERTIFICATE_PAPER_INK.footerName }}>
                             {signatureName || issuerName || "LMS Academy"}
                         </p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                        <p className="text-[10px] uppercase tracking-wider" style={{ color: CERTIFICATE_PAPER_INK.footerLabel }}>
                             {signatureTitle || t('preview.officialIssuer')}
                         </p>
                     </div>
                     <div className="text-right space-y-1.5">
-                        <div className="h-px w-full bg-gray-200" />
-                        <p className="font-semibold text-sm text-gray-800">{mockDate}</p>
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider">{t('preview.issueDate')}</p>
+                        <div className="h-px w-full" style={{ backgroundColor: CERTIFICATE_PAPER_INK.footerRule }} />
+                        <p className="font-semibold text-sm" style={{ color: CERTIFICATE_PAPER_INK.footerName }}>{mockDate}</p>
+                        <p className="text-[10px] uppercase tracking-wider" style={{ color: CERTIFICATE_PAPER_INK.footerLabel }}>{t('preview.issueDate')}</p>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="pt-4 w-full flex items-center justify-between border-t border-gray-100">
-                    <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                <div
+                    className="pt-4 w-full flex items-center justify-between border-t"
+                    style={{ borderColor: CERTIFICATE_PAPER_INK.footerRule }}
+                >
+                    <div className="flex items-center gap-1.5 text-[10px]" style={{ color: CERTIFICATE_PAPER_INK.footerLabel }}>
                         <IconShieldCheck size={14} />
                         <span className="uppercase tracking-wider font-medium">{t('preview.verified')}</span>
                     </div>
@@ -165,11 +186,11 @@ export function CertificatePreview({
                     {designSettings.show_qr_code && (
                         <div className="flex items-center gap-2.5">
                             <div className="text-right">
-                                <p className="text-[9px] text-gray-400 font-mono">{mockCode}</p>
+                                <p className="text-[9px] font-mono" style={{ color: CERTIFICATE_PAPER_INK.certId }}>{mockCode}</p>
                             </div>
                             <div
-                                className="p-1.5 rounded-md bg-gray-50 border border-gray-100"
-                                style={{ color: smallText }}
+                                className="p-1.5 rounded-md border"
+                                style={{ color: smallText, borderColor: CERTIFICATE_PAPER_INK.footerRule }}
                             >
                                 <IconQrcode size={28} />
                             </div>

@@ -53,6 +53,9 @@ export function NotificationBell() {
   }
 
   useEffect(() => {
+    // loadNotifications is async and touches state only after its first await,
+    // which the rule cannot see.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadNotifications()
     
     // Poll for new notifications every 30 seconds
@@ -95,17 +98,16 @@ export function NotificationBell() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case "success":
-        return "text-green-600"
+        return "text-success"
       case "warning":
-        return "text-yellow-600"
+        return "text-warning"
       case "error":
-        return "text-red-600"
-      case "info":
-        return "text-blue-600"
       case "alert":
-        return "text-orange-600"
+        return "text-destructive"
+      case "info":
+        return "text-brand-text"
       default:
-        return "text-gray-600"
+        return "text-muted-foreground"
     }
   }
 
@@ -149,7 +151,7 @@ export function NotificationBell() {
             <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
               <IconInbox className="h-12 w-12 mb-2 opacity-50" />
               <p>No notifications</p>
-              <p className="text-xs mt-1">You're all caught up!</p>
+              <p className="text-xs mt-1">You&apos;re all caught up!</p>
             </div>
           ) : (
             <div className="divide-y">
@@ -157,7 +159,7 @@ export function NotificationBell() {
                 <div
                   key={notification.id}
                   className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
-                    !notification.in_app_read ? "bg-muted/30" : ""
+                    !notification.in_app_read ? "bg-brand-tint" : ""
                   }`}
                   onClick={() => {
                     if (!notification.in_app_read) {
@@ -172,7 +174,7 @@ export function NotificationBell() {
                           {notification.notification.title}
                         </h4>
                         {!notification.in_app_read && (
-                          <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                          <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">

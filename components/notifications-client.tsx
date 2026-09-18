@@ -116,21 +116,20 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
   const getTypeColor = (type: string) => {
     switch (type) {
       case "success":
-        return "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+        return "bg-success/10 text-success border-success/20"
       case "warning":
-        return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+        return "bg-warning/10 text-warning border-warning/20"
       case "error":
-        return "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-      case "info":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
       case "alert":
-        return "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+        return "bg-destructive/10 text-destructive border-destructive/20"
+      case "info":
+        return "bg-brand-tint text-brand-text border-primary/20"
       default:
-        return "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300"
+        return "bg-muted text-muted-foreground border-border"
     }
   }
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string): React.ComponentProps<typeof Badge>["variant"] => {
     switch (priority) {
       case "urgent":
         return "destructive"
@@ -149,7 +148,7 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
     <div className="space-y-6">
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="w-auto">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "unread" | "read")} className="w-auto">
           <TabsList>
             <TabsTrigger value="all">
               {t('tabs.all')} ({notifications.filter((n) => !n.dismissed_at).length})
@@ -187,7 +186,7 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
           {filteredNotifications.map((notification) => (
             <Card
               key={notification.id}
-              className={`${!notification.in_app_read ? "border-l-4 border-l-blue-500" : ""}`}
+              className={`${!notification.in_app_read ? "border-l-4 border-l-primary" : ""}`}
             >
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
@@ -197,12 +196,12 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
                         {notification.notification.title}
                       </CardTitle>
                       {!notification.in_app_read && (
-                        <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                        <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
-                        variant={getPriorityColor(notification.notification.priority) as any}
+                        variant={getPriorityColor(notification.notification.priority)}
                         className="text-xs"
                       >
                         {t(`priority.${notification.notification.priority}`) || notification.notification.priority}

@@ -233,11 +233,9 @@ export default async function TeacherDashboard() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.quickActions')}</p>
-                  <div className="mt-2 flex gap-2">
-                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-primary w-[65%] rounded-full" />
-                    </div>
-                  </div>
+                  {/* No activity metric is fetched here. The bar that used to sit above this line
+                      was a hardcoded w-[65%] (#774, T3-3); an empty track would read as 0% next to
+                      a label that says "Active", so the card carries the label alone. */}
                   <p className="mt-2 text-[11px] text-muted-foreground">
                     {t('stats.platformActivity')}
                   </p>
