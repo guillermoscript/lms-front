@@ -288,3 +288,16 @@ rather than inventing a keep.
 > plans (which planned the logo, signature and QR plates as keeps). The three `[0, 1]` rows above
 > resolve that contradiction in D12's favour. Each keep still needs its comment, and the comment still
 > names no utility class.
+
+---
+
+**D13b — The rule now holds for the whole field family.** *(Amendment, 2026-09-18, #774.)* D13 fixed
+`Badge` and left the same trap in every other primitive that set a dark-only base fill
+(`dark:bg-input/30` with no light twin, so a caller's `bg-success/10` lost in dark mode). The fill is
+now one mode-agnostic class — `bg-input/20`, and the `--input` token already differs per mode — in
+`Button` (outline), `Input`, `Textarea`, `SelectTrigger`, `InputGroup`, `ComboboxChips`,
+`CommandInput` and the sidebar input (`bg-muted/20`). The outline `Button` gains a faint fill in
+light mode, which is what makes it match the `Input` beside it in a toolbar; in dark it moves ~1.5%
+lightness, exactly as the outline Badge did. `Checkbox` and `RadioGroupItem` keep their dark-only
+fill on purpose: nobody tints them, their checked state is `bg-primary`, and a light fill would
+change every checkbox on the platform for no caller.
