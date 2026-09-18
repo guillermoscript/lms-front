@@ -288,3 +288,77 @@ rather than inventing a keep.
 > plans (which planned the logo, signature and QR plates as keeps). The three `[0, 1]` rows above
 > resolve that contradiction in D12's favour. Each keep still needs its comment, and the comment still
 > names no utility class.
+
+---
+
+**D13b — The rule now holds for the whole field family.** *(Amendment, 2026-09-18, #774.)* D13 fixed
+`Badge` and left the same trap in every other primitive that set a dark-only base fill
+(`dark:bg-input/30` with no light twin, so a caller's `bg-success/10` lost in dark mode). The fill is
+now one mode-agnostic class — `bg-input/20`, and the `--input` token already differs per mode — in
+`Button` (outline), `Input`, `Textarea`, `SelectTrigger`, `InputGroup`, `ComboboxChips`,
+`CommandInput` and the sidebar input (`bg-muted/20`). The outline `Button` gains a faint fill in
+light mode, which is what makes it match the `Input` beside it in a toolbar; in dark it moves ~1.5%
+lightness, exactly as the outline Badge did. `Checkbox` and `RadioGroupItem` keep their dark-only
+fill on purpose: nobody tints them, their checked state is `bg-primary`, and a light fill would
+change every checkbox on the platform for no caller.
+
+---
+
+## Part 5 — #774, the leftovers (2026-09-18)
+
+Every item DECISIONS raised as a follow-up, and the two verdicts the #772 audit questioned, closed.
+
+**T3-3 → the bar is gone, not filled.** No activity metric is fetched on the teacher dashboard —
+the page has courses, students, lessons and pending reviews, all already rendered elsewhere — so
+there was nothing to drive `w-[65%]` from without inventing a query. An empty track was the first
+answer and is also wrong: a permanently 0% bar sits directly under a label that reads "Platform
+activity: Active" and contradicts it. The card keeps its label and icon. Note for a separate issue:
+`stats.platformActivity` is itself a hardcoded claim, not a measurement.
+
+**T3-7 → deleted,** as decided. The `rgba(var(--primary), …)` glow never parsed; zero rendered change.
+
+**T6-1 → the preview reads the generator's ink.** `CERTIFICATE_PAPER_INK` in
+`lib/certificates/default-design.ts` is now the one source for paper `#fffef9` and the neutral inks,
+and `lib/certificate-generator.ts`, `lib/certificates/pdf-generator.tsx` and
+`components/teacher/certificate-preview.tsx` all read it. The preview reads it through `style`, and
+that is **not** the bypass T5-4 rejects: T5-4 refused moving *literals* into `style` to reach a
+cosmetic zero. Here no literal moved — the literals left the component, and a Tailwind arbitrary
+class cannot import a constant, so `bg-[#fffef9]` would have been a hand-kept copy of the very value
+whose drift caused this follow-up. The file leaves the baseline at `[0, 0]` honestly. Also fixed
+while in there: the preview painted the student name `text-gray-900` while the generator paints
+`.student-name` in the design's own ink.
+
+**Certificate hex fallbacks → `DEFAULT_CERTIFICATE_DESIGN`** in the teacher certificates page and
+`student-certificate-card.tsx`. Left alone, with reason: `badge-generator.ts`'s fixed navy/ink for
+the custom-design branch and its badge chrome, `verify/[code]`'s badge ink, and the swatches that
+render the school's actual pick with no fallback (correctly, since there is nothing to fall back to).
+
+**O2-1 → geometry only.** The colours already agreed. The wizard's dots move to create-school's
+2.5 with no `scale-110`, and its connector to a hairline. Neither flow gains or loses a state — that
+remains logic, not colour, exactly as O2-1 said.
+
+**O2-3 → `rounded-r-input`** on the slug addon, in place. `data-testid="create-school-slug"` is
+untouched and `tests/playwright/loop-1-creator-publishes.spec.ts:171` still resolves it.
+
+**T1-5 → amended: the quiet chip is `bg-card`, not `bg-muted`.** The original verdict predates the
+card underneath it becoming `bg-brand-tint`. Muted on tint is two low-chroma washes with nothing
+between them; the chip returns to the card surface it would have on an untinted panel and separates
+by weight, as D4 asks. The "Blanco" chip stays solid `bg-primary`.
+
+**O1-3 → amended: brand tint, not `success`.** The onboarding 80/20 tiles now carry the shape T3-2
+already shipped on the revenue pages — your revenue `bg-brand-tint` + `ring-primary/20` +
+`text-brand-text`, platform fee `bg-muted/40` + `text-muted-foreground`. A percentage is data, not a
+status (D2), and O1-4 had already ruled that green on the payment step reads as "already connected"
+to a school that has not connected anything yet. The same shape now reads the same in onboarding and
+on the revenue pages.
+
+**Shared banners and the switcher** leave the palette baseline: `limit-reached`, `access-cutoff` and
+`verify-email` take the `warning` tint (they are lifecycle states the admin acts on — S1's
+exception), the switcher goes neutral, and the notification bell and list map their types to
+`success` / `warning` / `destructive`, with the type that carries no bad news going brand rather
+than inventing an "info" token (D1). Unread is `bg-primary` / `bg-brand-tint`, never a blue.
+
+**Raised, not fixed here:** `components/admin/notifications-list.tsx`,
+`components/admin/notification-form.tsx` and `components/student/notifications-summary.tsx` each
+carry their own notification-type colour map. Three copies of one mapping is a D6 shared-module
+candidate.

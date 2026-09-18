@@ -6,7 +6,7 @@
  */
 
 import { KIT_HEADING_FONT_FILES } from './themes/brand-outputs'
-import type { ResolvedCertificateDesign } from './certificates/default-design'
+import { CERTIFICATE_PAPER_INK, type ResolvedCertificateDesign } from './certificates/default-design'
 
 interface CertificateData {
   certificateNumber: string
@@ -124,7 +124,7 @@ ${fontFaceCss}
 
     .certificate {
       width: 1056px; height: 816px;
-      background: #fffef9;
+      background: ${CERTIFICATE_PAPER_INK.paper};
       position: relative;
       overflow: hidden;
       box-shadow:
@@ -309,7 +309,7 @@ ${fontFaceCss}
       font-family: 'DM Sans', sans-serif;
       font-size: 12px;
       font-weight: 400;
-      color: #8a8578;
+      color: ${CERTIFICATE_PAPER_INK.preamble};
       letter-spacing: 0.5px;
       margin-bottom: 6px;
     }
@@ -348,7 +348,7 @@ ${fontFaceCss}
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 400;
-      color: #6b6560;
+      color: ${CERTIFICATE_PAPER_INK.description};
       line-height: 1.6;
       margin-bottom: 6px;
     }
@@ -376,7 +376,7 @@ ${fontFaceCss}
       font-weight: 500;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: #8a8578;
+      color: ${CERTIFICATE_PAPER_INK.preamble};
     }
     .score-badge .score-value {
       font-family: ${headingFontFamilyCss};
@@ -415,14 +415,14 @@ ${fontFaceCss}
       font-family: 'DM Sans', sans-serif;
       font-size: 12px;
       font-weight: 500;
-      color: #3a3632;
+      color: ${CERTIFICATE_PAPER_INK.footerName};
       margin-bottom: 6px;
     }
 
     .footer-rule {
       width: 140px;
       height: 0.75px;
-      background: #c5bfb6;
+      background: ${CERTIFICATE_PAPER_INK.footerRule};
       margin-bottom: 6px;
     }
 
@@ -432,7 +432,7 @@ ${fontFaceCss}
       font-weight: 500;
       letter-spacing: 2.5px;
       text-transform: uppercase;
-      color: #9a948c;
+      color: ${CERTIFICATE_PAPER_INK.footerLabel};
     }
 
     /* Certificate number — watermark style */
@@ -444,7 +444,7 @@ ${fontFaceCss}
       font-family: 'DM Sans', sans-serif;
       font-size: 9px;
       font-weight: 400;
-      color: #c5bfb6;
+      color: ${CERTIFICATE_PAPER_INK.certId};
       letter-spacing: 2px;
     }
 
@@ -465,7 +465,7 @@ ${fontFaceCss}
       padding: 10px 24px;
       border: none;
       background: ${secondaryColor};
-      color: #fffef9;
+      color: ${CERTIFICATE_PAPER_INK.paper};
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       font-weight: 500;

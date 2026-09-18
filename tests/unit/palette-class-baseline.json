@@ -111,14 +111,6 @@
     1,
     0
   ],
-  "components/notification-bell.tsx": [
-    7,
-    0
-  ],
-  "components/notifications-client.tsx": [
-    25,
-    0
-  ],
   "components/platform-sidebar.tsx": [
     6,
     0
@@ -134,18 +126,6 @@
   "components/public/school-landing-page.tsx": [
     0,
     1
-  ],
-  "components/shared/access-cutoff-banner.tsx": [
-    5,
-    0
-  ],
-  "components/shared/limit-reached-banner.tsx": [
-    5,
-    0
-  ],
-  "components/shared/verify-email-banner.tsx": [
-    5,
-    0
   ],
   "components/student/activity-section.tsx": [
     0,
@@ -179,10 +159,6 @@
     8,
     2
   ],
-  "components/teacher/certificate-preview.tsx": [
-    14,
-    1
-  ],
   "components/teacher/certificate-template-form/issuer-section.tsx": [
     0,
     1
@@ -194,10 +170,6 @@
   "components/teacher/lesson-editor/markdown-field.tsx": [
     0,
     13
-  ],
-  "components/tenant/tenant-switcher.tsx": [
-    1,
-    1
   ],
   "components/ui/alert-dialog.tsx": [
     0,

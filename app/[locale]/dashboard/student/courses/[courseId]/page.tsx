@@ -216,7 +216,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-muted border p-[2px]">
                   <div
-                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>

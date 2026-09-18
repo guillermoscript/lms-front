@@ -21,7 +21,7 @@ import {
 import QRCode from 'qrcode';
 import { headingFontPath } from '@/lib/themes/brand-fonts';
 import type { KitHeadingFont } from '@/lib/themes/brand-outputs';
-import type { ResolvedCertificateDesign } from './default-design';
+import { CERTIFICATE_PAPER_INK, type ResolvedCertificateDesign } from './default-design';
 
 // =====================================================
 // Types
@@ -137,7 +137,7 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
 
     return StyleSheet.create({
         page: {
-            backgroundColor: '#fffef9',
+            backgroundColor: CERTIFICATE_PAPER_INK.paper,
             fontFamily: 'Helvetica',
             position: 'relative',
         },
@@ -244,7 +244,7 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
         // Preamble
         preamble: {
             fontSize: 10,
-            color: '#8a8578',
+            color: CERTIFICATE_PAPER_INK.preamble,
             letterSpacing: 0.3,
             marginBottom: 6,
         },
@@ -278,7 +278,7 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
         // Description
         description: {
             fontSize: 10,
-            color: '#6b6560',
+            color: CERTIFICATE_PAPER_INK.description,
             marginBottom: 5,
         },
         // Course name
@@ -305,7 +305,7 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
             fontSize: 7,
             letterSpacing: 2.5,
             textTransform: 'uppercase',
-            color: '#8a8578',
+            color: CERTIFICATE_PAPER_INK.preamble,
         },
         scoreValue: {
             fontSize: 20,
@@ -337,20 +337,20 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
         },
         footerName: {
             fontSize: 10,
-            color: '#3a3632',
+            color: CERTIFICATE_PAPER_INK.footerName,
             marginBottom: 4,
         },
         footerRule: {
             width: 110,
             height: 0.5,
-            backgroundColor: '#c5bfb6',
+            backgroundColor: CERTIFICATE_PAPER_INK.footerRule,
             marginBottom: 4,
         },
         footerLabel: {
             fontSize: 7,
             letterSpacing: 2,
             textTransform: 'uppercase',
-            color: '#9a948c',
+            color: CERTIFICATE_PAPER_INK.footerLabel,
         },
         // QR code
         qrCol: {
@@ -367,7 +367,7 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
             fontSize: 6,
             letterSpacing: 1.5,
             textTransform: 'uppercase',
-            color: '#9a948c',
+            color: CERTIFICATE_PAPER_INK.footerLabel,
         },
         // Certificate ID watermark
         certId: {
@@ -377,7 +377,7 @@ export const createStyles = (design: ResolvedCertificateDesign, headingFamily: s
             right: 0,
             textAlign: 'center',
             fontSize: 7,
-            color: '#c5bfb6',
+            color: CERTIFICATE_PAPER_INK.certId,
             letterSpacing: 1.5,
         },
     });
@@ -513,8 +513,8 @@ async function generateQRCode(url: string): Promise<string> {
             width: 200,
             margin: 1,
             color: {
-                dark: '#3a3632',
-                light: '#fffef9',
+                dark: CERTIFICATE_PAPER_INK.footerName,
+                light: CERTIFICATE_PAPER_INK.paper,
             },
         });
         return qrDataUrl;

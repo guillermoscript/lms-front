@@ -13,6 +13,33 @@ export const DEFAULT_CERTIFICATE_DESIGN = {
   show_qr_code: true,
 } as const
 
+/**
+ * The fixed paper and neutral ink every renderer prints the certificate on —
+ * content, not theme (docs/handoff/764-surface3/DECISIONS.md T6-1/D12): a
+ * facsimile of a printed document keeps its own paper stock and ink
+ * regardless of the school's theme. Shared by both real renderers
+ * (`certificate-generator.ts`'s HTML view, `pdf-generator.tsx`'s PDF) so the
+ * two can't drift from each other, and mirrored (as literal Tailwind
+ * arbitrary-value classes, not `style={{}}` — the teacher-facing preview
+ * keeps its ink in `className` on purpose) by `certificate-preview.tsx`.
+ */
+export const CERTIFICATE_PAPER_INK = {
+  /** `.certificate` / PDF page background. */
+  paper: '#fffef9',
+  /** `.preamble` — "This is to certify that". */
+  preamble: '#8a8578',
+  /** `.description` — "has successfully completed…". */
+  description: '#6b6560',
+  /** `.footer-name` — signer name, issue date value. */
+  footerName: '#3a3632',
+  /** `.footer-rule` — the hairline under each footer column. */
+  footerRule: '#c5bfb6',
+  /** `.footer-label` / `.qrLabel` — uppercase footer captions. */
+  footerLabel: '#9a948c',
+  /** `.cert-id` — the certificate number watermark. */
+  certId: '#c5bfb6',
+} as const
+
 export interface CertificateDesignInput {
   logo_url?: string | null
   signature_image_url?: string | null
