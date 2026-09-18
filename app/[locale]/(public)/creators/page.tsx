@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getTranslations } from 'next-intl/server';
+import { APP_NAME } from '@/lib/app-name';
 import {
     Sparkles,
     Trophy,
@@ -84,7 +85,7 @@ export default async function CreatorsPage() {
             <section className="py-24 border-y border-white/5 bg-zinc-900/20 backdrop-blur-sm">
                 <div className="container mx-auto px-4 md:px-6">
                     <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-                        <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{t('differentiators.title')}</h2>
+                        <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{t('differentiators.title', { appName: APP_NAME })}</h2>
                         <p className="text-zinc-400 text-lg">{t('differentiators.subtitle')}</p>
                     </div>
 
@@ -213,7 +214,7 @@ export default async function CreatorsPage() {
                 <div className="container mx-auto px-4 md:px-6">
                     <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
                         <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{t('comparison.title')}</h2>
-                        <p className="text-zinc-400 text-lg">{t('comparison.subtitle')}</p>
+                        <p className="text-zinc-400 text-lg">{t('comparison.subtitle', { appName: APP_NAME })}</p>
                     </div>
 
                     <div className="max-w-4xl mx-auto overflow-x-auto">
@@ -222,7 +223,7 @@ export default async function CreatorsPage() {
                                 <tr className="border-b border-zinc-800">
                                     <th className="text-left py-4 px-4 text-sm font-medium text-zinc-500">{t('comparison.feature')}</th>
                                     <th className="text-center py-4 px-4">
-                                        <span className="text-sm font-bold text-blue-400">LMS V2</span>
+                                        <span className="text-sm font-bold text-blue-400">{APP_NAME}</span>
                                     </th>
                                     <th className="text-center py-4 px-4 text-sm font-medium text-zinc-500">Teachable</th>
                                     <th className="text-center py-4 px-4 text-sm font-medium text-zinc-500">Thinkific</th>

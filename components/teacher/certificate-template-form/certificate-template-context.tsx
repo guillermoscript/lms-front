@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { upsertCertificateTemplate, type CertificateTemplateFormData } from '@/app/actions/teacher/certificates'
 import { uploadCertificateAsset } from '@/app/actions/admin/certificate-assets'
+import { APP_NAME } from '@/lib/app-name'
 import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 import type { BrandOutputs } from '@/lib/themes/brand-outputs'
 
@@ -83,7 +84,7 @@ export function CertificateTemplateProvider({
     const [uploadingSignature, setUploadingSignature] = useState(false)
     const [formData, setFormData] = useState<CertificateTemplateFormData>({
         template_name: initialData?.template_name || '',
-        issuer_name: initialData?.issuer_name || process.env.NEXT_PUBLIC_APP_NAME || 'LMS Academy',
+        issuer_name: initialData?.issuer_name || APP_NAME,
         issuer_url: initialData?.issuer_url || process.env.NEXT_PUBLIC_APP_URL || '',
         description: initialData?.description || '',
         issuance_criteria: initialData?.issuance_criteria || '',

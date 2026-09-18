@@ -4075,36 +4075,6 @@
       }
     }
   },
-  "landing": {
-    "poweredBy": "Powered by Next.js 16",
-    "heroTitle": "Master your <br /> Future with <br /> <span class='text-zinc-500'>LMS V2</span>",
-    "heroSubtitle": "The ultimate learning platform for developers",
-    "heroDescription": "Master the latest technologies with our AI-powered platform. Interactive, fast, and designed for modern learning.",
-    "getStarted": "Get Started for Free",
-    "exploreCourses": "Explore Courses",
-    "viewGithub": "View on Github",
-    "trustedBy": "Trusted by developers from",
-    "featuresTitle": "Features that Power your Learning",
-    "featuresDescription": "We've designed LMS V2 to provide you with the best possible educational experience using cutting-edge technology.",
-    "feature1Title": "Smart AI Assistant",
-    "feature1Description": "Get instant help and deep code reviews powered by state-of-the-art AI models.",
-    "feature2Title": "Interactive MDX Content",
-    "feature2Description": "Lessons that come to life. Interact with code directly on the platform securely.",
-    "feature3Title": "Progress and Gamification",
-    "feature3Description": "Earn points, unlock achievements, and maintain your learning streak with our incentive system.",
-    "feature4Title": "Verifiable Certificates",
-    "feature4Description": "Validate your skills with digital certificates you can share on your professional profiles.",
-    "stats": {
-      "students": "10k+ Students",
-      "courses": "500+ Courses",
-      "rating": "4.9/5 Rating"
-    },
-    "cta": {
-      "title": "Ready to start your journey?",
-      "description": "Join thousands of developers who are already improving their skills with LMS V2.",
-      "button": "Create your Free Account"
-    }
-  },
   "creators": {
     "badge": "For Course Creators",
     "heroTitle": "Create, Sell & Scale Your Online Courses with AI",
@@ -4117,7 +4087,7 @@
       "revenue": "Bank transfer, PayPal and crypto payments for LATAM"
     },
     "differentiators": {
-      "title": "Why Creators Choose LMS V2",
+      "title": "Why Creators Choose {appName}",
       "subtitle": "Three things that set us apart from every other course platform.",
       "ai": {
         "title": "AI Auto-Grading",
@@ -4163,7 +4133,7 @@
     },
     "comparison": {
       "title": "See How We Compare",
-      "subtitle": "We built LMS V2 to give creators more features at a fraction of the cost.",
+      "subtitle": "We built {appName} to give creators more features at a fraction of the cost.",
       "feature": "Feature",
       "rows": {
         "aiGrading": "AI Grading",
@@ -4225,7 +4195,6 @@
     }
   },
   "navbar": {
-    "brand": "LMS V2",
     "courses": "Courses",
     "plans": "Plans",
     "about": "About",
@@ -4913,7 +4882,7 @@
   },
   "about": {
     "title": "Built for learning, by educators",
-    "description": "LMS V2 is a modern learning platform that helps teachers create courses and students learn with clarity. We focus on speed, accessibility, and delightful UX.",
+    "description": "{appName} is a modern learning platform that helps teachers create courses and students learn with clarity. We focus on speed, accessibility, and delightful UX.",
     "visitHome": "Back to Home",
     "contact": "Contact",
     "missionTitle": "Our mission",

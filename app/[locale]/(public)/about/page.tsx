@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from 'next-intl/server';
+import { APP_NAME } from '@/lib/app-name';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Rocket, Shield, Zap, Users, Gem, GraduationCap, ArrowRight } from "lucide-react";
@@ -34,7 +35,7 @@ export default async function AboutPage() {
                         </h1>
 
                         <p className="text-xl text-zinc-400 max-w-2xl leading-relaxed">
-                            {t('description')}
+                            {t('description', { appName: APP_NAME })}
                         </p>
 
                         <div className="flex flex-wrap gap-4 justify-center">
