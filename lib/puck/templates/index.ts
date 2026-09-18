@@ -118,9 +118,9 @@ const modernAcademyTemplate: PuckTemplate = {
         title: 'What Our Students Say',
         subtitle: 'Hear from learners who transformed their careers with us.',
         items: [
-          { name: 'Maria S.', role: 'Web Developer', quote: 'The courses are incredibly well-structured. I went from beginner to professional in just 3 months.', rating: 5 },
-          { name: 'Carlos R.', role: 'Data Analyst', quote: 'Best online learning platform I have used. The AI tutor is a game changer.', rating: 5 },
-          { name: 'Ana L.', role: 'UX Designer', quote: 'The gamification keeps me motivated every day. Already on a 30-day streak!', rating: 5 },
+          { name: 'Student name', role: 'Course they took', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'Course they took', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'Course they took', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('CtaBlock', {
@@ -666,9 +666,9 @@ const codeSchoolHomeTemplate: PuckTemplate = {
         title: 'What Our Graduates Say',
         subtitle: 'Real stories from developers who started their careers here.',
         items: [
-          { name: 'Daniel M.', role: 'Frontend Developer at Shopify', quote: 'I had zero coding experience. Six months later, I landed a frontend role. The project-based approach made all the difference.', rating: 5 },
-          { name: 'Priya K.', role: 'Full-Stack Developer', quote: 'The curriculum is incredibly well-structured. Each course builds on the last. I never felt lost or overwhelmed.', rating: 5 },
-          { name: 'Lucas R.', role: 'Junior Backend Developer', quote: 'The AI tutor saved me hours of debugging. It is like having a senior developer on call 24/7.', rating: 5 },
+          { name: 'Student name', role: 'Role they landed', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'Role they landed', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'Role they landed', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('FaqAccordion', {

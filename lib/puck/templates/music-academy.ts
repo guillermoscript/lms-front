@@ -101,9 +101,9 @@ const homeTemplate: PuckTemplate = {
         title: 'From Our Students',
         subtitle: 'Real progress from real musicians.',
         items: [
-          { name: 'Olivia M.', role: 'Guitar student', quote: 'I always thought I was tone deaf. Three months later I am playing full songs at family gatherings. The play-along approach just works.', rating: 5 },
-          { name: 'Raj P.', role: 'Piano student', quote: 'The step-by-step path kept me from giving up. Live feedback fixed bad habits I did not even know I had.', rating: 5 },
-          { name: 'Grace K.', role: 'Voice student', quote: 'My range and confidence have grown so much. I finally sang in front of people — and loved it.', rating: 5 },
+          { name: 'Student name', role: 'Instrument they study', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'Instrument they study', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'Instrument they study', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('FaqAccordion', {
