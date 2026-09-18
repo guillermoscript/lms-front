@@ -323,7 +323,7 @@ export function generateInvoiceHTML(data: InvoiceData): string {
  * Resolves the invoice issuer from the invoice's own school brand (#777) — the
  * same `deriveBrandOutputs` colours certificates and transactional emails use
  * (#765), never `process.env.COMPANY_*`. A school with no theme falls back to
- * `tenants.name` and the platform teal, exactly like `getSchoolBrand` does.
+ * `tenants.name` and the platform brand, exactly like `getSchoolBrand` does.
  *
  * There is no `tenant_settings` key today for a school's own invoicing
  * address/email/phone, so those stay empty until one exists — nothing here

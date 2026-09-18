@@ -3,7 +3,14 @@ import { join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import { contrastRatio, mixOklch } from '@/lib/color/contrast'
-import { KIT_CORNERS, KIT_FONT_VARIABLES, KIT_SURFACES } from '@/lib/themes/kit'
+import {
+  DEFAULT_KIT_THEME,
+  deriveKitVars,
+  KIT_CORNERS,
+  KIT_FONT_VARIABLES,
+  KIT_SURFACES,
+  KIT_THEMES,
+} from '@/lib/themes/kit'
 import { cn } from '@/lib/utils'
 
 /**
@@ -309,5 +316,25 @@ describe('Kódigo dark default wiring (app/[locale]/layout.tsx)', () => {
     // tenantInfo.theme is the stored kit resolved against custom_branding (#763).
     expect(layoutSource).toContain('theme: resolveSchoolTheme(')
     expect(layoutSource).toMatch(/theme: resolveSchoolTheme\([^)]*\{ customBranding \}\)/)
+  })
+})
+
+describe('the platform palette is the default theme (#766)', () => {
+  const darkBlock = ruleBody(globals, '.dark')
+  const value = (block: string, name: string) => block.match(new RegExp(`\\s${name}: ([^;]+);`))?.[1]
+
+  // Settled on #766: a school with no theme row renders the default theme with
+  // its recommended colour, not a separate platform palette. The two used to be
+  // different palettes (shadcn zinc + teal vs. Estructura cool + Tinta azul),
+  // so "no theme" and "the default theme" were two different screens and every
+  // contrast fix had to be made twice.
+  it('writes deriveKitVars(default theme, its first swatch) into :root and .dark', () => {
+    const brand = KIT_THEMES[DEFAULT_KIT_THEME].swatches[0].hex
+    const vars = deriveKitVars(DEFAULT_KIT_THEME, brand)
+    for (const [mode, block] of [['light', rootBlock], ['dark', darkBlock]] as const) {
+      for (const [name, expected] of Object.entries(vars[mode])) {
+        expect(value(block, name), `${mode} ${name}`).toBe(expected)
+      }
+    }
   })
 })
