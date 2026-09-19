@@ -119,12 +119,10 @@ test.describe('plan limits — every surface at the cap (#296)', () => {
     expect(inviteError).toBeNull()
 
     await loginExpectingJoinSchool(page, QA_BASE, SEEDED.alice.email, SEEDED.alice.password)
-    const joinButton = page.getByRole('button', { name: `Join ${QA.name}` })
-    await expect(joinButton).toBeVisible({ timeout: 20_000 })
-    // base-ui Button: a real DOM click, not Playwright's synthesized one.
-    await joinButton.evaluate((el) => (el as HTMLElement).click())
-
-    await expect(page.getByText('This school has reached its student limit')).toBeVisible({ timeout: 20_000 })
+    // The join runs on arrival since #790, so the refusal is on screen without
+    // a click — and the manual form is revealed underneath it as the retry.
+    await expect(page.getByText('This school has reached its student limit')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: `Join ${QA.name}` })).toBeVisible({ timeout: 20_000 })
 
     const { data: membership } = await admin
       .from('tenant_users')

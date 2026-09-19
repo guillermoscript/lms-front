@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import {getCurrentTenantId, getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { JoinSchoolForm } from '@/components/join-school-form'
+import { AutoJoinSchool } from '@/components/join-school-auto'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, School } from 'lucide-react'
 import Link from 'next/link'
@@ -99,7 +100,7 @@ export default async function JoinSchoolPage({
               {t('memberBody', { school: tenant.name })}
             </p>
             <div className="flex gap-2">
-              <Link href={destination} className="flex-1">
+              <Link href={destination} className="flex-1" data-testid="join-school-continue">
                 <Button className="w-full">
                   {nextPath ? t('continue') : t('goToDashboard')}
                 </Button>
@@ -124,48 +125,54 @@ export default async function JoinSchoolPage({
     .eq('status', 'active')
     .neq('tenant_id', tenantId)
 
+  // The join runs on arrival (#790) — `proxy.ts` only sends people here once
+  // they have navigated into this school, so the click below carried no
+  // decision. What follows is the failure path: the seat limit, a missing
+  // tenant, a metadata write that did not land.
   return (
-    <div className="container mx-auto py-12 max-w-2xl">
-      <div className="text-center mb-8">
-        <div className="flex justify-center mb-4">
-          <div className="h-16 w-16 rounded-full bg-brand-tint flex items-center justify-center">
-            <School className="h-8 w-8 text-brand-text" />
+    <AutoJoinSchool schoolName={tenant.name} destination={destination}>
+      <div className="container mx-auto py-12 max-w-2xl">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 rounded-full bg-brand-tint flex items-center justify-center">
+              <School className="h-8 w-8 text-brand-text" />
+            </div>
           </div>
+          <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
+            {t('title', { school: tenant.name })}
+          </h1>
+          <p className="text-muted-foreground">{t('subtitle', { school: tenant.name })}</p>
         </div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
-          {t('title', { school: tenant.name })}
-        </h1>
-        <p className="text-muted-foreground">{t('subtitle', { school: tenant.name })}</p>
+
+        {otherMemberships && otherMemberships.length > 0 && (
+          <Card className="mb-6 bg-brand-tint ring-primary/25">
+            <CardHeader>
+              <CardTitle className="text-sm text-brand-text">{t('otherSchoolsTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {otherMemberships.map((membership) => {
+                  // The generated types model this to-one embed as an array while
+                  // PostgREST returns a bare object; the `any` this replaces was
+                  // hiding the mismatch rather than resolving it. Handle both so
+                  // the row renders whichever shape actually arrives.
+                  const school = Array.isArray(membership.tenants)
+                    ? membership.tenants[0]
+                    : membership.tenants
+                  return (
+                    <li key={membership.tenant_id} className="text-sm text-brand-text">
+                      • {school?.name || t('unknownSchool')}
+                    </li>
+                  )
+                })}
+              </ul>
+              <p className="text-xs text-brand-text mt-3">{t('otherSchoolsHint')}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <JoinSchoolForm tenant={tenant} destination={destination} />
       </div>
-
-      {otherMemberships && otherMemberships.length > 0 && (
-        <Card className="mb-6 bg-brand-tint ring-primary/25">
-          <CardHeader>
-            <CardTitle className="text-sm text-brand-text">{t('otherSchoolsTitle')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {otherMemberships.map((membership) => {
-                // The generated types model this to-one embed as an array while
-                // PostgREST returns a bare object; the `any` this replaces was
-                // hiding the mismatch rather than resolving it. Handle both so
-                // the row renders whichever shape actually arrives.
-                const school = Array.isArray(membership.tenants)
-                  ? membership.tenants[0]
-                  : membership.tenants
-                return (
-                  <li key={membership.tenant_id} className="text-sm text-brand-text">
-                    • {school?.name || t('unknownSchool')}
-                  </li>
-                )
-              })}
-            </ul>
-            <p className="text-xs text-brand-text mt-3">{t('otherSchoolsHint')}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <JoinSchoolForm tenant={tenant} destination={destination} />
-    </div>
+    </AutoJoinSchool>
   )
 }

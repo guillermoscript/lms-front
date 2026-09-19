@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, loginAsStudent } from './utils/auth'
 import { BASE, TENANT_BASE, ACCOUNTS } from './utils/constants'
+import { getServiceRoleClient } from './utils/seed-state'
 
 /**
  * P0 — Authentication & Security Tests
@@ -29,17 +30,34 @@ test.describe('Authentication Security', () => {
     await expect(page.getByTestId('signup-submit')).toBeVisible()
   })
 
-  test('sign-up requires a full name', async ({ page }) => {
+  test('sign-up without a full name still names the student', async ({ page }) => {
+    // The name stopped being required (#790) — it is a label for other
+    // people's screens, not something to demand before an account exists. What
+    // #590 actually guards is that `profiles.full_name` is never empty, since
+    // that is what renders as "Unknown Student" on teacher and admin lists.
+    const email = `ada.noname.${Date.now()}@e2etest.com`
+    const admin = getServiceRoleClient()
+
     await page.goto(`${BASE}/en/auth/sign-up`)
-    await page.getByTestId('signup-email').fill(`e2e-noname-${Date.now()}@e2etest.com`)
+    await page.getByTestId('signup-email').fill(email)
     await page.getByTestId('signup-password').fill('password123')
     await page.getByTestId('signup-submit').click()
-    // HTML5 `required` blocks submission — still on sign-up, name flagged invalid
-    await expect(page).toHaveURL(/\/auth\/sign-up/)
-    const nameMissing = await page
-      .getByTestId('signup-name')
-      .evaluate((el) => (el as HTMLInputElement).validity.valueMissing)
-    expect(nameMissing).toBe(true)
+    await page.waitForURL(/\/auth\/sign-up-success|\/join-school|\/dashboard/, { timeout: 30_000 })
+
+    const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
+    const created = users?.users.find((u) => u.email === email)
+    expect(created, 'sign-up created an auth user').toBeTruthy()
+
+    try {
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('full_name')
+        .eq('id', created!.id)
+        .single()
+      expect(profile?.full_name).toBe('Ada Noname')
+    } finally {
+      await admin.auth.admin.deleteUser(created!.id)
+    }
   })
 
   test('sign-up with full name reaches success page', async ({ page }) => {
@@ -53,7 +71,8 @@ test.describe('Authentication Security', () => {
     await page.getByTestId('signup-submit').click()
     // A confirmed sign-up either shows the success page or — since the new user
     // has a session but no tenant membership — gets proxied to /join-school.
-    await page.waitForURL(/\/auth\/sign-up-success|\/join-school/, { timeout: 20_000 })
+    // …or straight into the school, now that /join-school joins on arrival (#790).
+    await page.waitForURL(/\/auth\/sign-up-success|\/join-school|\/dashboard/, { timeout: 20_000 })
   })
 
   // ─── Route Guards — Unauthenticated ──────────────────────────────────────

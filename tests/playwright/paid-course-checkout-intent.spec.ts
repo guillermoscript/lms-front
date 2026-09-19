@@ -164,26 +164,23 @@ test.describe('Paid course CTA keeps checkout intent for a new visitor (#684)', 
       expect(new URL(page.url()).searchParams.get('next')).toBe(checkoutPath)
     })
 
-    await test.step('after sign-up the non-member is asked to join with the checkout preserved as next', async () => {
+    await test.step('sign-up passes through the join page and lands on the checkout for that course', async () => {
       await fillSettled(page, 'signup-name', 'Paid Path Visitor')
       await fillSettled(page, 'signup-email', email)
       await fillSettled(page, 'signup-password', PASSWORD)
       await domClick(page, page.getByTestId('signup-submit'))
 
-      await page.waitForURL(/\/join-school\?/, { timeout: 90_000 })
-      expect(new URL(page.url()).searchParams.get('next')).toBe(checkoutPath)
-      await expect(page.getByTestId('join-school-title')).toBeVisible({ timeout: 60_000 })
-      expect(await rememberUser(email), 'sign-up created an auth user').toBeTruthy()
-    })
-
-    await test.step('joining the school lands on the checkout for that course, not the dashboard', async () => {
-      await domClick(page, page.getByTestId('join-school-submit'))
-      // A manual product is handed from /checkout to /checkout/manual — still
-      // the checkout for this course. The dashboard is the failure mode.
-      await page.waitForURL(/\/checkout(?:\/manual)?\?/, { timeout: 90_000 })
+      // `/join-school` joins on arrival and forwards since #790, so the
+      // intermediate URL is not something a test can reliably catch. What the
+      // issue is about survives in the destination: a manual product is handed
+      // from /checkout to /checkout/manual — still the checkout for THIS
+      // course. The dashboard is the failure mode, and so is any landing that
+      // has forgotten the courseId.
+      await page.waitForURL(/\/checkout(?:\/manual)?\?/, { timeout: 120_000 })
       const url = new URL(page.url())
       expect(url.pathname).not.toContain('/dashboard')
       expect(url.searchParams.get('courseId')).toBe(String(courseId))
+      expect(await rememberUser(email), 'sign-up created an auth user').toBeTruthy()
     })
   })
 
@@ -206,13 +203,20 @@ test.describe('Paid course CTA keeps checkout intent for a new visitor (#684)', 
     await fillSettled(page, 'login-email', email)
     await fillSettled(page, 'login-password', PASSWORD)
     await domClick(page, page.getByTestId('login-submit'))
-    await page.waitForURL(/\/join-school/, { timeout: 60_000 })
+
+    // The bounce through /join-school already joined them (#790), so a second visit with a
+    // hostile `next` renders the member card — whose Continue link is where a
+    // tampered destination would show up.
+    await page.waitForURL(/\/dashboard\/student/, { timeout: 90_000 })
+    expect(new URL(page.url()).hostname).toBe(new URL(BASE).hostname)
 
     await page.goto(`${BASE}/${LOCALE}/join-school?next=${encodeURIComponent('https://evil.example/phish')}`, {
       waitUntil: 'domcontentloaded',
     })
-    await expect(page.getByTestId('join-school-title')).toBeVisible({ timeout: 60_000 })
-    await domClick(page, page.getByTestId('join-school-submit'))
+    const continueLink = page.getByTestId('join-school-continue')
+    await expect(continueLink).toBeVisible({ timeout: 60_000 })
+    expect(await continueLink.getAttribute('href')).toBe('/dashboard/student')
+    await domClick(page, continueLink)
     await page.waitForURL(/\/dashboard\/student/, { timeout: 90_000 })
     expect(new URL(page.url()).hostname).toBe(new URL(BASE).hostname)
   })

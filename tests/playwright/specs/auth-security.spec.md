@@ -46,7 +46,7 @@ Password for all: `password123`
 | 2.3 | Email input visible | `[data-testid="signup-email"]` | visible |
 | 2.4 | Password input visible | `[data-testid="signup-password"]` | visible |
 | 2.5 | Submit button visible | `[data-testid="signup-submit"]` | visible |
-| 2.6 | Full name is required | submit without name | stays on sign-up; `signup-name` fails `validity.valueMissing` |
+| 2.6 | Full name is optional (#790) | submit without name | account is created; `profiles.full_name` is derived from the address, never empty |
 | 2.7 | Sign-up with name succeeds | fill name/email/password; submit | lands on `/auth/sign-up-success` or `/join-school` (guards #590 "Unknown Student") |
 
 ---
