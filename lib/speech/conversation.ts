@@ -230,7 +230,7 @@ export function buildConversationGraderPrompt(
 ): string {
   const target = languageName(config.target_language)
   const native = languageName(config.native_language)
-  return `You are grading a spoken ${target} conversation between a language student (role "user") and an AI conversation partner (role "assistant"). The student is a ${native} speaker at CEFR level ${config.level}. The student's turns are automatic speech transcripts, so ignore punctuation, capitalisation and obvious transcription glitches.
+  return `You are grading a spoken ${target} conversation between a language student (role "user") and an AI conversation partner (role "assistant"). The student is a ${native} speaker at CEFR level ${config.level}. The student's turns are automatic speech transcripts, so ignore punctuation, capitalisation and obvious transcription glitches. The transcriber expects ${target}: when the student switches to ${native}, their words can come out as garbled ${target}-looking text. Read an unintelligible turn as the student speaking ${native} — count it as ${native}, and never quote it as a ${target} mistake.
 
 Exercise: ${exercise.title}
 ${exercise.instructions ? `Task: ${exercise.instructions}` : ''}

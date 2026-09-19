@@ -119,6 +119,10 @@ export async function POST(req: Request) {
         instructions: buildConversationInstructions(exercise, config),
         voice: config.voice,
         outputModalities: ['audio'],
+        // Hinted on purpose. Measured 2026-09-20 with synthetic Spanish, accented
+        // and mixed clips: the hint barely changes Spanish turns ("Perdón" →
+        // "perdon"), while without it short accented English drifts ("I want a" →
+        // "Ai wanta"). The grader is told how to read a garbled turn instead.
         inputAudioTranscription: { language: config.target_language },
         turnDetection: { type: 'semantic-vad' },
         tools: CONVERSATION_TOOLS,
