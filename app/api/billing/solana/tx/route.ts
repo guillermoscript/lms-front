@@ -21,6 +21,7 @@ import {
 } from '@/lib/billing/solana-platform-payment'
 import { isRequestOpen } from '@/lib/billing/payment-request-ttl'
 import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
+import { APP_NAME } from '@/lib/app-name'
 
 export const runtime = 'nodejs'
 
@@ -33,7 +34,7 @@ function getSupabaseAdmin() {
 
 export async function GET() {
   return NextResponse.json({
-    label: process.env.NEXT_PUBLIC_APP_NAME || 'LMS',
+    label: APP_NAME,
     icon: `${process.env.NEXT_PUBLIC_APP_URL || ''}/favicon.ico`,
   })
 }
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       transaction,
-      message: `${process.env.NEXT_PUBLIC_APP_NAME || 'LMS'} — plan payment`,
+      message: `${APP_NAME} — plan payment`,
     })
   } catch (error) {
     console.error('[billing/solana/tx] error:', error)

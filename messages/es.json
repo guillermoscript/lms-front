@@ -4076,7 +4076,6 @@
     }
   },
   "navbar": {
-    "brand": "LMS V2",
     "courses": "Cursos",
     "plans": "Planes",
     "about": "Acerca de",
@@ -4708,36 +4707,6 @@
       }
     }
   },
-  "landing": {
-    "poweredBy": "Impulsado por Next.js 16",
-    "heroTitle": "Domina tu <br /> Futuro con <br /> <span class='text-zinc-500'>LMS V2</span>",
-    "heroSubtitle": "La plataforma de aprendizaje definitiva para desarrolladores",
-    "heroDescription": "Domina las últimas tecnologías con nuestra plataforma impulsada por IA. Interactiva, rápida y diseñada para el aprendizaje moderno.",
-    "getStarted": "Empieza Gratis",
-    "exploreCourses": "Explorar Cursos",
-    "viewGithub": "Ver en Github",
-    "trustedBy": "Confían en nosotros desarrolladores de",
-    "featuresTitle": "Características que Potencian tu Aprendizaje",
-    "featuresDescription": "Hemos diseñado LMS V2 para ofrecerte la mejor experiencia educativa posible con tecnología de vanguardia.",
-    "feature1Title": "Asistente de IA Inteligente",
-    "feature1Description": "Obtén ayuda instantánea y revisiones de código profundas impulsadas por modelos de IA de última generación.",
-    "feature2Title": "Contenido Interactivo MDX",
-    "feature2Description": "Lecciones que cobran vida. Interactúa con el código directamente en la plataforma de forma segura.",
-    "feature3Title": "Progreso y Gamificación",
-    "feature3Description": "Gana puntos, desbloquea logros y mantén tu racha de aprendizaje con nuestro sistema de incentivos.",
-    "feature4Title": "Certificados Verificables",
-    "feature4Description": "Valida tus habilidades con certificados digitales que puedes compartir en tus perfiles profesionales.",
-    "stats": {
-      "students": "10k+ Estudiantes",
-      "courses": "500+ Cursos",
-      "rating": "4.9/5 Calificación"
-    },
-    "cta": {
-      "title": "¿Listo para comenzar tu viaje?",
-      "description": "Únete a miles de desarrolladores que ya están mejorando sus habilidades con LMS V2.",
-      "button": "Crea tu Cuenta Gratis"
-    }
-  },
   "creators": {
     "badge": "Para creadores de cursos",
     "heroTitle": "Crea, vende y escala tus cursos en línea con IA",
@@ -4750,7 +4719,7 @@
       "revenue": "Pagos por transferencia, PayPal y cripto para LATAM"
     },
     "differentiators": {
-      "title": "Por qué los creadores eligen LMS V2",
+      "title": "Por qué los creadores eligen {appName}",
       "subtitle": "Tres cosas que nos diferencian de cualquier otra plataforma de cursos.",
       "ai": {
         "title": "Calificación automática con IA",
@@ -4796,7 +4765,7 @@
     },
     "comparison": {
       "title": "Mira cómo nos comparamos",
-      "subtitle": "Construimos LMS V2 para darles a los creadores más funciones por una fracción del costo.",
+      "subtitle": "Construimos {appName} para darles a los creadores más funciones por una fracción del costo.",
       "feature": "Función",
       "rows": {
         "aiGrading": "Calificación con IA",
@@ -4913,7 +4882,7 @@
   },
   "about": {
     "title": "Construido para aprender, por educadores",
-    "description": "LMS V2 es una plataforma de aprendizaje moderna que ayuda a los profesores a crear cursos y a los estudiantes a aprender con claridad. Nos enfocamos en la velocidad, la accesibilidad y una UX encantadora.",
+    "description": "{appName} es una plataforma de aprendizaje moderna que ayuda a los profesores a crear cursos y a los estudiantes a aprender con claridad. Nos enfocamos en la velocidad, la accesibilidad y una UX encantadora.",
     "visitHome": "Volver al inicio",
     "contact": "Contacto",
     "missionTitle": "Nuestra misión",

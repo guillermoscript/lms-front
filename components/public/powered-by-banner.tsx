@@ -1,5 +1,6 @@
 import { getCurrentTenant } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
+import { APP_NAME } from '@/lib/app-name'
 import { hasPlanFeature } from '@/lib/plans/server'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -19,9 +20,8 @@ export async function PoweredByBanner() {
   const platformUrl = platformDomain.includes('localhost') || platformDomain.includes('lvh.me')
     ? `http://${platformDomain}`
     : `https://${platformDomain}`
-  // The real product name (#730) — same fallback lib/seo.ts uses for the SEO
-  // site name — instead of the hardcoded "LMS V2" version label.
-  const platformName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS Platform'
+  // The real product name (#730), never the hardcoded "LMS V2" version label.
+  const platformName = APP_NAME
 
   return (
     <div className="border-t border-border bg-muted/30 py-2.5">

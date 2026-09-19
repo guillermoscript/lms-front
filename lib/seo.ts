@@ -2,8 +2,9 @@ import { headers } from 'next/headers'
 import type { Metadata } from 'next'
 import { getCurrentTenant, type Tenant } from '@/lib/supabase/tenant'
 import { normalizeLogoUrl } from '@/lib/themes/brand-outputs'
+import { APP_NAME } from '@/lib/app-name'
 
-const FALLBACK_SITE_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'LMS Platform'
+const FALLBACK_SITE_NAME = APP_NAME
 
 /**
  * Platform favicon, served from `public/` as plain static files (issue #778).

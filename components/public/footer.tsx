@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentTenant } from "@/lib/supabase/tenant";
 import { getTranslations } from 'next-intl/server';
+import { APP_NAME } from '@/lib/app-name';
 import { IconBrandTwitter, IconBrandFacebook, IconBrandInstagram, IconBrandYoutube, IconBrandLinkedin, IconBrandTiktok, IconBrandGithub } from '@tabler/icons-react'
 import type { FooterSettings, SocialPlatform } from "@/lib/landing-pages/types";
 
@@ -24,8 +25,8 @@ export async function Footer({ footerSettings }: FooterProps = {}) {
     const tenant = await getCurrentTenant();
     const t = await getTranslations('landingPageBuilder.footer');
     // Real product name (#730) when there's no tenant to brand this footer with
-    // (the platform's own marketing pages), matching lib/seo.ts's fallback.
-    const platformName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS Platform';
+    // (the platform's own marketing pages).
+    const platformName = APP_NAME;
     const brandName = tenant && tenant.id !== DEFAULT_TENANT_ID ? tenant.name : platformName;
 
     // If footerSettings is provided, render custom footer
