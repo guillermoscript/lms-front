@@ -35,6 +35,7 @@ import {
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
+import { LessonPreviewToggle } from '@/components/teacher/lesson-preview-toggle'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -347,34 +348,48 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
             <div className="grid gap-2">
               {lessons.length > 0 ? (
                 lessons.map((lesson) => (
-                  <Link key={lesson.id} href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
-                            {lesson.sequence}
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {lesson.status !== 'published' && (
-                                <Badge variant="secondary" className="text-[10px] h-4">
-                                  {t(`status.${lesson.status}`)}
-                                </Badge>
-                              )}
-                              {lesson.video_url && (
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <IconVideo className="h-3 w-3" />
-                                  {t('video')}
-                                </span>
-                              )}
-                            </div>
+                  // The row is a card with an overlay link rather than a card
+                  // wrapped in one: the free-preview switch (#791) is
+                  // interactive content, which cannot live inside an anchor.
+                  <Card key={lesson.id} className="group relative transition-all duration-200 hover:shadow-md">
+                    <CardContent className="flex items-center justify-between p-4">
+                      <Link
+                        href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`}
+                        className="absolute inset-0 rounded-[inherit]"
+                        aria-label={t('curriculum.editLesson')}
+                      />
+                      <div className="pointer-events-none flex items-center gap-4">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
+                          {lesson.sequence}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {lesson.status !== 'published' && (
+                              <Badge variant="secondary" className="text-[10px] h-4">
+                                {t(`status.${lesson.status}`)}
+                              </Badge>
+                            )}
+                            {lesson.video_url && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <IconVideo className="h-3 w-3" />
+                                {t('video')}
+                              </span>
+                            )}
                           </div>
                         </div>
+                      </div>
+                      <div className="relative flex items-center gap-3 shrink-0">
+                        <LessonPreviewToggle
+                          courseId={parseInt(courseId)}
+                          lessonId={lesson.id}
+                          isPreview={Boolean(lesson.is_preview)}
+                          lessonTitle={lesson.title}
+                        />
                         <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
-                      </CardContent>
-                    </Card>
-                  </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))
               ) : (
                 <Card className="border-dashed border-2">

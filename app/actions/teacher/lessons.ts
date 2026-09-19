@@ -140,3 +140,39 @@ export async function updateLesson(
     return { lessonId }
   })
 }
+
+/**
+ * Flip one lesson's free-preview flag from the course's lesson list (#791).
+ *
+ * The switch used to live only inside the lesson editor's Details step, so
+ * making three lessons free meant opening and saving three editors — which is
+ * a large part of why `is_preview` was set on 1 lesson in 83. This is the same
+ * write, reachable from the list.
+ */
+export async function setLessonPreview(
+  courseId: number,
+  lessonId: number,
+  isPreview: boolean
+) {
+  return actionHandler(async () => {
+    const ctx = await requireTeacherOrAdmin()
+    await verifyCourseOwnership(ctx, courseId)
+
+    const { error } = await ctx.supabase
+      .from('lessons')
+      .update({ is_preview: isPreview })
+      .eq('id', lessonId)
+      .eq('course_id', courseId)
+      .eq('tenant_id', ctx.tenantId)
+
+    if (error) throw error
+
+    revalidatePath(`/dashboard/teacher/courses/${courseId}`)
+    revalidatePath(`/dashboard/teacher/courses/${courseId}/lessons/${lessonId}`)
+    // The public course page lists which lessons a visitor can open, so it is
+    // stale the moment this flips.
+    revalidatePath(`/courses/${courseId}`)
+
+    return { lessonId, isPreview }
+  })
+}

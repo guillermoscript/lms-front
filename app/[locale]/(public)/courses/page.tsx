@@ -23,10 +23,13 @@ export default async function CoursesPage({
     searchParams,
 }: {
     params: Promise<{ locale: string }>
-    searchParams: Promise<{ search?: string; category?: string }>
+    searchParams: Promise<{ search?: string; category?: string; preview?: string }>
 }) {
     const { locale } = await params;
-    const { search, category } = await searchParams;
+    const { search, category, preview } = await searchParams;
+    // "Show me what I can start right now" (#791): courses with at least one
+    // published lesson a logged-out visitor can open.
+    const previewOnly = preview === '1';
     const t = await getTranslations('coursesCatalog');
     const tSearch = await getTranslations('courseSearch');
     const supabase = await createClient();
@@ -87,15 +90,19 @@ export default async function CoursesPage({
     // Published-lesson counts via admin client: the anon role can only read
     // preview lessons (RLS), so a nested select would undercount for visitors.
     const lessonCountMap: Record<number, number> = {};
+    const previewCountMap: Record<number, number> = {};
     if (courseIds.length > 0) {
         const { data: lessonRows } = await createAdminClient()
             .from('lessons')
-            .select('id, course_id')
+            .select('id, course_id, is_preview')
             .eq('tenant_id', tenantId)
             .eq('status', 'published')
             .in('course_id', courseIds);
         for (const row of lessonRows ?? []) {
             lessonCountMap[row.course_id] = (lessonCountMap[row.course_id] ?? 0) + 1;
+            if (row.is_preview) {
+                previewCountMap[row.course_id] = (previewCountMap[row.course_id] ?? 0) + 1;
+            }
         }
     }
 
@@ -137,12 +144,13 @@ export default async function CoursesPage({
             category: cat ? (Array.isArray(cat) ? cat[0] : cat) as { id: number; name: string } : null,
             author: auth ? (Array.isArray(auth) ? auth[0] : auth) as { id: string; full_name: string; avatar_url: string | null } : null,
             lessonCount: lessonCountMap[course.course_id] ?? 0,
+            previewLessonCount: previewCountMap[course.course_id] ?? 0,
             price: productMap[course.course_id]?.price ?? null,
             currency: productMap[course.course_id]?.currency ?? null,
         };
-    }) || [];
+    }).filter(course => !previewOnly || course.previewLessonCount > 0) || [];
 
-    const hasActiveFilters = sanitizedSearch || category;
+    const hasActiveFilters = Boolean(sanitizedSearch || category || previewOnly);
 
     // ItemList rich-result markup for the unfiltered catalog only — filtered
     // views are ephemeral search results, not the canonical course list.
@@ -173,6 +181,8 @@ export default async function CoursesPage({
                     categories={categories || []}
                     currentSearch={sanitizedSearch}
                     currentCategory={category}
+                    showPreviewFilter
+                    currentPreviewOnly={previewOnly}
                 />
 
                 {/* Results count */}

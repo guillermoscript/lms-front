@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { BookOpen, User } from "lucide-react";
+import { BookOpen, PlayCircle, User } from "lucide-react";
 import { useTranslations } from 'next-intl';
 
 interface CourseCardProps {
@@ -17,6 +17,8 @@ interface CourseCardProps {
         lessonCount: number;
         price: number | null;
         currency: string | null;
+        /** Published lessons a logged-out visitor can open right now (#791). */
+        previewLessonCount: number;
     };
 }
 
@@ -68,6 +70,19 @@ export function CourseCard({ course }: CourseCardProps) {
                             {priceDisplay}
                         </span>
                     </div>
+
+                    {/* Free-preview badge (#791) — the one thing on this card a
+                        visitor can act on without an account, so it says what
+                        they get rather than what it costs. A status, hence
+                        tokenised rather than scrimmed like the badges above. */}
+                    {course.previewLessonCount > 0 && (
+                        <div className="absolute bottom-3 left-3">
+                            <span className="flex items-center gap-1 rounded-md border border-primary/25 bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-text">
+                                <PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                                {t('startFree')}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <CardContent className="flex-1 p-5 space-y-3">

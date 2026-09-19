@@ -141,6 +141,9 @@ export function LessonDetailsStep() {
         <p className="mt-1.5 text-xs text-muted-foreground">
           {t('freePreviewHint')}
         </p>
+        {!initialData && formData.sequence === 1 && (
+          <p className="mt-1 text-xs text-brand-text">{t('freePreviewFirstLessonHint')}</p>
+        )}
       </div>
 
       {/* Publish scheduling */}
