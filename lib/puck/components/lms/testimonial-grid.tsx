@@ -30,17 +30,24 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
         quote: { type: 'textarea', label: 'Quote' },
         rating: { type: 'number', label: 'Rating (1-5)', min: 1, max: 5 },
       },
-      defaultItemProps: { name: 'Student', role: 'Student', quote: 'Great experience!', rating: 5 },
+      defaultItemProps: { name: 'Student name', role: 'Course they took', quote: 'Their words about what changed.', rating: 5 },
     },
     ...sectionSpacingFields,
   },
   defaultProps: {
     title: 'What Our Students Say',
     subtitle: '',
+    // Placeholders, never invented people (#739, the same rule the stats blocks
+    // follow since #724). These cards are what a school publishes if it drops the
+    // block on a page and never edits it, and real course reviews (below) replace
+    // them the moment there are any — so a named "Maria S., Web Developer" saying
+    // she went from beginner to professional in three months was a fabricated
+    // student making a fabricated claim on that school's own site. The copy still
+    // demonstrates what the block is for, and reads as a prompt to the editor.
     items: [
-      { name: 'Maria S.', role: 'Web Developer', quote: 'The courses are incredibly well-structured. I went from beginner to professional in just 3 months.', rating: 5 },
-      { name: 'Carlos R.', role: 'Data Analyst', quote: 'Best online learning platform I have used. The AI tutor is a game changer.', rating: 5 },
-      { name: 'Ana L.', role: 'UX Designer', quote: 'The gamification keeps me motivated every day. Already on a 30-day streak!', rating: 5 },
+      { name: 'Student name', role: 'Course they took', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+      { name: 'Student name', role: 'Course they took', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+      { name: 'Student name', role: 'Course they took', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
     ],
     ...sectionSpacingDefaults,
   },

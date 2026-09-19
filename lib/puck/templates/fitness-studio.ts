@@ -100,9 +100,9 @@ const homeTemplate: PuckTemplate = {
         title: 'Real Results, Real People',
         subtitle: 'See what members are achieving from home.',
         items: [
-          { name: 'Jasmine R.', role: 'Lost 18 lbs', quote: 'The 25-minute workouts fit around my kids and my job. I have never been this consistent — or this strong.', rating: 5 },
-          { name: 'Tom B.', role: 'Built strength', quote: 'I was intimidated by the gym. Training at home with real coaching changed everything. Down two belt sizes.', rating: 5 },
-          { name: 'Priya S.', role: 'Found her flow', quote: 'The yoga and mobility classes fixed my back pain and my stress levels. I look forward to every session.', rating: 5 },
+          { name: 'Student name', role: 'What they achieved', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'What they achieved', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'What they achieved', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('FaqAccordion', {
