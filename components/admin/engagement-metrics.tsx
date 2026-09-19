@@ -31,22 +31,26 @@ export function EngagementMetrics({
     {
       title: t('metrics.enrollments'),
       value: totalEnrollments,
+      testId: 'engagement-enrollments',
       icon: IconCertificate,
     },
     {
       title: t('metrics.activeStudents'),
       value: activeStudents,
+      testId: 'engagement-active-students',
       subtitle: t('metrics.activePeriod'),
       icon: IconUsers,
     },
     {
       title: t('metrics.lessonCompletions'),
       value: totalLessonCompletions,
+      testId: 'engagement-lesson-completions',
       icon: IconCheckbox,
     },
     {
       title: t('metrics.examSubmissions'),
       value: totalExamSubmissions,
+      testId: 'engagement-exam-submissions',
       icon: IconTrendingUp,
     },
   ]
@@ -66,7 +70,7 @@ export function EngagementMetrics({
             <span className="text-sm font-medium">
               {t('completionRate')}
             </span>
-            <span className="text-2xl font-bold tracking-tight">
+            <span className="text-2xl font-bold tracking-tight" data-testid="engagement-completion-rate">
               {averageCompletionRate.toFixed(1)}%
             </span>
           </div>
@@ -81,7 +85,7 @@ export function EngagementMetrics({
           {metrics.map((metric) => (
             <div key={metric.title} className="rounded-lg border p-4">
               <metric.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-              <p className="mt-3 text-2xl font-bold tracking-tight">{metric.value}</p>
+              <p className="mt-3 text-2xl font-bold tracking-tight" data-testid={metric.testId}>{metric.value}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{metric.title}</p>
               {metric.subtitle && (
                 <p className="text-[11px] text-muted-foreground">{metric.subtitle}</p>

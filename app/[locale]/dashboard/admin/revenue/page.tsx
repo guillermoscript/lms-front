@@ -57,10 +57,10 @@ export default async function RevenuePage() {
                       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {t('totalRevenue')}
                       </p>
-                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
+                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums" data-testid="revenue-total">
                         {formatCurrency(revenue.totalRevenue, revenue.currency, locale)}
                       </p>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
+                      <p className="mt-1 text-[11px] text-muted-foreground" data-testid="revenue-transaction-count">
                         {t('transactionCount', { count: revenue.transactionCount })}
                       </p>
                     </div>
@@ -78,7 +78,7 @@ export default async function RevenuePage() {
                       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {t('platformFees')}
                       </p>
-                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-muted-foreground">
+                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-muted-foreground" data-testid="revenue-platform-fees">
                         {formatCurrency(revenue.platformFees, revenue.currency, locale)}
                       </p>
                       {/* Only when there is a fee to reduce AND a cheaper plan to
@@ -103,7 +103,7 @@ export default async function RevenuePage() {
                       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                         {t('netRevenue')}
                       </p>
-                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-foreground">
+                      <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums text-foreground" data-testid="revenue-net">
                         {formatCurrency(revenue.netRevenue, revenue.currency, locale)}
                       </p>
                       <p className="mt-1 text-[11px] text-muted-foreground">
@@ -128,9 +128,9 @@ export default async function RevenuePage() {
                 <CardContent>
                   <div className="space-y-3">
                     {revenue.revenueByCourse.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between rounded-lg px-3 py-2.5 hover:bg-muted/50 transition-colors">
+                      <div key={item.id} className="flex items-center justify-between rounded-lg px-3 py-2.5 hover:bg-muted/50 transition-colors" data-testid="revenue-by-product-row">
                         <span className="text-sm font-medium">{item.name}</span>
-                        <span className="text-sm tabular-nums text-muted-foreground">
+                        <span className="text-sm tabular-nums text-muted-foreground" data-testid={`revenue-by-product-${item.id}`}>
                           {formatCurrency(item.amount, revenue.currency, locale)}
                         </span>
                       </div>

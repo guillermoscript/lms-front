@@ -204,18 +204,21 @@ export default async function AdminDashboardPage({
     {
       title: t('stats.totalUsers'),
       value: totalUsers || 0,
+      testId: 'admin-stat-users',
       icon: IconUsers,
       link: '/dashboard/admin/users',
     },
     {
       title: t('stats.activeSubscriptions'),
       value: activeSubscriptions || 0,
+      testId: 'admin-stat-subscriptions',
       icon: IconCrown,
       link: '/dashboard/admin/subscriptions',
     },
     {
       title: t('stats.totalCourses'),
       value: totalCourses || 0,
+      testId: 'admin-stat-courses',
       subtitle: t('stats.published', { count: publishedCourses || 0 }),
       icon: IconBook,
       link: '/dashboard/admin/courses',
@@ -223,12 +226,14 @@ export default async function AdminDashboardPage({
     {
       title: t('stats.pendingPayments'),
       value: pendingPaymentRequests || 0,
+      testId: 'admin-stat-pending-payments',
       icon: IconReceipt,
       link: '/dashboard/admin/payment-requests',
     },
     {
       title: t('stats.totalRevenue'),
       value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue),
+      testId: 'admin-stat-revenue',
       subtitle: t('stats.transactions', { count: totalTransactions || 0 }),
       icon: IconCurrencyDollar,
       link: '/dashboard/admin/transactions',
@@ -391,7 +396,7 @@ export default async function AdminDashboardPage({
                 <div className="flex items-center justify-between">
                   <stat.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
                 </div>
-                <p className="mt-3 text-2xl font-bold tracking-tight">
+                <p className="mt-3 text-2xl font-bold tracking-tight" data-testid={stat.testId}>
                   {stat.value}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
