@@ -231,6 +231,11 @@ export default function ConversationExercise({
       // A grader hiccup must not cost the student the conversation they just
       // had: the route re-opens the session on failure, so one retry is safe.
       if (res.status >= 500) res = await grade()
+      if (res.status === 410) {
+        setErrorMsg(t('sessionTooLong', { minutes: maxMinutes }))
+        setPhase('error')
+        return
+      }
       if (!res.ok) throw new Error(String(res.status))
       const data = await res.json()
       setResult({
@@ -252,7 +257,7 @@ export default function ConversationExercise({
     } finally {
       finishingRef.current = false
     }
-  }, [exercise.id, realtime, releaseMic, t])
+  }, [exercise.id, maxMinutes, realtime, releaseMic, t])
 
   // Countdown — the hard stop that keeps a session inside the teacher's budget.
   const finishRef = useRef(finish)
@@ -358,6 +363,20 @@ export default function ConversationExercise({
     </div>
   )
 
+  const showResult = Boolean(result) && phase !== 'live' && phase !== 'grading'
+  // One alert, next to the button the student will press next.
+  const retryInResult = showResult && !limitReached
+
+  const errorAlert = errorMsg && (
+    <div
+      className="flex items-start gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+      role="alert"
+    >
+      <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+      {errorMsg}
+    </div>
+  )
+
   const taskPanel = (
     <div className="space-y-4">
       <div className="rounded-xl border bg-card p-5">
@@ -373,15 +392,7 @@ export default function ConversationExercise({
           )}
         </div>
 
-        {errorMsg && (
-          <div
-            className="mt-4 flex items-start gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-            role="alert"
-          >
-            <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-            {errorMsg}
-          </div>
-        )}
+        {errorMsg && !retryInResult && <div className="mt-4">{errorAlert}</div>}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           {phase === 'live' ? (
@@ -441,8 +452,23 @@ export default function ConversationExercise({
     </div>
   )
 
-  const resultPanel = result ? (
+  // Hidden during a call: on desktop the result sits above the task, which
+  // pushed the live call below the fold, and on a phone its absence is what
+  // moves the student from the result tab to the call.
+  const resultPanel = result && showResult ? (
     <div className="space-y-4">
+      {/* The start button lives under this panel on desktop. A student reading
+          their feedback should not have to scroll past it to try again. */}
+      {retryInResult && (
+        <div className="space-y-3">
+          {errorAlert}
+          <Button onClick={() => void start()} className="w-full sm:w-auto">
+            <IconMicrophone size={16} aria-hidden="true" />
+            {t('startAgain')}
+          </Button>
+        </div>
+      )}
+
       <ExerciseResultSummary
         score={result.score}
         passed={result.passed}

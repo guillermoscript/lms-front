@@ -6,6 +6,7 @@ import {
   MAX_CONVERSATION_MINUTES,
   buildConversationGraderPrompt,
   buildConversationInstructions,
+  conversationOverran,
   parseConversationConfig,
 } from '@/lib/speech/conversation'
 
@@ -55,5 +56,17 @@ describe('conversation prompts', () => {
     // Realtime tools run in the student's browser: a score/passed parameter
     // here would be a forgeable pass. Grading stays in the evaluate route.
     expect(Object.keys(tool!.parameters.properties)).toEqual(['reason'])
+  })
+})
+
+describe('conversationOverran', () => {
+  it('allows the budget plus the slack a normal hang-up needs', () => {
+    expect(conversationOverran(5 * 60, 5)).toBe(false)
+    expect(conversationOverran(5 * 60 + 60, 5)).toBe(false)
+  })
+
+  it('refuses a session kept open past the countdown', () => {
+    expect(conversationOverran(5 * 60 + 61, 5)).toBe(true)
+    expect(conversationOverran(30 * 60, 1)).toBe(true)
   })
 })

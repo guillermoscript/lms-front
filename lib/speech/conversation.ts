@@ -54,6 +54,19 @@ export const CONVERSATION_DEFAULTS: ConversationConfig = {
   max_daily_attempts: 3,
 }
 
+/** Token mint → connect, the tutor's goodbye, the transcript flush before hang-up. */
+export const CONVERSATION_OVERRUN_SLACK_SECONDS = 60
+
+/**
+ * The countdown that ends a call lives in the browser, where it can be edited
+ * out. The server never holds the socket so it can't cut one, but it can refuse
+ * to grade a session that ran past the teacher's budget — which is the only
+ * reason to keep one open.
+ */
+export function conversationOverran(durationSeconds: number, maxMinutes: number): boolean {
+  return durationSeconds > maxMinutes * 60 + CONVERSATION_OVERRUN_SLACK_SECONDS
+}
+
 /**
  * The one tool the voice tutor has: end the call.
  *

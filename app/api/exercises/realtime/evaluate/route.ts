@@ -9,6 +9,7 @@ import {
   ConversationEvaluationSchema,
   ConversationTranscriptSchema,
   buildConversationGraderPrompt,
+  conversationOverran,
   parseConversationConfig,
 } from '@/lib/speech/conversation'
 
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
   // means the transcript did not come from a conversation we started.
   const { data: session } = await adminClient
     .from('exercise_media_submissions')
-    .select('id, created_at')
+    .select('id, created_at, duration_seconds')
     .eq('exercise_id', exerciseId)
     .eq('user_id', user.id)
     .eq('tenant_id', tenantId)
@@ -72,9 +73,18 @@ export async function POST(req: Request) {
     return Response.json({ error: 'No open conversation to grade' }, { status: 409 })
   }
 
+  // The length is stamped by the first claim: a grader failure re-opens the
+  // session, and the retry must not be measured against a clock that kept
+  // running while we were the ones being slow.
+  const durationSeconds =
+    session.duration_seconds ??
+    (session.created_at
+      ? Math.max(0, Math.round((Date.now() - new Date(session.created_at).getTime()) / 1000))
+      : null)
+
   const { data: claimed } = await adminClient
     .from('exercise_media_submissions')
-    .update({ status: 'processing' })
+    .update({ status: 'processing', duration_seconds: durationSeconds })
     .eq('id', session.id)
     .eq('status', 'pending')
     .select('id')
@@ -85,11 +95,15 @@ export async function POST(req: Request) {
   }
 
   const config = parseConversationConfig(exercise.exercise_config)
-  const durationSeconds = session.created_at
-    ? Math.max(0, Math.round((Date.now() - new Date(session.created_at).getTime()) / 1000))
-    : null
   const studentTurns = transcript.filter((t) => t.role === 'user')
   const studentWords = studentTurns.reduce((n, t) => n + t.text.split(/\s+/).length, 0)
+
+  // `max_minutes` is only a countdown in the browser. A session still open past
+  // it was kept open by a client that ignored the countdown.
+  if (durationSeconds != null && conversationOverran(durationSeconds, config.max_minutes)) {
+    await adminClient.from('exercise_media_submissions').update({ status: 'failed' }).eq('id', session.id)
+    return Response.json({ error: 'Conversation ran past its time limit' }, { status: 410 })
+  }
 
   // The transcript is the browser's word. It can't be proven, but it can be
   // impossible: nobody speaks faster than ~4 words a second, so a long
