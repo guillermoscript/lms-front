@@ -9,6 +9,7 @@ import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 import { toLatestEvaluation, type LatestExerciseEvaluation } from '@/lib/exercises/latest-evaluation'
 import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
 import type { SpeechEvaluation } from '@/lib/speech/types'
+import { ConversationTranscriptSchema, parseConversationConfig } from '@/lib/speech/conversation'
 
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,6 +27,19 @@ const AudioExercise = dynamic(
       <div className="space-y-4 p-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-12 w-32 mx-auto" />
+      </div>
+    ),
+  }
+)
+
+const ConversationExercise = dynamic(
+  () => import('@/components/exercises/conversation-exercise'),
+  {
+    loading: () => (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="mx-auto size-40 rounded-full" />
         <Skeleton className="h-12 w-32 mx-auto" />
       </div>
     ),
@@ -178,6 +192,8 @@ export default async function ExercisePage({ params }: PageProps) {
     // finished exercise. Derived from the same rows as submissionHistory — the
     // artifact/essay engines write here too, their results were just never read.
     let latestEvaluation: LatestExerciseEvaluation | null = null
+    // Conversation results carry corrections + the transcript beyond the shared shape.
+    let latestAiResult: Record<string, unknown> | null = null
     try {
         const { data: evaluations, error: evaluationsError } = await supabase
             .from('exercise_evaluations')
@@ -205,6 +221,7 @@ export default async function ExercisePage({ params }: PageProps) {
         }))
 
         latestEvaluation = toLatestEvaluation(evaluations?.[0] ?? null)
+        latestAiResult = (evaluations?.[0]?.ai_result as Record<string, unknown> | null) ?? null
     } catch (err) {
         // RLS or table access may fail — gracefully degrade
         console.error('Error fetching exercise evaluations:', err)
@@ -221,7 +238,9 @@ export default async function ExercisePage({ params }: PageProps) {
     // Count today's submissions for daily attempt tracking
     let dailyAttemptsUsed = 0
     const maxDailyAttempts = exerciseConfig?.max_daily_attempts ?? 5
-    if (exercise.exercise_type === 'audio_evaluation') {
+    const isConversation = exercise.exercise_type === 'real_time_conversation'
+    const conversationConfig = parseConversationConfig(exercise.exercise_config)
+    if (exercise.exercise_type === 'audio_evaluation' || isConversation) {
         try {
             const todayStart = new Date()
             todayStart.setUTCHours(0, 0, 0, 0)
@@ -231,6 +250,8 @@ export default async function ExercisePage({ params }: PageProps) {
                 .eq('exercise_id', parseInt(exerciseId))
                 .eq('user_id', userId)
                 .eq('tenant_id', tenantId)
+                // Same table, two engines: a live session is `conversation`, a recording `audio`.
+                .eq('media_type', isConversation ? 'conversation' : 'audio')
                 .gte('created_at', todayStart.toISOString())
             dailyAttemptsUsed = count ?? 0
         } catch {
@@ -395,6 +416,35 @@ export default async function ExercisePage({ params }: PageProps) {
                     isExerciseCompletedSection={otherExercisesSection}
                     dailyAttemptsUsed={dailyAttemptsUsed}
                     maxDailyAttempts={maxDailyAttempts}
+                />
+            ) : isConversation ? (
+                <ConversationExercise
+                    exercise={exercise}
+                    scenario={conversationConfig.scenario}
+                    maxMinutes={conversationConfig.max_minutes}
+                    passingScore={conversationConfig.passing_score}
+                    isExerciseCompleted={isExerciseCompleted}
+                    dailyAttemptsUsed={dailyAttemptsUsed}
+                    maxDailyAttempts={conversationConfig.max_daily_attempts}
+                    isExerciseCompletedSection={otherExercisesSection}
+                    initialResult={
+                        latestEvaluation
+                            ? {
+                                  score: latestEvaluation.score,
+                                  passed: latestEvaluation.passed,
+                                  feedback: latestEvaluation.feedback,
+                                  strengths: latestEvaluation.strengths,
+                                  improvements: latestEvaluation.improvements,
+                                  corrections: Array.isArray(latestAiResult?.corrections)
+                                      ? (latestAiResult.corrections as { said: string; better: string; why: string }[])
+                                      : [],
+                                  transcript:
+                                      ConversationTranscriptSchema.safeParse(latestAiResult?.transcript).data ?? [],
+                                  attemptNumber: latestEvaluation.attemptNumber,
+                                  createdAt: latestEvaluation.createdAt,
+                              }
+                            : null
+                    }
                 />
             ) : exercise.exercise_type === 'video_evaluation' ? (
                 <VideoExercise

@@ -4,20 +4,33 @@ import { useState, useCallback, useEffect, useMemo, createContext, use } from 'r
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createExercise, updateExercise } from '@/app/actions/teacher/exercises'
+import { CONVERSATION_DEFAULTS } from '@/lib/speech/conversation'
 import {
   IconSettings2,
   IconRobot,
   IconMicrophone,
-  IconCheck,
+  IconMessageCircle,
 } from '@tabler/icons-react'
 
 export interface ExerciseBuilderProps {
   courseId: number
   lessonId?: number
-  initialData?: any
+  initialData?: {
+    id: number
+    title?: string | null
+    description?: string | null
+    instructions?: string | null
+    exercise_type?: string | null
+    difficulty_level?: string | null
+    time_limit?: number | null
+    system_prompt?: string | null
+    status?: string | null
+    // jsonb whose shape depends on exercise_type — read field by field below.
+    exercise_config?: Record<string, any> | null // eslint-disable-line @typescript-eslint/no-explicit-any
+  }
 }
 
-export type ExerciseStep = 'details' | 'ai-config' | 'audio-config'
+export type ExerciseStep = 'details' | 'ai-config' | 'audio-config' | 'conversation-config'
 
 export interface ExerciseFormData {
   title: string
@@ -38,6 +51,13 @@ export interface ExerciseFormData {
   rubric_pace: boolean
   rubric_structure: boolean
   rubric_confidence: boolean
+  // live conversation config
+  conv_scenario: string
+  conv_target_language: string
+  conv_native_language: string
+  conv_level: string
+  conv_voice: string
+  conv_max_minutes: number
 }
 
 export interface StepDefinition {
@@ -61,6 +81,7 @@ export interface ExerciseBuilderContextValue {
 
   // Derived
   isAudioType: boolean
+  isConversationType: boolean
   isDetailsComplete: boolean
   hasAIConfig: boolean
   steps: StepDefinition[]
@@ -114,9 +135,16 @@ export function ExerciseBuilderProvider({
     rubric_pace: initialData?.exercise_config?.rubric?.pace !== false,
     rubric_structure: initialData?.exercise_config?.rubric?.structure !== false,
     rubric_confidence: initialData?.exercise_config?.rubric?.confidence !== false,
+    conv_scenario: initialData?.exercise_config?.scenario || CONVERSATION_DEFAULTS.scenario,
+    conv_target_language: initialData?.exercise_config?.target_language || CONVERSATION_DEFAULTS.target_language,
+    conv_native_language: initialData?.exercise_config?.native_language || CONVERSATION_DEFAULTS.native_language,
+    conv_level: initialData?.exercise_config?.level || CONVERSATION_DEFAULTS.level,
+    conv_voice: initialData?.exercise_config?.voice || CONVERSATION_DEFAULTS.voice,
+    conv_max_minutes: initialData?.exercise_config?.max_minutes || CONVERSATION_DEFAULTS.max_minutes,
   })
 
   const isAudioType = formData.exercise_type === 'audio_evaluation' || formData.exercise_type === 'video_evaluation'
+  const isConversationType = formData.exercise_type === 'real_time_conversation'
 
   const updateField = useCallback(
     <K extends keyof ExerciseFormData>(key: K, value: ExerciseFormData[K]) => {
@@ -158,6 +186,12 @@ export function ExerciseBuilderProvider({
         rubric_pace: formData.rubric_pace,
         rubric_structure: formData.rubric_structure,
         rubric_confidence: formData.rubric_confidence,
+        conv_scenario: formData.conv_scenario,
+        conv_target_language: formData.conv_target_language,
+        conv_native_language: formData.conv_native_language,
+        conv_level: formData.conv_level,
+        conv_voice: formData.conv_voice,
+        conv_max_minutes: formData.conv_max_minutes,
       }
 
       const result = initialData
@@ -177,9 +211,9 @@ export function ExerciseBuilderProvider({
         setSaveSuccess(true)
         setLoading(false)
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
-      setError(err.message || t('saveError'))
+      setError(err instanceof Error && err.message ? err.message : t('saveError'))
       setLoading(false)
     }
   }
@@ -202,6 +236,11 @@ export function ExerciseBuilderProvider({
       label: t('audioSetupTitle'),
       icon: <IconMicrophone className="h-4 w-4" />,
       complete: formData.topic_prompt.trim().length > 0,
+    }] : isConversationType ? [{
+      key: 'conversation-config' as ExerciseStep,
+      label: t('conversationSetupTitle'),
+      icon: <IconMessageCircle className="h-4 w-4" />,
+      complete: formData.conv_scenario.trim().length > 0,
     }] : [{
       key: 'ai-config' as ExerciseStep,
       label: t('aiConfigTitle'),
@@ -213,10 +252,10 @@ export function ExerciseBuilderProvider({
   const value = useMemo(() => ({
     formData, loading, error, saveSuccess, activeStep,
     initialData, courseId,
-    isAudioType, isDetailsComplete, hasAIConfig, steps,
+    isAudioType, isConversationType, isDetailsComplete, hasAIConfig, steps,
     updateField, setFormData, handleSave, setActiveStep, setError,
   }), [formData, loading, error, saveSuccess, activeStep,
-    initialData, courseId, isAudioType, isDetailsComplete, hasAIConfig])
+    initialData, courseId, isAudioType, isConversationType, isDetailsComplete, hasAIConfig])
 
   return (
     <ExerciseBuilderContext value={value}>

@@ -4,6 +4,7 @@ import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/l
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import { parseConversationConfig } from '@/lib/speech/conversation'
 
 export interface ExerciseFormData {
   title: string
@@ -26,6 +27,27 @@ export interface ExerciseFormData {
   rubric_pace: boolean
   rubric_structure: boolean
   rubric_confidence: boolean
+  // Live conversation config fields
+  conv_scenario: string
+  conv_target_language: string
+  conv_native_language: string
+  conv_level: string
+  conv_voice: string
+  conv_max_minutes: number
+}
+
+/** Normalised through the same parser the token route reads it with. */
+function buildConversationConfig(data: ExerciseFormData) {
+  return parseConversationConfig({
+    scenario: data.conv_scenario,
+    target_language: data.conv_target_language,
+    native_language: data.conv_native_language,
+    level: data.conv_level,
+    voice: data.conv_voice,
+    max_minutes: data.conv_max_minutes,
+    passing_score: data.passing_score,
+    max_daily_attempts: data.max_daily_attempts || 0,
+  })
 }
 
 function buildAudioConfig(data: ExerciseFormData) {
@@ -72,6 +94,8 @@ export async function createExercise(courseId: number, data: ExerciseFormData) {
 
     if (isAudioType) {
       exerciseData.exercise_config = buildAudioConfig(data)
+    } else if (data.exercise_type === 'real_time_conversation') {
+      exerciseData.exercise_config = buildConversationConfig(data)
     }
 
     const { data: newExercise, error } = await ctx.supabase
@@ -128,6 +152,8 @@ export async function updateExercise(
 
     if (isAudioType) {
       exerciseData.exercise_config = buildAudioConfig(data)
+    } else if (data.exercise_type === 'real_time_conversation') {
+      exerciseData.exercise_config = buildConversationConfig(data)
     }
 
     const { error } = await ctx.supabase

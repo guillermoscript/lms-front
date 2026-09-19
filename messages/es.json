@@ -1737,7 +1737,30 @@
         "statusArchived": "Archivado",
         "timeLimitUnit": "min",
         "saveError": "No se pudo guardar el ejercicio. Revisa tu conexión e intenta de nuevo.",
-        "dismissError": "Descartar error"
+        "dismissError": "Descartar error",
+        "typeConversation": "Conversación de voz en vivo",
+        "conversationSetupTitle": "Configuración de la conversación",
+        "conversationSetupDesc": "El estudiante habla en voz alta con un compañero de IA y luego recibe comentarios con nota.",
+        "conversationScenarioLabel": "Escenario",
+        "conversationScenarioPlaceholder": "Eres barista en una cafetería de Londres. El estudiante pide una bebida, pregunta precios y paga.",
+        "conversationScenarioHint": "Describe a quién interpreta la IA y qué debe lograr el estudiante. Los estudiantes lo ven.",
+        "conversationLanguageSection": "Idioma",
+        "conversationTargetLanguage": "Idioma que se practica",
+        "conversationNativeLanguage": "Idioma del estudiante",
+        "conversationLevel": "Nivel (MCER)",
+        "conversationNativeHint": "El compañero habla el idioma que se practica y da pistas y comentarios en el idioma del estudiante.",
+        "conversationVoice": "Voz",
+        "conversationMaxMinutes": "Minutos máx.",
+        "conversationDailySessions": "Conversaciones por día",
+        "conversationCostHint": "La voz en vivo se cobra por minuto. Mantén las conversaciones cortas y limítalas por día; 0 significa sin límite.",
+        "conversationLanguages": {
+          "en": "Inglés",
+          "es": "Español",
+          "pt": "Portugués",
+          "fr": "Francés",
+          "de": "Alemán",
+          "it": "Italiano"
+        }
       },
       "submissionReview": {
         "status": {
@@ -6245,7 +6268,37 @@
       "sections": "Secciones del ejercicio",
       "task": "Ejercicio",
       "coach": "Tutor IA",
-      "record": "Grabar"
+      "record": "Grabar",
+      "speak": "Hablar"
+    },
+    "conversation": {
+      "title": "Conversación en vivo",
+      "scenario": "Escenario",
+      "start": "Iniciar conversación",
+      "startAgain": "Iniciar una nueva conversación",
+      "finish": "Terminar y recibir comentarios",
+      "mute": "Silenciar",
+      "unmute": "Activar micrófono",
+      "connecting": "Conectando…",
+      "listening": "Escuchando — adelante",
+      "tutorSpeaking": "Tu compañero está hablando",
+      "muted": "Micrófono silenciado",
+      "ready": "Cuando quieras",
+      "grading": "Evaluando tu conversación…",
+      "timeLeft": "Tiempo restante",
+      "maxLength": "Hasta {minutes} min por conversación",
+      "attemptsToday": "{used} de {max} conversaciones hoy",
+      "dailyLimitReached": "Ya usaste las conversaciones de hoy. Vuelve mañana.",
+      "notAvailable": "Las conversaciones en vivo no están disponibles para este ejercicio ahora mismo.",
+      "connectionError": "No pudimos conectar con el compañero de voz. Revisa tu conexión e inténtalo de nuevo.",
+      "micDenied": "Necesitamos tu micrófono para este ejercicio. Permite el acceso en tu navegador e inténtalo de nuevo.",
+      "nothingSaid": "No te escuchamos decir nada, así que no hay nada que evaluar. Inténtalo de nuevo y habla después del saludo.",
+      "gradingError": "No pudimos evaluar esta conversación. Inténtalo de nuevo.",
+      "liveTranscript": "Transcripción en vivo",
+      "transcriptEmptyTitle": "Aún nada",
+      "transcriptEmpty": "Lo que digan tú y tu compañero aparecerá aquí.",
+      "corrections": "Dilo mejor",
+      "fullTranscript": "Transcripción completa"
     }
   },
   "exams": {

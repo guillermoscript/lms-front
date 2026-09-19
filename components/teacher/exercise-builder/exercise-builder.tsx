@@ -7,6 +7,7 @@ import { ExerciseBuilderToolbar } from './exercise-builder-toolbar'
 import { ExerciseDetailsStep } from './exercise-details-step'
 import { ExerciseAIConfigStep } from './exercise-ai-config-step'
 import { ExerciseAudioConfigStep } from './exercise-audio-config-step'
+import { ExerciseConversationConfigStep } from './exercise-conversation-config-step'
 import { IconAlertTriangle, IconX } from '@tabler/icons-react'
 
 export function ExerciseBuilder(props: ExerciseBuilderProps) {
@@ -45,6 +46,7 @@ function ExerciseBuilderShell() {
       {activeStep === 'details' && <ExerciseDetailsStep />}
       {activeStep === 'ai-config' && <ExerciseAIConfigStep />}
       {activeStep === 'audio-config' && <ExerciseAudioConfigStep />}
+      {activeStep === 'conversation-config' && <ExerciseConversationConfigStep />}
     </div>
   )
 }
