@@ -33,7 +33,8 @@ export function ExerciseConversationConfigStep() {
       <Label className="mb-2 block text-xs font-medium text-muted-foreground">{label}</Label>
       <Select value={formData[field]} onValueChange={(v) => v && updateField(field, v)}>
         <SelectTrigger className="h-10 w-full border-muted bg-muted/30">
-          <SelectValue />
+          {/* base-ui shows the raw value ("en") unless told how to label it. */}
+          <SelectValue>{(code: string) => t(`conversationLanguages.${code}`)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {CONVERSATION_LANGUAGES.map((code) => (
