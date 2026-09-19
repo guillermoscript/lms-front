@@ -119,9 +119,11 @@ test.describe('plan limits — every surface at the cap (#296)', () => {
     expect(inviteError).toBeNull()
 
     await loginExpectingJoinSchool(page, QA_BASE, SEEDED.alice.email, SEEDED.alice.password)
-    // The join runs on arrival since #790, so the refusal is on screen without
-    // a click — and the manual form is revealed underneath it as the retry.
-    await expect(page.getByText('This school has reached its student limit')).toBeVisible({ timeout: 30_000 })
+    // Alice was invited, so the join runs on arrival (#790) and the refusal is
+    // on screen without a click — with the manual form underneath as the retry.
+    // The seat check happens before the invitation is touched, so the
+    // invitation is still pending below.
+    await expect(page.getByText('This school has reached its student limit')).toBeVisible({ timeout: 60_000 })
     await expect(page.getByRole('button', { name: `Join ${QA.name}` })).toBeVisible({ timeout: 20_000 })
 
     const { data: membership } = await admin

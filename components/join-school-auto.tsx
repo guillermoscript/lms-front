@@ -43,7 +43,12 @@ export function AutoJoinSchool({ schoolName, destination, children }: AutoJoinSc
     if (hasStarted.current) return
     hasStarted.current = true
 
-    let cancelled = false
+    // No cancel-on-unmount flag here, deliberately. StrictMode mounts, tears
+    // down and remounts: the teardown would set a flag the in-flight promise
+    // then reads, and because the remount is short-circuited by `hasStarted`
+    // no second call replaces it — the refusal would never reach the screen
+    // and the spinner would spin forever. Setting state on an unmounted
+    // component is a no-op in React 18+; a lost error is not.
     joinCurrentSchool()
       .then((result) => {
         if (result.success) {
@@ -53,16 +58,12 @@ export function AutoJoinSchool({ schoolName, destination, children }: AutoJoinSc
           window.location.assign(destination)
           return
         }
-        if (!cancelled) setError(result.error || t('error'))
+        setError(result.error || t('error'))
       })
       .catch((err) => {
         console.error('Auto-join failed:', err)
-        if (!cancelled) setError(t('unexpectedError'))
+        setError(t('unexpectedError'))
       })
-
-    return () => {
-      cancelled = true
-    }
   }, [destination, t])
 
   if (!error) {

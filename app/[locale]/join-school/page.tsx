@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import {getCurrentTenantId, getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {getCurrentTenantId, getCurrentTenant, getCurrentUserId, getSessionUser } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { JoinSchoolForm } from '@/components/join-school-form'
 import { AutoJoinSchool } from '@/components/join-school-auto'
@@ -125,54 +126,92 @@ export default async function JoinSchoolPage({
     .eq('status', 'active')
     .neq('tenant_id', tenantId)
 
-  // The join runs on arrival (#790) — `proxy.ts` only sends people here once
-  // they have navigated into this school, so the click below carried no
-  // decision. What follows is the failure path: the seat limit, a missing
-  // tenant, a metadata write that did not land.
+  // Who gets joined on arrival rather than asked (#790).
+  //
+  // Not everyone: a membership spends a seat against the school's plan, so a
+  // logged-in person who merely opens a link into a school they have nothing
+  // to do with must still choose. What the three cases below have in common is
+  // that the choice is already made somewhere else —
+  //
+  //   · no other school at all — this is the signup funnel's last step, and
+  //     the account exists for exactly this;
+  //   · an invitation addressed to them — the school asked them to come;
+  //   · a checkout as the destination — they arrived to pay this school.
+  //
+  // Anything else falls through to the card, which is the same page it always
+  // was and is also where a failed join explains itself.
+  const memberOfNothing = (otherMemberships ?? []).length === 0
+  const wantsToPay = destination.startsWith('/checkout')
+
+  let hasInvitation = false
+  if (!memberOfNothing && !wantsToPay) {
+    // Admin client: `tenant_invitations` is not readable by someone who is not
+    // yet a member, which is precisely who is looking at this page.
+    const email = (await getSessionUser())?.email?.toLowerCase()
+    if (email) {
+      const { data: invitation } = await createAdminClient()
+        .from('tenant_invitations')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('email', email)
+        .eq('status', 'pending')
+        .maybeSingle()
+      hasInvitation = Boolean(invitation)
+    }
+  }
+
+  const autoJoin = memberOfNothing || wantsToPay || hasInvitation
+
+  const body = (
+    <div className="container mx-auto py-12 max-w-2xl">
+      <div className="text-center mb-8">
+        <div className="flex justify-center mb-4">
+          <div className="h-16 w-16 rounded-full bg-brand-tint flex items-center justify-center">
+            <School className="h-8 w-8 text-brand-text" />
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
+          {t('title', { school: tenant.name })}
+        </h1>
+        <p className="text-muted-foreground">{t('subtitle', { school: tenant.name })}</p>
+      </div>
+
+      {otherMemberships && otherMemberships.length > 0 && (
+        <Card className="mb-6 bg-brand-tint ring-primary/25">
+          <CardHeader>
+            <CardTitle className="text-sm text-brand-text">{t('otherSchoolsTitle')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {otherMemberships.map((membership) => {
+                // The generated types model this to-one embed as an array while
+                // PostgREST returns a bare object; the `any` this replaces was
+                // hiding the mismatch rather than resolving it. Handle both so
+                // the row renders whichever shape actually arrives.
+                const school = Array.isArray(membership.tenants)
+                  ? membership.tenants[0]
+                  : membership.tenants
+                return (
+                  <li key={membership.tenant_id} className="text-sm text-brand-text">
+                    • {school?.name || t('unknownSchool')}
+                  </li>
+                )
+              })}
+            </ul>
+            <p className="text-xs text-brand-text mt-3">{t('otherSchoolsHint')}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <JoinSchoolForm tenant={tenant} destination={destination} />
+    </div>
+  )
+
+  if (!autoJoin) return body
+
   return (
     <AutoJoinSchool schoolName={tenant.name} destination={destination}>
-      <div className="container mx-auto py-12 max-w-2xl">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-brand-tint flex items-center justify-center">
-              <School className="h-8 w-8 text-brand-text" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
-            {t('title', { school: tenant.name })}
-          </h1>
-          <p className="text-muted-foreground">{t('subtitle', { school: tenant.name })}</p>
-        </div>
-
-        {otherMemberships && otherMemberships.length > 0 && (
-          <Card className="mb-6 bg-brand-tint ring-primary/25">
-            <CardHeader>
-              <CardTitle className="text-sm text-brand-text">{t('otherSchoolsTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {otherMemberships.map((membership) => {
-                  // The generated types model this to-one embed as an array while
-                  // PostgREST returns a bare object; the `any` this replaces was
-                  // hiding the mismatch rather than resolving it. Handle both so
-                  // the row renders whichever shape actually arrives.
-                  const school = Array.isArray(membership.tenants)
-                    ? membership.tenants[0]
-                    : membership.tenants
-                  return (
-                    <li key={membership.tenant_id} className="text-sm text-brand-text">
-                      • {school?.name || t('unknownSchool')}
-                    </li>
-                  )
-                })}
-              </ul>
-              <p className="text-xs text-brand-text mt-3">{t('otherSchoolsHint')}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <JoinSchoolForm tenant={tenant} destination={destination} />
-      </div>
+      {body}
     </AutoJoinSchool>
   )
 }

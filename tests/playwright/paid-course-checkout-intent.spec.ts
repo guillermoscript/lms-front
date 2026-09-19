@@ -22,6 +22,7 @@ import { test, expect, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
+import { login } from './utils/auth'
 
 const BASE = TENANT_BASE
 const CREATOR_ID = 'a1000000-0000-0000-0000-000000000003' // creator@codeacademy.com
@@ -197,17 +198,12 @@ test.describe('Paid course CTA keeps checkout intent for a new visitor (#684)', 
     if (createError || !created.user) throw new Error(`create tamper user: ${createError?.message ?? 'no user'}`)
     createdUserIds.push(created.user.id)
 
-    await page.goto(`${BASE}/${LOCALE}/auth/login?next=${encodeURIComponent('/join-school')}`, {
-      waitUntil: 'domcontentloaded',
-    })
-    await fillSettled(page, 'login-email', email)
-    await fillSettled(page, 'login-password', PASSWORD)
-    await domClick(page, page.getByTestId('login-submit'))
-
-    // The bounce through /join-school already joined them (#790), so a second visit with a
-    // hostile `next` renders the member card — whose Continue link is where a
-    // tampered destination would show up.
-    await page.waitForURL(/\/dashboard\/student/, { timeout: 90_000 })
+    // The shared helper, which re-presses a login the page dropped before
+    // hydration. It only returns once a dashboard is on screen — which here
+    // means the bounce through /join-school joined them on arrival (#790):
+    // this account is a member of nothing, the signup funnel's last step.
+    await login(page, email, PASSWORD, BASE)
+    expect(page.url(), 'login landed inside the school').toMatch(/\/dashboard\//)
     expect(new URL(page.url()).hostname).toBe(new URL(BASE).hostname)
 
     await page.goto(`${BASE}/${LOCALE}/join-school?next=${encodeURIComponent('https://evil.example/phish')}`, {
