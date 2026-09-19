@@ -1719,6 +1719,20 @@
         "minDurationLabel": "Mínimo (segundos)",
         "maxDurationLabel": "Máximo (segundos)",
         "evaluationRubric": "Criterios de Puntuación",
+        "speechRubricMode": "Qué se evalúa",
+        "speechRubricModes": {
+          "public_speaking": {
+            "label": "Oratoria",
+            "desc": "Ritmo, muletillas, estructura y expresión."
+          },
+          "language_learner": {
+            "label": "Aprendizaje de idiomas",
+            "desc": "Gramática, vocabulario y fluidez según el nivel del estudiante, con correcciones."
+          }
+        },
+        "speechFeedbackLanguage": "Idioma de la retroalimentación",
+        "speechFeedbackSameAsSpoken": "El mismo que habla el estudiante",
+        "speechFeedbackLanguageHint": "Los principiantes entienden mejor la retroalimentación en su propio idioma.",
         "rubricFillerWords": "Muletillas",
         "rubricFillerWordsDesc": "Señalar uso excesivo de eh, um, este, etc.",
         "rubricPace": "Ritmo de Habla",
@@ -6161,6 +6175,7 @@
       "strengths": "Fortalezas",
       "improvements": "Áreas de Mejora",
       "focusNext": "Enfoque para el Próximo Intento",
+      "corrections": "Dilo mejor",
       "annotatedTranscript": "Transcripción Anotada",
       "fillerWord": "Muletilla",
       "longPause": "Pausa larga",

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { runSpeechPipeline } from '@/lib/speech/pipeline'
+import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
 import { getPipeline } from '@/lib/speech/registry'
 import type { ExerciseContext } from '@/lib/speech/types'
 
@@ -117,6 +118,7 @@ export async function POST(req: Request) {
       instructions: exercise.instructions ?? '',
       topic_prompt: config.topic_prompt,
       rubric: config.rubric,
+      speechRubric: parseSpeechRubricConfig(config),
       exerciseId: submission.exercise_id,
       userId: user.id,
       passingScore,
@@ -127,7 +129,7 @@ export async function POST(req: Request) {
       config.ai_coach ?? 'openai'
     )
 
-    // 9. Run the speech pipeline (AI evaluates + calls markExerciseCompleted if score passes)
+    // 9. Run the speech pipeline (transcribe, then grade)
     const evaluation = await runSpeechPipeline(urlData.signedUrl, exerciseContext, { stt, coach }, { supabase: adminClient })
 
     // 10. Save results

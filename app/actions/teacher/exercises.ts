@@ -5,6 +5,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { parseConversationConfig } from '@/lib/speech/conversation'
+import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
 
 export interface ExerciseFormData {
   title: string
@@ -27,6 +28,10 @@ export interface ExerciseFormData {
   rubric_pace: boolean
   rubric_structure: boolean
   rubric_confidence: boolean
+  speech_rubric_mode: string
+  speech_target_language: string
+  speech_level: string
+  speech_feedback_language: string
   // Live conversation config fields
   conv_scenario: string
   conv_target_language: string
@@ -65,6 +70,13 @@ function buildAudioConfig(data: ExerciseFormData) {
       structure: data.rubric_structure,
       confidence: data.rubric_confidence,
     },
+    // Normalised through the same parser the analyze route reads it with.
+    ...parseSpeechRubricConfig({
+      rubric_mode: data.speech_rubric_mode,
+      target_language: data.speech_target_language,
+      level: data.speech_level,
+      feedback_language: data.speech_feedback_language,
+    }),
   }
 }
 

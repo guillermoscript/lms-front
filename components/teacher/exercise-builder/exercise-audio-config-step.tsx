@@ -13,11 +13,24 @@ import {
   IconEye,
   IconCheck,
 } from '@tabler/icons-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { CONVERSATION_LANGUAGES, CONVERSATION_LEVELS } from '@/lib/speech/conversation'
+import { SPEECH_RUBRIC_MODES } from '@/lib/speech/learner-rubric'
 import { cn } from '@/lib/utils'
+
+/** base-ui Select has no empty value; this stands for "the language the student spoke". */
+const SAME_AS_SPOKEN = 'auto'
 
 export function ExerciseAudioConfigStep() {
   const { formData, updateField } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
+  const learner = formData.speech_rubric_mode === 'language_learner'
 
   return (
     <div className="animate-in fade-in slide-in-from-left-2 duration-300  space-y-6">
@@ -134,7 +147,107 @@ export function ExerciseAudioConfigStep() {
 
       <Separator className="my-2" />
 
-      {/* Rubric */}
+      {/* What is graded */}
+      <div>
+        <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{t('speechRubricMode')}</h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {SPEECH_RUBRIC_MODES.map((mode) => {
+            const selected = formData.speech_rubric_mode === mode
+            return (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => updateField('speech_rubric_mode', mode)}
+                className={cn(
+                  'rounded-xl border p-4 text-left transition-all',
+                  selected
+                    ? 'border-primary/30 bg-primary/5'
+                    : 'border-transparent bg-muted/40 text-muted-foreground hover:bg-muted'
+                )}
+              >
+                <p className="text-xs font-semibold">{t(`speechRubricModes.${mode}.label`)}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{t(`speechRubricModes.${mode}.desc`)}</p>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {learner && (
+            <>
+              <div className="rounded-xl border bg-card p-4">
+                <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+                  {t('conversationTargetLanguage')}
+                </Label>
+                <Select
+                  value={formData.speech_target_language}
+                  onValueChange={(v) => v && updateField('speech_target_language', v)}
+                >
+                  <SelectTrigger className="h-10 w-full border-muted bg-muted/30">
+                    <SelectValue>{(code: string) => t(`conversationLanguages.${code}`)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONVERSATION_LANGUAGES.map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {t(`conversationLanguages.${code}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="rounded-xl border bg-card p-4">
+                <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+                  {t('conversationLevel')}
+                </Label>
+                <Select value={formData.speech_level} onValueChange={(v) => v && updateField('speech_level', v)}>
+                  <SelectTrigger className="h-10 w-full border-muted bg-muted/30">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONVERSATION_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>
+                        {level}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          <div className="rounded-xl border bg-card p-4">
+            <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+              {t('speechFeedbackLanguage')}
+            </Label>
+            <Select
+              value={formData.speech_feedback_language || SAME_AS_SPOKEN}
+              onValueChange={(v) => v && updateField('speech_feedback_language', v === SAME_AS_SPOKEN ? '' : v)}
+            >
+              <SelectTrigger className="h-10 w-full border-muted bg-muted/30">
+                <SelectValue>
+                  {(code: string) =>
+                    code === SAME_AS_SPOKEN ? t('speechFeedbackSameAsSpoken') : t(`conversationLanguages.${code}`)
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SAME_AS_SPOKEN}>{t('speechFeedbackSameAsSpoken')}</SelectItem>
+                {CONVERSATION_LANGUAGES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {t(`conversationLanguages.${code}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">{t('speechFeedbackLanguageHint')}</p>
+      </div>
+
+      {!learner && <Separator className="my-2" />}
+
+      {/* Rubric — the public-speaking criteria; the learner rubric is fixed. */}
+      {!learner && (
       <div>
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{t('evaluationRubric')}</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -169,6 +282,7 @@ export function ExerciseAudioConfigStep() {
           ))}
         </div>
       </div>
+      )}
     </div>
   )
 }

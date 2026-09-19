@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createExercise, updateExercise } from '@/app/actions/teacher/exercises'
 import { CONVERSATION_DEFAULTS } from '@/lib/speech/conversation'
+import { SPEECH_RUBRIC_DEFAULTS } from '@/lib/speech/learner-rubric'
 import {
   IconSettings2,
   IconRobot,
@@ -51,6 +52,10 @@ export interface ExerciseFormData {
   rubric_pace: boolean
   rubric_structure: boolean
   rubric_confidence: boolean
+  speech_rubric_mode: string
+  speech_target_language: string
+  speech_level: string
+  speech_feedback_language: string
   // live conversation config
   conv_scenario: string
   conv_target_language: string
@@ -135,6 +140,12 @@ export function ExerciseBuilderProvider({
     rubric_pace: initialData?.exercise_config?.rubric?.pace !== false,
     rubric_structure: initialData?.exercise_config?.rubric?.structure !== false,
     rubric_confidence: initialData?.exercise_config?.rubric?.confidence !== false,
+    // Shares `target_language`/`level` keys with the conversation config on
+    // purpose: an exercise is one type or the other, never both.
+    speech_rubric_mode: initialData?.exercise_config?.rubric_mode || SPEECH_RUBRIC_DEFAULTS.rubric_mode,
+    speech_target_language: initialData?.exercise_config?.target_language || SPEECH_RUBRIC_DEFAULTS.target_language,
+    speech_level: initialData?.exercise_config?.level || SPEECH_RUBRIC_DEFAULTS.level,
+    speech_feedback_language: initialData?.exercise_config?.feedback_language || '',
     conv_scenario: initialData?.exercise_config?.scenario || CONVERSATION_DEFAULTS.scenario,
     conv_target_language: initialData?.exercise_config?.target_language || CONVERSATION_DEFAULTS.target_language,
     conv_native_language: initialData?.exercise_config?.native_language || CONVERSATION_DEFAULTS.native_language,
@@ -186,6 +197,10 @@ export function ExerciseBuilderProvider({
         rubric_pace: formData.rubric_pace,
         rubric_structure: formData.rubric_structure,
         rubric_confidence: formData.rubric_confidence,
+        speech_rubric_mode: formData.speech_rubric_mode,
+        speech_target_language: formData.speech_target_language,
+        speech_level: formData.speech_level,
+        speech_feedback_language: formData.speech_feedback_language,
         conv_scenario: formData.conv_scenario,
         conv_target_language: formData.conv_target_language,
         conv_native_language: formData.conv_native_language,

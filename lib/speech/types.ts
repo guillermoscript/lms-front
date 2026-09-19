@@ -47,12 +47,16 @@ export interface SpeechEvaluation {
   strengths: string[]
   improvements: string[]
   focus_next: string
+  /** Learner rubric only. */
+  corrections?: import('./learner-rubric').SpeechCorrection[]
   annotated_transcript: AnnotatedSegment[]
   metrics: SpeechMetrics
 }
 
 export interface STTConfig {
   language?: string
+  /** Keep the speaker's own wording: no casing/numeral clean-up before grading. */
+  verbatim?: boolean
   [key: string]: unknown
 }
 
@@ -66,7 +70,8 @@ export interface ExerciseContext {
     structure?: boolean
     confidence?: boolean
   }
-  // Used by AI tools (e.g. markExerciseCompleted)
+  /** How to grade and in what language to answer. Absent = public speaking. */
+  speechRubric?: import('./learner-rubric').SpeechRubricConfig
   exerciseId?: number
   userId?: string
   passingScore?: number
