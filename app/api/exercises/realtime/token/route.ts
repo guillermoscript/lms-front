@@ -4,6 +4,7 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { hasPlanFeature } from '@/lib/plans/server'
 import {
+  CONVERSATION_TOOLS,
   REALTIME_MODEL,
   buildConversationInstructions,
   parseConversationConfig,
@@ -105,9 +106,12 @@ export async function POST(req: Request) {
         outputModalities: ['audio'],
         inputAudioTranscription: { language: config.target_language },
         turnDetection: { type: 'semantic-vad' },
+        tools: CONVERSATION_TOOLS,
       },
     })
-    return Response.json({ token, url, tools: [] })
+    // The hook re-sends `tools` in its own session.update on connect; an empty
+    // list there would erase the ones embedded in the token.
+    return Response.json({ token, url, tools: CONVERSATION_TOOLS })
   } catch (err) {
     console.error('Realtime token error:', err)
     return new Response('Could not start the conversation', { status: 502 })

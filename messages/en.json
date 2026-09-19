@@ -6302,7 +6302,8 @@
       "transcriptEmpty": "What you and your partner say will appear here.",
       "corrections": "Say it better",
       "fullTranscript": "Full transcript",
-      "micInsecure": "Your browser only allows microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again."
+      "micInsecure": "Your browser only allows microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again.",
+      "wrappingUp": "Wrapping up…"
     }
   },
   "exams": {

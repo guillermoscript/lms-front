@@ -22,7 +22,12 @@ import {
   ConversationScrollButton,
 } from '@/components/ai-elements/conversation'
 import { Message, MessageContent } from '@/components/ai-elements/message'
-import { REALTIME_MODEL, type ConversationEvaluation, type ConversationTurn } from '@/lib/speech/conversation'
+import {
+  FINISH_CONVERSATION_TOOL,
+  REALTIME_MODEL,
+  type ConversationEvaluation,
+  type ConversationTurn,
+} from '@/lib/speech/conversation'
 import ExerciseBrief from './exercise-brief'
 import ExerciseHeader from './exercise-header'
 import ExerciseResultSummary from './exercise-result-summary'
@@ -87,6 +92,8 @@ export default function ConversationExercise({
   const [result, setResult] = useState<ConversationResult | null>(initialResult)
   const [attemptsUsed, setAttemptsUsed] = useState(dailyAttemptsUsed)
   const [gradedNonce, setGradedNonce] = useState(0)
+  // The tutor asked to end the call; we hang up once its goodbye has played.
+  const [endRequested, setEndRequested] = useState(false)
 
   const streamRef = useRef<MediaStream | null>(null)
   const greetedRef = useRef(false)
@@ -98,6 +105,11 @@ export default function ConversationExercise({
   const realtime = useRealtime({
     model,
     api: { token: `/api/exercises/realtime/token?exerciseId=${exercise.id}` },
+    // Returns nothing on purpose: a tool output would make the tutor speak again.
+    // The tool carries no verdict — grading stays on the server.
+    onToolCall: ({ toolCall }) => {
+      if (toolCall.toolName === FINISH_CONVERSATION_TOOL) setEndRequested(true)
+    },
     onError: (error) => {
       console.error('Realtime error:', error)
       setErrorMsg(
@@ -136,6 +148,7 @@ export default function ConversationExercise({
   const start = async () => {
     setErrorMsg(null)
     setMuted(false)
+    setEndRequested(false)
     greetedRef.current = false
     setSecondsLeft(maxMinutes * 60)
     // Browsers only expose the microphone on https (or localhost). On plain http
@@ -222,6 +235,14 @@ export default function ConversationExercise({
     if (phase === 'live' && secondsLeft === 0) void finishRef.current()
   }, [phase, secondsLeft])
 
+  // Tutor-initiated ending: let the goodbye finish playing, then grade. The
+  // grace period covers the gap between the tool call and the last audio chunk.
+  useEffect(() => {
+    if (!endRequested || phase !== 'live' || isPlaying) return
+    const id = setTimeout(() => void finishRef.current(), 1200)
+    return () => clearTimeout(id)
+  }, [endRequested, phase, isPlaying])
+
   // Leaving the page must drop the socket and the mic.
   const releaseRef = useRef(releaseMic)
   const disconnectRef = useRef(realtime.disconnect)
@@ -263,7 +284,9 @@ export default function ConversationExercise({
         ? t('connecting')
         : personaState === 'speaking'
           ? t('tutorSpeaking')
-          : personaState === 'listening'
+          : endRequested
+            ? t('wrappingUp')
+            : personaState === 'listening'
             ? t('listening')
             : phase === 'live' && muted
               ? t('muted')

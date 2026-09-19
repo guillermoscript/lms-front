@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   CONVERSATION_DEFAULTS,
+  CONVERSATION_TOOLS,
+  FINISH_CONVERSATION_TOOL,
   MAX_CONVERSATION_MINUTES,
   buildConversationGraderPrompt,
   buildConversationInstructions,
@@ -45,5 +47,13 @@ describe('conversation prompts', () => {
     const text = buildConversationGraderPrompt(exercise, config)
     expect(text).toContain('in Spanish')
     expect(text).toContain('relative to level A1')
+  })
+
+  it('the tutor can end the call, and the tool carries no verdict', () => {
+    expect(buildConversationInstructions(exercise, config)).toContain(FINISH_CONVERSATION_TOOL)
+    const tool = CONVERSATION_TOOLS.find((t) => t.name === FINISH_CONVERSATION_TOOL)
+    // Realtime tools run in the student's browser: a score/passed parameter
+    // here would be a forgeable pass. Grading stays in the evaluate route.
+    expect(Object.keys(tool!.parameters.properties)).toEqual(['reason'])
   })
 })

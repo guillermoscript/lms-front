@@ -6302,7 +6302,8 @@
       "transcriptEmpty": "Lo que digan tú y tu compañero aparecerá aquí.",
       "corrections": "Dilo mejor",
       "fullTranscript": "Transcripción completa",
-      "micInsecure": "Tu navegador solo permite usar el micrófono en una página segura (https), por eso no puede pedirte permiso aquí. Abre esta página con https e inténtalo de nuevo."
+      "micInsecure": "Tu navegador solo permite usar el micrófono en una página segura (https), por eso no puede pedirte permiso aquí. Abre esta página con https e inténtalo de nuevo.",
+      "wrappingUp": "Terminando…"
     }
   },
   "exams": {
