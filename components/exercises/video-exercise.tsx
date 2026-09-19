@@ -31,7 +31,7 @@ interface SubmissionHistoryItem {
   ai_evaluation: SpeechEvaluation | null
   score: number | null
   status: string
-  media_url: string
+  submission_id: number | null
   created_at: string
   duration_seconds: number | null
 }
@@ -349,13 +349,13 @@ export default function VideoExercise({
         ai_evaluation: result,
         score: result.score,
         status: didPass ? 'completed' : 'failed',
-        media_url: '',
+        submission_id: submissionId,
         created_at: new Date().toISOString(),
         duration_seconds: duration,
       }, ...prev])
-    } catch (err: any) {
+    } catch (err) {
       console.error('Video submission error:', err)
-      setErrorMsg(err.message || 'Something went wrong. Please try again.')
+      setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
       setSubmitState('error')
     }
   }, [exercise.id, maxDaily])
@@ -554,7 +554,7 @@ function VideoSubmissionHistoryRow({ submission, attemptNumber, passingScore }: 
       const res = await fetch('/api/exercises/media/signed-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId: submission.id }),
+        body: JSON.stringify({ submissionId: submission.submission_id }),
       })
       if (res.ok) {
         const { signedUrl } = await res.json()
@@ -597,7 +597,7 @@ function VideoSubmissionHistoryRow({ submission, attemptNumber, passingScore }: 
         </div>
 
         <div className="flex items-center gap-1">
-          {submission.media_url && !videoUrl && (
+          {submission.submission_id != null && !videoUrl && (
             <Button
               variant="ghost"
               size="sm"

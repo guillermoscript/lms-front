@@ -187,7 +187,7 @@ export default async function ExercisePage({ params }: PageProps) {
         .slice(0, 3)
 
     // Fetch evaluation history from unified exercise_evaluations table
-    let submissionHistory: { id: number; ai_evaluation: SpeechEvaluation | null; score: number | null; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
+    let submissionHistory: { id: number; ai_evaluation: SpeechEvaluation | null; score: number | null; status: string; submission_id: number | null; created_at: string; duration_seconds: number | null }[] = []
     // Newest graded attempt, replayed to the student when they come back to a
     // finished exercise. Derived from the same rows as submissionHistory — the
     // artifact/essay engines write here too, their results were just never read.
@@ -197,7 +197,7 @@ export default async function ExercisePage({ params }: PageProps) {
     try {
         const { data: evaluations, error: evaluationsError } = await supabase
             .from('exercise_evaluations')
-            .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at')
+            .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at, submission_id, submission_source')
             .eq('exercise_id', parseInt(exerciseId))
             .eq('user_id', userId)
             .eq('tenant_id', tenantId)
@@ -213,7 +213,12 @@ export default async function ExercisePage({ params }: PageProps) {
             ai_evaluation: ev.ai_result as unknown as SpeechEvaluation | null,
             score: ev.score,
             status: ev.passed ? 'completed' : 'failed',
-            media_url: '',
+            // The recording lives on the media submission, not on the evaluation —
+            // playback has to ask for THAT id.
+            submission_id:
+                ev.submission_source === 'exercise_media_submissions' && ev.submission_id != null
+                    ? Number(ev.submission_id)
+                    : null,
             created_at: ev.created_at,
             duration_seconds:
                 (ev.ai_metrics as unknown as { duration_seconds?: number | null } | null)

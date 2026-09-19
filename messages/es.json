@@ -6194,7 +6194,8 @@
       "passingThreshold": "Aprueba: {score}",
       "completedScore": "Tu Mejor Puntuación",
       "completedOn": "Completado el {date}",
-      "exerciseMarkedComplete": "Este ejercicio ha sido marcado como completado. ¡Buen trabajo!"
+      "exerciseMarkedComplete": "Este ejercicio ha sido marcado como completado. ¡Buen trabajo!",
+      "playRecording": "Reproducir grabación"
     },
     "video": {
       "title": "Ejercicio de Video",

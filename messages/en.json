@@ -6194,7 +6194,8 @@
       "passingThreshold": "Pass: {score}",
       "completedScore": "Your Best Score",
       "completedOn": "Completed on {date}",
-      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
+      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!",
+      "playRecording": "Play recording"
     },
     "video": {
       "title": "Video Exercise",
