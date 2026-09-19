@@ -6298,6 +6298,7 @@
       "nothingSaid": "We didn't hear you say anything, so there is nothing to grade. Try again and speak after your partner greets you.",
       "gradingError": "We couldn't grade this conversation. Please try again.",
       "sessionTooLong": "This conversation ran past its {minutes}-minute limit, so it can't be graded. Start a new one.",
+      "hint": "Hint",
       "liveTranscript": "Live transcript",
       "transcriptEmptyTitle": "Nothing yet",
       "transcriptEmpty": "What you and your partner say will appear here.",

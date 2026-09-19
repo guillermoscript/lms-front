@@ -6298,6 +6298,7 @@
       "nothingSaid": "No te escuchamos decir nada, así que no hay nada que evaluar. Inténtalo de nuevo y habla después del saludo.",
       "gradingError": "No pudimos evaluar esta conversación. Inténtalo de nuevo.",
       "sessionTooLong": "Esta conversación superó su límite de {minutes} minutos, así que no se puede evaluar. Inicia una nueva.",
+      "hint": "Pista",
       "liveTranscript": "Transcripción en vivo",
       "transcriptEmptyTitle": "Aún nada",
       "transcriptEmpty": "Lo que digan tú y tu compañero aparecerá aquí.",

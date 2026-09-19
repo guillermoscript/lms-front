@@ -5,8 +5,10 @@ import { experimental_useRealtime as useRealtime } from '@ai-sdk/react'
 import { openai } from '@ai-sdk/openai'
 import { useTranslations } from 'next-intl'
 import confetti from 'canvas-confetti'
+import { nanoid } from 'nanoid'
 import {
   IconAlertTriangle,
+  IconBulb,
   IconLoader2,
   IconMessageCircle,
   IconMicrophone,
@@ -24,8 +26,11 @@ import {
 import { Message, MessageContent } from '@/components/ai-elements/message'
 import {
   FINISH_CONVERSATION_TOOL,
+  GIVE_HINT_TOOL,
+  NOTE_CORRECTION_TOOL,
   REALTIME_MODEL,
   type ConversationEvaluation,
+  type ConversationNote,
   type ConversationTurn,
 } from '@/lib/speech/conversation'
 import ExerciseBrief from './exercise-brief'
@@ -103,16 +108,35 @@ export default function ConversationExercise({
   const turnsRef = useRef<ConversationTurn[]>([])
 
   const model = useMemo(() => openai.experimental_realtime(REALTIME_MODEL), [])
+  // One key per mounted tab: the server ties the session to it, so a second
+  // tab on the same exercise can't close or grade this one's call. Stable on
+  // purpose — the hook rebuilds its store whenever the token URL changes.
+  const [tab] = useState(() => nanoid(16))
+  // The tutor's latest written hint, and the mistakes it logged for the grader.
+  const [hint, setHint] = useState<string | null>(null)
+  const notesRef = useRef<ConversationNote[]>([])
 
   // No `sessionConfig` on purpose: instructions, voice and turn detection are
   // embedded in the token by the server, where the student can't edit them.
   const realtime = useRealtime({
     model,
-    api: { token: `/api/exercises/realtime/token?exerciseId=${exercise.id}` },
-    // Returns nothing on purpose: a tool output would make the tutor speak again.
-    // The tool carries no verdict — grading stays on the server.
+    api: { token: `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}` },
+    // No tool carries a verdict — grading stays on the server. Returning a
+    // value sends a tool output, which makes the tutor speak again: wanted
+    // after a hint (it was asked to call that one BEFORE speaking), not after
+    // a goodbye or a logged mistake (those come AFTER it has spoken).
     onToolCall: ({ toolCall }) => {
+      const args = (toolCall.args ?? {}) as Record<string, unknown>
       if (toolCall.toolName === FINISH_CONVERSATION_TOOL) setEndRequested(true)
+      if (toolCall.toolName === NOTE_CORRECTION_TOOL) {
+        if (typeof args.said === 'string' && typeof args.better === 'string') {
+          notesRef.current.push({ said: args.said.slice(0, 300), better: args.better.slice(0, 300) })
+        }
+      }
+      if (toolCall.toolName === GIVE_HINT_TOOL) {
+        if (typeof args.hint === 'string') setHint(args.hint)
+        return { shown: true }
+      }
     },
     onError: (error) => {
       console.error('Realtime error:', error)
@@ -166,6 +190,8 @@ export default function ConversationExercise({
     setErrorMsg(null)
     setMuted(false)
     setEndRequested(false)
+    setHint(null)
+    notesRef.current = []
     greetedRef.current = false
     setSecondsLeft(maxMinutes * 60)
     // Browsers only expose the microphone on https (or localhost). On plain http
@@ -225,7 +251,7 @@ export default function ConversationExercise({
         fetch('/api/exercises/realtime/evaluate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ exerciseId: exercise.id, transcript: finalTurns }),
+          body: JSON.stringify({ exerciseId: exercise.id, tab, transcript: finalTurns, notes: notesRef.current }),
         })
       let res = await grade()
       // A grader hiccup must not cost the student the conversation they just
@@ -257,7 +283,7 @@ export default function ConversationExercise({
     } finally {
       finishingRef.current = false
     }
-  }, [exercise.id, maxMinutes, realtime, releaseMic, t])
+  }, [exercise.id, maxMinutes, realtime, releaseMic, t, tab])
 
   // Countdown — the hard stop that keeps a session inside the teacher's budget.
   const finishRef = useRef(finish)
@@ -429,6 +455,18 @@ export default function ConversationExercise({
         </div>
         {limitReached && <p className="mt-2 text-center text-xs text-warning">{t('dailyLimitReached')}</p>}
       </div>
+
+      {phase === 'live' && hint && (
+        // The tutor keeps speaking the practised language; the hint is the one
+        // thing on this screen in the student's own.
+        <div className="flex items-start gap-2.5 rounded-xl border bg-brand-tint px-4 py-3 text-sm" role="status">
+          <IconBulb size={16} className="mt-0.5 shrink-0 text-brand-text" aria-hidden="true" />
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">{t('hint')}</p>
+            <p>{hint}</p>
+          </div>
+        </div>
+      )}
 
       {(phase === 'live' || phase === 'grading') && (
         <div className="rounded-xl border bg-card">

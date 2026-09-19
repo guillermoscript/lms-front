@@ -6,7 +6,9 @@ import { AI_MODELS } from '@/lib/ai/config'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import {
+  CONVERSATION_TAB_KEY,
   ConversationEvaluationSchema,
+  ConversationNotesSchema,
   ConversationTranscriptSchema,
   buildConversationGraderPrompt,
   conversationOverran,
@@ -30,13 +32,19 @@ export async function POST(req: Request) {
 
   let exerciseId: number
   let transcript
+  let notes
+  let tab: string
   try {
     const body = await req.json()
     exerciseId = parseInt(body.exerciseId)
     if (isNaN(exerciseId) || exerciseId <= 0) throw new Error('invalid')
+    tab = String(body.tab ?? '')
+    if (!CONVERSATION_TAB_KEY.test(tab)) throw new Error('invalid')
     transcript = ConversationTranscriptSchema.parse(body.transcript)
+    // Optional and never worth failing a grade over.
+    notes = ConversationNotesSchema.safeParse(body.notes).data ?? []
   } catch {
-    return Response.json({ error: 'exerciseId and a non-empty transcript are required' }, { status: 400 })
+    return Response.json({ error: 'exerciseId, tab and a non-empty transcript are required' }, { status: 400 })
   }
 
   const { data: exercise, error } = await adminClient
@@ -65,6 +73,7 @@ export async function POST(req: Request) {
     .eq('tenant_id', tenantId)
     .eq('media_type', 'conversation')
     .eq('status', 'pending')
+    .eq('stt_result->>tab', tab)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -117,7 +126,7 @@ export async function POST(req: Request) {
     const { output } = await generateText({
       model: AI_MODELS.grader,
       output: Output.object({ schema: ConversationEvaluationSchema }),
-      system: buildConversationGraderPrompt(exercise, config),
+      system: buildConversationGraderPrompt(exercise, config, notes),
       prompt: transcript.map((t) => `${t.role === 'user' ? 'STUDENT' : 'PARTNER'}: ${t.text}`).join('\n'),
     })
     if (!output) throw new Error('Grader returned no output')
@@ -157,6 +166,7 @@ export async function POST(req: Request) {
         turns_count: transcript.length,
         student_turns: studentTurns.length,
         student_words: studentWords,
+        tutor_notes: notes.length,
       },
     })
 

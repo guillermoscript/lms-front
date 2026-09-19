@@ -3,6 +3,10 @@ import {
   CONVERSATION_DEFAULTS,
   CONVERSATION_TOOLS,
   FINISH_CONVERSATION_TOOL,
+  GIVE_HINT_TOOL,
+  NOTE_CORRECTION_TOOL,
+  CONVERSATION_TAB_KEY,
+  ConversationNotesSchema,
   MAX_CONVERSATION_MINUTES,
   buildConversationGraderPrompt,
   buildConversationInstructions,
@@ -42,6 +46,7 @@ describe('conversation prompts', () => {
     expect(text).toContain('English conversation partner for a Spanish-speaking student at CEFR level A1')
     expect(text).toContain('You are a barista.')
     expect(text).toContain('brief hint in Spanish')
+    expect(text).toContain(GIVE_HINT_TOOL)
   })
 
   it('the grader writes feedback in the native language and grades to level', () => {
@@ -56,6 +61,32 @@ describe('conversation prompts', () => {
     // Realtime tools run in the student's browser: a score/passed parameter
     // here would be a forgeable pass. Grading stays in the evaluate route.
     expect(Object.keys(tool!.parameters.properties)).toEqual(['reason'])
+  })
+
+  it('no tool can report a score, a pass or a level', () => {
+    const allowed: Record<string, string[]> = {
+      [FINISH_CONVERSATION_TOOL]: ['reason'],
+      [GIVE_HINT_TOOL]: ['hint'],
+      [NOTE_CORRECTION_TOOL]: ['said', 'better'],
+    }
+    expect(CONVERSATION_TOOLS.map((t) => t.name).sort()).toEqual(Object.keys(allowed).sort())
+    for (const t of CONVERSATION_TOOLS) {
+      expect(Object.keys(t.parameters.properties)).toEqual(allowed[t.name])
+    }
+  })
+
+  it('logged mistakes reach the grader as leads to verify, not as facts', () => {
+    const text = buildConversationGraderPrompt(exercise, config, [{ said: 'I have 20 years', better: 'I am 20' }])
+    expect(text).toContain('"I have 20 years" → "I am 20"')
+    expect(text).toContain('ONLY if the transcript shows')
+    expect(buildConversationGraderPrompt(exercise, config)).not.toContain('possible mistakes')
+  })
+
+  it('notes are bounded, and a tab key is a plain token', () => {
+    expect(ConversationNotesSchema.safeParse(Array(31).fill({ said: 'a', better: 'b' })).success).toBe(false)
+    expect(ConversationNotesSchema.safeParse([{ said: 'a', better: 'b', score: 100 }]).data).toEqual([{ said: 'a', better: 'b' }])
+    expect(CONVERSATION_TAB_KEY.test('V1StGXR8_Z5jdHi6')).toBe(true)
+    expect(CONVERSATION_TAB_KEY.test("x' or 1=1")).toBe(false)
   })
 })
 

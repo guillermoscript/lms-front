@@ -4,6 +4,8 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { hasPlanFeature } from '@/lib/plans/server'
 import {
+  CONVERSATION_OVERRUN_SLACK_SECONDS,
+  CONVERSATION_TAB_KEY,
   CONVERSATION_TOOLS,
   REALTIME_MODEL,
   buildConversationInstructions,
@@ -18,7 +20,8 @@ import {
  * ephemeral token from `exercise_config` — the `sessionConfig` the browser
  * sends in the body is deliberately ignored. Each mint opens a
  * `exercise_media_submissions` row (`media_type = 'conversation'`), which is
- * what the daily cap counts and what the evaluate route later closes.
+ * what the daily cap counts and what the evaluate route later closes. The row
+ * is keyed by the `tab` the browser sends, so two tabs hold two sessions.
  */
 export async function POST(req: Request) {
   const auth = await getApiAuthContext(req)
@@ -26,9 +29,11 @@ export async function POST(req: Request) {
   const { user, tenantId } = auth
   const adminClient = createAdminClient()
 
-  const exerciseId = parseInt(new URL(req.url).searchParams.get('exerciseId') ?? '')
-  if (isNaN(exerciseId) || exerciseId <= 0) {
-    return new Response('exerciseId is required', { status: 400 })
+  const params = new URL(req.url).searchParams
+  const exerciseId = parseInt(params.get('exerciseId') ?? '')
+  const tab = params.get('tab') ?? ''
+  if (isNaN(exerciseId) || exerciseId <= 0 || !CONVERSATION_TAB_KEY.test(tab)) {
+    return new Response('exerciseId and tab are required', { status: 400 })
   }
 
   const { data: exercise, error } = await adminClient
@@ -73,15 +78,23 @@ export async function POST(req: Request) {
     }
   }
 
-  // An abandoned session (tab closed mid-call) must not be graded later as if
-  // it were the new one.
-  await adminClient
-    .from('exercise_media_submissions')
-    .update({ status: 'failed' })
-    .eq('exercise_id', exerciseId)
-    .eq('user_id', user.id)
-    .eq('media_type', 'conversation')
-    .eq('status', 'pending')
+  // A session belongs to the browser tab that opened it. Starting again in the
+  // same tab abandons its previous call, which must not be graded later as if
+  // it were the new one. Another tab's live call is left alone — closing it
+  // here meant a student with two tabs open could never get the first graded.
+  const mine = () =>
+    adminClient
+      .from('exercise_media_submissions')
+      .update({ status: 'failed' })
+      .eq('exercise_id', exerciseId)
+      .eq('user_id', user.id)
+      .eq('media_type', 'conversation')
+      .eq('status', 'pending')
+  await mine().eq('stt_result->>tab', tab)
+  // Whatever outlived its budget can no longer be graded (the evaluate route
+  // refuses it) — a tab closed mid-call would otherwise stay pending forever.
+  const budgetMs = (config.max_minutes * 60 + CONVERSATION_OVERRUN_SLACK_SECONDS) * 1000
+  await mine().lt('created_at', new Date(Date.now() - budgetMs).toISOString())
 
   const { error: insertError } = await adminClient.from('exercise_media_submissions').insert({
     exercise_id: exerciseId,
@@ -90,6 +103,8 @@ export async function POST(req: Request) {
     media_type: 'conversation',
     media_url: '',
     status: 'pending',
+    // Replaced by the transcript once graded; only needed while pending.
+    stt_result: { tab },
   })
   if (insertError) {
     console.error('Realtime session insert failed:', insertError)
