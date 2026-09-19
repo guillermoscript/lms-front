@@ -138,6 +138,13 @@ export default function ConversationExercise({
     setMuted(false)
     greetedRef.current = false
     setSecondsLeft(maxMinutes * 60)
+    // Browsers only expose the microphone on https (or localhost). On plain http
+    // there is no permission prompt at all — say so instead of blaming a denial.
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setErrorMsg(t('micInsecure'))
+      setPhase('error')
+      return
+    }
     try {
       // Ask for the mic BEFORE minting a session: a denied prompt must not
       // burn one of the student's daily attempts.

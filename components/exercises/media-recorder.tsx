@@ -110,34 +110,38 @@ export function MediaRecorderComponent({
   }, [])
 
   const drawWaveform = useCallback(() => {
-    const canvas = canvasRef.current
-    const analyser = analyserRef.current
-    if (!canvas || !analyser) return
+    // A named inner loop: the callback can't reference itself before it exists.
+    const draw = () => {
+      const canvas = canvasRef.current
+      const analyser = analyserRef.current
+      if (!canvas || !analyser) return
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-    const data = new Uint8Array(analyser.frequencyBinCount)
-    analyser.getByteTimeDomainData(data)
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      analyser.getByteTimeDomainData(data)
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.beginPath()
-    ctx.strokeStyle = 'hsl(var(--primary))'
-    ctx.lineWidth = 2
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.beginPath()
+      ctx.strokeStyle = 'hsl(var(--primary))'
+      ctx.lineWidth = 2
 
-    const sliceWidth = canvas.width / data.length
-    let x = 0
+      const sliceWidth = canvas.width / data.length
+      let x = 0
 
-    for (let i = 0; i < data.length; i++) {
-      const v = data[i] / 128.0
-      const y = (v * canvas.height) / 2
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-      x += sliceWidth
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128.0
+        const y = (v * canvas.height) / 2
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+        x += sliceWidth
+      }
+      ctx.stroke()
+
+      animFrameRef.current = requestAnimationFrame(draw)
     }
-    ctx.stroke()
-
-    animFrameRef.current = requestAnimationFrame(drawWaveform)
+    draw()
   }, [])
 
   const stopRecording = useCallback(() => {
@@ -175,6 +179,13 @@ export function MediaRecorderComponent({
   const startCountdown = async () => {
     setError(null)
     try {
+      // Browsers only expose the microphone on https (or localhost). On plain
+      // http there is no permission prompt at all — say so instead of blaming
+      // a denial the user never made.
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setError(t('micInsecure'))
+        return
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
 
