@@ -210,7 +210,18 @@ export default async function ExercisePage({ params }: PageProps) {
         // Map to legacy format for AudioExercise component compatibility
         submissionHistory = (evaluations ?? []).map(ev => ({
             id: Number(ev.id),
-            ai_evaluation: ev.ai_result as unknown as SpeechEvaluation | null,
+            // The media route splits a SpeechEvaluation across columns: feedback in
+            // ai_result, numbers in ai_metrics, score on the row. SpeechFeedback reads
+            // `metrics.wpm` unguarded, so handing it ai_result alone crashed the page
+            // for every student returning to a graded recording.
+            ai_evaluation:
+                ev.ai_result && ev.ai_metrics
+                    ? ({
+                          ...(ev.ai_result as object),
+                          score: ev.score ?? 0,
+                          metrics: ev.ai_metrics,
+                      } as unknown as SpeechEvaluation)
+                    : null,
             score: ev.score,
             status: ev.passed ? 'completed' : 'failed',
             // The recording lives on the media submission, not on the evaluation —
