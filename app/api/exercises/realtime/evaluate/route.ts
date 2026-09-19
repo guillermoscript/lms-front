@@ -89,6 +89,15 @@ export async function POST(req: Request) {
     ? Math.max(0, Math.round((Date.now() - new Date(session.created_at).getTime()) / 1000))
     : null
   const studentTurns = transcript.filter((t) => t.role === 'user')
+  const studentWords = studentTurns.reduce((n, t) => n + t.text.split(/\s+/).length, 0)
+
+  // The transcript is the browser's word. It can't be proven, but it can be
+  // impossible: nobody speaks faster than ~4 words a second, so a long
+  // "conversation" posted seconds after the session opened was not spoken.
+  if (durationSeconds != null && studentWords > 20 && studentWords > durationSeconds * 4) {
+    await adminClient.from('exercise_media_submissions').update({ status: 'failed' }).eq('id', session.id)
+    return Response.json({ error: 'Transcript does not match the conversation' }, { status: 422 })
+  }
 
   try {
     const { output } = await generateText({
@@ -133,7 +142,7 @@ export async function POST(req: Request) {
         duration_seconds: durationSeconds,
         turns_count: transcript.length,
         student_turns: studentTurns.length,
-        student_words: studentTurns.reduce((n, t) => n + t.text.split(/\s+/).length, 0),
+        student_words: studentWords,
       },
     })
 
@@ -163,7 +172,9 @@ export async function POST(req: Request) {
     return Response.json({ ...output, score, passed, passingScore: config.passing_score })
   } catch (err) {
     console.error('Conversation evaluation error:', err)
-    await adminClient.from('exercise_media_submissions').update({ status: 'failed' }).eq('id', session.id)
+    // Back to pending, not failed: the conversation happened and the student
+    // should be able to get it graded on a retry.
+    await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', session.id)
     return Response.json({ error: 'Evaluation failed' }, { status: 500 })
   }
 }

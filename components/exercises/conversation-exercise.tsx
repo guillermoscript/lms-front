@@ -97,6 +97,10 @@ export default function ConversationExercise({
 
   const streamRef = useRef<MediaStream | null>(null)
   const greetedRef = useRef(false)
+  const statusRef = useRef<string>('disconnected')
+  const releaseRef = useRef<() => void>(() => {})
+  // Latest transcript, readable from async code that outlives a render.
+  const turnsRef = useRef<ConversationTurn[]>([])
 
   const model = useMemo(() => openai.experimental_realtime(REALTIME_MODEL), [])
 
@@ -112,6 +116,13 @@ export default function ConversationExercise({
     },
     onError: (error) => {
       console.error('Realtime error:', error)
+      // Provider error events mid-call are usually non-fatal (a barge-in
+      // truncate landing after the audio ended, a cancel with nothing to
+      // cancel). Tearing the UI down while the socket and mic stay open would
+      // strand a billed session — only a call that never connected is dead,
+      // and a dropped one is handled by the status watcher below.
+      if (statusRef.current === 'connected') return
+      releaseRef.current()
       setErrorMsg(
         error.message.includes('429')
           ? t('dailyLimitReached')
@@ -123,6 +134,9 @@ export default function ConversationExercise({
     },
   })
   const { status, messages, isPlaying, isCapturing } = realtime
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
 
   const turns: ConversationTurn[] = useMemo(
     () =>
@@ -138,6 +152,9 @@ export default function ConversationExercise({
         .filter((turn) => turn.text.length > 0),
     [messages]
   )
+  useEffect(() => {
+    turnsRef.current = turns
+  }, [turns])
 
   const releaseMic = useCallback(() => {
     realtime.stopAudioCapture()
@@ -170,7 +187,6 @@ export default function ConversationExercise({
       return
     }
     setPhase('live')
-    setAttemptsUsed((n) => n + 1)
     await realtime.connect()
   }
 
@@ -178,28 +194,43 @@ export default function ConversationExercise({
   useEffect(() => {
     if (phase !== 'live' || status !== 'connected' || greetedRef.current) return
     greetedRef.current = true
+    // Counted here, not on click: a refused token (plan, daily cap) opens no session.
+    setAttemptsUsed((n) => n + 1)
     if (streamRef.current) realtime.startAudioCapture(streamRef.current)
     realtime.requestResponse()
   }, [phase, status, realtime])
 
+  const finishingRef = useRef(false)
   const finish = useCallback(async () => {
+    if (finishingRef.current) return
+    finishingRef.current = true
     releaseMic()
     realtime.stopPlayback()
+    setPhase('grading')
+    // The transcript of the student's last words arrives AFTER their audio.
+    // Hanging up at once graded conversations with the final turn missing.
+    if (statusRef.current === 'connected') await new Promise((r) => setTimeout(r, 1500))
     realtime.disconnect()
+    const finalTurns = turnsRef.current
 
-    if (!turns.some((turn) => turn.role === 'user')) {
+    if (!finalTurns.some((turn) => turn.role === 'user')) {
+      finishingRef.current = false
       setErrorMsg(t('nothingSaid'))
       setPhase('error')
       return
     }
 
-    setPhase('grading')
     try {
-      const res = await fetch('/api/exercises/realtime/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exerciseId: exercise.id, transcript: turns }),
-      })
+      const grade = () =>
+        fetch('/api/exercises/realtime/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exerciseId: exercise.id, transcript: finalTurns }),
+        })
+      let res = await grade()
+      // A grader hiccup must not cost the student the conversation they just
+      // had: the route re-opens the session on failure, so one retry is safe.
+      if (res.status >= 500) res = await grade()
       if (!res.ok) throw new Error(String(res.status))
       const data = await res.json()
       setResult({
@@ -209,7 +240,7 @@ export default function ConversationExercise({
         strengths: data.strengths ?? [],
         improvements: data.improvements ?? [],
         corrections: data.corrections ?? [],
-        transcript: turns,
+        transcript: finalTurns,
         createdAt: new Date().toISOString(),
       })
       setGradedNonce((n) => n + 1)
@@ -218,8 +249,10 @@ export default function ConversationExercise({
     } catch {
       setErrorMsg(t('gradingError'))
       setPhase('error')
+    } finally {
+      finishingRef.current = false
     }
-  }, [exercise.id, realtime, releaseMic, t, turns])
+  }, [exercise.id, realtime, releaseMic, t])
 
   // Countdown — the hard stop that keeps a session inside the teacher's budget.
   const finishRef = useRef(finish)
@@ -235,6 +268,21 @@ export default function ConversationExercise({
     if (phase === 'live' && secondsLeft === 0) void finishRef.current()
   }, [phase, secondsLeft])
 
+  // The socket dropped mid-call (network, provider session ceiling). Finish is
+  // disabled unless connected, so without this the student is stuck on a dead
+  // call: grade what was said.
+  const wasConnectedRef = useRef(false)
+  useEffect(() => {
+    if (phase !== 'live') {
+      wasConnectedRef.current = false
+      return
+    }
+    if (status === 'connected') wasConnectedRef.current = true
+    else if (wasConnectedRef.current && (status === 'disconnected' || status === 'error')) {
+      void finishRef.current()
+    }
+  }, [phase, status])
+
   // Tutor-initiated ending: let the goodbye finish playing, then grade. The
   // grace period covers the gap between the tool call and the last audio chunk.
   useEffect(() => {
@@ -244,7 +292,6 @@ export default function ConversationExercise({
   }, [endRequested, phase, isPlaying])
 
   // Leaving the page must drop the socket and the mic.
-  const releaseRef = useRef(releaseMic)
   const disconnectRef = useRef(realtime.disconnect)
   useEffect(() => {
     releaseRef.current = releaseMic
