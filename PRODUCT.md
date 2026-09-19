@@ -70,7 +70,7 @@ Missing data shows as missing. Ungraded shows as ungraded, not as zero. Estimate
 
 ## Accessibility & Inclusion
 
-**Target: WCAG 2.2 AA, verified under tenant theming.** AA is the floor, not the aspiration, and it must hold for every tenant primary color, not just the default teal. A contrast check that only passes against the shipped palette has not been done.
+**Target: WCAG 2.2 AA, verified under tenant theming.** AA is the floor, not the aspiration, and it must hold for every tenant primary color, not just the default Tinta azul. A contrast check that only passes against the shipped palette has not been done.
 
 - **Color is never the sole carrier of meaning.** Status, validation, correctness, and severity always pair color with text, icon, or position. Serves color-blind users and survives arbitrary tenant hues at the same time.
 - **`prefers-reduced-motion` is respected everywhere.** Under reduced motion, transitions become instant state changes, not slower animations. Nothing essential is communicated only through movement.

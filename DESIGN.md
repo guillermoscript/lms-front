@@ -2,23 +2,23 @@
 name: LMS Platform
 description: Multi-tenant LMS where the room stays quiet so the material can be loud.
 colors:
-  slate-teal: "oklch(0.52 0.105 223.128)"
-  slate-teal-deep: "oklch(0.45 0.085 224.283)"
-  slate-teal-mid: "oklch(0.609 0.126 221.723)"
-  slate-teal-bright: "oklch(0.715 0.143 215.221)"
-  slate-teal-pale: "oklch(0.865 0.127 207.078)"
-  ink: "oklch(0.141 0.005 285.823)"
-  ink-muted: "oklch(0.552 0.016 285.938)"
+  tinta-azul: "#3A50B8"
+  tinta-azul-deep: "#24347C"
+  tinta-azul-mid: "#536BC5"
+  tinta-azul-bright: "#788ED4"
+  tinta-azul-pale: "#A0B1E3"
+  tinta-azul-tint: "#E5EAF8"
+  ink: "oklch(0.2 0.02 262)"
+  ink-muted: "oklch(0.47 0.02 260)"
   paper: "oklch(1 0 0)"
-  paper-raised: "oklch(0.985 0 0)"
-  surface-quiet: "oklch(0.967 0.001 286.375)"
-  surface-slate: "oklch(0.21 0.006 285.885)"
-  surface-slate-quiet: "oklch(0.274 0.006 286.033)"
-  hairline: "oklch(0.92 0.004 286.32)"
-  ring-neutral: "oklch(0.705 0.015 286.067)"
-  alert: "oklch(0.577 0.245 27.325)"
+  paper-raised: "oklch(0.985 0.004 250)"
+  surface-quiet: "oklch(0.955 0.006 250)"
+  surface-slate: "oklch(0.22 0.01 260)"
+  surface-slate-quiet: "oklch(0.27 0.01 260)"
+  hairline: "oklch(0.9 0.01 250)"
+  alert: "oklch(0.51 0.2 27)"
   alert-dark: "oklch(0.704 0.191 22.216)"
-  on-teal: "oklch(0.984 0.019 200.873)"
+  on-brand: "oklch(0.99 0 0)"
 typography:
   display:
     fontFamily: "Noto Sans, ui-sans-serif, system-ui, sans-serif"
@@ -81,18 +81,18 @@ spacing:
   chapter: "64px"
 components:
   button-primary:
-    backgroundColor: "{colors.slate-teal}"
-    textColor: "{colors.on-teal}"
+    backgroundColor: "{colors.tinta-azul}"
+    textColor: "{colors.on-brand}"
     typography: "{typography.label}"
     rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-primary-hover:
-    backgroundColor: "oklch(0.52 0.105 223.128 / 0.8)"
-    textColor: "{colors.on-teal}"
+    backgroundColor: "#3A50B8CC"
+    textColor: "{colors.on-brand}"
   button-primary-learner:
-    backgroundColor: "{colors.slate-teal}"
-    textColor: "{colors.on-teal}"
+    backgroundColor: "{colors.tinta-azul}"
+    textColor: "{colors.on-brand}"
     typography: "{typography.title}"
     rounded: "{rounded.button}"
     padding: "0 16px"
@@ -149,48 +149,50 @@ The room is also rented. Every school overrides the primary color, the corner ra
 
 **Key Characteristics:**
 - Flat surfaces, hairline separation, shadows reserved for floating layers only
-- Muted teal accent at low chroma, deployed sparingly, never as decoration
-- Neutrals held at a constant violet-grey hue that is deliberately independent of the tenant brand
+- A single muted brand accent at low chroma, deployed sparingly, never as decoration
+- Neutrals held at one cool hue per theme, deliberately independent of the tenant brand
 - Two named density registers, learner and staff, never averaged
 - Progress communicated by position and sequence, not by reward graphics
 - Bilingual layouts (en/es) with Spanish as the sizing case, not the afterthought
 
-## 2. Colors: The Slate Teal Palette
+## 2. Colors: The Default Theme's Palette
 
-A cool, deliberately desaturated palette. The brand teal sits at chroma 0.105, roughly half what a default framework accent would use, because it has to survive being the only saturated thing on a page full of text.
+The platform has no palette of its own. Since #766 it renders the theme kit's default theme — **Estructura** with its recommended colour, **Tinta azul** — so a school that never opens the picker and a school that picks the default see the same screen. Everything below is `deriveKitVars('estructura', '#3A50B8')` (`lib/themes/kit.ts`), written into `:root` and `.dark` in `app/globals.css` and re-derived by `tests/unit/theme-kit-tokens.test.ts`. It replaced a Slate Teal palette the kit could not produce.
+
+Still a cool, deliberately desaturated room: the brand is one saturated thing on a page full of text, and everything else is a cool grey.
 
 ### Primary
-- **Slate Teal** (`oklch(0.52 0.105 223.128)`): the brand accent. Primary buttons, active navigation, links inside prose, focus emphasis, the single filled element in an otherwise flat view. Tenant-overridable. Light theme value.
-- **Slate Teal Deep** (`oklch(0.45 0.085 224.283)`): the dark-theme primary and the darkest step of the data ramp. Lower chroma than its light counterpart so it does not glare against a near-black surface.
-- **On Teal** (`oklch(0.984 0.019 200.873)`): the only ink permitted on a filled Slate Teal surface. Very slightly teal-tinted white, never pure white.
+- **Tinta azul** (`#3A50B8`, `oklch(0.476 0.166 270)`): the brand accent. Primary buttons, active navigation, links inside prose, focus emphasis, the single filled element in an otherwise flat view. Tenant-overridable, and the same value in both modes — the kit re-derives the *ink* rather than the colour.
+- **On Brand** (`oklch(0.99 0 0)`): the ink on a filled brand surface here. Never hardcode it. It is whichever of the kit's two inks reads better on the resolved colour (`readableButton`), and on a brand that fails AA in both it is the colour that shifts.
+- **Tinta azul tint** (`#E5EAF8` light, `#1F273E` dark): the soft panel fill behind brand-coloured text, and **brand-text** (`#3A50B8` light, `#939FD8` dark) is the only brand value permitted as text.
 
 ### Secondary
-- **Slate Teal Mid** (`oklch(0.609 0.126 221.723)`) and **Slate Teal Bright** (`oklch(0.715 0.143 215.221)`): the sidebar active state and the mid steps of the chart ramp. Chroma rises as lightness rises, which is what keeps the ramp readable at both ends.
-- **Slate Teal Pale** (`oklch(0.865 0.127 207.078)`): the lightest chart step and the tint used behind selected or highlighted rows.
+- **Tinta azul Pale / Bright / Mid** (`#A0B1E3`, `#788ED4`, `#536BC5`) and **Deep** (`#24347C`): the chart ramp, mixed from the brand toward white and black. `--chart-1` through `--chart-5`.
 
-Together these five form the data-visualization ramp (`--chart-1` through `--chart-5`). It is monochromatic by construction: a single hue family stepped by lightness. That is a deliberate constraint. A categorical series needs a second encoding (label, shape, order) rather than a second hue, because a second hue would collide with tenant theming.
+The ramp is monochromatic by construction: one hue stepped by lightness. That is a deliberate constraint. A categorical series needs a second encoding (label, shape, order) rather than a second hue, because a second hue would collide with tenant theming.
 
 ### Neutral
-- **Ink** (`oklch(0.141 0.005 285.823)`): primary text on light, and the page surface on dark.
-- **Ink Muted** (`oklch(0.552 0.016 285.938)`): secondary text, captions, placeholder text, metadata. Never used for anything a user must act on.
-- **Paper** (`oklch(1 0 0)`) and **Paper Raised** (`oklch(0.985 0 0)`): the light page surface and the sidebar. The only place a pure value is permitted, and only as a background.
-- **Surface Quiet** (`oklch(0.967 0.001 286.375)`): muted and secondary fills on light. Inline code, table headers, secondary buttons, disabled fills.
-- **Surface Slate** (`oklch(0.21 0.006 285.885)`) and **Surface Slate Quiet** (`oklch(0.274 0.006 286.033)`): the dark-theme card and muted fills. Dark mode layers tonally rather than with shadow.
-- **Hairline** (`oklch(0.92 0.004 286.32)`): every border, divider, and input stroke on light. On dark this becomes `oklch(1 0 0 / 10%)`, an alpha value rather than a solid, so it composites correctly over any tonal layer.
-- **Ring Neutral** (`oklch(0.705 0.015 286.067)`): the default focus ring where the brand color would be too loud or is not yet resolved.
+These are Estructura's `cool` surface set. A school on another theme gets that theme's set (`warm`, `neutral`, `dark`) at the same roles, which is why nothing structural may read a specific grey.
+- **Ink** (`oklch(0.2 0.02 262)`): primary text on light. On dark it is `oklch(0.96 0.005 260)`.
+- **Ink Muted** (`oklch(0.47 0.02 260)`): secondary text, captions, placeholder text, metadata. Never used for anything a user must act on. AA on background, card and muted on every kit surface (#773).
+- **Paper** (`oklch(1 0 0)`) and **Paper Raised** (`oklch(0.985 0.004 250)`): the card and the page behind it. The page is the faintly cool one, so a white card reads as a sheet on a desk rather than as the page itself.
+- **Surface Quiet** (`oklch(0.955 0.006 250)`): muted and secondary fills on light. Inline code, table headers, secondary buttons, disabled fills.
+- **Surface Slate** (`oklch(0.22 0.01 260)`) and **Surface Slate Quiet** (`oklch(0.27 0.01 260)`): the dark-theme card and muted fills, over a page at `oklch(0.17 0.01 260)`. Dark mode layers tonally rather than with shadow.
+- **Hairline** (`oklch(0.9 0.01 250)` light, `oklch(0.32 0.01 260)` dark): every border, divider, and input stroke. Solid in both modes since the kit owns them.
+- The focus ring is the brand (`--ring`), not a neutral: the kit points it at brand-text, which is AA on every surface the ring lands on.
 
 ### Tertiary
-- **Alert** (`oklch(0.577 0.245 27.325)`) light, **Alert Dark** (`oklch(0.704 0.191 22.216)`) dark: destructive and error only. This is the one high-chroma color in the system and its chroma is the signal. It appears as a 10 to 20 percent tint behind red text, not as a solid red fill. A solid red button is prohibited.
+- **Alert** (`oklch(0.51 0.2 27)`) light, **Alert Dark** (`oklch(0.704 0.191 22.216)`) dark: destructive and error only. Status colours are the platform's on every theme — a kit never sets them, and each one holds AA on all four surface sets. This is the one high-chroma color in the system and its chroma is the signal. It appears as a 10 to 20 percent tint behind red text, not as a solid red fill. A solid red button is prohibited.
 
 ### Named Rules
 
-**The Constant Neutral Rule.** The neutrals sit at hue 285 to 286, a cool violet-grey, while the brand sits at hue 223. They are not tinted toward the brand, and this is deliberate rather than an oversight. The brand hue is tenant-variable; a neutral tinted toward it would shift under every school, and the whole product would change temperature per tenant. The neutral axis is the constant that makes two tenants read as one product. Never re-tint neutrals to match a tenant primary.
+**The Constant Neutral Rule.** Neutrals come from the theme, never from the brand colour. Estructura's sit at hue 250 to 262, a cool blue-grey, while Tinta azul sits at hue 270 (`oklch(0.476 0.166 270)`) — close, and still independent. A neutral tinted toward the brand would shift under every school and the product would change temperature per tenant; a school changes its colour far more often than its theme. Four surface sets exist, one per theme, and each is a fixed set. Never re-tint neutrals to match a tenant primary.
 
-**The Single Filled Element Rule.** On any learner view, exactly one element carries a filled Slate Teal background: the next action. Everything else is text, hairline, or tonal fill. If a screen has two filled teal elements, one of them is not the next action and should be an outline or ghost variant.
+**The Single Filled Element Rule.** On any learner view, exactly one element carries a filled brand background: the next action. Everything else is text, hairline, or tonal fill. If a screen has two filled brand elements, one of them is not the next action and should be an outline or ghost variant.
 
 **The Tenant-Proof Rule.** Every contrast, emphasis, and state decision must hold when the primary is replaced by an arbitrary tenant color. Color is never the sole carrier of meaning: status, validation, correctness, and severity always pair color with text, icon, or position. Derived inks are computed from the resolved color, never hardcoded. This has already shipped as a bug (issue #569); it is not hypothetical.
 
-**The No Pure Ink Rule.** `#000` and `#fff` are prohibited as text colors. Text on light is Ink at lightness 0.141; text on dark is `oklch(0.985 0 0)`. Pure white survives only as a page background.
+**The No Pure Ink Rule.** `#000` and `#fff` are prohibited as text colors. Text on light is Ink at lightness 0.2; text on dark is `oklch(0.96 0.005 260)`; the ink on a filled brand surface bottoms out at `oklch(0.99 0 0)`. Pure white survives only as a card surface.
 
 ## 3. Typography
 

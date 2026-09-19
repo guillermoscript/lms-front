@@ -51,7 +51,7 @@ describe('getInvoiceConfig — resolves the issuer from the school brand, not en
     expect(issuer.brand).toMatch(/^#[0-9A-F]{6}$/)
   })
 
-  it('falls back to tenants.name and the platform teal when there is no theme', () => {
+  it('falls back to tenants.name and the platform brand when there is no theme', () => {
     const brand = platformSchoolBrand('tenant-2', 'Untitled School')
     const issuer = getInvoiceConfig(brand)
 

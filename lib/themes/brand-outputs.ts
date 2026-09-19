@@ -25,6 +25,7 @@ import {
   toHex,
 } from '@/lib/color/contrast'
 import {
+  DEFAULT_KIT_THEME,
   KIT_DARK_INK,
   KIT_LIGHT_INK,
   KIT_THEMES,
@@ -44,8 +45,12 @@ function hex(css: string): string {
  * The platform palette's brand: `--brand` / `--primary` in `app/globals.css`
  * (light). A school with no theme renders its outputs in this colour, as the
  * app does. `tests/unit/brand-outputs.test.ts` keeps the two in step.
+ *
+ * Since #766 that is the default theme's recommended swatch (Estructura /
+ * Tinta azul), not a teal of its own — the platform palette and the default
+ * theme are the same palette now.
  */
-export const PLATFORM_BRAND_CSS = 'oklch(0.52 0.105 223.128)'
+export const PLATFORM_BRAND_CSS = KIT_THEMES[DEFAULT_KIT_THEME].swatches[0].hex
 export const PLATFORM_BRAND_HEX = hex(PLATFORM_BRAND_CSS)
 
 /** The paper every output is designed on. */
