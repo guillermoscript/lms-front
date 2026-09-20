@@ -37,7 +37,7 @@ on:
     # Keep these in sync with vercel.json and with the case block below.
     - cron: '*/10 * * * *' # payment + webhook + activation reconcilers
     - cron: '0 * * * *' # daily-digest — hourly by design (each tenant sends at its own local hour); expire-stale-checkouts rides along
-    - cron: '0 0 * * *' # expire-subscriptions
+    - cron: '0 0 * * *' # expire-subscriptions; expire-payment-requests (manual request TTL, #802) rides along
     - cron: '0 1 * * 1' # league-rollover (pg_cron also runs it Mondays 00:05; this is the fallback)
     - cron: '0 2 * * *' # expire-platform-subscriptions
     - cron: '0 3 * * *' # enforce-plan-limits
@@ -58,6 +58,7 @@ on:
           - redeliver-webhook-events
           - reconcile-solana-platform-activations
           - expire-stale-checkouts
+          - expire-payment-requests
           # Never scheduled: solana-pull submits on-chain USDC transfers and has
           # never had a scheduler in vercel.json either. Available here for
           # manual runs only — putting it on a timer needs its own review.
@@ -90,7 +91,7 @@ jobs:
             case "${SCHEDULE:-}" in
               '*/10 * * * *') routes='solana-reconcile binance-personal-reconcile redeliver-webhook-events reconcile-solana-platform-activations' ;;
               '0 * * * *')    routes='daily-digest expire-stale-checkouts' ;;
-              '0 0 * * *')    routes='expire-subscriptions' ;;
+              '0 0 * * *')    routes='expire-subscriptions expire-payment-requests' ;;
               '0 1 * * 1')    routes='league-rollover' ;;
               '0 2 * * *')    routes='expire-platform-subscriptions' ;;
               '0 3 * * *')    routes='enforce-plan-limits' ;;

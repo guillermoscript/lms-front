@@ -661,7 +661,43 @@
           "proofSection": "Payment Proof",
           "proofUploaded": "Proof uploaded",
           "uploadHint": "Upload your transfer receipt so we can verify your payment.",
-          "viewProof": "View uploaded proof"
+          "viewProof": "View uploaded proof",
+          "expiresOn": "Expires on",
+          "expiredOn": "This request expired on {date} because no payment was received. You can request it again from the course page.",
+          "reportedTitle": "Payment details sent",
+          "reportedHint": "The school will confirm it against their account. You can correct these details until they do."
+        },
+        "report": {
+          "title": "Tell the school about your payment",
+          "updateTitle": "Correct your payment details",
+          "description": "Add the reference number so the school can find your payment and confirm it faster.",
+          "submit": "Send payment details",
+          "update": "Update details",
+          "submitting": "Sending…",
+          "success": "Payment details sent to the school",
+          "error": "Could not save your payment details",
+          "payerSection": "Someone else paid for me",
+          "payerHint": "Fill this in only if the transfer came from an account that is not yours.",
+          "fields": {
+            "reference": "Reference number",
+            "paidAt": "Date you paid",
+            "paidToAccount": "Account you paid into",
+            "amount": "Amount you sent",
+            "currency": "Currency",
+            "payerName": "Name on the account",
+            "payerDocument": "ID number",
+            "payerBank": "Bank",
+            "payerPhone": "Phone"
+          },
+          "placeholders": {
+            "reference": "e.g. 0123456789",
+            "paidToAccount": "Which account you sent it to",
+            "amount": "0.00",
+            "payerName": "Who the transfer came from",
+            "payerDocument": "ID or tax number",
+            "payerBank": "Bank it was sent from",
+            "payerPhone": "Phone used to pay"
+          }
         }
       }
     },
@@ -2785,7 +2821,9 @@
           "review": "Review",
           "manage": "Manage",
           "id": "Request ID",
-          "invoice": "Invoice"
+          "invoice": "Invoice",
+          "reported": "Payment reported",
+          "expired": "Expired unpaid"
         },
         "status": {
           "pending": "Pending",
@@ -2868,7 +2906,21 @@
             "paymentConfirmed": "Payment has been confirmed.",
             "completed": "Student has been enrolled successfully!",
             "cancelled": "Payment request has been cancelled."
-          }
+          },
+          "reported": {
+            "title": "Payment reported by the student",
+            "reference": "Reference",
+            "paidAt": "Paid on",
+            "amount": "Amount sent",
+            "paidTo": "Paid into",
+            "payerName": "Paid by",
+            "payerDocument": "ID number",
+            "payerBank": "Bank",
+            "payerPhone": "Phone",
+            "currencyDiffers": "Sent in a different currency than the price — check the amount against your account.",
+            "amountDiffers": "Does not match the {expected} you asked for."
+          },
+          "expiredOn": "Expired on {date} — no payment was ever reported."
         },
         "dialog": {
           "title": "Payment Request #{id}",
@@ -3426,6 +3478,30 @@
               "solanaDesc": "The address students pay into. One address covers both one-time purchases and subscriptions.",
               "binanceTitle": "Binance Pay credentials",
               "binanceDesc": "Your Pay ID and a read-only API key. We use the key only to confirm incoming transfers — it can't move funds."
+            },
+            "accounts": {
+              "title": "Accounts you accept payments into",
+              "hint": "Students see these at checkout and pick the one they paid into, so you know which statement to open.",
+              "empty": "No accounts yet. Add the bank account, wallet or phone number students should send money to.",
+              "accountNumber": "Account {number}",
+              "add": "Add account",
+              "remove": "Remove",
+              "fields": {
+                "method": "Method",
+                "bank": "Bank",
+                "identifier": "Number, phone or email",
+                "holder": "Account holder",
+                "document": "ID / tax number",
+                "note": "Note"
+              },
+              "placeholders": {
+                "method": "Bank transfer, Pago Móvil, Zelle…",
+                "bank": "Bank name",
+                "identifier": "Account number, phone or email",
+                "holder": "Name on the account",
+                "document": "ID or tax number",
+                "note": "Anything else the student should know"
+              }
             }
           },
           "branding": {

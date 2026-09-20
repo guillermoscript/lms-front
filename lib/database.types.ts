@@ -4329,19 +4329,32 @@ export type Database = {
           contact_name: string
           contact_phone: string | null
           created_at: string | null
+          expired_at: string | null
+          expires_at: string
           invoice_generated_at: string | null
           invoice_number: string | null
           message: string | null
+          paid_at: string | null
+          paid_to_account: string | null
+          payer_bank: string | null
+          payer_document: string | null
+          payer_name: string | null
+          payer_phone: string | null
           payment_amount: number | null
           payment_confirmed_at: string | null
           payment_currency: string | null
           payment_deadline: string | null
           payment_instructions: string | null
           payment_method: string | null
+          payment_reference: string | null
+          payment_reported_at: string | null
           plan_id: number | null
           processed_by: string | null
           product_id: number | null
           proof_url: string | null
+          reminder_sent_at: string | null
+          reported_amount: number | null
+          reported_currency: string | null
           request_id: number
           status: string
           tenant_id: string
@@ -4354,19 +4367,32 @@ export type Database = {
           contact_name: string
           contact_phone?: string | null
           created_at?: string | null
+          expired_at?: string | null
+          expires_at?: string
           invoice_generated_at?: string | null
           invoice_number?: string | null
           message?: string | null
+          paid_at?: string | null
+          paid_to_account?: string | null
+          payer_bank?: string | null
+          payer_document?: string | null
+          payer_name?: string | null
+          payer_phone?: string | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_currency?: string | null
           payment_deadline?: string | null
           payment_instructions?: string | null
           payment_method?: string | null
+          payment_reference?: string | null
+          payment_reported_at?: string | null
           plan_id?: number | null
           processed_by?: string | null
           product_id?: number | null
           proof_url?: string | null
+          reminder_sent_at?: string | null
+          reported_amount?: number | null
+          reported_currency?: string | null
           request_id?: number
           status?: string
           tenant_id?: string
@@ -4379,19 +4405,32 @@ export type Database = {
           contact_name?: string
           contact_phone?: string | null
           created_at?: string | null
+          expired_at?: string | null
+          expires_at?: string
           invoice_generated_at?: string | null
           invoice_number?: string | null
           message?: string | null
+          paid_at?: string | null
+          paid_to_account?: string | null
+          payer_bank?: string | null
+          payer_document?: string | null
+          payer_name?: string | null
+          payer_phone?: string | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_currency?: string | null
           payment_deadline?: string | null
           payment_instructions?: string | null
           payment_method?: string | null
+          payment_reference?: string | null
+          payment_reported_at?: string | null
           plan_id?: number | null
           processed_by?: string | null
           product_id?: number | null
           proof_url?: string | null
+          reminder_sent_at?: string | null
+          reported_amount?: number | null
+          reported_currency?: string | null
           request_id?: number
           status?: string
           tenant_id?: string
