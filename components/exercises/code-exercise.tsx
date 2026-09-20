@@ -1,85 +1,79 @@
 "use client";
 
 import { ReactNode } from "react";
-import * as motion from "motion/react-client";
-import { Badge } from "@/components/ui/badge";
-import { IconCode, IconAlertCircle } from "@tabler/icons-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTranslations } from "next-intl";
+import ExerciseBrief from "@/components/exercises/exercise-brief";
+import ExerciseHeader from "@/components/exercises/exercise-header";
+import ExerciseWorkspace, { initialWorkspacePanel } from "@/components/exercises/exercise-workspace";
 
 interface CodeExerciseProps {
-    exercise: any;
+    exercise: {
+        title: string;
+        description?: string | null;
+        instructions?: string | null;
+        difficulty_level?: string | null;
+        time_limit?: number | null;
+    };
     isExerciseCompleted: boolean;
     studentId: string;
     courseId: string;
+    /** The editor. */
     children: ReactNode;
     /** Prior completion record, shown when the student returns to a solved challenge. */
     resultSummary?: ReactNode;
+    related?: ReactNode;
 }
 
+/**
+ * The same shell as every other engine, with the editor filling the work pane:
+ * task on the left, code over its output on the right.
+ *
+ * The task used to live in a second tab ("Detailed Instructions"), so a
+ * student landed on an empty editor with no statement of what to build.
+ */
 export default function CodeExercise({
     exercise,
     isExerciseCompleted,
     children,
     resultSummary,
+    related,
 }: CodeExerciseProps) {
+    const t = useTranslations("exercises.code");
+    const tWorkspace = useTranslations("exercises.workspace");
+
     return (
-        <div className="space-y-6 pb-20">
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="flex flex-col gap-4"
-            >
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="bg-brand-tint text-brand-text border-primary/25">
-                                Coding Challenge
-                            </Badge>
-                            {isExerciseCompleted && (
-                                <Badge className="bg-success/10 text-success border-success/20">Completed</Badge>
-                            )}
-                        </div>
-                        <h1 className="text-3xl font-bold tracking-tight">{exercise.title}</h1>
+        <div className="lg:h-full">
+            <ExerciseWorkspace
+                header={
+                    <ExerciseHeader
+                        typeLabel={t("typeLabel")}
+                        title={exercise.title}
+                        description={exercise.description}
+                        difficulty={exercise.difficulty_level}
+                        timeLimit={exercise.time_limit}
+                        completed={isExerciseCompleted}
+                    />
+                }
+                brief={
+                    <div className="space-y-6">
+                        <ExerciseBrief instructions={exercise.instructions ?? ""} />
+                        {/* Beside the task it answers, not over the editor. */}
+                        <div className="hidden lg:block">{resultSummary}</div>
                     </div>
-                </div>
-            </motion.div>
-
-            {resultSummary}
-
-            <Tabs defaultValue="environment" className="space-y-4">
-                <TabsList className="bg-muted/50 p-1">
-                    <TabsTrigger value="environment" className="gap-2">
-                        <IconCode size={18} />
-                        Workspace
-                    </TabsTrigger>
-                    <TabsTrigger value="instructions" className="gap-2">
-                        <IconAlertCircle size={18} />
-                        Detailed Instructions
-                    </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="environment" className="mt-0">
-                    <div className="grid grid-cols-1 gap-6">
-                        {children}
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="instructions">
-                    <div className="bg-card border rounded-xl p-8 max-w-3xl mx-auto shadow-sm">
-                        <h2 className="text-2xl font-bold mb-4">Problem Description</h2>
-                        <div className="prose prose-slate dark:prose-invert max-w-none">
-                            <p className="text-lg text-muted-foreground mb-6">
-                                {exercise.description}
-                            </p>
-                            <div className="bg-muted p-6 rounded-lg border border-border">
-                                <h3 className="not-prose text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">Tasks</h3>
-                                {exercise.instructions}
-                            </div>
-                        </div>
-                    </div>
-                </TabsContent>
-            </Tabs>
+                }
+                task={children}
+                taskLabel={tWorkspace("code")}
+                // A phone gets it as its own tab; the desktop copy is in the brief.
+                result={resultSummary ? <div className="lg:hidden">{resultSummary}</div> : undefined}
+                resultPassed
+                related={related}
+                initialPanel={initialWorkspacePanel({
+                    hasResult: false,
+                    passed: true,
+                    attempted: isExerciseCompleted,
+                })}
+                fillTask
+            />
         </div>
     );
 }

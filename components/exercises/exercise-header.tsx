@@ -2,9 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import Markdown from 'react-markdown'
-import { IconCheck, IconClock, IconFlame, IconSparkles } from '@tabler/icons-react'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+import { IconCheck } from '@tabler/icons-react'
 
 interface ExerciseHeaderProps {
   typeLabel: string
@@ -18,26 +16,10 @@ interface ExerciseHeaderProps {
 /**
  * Title block shared by every exercise engine.
  *
- * The difficulty inks are `-700 dark:-400`, not `-600`: measured against its
- * own `-500/10` tint, amber-600 text came out at 2.94:1, well under AA. Each
- * engine used to carry its own copy of that table, so the failure shipped four
- * times over.
+ * One line of sentence-case metadata, not a row of chips: four tinted,
+ * uppercase badges above the title were the loudest thing on a page whose
+ * subject is the title. Difficulty is a word, so it needs no color to carry it.
  */
-const DIFFICULTY: Record<string, { ink: string; icon: typeof IconFlame }> = {
-  easy: {
-    ink: 'text-success bg-success/10 border-success/25',
-    icon: IconSparkles,
-  },
-  medium: {
-    ink: 'text-warning bg-warning/10 border-warning/25',
-    icon: IconFlame,
-  },
-  hard: {
-    ink: 'text-destructive bg-destructive/10 border-destructive/25',
-    icon: IconFlame,
-  },
-}
-
 export default function ExerciseHeader({
   typeLabel,
   title,
@@ -47,43 +29,23 @@ export default function ExerciseHeader({
   completed,
 }: ExerciseHeaderProps) {
   const t = useTranslations('exercises.audio')
-  const level = DIFFICULTY[difficulty ?? 'easy'] ?? DIFFICULTY.easy
-  const LevelIcon = level.icon
   const levelLabel = t(
     difficulty === 'hard' ? 'advanced' : difficulty === 'medium' ? 'intermediate' : 'beginner'
   )
 
-  const chip = 'font-semibold border text-[10px] px-2.5 py-0.5 uppercase tracking-wider'
+  const meta = [typeLabel, levelLabel, timeLimit ? `${timeLimit} min` : null].filter(Boolean)
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={cn(chip, 'border-border bg-muted/50 text-foreground')}>
-          {typeLabel}
-        </Badge>
-        <Badge variant="outline" className={cn(chip, level.ink)}>
-          <LevelIcon size={11} className="mr-1" aria-hidden="true" />
-          {levelLabel}
-        </Badge>
-        {timeLimit ? (
-          <Badge variant="outline" className={cn(chip, 'text-muted-foreground')}>
-            <IconClock size={11} className="mr-1" aria-hidden="true" />
-            {timeLimit} min
-          </Badge>
-        ) : null}
+    <div className="space-y-2 sm:space-y-3">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <span>{meta.join(' · ')}</span>
         {completed && (
-          <Badge
-            className={cn(
-              chip,
-              // Solid fill token pairs foreground automatically in both themes.
-              'border-transparent bg-success text-success-foreground'
-            )}
-          >
-            <IconCheck size={11} className="mr-1" aria-hidden="true" />
+          <span className="flex items-center gap-1 font-medium text-success">
+            <IconCheck size={14} aria-hidden="true" />
             {t('completed')}
-          </Badge>
+          </span>
         )}
-      </div>
+      </p>
 
       <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-balance leading-tight">
         {title}
