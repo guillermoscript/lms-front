@@ -1727,7 +1727,28 @@
         "firstLessonHint": {
           "title": "{course} ya está creado.",
           "body": "Los estudiantes podrán abrirlo cuando publiques esta lección — escríbela y pulsa Publicar."
-        }
+        },
+        "aiTaskModeFreeText": "Texto libre",
+        "aiTaskModeStructured": "Estructurado",
+        "aiTaskStructuredHint": "La plataforma arma el prompt del tutor a partir de estos campos — no hay que escribir ningún prompt.",
+        "aiTaskLevelLabel": "Nivel del estudiante",
+        "aiTaskLevelPlaceholder": "p. ej. Principiante, inglés B1",
+        "aiTaskTutorRoleLabel": "Rol del tutor",
+        "aiTaskTutorRolePlaceholder": "p. ej. Barista amable tomando un pedido",
+        "aiTaskScenarioLabel": "Escenario",
+        "aiTaskScenarioPlaceholder": "Describe la situación que practicará el estudiante",
+        "aiTaskRequirementsLabel": "Requisitos",
+        "aiTaskRequirementsHint": "El estudiante debe cumplir cada uno, en orden, antes de que la lección pueda marcarse como completa.",
+        "aiTaskRequirementPlaceholder": "p. ej. Pedir una bebida y un tamaño",
+        "aiTaskAddRequirement": "Agregar requisito",
+        "aiTaskRemoveRequirement": "Quitar requisito",
+        "aiTaskMoveUp": "Subir",
+        "aiTaskMoveDown": "Bajar",
+        "aiTaskClosingPhaseLabel": "Fase de cierre",
+        "aiTaskClosingPhasePlaceholder": "p. ej. Pedir al estudiante que resuma el pedido antes de pagar",
+        "aiTaskClosingPhaseHint": "Solo hace falta si hay un paso final después de cumplir todos los requisitos — un resumen, una versión final, un recap.",
+        "aiTaskMinTurnsLabel": "Mensajes mínimos del estudiante",
+        "aiTaskMinTurnsHint": "La lección no puede marcarse completa antes de que el estudiante haya enviado esta cantidad de mensajes. Usa 0 para permitir una respuesta completa desde el primer intento."
       },
       "exerciseBuilder": {
         "details": "Detalles",
@@ -4514,6 +4535,9 @@
         "title": "¿Reiniciar conversación?",
         "cancel": "Cancelar",
         "confirm": "Reiniciar"
+      },
+      "progress": {
+        "label": "{met}/{total} requisitos cumplidos"
       }
     },
     "lessonSidebar": {

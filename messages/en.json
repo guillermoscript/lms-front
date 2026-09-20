@@ -1727,7 +1727,28 @@
         "firstLessonHint": {
           "title": "{course} is created.",
           "body": "Students can open it once this lesson is published — write it and hit Publish."
-        }
+        },
+        "aiTaskModeFreeText": "Free text",
+        "aiTaskModeStructured": "Structured",
+        "aiTaskStructuredHint": "The platform assembles the tutor's prompt from these fields — no prompt to write by hand.",
+        "aiTaskLevelLabel": "Student level",
+        "aiTaskLevelPlaceholder": "e.g. Beginner, B1 Spanish",
+        "aiTaskTutorRoleLabel": "Tutor role",
+        "aiTaskTutorRolePlaceholder": "e.g. Friendly barista taking an order",
+        "aiTaskScenarioLabel": "Scenario",
+        "aiTaskScenarioPlaceholder": "Describe the situation the student practices",
+        "aiTaskRequirementsLabel": "Requirements",
+        "aiTaskRequirementsHint": "The student must meet every one, in order, before the lesson can be marked complete.",
+        "aiTaskRequirementPlaceholder": "e.g. Order a drink and a size",
+        "aiTaskAddRequirement": "Add requirement",
+        "aiTaskRemoveRequirement": "Remove requirement",
+        "aiTaskMoveUp": "Move up",
+        "aiTaskMoveDown": "Move down",
+        "aiTaskClosingPhaseLabel": "Closing phase",
+        "aiTaskClosingPhasePlaceholder": "e.g. Ask the student to recap the order before paying",
+        "aiTaskClosingPhaseHint": "Only needed if there is a final step after every requirement is met — a recap, a full rewrite, a summary.",
+        "aiTaskMinTurnsLabel": "Minimum student messages",
+        "aiTaskMinTurnsHint": "The lesson can't be marked complete before the student has sent this many messages. Set to 0 to allow a complete answer on the first try."
       },
       "exerciseBuilder": {
         "details": "Details",
@@ -4633,6 +4654,9 @@
         "title": "Restart conversation?",
         "cancel": "Cancel",
         "confirm": "Restart"
+      },
+      "progress": {
+        "label": "{met}/{total} requirements met"
       }
     },
     "lessonSidebar": {

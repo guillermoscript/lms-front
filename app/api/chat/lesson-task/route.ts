@@ -3,6 +3,7 @@ import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
 import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
+import { parseStructuredRequirements, requirementIds } from '@/lib/ai/lesson-requirements'
 import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 import { fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
@@ -18,12 +19,18 @@ const bodySchema = z.object({
     lessonId: z.coerce.number().int().positive(),
 })
 
+interface LessonAITaskRow {
+    task_instructions?: string
+    system_prompt?: string
+    requirements?: unknown
+}
+
 interface LessonRow {
     title: string
     description?: string
     content?: string
     course_id: number
-    lessons_ai_tasks: { task_instructions?: string; system_prompt?: string } | { task_instructions?: string; system_prompt?: string }[] | null
+    lessons_ai_tasks: LessonAITaskRow | LessonAITaskRow[] | null
     course: { tenant_id: string } | { tenant_id: string }[] | null
 }
 
@@ -49,15 +56,20 @@ export async function POST(req: Request) {
         supabase,
         lessonId,
         tenantId,
-        'title, description, content, course_id, lessons_ai_tasks(task_instructions, system_prompt), course:courses!inner(tenant_id)'
+        'title, description, content, course_id, lessons_ai_tasks(task_instructions, system_prompt, requirements), course:courses!inner(tenant_id)'
     )
 
     if (!lesson) return new Response('Lesson not found', { status: 404 })
 
     // Handle both array and object response from Supabase (one-to-one relationship)
-    const aiTask = (Array.isArray(lesson.lessons_ai_tasks)
+    const aiTaskRow = (Array.isArray(lesson.lessons_ai_tasks)
         ? lesson.lessons_ai_tasks?.[0]
         : lesson.lessons_ai_tasks) ?? undefined
+
+    // NULL/invalid `requirements` falls back to the free-text task below (#806
+    // compatibility contract) — never a 500 on a row from before this shipped.
+    const structuredRequirements = parseStructuredRequirements(aiTaskRow?.requirements)
+    const aiTask = aiTaskRow ? { ...aiTaskRow, requirements: structuredRequirements } : undefined
 
     // 2. Save user message
     const messageText = lastUserMessageText(messages)
@@ -86,9 +98,11 @@ export async function POST(req: Request) {
         tools: createLessonTools(supabase, {
             lessonId: String(lessonId),
             userId: user.id,
+            requirementIds: requirementIds(structuredRequirements),
             verify: () => verifyLessonCompletion({
                 taskInstructions: aiTask?.task_instructions,
                 teacherPrompt: aiTask?.system_prompt,
+                structuredRequirements,
                 messages,
             }),
         }),
@@ -103,8 +117,19 @@ export async function POST(req: Request) {
             // card and a teacher can see why it was granted (#805) — this is
             // the only write path for this row, extending it rather than
             // adding a second insert.
+            // Two tools (markLessonCompleted + reportProgress, #806) make
+            // `step.toolResults` a union of per-tool arrays, and TS widens the
+            // callback parameter across that union — so narrow the shape we
+            // actually read before filtering.
+            type LessonToolResult = {
+                toolName: string
+                toolCallId: string
+                input: unknown
+                output: unknown
+            }
+
             const toolInvocations = event.steps.flatMap((step) =>
-                step.toolResults
+                (step.toolResults as LessonToolResult[])
                     .filter((result) => result.toolName === 'markLessonCompleted')
                     .map((result) => ({
                         version: LESSON_TASK_TOOL_INVOCATION_VERSION,

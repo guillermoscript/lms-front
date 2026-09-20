@@ -34,6 +34,7 @@ import {
   useChatAttachmentInputProps,
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
+import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 interface AIPreviewModalProps {
   type: 'lesson' | 'exercise'
@@ -41,6 +42,8 @@ interface AIPreviewModalProps {
     task_description?: string
     system_prompt?: string
     instructions?: string
+    /** Structured task draft (#806) — when set, takes over the whole prompt, same as a saved row with `requirements` set. */
+    requirements?: StructuredRequirements | null
     /** Exercise draft — same context the student's coach gets. */
     exercise?: { title?: string; description?: string }
     /** Lesson draft the tutor grounds itself in — same context a student's tutor gets. */

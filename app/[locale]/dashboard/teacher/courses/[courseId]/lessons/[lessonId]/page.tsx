@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import { parseStructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 const LessonEditor = dynamic(
   () => import('@/components/teacher/lesson-editor').then(m => m.LessonEditor),
@@ -69,7 +70,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
       // The AI task lives in lessons_ai_tasks — that is what the student runtime
       // reads and what the editor writes. The lessons.ai_task_* columns are
       // legacy and only ever populated by a version restore.
-      .select('*, lessons_ai_tasks(task_instructions, system_prompt)')
+      .select('*, lessons_ai_tasks(task_instructions, system_prompt, requirements)')
       .eq('id', parseInt(lessonId))
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
@@ -117,6 +118,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
           // showing it would tell the teacher a removed task is still live.
           ai_task_description: aiTask?.task_instructions || null,
           ai_task_instructions: aiTask?.system_prompt || null,
+          ai_task_requirements: parseStructuredRequirements(aiTask?.requirements),
           is_preview: lesson.is_preview ?? null,
           resources: resources || [],
         }}

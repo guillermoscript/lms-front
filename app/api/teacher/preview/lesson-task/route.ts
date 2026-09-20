@@ -4,6 +4,7 @@ import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createPreviewLessonTools } from '@/lib/ai/tools'
 import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
+import { requirementIds, structuredRequirementsSchema } from '@/lib/ai/lesson-requirements'
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { sanitizeLastUserAttachments } from '@/lib/ai/attachments'
@@ -17,6 +18,9 @@ const bodySchema = z.object({
   messages: z.array(z.any()),
   task_description: z.string().optional(),
   system_prompt: z.string().optional(),
+  // Present when the teacher is testing the structured form (#806) — takes
+  // over the whole prompt, exactly as the saved row does once `requirements` is set.
+  requirements: structuredRequirementsSchema.nullable().optional(),
   lesson: z
     .object({
       title: z.string().optional(),
@@ -56,7 +60,8 @@ export async function POST(req: Request) {
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return new Response('Invalid request body', { status: 400 })
-  const { messages, task_description, system_prompt, lesson } = parsed.data
+  const { messages, task_description, system_prompt, requirements, lesson } = parsed.data
+  const structuredRequirements = requirements ?? null
 
   // Preview mode: the student's prompt and tool, but the tool is a dry run and nothing is saved.
   const modelMessages = await convertToModelMessages(sanitizeLastUserAttachments(messages as UIMessage[]))
@@ -67,13 +72,18 @@ export async function POST(req: Request) {
       system: PROMPTS.previewLesson(lesson ?? {}, {
         task_instructions: task_description || undefined,
         system_prompt: system_prompt || undefined,
+        requirements: structuredRequirements,
       }),
       messages: modelMessages,
-      tools: createPreviewLessonTools(() => verifyLessonCompletion({
-        taskInstructions: task_description,
-        teacherPrompt: system_prompt,
-        messages,
-      })),
+      tools: createPreviewLessonTools(
+        () => verifyLessonCompletion({
+          taskInstructions: task_description,
+          teacherPrompt: system_prompt,
+          structuredRequirements,
+          messages,
+        }),
+        requirementIds(structuredRequirements)
+      ),
       experimental_telemetry: { functionId: 'preview-lesson-task' },
       stopWhen: stepCountIs(AI_CONFIG.maxSteps),
     }),

@@ -110,7 +110,32 @@ const refusal = (verdict: CompletionVerdict) => ({
     error: `Not complete yet — do not tell the student the lesson is done. Keep guiding them. What is missing: ${verdict.reason}`,
 });
 
-export const createPreviewLessonTools = (verify: VerifyCompletion) => ({
+const REPORT_PROGRESS = {
+    description:
+        'Report which structured requirement ids the student has met so far, based on their OWN messages. Call it every time that set changes — right after a requirement becomes newly met, not only at the end. This never completes the lesson and never writes anything; only "markLessonCompleted" decides that.',
+    inputSchema: z.object({
+        met: z.array(z.string()).describe('The ids of every requirement met so far (cumulative, not just this turn).'),
+    }),
+};
+
+/**
+ * Signal-only tool: echoes back which of the task's own requirement ids were
+ * reported met, so the student's progress bar ("2/4") has something to
+ * render. No writes, no completion authority — `markLessonCompleted` (backed
+ * by the verifier) is the only thing that can finish the lesson.
+ */
+export const createReportProgressTool = (taskRequirementIds: string[]) => {
+    const known = new Set(taskRequirementIds);
+    return tool({
+        ...REPORT_PROGRESS,
+        execute: async ({ met }) => ({
+            met: met.filter((id) => known.has(id)),
+            total: taskRequirementIds.length,
+        }),
+    });
+};
+
+export const createPreviewLessonTools = (verify: VerifyCompletion, taskRequirementIds: string[] = []) => ({
     markLessonCompleted: tool({
         ...MARK_LESSON_COMPLETED,
         execute: async ({ feedback }) => {
@@ -119,11 +144,12 @@ export const createPreviewLessonTools = (verify: VerifyCompletion) => ({
             return { success: true, preview: true, feedback };
         },
     }),
+    ...(taskRequirementIds.length > 0 ? { reportProgress: createReportProgressTool(taskRequirementIds) } : {}),
 });
 
 export const createLessonTools = (
     supabase: SupabaseClient,
-    context: { lessonId?: string; userId: string; verify: VerifyCompletion }
+    context: { lessonId?: string; userId: string; verify: VerifyCompletion; requirementIds?: string[] }
 ) => ({
     markLessonCompleted: tool({
         ...MARK_LESSON_COMPLETED,
@@ -189,4 +215,7 @@ export const createLessonTools = (
             return { success: true, message: 'Lesson marked as completed!', feedback, requirementsCheck: verdict.reason };
         },
     }),
+    ...((context.requirementIds && context.requirementIds.length > 0)
+        ? { reportProgress: createReportProgressTool(context.requirementIds) }
+        : {}),
 });

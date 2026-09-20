@@ -3,6 +3,7 @@
 import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
+import { structuredRequirementsSchema, type StructuredRequirements } from '@/lib/ai/lesson-requirements'
 import { revalidatePath } from 'next/cache'
 
 export interface LessonFormData {
@@ -15,6 +16,8 @@ export interface LessonFormData {
   publish_at: string
   ai_task_description: string
   ai_task_instructions: string
+  /** Structured form (#806). `null`/`undefined` keeps the free-text task above. */
+  ai_task_requirements?: StructuredRequirements | null
   is_preview: boolean
 }
 
@@ -45,7 +48,12 @@ export async function createLesson(courseId: number, data: LessonFormData) {
 
     if (error) throw error
 
-    if (data.ai_task_description?.trim() || data.ai_task_instructions?.trim()) {
+    if (data.ai_task_description?.trim() || data.ai_task_instructions?.trim() || data.ai_task_requirements) {
+      // The structured form takes over the whole prompt (#806): validated
+      // server-side too, since a bad shape here would 500 the student's chat.
+      const requirements = data.ai_task_requirements
+        ? structuredRequirementsSchema.parse(data.ai_task_requirements)
+        : null
       const { error: taskError } = await ctx.supabase
         .from('lessons_ai_tasks')
         .upsert(
@@ -53,6 +61,7 @@ export async function createLesson(courseId: number, data: LessonFormData) {
             lesson_id: newLesson.id,
             task_instructions: data.ai_task_description || '',
             system_prompt: data.ai_task_instructions || '',
+            requirements,
           },
           { onConflict: 'lesson_id' }
         )
@@ -69,7 +78,7 @@ export async function createLesson(courseId: number, data: LessonFormData) {
         content_length: (data.content || '').length,
         has_video: Boolean(data.video_url),
         has_ai_task: Boolean(
-          data.ai_task_description?.trim() || data.ai_task_instructions?.trim()
+          data.ai_task_description?.trim() || data.ai_task_instructions?.trim() || data.ai_task_requirements
         ),
         is_preview: data.is_preview ?? false,
         published: Boolean(data.publish),
@@ -112,7 +121,12 @@ export async function updateLesson(
 
     if (error) throw error
 
-    if (data.ai_task_description?.trim() || data.ai_task_instructions?.trim()) {
+    if (data.ai_task_description?.trim() || data.ai_task_instructions?.trim() || data.ai_task_requirements) {
+      // The structured form takes over the whole prompt (#806): validated
+      // server-side too, since a bad shape here would 500 the student's chat.
+      const requirements = data.ai_task_requirements
+        ? structuredRequirementsSchema.parse(data.ai_task_requirements)
+        : null
       const { error: taskError } = await ctx.supabase
         .from('lessons_ai_tasks')
         .upsert(
@@ -120,6 +134,7 @@ export async function updateLesson(
             lesson_id: lessonId,
             task_instructions: data.ai_task_description || '',
             system_prompt: data.ai_task_instructions || '',
+            requirements,
           },
           { onConflict: 'lesson_id' }
         )

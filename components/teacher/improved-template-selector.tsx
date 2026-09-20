@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { IconTemplate, IconSparkles, IconArrowRight, IconCheck, IconAlertCircle, IconArrowLeft, IconEye, IconSettings } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { mapSystemTemplateToStructured } from '@/lib/ai/structured-template-mapping'
+import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 interface Template {
   id: number
@@ -24,7 +26,12 @@ interface Template {
 
 interface ImprovedTemplateSelectorProps {
   category: 'lesson_task' | 'exercise' | 'exam_grading'
-  onApply: (data: { instructions: string; system_prompt: string }) => void
+  // `structured` is the template's mapping into the structured task form
+  // (#806) when one is known for it (see `mapSystemTemplateToStructured`) —
+  // `null` for a teacher's own template, or one with no known mapping. The
+  // caller decides which of `{instructions, system_prompt}` / `structured`
+  // it wants based on which mode the task form is in.
+  onApply: (data: { instructions: string; system_prompt: string; structured: StructuredRequirements | null }) => void
 }
 
 export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplateSelectorProps) {
@@ -95,8 +102,9 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
 
     const instructions = replaceVariables(selectedTemplate?.task_description_template ?? null)
     const system_prompt = replaceVariables(selectedTemplate?.system_prompt_template ?? null)
+    const structured = selectedTemplate ? mapSystemTemplateToStructured(selectedTemplate.name, variableValues) : null
 
-    onApply({ instructions, system_prompt })
+    onApply({ instructions, system_prompt, structured })
     handleClose()
   }
 

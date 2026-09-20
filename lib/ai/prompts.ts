@@ -1,3 +1,5 @@
+import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
+
 // Non-overridable guardrail floor appended AFTER any teacher-supplied system
 // prompt: later instructions win ties, so the floor holds even when a teacher
 // override replaces the default persona (issue #390 — hint ladder, never
@@ -38,6 +40,42 @@ export const LESSON_COMPLETION_PROTOCOL = `
     - Once it succeeds, close briefly. Do not open a new task.
 `;
 
+// Platform-assembled tutor brief for a structured AI task (#806). Replaces the
+// teacher's free-text system prompt entirely — that is the point of turning
+// the prompt into fields: the platform, not a hand-written paragraph, decides
+// how level/scenario/role/requirements become the instructions the model
+// sees. Requirement ids are the same ones the model reports through
+// "reportProgress" and the ones the verifier checks one by one.
+export const buildStructuredTutorPrompt = (
+    lesson: { title: string; description?: string; content?: string },
+    structured: StructuredRequirements
+): string => {
+    const requirementLines = structured.requirements
+        .map((requirement, index) => `${index + 1}. [${requirement.id}] ${requirement.text}`)
+        .join('\n')
+
+    return `
+    You are the AI tutor for this lesson. Role: ${structured.tutor_role}.
+    Student level: ${structured.level}.
+    Scenario: ${structured.scenario}
+
+    Lesson: ${lesson.title} - ${lesson.description || ''}
+    Lesson content: ${lesson.content || ''}
+
+    REQUIREMENTS (ordered — the student must meet every one through their OWN messages, not by you writing it for them):
+    ${requirementLines}
+    ${structured.closing_phase
+        ? `\nCLOSING PHASE (only once every requirement above is met): ${structured.closing_phase}`
+        : ''
+    }
+
+    PROGRESS TOOL:
+    - Call "reportProgress" with the ids of every requirement met so far (cumulative, not just this turn) whenever that set changes — right after a requirement becomes newly met, not only at the end. It never completes the lesson and never writes anything; it only drives the student's progress bar.
+
+    Respond in the language the student uses. Stay in character as described above.
+  `
+}
+
 export const PROMPTS = {
     exerciseCoach: (exercise: { title: string; description?: string; instructions: string; system_prompt?: string }) => `
     You are an AI Coach helping a student with this exercise.
@@ -53,7 +91,13 @@ export const PROMPTS = {
     When the student completes the task or demonstrates sufficient mastery, use the "markExerciseCompleted" tool.
   `,
 
-    lessonTutor: (lesson: { title: string; description?: string; content?: string }, aiTask?: { task_instructions?: string; system_prompt?: string }) => `
+    lessonTutor: (
+      lesson: { title: string; description?: string; content?: string },
+      aiTask?: { task_instructions?: string; system_prompt?: string; requirements?: StructuredRequirements | null }
+    ) => `
+    ${aiTask?.requirements
+      ? buildStructuredTutorPrompt(lesson, aiTask.requirements)
+      : `
     ${aiTask?.system_prompt || 'Eres un tutor AI, tu mision es ayudar a los estudiantes con esta leccion. Ten en cuenta lo siguiente:\n1. Lee la leccion y asegurate de entenderla\n2. Responde a las preguntas de los estudiantes\n3. trata de ser lo mas claro posible'}
 
     La leccion es la siguiente: ${lesson.title} - ${lesson.description || ''}
@@ -62,6 +106,8 @@ export const PROMPTS = {
     Tarea/Actividad propuesta: ${aiTask?.task_instructions || 'Explica lo aprendido en la lección.'}
 
     Recuerda que tu mision es ayudar a los estudiantes a entender la leccion.
+    `
+    }
     ${TUTOR_GUARDRAIL_FLOOR}
     ${METACOGNITIVE_NUDGE}
     ${LESSON_COMPLETION_PROTOCOL}
@@ -86,7 +132,10 @@ ${METACOGNITIVE_NUDGE}`
 
     // The editor preview runs the SAME prompt a student gets, so what the
     // teacher tests is what ships. Only the tool differs: it is a dry run.
-    previewLesson: (lesson: { title?: string; description?: string; content?: string }, aiTask?: { task_instructions?: string; system_prompt?: string }): string =>
+    previewLesson: (
+      lesson: { title?: string; description?: string; content?: string },
+      aiTask?: { task_instructions?: string; system_prompt?: string; requirements?: StructuredRequirements | null }
+    ): string =>
       PROMPTS.lessonTutor({ ...lesson, title: lesson.title || '' }, aiTask),
 
     speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; feedbackLanguageInstruction?: string }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
