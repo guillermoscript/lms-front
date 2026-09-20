@@ -35,6 +35,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getCourseSocialProof } from '@/lib/social-proof';
 import { StarRating } from '@/components/shared/star-rating';
 import { Users } from 'lucide-react';
+import { isFreePreviewEnabled } from '@/lib/settings/free-preview';
 
 export const dynamic = 'force-dynamic';
 
@@ -173,7 +174,7 @@ export default async function CourseDetailsPage(props: {
         })()
         : Promise.resolve(false);
 
-    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }, seo] = await Promise.all([
+    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }, seo, freePreviewEnabled] = await Promise.all([
         authorPromise,
         accessPromise,
         productCoursesPromise,
@@ -181,6 +182,7 @@ export default async function CourseDetailsPage(props: {
         getCourseSocialProof(courseId, tenantId),
         lessonsPromise,
         getSeoContext(),
+        isFreePreviewEnabled(tenantId),
     ]);
 
     const { averageRating, reviewCount, studentCount, recentReviews } = socialProof;
@@ -390,7 +392,11 @@ export default async function CourseDetailsPage(props: {
                                         </AccordionTrigger>
                                         <AccordionContent className="pb-4 space-y-1">
                                             {lessons.map((lesson: Lesson, index: number) => (
-                                                lesson.is_preview ? (
+                                                // The school-level switch (#799) wins over the per-lesson
+                                                // flag: this page is read via the admin client (bypasses
+                                                // RLS), so it must not keep badging/linking to a preview
+                                                // lesson the school just turned off tenant-wide.
+                                                lesson.is_preview && freePreviewEnabled ? (
                                                     <Link
                                                         key={lesson.id}
                                                         href={`/courses/${params.id}/lessons/${lesson.id}`}
