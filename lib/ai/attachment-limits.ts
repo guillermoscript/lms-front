@@ -3,7 +3,7 @@
  * tutor, Aristotle). Shared by the client (PromptInput validation) and the
  * server (route sanitisation) so both sides agree on what is accepted.
  *
- * Images only: the routes run on gpt-4o-mini, which reads images but not
+ * Images only: the chat routes accept what the model reads reliably — images, not
  * arbitrary documents, and a PDF in the message would fail the whole call.
  */
 export const AI_ATTACHMENT_ACCEPT = 'image/*'
