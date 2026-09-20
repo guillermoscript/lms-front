@@ -84,6 +84,7 @@ gh workflow enable cron.yml
 | `daily-digest` | hourly | No digests, no streak nudges. Must be **hourly** — each tenant sends at its own local hour |
 | `expire-stale-checkouts` | hourly | An abandoned PayPal/Lemon Squeezy/Binance redirect leaves a `pending` transaction inside both purchase-uniqueness indexes, and the buyer can never retry that item again (#624). Reconciles PayPal orders before expiring, so an approved-but-uncaptured payment is taken rather than thrown away |
 | `expire-subscriptions` | `0 0` | Lapsed self-managed subscriptions (Solana, manual) keep their entitlements forever |
+| `expire-payment-requests` | `0 0` | A student-facing manual/offline `payment_requests` row (#802) never closes: an unpaid request blocks that student from ever requesting the same item again (one-open-per-item unique index), and one who paid gets no "your request is about to expire" nudge before it lapses |
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
 | `expire-platform-subscriptions` | `0 2` | No renewal reminders, no grace period, no downgrade to free: a school that stopped paying keeps its paid plan |
 | `enforce-plan-limits` | `0 3` | pg_cron is primary (#660); this is the fallback. If neither runs: a tenant that grows past its plan limits with no plan-change event is never cut off, a pending cutoff never completes, and no reminder email is ever sent |
@@ -92,6 +93,24 @@ gh workflow enable cron.yml
 Every route is idempotent, so a late or repeated run is safe. `league-rollover`
 in particular resolves the previous week from the data and finalizes every
 unfinalized week, so running it late *is* the catch-up path (#549).
+
+**`expire-payment-requests` will never cancel a request with money claimed
+against it.** Both its phases read the predicates in
+`lib/payments/manual-request-ttl.ts`, not a hand-written condition, so a row
+the student has reported a payment reference against
+(`payment_reported_at` set) or one the admin already confirmed
+(`payment_received`) is excluded from both the reminder and the sweep — the
+same rule the duplicate-request guard in `app/actions/payment-requests.ts`
+uses to decide whether a row still blocks a new request. Expiring is silent
+(in-app notification, no email): the #802 migration backfilled `expires_at`
+from `created_at` on every pre-existing row, so the first production run
+closes a backlog that may be months old, and emailing that backlog would read
+as spam about a request the student forgot long ago. Run it by hand the same
+way as any other route (§4):
+
+```bash
+gh workflow run cron.yml -f route=expire-payment-requests
+```
 
 ---
 

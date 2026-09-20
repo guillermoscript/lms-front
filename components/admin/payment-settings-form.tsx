@@ -29,6 +29,11 @@ import { useTranslations } from 'next-intl'
 import PaymentProviderRow from '@/components/admin/payment-provider-row'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import BinancePersonalForm from '@/components/admin/binance-personal-form'
+import ManualPaymentAccountsEditor from '@/components/admin/manual-payment-accounts-editor'
+import {
+  normalizeManualPaymentAccounts,
+  type ManualPaymentAccount,
+} from '@/lib/payments/manual-payment-accounts'
 
 interface PaymentSettingsFormProps {
   settings: SettingsGroup
@@ -93,6 +98,12 @@ export default function PaymentSettingsForm({
     settings.manual_payment_instructions?.value?.value ?? ''
   )
 
+  // The one setting whose value is a list, so it is held in state rather than
+  // read back out of FormData on submit.
+  const [accounts, setAccounts] = useState<ManualPaymentAccount[]>(() =>
+    normalizeManualPaymentAccounts(settings.manual_payment_accounts?.value)
+  )
+
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
 
@@ -112,6 +123,10 @@ export default function PaymentSettingsForm({
         manual_payment_instructions: {
           value: (formData.get('manual_payment_instructions') as string) || '',
         },
+        // Normalised on the way out as well as on the way in: a half-filled row
+        // the admin added and never named is dropped here rather than published
+        // to students as a blank account.
+        manual_payment_accounts: { accounts: normalizeManualPaymentAccounts(accounts) },
       }
 
       const result = await updateSettings(updatedSettings)
@@ -309,6 +324,12 @@ export default function PaymentSettingsForm({
                   {t('payment.manualInstructionsHint')}
                 </p>
               </div>
+
+              <ManualPaymentAccountsEditor
+                accounts={accounts}
+                onChange={setAccounts}
+                disabled={isSubmitting}
+              />
 
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-0.5">

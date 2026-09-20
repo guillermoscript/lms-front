@@ -31,6 +31,9 @@ interface PaymentRequest {
   invoice_number: string | null
   admin_notes: string | null
   created_at: string
+  payment_reference?: string | null
+  payment_reported_at?: string | null
+  expired_at?: string | null
   user: {
     id: string
     full_name: string
@@ -120,12 +123,30 @@ export function PaymentRequestsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
-                  >
-                    {t(`status.${request.status}`)}
-                  </Badge>
+                  <div className="space-y-1">
+                    <Badge
+                      variant="outline"
+                      className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
+                    >
+                      {t(`status.${request.status}`)}
+                    </Badge>
+                    {/* The queue's whole job is "who is waiting on me". A
+                        reported reference is the row to work next; a lapsed one
+                        is the row to stop looking at (#802). */}
+                    {request.payment_reported_at && (
+                      <div className="text-xs font-medium text-brand-text">
+                        {t('table.reported')}
+                        {request.payment_reference && (
+                          <span className="ml-1 font-mono text-muted-foreground">
+                            {request.payment_reference}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {request.expired_at && (
+                      <div className="text-xs text-muted-foreground">{t('table.expired')}</div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {request.invoice_number ? (
