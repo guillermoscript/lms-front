@@ -13,6 +13,7 @@ import {
 } from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
 import { SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit'
+import { normalizeManualPaymentAccounts, type ManualPaymentAccount } from '@/lib/payments/manual-payment-accounts'
 
 /**
  * A `tenant_settings.setting_value` JSONB payload. Every setting is stored as
@@ -23,6 +24,8 @@ export type SettingValue = {
   enabled?: boolean
   value?: string | number | null
   message?: string
+  /** `manual_payment_accounts` (#802) — the one setting whose value is a list. */
+  accounts?: ManualPaymentAccount[]
 }
 
 /** One setting as `getAllSettingsByCategory()` hands it to a settings form. */
@@ -771,6 +774,31 @@ export async function getManualPaymentInstructions(): Promise<string> {
 }
 
 /**
+ * Get this tenant's structured offline payment accounts (#802).
+ *
+ * No role gate, for the same reason as the instructions above it: the student
+ * reads these at checkout to know where to send the money, and again on their
+ * request page to say which one they used. Returns `[]` when the school has
+ * never opened the editor, which is exactly the pre-#802 behaviour.
+ */
+export async function getManualPaymentAccounts(): Promise<ManualPaymentAccount[]> {
+  try {
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'manual_payment_accounts')
+      .maybeSingle()
+    return normalizeManualPaymentAccounts(data?.setting_value)
+  } catch (error) {
+    console.error('Error resolving manual payment accounts:', error)
+    return []
+  }
+}
+
+/**
  * Get all settings grouped by category (for the settings page)
  */
 export async function getAllSettingsByCategory(): Promise<CategorySettingsResponse> {
@@ -801,7 +829,7 @@ export async function getAllSettingsByCategory(): Promise<CategorySettingsRespon
       stripe_enabled: 'payment', paypal_enabled: 'payment', binance_enabled: 'payment', binance_personal_enabled: 'payment',
       lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', solana_accept_sol: 'payment', currency: 'payment',
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
-      manual_payment_instructions: 'payment',
+      manual_payment_instructions: 'payment', manual_payment_accounts: 'payment',
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
       max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',
       enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',

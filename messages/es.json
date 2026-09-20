@@ -661,7 +661,43 @@
           "proofSection": "Comprobante de Pago",
           "proofUploaded": "Comprobante subido",
           "uploadHint": "Sube tu comprobante de transferencia para que podamos verificar tu pago.",
-          "viewProof": "Ver comprobante subido"
+          "viewProof": "Ver comprobante subido",
+          "expiresOn": "Vence el",
+          "expiredOn": "Esta solicitud venció el {date} porque no se recibió el pago. Puedes solicitarla de nuevo desde la página del curso.",
+          "reportedTitle": "Datos del pago enviados",
+          "reportedHint": "La escuela lo confirmará con su cuenta. Puedes corregir estos datos hasta que lo haga."
+        },
+        "report": {
+          "title": "Avísale a la escuela de tu pago",
+          "updateTitle": "Corrige los datos de tu pago",
+          "description": "Agrega el número de referencia para que la escuela encuentre tu pago y lo confirme más rápido.",
+          "submit": "Enviar datos del pago",
+          "update": "Actualizar datos",
+          "submitting": "Enviando…",
+          "success": "Le enviamos los datos de tu pago a la escuela",
+          "error": "No pudimos guardar los datos de tu pago",
+          "payerSection": "Pagó otra persona por mí",
+          "payerHint": "Complétalo solo si la transferencia salió de una cuenta que no es tuya.",
+          "fields": {
+            "reference": "Número de referencia",
+            "paidAt": "Fecha en que pagaste",
+            "paidToAccount": "Cuenta donde pagaste",
+            "amount": "Monto que enviaste",
+            "currency": "Moneda",
+            "payerName": "Nombre del titular",
+            "payerDocument": "Cédula",
+            "payerBank": "Banco",
+            "payerPhone": "Teléfono"
+          },
+          "placeholders": {
+            "reference": "ej. 0123456789",
+            "paidToAccount": "A cuál cuenta lo enviaste",
+            "amount": "0,00",
+            "payerName": "De quién salió la transferencia",
+            "payerDocument": "Cédula o RIF",
+            "payerBank": "Banco desde donde se envió",
+            "payerPhone": "Teléfono con el que pagaste"
+          }
         }
       }
     },
@@ -2803,7 +2839,9 @@
           "manage": "Gestionar",
           "review": "Revisar",
           "id": "ID de solicitud",
-          "invoice": "Factura"
+          "invoice": "Factura",
+          "reported": "Pago reportado",
+          "expired": "Vencida sin pago"
         },
         "status": {
           "pending": "Pendiente",
@@ -2886,7 +2924,21 @@
             "paymentConfirmed": "El pago ha sido confirmado.",
             "completed": "¡El estudiante ha sido inscrito exitosamente!",
             "cancelled": "La solicitud de pago ha sido cancelada."
-          }
+          },
+          "reported": {
+            "title": "Pago reportado por el estudiante",
+            "reference": "Referencia",
+            "paidAt": "Pagado el",
+            "amount": "Monto enviado",
+            "paidTo": "Pagado en",
+            "payerName": "Pagado por",
+            "payerDocument": "Cédula",
+            "payerBank": "Banco",
+            "payerPhone": "Teléfono",
+            "currencyDiffers": "Lo envió en otra moneda distinta al precio: verifica el monto en tu cuenta.",
+            "amountDiffers": "No coincide con los {expected} que solicitaste."
+          },
+          "expiredOn": "Venció el {date}: nunca se reportó un pago."
         },
         "dialog": {
           "title": "Solicitud de Pago #{id}",
@@ -3444,6 +3496,30 @@
               "solanaDesc": "La dirección a la que pagan los estudiantes. Una sola dirección cubre pagos únicos y suscripciones.",
               "binanceTitle": "Credenciales de Binance Pay",
               "binanceDesc": "Tu Pay ID y una clave API de solo lectura. Usamos la clave solo para confirmar transferencias entrantes — no puede mover fondos."
+            },
+            "accounts": {
+              "title": "Cuentas donde recibes los pagos",
+              "hint": "Los estudiantes las ven al pagar y eligen en cuál depositaron, así sabes qué cuenta revisar.",
+              "empty": "Todavía no hay cuentas. Agrega la cuenta, billetera o número de teléfono al que deben enviarte el dinero.",
+              "accountNumber": "Cuenta {number}",
+              "add": "Agregar cuenta",
+              "remove": "Eliminar",
+              "fields": {
+                "method": "Método",
+                "bank": "Banco",
+                "identifier": "Número, teléfono o correo",
+                "holder": "Titular de la cuenta",
+                "document": "Cédula / RIF",
+                "note": "Nota"
+              },
+              "placeholders": {
+                "method": "Transferencia, Pago Móvil, Zelle…",
+                "bank": "Nombre del banco",
+                "identifier": "Número de cuenta, teléfono o correo",
+                "holder": "Nombre del titular",
+                "document": "Cédula o RIF",
+                "note": "Algo más que el estudiante deba saber"
+              }
             }
           },
           "branding": {
@@ -6322,7 +6398,10 @@
       "empty": {
         "title": "No se encontraron ejercicios",
         "description": "No hay ejercicios activos para este curso en este momento."
-      }
+      },
+      "cardFallbackDescription": "Práctica interactiva para reforzar este curso.",
+      "minutes": "{minutes} min",
+      "completed": "Completado"
     },
     "workspace": {
       "brief": "Instrucciones",
@@ -6402,6 +6481,16 @@
       "task": "Tarea",
       "output": "Salida",
       "solved": "Todas las pruebas pasan. Reto completado."
+    },
+    "filter": {
+      "label": "Filtrar por tipo de ejercicio",
+      "all": "Todos",
+      "emptyForType": "Aún no hay ejercicios de este tipo."
+    },
+    "difficulty": {
+      "easy": "Fácil",
+      "medium": "Medio",
+      "hard": "Difícil"
     }
   },
   "exams": {

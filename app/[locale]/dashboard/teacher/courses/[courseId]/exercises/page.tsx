@@ -4,21 +4,13 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
   IconPlus,
   IconArrowLeft,
   IconChevronRight,
-  IconCode,
-  IconBrain,
-  IconMessageCircle,
-  IconFileText,
-  IconBooks,
-  IconChecklist,
-  IconClock,
   IconTarget,
 } from '@tabler/icons-react'
-import * as motion from 'motion/react-client'
+import ExerciseManageList, { type ManagedExercise } from '@/components/teacher/exercise-manage-list'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function ExercisesPage({ params }: { params: Promise<{ courseId: string }> }) {
@@ -69,15 +61,16 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
     checkpointLessonsByExercise.set(row.exercise_id, titles)
   }
 
-  const getExerciseIcon = (type: string) => {
-    switch (type) {
-      case 'coding_challenge': return <IconCode className="h-4.5 w-4.5 text-brand-text" />
-      case 'quiz': return <IconBrain className="h-4.5 w-4.5 text-brand-text" />
-      case 'discussion': return <IconMessageCircle className="h-4.5 w-4.5 text-brand-text" />
-      case 'essay':
-      default: return <IconFileText className="h-4.5 w-4.5 text-brand-text" />
-    }
-  }
+  const rows: ManagedExercise[] = (exercises ?? []).map((exercise) => ({
+    id: exercise.id,
+    title: exercise.title,
+    exercise_type: exercise.exercise_type,
+    difficulty_level: exercise.difficulty_level,
+    status: exercise.status,
+    time_limit: exercise.time_limit,
+    lessonTitle: exercise.lesson?.title ?? null,
+    checkpointLessons: checkpointLessonsByExercise.get(exercise.id) ?? [],
+  }))
 
   return (
     <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
@@ -128,87 +121,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-2">
-          {exercises?.map((exercise, idx) => (
-            <motion.div
-              key={exercise.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04, duration: 0.25 }}
-            >
-              <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
-                <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-tint shrink-0">
-                        {getExerciseIcon(exercise.exercise_type)}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">
-                          {exercise.title}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                          <span className="text-xs text-muted-foreground capitalize">
-                            {exercise.exercise_type.replace('_', ' ')}
-                          </span>
-                          <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                          <span className="text-xs text-muted-foreground capitalize">
-                            {t(`difficulty.${exercise.difficulty_level}`)}
-                          </span>
-                          {exercise.status !== 'published' && (
-                            <>
-                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                              <Badge variant="secondary" className="text-[10px] h-4">
-                                {t(`status.${exercise.status}`)}
-                              </Badge>
-                            </>
-                          )}
-                          {exercise.lesson && (
-                            <>
-                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <IconBooks className="h-3 w-3" />
-                                <span className="truncate max-w-[120px]">{exercise.lesson.title}</span>
-                              </span>
-                            </>
-                          )}
-                          {checkpointLessonsByExercise.has(exercise.id) && (
-                            <>
-                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] h-4 gap-1 bg-brand-tint border-primary/20 text-brand-text"
-                              >
-                                <IconChecklist className="h-3 w-3" />
-                                <span className="truncate max-w-[140px]">
-                                  {t('practice.checkpointIn', {
-                                    lesson: checkpointLessonsByExercise.get(exercise.id)![0],
-                                  })}
-                                </span>
-                                {checkpointLessonsByExercise.get(exercise.id)!.length > 1 &&
-                                  ` +${checkpointLessonsByExercise.get(exercise.id)!.length - 1}`}
-                              </Badge>
-                            </>
-                          )}
-                          {exercise.time_limit && (
-                            <>
-                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <IconClock className="h-3 w-3" />
-                                {exercise.time_limit}m
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0 ml-4" />
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+        <ExerciseManageList exercises={rows} courseId={courseId} />
       )}
     </div>
   )
