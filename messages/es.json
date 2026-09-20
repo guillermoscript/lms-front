@@ -4493,7 +4493,8 @@
         "completedDetail": "¡Buen trabajo! Has completado la tarea con éxito.",
         "restartSuccess": "Chat reiniciado con éxito",
         "restartFailed": "Error al reiniciar el chat",
-        "restartError": "Error al reiniciar el chat"
+        "restartError": "Error al reiniciar el chat",
+        "genericError": "Algo salió mal. Inténtalo de nuevo."
       },
       "confirmRestart": "¿Reiniciar la conversación? Esto borra tu historial de chat. Una lección que ya completaste sigue completada.",
       "successHeader": "¡Lección Completada!",
@@ -6498,7 +6499,8 @@
         "explain": "Explícame las instrucciones",
         "check": "Revisa mi respuesta",
         "hint": "Dame una pista"
-      }
+      },
+      "error": "Algo salió mal. Inténtalo de nuevo."
     },
     "code": {
       "typeLabel": "Reto de código",
@@ -7544,5 +7546,10 @@
         "footerCertificate": "Certificado verificable al terminar"
       }
     }
+  },
+  "aiChatLimits": {
+    "burst": "Estás enviando mensajes muy rápido. Espera un momento e inténtalo de nuevo.",
+    "daily": "Has alcanzado el límite de práctica de hoy. Inténtalo de nuevo mañana.",
+    "monthly": "El presupuesto mensual de IA de tu escuela se agotó este mes. Pide a un administrador que mejore el plan."
   }
 }

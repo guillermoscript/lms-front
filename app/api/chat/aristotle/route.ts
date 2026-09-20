@@ -1,13 +1,15 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
-import { lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { capChatHistory, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { lastUserMessageHasAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { propagateAttributes } from '@langfuse/tracing'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
+import { aiChatRateLimitedResponse, aiChatUsageLimitResponse, checkAiChatUsage } from '@/lib/ai/chat-usage'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -25,6 +27,15 @@ export async function POST(req: Request) {
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
 
+    // Was not covered by #804 — Aristotle gets the same burst brake every
+    // other AI chat surface does (issue #807). The durable budget is checked
+    // below, after enrollment, so a 403 never costs a budget slot.
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return aiChatRateLimitedResponse()
+    }
+
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
     const { messages: rawMessages, courseId, contextPage } = parsed.data
@@ -37,6 +48,9 @@ export async function POST(req: Request) {
     if (!(await hasCourseAccess(supabase, user.id, numericCourseId))) {
         return new Response('Not enrolled', { status: 403 })
     }
+
+    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
 
     // Fetch tutor config
     const { data: tutorConfig } = await supabase
@@ -257,7 +271,7 @@ export async function POST(req: Request) {
     }
 
     // Stream response
-    const modelMessages = await convertToModelMessages(messages)
+    const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
     const result = propagateAttributes(
         { userId: user.id, metadata: { tenantId, contextPage: contextPage || '' } },
         () => streamText({

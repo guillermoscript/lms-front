@@ -8,8 +8,10 @@ import { requirementIds, structuredRequirementsSchema } from '@/lib/ai/lesson-re
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { sanitizeLastUserAttachments } from '@/lib/ai/attachments'
+import { capChatHistory } from '@/lib/ai/chat-helpers'
 import { z } from 'zod'
 import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
+import { checkAiChatUsage, aiChatRateLimitedResponse, aiChatUsageLimitResponse } from '@/lib/ai/chat-usage'
 
 export const maxDuration = 120
 
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
   try {
     await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
   } catch {
-    return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+    return aiChatRateLimitedResponse()
   }
 
   // The system prompt comes from the request body: for anyone but staff this
@@ -58,13 +60,19 @@ export async function POST(req: Request) {
     return new Response('Forbidden', { status: 403 })
   }
 
+  // A preview turn spends the same tenant/user budget as the real chat.
+  const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+  if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return new Response('Invalid request body', { status: 400 })
   const { messages, task_description, system_prompt, requirements, lesson } = parsed.data
   const structuredRequirements = requirements ?? null
 
   // Preview mode: the student's prompt and tool, but the tool is a dry run and nothing is saved.
-  const modelMessages = await convertToModelMessages(sanitizeLastUserAttachments(messages as UIMessage[]))
+  const modelMessages = await convertToModelMessages(
+    capChatHistory(sanitizeLastUserAttachments(messages as UIMessage[]), AI_CONFIG.maxHistoryMessages)
+  )
   const result = propagateAttributes(
     { userId: user.id },
     () => streamText({

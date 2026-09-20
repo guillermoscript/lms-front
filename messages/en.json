@@ -4612,7 +4612,8 @@
         "completedDetail": "Great job! You have successfully completed the task.",
         "restartSuccess": "Chat restarted successfully",
         "restartFailed": "Failed to restart chat",
-        "restartError": "Error restarting chat"
+        "restartError": "Error restarting chat",
+        "genericError": "Something went wrong. Please try again."
       },
       "confirmRestart": "Restart the conversation? This clears your chat history. A lesson you already completed stays completed.",
       "successHeader": "Lesson Completed!",
@@ -6498,7 +6499,8 @@
         "explain": "Explain the instructions",
         "check": "Check my answer",
         "hint": "Give me a hint"
-      }
+      },
+      "error": "Something went wrong. Please try again."
     },
     "code": {
       "typeLabel": "Coding challenge",
@@ -7544,5 +7546,10 @@
         "footerCertificate": "Verifiable certificate when you finish"
       }
     }
+  },
+  "aiChatLimits": {
+    "burst": "You're sending messages a bit fast. Wait a moment and try again.",
+    "daily": "You've reached today's practice limit. Try again tomorrow.",
+    "monthly": "Your school's monthly AI budget is spent for this month. Ask an admin to upgrade the plan."
   }
 }

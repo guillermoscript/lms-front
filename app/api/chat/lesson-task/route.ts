@@ -5,7 +5,8 @@ import { createLessonTools } from '@/lib/ai/tools'
 import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
 import { parseStructuredRequirements, requirementIds } from '@/lib/ai/lesson-requirements'
 import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
-import { fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { checkAiChatUsage, aiChatRateLimitedResponse, aiChatUsageLimitResponse } from '@/lib/ai/chat-usage'
+import { capChatHistory, fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { LESSON_TASK_TOOL_INVOCATION_VERSION } from '@/lib/ai/lesson-task-history'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     try {
         await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
     } catch {
-        return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+        return aiChatRateLimitedResponse()
     }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
@@ -60,6 +61,10 @@ export async function POST(req: Request) {
     )
 
     if (!lesson) return new Response('Lesson not found', { status: 404 })
+
+    // A 404 above never costs a budget slot.
+    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
 
     // Handle both array and object response from Supabase (one-to-one relationship)
     const aiTaskRow = (Array.isArray(lesson.lessons_ai_tasks)
@@ -88,7 +93,9 @@ export async function POST(req: Request) {
     }
 
     // 3. Stream Response
-    const modelMessages = await convertToModelMessages(messages)
+    // Only the MODEL's view is capped — verify() below still reads the full,
+    // untrimmed `messages` as its evidence.
+    const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
     const result = propagateAttributes(
         { userId: user.id, metadata: { lessonId: String(lessonId), tenantId } },
         () => streamText({
