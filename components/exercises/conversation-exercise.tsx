@@ -4,13 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { experimental_useRealtime as useRealtime } from '@ai-sdk/react'
 import { openai } from '@ai-sdk/openai'
 import { useTranslations } from 'next-intl'
-import confetti from 'canvas-confetti'
 import { nanoid } from 'nanoid'
 import {
   IconAlertTriangle,
   IconBulb,
   IconLoader2,
-  IconMessageCircle,
   IconMicrophone,
   IconMicrophoneOff,
   IconPhoneOff,
@@ -35,7 +33,9 @@ import {
 } from '@/lib/speech/conversation'
 import ExerciseBrief from './exercise-brief'
 import ExerciseHeader from './exercise-header'
+import { cn } from '@/lib/utils'
 import ExerciseResultSummary from './exercise-result-summary'
+import { EXERCISE_SURFACE, ResultSection, RESULT_PROSE } from './result-parts'
 import ExerciseWorkspace, { initialWorkspacePanel } from './exercise-workspace'
 
 type Phase = 'idle' | 'live' | 'grading' | 'error'
@@ -276,7 +276,6 @@ export default function ConversationExercise({
       })
       setGradedNonce((n) => n + 1)
       setPhase('idle')
-      if (data.passed) confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } })
     } catch {
       setErrorMsg(t('gradingError'))
       setPhase('error')
@@ -375,15 +374,12 @@ export default function ConversationExercise({
   const limitReached = !isUnlimited && attemptsUsed >= maxDailyAttempts && phase !== 'live'
 
   const briefPanel = (
-    <div className="space-y-4 lg:space-y-6">
+    <div className="space-y-5">
       <ExerciseBrief instructions={exercise.instructions ?? ''} />
       {scenario && (
-        <div className="rounded-xl border bg-card p-5">
-          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-            <IconMessageCircle size={16} className="text-brand-text" aria-hidden="true" />
-            {t('scenario')}
-          </h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">{scenario}</p>
+        <div className="border-t pt-5">
+          <h2 className="mb-2 text-sm font-semibold">{t('scenario')}</h2>
+          <p className="max-w-[68ch] text-base leading-relaxed text-foreground/85">{scenario}</p>
         </div>
       )}
     </div>
@@ -394,18 +390,15 @@ export default function ConversationExercise({
   const retryInResult = showResult && !limitReached
 
   const errorAlert = errorMsg && (
-    <div
-      className="flex items-start gap-2.5 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive"
-      role="alert"
-    >
+    <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
       <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
       {errorMsg}
-    </div>
+    </p>
   )
 
   const taskPanel = (
     <div className="space-y-4">
-      <div className="rounded-xl border bg-card p-5">
+      <div className={EXERCISE_SURFACE}>
         <div className="flex flex-col items-center gap-3">
           <Persona state={personaState} variant="halo" className="size-40" />
           <p className="text-sm font-medium" role="status" aria-live="polite">
@@ -418,12 +411,13 @@ export default function ConversationExercise({
           )}
         </div>
 
-        {errorMsg && !retryInResult && <div className="mt-4">{errorAlert}</div>}
+        {/* On a phone the alert rides with the result tab's retry button. */}
+        {errorMsg && <div className={cn('mt-4', retryInResult && 'hidden lg:block')}>{errorAlert}</div>}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           {phase === 'live' ? (
             <>
-              <Button variant="outline" onClick={toggleMute} disabled={status !== 'connected'} aria-pressed={muted}>
+              <Button variant="outline" size="lg" className="h-11 text-sm" onClick={toggleMute} disabled={status !== 'connected'} aria-pressed={muted}>
                 {muted ? (
                   <IconMicrophoneOff size={16} aria-hidden="true" />
                 ) : (
@@ -431,45 +425,55 @@ export default function ConversationExercise({
                 )}
                 {muted ? t('unmute') : t('mute')}
               </Button>
-              <Button onClick={() => void finish()} disabled={status !== 'connected'}>
+              <Button size="lg" className="h-11 text-sm" onClick={() => void finish()} disabled={status !== 'connected'}>
                 <IconPhoneOff size={16} aria-hidden="true" />
                 {t('finish')}
               </Button>
             </>
           ) : phase === 'grading' ? (
-            <Button disabled>
-              <IconLoader2 size={16} className="animate-spin" aria-hidden="true" />
+            <Button disabled size="lg" className="h-11 text-sm">
+              <IconLoader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
               {t('grading')}
             </Button>
           ) : (
-            <Button onClick={() => void start()} disabled={limitReached}>
+            <Button
+              size="lg"
+              className="h-11 text-sm"
+              onClick={() => void start()}
+              disabled={limitReached}
+            >
               <IconMicrophone size={16} aria-hidden="true" />
               {result || phase === 'error' ? t('startAgain') : t('start')}
             </Button>
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-center gap-4 border-t pt-4 text-xs text-muted-foreground">
+        <div className="mt-5 flex flex-wrap justify-center gap-x-4 gap-y-1 border-t pt-4 text-sm text-muted-foreground">
           <span>{t('maxLength', { minutes: maxMinutes })}</span>
           {!isUnlimited && <span>{t('attemptsToday', { used: attemptsUsed, max: maxDailyAttempts })}</span>}
         </div>
-        {limitReached && <p className="mt-2 text-center text-xs text-warning">{t('dailyLimitReached')}</p>}
+        {limitReached && (
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-sm font-medium text-warning">
+            <IconAlertTriangle size={14} aria-hidden="true" />
+            {t('dailyLimitReached')}
+          </p>
+        )}
       </div>
 
       {phase === 'live' && hint && (
         // The tutor keeps speaking the practised language; the hint is the one
         // thing on this screen in the student's own.
-        <div className="flex items-start gap-2.5 rounded-xl border bg-brand-tint px-4 py-3 text-sm" role="status">
+        <div className="flex items-start gap-2.5 rounded-lg bg-brand-tint px-4 py-3 text-sm" role="status">
           <IconBulb size={16} className="mt-0.5 shrink-0 text-brand-text" aria-hidden="true" />
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">{t('hint')}</p>
+            <p className="text-sm font-semibold">{t('hint')}</p>
             <p>{hint}</p>
           </div>
         </div>
       )}
 
       {(phase === 'live' || phase === 'grading') && (
-        <div className="rounded-xl border bg-card">
+        <div className="rounded-card bg-card ring-1 ring-foreground/10">
           <h3 className="border-b px-5 py-3 text-sm font-semibold">{t('liveTranscript')}</h3>
           <Conversation className="h-72">
             <ConversationContent>
@@ -495,12 +499,12 @@ export default function ConversationExercise({
   // moves the student from the result tab to the call.
   const resultPanel = result && showResult ? (
     <div className="space-y-4">
-      {/* The start button lives under this panel on desktop. A student reading
-          their feedback should not have to scroll past it to try again. */}
+      {/* Phone only, where the call is a tab away. From `lg` up the call panel
+          sits right above this one and carries the button. */}
       {retryInResult && (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:hidden">
           {errorAlert}
-          <Button onClick={() => void start()} className="w-full sm:w-auto">
+          <Button size="lg" onClick={() => void start()} className="h-11 w-full text-sm sm:w-auto sm:px-6">
             <IconMicrophone size={16} aria-hidden="true" />
             {t('startAgain')}
           </Button>
@@ -516,50 +520,52 @@ export default function ConversationExercise({
         attemptNumber={result.attemptNumber}
         completedAt={result.createdAt}
         passingScore={passingScore}
-      />
+      >
+        {result.corrections.length > 0 && (
+          <ResultSection title={t('corrections')}>
+            <ul className="space-y-3">
+              {result.corrections.map((c, i) => (
+                <li key={i} className={cn('text-sm', RESULT_PROSE)}>
+                  <p className="text-muted-foreground line-through decoration-destructive/60">{c.said}</p>
+                  <p className="font-medium">{c.better}</p>
+                  <p className="mt-0.5 text-muted-foreground">{c.why}</p>
+                </li>
+              ))}
+            </ul>
+          </ResultSection>
+        )}
 
-      {result.corrections.length > 0 && (
-        <div className="rounded-xl border bg-card p-5">
-          <h3 className="mb-3 text-sm font-semibold">{t('corrections')}</h3>
-          <ul className="space-y-3">
-            {result.corrections.map((c, i) => (
-              <li key={i} className="text-sm">
-                <p className="text-muted-foreground line-through decoration-destructive/60">{c.said}</p>
-                <p className="font-medium">{c.better}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{c.why}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {result.transcript.length > 0 && (
-        <details className="rounded-xl border bg-card p-5">
-          <summary className="cursor-pointer text-sm font-semibold">{t('fullTranscript')}</summary>
-          <div className="mt-4 space-y-3">
-            {result.transcript.map((turn, i) => (
-              <Message key={i} from={turn.role}>
-                <MessageContent>{turn.text}</MessageContent>
-              </Message>
-            ))}
-          </div>
-        </details>
-      )}
+        {result.transcript.length > 0 && (
+          <ResultSection>
+            <details>
+              <summary className="cursor-pointer text-sm font-semibold">{t('fullTranscript')}</summary>
+              <div className="mt-4 space-y-3">
+                {result.transcript.map((turn, i) => (
+                  <Message key={i} from={turn.role}>
+                    <MessageContent>{turn.text}</MessageContent>
+                  </Message>
+                ))}
+              </div>
+            </details>
+          </ResultSection>
+        )}
+      </ExerciseResultSummary>
     </div>
   ) : undefined
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <ExerciseHeader
-        typeLabel={t('title')}
-        title={exercise.title}
-        description={exercise.description}
-        difficulty={exercise.difficulty_level}
-        timeLimit={exercise.time_limit}
-        completed={isExerciseCompleted || passed === true}
-      />
-
+    <div className="lg:h-full">
       <ExerciseWorkspace
+        header={
+          <ExerciseHeader
+            typeLabel={t('title')}
+            title={exercise.title}
+            description={exercise.description}
+            difficulty={exercise.difficulty_level}
+            timeLimit={exercise.time_limit}
+            completed={isExerciseCompleted || passed === true}
+          />
+        }
         brief={briefPanel}
         task={taskPanel}
         taskLabel={tWorkspace('speak')}

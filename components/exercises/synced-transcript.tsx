@@ -46,7 +46,7 @@ export function SyncedTranscript({
           index={index}
           className={
             timed[index]?.type === 'filler'
-              ? 'underline decoration-warning decoration-2 underline-offset-4'
+              ? 'rounded bg-warning/15 font-medium text-warning'
               : timed[index]?.type === 'long_pause'
                 ? 'italic'
                 : undefined

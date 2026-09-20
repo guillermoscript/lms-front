@@ -2,265 +2,145 @@
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { IconRefresh, IconMicrophone, IconPlayerPlay, IconCheck, IconAlertTriangle } from '@tabler/icons-react'
+import { IconAlertTriangle, IconRefresh } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import type { SpeechEvaluation } from '@/lib/speech/types'
+import { FeedbackList, ResultSection, RESULT_PROSE } from './result-parts'
 
 interface SpeechFeedbackProps {
   evaluation: SpeechEvaluation
   onTryAgain?: () => void
-  passed?: boolean
-  passingScore?: number
+  /** The caller renders the transcript itself (beside the player). */
+  hideTranscript?: boolean
+  /** The recorder is showing it already. */
+  hideFocus?: boolean
   className?: string
 }
 
-function ScoreCircle({ score, label, passingScore }: { score: number; label: string; passingScore?: number }) {
-  const radius = 40
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference - (score / 100) * circumference
-
-  const color =
-    score >= 80 ? 'text-success stroke-success' :
-    score >= 60 ? 'text-warning stroke-warning' :
-    'text-destructive stroke-destructive'
-
-  // Threshold marker in un-rotated SVG space (parent CSS -rotate-90 handles visual positioning)
-  // Arc fills clockwise from 3 o'clock (0°) in SVG coords
-  const thresholdRad = passingScore ? (passingScore / 100) * 2 * Math.PI : null
-  const svgCx = 56
-  const svgCy = 56
-  const markerX = thresholdRad !== null ? svgCx + radius * Math.cos(thresholdRad) : 0
-  const markerY = thresholdRad !== null ? svgCy + radius * Math.sin(thresholdRad) : 0
-
+/** One delivery figure, inline. Out-of-range pairs an icon and a hint with the
+ * color, so it reads under any tenant palette. */
+function Metric({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
-    <div className="relative flex h-28 w-28 items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" width="112" height="112" viewBox="0 0 112 112">
-        <circle
-          cx="56" cy="56" r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          className="text-muted/30"
-        />
-        <circle
-          cx="56" cy="56" r={radius}
-          fill="none"
-          strokeWidth="8"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className={cn('transition-all duration-700', color)}
-        />
-        {/* Passing score threshold marker */}
-        {passingScore && thresholdRad !== null && (
-          <>
-            <circle
-              cx={markerX}
-              cy={markerY}
-              r="3"
-              className="fill-foreground/40"
-            />
-            <circle
-              cx={markerX}
-              cy={markerY}
-              r="1.5"
-              className="fill-background"
-            />
-          </>
-        )}
-      </svg>
-      <div className="relative text-center">
-        <div className={cn('text-3xl font-black tabular-nums leading-none', color.split(' ')[0])}>
-          {Math.round(score)}
-        </div>
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mt-0.5">{label}</div>
-      </div>
-    </div>
-  )
-}
-
-function MetricBadge({ label, value, good }: { label: string; value: string | number; good?: boolean }) {
-  return (
-    <div className="flex flex-col items-center gap-1 rounded-xl border bg-card px-4 py-3 text-center min-w-[80px]">
-      <span className={cn(
-        'text-lg font-black tabular-nums',
-        good === true ? 'text-success' :
-        good === false ? 'text-warning' :
-        'text-foreground'
-      )}>
+    <div className="flex items-baseline gap-1.5">
+      <dd className={cn('text-base font-semibold tabular-nums', hint && 'text-warning')}>
+        {hint && <IconAlertTriangle size={14} className="mr-1 inline -translate-y-px" aria-hidden="true" />}
         {value}
-      </span>
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</span>
+      </dd>
+      <dt className="text-sm text-muted-foreground">
+        {label}
+        {hint && <span> ({hint})</span>}
+      </dt>
     </div>
   )
 }
 
-export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, className }: SpeechFeedbackProps) {
+type Segments = SpeechEvaluation['annotated_transcript']
+
+/** What they said, read as prose: the longest text in a review, so learner
+ * body size. Fillers pair weight with the tint; pauses switch to mono. */
+export function AnnotatedTranscript({ segments }: { segments: Segments }) {
+  return (
+    <p className={cn('text-base leading-8 text-foreground/85', RESULT_PROSE)}>
+      {segments.map((seg, i) => (
+        <span
+          key={i}
+          className={cn(
+            seg.type === 'filler' && 'rounded px-0.5 bg-warning/15 text-warning font-medium',
+            seg.type === 'long_pause' && 'rounded px-1 bg-muted text-muted-foreground text-sm font-mono'
+          )}
+        >
+          {seg.text}
+        </span>
+      ))}
+    </p>
+  )
+}
+
+export function TranscriptLegend({ ns }: { ns: 'exercises.audio' | 'exercises.video' }) {
+  const t = useTranslations(ns)
+  return (
+    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block h-2.5 w-2.5 rounded-sm bg-warning/30" aria-hidden="true" />
+        {t('fillerWord')}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block h-2.5 w-2.5 rounded-sm bg-muted ring-1 ring-foreground/10" aria-hidden="true" />
+        {t('longPause')}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * The written half of a spoken attempt: delivery figures, what to work on,
+ * and the transcript. The grade itself is `ResultVerdict`'s job — this used to
+ * restate it as a banner and a ring.
+ */
+export function SpeechFeedback({ evaluation, onTryAgain, hideTranscript, hideFocus, className }: SpeechFeedbackProps) {
   const t = useTranslations('exercises.audio')
-  const { score, strengths, improvements, focus_next, annotated_transcript, metrics } = evaluation
+  const { strengths, improvements, focus_next, annotated_transcript, metrics } = evaluation
   const corrections = evaluation.corrections ?? []
 
   const wpmGood = metrics.wpm >= 100 && metrics.wpm <= 180
   const fillerGood = metrics.filler_count <= 3
 
   return (
-    <div className={cn('space-y-6', className)}>
-      {/* Pass/fail banner */}
-      {passed !== undefined && (
-        passed ? (
-          <div className="rounded-2xl border-2 border-success/30 bg-success/10 p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-success/15 p-2">
-                <IconCheck size={20} className="text-success" />
-              </div>
-              <div>
-                <h3 className="font-bold text-success">{t('passed')}</h3>
-                <p className="text-sm text-success">{t('passedMessage')}</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border-2 border-warning/30 bg-warning/10 p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-warning/15 p-2">
-                <IconAlertTriangle size={20} className="text-warning" />
-              </div>
-              <div>
-                <h3 className="font-bold text-warning">{t('notPassed')}</h3>
-                <p className="text-sm text-warning">
-                  {t('notPassedMessage', { score: passingScore ?? 70 })}
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-      )}
+    <div className={cn('space-y-5', className)}>
+      <dl className="flex flex-wrap gap-x-8 gap-y-2">
+        <Metric label={t('wpm')} value={metrics.wpm} hint={wpmGood ? undefined : t('wpmHint')} />
+        <Metric
+          label={t('fillers')}
+          value={metrics.filler_count}
+          hint={fillerGood ? undefined : t('fillersHint')}
+        />
+        <Metric label={t('pauses')} value={metrics.pause_count} />
+        <Metric label={t('duration')} value={`${Math.round(metrics.duration_seconds)}s`} />
+      </dl>
 
-      {/* Score + Metrics row */}
-      <div className="flex flex-wrap items-center gap-6">
-        <ScoreCircle score={score} label={t('score')} passingScore={passingScore} />
-
-        <div className="flex flex-wrap gap-3">
-          <MetricBadge
-            label={t('wpm')}
-            value={metrics.wpm}
-            good={wpmGood}
-          />
-          <MetricBadge
-            label={t('fillers')}
-            value={metrics.filler_count}
-            good={fillerGood}
-          />
-          <MetricBadge
-            label={t('pauses')}
-            value={metrics.pause_count}
-          />
-          <MetricBadge
-            label={t('duration')}
-            value={`${Math.round(metrics.duration_seconds)}s`}
-          />
-        </div>
-      </div>
-
-      {/* Strengths */}
-      {strengths.length > 0 && (
-        <div className="rounded-2xl border-2 border-success/30 bg-success/10 p-5">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-success flex items-center gap-2">
-            {t('strengths')}
-          </h3>
-          <ul className="space-y-2">
-            {strengths.map((s, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                <span className="mt-0.5 shrink-0 text-success">•</span>
-                {s}
-              </li>
-            ))}
-          </ul>
+      {/* First, and the only filled block: it is the one line to act on. */}
+      {focus_next && !hideFocus && (
+        <div className="rounded-lg bg-muted/60 px-4 py-3">
+          <h4 className="mb-1 text-sm font-semibold">{t('focusNext')}</h4>
+          <p className={cn('text-sm leading-relaxed', RESULT_PROSE)}>{focus_next}</p>
         </div>
       )}
 
-      {/* Improvements */}
-      {improvements.length > 0 && (
-        <div className="rounded-2xl border-2 border-warning/30 bg-warning/10 p-5">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-warning flex items-center gap-2">
-            {t('improvements')}
-          </h3>
-          <ul className="space-y-2">
-            {improvements.map((imp, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
-                <span className="mt-0.5 shrink-0 text-warning">•</span>
-                {imp}
-              </li>
-            ))}
-          </ul>
-        </div>
+      {(strengths.length > 0 || improvements.length > 0) && (
+        <ResultSection className="grid gap-5 sm:grid-cols-2 sm:gap-8">
+          <FeedbackList title={t('strengths')} items={strengths} tone="strength" />
+          <FeedbackList title={t('improvements')} items={improvements} tone="improvement" />
+        </ResultSection>
       )}
 
       {/* Corrections — learner rubric only */}
       {corrections.length > 0 && (
-        <div className="rounded-2xl border bg-card p-5">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-foreground">{t('corrections')}</h3>
+        <ResultSection title={t('corrections')}>
           <ul className="space-y-3">
             {corrections.map((c, i) => (
-              <li key={i} className="text-sm">
+              <li key={i} className={cn('text-sm', RESULT_PROSE)}>
                 <p className="text-muted-foreground line-through decoration-destructive/60">{c.said}</p>
                 <p className="font-medium">{c.better}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">{c.why}</p>
+                <p className="mt-0.5 text-muted-foreground">{c.why}</p>
               </li>
             ))}
           </ul>
-        </div>
+        </ResultSection>
       )}
 
-      {/* Focus Next */}
-      {focus_next && (
-        <div className="rounded-2xl border-2 border-primary/15 bg-primary/[0.03] p-5">
-          <h3 className="mb-2 text-xs font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
-            {t('focusNext')}
-          </h3>
-          <p className="text-sm text-foreground/80">{focus_next}</p>
-        </div>
+      {!hideTranscript && annotated_transcript.length > 0 && (
+        <ResultSection title={t('annotatedTranscript')}>
+          <AnnotatedTranscript segments={annotated_transcript} />
+          <TranscriptLegend ns="exercises.audio" />
+        </ResultSection>
       )}
 
-      {/* Annotated Transcript */}
-      {annotated_transcript.length > 0 && (
-        <div className="rounded-2xl border bg-card p-5">
-          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <IconPlayerPlay size={12} />
-            {t('annotatedTranscript')}
-          </h3>
-          <div className="text-sm leading-7 text-foreground/80">
-            {annotated_transcript.map((seg, i) => (
-              <span
-                key={i}
-                className={cn(
-                  seg.type === 'filler' && 'rounded px-0.5 bg-warning/15 text-warning font-medium',
-                  seg.type === 'long_pause' && 'rounded px-1 bg-muted text-muted-foreground text-xs font-mono'
-                )}
-              >
-                {seg.text}
-              </span>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded bg-warning/30" />
-              {t('fillerWord')}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded bg-muted" />
-              {t('longPause')}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Try again — only show if not passed */}
-      {onTryAgain && passed !== true && (
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={onTryAgain} className="gap-2">
-            <IconRefresh size={15} />
+      {/* Phone only, where the recorder is a tab away. From `lg` up the filled
+          "Record again" sits right under the review. */}
+      {onTryAgain && (
+        <div className="border-t pt-5 lg:hidden">
+          <Button variant="outline" size="lg" onClick={onTryAgain} className="gap-2">
+            <IconRefresh size={16} aria-hidden="true" />
             {t('tryAgain')}
           </Button>
         </div>

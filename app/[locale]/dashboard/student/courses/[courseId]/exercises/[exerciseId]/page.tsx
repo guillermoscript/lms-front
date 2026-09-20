@@ -14,11 +14,10 @@ import { ConversationTranscriptSchema, parseConversationConfig } from '@/lib/spe
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
-import ExerciseCard from '@/components/exercises/exercise-card'
+import RelatedExercises from '@/components/exercises/related-exercises'
 import EssayExercise from '@/components/exercises/essay-exercise'
 import CodeExercise from '@/components/exercises/code-exercise'
 import ExerciseChat from '@/components/exercises/exercise-chat'
-import ToggleableSection from '@/components/exercises/toggleable-section'
 
 const AudioExercise = dynamic(
   () => import('@/components/exercises/audio-exercise'),
@@ -307,21 +306,8 @@ export default async function ExercisePage({ params }: PageProps) {
         { href: '#', label: exercise.title },
     ]
 
-    const t = await getTranslations('exercises.audio')
     const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
-        <>
-            {/* Full-strength muted, not /70: the faded variant measured 2.76:1. */}
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('moreExercises')}</h3>
-            <div className="grid gap-3">
-                {otherExercises.map((ex) => (
-                    <ExerciseCard
-                        key={ex.id}
-                        exercise={ex}
-                        courseId={courseId}
-                    />
-                ))}
-            </div>
-        </>
+        <RelatedExercises exercises={otherExercises} courseId={courseId} />
     ) : null
 
     // Code challenges are graded by their own test runner and never write an
@@ -361,9 +347,16 @@ export default async function ExercisePage({ params }: PageProps) {
         />
     )
 
+    // From `lg` up the page is a fixed shell — instructions pane, work pane —
+    // so it takes the viewport less the dashboard's 4rem header and the panes
+    // scroll instead of the body. A phone scrolls normally.
     return (
-        <div className="mx-auto container py-3 sm:py-6 px-3 sm:px-4 lg:px-8 space-y-3 sm:space-y-6">
-            <BreadcrumbComponent links={breadcrumbLinks} />
+        <div className="mx-auto container px-3 py-3 sm:px-4 sm:py-6 lg:flex lg:h-[calc(100dvh-4rem)] lg:max-w-none lg:flex-col lg:overflow-hidden lg:px-8 lg:py-0 space-y-3 sm:space-y-6 lg:space-y-0">
+            <div className="lg:shrink-0 lg:border-b lg:py-3">
+                <BreadcrumbComponent links={breadcrumbLinks} />
+            </div>
+
+            <div className="lg:min-h-0 lg:flex-1">
 
             {exercise.exercise_type === 'coding_challenge' ? (
                 <CodeExercise
@@ -372,6 +365,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     studentId={userId}
                     courseId={courseId}
                     resultSummary={codeResultSummary}
+                    related={otherExercisesSection}
                 >
                     <CodeChallengeWrapper
                         exercise={exercise}
@@ -381,21 +375,6 @@ export default async function ExercisePage({ params }: PageProps) {
                         userCode={lastSubmission?.submission_code}
                     />
 
-                    {otherExercises && otherExercises.length > 0 && (
-                        <ToggleableSection
-                            title={<h3 className="font-semibold">{t('moreExercises')}</h3>}
-                        >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {otherExercises.map((ex) => (
-                                    <ExerciseCard
-                                        key={ex.id}
-                                        exercise={ex}
-                                        courseId={courseId}
-                                    />
-                                ))}
-                            </div>
-                        </ToggleableSection>
-                    )}
                 </CodeExercise>
             ) : exercise.exercise_type === 'artifact' ? (
                 <ArtifactExercise
@@ -487,6 +466,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     {chatComponent}
                 </EssayExercise>
             )}
+            </div>
         </div>
     )
 }
