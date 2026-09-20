@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import {getCurrentTenantId, getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {getCurrentTenantId, getCurrentTenant, getCurrentUserId, getSessionUser } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { JoinSchoolForm } from '@/components/join-school-form'
+import { AutoJoinSchool } from '@/components/join-school-auto'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, School } from 'lucide-react'
 import Link from 'next/link'
@@ -99,7 +101,7 @@ export default async function JoinSchoolPage({
               {t('memberBody', { school: tenant.name })}
             </p>
             <div className="flex gap-2">
-              <Link href={destination} className="flex-1">
+              <Link href={destination} className="flex-1" data-testid="join-school-continue">
                 <Button className="w-full">
                   {nextPath ? t('continue') : t('goToDashboard')}
                 </Button>
@@ -124,7 +126,43 @@ export default async function JoinSchoolPage({
     .eq('status', 'active')
     .neq('tenant_id', tenantId)
 
-  return (
+  // Who gets joined on arrival rather than asked (#790).
+  //
+  // Not everyone: a membership spends a seat against the school's plan, so a
+  // logged-in person who merely opens a link into a school they have nothing
+  // to do with must still choose. What the three cases below have in common is
+  // that the choice is already made somewhere else —
+  //
+  //   · no other school at all — this is the signup funnel's last step, and
+  //     the account exists for exactly this;
+  //   · an invitation addressed to them — the school asked them to come;
+  //   · a checkout as the destination — they arrived to pay this school.
+  //
+  // Anything else falls through to the card, which is the same page it always
+  // was and is also where a failed join explains itself.
+  const memberOfNothing = (otherMemberships ?? []).length === 0
+  const wantsToPay = destination.startsWith('/checkout')
+
+  let hasInvitation = false
+  if (!memberOfNothing && !wantsToPay) {
+    // Admin client: `tenant_invitations` is not readable by someone who is not
+    // yet a member, which is precisely who is looking at this page.
+    const email = (await getSessionUser())?.email?.toLowerCase()
+    if (email) {
+      const { data: invitation } = await createAdminClient()
+        .from('tenant_invitations')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('email', email)
+        .eq('status', 'pending')
+        .maybeSingle()
+      hasInvitation = Boolean(invitation)
+    }
+  }
+
+  const autoJoin = memberOfNothing || wantsToPay || hasInvitation
+
+  const body = (
     <div className="container mx-auto py-12 max-w-2xl">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
@@ -167,5 +205,13 @@ export default async function JoinSchoolPage({
 
       <JoinSchoolForm tenant={tenant} destination={destination} />
     </div>
+  )
+
+  if (!autoJoin) return body
+
+  return (
+    <AutoJoinSchool schoolName={tenant.name} destination={destination}>
+      {body}
+    </AutoJoinSchool>
   )
 }

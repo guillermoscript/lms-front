@@ -22,6 +22,7 @@ import { test, expect, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
+import { login } from './utils/auth'
 
 const BASE = TENANT_BASE
 const CREATOR_ID = 'a1000000-0000-0000-0000-000000000003' // creator@codeacademy.com
@@ -164,26 +165,23 @@ test.describe('Paid course CTA keeps checkout intent for a new visitor (#684)', 
       expect(new URL(page.url()).searchParams.get('next')).toBe(checkoutPath)
     })
 
-    await test.step('after sign-up the non-member is asked to join with the checkout preserved as next', async () => {
+    await test.step('sign-up passes through the join page and lands on the checkout for that course', async () => {
       await fillSettled(page, 'signup-name', 'Paid Path Visitor')
       await fillSettled(page, 'signup-email', email)
       await fillSettled(page, 'signup-password', PASSWORD)
       await domClick(page, page.getByTestId('signup-submit'))
 
-      await page.waitForURL(/\/join-school\?/, { timeout: 90_000 })
-      expect(new URL(page.url()).searchParams.get('next')).toBe(checkoutPath)
-      await expect(page.getByTestId('join-school-title')).toBeVisible({ timeout: 60_000 })
-      expect(await rememberUser(email), 'sign-up created an auth user').toBeTruthy()
-    })
-
-    await test.step('joining the school lands on the checkout for that course, not the dashboard', async () => {
-      await domClick(page, page.getByTestId('join-school-submit'))
-      // A manual product is handed from /checkout to /checkout/manual — still
-      // the checkout for this course. The dashboard is the failure mode.
-      await page.waitForURL(/\/checkout(?:\/manual)?\?/, { timeout: 90_000 })
+      // `/join-school` joins on arrival and forwards since #790, so the
+      // intermediate URL is not something a test can reliably catch. What the
+      // issue is about survives in the destination: a manual product is handed
+      // from /checkout to /checkout/manual — still the checkout for THIS
+      // course. The dashboard is the failure mode, and so is any landing that
+      // has forgotten the courseId.
+      await page.waitForURL(/\/checkout(?:\/manual)?\?/, { timeout: 120_000 })
       const url = new URL(page.url())
       expect(url.pathname).not.toContain('/dashboard')
       expect(url.searchParams.get('courseId')).toBe(String(courseId))
+      expect(await rememberUser(email), 'sign-up created an auth user').toBeTruthy()
     })
   })
 
@@ -200,19 +198,21 @@ test.describe('Paid course CTA keeps checkout intent for a new visitor (#684)', 
     if (createError || !created.user) throw new Error(`create tamper user: ${createError?.message ?? 'no user'}`)
     createdUserIds.push(created.user.id)
 
-    await page.goto(`${BASE}/${LOCALE}/auth/login?next=${encodeURIComponent('/join-school')}`, {
-      waitUntil: 'domcontentloaded',
-    })
-    await fillSettled(page, 'login-email', email)
-    await fillSettled(page, 'login-password', PASSWORD)
-    await domClick(page, page.getByTestId('login-submit'))
-    await page.waitForURL(/\/join-school/, { timeout: 60_000 })
+    // The shared helper, which re-presses a login the page dropped before
+    // hydration. It only returns once a dashboard is on screen — which here
+    // means the bounce through /join-school joined them on arrival (#790):
+    // this account is a member of nothing, the signup funnel's last step.
+    await login(page, email, PASSWORD, BASE)
+    expect(page.url(), 'login landed inside the school').toMatch(/\/dashboard\//)
+    expect(new URL(page.url()).hostname).toBe(new URL(BASE).hostname)
 
     await page.goto(`${BASE}/${LOCALE}/join-school?next=${encodeURIComponent('https://evil.example/phish')}`, {
       waitUntil: 'domcontentloaded',
     })
-    await expect(page.getByTestId('join-school-title')).toBeVisible({ timeout: 60_000 })
-    await domClick(page, page.getByTestId('join-school-submit'))
+    const continueLink = page.getByTestId('join-school-continue')
+    await expect(continueLink).toBeVisible({ timeout: 60_000 })
+    expect(await continueLink.getAttribute('href')).toBe('/dashboard/student')
+    await domClick(page, continueLink)
     await page.waitForURL(/\/dashboard\/student/, { timeout: 90_000 })
     expect(new URL(page.url()).hostname).toBe(new URL(BASE).hostname)
   })

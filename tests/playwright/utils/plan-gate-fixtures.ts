@@ -205,9 +205,21 @@ export async function loginExpectingJoinSchool(page: Page, base: string, email: 
     .toBe(email)
 
   const arrived = () => page.url().includes('/join-school')
-  for (let attempt = 0; attempt < 3 && !arrived(); attempt++) {
+  // Re-fill before every press, not once before the loop. A press that lands
+  // before hydration is dropped silently AND the render that follows wipes
+  // both fields, so the retries were submitting an empty form — GoTrue's
+  // "missing email or phone", not a slow navigation. Five presses, not three:
+  // this helper runs last in a file whose earlier tests leave the dev server
+  // compiling.
+  for (let attempt = 0; attempt < 5 && !arrived(); attempt++) {
+    await emailField.fill(email).catch(() => undefined)
+    await page.getByTestId('login-password').fill(password).catch(() => undefined)
+    if ((await emailField.inputValue().catch(() => '')) !== email) {
+      await page.waitForTimeout(1000)
+      continue
+    }
     await page.getByTestId('login-submit').click().catch(() => undefined)
-    await page.waitForURL('**/join-school**', { timeout: 20_000, waitUntil: 'commit' }).catch(() => undefined)
+    await page.waitForURL('**/join-school**', { timeout: 30_000, waitUntil: 'commit' }).catch(() => undefined)
   }
   if (!arrived()) throw new Error(`expected /join-school after login, still at ${page.url()}`)
 }
