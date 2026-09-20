@@ -38,6 +38,7 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-access-guard'
 import { loadLessonCheckpoints } from '@/lib/checkpoints/load'
 import { CheckpointsProvider } from '@/components/lesson/checkpoints/checkpoints-provider'
+import { parseStructuredRequirements, structuredRequirementsSummary } from '@/lib/ai/lesson-requirements'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -82,7 +83,7 @@ export default async function LessonPage({ params }: PageProps) {
         profiles(*),
         comment_reactions(*)
       ),
-      lessons_ai_tasks(task_instructions),
+      lessons_ai_tasks(task_instructions, requirements),
       lessons_ai_task_messages(id, message, sender, created_at, attachments, tool_invocations),
       lesson_completions(lesson_id, user_id)
     `)
@@ -113,6 +114,11 @@ export default async function LessonPage({ params }: PageProps) {
   const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
     ? lessonData.lessons_ai_tasks?.[0]
     : lessonData.lessons_ai_tasks;
+  // NULL/invalid `requirements` (or no task at all) falls back to the free-text
+  // `task_instructions` shown today (#806 compatibility contract).
+  const structuredRequirements = parseStructuredRequirements(aiTask?.requirements);
+  const taskDescription = aiTask?.task_instructions
+    || (structuredRequirements ? structuredRequirementsSummary(structuredRequirements) : '');
 
   const dbMessages = lessonData.lessons_ai_task_messages || [];
   const initialMessages = (await Promise.all(dbMessages.map(async (msg: {
@@ -423,15 +429,16 @@ export default async function LessonPage({ params }: PageProps) {
                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5 sm:mb-2">
                       {t('currentTask')}
                     </h4>
-                    <TaskInstructions text={aiTask.task_instructions} />
+                    <TaskInstructions text={taskDescription} />
                   </div>
 
                   {/* Chat */}
                   <div className="sm:px-5 sm:pb-5">
                     <LessonAIChat
                       lessonId={lesson.id}
-                      taskDescription={aiTask.task_instructions}
+                      taskDescription={taskDescription}
                       initialMessages={initialMessages}
+                      requirements={structuredRequirements?.requirements}
                     />
                   </div>
                 </div>

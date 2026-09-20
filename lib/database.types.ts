@@ -3966,6 +3966,7 @@ export type Database = {
           created_at: string
           id: number
           lesson_id: number | null
+          requirements: Json | null
           system_prompt: string | null
           task_instructions: string | null
         }
@@ -3973,6 +3974,7 @@ export type Database = {
           created_at?: string
           id?: number
           lesson_id?: number | null
+          requirements?: Json | null
           system_prompt?: string | null
           task_instructions?: string | null
         }
@@ -3980,6 +3982,7 @@ export type Database = {
           created_at?: string
           id?: number
           lesson_id?: number | null
+          requirements?: Json | null
           system_prompt?: string | null
           task_instructions?: string | null
         }

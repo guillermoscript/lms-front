@@ -10,6 +10,7 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { PreviewBanner } from '@/components/teacher/preview-banner'
 import { TaskInstructions } from '@/components/student/task-instructions'
 import { PreviewLessonSidebar } from './preview-lesson-sidebar'
+import { parseStructuredRequirements, structuredRequirementsSummary } from '@/lib/ai/lesson-requirements'
 import Link from 'next/link'
 
 interface PageProps {
@@ -70,6 +71,9 @@ export default async function LessonPreviewPage({ params }: PageProps) {
   const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
     ? lessonData.lessons_ai_tasks?.[0]
     : lessonData.lessons_ai_tasks
+  const structuredRequirements = parseStructuredRequirements(aiTask?.requirements)
+  const taskDescription = aiTask?.task_instructions
+    || (structuredRequirements ? structuredRequirementsSummary(structuredRequirements) : '')
 
   const sidebarLessons =
     allLessons?.map((l) => ({
@@ -159,7 +163,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
                           {t('currentTask')}
                         </h4>
-                        <TaskInstructions text={aiTask.task_instructions} />
+                        <TaskInstructions text={taskDescription} />
                       </div>
                     </div>
                   </div>

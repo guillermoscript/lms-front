@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, createContext, use } from 'r
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { createLesson, updateLesson } from '@/app/actions/teacher/lessons'
+import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
 import { getLessonStarterTemplate, stripStarterPlaceholders } from './starter-template'
 import {
   IconFileText,
@@ -27,6 +28,7 @@ export interface LessonEditorProps {
     publish_at: string | null
     ai_task_description: string | null
     ai_task_instructions: string | null
+    ai_task_requirements?: StructuredRequirements | null
     is_preview: boolean | null
     resources?: { id: number; file_name: string; file_size: number; mime_type: string }[]
   }
@@ -43,6 +45,8 @@ export interface LessonFormData {
   publish_at: string
   ai_task_description: string
   ai_task_instructions: string
+  /** Structured task form (#806). `null` = free-text task above. */
+  ai_task_requirements: StructuredRequirements | null
   is_preview: boolean
 }
 
@@ -58,6 +62,7 @@ export interface StepDefinition {
 export interface SavedAITask {
   description: string
   instructions: string
+  requirements: StructuredRequirements | null
 }
 
 export interface LessonEditorContextValue {
@@ -130,6 +135,7 @@ export function LessonEditorProvider({
     publish_at: initialData?.publish_at || '',
     ai_task_description: initialData?.ai_task_description || '',
     ai_task_instructions: initialData?.ai_task_instructions || '',
+    ai_task_requirements: initialData?.ai_task_requirements ?? null,
     // The first lesson of a course is free by default (#791). A curriculum a
     // visitor cannot open a single line of is the reason `is_preview` shipped
     // set on 1 lesson in 83 — the teacher can still turn it off right here.
@@ -139,6 +145,7 @@ export function LessonEditorProvider({
   const [savedTask, setSavedTask] = useState<SavedAITask>({
     description: initialData?.ai_task_description?.trim() || '',
     instructions: initialData?.ai_task_instructions?.trim() || '',
+    requirements: initialData?.ai_task_requirements ?? null,
   })
 
   const updateField = useCallback(
@@ -188,6 +195,7 @@ export function LessonEditorProvider({
         publish_at: formData.publish_at,
         ai_task_description: formData.ai_task_description,
         ai_task_instructions: formData.ai_task_instructions,
+        ai_task_requirements: formData.ai_task_requirements,
         is_preview: formData.is_preview,
       }
 
@@ -213,6 +221,7 @@ export function LessonEditorProvider({
       setSavedTask({
         description: formData.ai_task_description.trim(),
         instructions: formData.ai_task_instructions.trim(),
+        requirements: formData.ai_task_requirements,
       })
 
       if (publish) {
@@ -237,7 +246,8 @@ export function LessonEditorProvider({
   const isContentComplete = (formData.content?.trim().length ?? 0) > 20
   const hasAITask =
     formData.ai_task_description.trim().length > 0 ||
-    formData.ai_task_instructions.trim().length > 0
+    formData.ai_task_instructions.trim().length > 0 ||
+    Boolean(formData.ai_task_requirements)
   const hasResources = (initialData?.resources?.length ?? 0) > 0
 
   const steps: StepDefinition[] = [

@@ -67,6 +67,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { LessonCompletionCard } from "@/components/ai/lesson-completion-card";
 import { findLessonCompletion, lessonCompletionOutput } from "@/lib/ai/lesson-completion";
+import { latestReportedProgress, type Requirement } from "@/lib/ai/lesson-requirements";
 
 /**
  * Tracks the visual viewport height while the mobile chat overlay is open so
@@ -98,6 +99,43 @@ interface LessonAIChatProps {
     lessonId: number;
     taskDescription: string;
     initialMessages?: UIMessage[];
+    /** Structured task's ordered requirements (#806) — undefined/empty for a free-text task. */
+    requirements?: Requirement[];
+}
+
+/** "2/4" progress bar for a structured task, driven by the tutor's `reportProgress` calls. */
+function RequirementsProgress({
+    requirements,
+    metIds,
+}: {
+    requirements: Requirement[];
+    metIds: string[];
+}) {
+    const t = useTranslations("components.lessonAIChat");
+    const met = new Set(metIds);
+    const metCount = requirements.filter((requirement) => met.has(requirement.id)).length;
+
+    return (
+        <div className="border-b bg-muted/20 px-3 py-2 sm:px-4 sm:py-2.5 shrink-0">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-foreground">
+                    {t("progress.label", { met: metCount, total: requirements.length })}
+                </span>
+            </div>
+            <div className="flex gap-1">
+                {requirements.map((requirement) => (
+                    <div
+                        key={requirement.id}
+                        title={requirement.text}
+                        className={cn(
+                            "h-1.5 flex-1 rounded-full transition-colors",
+                            met.has(requirement.id) ? "bg-success" : "bg-muted-foreground/20"
+                        )}
+                    />
+                ))}
+            </div>
+        </div>
+    );
 }
 
 // Legacy tool-invocation part shape persisted in lessons_ai_task_messages.
@@ -115,6 +153,7 @@ function InnerLessonAIChat({
     lessonId,
     taskDescription,
     initialMessages = [],
+    requirements,
 }: LessonAIChatProps) {
     const router = useRouter();
     const t = useTranslations('components.lessonAIChat');
@@ -171,6 +210,7 @@ function InnerLessonAIChat({
     // already-completed lesson shows the card without replaying the
     // celebration — only a completion NEW to this session should confetti.
     const celebratedCallId = useRef<string | null>(findLessonCompletion(initialMessages)?.toolCallId ?? null);
+    const reportedProgress = requirements && requirements.length > 0 ? latestReportedProgress(messages) : [];
     useEffect(() => {
         if (!completion || celebratedCallId.current === completion.toolCallId) return;
         celebratedCallId.current = completion.toolCallId;
@@ -325,6 +365,10 @@ function InnerLessonAIChat({
                             <IconChevronDown className="h-5 w-5" />
                         </Button>
                     </div>
+                )}
+
+                {requirements && requirements.length > 0 && !isCompleted && (
+                    <RequirementsProgress requirements={requirements} metIds={reportedProgress} />
                 )}
 
                 {/* Completion Banner - Positioned at bottom, doesn't block messages */}
