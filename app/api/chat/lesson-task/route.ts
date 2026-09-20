@@ -117,8 +117,19 @@ export async function POST(req: Request) {
             // card and a teacher can see why it was granted (#805) — this is
             // the only write path for this row, extending it rather than
             // adding a second insert.
+            // Two tools (markLessonCompleted + reportProgress, #806) make
+            // `step.toolResults` a union of per-tool arrays, and TS widens the
+            // callback parameter across that union — so narrow the shape we
+            // actually read before filtering.
+            type LessonToolResult = {
+                toolName: string
+                toolCallId: string
+                input: unknown
+                output: unknown
+            }
+
             const toolInvocations = event.steps.flatMap((step) =>
-                step.toolResults
+                (step.toolResults as LessonToolResult[])
                     .filter((result) => result.toolName === 'markLessonCompleted')
                     .map((result) => ({
                         version: LESSON_TASK_TOOL_INVOCATION_VERSION,
