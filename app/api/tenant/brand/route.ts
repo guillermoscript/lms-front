@@ -32,11 +32,14 @@ export async function GET(request: NextRequest) {
     // No slug: the subdomain already told proxy.ts which school this is. Both
     // paths read the row, so `slug` in the answer is always the school's own —
     // never null on a subdomain, never the caller's spelling of it.
-    const tenants = createAdminClient().from('tenants').select('id, slug')
-    const { data: tenant } = await (slug
-      ? tenants.eq('slug', slug)
-      : tenants.eq('id', await getCurrentTenantId())
-    ).maybeSingle()
+    const [column, value] = slug
+      ? (['slug', slug] as const)
+      : (['id', await getCurrentTenantId()] as const)
+    const { data: tenant } = await createAdminClient()
+      .from('tenants')
+      .select('id, slug')
+      .eq(column, value)
+      .maybeSingle()
     if (!tenant) return new NextResponse('School not found', { status: 404 })
 
     const tenantId: string = tenant.id
