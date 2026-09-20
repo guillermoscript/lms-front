@@ -29,24 +29,18 @@ export async function GET(request: NextRequest) {
   try {
     const slug = request.nextUrl.searchParams.get('slug')?.trim().toLowerCase()
 
-    let tenantId: string | null = null
-    let tenantSlug: string | null = slug ?? null
+    // No slug: the subdomain already told proxy.ts which school this is. Both
+    // paths read the row, so `slug` in the answer is always the school's own —
+    // never null on a subdomain, never the caller's spelling of it.
+    const tenants = createAdminClient().from('tenants').select('id, slug')
+    const { data: tenant } = await (slug
+      ? tenants.eq('slug', slug)
+      : tenants.eq('id', await getCurrentTenantId())
+    ).maybeSingle()
+    if (!tenant) return new NextResponse('School not found', { status: 404 })
 
-    if (slug) {
-      const { data } = await createAdminClient()
-        .from('tenants')
-        .select('id, slug')
-        .eq('slug', slug)
-        .maybeSingle()
-      if (!data) return new NextResponse('School not found', { status: 404 })
-      tenantId = data.id
-      tenantSlug = data.slug
-    } else {
-      // No slug: the subdomain already told proxy.ts which school this is.
-      tenantId = await getCurrentTenantId()
-    }
-
-    if (!tenantId) return new NextResponse('School not found', { status: 404 })
+    const tenantId: string = tenant.id
+    const tenantSlug: string = tenant.slug
 
     const brand = await getSchoolBrand(tenantId)
     const { outputs } = brand
