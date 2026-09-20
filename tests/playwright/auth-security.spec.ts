@@ -42,18 +42,20 @@ test.describe('Authentication Security', () => {
     expect(nameMissing).toBe(true)
   })
 
-  test('sign-up with full name reaches success page', async ({ page }) => {
+  test('sign-up with a session does not stop at "check your inbox"', async ({ page }) => {
     // Guards #590: signing up without a name made students read as "Unknown Student".
-    // Local GoTrue autoconfirms (enable_confirmations = false), so a successful
-    // sign-up lands on /auth/sign-up-success.
+    // Local GoTrue autoconfirms (enable_confirmations = false) exactly as
+    // production does, so the sign-up returns a session — the account is
+    // already live and /auth/sign-up-success would be a dead end pointing at
+    // an email that is never sent (#797, mailer #676). BASE is the platform
+    // tenant, where a fresh account with nowhere to go is a creator: the same
+    // destination /auth/confirm picks for a confirmed sign-up there.
     await page.goto(`${BASE}/en/auth/sign-up`)
     await page.getByTestId('signup-name').fill('E2E Signup Tester')
     await page.getByTestId('signup-email').fill(`e2e-signup-${Date.now()}@e2etest.com`)
     await page.getByTestId('signup-password').fill('password123')
     await page.getByTestId('signup-submit').click()
-    // A confirmed sign-up either shows the success page or — since the new user
-    // has a session but no tenant membership — gets proxied to /join-school.
-    await page.waitForURL(/\/auth\/sign-up-success|\/join-school/, { timeout: 20_000 })
+    await page.waitForURL(/\/create-school/, { timeout: 20_000 })
   })
 
   // ─── Route Guards — Unauthenticated ──────────────────────────────────────
