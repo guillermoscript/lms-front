@@ -17,6 +17,11 @@ export interface LeagueStanding {
   weekly_xp: number
   rank: number
   is_me: boolean
+  /**
+   * Where this member moves if the week ended now, by the rollover's own rule.
+   * Absent on a backend older than `20260921110000` — treat as unknown, not as null.
+   */
+  zone?: 'promote' | 'demote' | null
 }
 
 /** What `get_league_standings()` answers. `in_league: false` carries only `reason`. */
@@ -29,10 +34,12 @@ export type LeagueStandings =
       week_start: string
       week_end: string
       tier: { tier: number; slug: string; name: string; max_tier: number }
-      /** How many of the cohort's top move up / bottom move down at rollover. */
+      /** How many members move up / down if the week ended now (scaled to active members). */
       promote_count: number
       demote_count: number
       cohort_size: number
+      /** Members with XP this week — the bands are sized against these. */
+      active_size?: number
       standings: LeagueStanding[]
     }
 

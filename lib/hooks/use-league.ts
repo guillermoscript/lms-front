@@ -17,6 +17,8 @@ export interface LeagueStanding {
     weekly_xp: number;
     rank: number;
     is_me: boolean;
+    /** Where this member moves if the week ended now — decided by the RPC with the rollover's own rule. */
+    zone: "promote" | "demote" | null;
 }
 
 export interface LeagueData {
