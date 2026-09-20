@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { generateCertificateHTML } from '@/lib/certificate-generator'
 import { generateCertificatePDF } from '@/lib/certificates/pdf-generator'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { resolveCertificateDesign } from '@/lib/certificates/default-design'
 
@@ -11,15 +10,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
+    // Serves the browser (session cookies + the subdomain's x-tenant-id) and
+    // the native app (Authorization: Bearer + the tenant from the verified JWT
+    // claim) from one path — the app cannot send a cookie, and without this it
+    // saved the 401 body as the student's certificate PDF.
+    const auth = await getApiAuthContext(request)
+    if (!auth) return new NextResponse('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
+
     const { id } = await params
     const format = request.nextUrl.searchParams.get('format')
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
 
     // Get certificate with course info and validate tenant
     const { data: certificate, error: certError } = await supabase
