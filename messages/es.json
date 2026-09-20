@@ -11,7 +11,8 @@
     },
     "products": {
       "title": "Planes y productos",
-      "description": "Explora los planes y paquetes de cursos disponibles."
+      "description": "Explora los planes y paquetes de cursos disponibles.",
+      "badge": "Producto"
     },
     "about": {
       "title": "Nosotros",
@@ -39,6 +40,9 @@
     },
     "checkout": {
       "title": "Pago"
+    },
+    "checkoutSuccess": {
+      "title": "Pedido confirmado"
     },
     "auth": {
       "login": "Iniciar sesión",
@@ -3438,7 +3442,10 @@
             "expiration": "Expiración de Inscripción (Días)",
             "expirationHint": "Número de días hasta que la inscripción expire (0 = nunca expira)",
             "capacity": "Activar Capacidad de Curso",
-            "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos"
+            "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos",
+            "freePreview": "Vistas Previas Públicas de Lecciones",
+            "freePreviewHint": "Permite que cualquiera vea una lección gratuita por curso, incluso sin una cuenta, para que los estudiantes potenciales puedan probar antes de comprar.",
+            "freePreviewCount": "{count} lecciones son públicas actualmente."
           },
           "solanaWallet": {
             "label": "Dirección de la wallet receptora",

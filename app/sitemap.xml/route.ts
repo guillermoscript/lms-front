@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isFreePreviewEnabled } from '@/lib/settings/free-preview'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,21 +52,26 @@ export async function GET(request: NextRequest) {
   // One query for every course (not one per course), paged in batches of
   // PostgREST's 1000-row default cap (#533 truncated-sweep history) instead
   // of trusting a single .limit() the way the courses query above does.
+  // A school that turned free previews off (#799) must not have those URLs
+  // advertised to crawlers either — skip the query entirely rather than
+  // fetch-then-filter.
   const PREVIEW_LESSON_PAGE_SIZE = 1000
   const previewLessonPaths: string[] = []
-  for (let from = 0; ; from += PREVIEW_LESSON_PAGE_SIZE) {
-    const { data: page } = await admin
-      .from('lessons')
-      .select('id, course_id, courses!inner(status)')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'published')
-      .eq('is_preview', true)
-      .eq('courses.status', 'published')
-      .order('id', { ascending: true })
-      .range(from, from + PREVIEW_LESSON_PAGE_SIZE - 1)
-    if (!page || page.length === 0) break
-    previewLessonPaths.push(...page.map((l) => `/courses/${l.course_id}/lessons/${l.id}`))
-    if (page.length < PREVIEW_LESSON_PAGE_SIZE) break
+  if (await isFreePreviewEnabled(tenantId)) {
+    for (let from = 0; ; from += PREVIEW_LESSON_PAGE_SIZE) {
+      const { data: page } = await admin
+        .from('lessons')
+        .select('id, course_id, courses!inner(status)')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'published')
+        .eq('is_preview', true)
+        .eq('courses.status', 'published')
+        .order('id', { ascending: true })
+        .range(from, from + PREVIEW_LESSON_PAGE_SIZE - 1)
+      if (!page || page.length === 0) break
+      previewLessonPaths.push(...page.map((l) => `/courses/${l.course_id}/lessons/${l.id}`))
+      if (page.length < PREVIEW_LESSON_PAGE_SIZE) break
+    }
   }
 
   const paths = [

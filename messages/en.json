@@ -11,7 +11,8 @@
     },
     "products": {
       "title": "Plans & Products",
-      "description": "Explore available plans and course bundles."
+      "description": "Explore available plans and course bundles.",
+      "badge": "Product"
     },
     "about": {
       "title": "About",
@@ -39,6 +40,9 @@
     },
     "checkout": {
       "title": "Checkout"
+    },
+    "checkoutSuccess": {
+      "title": "Order Confirmed"
     },
     "auth": {
       "login": "Log In",
@@ -3438,7 +3442,10 @@
             "expiration": "Enrollment Expiration (Days)",
             "expirationHint": "Number of days until enrollment expires (0 = never expires)",
             "capacity": "Enable Course Capacity",
-            "capacityHint": "Allow setting maximum student limits for courses"
+            "capacityHint": "Allow setting maximum student limits for courses",
+            "freePreview": "Public Lesson Previews",
+            "freePreviewHint": "Let anyone see one free lesson per course, even without an account, so prospective students can try before they buy.",
+            "freePreviewCount": "{count} lessons are currently public."
           },
           "solanaWallet": {
             "label": "Receiving wallet address",

@@ -395,14 +395,18 @@ export async function GET(request: NextRequest) {
       : { data: null }
 
     if (course) {
-      const title = clamp(course.title, 110) || site
+      // A caller's own title wins. The free-lesson pages reuse this variant to
+      // borrow the course's thumbnail and brand panel (#799), but the card has
+      // to name the lesson someone is being handed, not the course it sits in;
+      // /courses/[id] passes the course's own title here, so it is unaffected.
+      const title = clamp(sp.get('title'), 110) || clamp(course.title, 110) || site
       const badge = clamp(sp.get('badge'), 40)
       const thumbnail = course.thumbnail_url ? await fetchImageAsDataUrl(course.thumbnail_url) : null
       // Without a thumbnail the half-width panel wastes the card, so the
       // course reads like the generic card, description included.
       const card = thumbnail
         ? renderCourseCard({ site, title, badge, thumbnail, logo, palette, headingFontFamily })
-        : renderGenericCard({ site, title, subtitle: clamp(course.description, 180), badge, logo, palette, headingFontFamily })
+        : renderGenericCard({ site, title, subtitle: clamp(sp.get('subtitle'), 180) || clamp(course.description, 180), badge, logo, palette, headingFontFamily })
       return new ImageResponse(card, { width: WIDTH, height: HEIGHT, headers: CACHE_HEADERS, fonts })
     }
     // Unresolved course id (deleted, unpublished, wrong tenant) — the generic
