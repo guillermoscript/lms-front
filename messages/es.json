@@ -11,7 +11,8 @@
     },
     "products": {
       "title": "Planes y productos",
-      "description": "Explora los planes y paquetes de cursos disponibles."
+      "description": "Explora los planes y paquetes de cursos disponibles.",
+      "badge": "Producto"
     },
     "about": {
       "title": "Nosotros",
@@ -39,6 +40,9 @@
     },
     "checkout": {
       "title": "Pago"
+    },
+    "checkoutSuccess": {
+      "title": "Pedido confirmado"
     },
     "auth": {
       "login": "Iniciar sesión",
@@ -1720,6 +1724,20 @@
         "minDurationLabel": "Mínimo (segundos)",
         "maxDurationLabel": "Máximo (segundos)",
         "evaluationRubric": "Criterios de Puntuación",
+        "speechRubricMode": "Qué se evalúa",
+        "speechRubricModes": {
+          "public_speaking": {
+            "label": "Oratoria",
+            "desc": "Ritmo, muletillas, estructura y expresión."
+          },
+          "language_learner": {
+            "label": "Aprendizaje de idiomas",
+            "desc": "Gramática, vocabulario y fluidez según el nivel del estudiante, con correcciones."
+          }
+        },
+        "speechFeedbackLanguage": "Idioma de la retroalimentación",
+        "speechFeedbackSameAsSpoken": "El mismo que habla el estudiante",
+        "speechFeedbackLanguageHint": "Los principiantes entienden mejor la retroalimentación en su propio idioma.",
         "rubricFillerWords": "Muletillas",
         "rubricFillerWordsDesc": "Señalar uso excesivo de eh, um, este, etc.",
         "rubricPace": "Ritmo de Habla",
@@ -3425,7 +3443,10 @@
             "expiration": "Expiración de Inscripción (Días)",
             "expirationHint": "Número de días hasta que la inscripción expire (0 = nunca expira)",
             "capacity": "Activar Capacidad de Curso",
-            "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos"
+            "capacityHint": "Permitir establecer límites máximos de estudiantes para los cursos",
+            "freePreview": "Vistas Previas Públicas de Lecciones",
+            "freePreviewHint": "Permite que cualquiera vea una lección gratuita por curso, incluso sin una cuenta, para que los estudiantes potenciales puedan probar antes de comprar.",
+            "freePreviewCount": "{count} lecciones son públicas actualmente."
           },
           "solanaWallet": {
             "label": "Dirección de la wallet receptora",
@@ -6118,7 +6139,7 @@
   },
   "exercises": {
     "artifact": {
-      "typeLabel": "Ejercicio Interactivo",
+      "typeLabel": "Ejercicio interactivo",
       "evaluating": "Evaluando tu entrega...",
       "score": "Puntuación",
       "passed": "Aprobado",
@@ -6135,11 +6156,11 @@
       "passMark": "Nota mínima {score}"
     },
     "audio": {
-      "title": "Ejercicio de Audio",
+      "title": "Ejercicio de audio",
       "instructions": "Instrucciones",
-      "topicPrompt": "Tema a Desarrollar",
+      "topicPrompt": "Tema",
       "completed": "Completado",
-      "recordYourResponse": "Graba Tu Respuesta",
+      "recordYourResponse": "Graba tu respuesta",
       "record": "Grabar",
       "upload": "Subir",
       "stop": "Detener Grabación",
@@ -6151,8 +6172,7 @@
       "analyzing": "Analizando tu grabación...",
       "analyzingDescription": "Transcribiendo audio y generando retroalimentación con IA. Esto puede tardar hasta 30 segundos.",
       "aiFeedback": "Retroalimentación IA",
-      "tryAgain": "Intentar de Nuevo",
-      "score": "puntuación",
+      "tryAgain": "Intentar de nuevo",
       "wpm": "PPM",
       "fillers": "Muletillas",
       "pauses": "Pausas",
@@ -6160,25 +6180,20 @@
       "durationRange": "Duración: {min}–{max}",
       "uploadLimit": "Subida: máx 25 MB (MP3, M4A, WAV, OGG, WebM)",
       "strengths": "Fortalezas",
-      "improvements": "Áreas de Mejora",
-      "focusNext": "Enfoque para el Próximo Intento",
-      "annotatedTranscript": "Transcripción Anotada",
+      "improvements": "Áreas de mejora",
+      "focusNext": "Enfoque para el próximo intento",
+      "corrections": "Dilo mejor",
+      "annotatedTranscript": "Transcripción",
       "fillerWord": "Muletilla",
       "longPause": "Pausa larga",
-      "passed": "¡Ejercicio Completado!",
-      "passedMessage": "¡Buen trabajo! Alcanzaste la puntuación mínima. Tu ejercicio ha sido marcado como completado.",
-      "notPassed": "¡Sigue Practicando!",
-      "notPassedMessage": "Revisa la retroalimentación a continuación e intenta de nuevo para alcanzar la puntuación mínima de {score}.",
-      "submissionHistory": "Historial de Entregas",
-      "play": "Reproducir",
+      "submissionHistory": "Intentos",
       "download": "Descargar",
-      "details": "Mostrar Detalles",
-      "hideDetails": "Ocultar Detalles",
+      "details": "Detalles",
+      "hideDetails": "Ocultar detalles",
       "attempt": "Intento {number}",
       "dailyLimitReached": "Límite diario de intentos alcanzado",
-      "dailyLimitMessage": "Has usado los {limit} intentos de hoy. ¡Vuelve mañana para intentar de nuevo!",
-      "attemptsRemaining": "{count} intentos restantes hoy",
-      "moreExercises": "Más Ejercicios",
+      "dailyLimitMessage": "Has usado los {limit} intentos de hoy. Podrás grabar de nuevo mañana.",
+      "moreExercises": "Más ejercicios",
       "beginner": "Principiante",
       "intermediate": "Intermedio",
       "advanced": "Avanzado",
@@ -6190,19 +6205,29 @@
       "maxDuration": "máx {time}",
       "attemptsUsedOf": "{used} de {max} intentos usados hoy",
       "pointsAway": "{points} puntos para aprobar",
-      "recordAgain": "Grabar de Nuevo",
-      "improvementFocus": "En Qué Enfocarte",
-      "passingThreshold": "Aprueba: {score}",
-      "completedScore": "Tu Mejor Puntuación",
+      "recordAgain": "Grabar de nuevo",
+      "improvementFocus": "En qué enfocarte",
       "completedOn": "Completado el {date}",
-      "exerciseMarkedComplete": "Este ejercicio ha sido marcado como completado. ¡Buen trabajo!"
+      "playRecording": "Escuchar",
+      "micInsecure": "Tu navegador solo permite usar el micrófono en una página segura (https), por eso no puede pedirte permiso aquí. Abre esta página con https e inténtalo de nuevo.",
+      "wpmHint": "lo ideal es 100–180",
+      "fillersHint": "lo ideal es 3 o menos",
+      "bestScore": "Mejor puntuación {score}",
+      "lastAttempt": "Último intento: {score} / 100",
+      "passedRecordAgain": "Aprobaste este ejercicio. Puedes grabar de nuevo para practicar; se conserva tu mejor puntuación.",
+      "noFeedbackForAttempt": "No se guardaron comentarios escritos para este intento.",
+      "playbackError": "No se pudo cargar la grabación. Inténtalo de nuevo en un momento.",
+      "yourRecording": "Tu grabación",
+      "orUpload": "o sube un archivo",
+      "tapToRecord": "Grabar",
+      "recordingPreview": "Vista previa de la grabación"
     },
     "video": {
-      "title": "Ejercicio de Video",
+      "title": "Ejercicio de video",
       "instructions": "Instrucciones",
-      "topicPrompt": "Tema a Desarrollar",
+      "topicPrompt": "Tema a exponer",
       "completed": "Completado",
-      "recordYourResponse": "Graba Tu Respuesta",
+      "recordYourResponse": "Graba tu respuesta",
       "record": "Grabar Video",
       "upload": "Subir",
       "stop": "Detener Grabación",
@@ -6214,24 +6239,19 @@
       "analyzing": "Analizando tu video...",
       "analyzingDescription": "Procesando el video y generando retroalimentación con IA. Esto puede tardar hasta 60 segundos.",
       "aiFeedback": "Retroalimentación IA",
-      "tryAgain": "Intentar de Nuevo",
-      "score": "puntuación",
+      "tryAgain": "Intentar de nuevo",
       "duration": "Duración",
       "durationRange": "Duración: {min}–{max}",
       "uploadLimit": "Subida: máx 100 MB (MP4, WebM, MOV)",
       "strengths": "Fortalezas",
-      "improvements": "Áreas de Mejora",
-      "focusNext": "Enfoque para el Próximo Intento",
-      "passed": "¡Ejercicio Completado!",
-      "passedMessage": "¡Buen trabajo! Alcanzaste la puntuación para aprobar. Tu ejercicio ha sido marcado como completado.",
-      "notPassed": "¡Sigue Practicando!",
-      "notPassedMessage": "Revisa los comentarios y vuelve a intentarlo para alcanzar la puntuación mínima de {score}.",
-      "submissionHistory": "Historial de Envíos",
-      "details": "Ver Detalles",
-      "hideDetails": "Ocultar Detalles",
+      "improvements": "Áreas de mejora",
+      "focusNext": "Enfoque para el próximo intento",
+      "submissionHistory": "Intentos",
+      "details": "Detalles",
+      "hideDetails": "Ocultar detalles",
       "attempt": "Intento {number}",
       "dailyLimitReached": "Límite diario de intentos alcanzado",
-      "dailyLimitMessage": "Has usado todos tus {limit} intentos de hoy. ¡Vuelve mañana para intentarlo de nuevo!",
+      "dailyLimitMessage": "Has usado los {limit} intentos de hoy. Podrás grabar de nuevo mañana.",
       "moreExercises": "Más Ejercicios",
       "beginner": "Principiante",
       "intermediate": "Intermedio",
@@ -6244,12 +6264,23 @@
       "maxDuration": "máx {time}",
       "attemptsUsedOf": "{used} de {max} intentos usados hoy",
       "pointsAway": "{points} puntos para aprobar",
-      "recordAgain": "Grabar de Nuevo",
-      "improvementFocus": "En qué Enfocarse",
-      "passingThreshold": "Aprobado: {score}",
-      "completedScore": "Tu Mejor Puntuación",
+      "recordAgain": "Grabar de nuevo",
+      "improvementFocus": "En qué enfocarte",
       "completedOn": "Completado el {date}",
-      "exerciseMarkedComplete": "Este ejercicio ha sido marcado como completado. ¡Buen trabajo!"
+      "micInsecure": "Tu navegador solo permite usar la cámara y el micrófono en una página segura (https), por eso no puede pedirte permiso aquí. Abre esta página con https e inténtalo de nuevo.",
+      "wpmHint": "lo ideal es 100–180",
+      "fillersHint": "lo ideal es 3 o menos",
+      "bestScore": "Mejor puntuación {score}",
+      "lastAttempt": "Último intento: {score} / 100",
+      "passedRecordAgain": "Aprobaste este ejercicio. Puedes grabar de nuevo para practicar; se conserva tu mejor puntuación.",
+      "annotatedTranscript": "Transcripción",
+      "playRecording": "Ver grabación",
+      "download": "Descargar",
+      "noFeedbackForAttempt": "No se guardaron comentarios escritos para este intento.",
+      "playbackError": "No se pudo cargar la grabación. Inténtalo de nuevo en un momento.",
+      "yourRecording": "Tu grabación",
+      "orUpload": "o sube un archivo",
+      "tapToRecord": "Grabar"
     },
     "list": {
       "title": "Zona de Práctica",
@@ -6270,7 +6301,9 @@
       "task": "Ejercicio",
       "coach": "Tutor IA",
       "record": "Grabar",
-      "speak": "Hablar"
+      "speak": "Hablar",
+      "code": "Código",
+      "resize": "Redimensionar paneles"
     },
     "conversation": {
       "title": "Conversación en vivo",
@@ -6295,11 +6328,50 @@
       "micDenied": "Necesitamos tu micrófono para este ejercicio. Permite el acceso en tu navegador e inténtalo de nuevo.",
       "nothingSaid": "No te escuchamos decir nada, así que no hay nada que evaluar. Inténtalo de nuevo y habla después del saludo.",
       "gradingError": "No pudimos evaluar esta conversación. Inténtalo de nuevo.",
+      "sessionTooLong": "Esta conversación superó su límite de {minutes} minutos, así que no se puede evaluar. Inicia una nueva.",
+      "hint": "Pista",
       "liveTranscript": "Transcripción en vivo",
       "transcriptEmptyTitle": "Aún nada",
       "transcriptEmpty": "Lo que digan tú y tu compañero aparecerá aquí.",
       "corrections": "Dilo mejor",
-      "fullTranscript": "Transcripción completa"
+      "fullTranscript": "Transcripción completa",
+      "micInsecure": "Tu navegador solo permite usar el micrófono en una página segura (https), por eso no puede pedirte permiso aquí. Abre esta página con https e inténtalo de nuevo.",
+      "wrappingUp": "Terminando…"
+    },
+    "types": {
+      "coding_challenge": "Código",
+      "essay": "Ensayo",
+      "discussion": "Discusión",
+      "quiz": "Cuestionario",
+      "multiple_choice": "Opción múltiple",
+      "fill_in_the_blank": "Completar espacios",
+      "audio_evaluation": "Audio",
+      "video_evaluation": "Video",
+      "real_time_conversation": "Conversación",
+      "artifact": "Interactivo"
+    },
+    "coach": {
+      "title": "Tutor IA",
+      "thinking": "Pensando…",
+      "ready": "Escribe tu respuesta o pide ayuda",
+      "completed": "Completado",
+      "restart": "Reiniciar conversación",
+      "emptyTitle": "Escribe tu respuesta aquí.",
+      "emptyBody": "El tutor puede explicarte la tarea o darte una pista, y califica tu trabajo cuando le pides que revise tu respuesta.",
+      "markedComplete": "Ejercicio completado",
+      "placeholder": "Escribe tu respuesta…",
+      "suggestions": {
+        "start": "Ayúdame a empezar",
+        "explain": "Explícame las instrucciones",
+        "check": "Revisa mi respuesta",
+        "hint": "Dame una pista"
+      }
+    },
+    "code": {
+      "typeLabel": "Reto de código",
+      "task": "Tarea",
+      "output": "Salida",
+      "solved": "Todas las pruebas pasan. Reto completado."
     }
   },
   "exams": {

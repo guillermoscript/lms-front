@@ -7,12 +7,20 @@ import { IconCode, IconMessage, IconClock, IconChartBar, IconCheck, IconChevronR
 import { cn } from "@/lib/utils";
 
 interface ExerciseCardProps {
-    exercise: any;
+    exercise: {
+        id: number;
+        title: string;
+        description?: string | null;
+        exercise_type: string;
+        difficulty_level?: string | null;
+        time_limit?: number | null;
+        exercise_completions?: unknown[] | null;
+    };
     courseId: string;
 }
 
 export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) {
-    const isCompleted = exercise.exercise_completions?.length > 0;
+    const isCompleted = (exercise.exercise_completions?.length ?? 0) > 0;
 
     const typeConfig: Record<string, { icon: typeof IconCode; label: string }> = {
         coding_challenge: { icon: IconCode, label: "Code" },
@@ -23,6 +31,7 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
         fill_in_the_blank: { icon: IconTextSize, label: "Fill in Blank" },
         audio_evaluation: { icon: IconMicrophone, label: "Audio" },
         video_evaluation: { icon: IconVideo, label: "Video" },
+        real_time_conversation: { icon: IconMessageCircle, label: "Conversation" },
     };
 
     const config = typeConfig[exercise.exercise_type] || typeConfig.essay;

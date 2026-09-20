@@ -10,13 +10,13 @@ import {
     useSandpack
 } from "@codesandbox/sandpack-react";
 import { Button } from "@/components/ui/button";
-import { IconPlayerPlay, IconCheck, IconRotateClockwise } from "@tabler/icons-react";
+import { IconPlayerPlay, IconCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 interface CodeChallengeWrapperProps {
-    exercise: any;
+    exercise: { active_file?: string | null; visible_files?: string[] | null };
     files: Record<string, string>;
     exerciseId: number;
     isExerciseCompleted: boolean;
@@ -61,6 +61,7 @@ export default function CodeChallengeWrapper({
 }: CodeChallengeWrapperProps) {
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const tGamification = useTranslations("components.gamification");
+    const t = useTranslations("exercises.code");
     const supabase = createClient();
 
     const handleComplete = async () => {
@@ -110,13 +111,46 @@ export default function CodeChallengeWrapper({
                         height: 250px !important;
                         min-height: 0 !important;
                         width: 100% !important;
-                        border-top: 1px solid hsl(var(--border));
+                        border-top: 1px solid var(--border);
                         border-left: none !important;
+                    }
+                }
+                /* Desktop work pane: code over its output, filling the pane. The
+                   file tree gives way to the editor's own tabs. */
+                @media (min-width: 1024px) {
+                    .sp-challenge-wrapper .sp-wrapper {
+                        flex: 1 1 0;
+                        min-height: 0;
+                    }
+                    .sp-challenge-wrapper .sp-layout {
+                        --sp-layout-height: 100%;
+                        flex-direction: column !important;
+                        flex-wrap: nowrap !important;
+                        height: 100% !important;
+                        border: 0 !important;
+                        border-radius: 0 !important;
+                    }
+                    .sp-challenge-wrapper .sp-file-explorer {
+                        display: none !important;
+                    }
+                    .sp-challenge-wrapper .sp-editor {
+                        flex: 3 1 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                    }
+                    .sp-challenge-wrapper .sp-output-panel {
+                        flex: 2 1 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        border-left: none !important;
+                        border-top: 1px solid var(--border);
                     }
                 }
             `}</style>
 
-            <div className="space-y-4 sp-challenge-wrapper">
+            <div className="sp-challenge-wrapper space-y-4 lg:flex lg:h-full lg:flex-col lg:space-y-0">
                 <SandpackProvider
                     files={files}
                     theme="dark"
@@ -126,7 +160,7 @@ export default function CodeChallengeWrapper({
                         visibleFiles: exercise.visible_files || undefined,
                     }}
                 >
-                    <SandpackLayout className="rounded-xl overflow-hidden border shadow-soft ring-1 ring-border/50">
+                    <SandpackLayout className="overflow-hidden rounded-card ring-1 ring-foreground/10 lg:ring-0">
                         <SandpackFileExplorer className="border-r bg-muted/50" />
                         <SandpackCodeEditor
                             showLineNumbers
@@ -135,7 +169,7 @@ export default function CodeChallengeWrapper({
                         />
                         <div className="sp-output-panel flex flex-col border-l bg-background">
                             <div className="p-3 border-b flex items-center justify-between bg-muted/30 shrink-0">
-                                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Output</span>
+                                <span className="text-sm font-semibold">{t("output")}</span>
                                 <div className="flex items-center gap-2">
                                     <SubmitButton onComplete={handleComplete} />
                                 </div>
@@ -150,21 +184,12 @@ export default function CodeChallengeWrapper({
                 </SandpackProvider>
 
                 {isCompleted && (
-                    <div className="p-4 my-2 bg-success/10 border border-success/30 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-success/15 text-success rounded-full flex items-center justify-center shrink-0">
-                                <IconCheck size={24} />
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-success">Challenge Completed!</h4>
-                                <p className="text-sm text-success">Excellent work. You've successfully solved this coding challenge.</p>
-                            </div>
-                        </div>
-                        <Button variant="outline" className="text-success border-success/30 hover:bg-success/10 gap-2 shrink-0 ml-4">
-                            <IconRotateClockwise size={18} />
-                            Next Activity
-                        </Button>
-                    </div>
+                    // A status line. It used to be a tinted card with an icon
+                    // medallion and a "Next Activity" button wired to nothing.
+                    <p className="flex items-center gap-2 text-sm font-medium text-success lg:shrink-0 lg:border-t lg:px-4 lg:py-3" role="status">
+                        <IconCheck size={16} aria-hidden="true" />
+                        {t("solved")}
+                    </p>
                 )}
             </div>
         </>

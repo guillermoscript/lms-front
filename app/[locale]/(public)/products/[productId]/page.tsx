@@ -28,11 +28,16 @@ export async function generateMetadata({
     .single()
   if (!product) return {}
 
+  // No `type=` variant in /api/og/route.tsx fits a product (only generic,
+  // certificate, course) — a product isn't a course, so the generic card
+  // stays; the badge is the only branding this page can add.
+  const t = await getTranslations({ locale, namespace: 'seo' })
   return buildPageMetadata({
     title: product.name,
     description: product.description?.replace(/\s+/g, ' ').trim().slice(0, 160) || undefined,
     path: `/products/${productId}`,
     locale,
+    ogBadge: t('products.badge'),
   })
 }
 

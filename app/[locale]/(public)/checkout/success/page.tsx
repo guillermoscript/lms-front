@@ -7,9 +7,28 @@ import { Card, CardContent } from '@/components/ui/card'
 import { CheckoutProcessing } from '@/components/public/checkout-processing'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import type { Metadata } from 'next'
+import { buildPageMetadata } from '@/lib/seo'
 
 interface CheckoutSuccessPageProps {
   searchParams: Promise<{ transactionId?: string; type?: string }>
+}
+
+// Post-purchase confirmation, unique per transaction and worth nothing in
+// search — title only, kept out of the index (#799).
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const t = await getTranslations({ locale, namespace: 'seo' })
+  return buildPageMetadata({
+    title: t('checkoutSuccess.title'),
+    path: '/checkout/success',
+    locale,
+    noIndex: true,
+  })
 }
 
 export default async function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPageProps) {

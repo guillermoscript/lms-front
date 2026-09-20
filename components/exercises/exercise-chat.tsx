@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useState, useEffect } from "react";
-import { IconRobot, IconCheck, IconRotateClockwise2, IconSparkles } from "@tabler/icons-react";
+import { IconCheck, IconRotateClockwise2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -47,22 +47,18 @@ interface ExerciseChatProps {
     profile: { full_name?: string | null } | null;
 }
 
-const suggestions = [
-    "Help me get started",
-    "Explain the instructions",
-    "Check my answer",
-    "Give me a hint"
-];
+const SUGGESTION_KEYS = ['start', 'explain', 'check', 'hint'] as const;
 
 function InnerExerciseChat({
     apiEndpoint,
     exerciseId,
     initialMessages,
     isExerciseCompleted: initialCompleted,
-    profile,
 }: ExerciseChatProps) {
     const router = useRouter();
     const tGamification = useTranslations("gamification");
+    const t = useTranslations("exercises.coach");
+    const suggestions = SUGGESTION_KEYS.map((key) => t(`suggestions.${key}`));
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
     const { textInput } = usePromptInputController();
@@ -145,41 +141,38 @@ function InnerExerciseChat({
         }
     };
 
-    const firstName = profile?.full_name?.split(' ')[0] || 'there';
-
     return (
-        <div className="relative flex flex-col h-[min(500px,65vh)] sm:h-[600px] md:h-[650px] overflow-hidden bg-background rounded-xl sm:rounded-2xl border sm:border-2 shadow-sm">
+        // Flat, like every other surface on the page: it used to be the one
+        // element with a 2px border and a shadow.
+        <div className="relative flex h-[min(500px,65vh)] flex-col overflow-hidden rounded-card bg-card ring-1 ring-foreground/10 sm:h-[600px] md:h-[650px]">
             {/* Chat Header */}
-            <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b bg-muted/30">
-                <div className="flex items-center gap-2 sm:gap-2.5">
-                    <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-brand-tint">
-                        <IconSparkles size={14} className="sm:size-4 text-brand-text" aria-hidden="true" />
-                    </div>
-                    <div>
-                        <h3 className="text-xs sm:text-sm font-bold leading-none">AI Coach</h3>
-                        <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
-                            {isLoading ? "Thinking..." : "Ready to help"}
-                        </p>
-                    </div>
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+                <div className="min-w-0">
+                    <h3 className="text-sm font-semibold leading-tight">{t('title')}</h3>
+                    <p className="text-sm text-muted-foreground" role="status">
+                        {isLoading ? t('thinking') : t('ready')}
+                    </p>
                 </div>
-                <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="flex items-center gap-2">
                     {isCompleted && (
-                        <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] font-bold text-success bg-success/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-success/20">
-                            <IconCheck size={10} className="sm:size-3 stroke-[3]" aria-hidden="true" />
-                            <span className="hidden sm:inline">Completed</span>
-                            <span className="sm:hidden">Done</span>
-                        </div>
+                        <span className="flex items-center gap-1 text-sm font-medium text-success">
+                            <IconCheck size={14} aria-hidden="true" />
+                            {t('completed')}
+                        </span>
                     )}
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+                        className="h-10 w-10 text-muted-foreground hover:text-foreground"
                         onClick={handleRestart}
                         disabled={isRestarting || isLoading}
-                        aria-label="Restart conversation"
+                        aria-label={t('restart')}
                     >
-                        <IconRotateClockwise2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isRestarting ? 'animate-spin' : ''}`} />
+                        <IconRotateClockwise2
+                            className={`h-4 w-4 ${isRestarting ? 'animate-spin motion-reduce:animate-none' : ''}`}
+                            aria-hidden="true"
+                        />
                     </Button>
                 </div>
             </div>
@@ -188,15 +181,12 @@ function InnerExerciseChat({
             <Conversation>
                 <ConversationContent className="gap-4 sm:gap-8 p-3 sm:p-4">
                     {messages.length === 0 && (
-                        <div className="flex flex-col items-center justify-center min-h-full text-muted-foreground p-1 sm:p-4 md:p-6 text-center">
-                            <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-brand-tint flex items-center justify-center mb-2 sm:mb-4">
-                                <IconRobot className="h-5 w-5 sm:h-7 sm:w-7 text-brand-text/60" aria-hidden="true" />
-                            </div>
-                            <h3 className="text-sm sm:text-lg font-bold text-foreground mb-1 sm:mb-1.5">
-                                Hi {firstName}!
-                            </h3>
-                            <p className="max-w-sm mx-auto text-xs sm:text-sm leading-relaxed">
-                                I&rsquo;m your AI Coach. I&rsquo;ll guide you through this exercise, provide hints, and evaluate your work. Start by asking a question or use a suggestion below.
+                        // Says what the box is for. It used to be a robot tile
+                        // and a "Hi {name}!" over a paragraph about itself.
+                        <div className="flex min-h-full flex-col items-center justify-center p-4 text-center">
+                            <p className="max-w-sm text-base font-medium">{t('emptyTitle')}</p>
+                            <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                                {t('emptyBody')}
                             </p>
                         </div>
                     )}
@@ -216,16 +206,14 @@ function InnerExerciseChat({
                                     if (part.type === 'tool-markExerciseCompleted') {
                                         if (part.state === 'output-available') {
                                             return (
-                                                <div key={part.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-4 bg-success/10 border border-success/20 rounded-xl text-success text-xs sm:text-sm">
-                                                    <div className="flex items-start gap-2 sm:gap-3">
-                                                        <div className="p-1 sm:p-1.5 bg-success rounded-lg shrink-0">
-                                                            <IconCheck className="h-3 w-3 sm:h-4 sm:w-4 text-success-foreground" aria-hidden="true" />
-                                                        </div>
-                                                        <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                                                            <p className="font-bold text-success text-sm sm:text-base">Exercise Mastered!</p>
-                                                            <p className="opacity-90 leading-relaxed">{(part.output as { feedback?: string } | undefined)?.feedback}</p>
-                                                        </div>
-                                                    </div>
+                                                <div key={part.toolCallId} className="mt-4 border-t pt-3 text-sm">
+                                                    <p className="flex items-center gap-1.5 font-semibold text-success">
+                                                        <IconCheck size={16} aria-hidden="true" />
+                                                        {t('markedComplete')}
+                                                    </p>
+                                                    <p className="mt-1 leading-relaxed">
+                                                        {(part.output as { feedback?: string } | undefined)?.feedback}
+                                                    </p>
                                                 </div>
                                             )
                                         }
@@ -258,7 +246,7 @@ function InnerExerciseChat({
                         <ChatAttachmentsPreview />
                         <PromptInputBody>
                             <PromptInputTextarea
-                                placeholder="Type your response..."
+                                placeholder={t('placeholder')}
                             />
                         </PromptInputBody>
                         <PromptInputFooter>

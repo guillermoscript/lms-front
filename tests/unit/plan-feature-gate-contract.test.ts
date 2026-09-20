@@ -20,7 +20,6 @@ const ENFORCED_ELSEWHERE: Record<string, string> = {
   store: 'get_gamification_features RPC in supabase/functions/spend-points',
   community: 'features.community check on every community page (app/[locale]/dashboard/*/community)',
   priority_support: 'not a product capability — support SLA',
-  voice_exercises: 'no voice surface ships yet; gate at build time (tracked in #662)',
   white_label: 'no white-label surface ships yet; gate at build time (tracked in #662)',
 }
 

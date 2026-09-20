@@ -129,6 +129,13 @@ export function VideoRecorderComponent({
   const startCountdown = async () => {
     setError(null)
     try {
+      // Browsers only expose the microphone on https (or localhost). On plain
+      // http there is no permission prompt at all — say so instead of blaming
+      // a denial the user never made.
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setError(t('micInsecure'))
+        return
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       streamRef.current = stream
 

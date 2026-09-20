@@ -9,15 +9,15 @@ import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 import { toLatestEvaluation, type LatestExerciseEvaluation } from '@/lib/exercises/latest-evaluation'
 import ExerciseResultSummary from '@/components/exercises/exercise-result-summary'
 import type { SpeechEvaluation } from '@/lib/speech/types'
+import { ConversationTranscriptSchema, parseConversationConfig } from '@/lib/speech/conversation'
 
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
-import ExerciseCard from '@/components/exercises/exercise-card'
+import RelatedExercises from '@/components/exercises/related-exercises'
 import EssayExercise from '@/components/exercises/essay-exercise'
 import CodeExercise from '@/components/exercises/code-exercise'
 import ExerciseChat from '@/components/exercises/exercise-chat'
-import ToggleableSection from '@/components/exercises/toggleable-section'
 
 const AudioExercise = dynamic(
   () => import('@/components/exercises/audio-exercise'),
@@ -26,6 +26,19 @@ const AudioExercise = dynamic(
       <div className="space-y-4 p-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-12 w-32 mx-auto" />
+      </div>
+    ),
+  }
+)
+
+const ConversationExercise = dynamic(
+  () => import('@/components/exercises/conversation-exercise'),
+  {
+    loading: () => (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="mx-auto size-40 rounded-full" />
         <Skeleton className="h-12 w-32 mx-auto" />
       </div>
     ),
@@ -173,15 +186,17 @@ export default async function ExercisePage({ params }: PageProps) {
         .slice(0, 3)
 
     // Fetch evaluation history from unified exercise_evaluations table
-    let submissionHistory: { id: number; ai_evaluation: SpeechEvaluation | null; score: number | null; status: string; media_url: string; created_at: string; duration_seconds: number | null }[] = []
+    let submissionHistory: { id: number; ai_evaluation: SpeechEvaluation | null; score: number | null; status: string; submission_id: number | null; created_at: string; duration_seconds: number | null }[] = []
     // Newest graded attempt, replayed to the student when they come back to a
     // finished exercise. Derived from the same rows as submissionHistory — the
     // artifact/essay engines write here too, their results were just never read.
     let latestEvaluation: LatestExerciseEvaluation | null = null
+    // Conversation results carry corrections + the transcript beyond the shared shape.
+    let latestAiResult: Record<string, unknown> | null = null
     try {
         const { data: evaluations, error: evaluationsError } = await supabase
             .from('exercise_evaluations')
-            .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at')
+            .select('id, score, passed, ai_result, ai_metrics, engine_type, attempt_number, created_at, submission_id, submission_source')
             .eq('exercise_id', parseInt(exerciseId))
             .eq('user_id', userId)
             .eq('tenant_id', tenantId)
@@ -194,10 +209,26 @@ export default async function ExercisePage({ params }: PageProps) {
         // Map to legacy format for AudioExercise component compatibility
         submissionHistory = (evaluations ?? []).map(ev => ({
             id: Number(ev.id),
-            ai_evaluation: ev.ai_result as unknown as SpeechEvaluation | null,
+            // The media route splits a SpeechEvaluation across columns: feedback in
+            // ai_result, numbers in ai_metrics, score on the row. SpeechFeedback reads
+            // `metrics.wpm` unguarded, so handing it ai_result alone crashed the page
+            // for every student returning to a graded recording.
+            ai_evaluation:
+                ev.ai_result && ev.ai_metrics
+                    ? ({
+                          ...(ev.ai_result as object),
+                          score: ev.score ?? 0,
+                          metrics: ev.ai_metrics,
+                      } as unknown as SpeechEvaluation)
+                    : null,
             score: ev.score,
             status: ev.passed ? 'completed' : 'failed',
-            media_url: '',
+            // The recording lives on the media submission, not on the evaluation —
+            // playback has to ask for THAT id.
+            submission_id:
+                ev.submission_source === 'exercise_media_submissions' && ev.submission_id != null
+                    ? Number(ev.submission_id)
+                    : null,
             created_at: ev.created_at,
             duration_seconds:
                 (ev.ai_metrics as unknown as { duration_seconds?: number | null } | null)
@@ -205,6 +236,7 @@ export default async function ExercisePage({ params }: PageProps) {
         }))
 
         latestEvaluation = toLatestEvaluation(evaluations?.[0] ?? null)
+        latestAiResult = (evaluations?.[0]?.ai_result as Record<string, unknown> | null) ?? null
     } catch (err) {
         // RLS or table access may fail — gracefully degrade
         console.error('Error fetching exercise evaluations:', err)
@@ -221,7 +253,9 @@ export default async function ExercisePage({ params }: PageProps) {
     // Count today's submissions for daily attempt tracking
     let dailyAttemptsUsed = 0
     const maxDailyAttempts = exerciseConfig?.max_daily_attempts ?? 5
-    if (exercise.exercise_type === 'audio_evaluation') {
+    const isConversation = exercise.exercise_type === 'real_time_conversation'
+    const conversationConfig = parseConversationConfig(exercise.exercise_config)
+    if (exercise.exercise_type === 'audio_evaluation' || isConversation) {
         try {
             const todayStart = new Date()
             todayStart.setUTCHours(0, 0, 0, 0)
@@ -231,6 +265,8 @@ export default async function ExercisePage({ params }: PageProps) {
                 .eq('exercise_id', parseInt(exerciseId))
                 .eq('user_id', userId)
                 .eq('tenant_id', tenantId)
+                // Same table, two engines: a live session is `conversation`, a recording `audio`.
+                .eq('media_type', isConversation ? 'conversation' : 'audio')
                 .gte('created_at', todayStart.toISOString())
             dailyAttemptsUsed = count ?? 0
         } catch {
@@ -270,21 +306,8 @@ export default async function ExercisePage({ params }: PageProps) {
         { href: '#', label: exercise.title },
     ]
 
-    const t = await getTranslations('exercises.audio')
     const otherExercisesSection = otherExercises && otherExercises.length > 0 ? (
-        <>
-            {/* Full-strength muted, not /70: the faded variant measured 2.76:1. */}
-            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">{t('moreExercises')}</h3>
-            <div className="grid gap-3">
-                {otherExercises.map((ex) => (
-                    <ExerciseCard
-                        key={ex.id}
-                        exercise={ex}
-                        courseId={courseId}
-                    />
-                ))}
-            </div>
-        </>
+        <RelatedExercises exercises={otherExercises} courseId={courseId} />
     ) : null
 
     // Code challenges are graded by their own test runner and never write an
@@ -324,9 +347,16 @@ export default async function ExercisePage({ params }: PageProps) {
         />
     )
 
+    // From `lg` up the page is a fixed shell — instructions pane, work pane —
+    // so it takes the viewport less the dashboard's 4rem header and the panes
+    // scroll instead of the body. A phone scrolls normally.
     return (
-        <div className="mx-auto container py-3 sm:py-6 px-3 sm:px-4 lg:px-8 space-y-3 sm:space-y-6">
-            <BreadcrumbComponent links={breadcrumbLinks} />
+        <div className="mx-auto container px-3 py-3 sm:px-4 sm:py-6 lg:flex lg:h-[calc(100dvh-4rem)] lg:max-w-none lg:flex-col lg:overflow-hidden lg:px-8 lg:py-0 space-y-3 sm:space-y-6 lg:space-y-0">
+            <div className="lg:shrink-0 lg:border-b lg:py-3">
+                <BreadcrumbComponent links={breadcrumbLinks} />
+            </div>
+
+            <div className="lg:min-h-0 lg:flex-1">
 
             {exercise.exercise_type === 'coding_challenge' ? (
                 <CodeExercise
@@ -335,6 +365,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     studentId={userId}
                     courseId={courseId}
                     resultSummary={codeResultSummary}
+                    related={otherExercisesSection}
                 >
                     <CodeChallengeWrapper
                         exercise={exercise}
@@ -344,21 +375,6 @@ export default async function ExercisePage({ params }: PageProps) {
                         userCode={lastSubmission?.submission_code}
                     />
 
-                    {otherExercises && otherExercises.length > 0 && (
-                        <ToggleableSection
-                            title={<h3 className="font-semibold">{t('moreExercises')}</h3>}
-                        >
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {otherExercises.map((ex) => (
-                                    <ExerciseCard
-                                        key={ex.id}
-                                        exercise={ex}
-                                        courseId={courseId}
-                                    />
-                                ))}
-                            </div>
-                        </ToggleableSection>
-                    )}
                 </CodeExercise>
             ) : exercise.exercise_type === 'artifact' ? (
                 <ArtifactExercise
@@ -396,6 +412,35 @@ export default async function ExercisePage({ params }: PageProps) {
                     dailyAttemptsUsed={dailyAttemptsUsed}
                     maxDailyAttempts={maxDailyAttempts}
                 />
+            ) : isConversation ? (
+                <ConversationExercise
+                    exercise={exercise}
+                    scenario={conversationConfig.scenario}
+                    maxMinutes={conversationConfig.max_minutes}
+                    passingScore={conversationConfig.passing_score}
+                    isExerciseCompleted={isExerciseCompleted}
+                    dailyAttemptsUsed={dailyAttemptsUsed}
+                    maxDailyAttempts={conversationConfig.max_daily_attempts}
+                    isExerciseCompletedSection={otherExercisesSection}
+                    initialResult={
+                        latestEvaluation
+                            ? {
+                                  score: latestEvaluation.score,
+                                  passed: latestEvaluation.passed,
+                                  feedback: latestEvaluation.feedback,
+                                  strengths: latestEvaluation.strengths,
+                                  improvements: latestEvaluation.improvements,
+                                  corrections: Array.isArray(latestAiResult?.corrections)
+                                      ? (latestAiResult.corrections as { said: string; better: string; why: string }[])
+                                      : [],
+                                  transcript:
+                                      ConversationTranscriptSchema.safeParse(latestAiResult?.transcript).data ?? [],
+                                  attemptNumber: latestEvaluation.attemptNumber,
+                                  createdAt: latestEvaluation.createdAt,
+                              }
+                            : null
+                    }
+                />
             ) : exercise.exercise_type === 'video_evaluation' ? (
                 <VideoExercise
                     exercise={exercise}
@@ -421,6 +466,7 @@ export default async function ExercisePage({ params }: PageProps) {
                     {chatComponent}
                 </EssayExercise>
             )}
+            </div>
         </div>
     )
 }

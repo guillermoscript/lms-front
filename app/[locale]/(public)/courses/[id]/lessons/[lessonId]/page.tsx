@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isFreePreviewEnabled } from '@/lib/settings/free-preview'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
@@ -25,6 +26,10 @@ interface PageProps {
 // cache() dedupes the generateMetadata + page calls within a request.
 const getPreviewLesson = cache(async (courseId: number, lessonId: number, tenantId: string) => {
     if (!Number.isInteger(courseId) || !Number.isInteger(lessonId)) return null
+    // A school can switch public previews off for the whole tenant (#799).
+    // The anon RLS policy enforces the same rule, but this page reads through
+    // the admin client and so would sail straight past it.
+    if (!(await isFreePreviewEnabled(tenantId))) return null
     const admin = createAdminClient()
 
     const [{ data: course }, { data: lesson }] = await Promise.all([
@@ -53,13 +58,22 @@ const getPreviewLesson = cache(async (courseId: number, lessonId: number, tenant
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
     const { id, lessonId, locale } = await props.params
     const tenantId = await getCurrentTenantId()
-    const data = await getPreviewLesson(Number(id), Number(lessonId), tenantId)
+    const [data, t] = await Promise.all([
+        getPreviewLesson(Number(id), Number(lessonId), tenantId),
+        getTranslations('coursePublicDetails'),
+    ])
     if (!data) notFound()
+    // Same branded course card as /courses/[id] (issue #765/#799): `courseId`
+    // is what lets the OG route reach for the course's thumbnail and the
+    // school's logo. The card still names THIS lesson — the route prefers the
+    // title the caller passes over the course's own.
     return buildPageMetadata({
         title: `${data.lesson.title} — ${data.course.title}`,
         description: data.lesson.description?.replace(/\s+/g, ' ').trim().slice(0, 160) || data.course.title,
         path: `/courses/${id}/lessons/${lessonId}`,
         locale,
+        ogParams: { type: 'course', courseId: id },
+        ogBadge: t('preview.badge'),
     })
 }
 
