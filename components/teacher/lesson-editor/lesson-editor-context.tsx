@@ -130,7 +130,10 @@ export function LessonEditorProvider({
     publish_at: initialData?.publish_at || '',
     ai_task_description: initialData?.ai_task_description || '',
     ai_task_instructions: initialData?.ai_task_instructions || '',
-    is_preview: initialData?.is_preview ?? false,
+    // The first lesson of a course is free by default (#791). A curriculum a
+    // visitor cannot open a single line of is the reason `is_preview` shipped
+    // set on 1 lesson in 83 — the teacher can still turn it off right here.
+    is_preview: initialData?.is_preview ?? (!initialData && initialSequence === 1),
   })
 
   const [savedTask, setSavedTask] = useState<SavedAITask>({

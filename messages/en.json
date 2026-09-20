@@ -821,7 +821,11 @@
           "generateWithAi": "Generate with AI",
           "generating": "Drafting lessons…",
           "generateSuccess": "{count, plural, one {# draft lesson} other {# draft lessons}} added. Review and publish.",
-          "generateError": "Could not generate lessons. Try again."
+          "generateError": "Could not generate lessons. Try again.",
+          "previewLabel": "Free",
+          "previewSwitchLabel": "Free preview for {lesson}",
+          "previewOn": "{lesson} is now readable by anyone.",
+          "previewOff": "{lesson} is no longer a free preview."
         },
         "practice": {
           "title": "Practice Exercises",
@@ -1350,6 +1354,7 @@
         "sequenceHint": "Position of this lesson in the course curriculum.",
         "freePreviewLabel": "Free preview",
         "freePreviewHint": "Anyone can view this lesson from the public course page — including visitors who aren't enrolled or logged in.",
+        "freePreviewFirstLessonHint": "On by default for the first lesson — it's what a visitor reads before they sign up.",
         "aiTaskTitle": "AI Task",
         "aiTaskDescription": "Add an interactive AI challenge students complete after the lesson.",
         "aiTaskPromptLabel": "Student Challenge",
@@ -4990,7 +4995,8 @@
       "free": "Free",
       "lessons": "{count} lessons",
       "viewCourse": "View Course",
-      "noCategory": "General"
+      "noCategory": "General",
+      "startFree": "Free lesson"
     },
     "filterSidebar": {
       "categories": "Categories",
@@ -5024,7 +5030,8 @@
     "allCategories": "All",
     "noResults": "No courses found matching your search.",
     "clearFilters": "Clear filters",
-    "categoriesLabel": "Course categories"
+    "categoriesLabel": "Course categories",
+    "previewOnly": "Free to start"
   },
   "coursePublicDetails": {
     "socialProof": {
@@ -5088,7 +5095,12 @@
       "notice": "You're viewing a free preview of this course.",
       "backToCourse": "Back to course",
       "enrollTitle": "Ready for the full course?",
-      "enrollCta": "View course & enroll"
+      "enrollCta": "View course & enroll",
+      "nextLessonLabel": "Next free lesson",
+      "enrollBody": "The rest of this course is one step away.",
+      "signUpBody": "Create an account to keep going — it takes a moment.",
+      "signUpCta": "Create your account",
+      "haveAccount": "Already have an account? Log in"
     }
   },
   "pricing": {

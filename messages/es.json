@@ -821,7 +821,11 @@
           "generateWithAi": "Generar con IA",
           "generating": "Redactando lecciones…",
           "generateSuccess": "Se {count, plural, one {añadió # lección en borrador} other {añadieron # lecciones en borrador}}. Revisa y publica.",
-          "generateError": "No se pudieron generar las lecciones. Inténtalo de nuevo."
+          "generateError": "No se pudieron generar las lecciones. Inténtalo de nuevo.",
+          "previewLabel": "Gratis",
+          "previewSwitchLabel": "Vista previa gratuita de {lesson}",
+          "previewOn": "{lesson} ahora la puede leer cualquiera.",
+          "previewOff": "{lesson} ya no es una vista previa gratuita."
         },
         "practice": {
           "title": "Ejercicios de Práctica",
@@ -1350,6 +1354,7 @@
         "sequenceHint": "Posición de esta lección en el plan de estudios.",
         "freePreviewLabel": "Vista previa gratis",
         "freePreviewHint": "Cualquier persona puede ver esta lección desde la página pública del curso, incluidos visitantes sin inscripción o sin iniciar sesión.",
+        "freePreviewFirstLessonHint": "Activado por defecto en la primera lección: es lo que un visitante lee antes de registrarse.",
         "aiTaskTitle": "Tarea IA",
         "aiTaskDescription": "Añade un desafío interactivo con IA que los estudiantes completen después de la lección.",
         "aiTaskPromptLabel": "Desafío para el Estudiante",
@@ -4990,7 +4995,8 @@
       "free": "Gratis",
       "lessons": "{count} lecciones",
       "viewCourse": "Ver Curso",
-      "noCategory": "General"
+      "noCategory": "General",
+      "startFree": "Lección gratis"
     },
     "filterSidebar": {
       "categories": "Categorías",
@@ -5024,7 +5030,8 @@
     "allCategories": "Todos",
     "noResults": "No se encontraron cursos que coincidan con tu búsqueda.",
     "clearFilters": "Limpiar filtros",
-    "categoriesLabel": "Categorías de cursos"
+    "categoriesLabel": "Categorías de cursos",
+    "previewOnly": "Empieza gratis"
   },
   "coursePublicDetails": {
     "socialProof": {
@@ -5088,7 +5095,12 @@
       "notice": "Estás viendo una vista previa gratuita de este curso.",
       "backToCourse": "Volver al curso",
       "enrollTitle": "¿Listo para el curso completo?",
-      "enrollCta": "Ver curso e inscribirse"
+      "enrollCta": "Ver curso e inscribirse",
+      "nextLessonLabel": "Siguiente lección gratis",
+      "enrollBody": "El resto del curso está a un paso.",
+      "signUpBody": "Crea una cuenta para seguir: toma un momento.",
+      "signUpCta": "Crea tu cuenta",
+      "haveAccount": "¿Ya tienes cuenta? Inicia sesión"
     }
   },
   "pricing": {

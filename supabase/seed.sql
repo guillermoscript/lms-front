@@ -1250,6 +1250,19 @@ pip install -r requirements.txt
 )
 ON CONFLICT (id) DO NOTHING;
 
+-- The first lesson of every published course is a free preview (#791): that is
+-- what a new course gets by default now, and a seed without one shows visitors
+-- a curriculum they cannot open a single line of — which is exactly how the
+-- feature ended up set on 1 lesson in 83 in production.
+UPDATE lessons l
+SET is_preview = true
+WHERE l.sequence = 1
+  AND l.status = 'published'
+  AND EXISTS (
+    SELECT 1 FROM courses c
+    WHERE c.course_id = l.course_id AND c.status = 'published'
+  );
+
 
 -- ---------------------------------------------------------------------------
 -- 19. LESSONS_AI_TASKS  (for lessons that have AI tasks)
