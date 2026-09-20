@@ -8,6 +8,12 @@ export interface LessonCompletionOutput {
     error?: string
     /** Set by the editor preview's dry-run tool: nothing was written. */
     preview?: boolean
+    /**
+     * The verifier's own line-per-requirement audit (`CompletionVerdict.reason`
+     * on a granted completion) — persisted alongside the tool call so a
+     * teacher can see why it was granted, not just that it was (#805).
+     */
+    requirementsCheck?: string
 }
 
 interface ToolPartLike {

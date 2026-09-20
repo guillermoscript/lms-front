@@ -12,6 +12,7 @@ import { LessonComments } from '@/components/student/lesson-comments'
 import dynamic from 'next/dynamic'
 import type { UIMessage } from 'ai'
 import { Skeleton } from '@/components/ui/skeleton'
+import { rebuildLessonTaskToolParts } from '@/lib/ai/lesson-task-history'
 
 const LessonAIChat = dynamic(
   () => import('@/components/student/lesson-ai-chat').then(m => m.LessonAIChat),
@@ -82,7 +83,7 @@ export default async function LessonPage({ params }: PageProps) {
         comment_reactions(*)
       ),
       lessons_ai_tasks(task_instructions),
-      lessons_ai_task_messages(id, message, sender, created_at, attachments),
+      lessons_ai_task_messages(id, message, sender, created_at, attachments, tool_invocations),
       lesson_completions(lesson_id, user_id)
     `)
     .eq('id', parseInt(lessonId))
@@ -131,18 +132,10 @@ export default async function LessonPage({ params }: PageProps) {
       });
     }
 
-    if (msg.tool_invocations) {
-      const invocations = Array.isArray(msg.tool_invocations)
-        ? msg.tool_invocations
-        : [msg.tool_invocations];
-
-      invocations.forEach((invocation: unknown) => {
-        parts.push({
-          type: 'tool-invocation',
-          toolInvocation: invocation
-        });
-      });
-    }
+    // Rebuilds a completed markLessonCompleted call into a v7
+    // tool-markLessonCompleted part so the "Target achieved" card and the
+    // chat's lock survive a reload (#805); tolerates rows with no tool call.
+    parts.push(...rebuildLessonTaskToolParts(msg.tool_invocations));
 
     return {
       id: msg.id.toString(),
@@ -150,7 +143,6 @@ export default async function LessonPage({ params }: PageProps) {
       parts: parts,
       createdAt: msg.created_at
     };
-    // DB rows use a legacy part shape; the chat renders them via ToolInvocationPart
   }))) as unknown as UIMessage[];
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
@@ -439,7 +431,6 @@ export default async function LessonPage({ params }: PageProps) {
                     <LessonAIChat
                       lessonId={lesson.id}
                       taskDescription={aiTask.task_instructions}
-                      isCompleted={isCurrentLessonCompleted}
                       initialMessages={initialMessages}
                     />
                   </div>

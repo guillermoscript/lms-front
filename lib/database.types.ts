@@ -3928,6 +3928,7 @@ export type Database = {
           lesson_id: number | null
           message: string | null
           sender: Database["public"]["Enums"]["ai_sender_type"] | null
+          tool_invocations: Json | null
           user_id: string | null
         }
         Insert: {
@@ -3937,6 +3938,7 @@ export type Database = {
           lesson_id?: number | null
           message?: string | null
           sender?: Database["public"]["Enums"]["ai_sender_type"] | null
+          tool_invocations?: Json | null
           user_id?: string | null
         }
         Update: {
@@ -3946,6 +3948,7 @@ export type Database = {
           lesson_id?: number | null
           message?: string | null
           sender?: Database["public"]["Enums"]["ai_sender_type"] | null
+          tool_invocations?: Json | null
           user_id?: string | null
         }
         Relationships: [

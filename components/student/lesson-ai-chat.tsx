@@ -97,7 +97,6 @@ function useVisualViewportHeight(enabled: boolean) {
 interface LessonAIChatProps {
     lessonId: number;
     taskDescription: string;
-    isCompleted?: boolean;
     initialMessages?: UIMessage[];
 }
 
@@ -115,14 +114,10 @@ interface ToolInvocationPart {
 function InnerLessonAIChat({
     lessonId,
     taskDescription,
-    isCompleted: initialIsCompleted,
     initialMessages = [],
 }: LessonAIChatProps) {
     const router = useRouter();
     const t = useTranslations('components.lessonAIChat');
-    const [lessonCompleted, setLessonCompleted] = useState(initialIsCompleted);
-    // After a restart the lesson is still completed, but the student is practising again.
-    const [practising, setPractising] = useState(false);
     const [isRestarting, setIsRestarting] = useState(false);
     const [restartDialogOpen, setRestartDialogOpen] = useState(false);
     // Mobile-only: the chat lives behind a launcher and opens as a
@@ -166,15 +161,19 @@ function InnerLessonAIChat({
     // Completion is the tool's ANSWER, not its call: the server refuses while
     // required checkpoints are open, and `onToolCall` fires before it has run.
     const completion = findLessonCompletion(messages);
-    // The chat locks on a finished conversation, not on a finished lesson: an
-    // empty or restarted chat is always open for practice.
-    const isCompleted = Boolean(lessonCompleted) && messages.length > 0 && !practising;
-    const celebratedCallId = useRef<string | null>(null);
+    // The chat locks on a finished CONVERSATION, not a flag: `initialMessages`
+    // rebuilds a past grant from `lessons_ai_task_messages.tool_invocations`
+    // (#805), and restart deletes those rows — so an empty or restarted chat
+    // has no completion part and is open for practice, with no separate
+    // client-side "practising" state to lose on reload.
+    const isCompleted = Boolean(completion);
+    // Seeded from the history the page loaded with, so a reload of an
+    // already-completed lesson shows the card without replaying the
+    // celebration — only a completion NEW to this session should confetti.
+    const celebratedCallId = useRef<string | null>(findLessonCompletion(initialMessages)?.toolCallId ?? null);
     useEffect(() => {
         if (!completion || celebratedCallId.current === completion.toolCallId) return;
         celebratedCallId.current = completion.toolCallId;
-        setLessonCompleted(true);
-        setPractising(false);
 
         confetti({
             particleCount: 150,
@@ -227,8 +226,9 @@ function InnerLessonAIChat({
             });
 
             if (res.ok) {
+                // No completion part left in an empty conversation — the chat
+                // unlocks on its own, nothing else to flip.
                 setMessages([]);
-                setPractising(true);
                 toast.success(t('toast.restartSuccess'));
                 router.refresh();
             } else {

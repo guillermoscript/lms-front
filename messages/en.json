@@ -924,6 +924,15 @@
           "warnings": {
             "title": "Some progress data could not be loaded",
             "desc": "These sources failed to read, so activity and progress below may be under-counted:"
+          },
+          "aiAudit": {
+            "viewButton": "AI tutor conversation for {title}",
+            "loading": "Loading the AI tutor's record…",
+            "error": "Could not load the AI tutor's record.",
+            "completedOn": "Completed {date}",
+            "feedback": "Tutor's feedback",
+            "requirementsCheck": "Verifier's check",
+            "notFound": "No AI tutor completion on record for this lesson."
           }
         },
         "certificates": {
