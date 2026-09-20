@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
-import ExerciseCard from '@/components/exercises/exercise-card'
+import ExerciseBrowseList from '@/components/exercises/exercise-browse-list'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -100,15 +100,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {standaloneExercises.map((exercise) => (
-                        <ExerciseCard
-                            key={exercise.id}
-                            exercise={exercise}
-                            courseId={courseId}
-                        />
-                    ))}
-                </div>
+                <ExerciseBrowseList exercises={standaloneExercises} courseId={courseId} />
             )}
         </div>
     )

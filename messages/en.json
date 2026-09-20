@@ -6304,7 +6304,10 @@
       "empty": {
         "title": "No exercises found",
         "description": "There are no active exercises for this course at the moment."
-      }
+      },
+      "cardFallbackDescription": "Interactive practice to reinforce this course.",
+      "minutes": "{minutes} min",
+      "completed": "Completed"
     },
     "workspace": {
       "brief": "Instructions",
@@ -6384,6 +6387,16 @@
       "task": "Task",
       "output": "Output",
       "solved": "All tests pass. Challenge completed."
+    },
+    "filter": {
+      "label": "Filter by exercise type",
+      "all": "All",
+      "emptyForType": "No exercises of this type yet."
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
     }
   },
   "exams": {
