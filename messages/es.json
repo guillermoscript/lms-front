@@ -6304,7 +6304,10 @@
       "empty": {
         "title": "No se encontraron ejercicios",
         "description": "No hay ejercicios activos para este curso en este momento."
-      }
+      },
+      "cardFallbackDescription": "Práctica interactiva para reforzar este curso.",
+      "minutes": "{minutes} min",
+      "completed": "Completado"
     },
     "workspace": {
       "brief": "Instrucciones",
@@ -6384,6 +6387,16 @@
       "task": "Tarea",
       "output": "Salida",
       "solved": "Todas las pruebas pasan. Reto completado."
+    },
+    "filter": {
+      "label": "Filtrar por tipo de ejercicio",
+      "all": "Todos",
+      "emptyForType": "Aún no hay ejercicios de este tipo."
+    },
+    "difficulty": {
+      "easy": "Fácil",
+      "medium": "Medio",
+      "hard": "Difícil"
     }
   },
   "exams": {

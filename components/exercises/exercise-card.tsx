@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconCode, IconMessage, IconClock, IconChartBar, IconCheck, IconChevronRight, IconMessageCircle, IconListCheck, IconCircleCheck, IconTextSize, IconMicrophone, IconVideo } from "@tabler/icons-react";
+import { IconClock, IconCheck, IconChevronRight } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { EXERCISE_TYPE_ICONS, FALLBACK_EXERCISE_ICON, isKnownExerciseType } from "@/components/exercises/exercise-type-meta";
 
 interface ExerciseCardProps {
     exercise: {
@@ -20,22 +22,15 @@ interface ExerciseCardProps {
 }
 
 export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) {
+    const t = useTranslations("exercises.list");
+    const tTypes = useTranslations("exercises.types");
+    const tDifficulty = useTranslations("exercises.difficulty");
     const isCompleted = (exercise.exercise_completions?.length ?? 0) > 0;
 
-    const typeConfig: Record<string, { icon: typeof IconCode; label: string }> = {
-        coding_challenge: { icon: IconCode, label: "Code" },
-        essay: { icon: IconMessage, label: "Essay" },
-        discussion: { icon: IconMessageCircle, label: "Discussion" },
-        quiz: { icon: IconListCheck, label: "Quiz" },
-        multiple_choice: { icon: IconCircleCheck, label: "Multiple Choice" },
-        fill_in_the_blank: { icon: IconTextSize, label: "Fill in Blank" },
-        audio_evaluation: { icon: IconMicrophone, label: "Audio" },
-        video_evaluation: { icon: IconVideo, label: "Video" },
-        real_time_conversation: { icon: IconMessageCircle, label: "Conversation" },
-    };
-
-    const config = typeConfig[exercise.exercise_type] || typeConfig.essay;
-    const TypeIcon = config.icon;
+    const TypeIcon = EXERCISE_TYPE_ICONS[exercise.exercise_type] ?? FALLBACK_EXERCISE_ICON;
+    const typeLabel = isKnownExerciseType(exercise.exercise_type)
+        ? tTypes(exercise.exercise_type)
+        : exercise.exercise_type;
 
     const difficultyColor = {
         easy: "bg-success/10 text-success border-success/20",
@@ -45,49 +40,51 @@ export default function ExerciseCard({ exercise, courseId }: ExerciseCardProps) 
 
     return (
         <Link href={`/dashboard/student/courses/${courseId}/exercises/${exercise.id}`} className="block group">
-            <Card className="h-full hover:shadow-lg hover:border-primary/20 active:scale-[0.98] transition-all duration-200 overflow-hidden relative">
-                {isCompleted && (
-                    <div className="absolute top-3 right-3 z-10">
-                        <div className="bg-success text-success-foreground p-1 rounded-full shadow-md">
-                            <IconCheck size={12} stroke={4} />
-                        </div>
-                    </div>
-                )}
-
+            <Card className="h-full hover:shadow-lg hover:border-primary/20 active:scale-[0.98] transition-all duration-200 overflow-hidden">
                 <CardContent className="p-4 sm:p-5">
-                    <div className="flex items-start justify-between mb-3">
+                    {/* The kind of exercise reads before the title: a student
+                        picking from a dozen cards is choosing an activity, not
+                        a headline (it used to be 10px type in the footer). */}
+                    <div className="flex items-center gap-2.5 mb-3">
                         <div className={cn(
-                            "p-2.5 rounded-xl transition-transform duration-200",
+                            "p-2.5 rounded-xl transition-transform duration-200 shrink-0",
                             isCompleted ? "bg-success/10 text-success" : "bg-brand-tint text-brand-text group-hover:scale-110"
                         )}>
                             <TypeIcon size={20} />
                         </div>
-                        <Badge variant="outline" className={cn("rounded-md font-bold px-2 py-0 text-[10px] uppercase tracking-wider", difficultyColor)}>
-                            {exercise.difficulty_level}
-                        </Badge>
+                        <span className="text-sm font-medium text-foreground truncate">{typeLabel}</span>
+                        {exercise.difficulty_level && (
+                            <Badge variant="outline" className={cn("ml-auto shrink-0 rounded-md px-2 py-0 text-xs", difficultyColor)}>
+                                {["easy", "medium", "hard"].includes(exercise.difficulty_level)
+                                    ? tDifficulty(exercise.difficulty_level as "easy" | "medium" | "hard")
+                                    : exercise.difficulty_level}
+                            </Badge>
+                        )}
                     </div>
 
                     <div className="space-y-1.5">
                         <h3 className="font-bold text-base leading-tight group-hover:text-brand-text transition-colors line-clamp-2">
                             {exercise.title}
                         </h3>
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed min-h-[32px]">
-                            {exercise.description || "Interactive practice session to reinforce your learning."}
+                        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed min-h-[40px]">
+                            {exercise.description || t("cardFallbackDescription")}
                         </p>
                     </div>
 
                     <div className="flex items-center justify-between mt-3 pt-2.5 sm:mt-4 sm:pt-3 border-t border-border/50">
-                        <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             {exercise.time_limit && (
-                                <div className="flex items-center gap-1">
-                                    <IconClock size={12} />
-                                    {exercise.time_limit}m
-                                </div>
+                                <span className="flex items-center gap-1">
+                                    <IconClock size={14} aria-hidden="true" />
+                                    {t("minutes", { minutes: exercise.time_limit })}
+                                </span>
                             )}
-                            <div className="flex items-center gap-1">
-                                <IconChartBar size={12} />
-                                {config.label}
-                            </div>
+                            {isCompleted && (
+                                <span className="flex items-center gap-1 text-success">
+                                    <IconCheck size={14} aria-hidden="true" />
+                                    {t("completed")}
+                                </span>
+                            )}
                         </div>
                         <IconChevronRight
                             size={16}
