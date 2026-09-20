@@ -32,6 +32,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 // Deliberately NOT `localizedError()` below: that returns translated copy, so
 // the same failure would split into an English bucket and a Spanish one.
 import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
+import { deriveNameFromEmail } from '@/lib/auth/display-name'
 
 // Mirrors app/[locale]/auth/confirm/route.ts, the same moment in the flow
 // for the confirmation-on deployments — a signup on the main platform means
@@ -80,17 +81,12 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
-    const name = fullName.trim()
+    // An empty name no longer stops the signup (#790) — it is a label for
+    // other people's screens, not something the visitor owes us before they
+    // have an account. `deriveNameFromEmail` keeps `profiles.full_name`
+    // populated so nobody renders as "Unknown Student".
+    const name = fullName.trim() || deriveNameFromEmail(email)
     markSignupStarted()
-    if (!name) {
-      setError(t('errors.nameRequired'))
-      analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
-        method: 'password',
-        failure_reason: 'name_required',
-        is_client_validation: true,
-      })
-      return
-    }
     analytics.track(ANALYTICS_EVENTS.SIGNUP_SUBMITTED, {
       method: 'password',
       has_tenant: Boolean(tenantId),
@@ -235,14 +231,13 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="full-name">{t('fullName')}</Label>
+                <Label htmlFor="full-name">{t('fullNameOptional')}</Label>
                 <Input
                   id="full-name"
                   data-testid="signup-name"
                   type="text"
                   autoComplete="name"
                   placeholder={t('fullNamePlaceholder')}
-                  required
                   value={fullName}
                   onChange={(e) => { markSignupStarted(); setFullName(e.target.value) }}
                 />

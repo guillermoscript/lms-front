@@ -32,7 +32,6 @@ import { login } from './utils/auth'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
 
 const BASE = TENANT_BASE
-const TENANT_NAME = 'Code Academy Pro'
 const RUN = Date.now()
 const INVITEE_PREFIX = 'invite673-'
 const COURSE_TITLE = `[E2E] #673 Invited teacher course ${RUN}`
@@ -196,19 +195,15 @@ async function acceptInvitation(
     expect(new URL(page.url()).searchParams.get('next')).toBe('/join-school')
   })
 
-  await test.step('sign-up lands on the join page for this school', async () => {
+  await test.step('sign-up reaches the school through the join page, which joins on its own', async () => {
     await fillSettled(page, 'signup-name', invitee.name)
     await fillSettled(page, 'signup-email', invitee.email)
     await fillSettled(page, 'signup-password', invitee.password)
     await domClick(page, 'signup-submit')
-    await page.waitForURL(/\/join-school(?:[/?#]|$)/, { timeout: 90_000 })
-    await expect(page.getByTestId('join-school-title')).toContainText(TENANT_NAME, { timeout: 60_000 })
-  })
-
-  await test.step('Join', async () => {
-    const joinButton = page.getByRole('button', { name: `Join ${TENANT_NAME}` })
-    await expect(joinButton).toBeVisible({ timeout: 30_000 })
-    await domClick(page, joinButton)
+    // No Join button to press since #790: `/join-school` joins on arrival and
+    // forwards. The invited role is asserted from `tenant_users` by the caller
+    // — this step only has to end up inside the school.
+    await page.waitForURL(/\/dashboard(?:[/?#]|$)/, { timeout: 120_000 })
   })
 
   return { context, page }
