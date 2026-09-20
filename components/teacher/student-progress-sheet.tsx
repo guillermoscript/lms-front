@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { EXAM_PASS_SCORE, STALL_DAYS, type CourseItem, type StudentProgress } from '@/lib/analytics/student-progress'
 import { EngagementBadge, ProgressCell, ActivityTime, Fact } from './student-progress-cells'
 import { IssueCertificateButton } from './issue-certificate-button'
+import { LessonAiAuditDialog } from './lesson-ai-audit-dialog'
 
 export interface SheetStudent {
   userId: string
@@ -201,6 +202,12 @@ export function StudentProgressSheet({
                                 : t('sheet.pending')}
                             </div>
                           </div>
+                          {/* Only a completed lesson can have a tutor-granted
+                              completion to audit; the dialog itself says so
+                              when this lesson has no AI task or conversation. */}
+                          {done && (
+                            <LessonAiAuditDialog lessonId={l.id} studentId={student.userId} lessonTitle={l.title} />
+                          )}
                         </li>
                       )
                     })}

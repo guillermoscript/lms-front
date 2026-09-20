@@ -924,6 +924,15 @@
           "warnings": {
             "title": "No se pudieron cargar algunos datos de progreso",
             "desc": "Estas fuentes fallaron al leerse, así que la actividad y el progreso de abajo pueden estar subestimados:"
+          },
+          "aiAudit": {
+            "viewButton": "Conversación con el tutor de IA para {title}",
+            "loading": "Cargando el registro del tutor de IA…",
+            "error": "No se pudo cargar el registro del tutor de IA.",
+            "completedOn": "Completada el {date}",
+            "feedback": "Retroalimentación del tutor",
+            "requirementsCheck": "Verificación del verificador",
+            "notFound": "No hay ninguna finalización del tutor de IA registrada para esta lección."
           }
         },
         "certificates": {

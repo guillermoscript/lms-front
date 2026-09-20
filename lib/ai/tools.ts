@@ -183,7 +183,10 @@ export const createLessonTools = (
                 }
             }
 
-            return { success: true, message: 'Lesson marked as completed!', feedback };
+            // requirementsCheck rides along in the tool's own output so the
+            // route's onFinish can persist it next to the call — the audit
+            // trail a teacher reads later (#805) — without a second lookup.
+            return { success: true, message: 'Lesson marked as completed!', feedback, requirementsCheck: verdict.reason };
         },
     }),
 });
