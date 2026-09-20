@@ -1,4 +1,5 @@
 import type { DbClient, DbResult } from '../client'
+import { LIVE_SUBSCRIPTION_STATUSES } from '../constants'
 import type { EnrolledCourse } from '../types'
 
 export interface PublishedCourse {
@@ -34,6 +35,12 @@ export interface ActiveSubscription {
   subscription_id: number
   subscription_status: string
   end_date: string
+  /**
+   * The ONLY signal that a cancel is scheduled (#545). A subscription with the
+   * flag set is still live until `end_date` — the date means "ends on", not
+   * "renews on". `cancel_at` is informational and nullable; never branch on it.
+   */
+  cancel_at_period_end: boolean
   plan: {
     plan_id: number
     plan_name: string
@@ -136,6 +143,14 @@ export function getCoursesByIds(
     .eq('tenant_id', tenantId)
 }
 
+/**
+ * This user's live subscriptions, newest expiry first.
+ *
+ * "Live" is `LIVE_SUBSCRIPTION_STATUSES` — `active`, `renewed` and `past_due`
+ * (#545), not the `active` literal. A renewal writes `renewed` and a failed
+ * card writes `past_due`; both still grant access, so filtering on `active`
+ * alone told a paying student they had no plan.
+ */
 export function getActiveSubscriptions(
   supabase: DbClient,
   userId: string,
@@ -147,6 +162,7 @@ export function getActiveSubscriptions(
       subscription_id,
       subscription_status,
       end_date,
+      cancel_at_period_end,
       plan:plans!subscriptions_plan_id_fkey (
         plan_id,
         plan_name,
@@ -155,7 +171,7 @@ export function getActiveSubscriptions(
     `)
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
-    .eq('subscription_status', 'active')
+    .in('subscription_status', LIVE_SUBSCRIPTION_STATUSES)
     .gte('end_date', new Date().toISOString())
     .order('end_date', { ascending: false })
 }
