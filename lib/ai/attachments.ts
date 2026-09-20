@@ -166,6 +166,29 @@ export async function signStoredAttachments(
     )
 }
 
+/**
+ * The same signing, keyed by storage path instead of by position — for a
+ * caller that pairs the URLs with messages itself (#823). A path that could
+ * not be signed is simply absent.
+ */
+export async function signAttachmentPaths(paths: string[]): Promise<Map<string, string>> {
+    const urls = new Map<string, string>()
+    if (paths.length === 0) return urls
+
+    const { data, error } = await createAdminClient()
+        .storage.from(AI_ATTACHMENT_BUCKET)
+        .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS)
+    if (error || !data) {
+        console.error('Failed to sign AI chat attachments:', error)
+        return urls
+    }
+
+    for (const entry of data) {
+        if (entry.path && entry.signedUrl) urls.set(entry.path, entry.signedUrl)
+    }
+    return urls
+}
+
 /** True when the last user message carries at least one image part. */
 export function lastUserMessageHasAttachments(messages: MessageLike[]): boolean {
     const last = messages[messages.length - 1]
