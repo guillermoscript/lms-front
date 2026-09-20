@@ -11,10 +11,29 @@ import { getSolanaSettlementOptions } from "@/app/actions/admin/settings";
 import { findConflictingSubscription } from "@/lib/payments/subscription-guard";
 import { SubscriptionConflictNotice } from "@/components/public/subscription-conflict-notice";
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/types";
+import type { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/seo";
 
 interface SearchParams {
     courseId?: string;
     planId?: string;
+}
+
+// A checkout page carries whatever course/plan the shopper picked and
+// nothing worth indexing — title only, kept out of search (#799).
+export async function generateMetadata({
+    params
+}: {
+    params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+    const { locale } = await params
+    const t = await getTranslations({ locale, namespace: 'seo' })
+    return buildPageMetadata({
+        title: t('checkout.title'),
+        path: '/checkout',
+        locale,
+        noIndex: true,
+    })
 }
 
 export default async function CheckoutPage(props: { params: Promise<{ locale: string }>, searchParams: Promise<SearchParams> }) {

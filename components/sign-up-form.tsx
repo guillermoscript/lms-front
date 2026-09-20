@@ -24,6 +24,7 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { joinSchoolPath } from '@/lib/auth/route-access'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 // Shared with login and /auth/error so the three cannot drift, and closed-set
@@ -31,6 +32,11 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 // Deliberately NOT `localizedError()` below: that returns translated copy, so
 // the same failure would split into an English bucket and a Spanish one.
 import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
+
+// Mirrors app/[locale]/auth/confirm/route.ts, the same moment in the flow
+// for the confirmation-on deployments — a signup on the main platform means
+// "start a school", one on a tenant subdomain means "join this one".
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
 interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -127,7 +133,20 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         // tenant-scoped RLS fails closed and the next page 404s.
         await supabase.auth.refreshSession()
       }
-      router.push(data.session && nextPath ? nextPath : '/auth/sign-up-success')
+      // No session means confirmation is genuinely pending (prod has it off,
+      // so this is now the rare case) — sign-up-success is the "check your
+      // inbox" screen and still correct there. A session means the account is
+      // already live, so a brand-new student goes onward instead of being
+      // told to wait for an email that, on prod, mailer #676 never sends.
+      if (!data.session) {
+        router.push('/auth/sign-up-success')
+      } else if (nextPath) {
+        router.push(nextPath)
+      } else if (tenantId === DEFAULT_TENANT_ID) {
+        router.push('/create-school')
+      } else {
+        router.push(joinSchoolPath())
+      }
     } catch (error: unknown) {
       setError(localizedError(error))
       analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {

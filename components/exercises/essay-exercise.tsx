@@ -1,18 +1,24 @@
 "use client";
 
 import { ReactNode } from "react";
-import * as motion from "motion/react-client";
 import { useTranslations } from "next-intl";
 import ExerciseBrief from "@/components/exercises/exercise-brief";
 import ExerciseHeader from "@/components/exercises/exercise-header";
 import ExerciseWorkspace, { initialWorkspacePanel } from "@/components/exercises/exercise-workspace";
 
 interface EssayExerciseProps {
-    exercise: any;
+    exercise: {
+        title: string;
+        description?: string | null;
+        instructions: string;
+        exercise_type: string;
+        difficulty_level?: string | null;
+        time_limit?: number | null;
+    };
     exerciseId: string;
     courseId: string;
     isExerciseCompleted: boolean;
-    profile: any;
+    profile: { full_name?: string | null } | null;
     studentId: string;
     children: ReactNode;
     isExerciseCompletedSection?: ReactNode;
@@ -45,24 +51,20 @@ export default function EssayExercise({
     const typeLabel = typeLabels[exercise.exercise_type] || "Exercise";
 
     return (
-        <div className="space-y-4 sm:space-y-6">
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-            >
-                <ExerciseHeader
-                    typeLabel={typeLabel}
-                    title={exercise.title}
-                    description={exercise.description}
-                    difficulty={exercise.difficulty_level}
-                    timeLimit={exercise.time_limit}
-                    completed={isExerciseCompleted}
-                />
-            </motion.div>
-
+        <div className="lg:h-full">
             <ExerciseWorkspace
+                header={
+                    <ExerciseHeader
+                        typeLabel={typeLabel}
+                        title={exercise.title}
+                        description={exercise.description}
+                        difficulty={exercise.difficulty_level}
+                        timeLimit={exercise.time_limit}
+                        completed={isExerciseCompleted}
+                    />
+                }
                 brief={<ExerciseBrief instructions={exercise.instructions} />}
+                resultFirst={Boolean(resultSummary)}
                 task={children}
                 taskLabel={t("coach")}
                 result={resultSummary}

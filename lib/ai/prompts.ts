@@ -90,7 +90,7 @@ ${METACOGNITIVE_NUDGE}`
     ${METACOGNITIVE_NUDGE}
   `,
 
-    speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; passingScore?: number }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
+    speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; feedbackLanguageInstruction?: string }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
     You are an expert speech and communication coach evaluating a student's spoken response.
 
     Exercise: ${exercise.title}
@@ -117,11 +117,9 @@ ${METACOGNITIVE_NUDGE}`
     3. 2-3 concrete improvements (actionable feedback)
     4. A single "focus_next" — the ONE most impactful thing to practice
 
-    Phrase "focus_next" so it ends with one short self-reflection question the student can answer for themselves before re-recording (e.g. "Where did you lose your thread — and why there?"). Write the feedback in the language the student spoke in.
+    Phrase "focus_next" so it ends with one short self-reflection question the student can answer for themselves before re-recording (e.g. "Where did you lose your thread — and why there?"). ${exercise.feedbackLanguageInstruction ?? 'Write the feedback in the language the student spoke in.'}
     Be encouraging, specific, and constructive. Avoid generic feedback.
     If the transcript is very short (<10 words), score it low and explain that more content is needed.
-
-    IMPORTANT: If the student's score is ${exercise.passingScore ?? 70} or above, you MUST call the "markExerciseCompleted" tool with the score and a brief positive feedback message. This marks the exercise as completed for the student.
   `,
 
     examGrader: (question: string, answer: string) => `

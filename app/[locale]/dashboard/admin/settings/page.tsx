@@ -17,6 +17,7 @@ import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
 import { getMailerStatus } from '@/lib/email/status'
 import { MailerStatusRow } from '@/components/admin/mailer-status-row'
+import { countPreviewLessons } from '@/lib/settings/free-preview'
 
 export default async function SettingsPage({
   searchParams,
@@ -82,6 +83,11 @@ export default async function SettingsPage({
   // Whether the platform mailer can send at all — read-only, from env presence
   // (#676). Rendered on the server so the API key never reaches the client.
   const mailer = getMailerStatus()
+
+  // How many lessons the #797 backfill (and any teacher opt-in) made public —
+  // shown next to the free-preview switch so an admin can see what turning it
+  // off actually affects (#799).
+  const previewLessonCount = await countPreviewLessons(tenantId)
 
   // Deep link support: /dashboard/admin/settings?tab=payment
   const { tab } = await searchParams
@@ -199,7 +205,7 @@ export default async function SettingsPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <EnrollmentSettingsForm settings={settings.enrollment || {}} />
+                  <EnrollmentSettingsForm settings={settings.enrollment || {}} previewLessonCount={previewLessonCount} />
                 </CardContent>
               </Card>
             </TabsContent>

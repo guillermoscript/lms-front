@@ -47,7 +47,7 @@ Password for all: `password123`
 | 2.4 | Password input visible | `[data-testid="signup-password"]` | visible |
 | 2.5 | Submit button visible | `[data-testid="signup-submit"]` | visible |
 | 2.6 | Full name is required | submit without name | stays on sign-up; `signup-name` fails `validity.valueMissing` |
-| 2.7 | Sign-up with name succeeds | fill name/email/password; submit | lands on `/auth/sign-up-success` or `/join-school` (guards #590 "Unknown Student") |
+| 2.7 | Sign-up with a session moves on | fill name/email/password; submit | lands on `/create-school` — autoconfirmed sign-up never stops at `/auth/sign-up-success` (#797; guards #590 "Unknown Student") |
 
 ---
 

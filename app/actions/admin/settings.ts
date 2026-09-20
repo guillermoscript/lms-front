@@ -94,7 +94,7 @@ export async function getSettings(category?: string): Promise<SettingsResponse> 
         general: ['site_name', 'site_description', 'contact_email', 'support_email', 'timezone', 'maintenance_mode'],
         email: ['smtp_', 'email_'],
         payment: ['stripe_', 'paypal_', 'lemonsqueezy_', 'solana_', 'binance_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval', 'manual_payment_instructions'],
-        enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled'],
+        enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled', 'free_preview_enabled'],
       }
       const keys = categoryPrefixes[category]
       if (keys) {
@@ -281,6 +281,9 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       allow_self_enrollment: { enabled: true },
       enrollment_expiration_days: { value: 365 },
       course_capacity_enabled: { enabled: false },
+      // On by default — matches what ships today (#799): every school already
+      // has free preview lessons unless it explicitly turns them off.
+      free_preview_enabled: { enabled: true },
       logo_url: { value: '' },
       favicon_url: { value: '' },
     }
@@ -802,6 +805,7 @@ export async function getAllSettingsByCategory(): Promise<CategorySettingsRespon
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
       max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',
       enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',
+      free_preview_enabled: 'enrollment',
     }
 
     const grouped = (data || []).reduce((acc: Record<string, SettingsGroup>, s: SettingRow) => {

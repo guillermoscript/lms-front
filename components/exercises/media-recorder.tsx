@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { IconMicrophone, IconPlayerStop, IconRefresh, IconCheck, IconUpload } from '@tabler/icons-react'
+import { IconAlertTriangle, IconMicrophone, IconPlayerStop, IconRefresh, IconCheck, IconUpload } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 type RecorderState = 'idle' | 'countdown' | 'recording' | 'review' | 'submitting'
@@ -110,34 +110,40 @@ export function MediaRecorderComponent({
   }, [])
 
   const drawWaveform = useCallback(() => {
-    const canvas = canvasRef.current
-    const analyser = analyserRef.current
-    if (!canvas || !analyser) return
+    // A named inner loop: the callback can't reference itself before it exists.
+    const draw = () => {
+      const canvas = canvasRef.current
+      const analyser = analyserRef.current
+      if (!canvas || !analyser) return
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-    const data = new Uint8Array(analyser.frequencyBinCount)
-    analyser.getByteTimeDomainData(data)
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      analyser.getByteTimeDomainData(data)
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.beginPath()
-    ctx.strokeStyle = 'hsl(var(--primary))'
-    ctx.lineWidth = 2
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.beginPath()
+      // The tokens are OKLCH, so `hsl(var(--primary))` was an invalid color and
+      // the stroke fell back to black — invisible in dark mode.
+      ctx.strokeStyle = getComputedStyle(canvas).color
+      ctx.lineWidth = 2
 
-    const sliceWidth = canvas.width / data.length
-    let x = 0
+      const sliceWidth = canvas.width / data.length
+      let x = 0
 
-    for (let i = 0; i < data.length; i++) {
-      const v = data[i] / 128.0
-      const y = (v * canvas.height) / 2
-      if (i === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-      x += sliceWidth
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128.0
+        const y = (v * canvas.height) / 2
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+        x += sliceWidth
+      }
+      ctx.stroke()
+
+      animFrameRef.current = requestAnimationFrame(draw)
     }
-    ctx.stroke()
-
-    animFrameRef.current = requestAnimationFrame(drawWaveform)
+    draw()
   }, [])
 
   const stopRecording = useCallback(() => {
@@ -175,6 +181,13 @@ export function MediaRecorderComponent({
   const startCountdown = async () => {
     setError(null)
     try {
+      // Browsers only expose the microphone on https (or localhost). On plain
+      // http there is no permission prompt at all — say so instead of blaming
+      // a denial the user never made.
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setError(t('micInsecure'))
+        return
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
 
@@ -295,61 +308,59 @@ export function MediaRecorderComponent({
 
   const isBelowMin = elapsed < minDurationSeconds && state === 'recording'
 
+  const busy = state === 'submitting' || isSubmitting
+
+  // A dictaphone, not a form: one round control under a fixed stage, so the
+  // panel keeps its height while idle → countdown → recording → review swap.
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col items-center gap-4 text-center">
       {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <p className="flex items-start gap-2 text-left text-sm text-destructive" role="alert">
+          <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
           {error}
-        </div>
+        </p>
       )}
 
-      {/* Waveform canvas — visible while recording */}
-      {state === 'recording' && (
-        <div className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] overflow-hidden">
+      <div className="flex h-16 w-full items-center justify-center">
+        {state === 'idle' && (
+          // Where the waveform will be: the same strip, at rest.
+          <div className="flex w-full items-center justify-between" aria-hidden="true">
+            {Array.from({ length: 48 }, (_, i) => (
+              <span key={i} className="h-1 w-1 rounded-full bg-foreground/20" />
+            ))}
+          </div>
+        )}
+
+        {state === 'countdown' && (
+          <p className="text-5xl font-bold tabular-nums" role="status" aria-label={t('getReady')}>
+            {countdown}
+          </p>
+        )}
+
+        {state === 'recording' && (
           <canvas
             ref={canvasRef}
             width={600}
             height={80}
-            className="w-full h-20"
+            className="h-16 w-full text-foreground"
             aria-hidden="true"
           />
-        </div>
-      )}
+        )}
 
-      {/* Timer */}
-      {(state === 'recording' || state === 'review') && (
-        <div className="flex items-center justify-between text-sm">
-          <span className={cn(
-            'font-mono font-bold tabular-nums',
-            state === 'recording' ? 'text-destructive' : 'text-muted-foreground'
-          )}>
-            {state === 'recording' ? '⏺ ' : ''}{formatTime(elapsed)}
-          </span>
-          <span className="text-muted-foreground text-xs">
-            {t('maxDuration', { time: formatTime(maxDurationSeconds) })}
-          </span>
-        </div>
-      )}
+        {(state === 'review' || state === 'submitting') && audioUrl && (
+          <audio src={audioUrl} controls className="h-10 w-full" aria-label={t('recordingPreview')} />
+        )}
+      </div>
 
-      {/* Countdown overlay */}
-      {state === 'countdown' && (
-        <div className="flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-primary/20 bg-primary/[0.03]">
-          <div className="text-center">
-            <div className="text-5xl font-black text-brand-text tabular-nums">{countdown}</div>
-            <p className="mt-1 text-xs text-muted-foreground">{t('getReady')}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Audio review player */}
-      {state === 'review' && audioUrl && (
-        <audio
-          src={audioUrl}
-          controls
-          className="w-full rounded-lg"
-          aria-label="Recording preview"
-        />
-      )}
+      <p className="flex items-center gap-2 font-mono text-base tabular-nums">
+        {state === 'recording' && (
+          <span className="h-2.5 w-2.5 rounded-full bg-destructive" aria-hidden="true" />
+        )}
+        <span className={cn('font-semibold', state === 'idle' && 'text-muted-foreground')}>
+          {formatTime(elapsed)}
+        </span>
+        <span className="text-muted-foreground">/ {formatTime(maxDurationSeconds)}</span>
+      </p>
 
       {/* Hidden file input */}
       <input
@@ -361,76 +372,70 @@ export function MediaRecorderComponent({
         aria-hidden="true"
       />
 
-      {/* Controls */}
-      <div className="flex items-center gap-3">
-        {state === 'idle' && (
-          <>
-            <Button
-              onClick={startCountdown}
-              disabled={disabled}
-              className="gap-2 flex-1"
-              size="lg"
-            >
-              <IconMicrophone size={18} />
-              {t('record')}
-            </Button>
-            <Button
-              variant="outline"
+      {(state === 'idle' || state === 'countdown') && (
+        <div className="flex flex-col items-center gap-2">
+          {/* An intentional circle: the one control on the panel. */}
+          <Button
+            onClick={startCountdown}
+            disabled={disabled || state === 'countdown'}
+            aria-label={t('record')}
+            className="size-[4.5rem] rounded-full p-0"
+          >
+            <IconMicrophone className="size-7" aria-hidden="true" />
+          </Button>
+          <span className="text-sm font-medium" aria-hidden="true">
+            {state === 'countdown' ? t('getReady') : t('record')}
+          </span>
+          {state === 'idle' && (
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className="gap-2"
-              size="lg"
+              className="flex min-h-10 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
             >
-              <IconUpload size={18} />
-              {t('upload')}
-            </Button>
-          </>
-        )}
+              <IconUpload size={16} aria-hidden="true" />
+              {t('orUpload')}
+            </button>
+          )}
+        </div>
+      )}
 
-        {state === 'recording' && (
+      {state === 'recording' && (
+        <div className="flex flex-col items-center gap-2">
           <Button
             onClick={stopRecording}
-            variant="outline"
-            className="gap-2 flex-1 border-destructive/30 text-destructive hover:bg-destructive/5"
-            size="lg"
+            variant="destructive"
             disabled={isBelowMin}
+            aria-label={t('stop')}
+            className="size-[4.5rem] rounded-full p-0"
           >
-            <IconPlayerStop size={18} />
-            {isBelowMin
-              ? t('keepRecording', { seconds: minDurationSeconds - elapsed })
-              : t('stop')}
+            <IconPlayerStop className="size-7" aria-hidden="true" />
           </Button>
-        )}
+          <span className="text-sm font-medium" aria-live="polite">
+            {isBelowMin ? t('keepRecording', { seconds: minDurationSeconds - elapsed }) : t('stop')}
+          </span>
+        </div>
+      )}
 
-        {state === 'review' && (
-          <>
-            <Button
-              variant="outline"
-              onClick={handleReRecord}
-              className="gap-2"
-              size="lg"
-            >
-              <IconRefresh size={16} />
-              {t('reRecord')}
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              className="gap-2 flex-1"
-              size="lg"
-            >
-              <IconCheck size={16} />
-              {t('submitRecording')}
-            </Button>
-          </>
-        )}
-
-        {(state === 'submitting' || isSubmitting) && (
-          <Button disabled className="gap-2 flex-1" size="lg">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            {t('uploading')}
+      {state === 'review' && !busy && (
+        <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+          <Button variant="outline" onClick={handleReRecord} size="lg" className="h-11 gap-2 text-sm sm:px-5">
+            <IconRefresh size={16} aria-hidden="true" />
+            {t('reRecord')}
           </Button>
-        )}
-      </div>
+          <Button onClick={handleSubmit} size="lg" className="h-11 gap-2 text-sm sm:px-6">
+            <IconCheck size={16} aria-hidden="true" />
+            {t('submitRecording')}
+          </Button>
+        </div>
+      )}
+
+      {busy && (
+        <Button disabled size="lg" className="h-11 gap-2 text-sm sm:px-6">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
+          {t('uploading')}
+        </Button>
+      )}
     </div>
   )
 }
