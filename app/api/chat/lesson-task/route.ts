@@ -2,8 +2,11 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
+import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 import { fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
+import { LESSON_TASK_TOOL_INVOCATION_VERSION } from '@/lib/ai/lesson-task-history'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
@@ -28,6 +31,12 @@ export async function POST(req: Request) {
     const auth = await getApiAuthContext(req)
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
+
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+    }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
@@ -74,15 +83,44 @@ export async function POST(req: Request) {
         model: AI_MODELS.tutor,
         system: PROMPTS.lessonTutor(lesson, aiTask),
         messages: modelMessages,
-        tools: createLessonTools(supabase, { lessonId: String(lessonId), userId: user.id }),
+        tools: createLessonTools(supabase, {
+            lessonId: String(lessonId),
+            userId: user.id,
+            verify: () => verifyLessonCompletion({
+                taskInstructions: aiTask?.task_instructions,
+                teacherPrompt: aiTask?.system_prompt,
+                messages,
+            }),
+        }),
         experimental_telemetry: { functionId: 'lesson-tutor' },
         onFinish: async (event) => {
             // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
+            // `event.text` is the LAST step only. The tutor congratulates and calls
+            // markLessonCompleted in one step, then closes in the next — keep both.
+            //
+            // The markLessonCompleted call (and its verdict) rides along in
+            // tool_invocations so a reload can rebuild the "Target achieved"
+            // card and a teacher can see why it was granted (#805) — this is
+            // the only write path for this row, extending it rather than
+            // adding a second insert.
+            const toolInvocations = event.steps.flatMap((step) =>
+                step.toolResults
+                    .filter((result) => result.toolName === 'markLessonCompleted')
+                    .map((result) => ({
+                        version: LESSON_TASK_TOOL_INVOCATION_VERSION,
+                        toolName: result.toolName,
+                        toolCallId: result.toolCallId,
+                        input: result.input,
+                        output: result.output,
+                    }))
+            )
+
             const messageData = {
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'assistant',
-                message: event.text,
+                message: event.steps.map((step) => step.text).filter(Boolean).join('\n\n'),
+                tool_invocations: toolInvocations.length > 0 ? toolInvocations : null,
             };
 
             const { error } = await supabase.from('lessons_ai_task_messages').insert(messageData)

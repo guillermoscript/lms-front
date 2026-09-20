@@ -7,6 +7,7 @@ import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/a
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 
 export const maxDuration = 120
 
@@ -29,6 +30,12 @@ export async function POST(req: Request) {
     const auth = await getApiAuthContext(req)
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
+
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+    }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })

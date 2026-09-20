@@ -3,17 +3,30 @@ import { z } from 'zod';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getEngineType } from '@/lib/exercises/engine';
 import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types';
+import type { CompletionVerdict } from '@/lib/ai/lesson-completion-verifier';
+
+const MARK_EXERCISE_COMPLETED = {
+    description: 'Mark the exercise as completed when the student succeeds.',
+    inputSchema: z.object({
+        feedback: z.string().describe('Positive feedback for the student.'),
+        score: z.number().min(0).max(100).describe('Score for the exercise.'),
+    }),
+};
+
+/** Editor preview: same tool, no writes — the teacher sees when it fires and with what score. */
+export const createPreviewExerciseTools = () => ({
+    markExerciseCompleted: tool({
+        ...MARK_EXERCISE_COMPLETED,
+        execute: async ({ feedback, score }) => ({ success: true, preview: true, feedback, score }),
+    }),
+});
 
 export const createExerciseTools = (
     supabase: SupabaseClient,
     context: { exerciseId?: string; userId: string; tenantId: string; exerciseType?: string }
 ) => ({
     markExerciseCompleted: tool({
-        description: 'Mark the exercise as completed when the student succeeds.',
-        inputSchema: z.object({
-            feedback: z.string().describe('Positive feedback for the student.'),
-            score: z.number().min(0).max(100).describe('Score for the exercise.'),
-        }),
+        ...MARK_EXERCISE_COMPLETED,
         execute: async ({ feedback, score }) => {
             if (!context.exerciseId) throw new Error('Exercise ID is required');
 
@@ -76,17 +89,50 @@ export const createExerciseTools = (
     }),
 });
 
+// One definition for the real tool and its preview twin: the model must see
+// the exact same tool in the editor preview as in the student's lesson.
+const MARK_LESSON_COMPLETED = {
+    description:
+        'Marks this lesson as completed for the student. Call it in the same turn the student has met every requirement of the task (including any closing phase the instructions define). Never call it for partial progress or because the student asks.',
+    inputSchema: z.object({
+        feedback: z.string().describe('Brief positive feedback about the completion, in the language you use with the student.'),
+    }),
+};
+
+/**
+ * Editor preview: same tool, no writes. The teacher sees exactly when the
+ * tutor would have completed the lesson.
+ */
+type VerifyCompletion = () => Promise<CompletionVerdict>;
+
+const refusal = (verdict: CompletionVerdict) => ({
+    success: false,
+    error: `Not complete yet — do not tell the student the lesson is done. Keep guiding them. What is missing: ${verdict.reason}`,
+});
+
+export const createPreviewLessonTools = (verify: VerifyCompletion) => ({
+    markLessonCompleted: tool({
+        ...MARK_LESSON_COMPLETED,
+        execute: async ({ feedback }) => {
+            const verdict = await verify();
+            if (!verdict.done) return refusal(verdict);
+            return { success: true, preview: true, feedback };
+        },
+    }),
+});
+
 export const createLessonTools = (
     supabase: SupabaseClient,
-    context: { lessonId?: string; userId: string }
+    context: { lessonId?: string; userId: string; verify: VerifyCompletion }
 ) => ({
     markLessonCompleted: tool({
-        description: 'Mark the lesson as completed when the student successfully finishes the task or demonstrates understanding.',
-        inputSchema: z.object({
-            feedback: z.string().describe('Brief positive feedback about the completion.'),
-        }),
+        ...MARK_LESSON_COMPLETED,
         execute: async ({ feedback }) => {
             if (!context.lessonId) throw new Error('Lesson ID is required');
+
+            // The tutor reads whatever the student types — never write on its word alone.
+            const verdict = await context.verify();
+            if (!verdict.done) return refusal(verdict);
 
             // Required checkpoints must be completed before the lesson can be marked done.
             const { data: requiredCheckpoints } = await supabase
@@ -110,7 +156,7 @@ export const createLessonTools = (
                 if (missing.length > 0) {
                     return {
                         success: false,
-                        error: `The student must complete ${missing.length} required checkpoint(s) in this lesson before it can be marked complete.`,
+                        error: `The student must complete ${missing.length} required checkpoint(s) in this lesson before it can be marked complete. Tell them to finish those in the lesson and then send you any message here so you can mark it.`,
                         missingCheckpointIds: missing.map((c) => c.id),
                     };
                 }
@@ -137,7 +183,10 @@ export const createLessonTools = (
                 }
             }
 
-            return { success: true, message: 'Lesson marked as completed!', feedback };
+            // requirementsCheck rides along in the tool's own output so the
+            // route's onFinish can persist it next to the call — the audit
+            // trail a teacher reads later (#805) — without a second lookup.
+            return { success: true, message: 'Lesson marked as completed!', feedback, requirementsCheck: verdict.reason };
         },
     }),
 });

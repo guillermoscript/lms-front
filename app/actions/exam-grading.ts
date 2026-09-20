@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { hasPlanFeature, isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
-import { openai } from '@ai-sdk/openai'
+import { AI_MODELS, DEFAULT_MODEL_ID } from '@/lib/ai/config'
 import { generateText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { getLocale } from 'next-intl/server'
@@ -414,10 +414,8 @@ Evaluate these free-text answers now:`
     const result = await propagateAttributes(
       { metadata: { examId: String(params.examId), submissionId: String(params.submissionId) } },
       () => generateText({
-        model: openai('gpt-4o-mini'),
+        model: AI_MODELS.grader,
         prompt: aiPrompt,
-        temperature: 0.3, // Lower temperature for more consistent grading
-        topP: 0.8,
         experimental_telemetry: { functionId: 'exam-grading' },
       }),
     )
@@ -486,7 +484,7 @@ Evaluate these free-text answers now:`
       p_overall_feedback: aiEvaluation.overall_feedback || EXAM_FEEDBACK_CODES.graded,
       p_score: scorePercentage,
       p_question_feedback: questionFeedback,
-      p_ai_model: 'gpt-4o-mini',
+      p_ai_model: DEFAULT_MODEL_ID,
       p_processing_time_ms: processingTime,
     })
 

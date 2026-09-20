@@ -65,6 +65,8 @@ import {
 } from "@/components/ai-elements/tool";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { LessonCompletionCard } from "@/components/ai/lesson-completion-card";
+import { findLessonCompletion, lessonCompletionOutput } from "@/lib/ai/lesson-completion";
 
 /**
  * Tracks the visual viewport height while the mobile chat overlay is open so
@@ -95,7 +97,6 @@ function useVisualViewportHeight(enabled: boolean) {
 interface LessonAIChatProps {
     lessonId: number;
     taskDescription: string;
-    isCompleted?: boolean;
     initialMessages?: UIMessage[];
 }
 
@@ -113,12 +114,10 @@ interface ToolInvocationPart {
 function InnerLessonAIChat({
     lessonId,
     taskDescription,
-    isCompleted: initialIsCompleted,
     initialMessages = [],
 }: LessonAIChatProps) {
     const router = useRouter();
     const t = useTranslations('components.lessonAIChat');
-    const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
     const [restartDialogOpen, setRestartDialogOpen] = useState(false);
     // Mobile-only: the chat lives behind a launcher and opens as a
@@ -157,26 +156,38 @@ function InnerLessonAIChat({
             },
         }),
         messages: initialMessages,
-        onToolCall: async ({ toolCall }) => {
-            if (toolCall.toolName === "markLessonCompleted") {
-                setIsCompleted(true);
-                const args = (toolCall as { args?: { feedback?: string } }).args ?? {};
-
-                // Trigger confetti
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#3b82f6', '#10b981', '#f59e0b']
-                });
-
-                toast.success(t('toast.completed'), {
-                    description: args.feedback || t('toast.completedDetail'),
-                });
-                router.refresh();
-            }
-        },
     });
+
+    // Completion is the tool's ANSWER, not its call: the server refuses while
+    // required checkpoints are open, and `onToolCall` fires before it has run.
+    const completion = findLessonCompletion(messages);
+    // The chat locks on a finished CONVERSATION, not a flag: `initialMessages`
+    // rebuilds a past grant from `lessons_ai_task_messages.tool_invocations`
+    // (#805), and restart deletes those rows — so an empty or restarted chat
+    // has no completion part and is open for practice, with no separate
+    // client-side "practising" state to lose on reload.
+    const isCompleted = Boolean(completion);
+    // Seeded from the history the page loaded with, so a reload of an
+    // already-completed lesson shows the card without replaying the
+    // celebration — only a completion NEW to this session should confetti.
+    const celebratedCallId = useRef<string | null>(findLessonCompletion(initialMessages)?.toolCallId ?? null);
+    useEffect(() => {
+        if (!completion || celebratedCallId.current === completion.toolCallId) return;
+        celebratedCallId.current = completion.toolCallId;
+
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#10b981', '#f59e0b'],
+            disableForReducedMotion: true,
+        });
+
+        toast.success(t('toast.completed'), {
+            description: completion.feedback || t('toast.completedDetail'),
+        });
+        router.refresh();
+    }, [completion, router, t]);
 
     const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -215,8 +226,9 @@ function InnerLessonAIChat({
             });
 
             if (res.ok) {
+                // No completion part left in an empty conversation — the chat
+                // unlocks on its own, nothing else to flip.
                 setMessages([]);
-                setIsCompleted(false);
                 toast.success(t('toast.restartSuccess'));
                 router.refresh();
             } else {
@@ -390,6 +402,18 @@ function InnerLessonAIChat({
                                         if (part.type === 'text') {
                                             return <MessageResponse key={index}>{part.text}</MessageResponse>;
                                         }
+                                        const completionOutput = lessonCompletionOutput(part);
+                                        if (completionOutput) {
+                                            // A refusal is explained by the tutor's own next words.
+                                            if (!completionOutput.success) return null;
+                                            return (
+                                                <LessonCompletionCard
+                                                    key={index}
+                                                    title={t('targetAchieved')}
+                                                    feedback={completionOutput.feedback}
+                                                />
+                                            );
+                                        }
                                         if (part.type === 'tool-invocation') {
                                             const toolInvocation = (part as unknown as ToolInvocationPart).toolInvocation;
                                             if (!toolInvocation) return null;
@@ -398,17 +422,11 @@ function InnerLessonAIChat({
                                             if (toolInvocation.toolName === 'markLessonCompleted') {
                                                 if (toolInvocation.state === 'result') {
                                                     return (
-                                                        <div key={toolInvocation.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-5 bg-success/10 border border-success/20 rounded-xl sm:rounded-2xl text-success text-sm shadow-sm ring-1 ring-inset ring-success/10">
-                                                            <div className="flex items-start gap-3 sm:gap-4">
-                                                                <div className="p-2 bg-success rounded-lg shadow-lg">
-                                                                    <IconCheck className="h-5 w-5 text-success-foreground" />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <p className="font-bold text-base text-success">{t('targetAchieved')}</p>
-                                                                    <p className="opacity-90 leading-relaxed text-sm">{(toolInvocation.result as { feedback?: string })?.feedback}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        <LessonCompletionCard
+                                                            key={toolInvocation.toolCallId}
+                                                            title={t('targetAchieved')}
+                                                            feedback={(toolInvocation.result as { feedback?: string })?.feedback}
+                                                        />
                                                     )
                                                 }
                                                 return null;

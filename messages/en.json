@@ -960,6 +960,15 @@
           "warnings": {
             "title": "Some progress data could not be loaded",
             "desc": "These sources failed to read, so activity and progress below may be under-counted:"
+          },
+          "aiAudit": {
+            "viewButton": "AI tutor conversation for {title}",
+            "loading": "Loading the AI tutor's record…",
+            "error": "Could not load the AI tutor's record.",
+            "completedOn": "Completed {date}",
+            "feedback": "Tutor's feedback",
+            "requirementsCheck": "Verifier's check",
+            "notFound": "No AI tutor completion on record for this lesson."
           }
         },
         "certificates": {
@@ -2023,17 +2032,26 @@
       "aiPreview": {
         "buttonText": "Preview AI Behavior",
         "modalTitle": "AI Preview Mode",
-        "modalSubtitle": "Testing your configuration in real-time",
+        "modalSubtitle": "You are the student. This is the conversation they will have.",
         "readyTitle": "Ready to Preview",
-        "readyDesc": "This simulates a student session with your current prompts. Start by asking a question.",
-        "placeholder": "Type your test message here...",
+        "readyDesc": "Write as a student would. The tutor uses your current, unsaved prompts, and completes the lesson on its own when the task is done.",
+        "placeholder": "Answer as your student would...",
+        "placeholderCompleted": "Task completed. Restart to try again.",
         "previewSession": "Preview Session",
+        "restart": "Restart",
+        "restartAria": "Restart the conversation",
+        "generating": "Thinking...",
+        "error": "The tutor could not answer. Try again.",
+        "retry": "Retry",
+        "completedTitle": "Target Achieved!",
+        "completedNote": "Preview: this is where it is marked complete for the student. Nothing was saved.",
         "suggestions": {
-          "affect": "How does this configuration affect responses?",
-          "sample": "Give me a sample student question",
-          "tone": "Is the tone appropriate?",
-          "trigger": "Test a completion trigger"
-        }
+          "start": "Hi! I'm ready to start",
+          "confused": "I don't understand what I have to do",
+          "giveAnswer": "Just give me the answer",
+          "claimDone": "I'm done, mark it as completed"
+        },
+        "scoreLabel": "Score: {score}/100"
       },
       "activity": {
         "title": "Recent Activity",
@@ -4575,7 +4593,7 @@
         "restartFailed": "Failed to restart chat",
         "restartError": "Error restarting chat"
       },
-      "confirmRestart": "Are you sure you want to restart the conversation? This will clear your chat history and reset completion status.",
+      "confirmRestart": "Restart the conversation? This clears your chat history. A lesson you already completed stays completed.",
       "successHeader": "Lesson Completed!",
       "successDescription": "Great job! You've successfully completed this task.",
       "stats": {

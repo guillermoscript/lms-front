@@ -108,6 +108,19 @@ export const aiGenerationLimiter = rateLimit({
   uniqueTokenPerInterval: 2000,
 });
 
+/**
+ * AI chat turns (lesson tutor, exercise coach, editor previews) — keyed by user
+ * id. Each turn is a model call on the platform's key. In-memory, so the cap is
+ * per server instance: a brake on scripts, not an exact quota.
+ */
+// A student typing flat out sends a handful of turns a minute; a script sends hundreds.
+export const AI_CHAT_TURNS_PER_MINUTE = 20;
+
+export const aiChatLimiter = rateLimit({
+  interval: 60 * 1000,
+  uniqueTokenPerInterval: 5000,
+});
+
 /** Client IP from standard proxy headers, falling back to 'unknown'. */
 export function getClientIp(req: { headers: { get(name: string): string | null } }): string {
   return (
