@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -23,6 +23,7 @@ import {
 } from '@tabler/icons-react'
 import { MediaRecorderComponent } from './media-recorder'
 import { SpeechFeedback } from './speech-feedback'
+import { SyncedTranscript } from './synced-transcript'
 import ExerciseBrief from './exercise-brief'
 import ExerciseHeader from './exercise-header'
 import ExerciseWorkspace, { initialWorkspacePanel } from './exercise-workspace'
@@ -33,7 +34,8 @@ interface SubmissionHistoryItem {
   ai_evaluation: SpeechEvaluation | null
   score: number | null
   status: string
-  media_url: string
+  /** `exercise_media_submissions.id` — what the signed-url route is keyed on. */
+  submission_id: number | null
   created_at: string
   duration_seconds: number | null
 }
@@ -408,13 +410,13 @@ export default function AudioExercise({
         ai_evaluation: result,
         score: result.score,
         status: didPass ? 'completed' : 'failed',
-        media_url: '',
+        submission_id: submissionId,
         created_at: new Date().toISOString(),
         duration_seconds: result.metrics?.duration_seconds ?? null,
       }, ...prev])
-    } catch (err: any) {
+    } catch (err) {
       console.error('Audio submission error:', err)
-      setErrorMsg(err.message || 'Something went wrong. Please try again.')
+      setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
       setSubmitState('error')
     }
   }, [exercise.id, maxDaily])
@@ -605,6 +607,8 @@ function SubmissionHistoryRow({
   const [expanded, setExpanded] = useState(false)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [loadingAudio, setLoadingAudio] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   const score = submission.score ?? 0
   const didPass = submission.status === 'completed'
@@ -617,7 +621,7 @@ function SubmissionHistoryRow({
       const res = await fetch('/api/exercises/media/signed-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId: submission.id }),
+        body: JSON.stringify({ submissionId: submission.submission_id }),
       })
       if (res.ok) {
         const { signedUrl } = await res.json()
@@ -660,13 +664,14 @@ function SubmissionHistoryRow({
         </div>
 
         <div className="flex items-center gap-1">
-          {submission.media_url && (
+          {submission.submission_id != null && (
             <>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={fetchAudio}
                 disabled={loadingAudio}
+                aria-label={t('playRecording')}
                 className="h-8 w-8 p-0"
               >
                 {loadingAudio ? (
@@ -700,8 +705,25 @@ function SubmissionHistoryRow({
 
       {/* Audio player */}
       {audioUrl && (
-        <div className="px-4 pb-3">
-          <audio src={audioUrl} controls className="w-full h-8 rounded" />
+        <div className="space-y-3 px-4 pb-3">
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            controls
+            autoPlay
+            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+            className="w-full h-8 rounded"
+          />
+          {submission.ai_evaluation?.annotated_transcript && (
+            <SyncedTranscript
+              segments={submission.ai_evaluation.annotated_transcript}
+              currentTime={currentTime}
+              onSeek={(seconds) => {
+                if (audioRef.current) audioRef.current.currentTime = seconds
+                setCurrentTime(seconds)
+              }}
+            />
+          )}
         </div>
       )}
 

@@ -99,6 +99,7 @@ function MetricBadge({ label, value, good }: { label: string; value: string | nu
 export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, className }: SpeechFeedbackProps) {
   const t = useTranslations('exercises.audio')
   const { score, strengths, improvements, focus_next, annotated_transcript, metrics } = evaluation
+  const corrections = evaluation.corrections ?? []
 
   const wpmGood = metrics.wpm >= 100 && metrics.wpm <= 180
   const fillerGood = metrics.filler_count <= 3
@@ -190,6 +191,22 @@ export function SpeechFeedback({ evaluation, onTryAgain, passed, passingScore, c
               <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
                 <span className="mt-0.5 shrink-0 text-warning">•</span>
                 {imp}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Corrections — learner rubric only */}
+      {corrections.length > 0 && (
+        <div className="rounded-2xl border bg-card p-5">
+          <h3 className="mb-3 text-xs font-bold uppercase tracking-widest text-foreground">{t('corrections')}</h3>
+          <ul className="space-y-3">
+            {corrections.map((c, i) => (
+              <li key={i} className="text-sm">
+                <p className="text-muted-foreground line-through decoration-destructive/60">{c.said}</p>
+                <p className="font-medium">{c.better}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{c.why}</p>
               </li>
             ))}
           </ul>

@@ -1719,6 +1719,20 @@
         "minDurationLabel": "Minimum (seconds)",
         "maxDurationLabel": "Maximum (seconds)",
         "evaluationRubric": "Scoring Criteria",
+        "speechRubricMode": "What is graded",
+        "speechRubricModes": {
+          "public_speaking": {
+            "label": "Public speaking",
+            "desc": "Pace, filler words, structure and delivery."
+          },
+          "language_learner": {
+            "label": "Language learning",
+            "desc": "Grammar, vocabulary and fluency for the student's level, with corrections."
+          }
+        },
+        "speechFeedbackLanguage": "Feedback language",
+        "speechFeedbackSameAsSpoken": "Same as the student speaks",
+        "speechFeedbackLanguageHint": "Beginners understand feedback best in their own language.",
         "rubricFillerWords": "Filler Words",
         "rubricFillerWordsDesc": "Flag excessive um, uh, like, etc.",
         "rubricPace": "Speaking Pace",
@@ -1737,7 +1751,30 @@
         "statusArchived": "Archived",
         "timeLimitUnit": "min",
         "saveError": "Couldn't save the exercise. Check your connection and try again.",
-        "dismissError": "Dismiss error"
+        "dismissError": "Dismiss error",
+        "typeConversation": "Live voice conversation",
+        "conversationSetupTitle": "Conversation setup",
+        "conversationSetupDesc": "The student talks out loud with an AI partner, then gets graded feedback.",
+        "conversationScenarioLabel": "Scenario",
+        "conversationScenarioPlaceholder": "You are a barista in a London café. The student orders a drink, asks about prices and pays.",
+        "conversationScenarioHint": "Describe who the AI plays and what the student has to get done. Students see this.",
+        "conversationLanguageSection": "Language",
+        "conversationTargetLanguage": "Language practised",
+        "conversationNativeLanguage": "Student's language",
+        "conversationLevel": "Level (CEFR)",
+        "conversationNativeHint": "The partner speaks the practised language and gives hints and feedback in the student's language.",
+        "conversationVoice": "Voice",
+        "conversationMaxMinutes": "Max minutes",
+        "conversationDailySessions": "Conversations per day",
+        "conversationCostHint": "Live voice is billed by the minute. Keep conversations short and cap them per day; 0 means unlimited.",
+        "conversationLanguages": {
+          "en": "English",
+          "es": "Spanish",
+          "pt": "Portuguese",
+          "fr": "French",
+          "de": "German",
+          "it": "Italian"
+        }
       },
       "submissionReview": {
         "status": {
@@ -6138,6 +6175,7 @@
       "strengths": "Strengths",
       "improvements": "Areas to Improve",
       "focusNext": "Focus for Next Attempt",
+      "corrections": "Say it better",
       "annotatedTranscript": "Annotated Transcript",
       "fillerWord": "Filler word",
       "longPause": "Long pause",
@@ -6171,7 +6209,9 @@
       "passingThreshold": "Pass: {score}",
       "completedScore": "Your Best Score",
       "completedOn": "Completed on {date}",
-      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
+      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!",
+      "playRecording": "Play recording",
+      "micInsecure": "Your browser only allows microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again."
     },
     "video": {
       "title": "Video Exercise",
@@ -6225,7 +6265,8 @@
       "passingThreshold": "Pass: {score}",
       "completedScore": "Your Best Score",
       "completedOn": "Completed on {date}",
-      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
+      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!",
+      "micInsecure": "Your browser only allows camera and microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again."
     },
     "list": {
       "title": "Practice Arena",
@@ -6245,7 +6286,41 @@
       "sections": "Exercise sections",
       "task": "Exercise",
       "coach": "AI Coach",
-      "record": "Record"
+      "record": "Record",
+      "speak": "Speak"
+    },
+    "conversation": {
+      "title": "Live conversation",
+      "scenario": "Scenario",
+      "start": "Start conversation",
+      "startAgain": "Start a new conversation",
+      "finish": "Finish and get feedback",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "connecting": "Connecting…",
+      "listening": "Listening — go ahead",
+      "tutorSpeaking": "Your partner is speaking",
+      "muted": "Microphone muted",
+      "ready": "Ready when you are",
+      "grading": "Grading your conversation…",
+      "timeLeft": "Time left",
+      "maxLength": "Up to {minutes} min per conversation",
+      "attemptsToday": "{used} of {max} conversations today",
+      "dailyLimitReached": "You've used today's conversations. Come back tomorrow.",
+      "notAvailable": "Live conversations aren't available for this exercise right now.",
+      "connectionError": "We couldn't connect to the voice partner. Check your connection and try again.",
+      "micDenied": "We need your microphone for this exercise. Allow access in your browser and try again.",
+      "nothingSaid": "We didn't hear you say anything, so there is nothing to grade. Try again and speak after your partner greets you.",
+      "gradingError": "We couldn't grade this conversation. Please try again.",
+      "sessionTooLong": "This conversation ran past its {minutes}-minute limit, so it can't be graded. Start a new one.",
+      "hint": "Hint",
+      "liveTranscript": "Live transcript",
+      "transcriptEmptyTitle": "Nothing yet",
+      "transcriptEmpty": "What you and your partner say will appear here.",
+      "corrections": "Say it better",
+      "fullTranscript": "Full transcript",
+      "micInsecure": "Your browser only allows microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again.",
+      "wrappingUp": "Wrapping up…"
     }
   },
   "exams": {

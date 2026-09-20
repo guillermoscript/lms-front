@@ -2,6 +2,7 @@ import { generateText, Output } from 'ai'
 import { z } from 'zod'
 import { AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
+import { SpeechCorrectionSchema, buildLearnerSpeechPrompt, feedbackLanguageInstruction, unclearWords } from '../learner-rubric'
 import type { SpeechCoach, TranscriptionResult, ExerciseContext, SpeechEvaluation, SpeechMetrics, AnnotatedSegment, SpeechCoachOptions } from '../types'
 
 const SpeechEvaluationSchema = z.object({
@@ -9,6 +10,9 @@ const SpeechEvaluationSchema = z.object({
   strengths: z.array(z.string()).min(1).max(5).describe('What the speaker did well'),
   improvements: z.array(z.string()).min(1).max(5).describe('Specific areas to improve'),
   focus_next: z.string().describe('Single most important thing to focus on in the next attempt'),
+})
+const LearnerEvaluationSchema = SpeechEvaluationSchema.extend({
+  corrections: z.array(SpeechCorrectionSchema).max(5).describe('The most useful language corrections'),
 })
 
 export class OpenAICoachProvider implements SpeechCoach {
@@ -27,12 +31,18 @@ export class OpenAICoachProvider implements SpeechCoach {
       duration_seconds: transcription.duration_seconds,
     }
 
-    // Output.object() and tools can't be combined in generateText (causes AI_NoOutputGeneratedError).
-    // So we get the structured evaluation first, then call markExerciseCompleted programmatically.
+    const rubric = context.speechRubric
+    const learner = rubric?.rubric_mode === 'language_learner'
+    // Grading only: completion is recorded by the analyze route from the score.
     const { output } = await generateText({
       model: AI_MODELS.coach,
-      output: Output.object({ schema: SpeechEvaluationSchema }),
-      system: PROMPTS.speechCoach({ ...context, passingScore: context.passingScore }, metrics),
+      output: Output.object({ schema: learner ? LearnerEvaluationSchema : SpeechEvaluationSchema }),
+      system: learner
+        ? buildLearnerSpeechPrompt(context, rubric, metrics, unclearWords(transcription.words))
+        : PROMPTS.speechCoach(
+            { ...context, feedbackLanguageInstruction: feedbackLanguageInstruction(rubric?.feedback_language ?? '') },
+            metrics
+          ),
       prompt: `Student transcript:\n\n"${transcription.transcript}"`,
     })
 
@@ -45,6 +55,7 @@ export class OpenAICoachProvider implements SpeechCoach {
       strengths: output.strengths,
       improvements: output.improvements,
       focus_next: output.focus_next,
+      ...(learner ? { corrections: (output as z.infer<typeof LearnerEvaluationSchema>).corrections } : {}),
       annotated_transcript,
       metrics,
     }
