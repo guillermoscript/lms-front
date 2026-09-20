@@ -41,9 +41,17 @@ interface AIPreviewModalProps {
     task_description?: string
     system_prompt?: string
     instructions?: string
+    /** Exercise draft — same context the student's coach gets. */
+    exercise?: { title?: string; description?: string }
     /** Lesson draft the tutor grounds itself in — same context a student's tutor gets. */
     lesson?: { title?: string; description?: string; content?: string }
   }
+}
+
+// The exercise coach's dry-run `markExerciseCompleted`, once it has answered.
+function exerciseCompletion(part: { type: string; state?: string; output?: unknown }) {
+  if (part.type !== 'tool-markExerciseCompleted' || part.state !== 'output-available') return null
+  return (part.output ?? {}) as { success?: boolean; feedback?: string; score?: number }
 }
 
 function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
@@ -71,7 +79,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
   const sendMessage = (message: Parameters<typeof send>[0]) => send(message, { body: config })
 
   const isBusy = status === 'submitted' || status === 'streaming'
-  const isCompleted = Boolean(findLessonCompletion(messages))
+  const isCompleted = Boolean(findLessonCompletion(messages)) || messages.some((message) => message.parts.some((part) => exerciseCompletion(part)?.success))
 
   const handleRestart = () => {
     stop()
@@ -167,6 +175,17 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                               key={index}
                               title={t('completedTitle')}
                               feedback={completion.feedback}
+                              note={t('completedNote')}
+                            />
+                          )
+                        }
+                        const graded = exerciseCompletion(part)
+                        if (graded?.success) {
+                          return (
+                            <LessonCompletionCard
+                              key={index}
+                              title={`${t('completedTitle')} · ${t('scoreLabel', { score: graded.score ?? 0 })}`}
+                              feedback={graded.feedback}
                               note={t('completedNote')}
                             />
                           )

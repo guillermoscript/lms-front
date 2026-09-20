@@ -109,6 +109,7 @@ export function ExerciseAIConfigStep() {
           config={{
             system_prompt: formData.system_prompt,
             instructions: formData.instructions,
+            exercise: { title: formData.title, description: formData.description },
           }}
         />
       </div>

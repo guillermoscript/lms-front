@@ -120,7 +120,9 @@ function InnerLessonAIChat({
 }: LessonAIChatProps) {
     const router = useRouter();
     const t = useTranslations('components.lessonAIChat');
-    const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
+    const [lessonCompleted, setLessonCompleted] = useState(initialIsCompleted);
+    // After a restart the lesson is still completed, but the student is practising again.
+    const [practising, setPractising] = useState(false);
     const [isRestarting, setIsRestarting] = useState(false);
     const [restartDialogOpen, setRestartDialogOpen] = useState(false);
     // Mobile-only: the chat lives behind a launcher and opens as a
@@ -164,11 +166,15 @@ function InnerLessonAIChat({
     // Completion is the tool's ANSWER, not its call: the server refuses while
     // required checkpoints are open, and `onToolCall` fires before it has run.
     const completion = findLessonCompletion(messages);
+    // The chat locks on a finished conversation, not on a finished lesson: an
+    // empty or restarted chat is always open for practice.
+    const isCompleted = Boolean(lessonCompleted) && messages.length > 0 && !practising;
     const celebratedCallId = useRef<string | null>(null);
     useEffect(() => {
         if (!completion || celebratedCallId.current === completion.toolCallId) return;
         celebratedCallId.current = completion.toolCallId;
-        setIsCompleted(true);
+        setLessonCompleted(true);
+        setPractising(false);
 
         confetti({
             particleCount: 150,
@@ -222,7 +228,7 @@ function InnerLessonAIChat({
 
             if (res.ok) {
                 setMessages([]);
-                setIsCompleted(false);
+                setPractising(true);
                 toast.success(t('toast.restartSuccess'));
                 router.refresh();
             } else {

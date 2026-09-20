@@ -3,10 +3,12 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createPreviewLessonTools } from '@/lib/ai/tools'
+import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { z } from 'zod'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 
 export const maxDuration = 120
 
@@ -29,6 +31,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return new Response('Unauthorized', { status: 401 })
+
+  try {
+    await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+  } catch {
+    return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+  }
 
   // The system prompt comes from the request body: for anyone but staff this
   // route would be an open-ended model proxy.
@@ -61,7 +69,11 @@ export async function POST(req: Request) {
         system_prompt: system_prompt || undefined,
       }),
       messages: modelMessages,
-      tools: createPreviewLessonTools(),
+      tools: createPreviewLessonTools(() => verifyLessonCompletion({
+        taskInstructions: task_description,
+        teacherPrompt: system_prompt,
+        messages,
+      })),
       experimental_telemetry: { functionId: 'preview-lesson-task' },
       stopWhen: stepCountIs(AI_CONFIG.maxSteps),
     }),

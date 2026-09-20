@@ -89,17 +89,6 @@ ${METACOGNITIVE_NUDGE}`
     previewLesson: (lesson: { title?: string; description?: string; content?: string }, aiTask?: { task_instructions?: string; system_prompt?: string }): string =>
       PROMPTS.lessonTutor({ ...lesson, title: lesson.title || '' }, aiTask),
 
-    previewExercise: (instructions?: string, system_prompt?: string) => `
-    ${system_prompt || 'You are a helpful exercise coach.'}
-
-    Exercise Instructions: ${instructions}
-
-    This is a PREVIEW session. Provide feedback as you would in a real session,
-    but explain your evaluation criteria rather than submitting scores.
-    ${TUTOR_GUARDRAIL_FLOOR}
-    ${METACOGNITIVE_NUDGE}
-  `,
-
     speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; feedbackLanguageInstruction?: string }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
     You are an expert speech and communication coach evaluating a student's spoken response.
 

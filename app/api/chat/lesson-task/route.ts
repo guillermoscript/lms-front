@@ -2,6 +2,8 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
+import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 import { fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
@@ -28,6 +30,12 @@ export async function POST(req: Request) {
     const auth = await getApiAuthContext(req)
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
+
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+    }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
@@ -74,7 +82,15 @@ export async function POST(req: Request) {
         model: AI_MODELS.tutor,
         system: PROMPTS.lessonTutor(lesson, aiTask),
         messages: modelMessages,
-        tools: createLessonTools(supabase, { lessonId: String(lessonId), userId: user.id }),
+        tools: createLessonTools(supabase, {
+            lessonId: String(lessonId),
+            userId: user.id,
+            verify: () => verifyLessonCompletion({
+                taskInstructions: aiTask?.task_instructions,
+                teacherPrompt: aiTask?.system_prompt,
+                messages,
+            }),
+        }),
         experimental_telemetry: { functionId: 'lesson-tutor' },
         onFinish: async (event) => {
             // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.

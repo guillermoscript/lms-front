@@ -1999,13 +1999,14 @@
         "error": "El tutor no pudo responder. Inténtalo de nuevo.",
         "retry": "Reintentar",
         "completedTitle": "¡Objetivo Logrado!",
-        "completedNote": "Vista previa: aquí se marca como completada la lección del estudiante. No se guardó nada.",
+        "completedNote": "Vista previa: aquí se marca como completado para el estudiante. No se guardó nada.",
         "suggestions": {
           "start": "¡Hola! Estoy listo para empezar",
           "confused": "No entiendo qué tengo que hacer",
           "giveAnswer": "Dame la respuesta y ya",
           "claimDone": "Ya terminé, márcala como completada"
-        }
+        },
+        "scoreLabel": "Nota: {score}/100"
       },
       "activity": {
         "title": "Actividad Reciente",
@@ -4388,7 +4389,7 @@
         "restartFailed": "Error al reiniciar el chat",
         "restartError": "Error al reiniciar el chat"
       },
-      "confirmRestart": "¿Estás seguro de que quieres reiniciar la conversación? Esto borrará tu historial de chat y restablecerá el estado de finalización.",
+      "confirmRestart": "¿Reiniciar la conversación? Esto borra tu historial de chat. Una lección que ya completaste sigue completada.",
       "successHeader": "¡Lección Completada!",
       "successDescription": "¡Buen trabajo! Has completado esta tarea con éxito.",
       "stats": {

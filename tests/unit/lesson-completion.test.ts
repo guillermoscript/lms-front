@@ -44,3 +44,21 @@ describe('lesson tutor prompt', () => {
         expect(PROMPTS.previewLesson(lesson, task)).toBe(PROMPTS.lessonTutor(lesson, task))
     })
 })
+
+describe('markLessonCompleted', () => {
+    const run = async (done: boolean) => {
+        const { createPreviewLessonTools } = await import('@/lib/ai/tools')
+        const tools = createPreviewLessonTools(async () => ({ done, reason: 'requirement 3 not met' }))
+        return tools.markLessonCompleted.execute!({ feedback: 'ok' }, { toolCallId: 't', messages: [] } as never)
+    }
+
+    it('refuses when the verifier disagrees with the tutor, and says what is missing', async () => {
+        const output = (await run(false)) as { success: boolean; error?: string }
+        expect(output.success).toBe(false)
+        expect(output.error).toContain('requirement 3 not met')
+    })
+
+    it('completes when the verifier agrees', async () => {
+        expect(await run(true)).toMatchObject({ success: true, feedback: 'ok' })
+    })
+})

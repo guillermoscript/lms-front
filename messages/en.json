@@ -1999,13 +1999,14 @@
         "error": "The tutor could not answer. Try again.",
         "retry": "Retry",
         "completedTitle": "Target Achieved!",
-        "completedNote": "Preview: this is where the student's lesson is marked complete. Nothing was saved.",
+        "completedNote": "Preview: this is where it is marked complete for the student. Nothing was saved.",
         "suggestions": {
           "start": "Hi! I'm ready to start",
           "confused": "I don't understand what I have to do",
           "giveAnswer": "Just give me the answer",
           "claimDone": "I'm done, mark it as completed"
-        }
+        },
+        "scoreLabel": "Score: {score}/100"
       },
       "activity": {
         "title": "Recent Activity",
@@ -4507,7 +4508,7 @@
         "restartFailed": "Failed to restart chat",
         "restartError": "Error restarting chat"
       },
-      "confirmRestart": "Are you sure you want to restart the conversation? This will clear your chat history and reset completion status.",
+      "confirmRestart": "Restart the conversation? This clears your chat history. A lesson you already completed stays completed.",
       "successHeader": "Lesson Completed!",
       "successDescription": "Great job! You've successfully completed this task.",
       "stats": {
