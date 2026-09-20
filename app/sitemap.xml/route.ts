@@ -39,7 +39,40 @@ export async function GET(request: NextRequest) {
     .eq('status', 'published')
     .limit(5000)
 
-  const paths = [...STATIC_PATHS, ...(courses ?? []).map((c) => `/courses/${c.course_id}`)]
+  // Preview lessons (#426) are the one piece of real course content a
+  // logged-out visitor — and therefore a crawler — can read, at
+  // /courses/:courseId/lessons/:lessonId. Guards mirror the page's own
+  // (app/[locale]/(public)/courses/[id]/lessons/[lessonId]/page.tsx):
+  // published lesson, is_preview, and its course still published — a lesson
+  // can outlive its course being unpublished, and a sitemap URL that 404s is
+  // worse than no URL. lessons carries its own tenant_id (see
+  // 20260722120000_lesson_preview.sql) so the courses join is for the
+  // status check only, not tenant scoping.
+  // One query for every course (not one per course), paged in batches of
+  // PostgREST's 1000-row default cap (#533 truncated-sweep history) instead
+  // of trusting a single .limit() the way the courses query above does.
+  const PREVIEW_LESSON_PAGE_SIZE = 1000
+  const previewLessonPaths: string[] = []
+  for (let from = 0; ; from += PREVIEW_LESSON_PAGE_SIZE) {
+    const { data: page } = await admin
+      .from('lessons')
+      .select('id, course_id, courses!inner(status)')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published')
+      .eq('is_preview', true)
+      .eq('courses.status', 'published')
+      .order('id', { ascending: true })
+      .range(from, from + PREVIEW_LESSON_PAGE_SIZE - 1)
+    if (!page || page.length === 0) break
+    previewLessonPaths.push(...page.map((l) => `/courses/${l.course_id}/lessons/${l.id}`))
+    if (page.length < PREVIEW_LESSON_PAGE_SIZE) break
+  }
+
+  const paths = [
+    ...STATIC_PATHS,
+    ...(courses ?? []).map((c) => `/courses/${c.course_id}`),
+    ...previewLessonPaths,
+  ]
 
   const entries = paths
     .flatMap((path) =>
