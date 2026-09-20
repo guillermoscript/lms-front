@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * — call that FIRST (cheap, no DB round trip) and only reach this on a pass,
  * since it costs a transaction with two advisory locks. This is the part that
  * survives a deploy: caps come from `platform_plans.limits` via
- * `increment_ai_chat_usage()` (migration 20260920150000), which checks and
+ * `increment_ai_chat_usage()` (migration 20260920170000), which checks and
  * increments atomically so two concurrent requests cannot both slip past a
  * cap. `-1` or a missing limit key means unlimited, same rule as every other
  * plan limit.

@@ -11,7 +11,7 @@ import { classifyAiChatError } from '@/lib/ai/chat-error'
  *   - `classifyAiChatError` — turning a 429 body back into a UI-friendly kind
  * The SQL side (the SECURITY DEFINER function itself, its advisory locks, the
  * plan-limit backfill) is not exercised here — there is no local Postgres in
- * this run. See migrations 20260920150000 / 20260920160000.
+ * this run. See migrations 20260920170000 / 20260920180000.
  */
 
 describe('capChatHistory', () => {

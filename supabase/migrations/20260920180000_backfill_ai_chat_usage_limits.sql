@@ -1,5 +1,5 @@
 -- Issue #807: give every plan an AI chat budget before increment_ai_chat_usage
--- (20260920150000) starts reading `max_ai_messages_per_day` /
+-- (20260920170000) starts reading `max_ai_messages_per_day` /
 -- `max_ai_messages_per_month`. Same reasoning as
 -- 20260901170000_backfill_plan_feature_keys.sql: `tenant_plan_limit()` already
 -- treats a MISSING key as -1 (unlimited), so skipping this would leave every
