@@ -124,7 +124,15 @@ Deno.serve(async (req) => {
     const baseMessage: Omit<ExpoPushMessage, "to"> = {
       title: notification.title,
       body,
-      data: { notification_id: notification.id, url: notification.metadata?.url ?? null },
+      // `url` is an APP route ("/course/12") and most notifications have none.
+      // The digest and the streak nudge store `action_url`, an absolute web
+      // link, which a native router cannot open — so `kind` travels too and
+      // the app decides where a tap on each kind lands (#825).
+      data: {
+        notification_id: notification.id,
+        url: notification.metadata?.url ?? null,
+        kind: notification.metadata?.kind ?? null,
+      },
       sound: "default",
       priority: ["high", "urgent"].includes(notification.priority) ? "high" : "default",
     };
