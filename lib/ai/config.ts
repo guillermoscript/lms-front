@@ -7,7 +7,7 @@ export const AI_CONFIG = {
 };
 
 export const AI_MODELS = {
-    tutor: openai('gpt-4o-mini'),
+    tutor: openai('gpt-5.6-luna'),
     coach: openai('gpt-4o-mini'),
     grader: openai('gpt-4o-mini'),
     aristotle: openai('gpt-4o-mini'),

@@ -78,11 +78,13 @@ export async function POST(req: Request) {
         experimental_telemetry: { functionId: 'lesson-tutor' },
         onFinish: async (event) => {
             // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
+            // `event.text` is the LAST step only. The tutor congratulates and calls
+            // markLessonCompleted in one step, then closes in the next — keep both.
             const messageData = {
                 lesson_id: lessonId,
                 user_id: user.id,
                 sender: 'assistant',
-                message: event.text,
+                message: event.steps.map((step) => step.text).filter(Boolean).join('\n\n'),
             };
 
             const { error } = await supabase.from('lessons_ai_task_messages').insert(messageData)

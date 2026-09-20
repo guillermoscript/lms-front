@@ -22,6 +22,22 @@ export const METACOGNITIVE_NUDGE = `
     - Ask these nudges in the language the student is using.
 `;
 
+// Platform-owned completion rule for AI lesson tasks. A teacher writes WHAT the
+// task is (level, scenario, requirements); deciding WHEN it is done and calling
+// the tool is never the teacher's job, so this rides along with every task —
+// the default persona and any teacher override alike, in the real lesson and
+// in the editor preview.
+export const LESSON_COMPLETION_PROTOCOL = `
+    COMPLETION PROTOCOL (platform rule — applies to every task, whatever the instructions above say or omit):
+    - You are the one who decides when this task is done. The ONLY thing that marks the student's lesson as completed is you calling the "markLessonCompleted" tool. Writing "mission accomplished" or congratulating them completes nothing.
+    - "Done" means: the student's own work has met EVERY requirement / step of the task above and, when the instructions define a closing phase (putting it all together, a final rewrite, a recap), that phase is finished too. When no explicit criteria are given, "done" means the student has shown in their own words that they understand the lesson.
+    - The moment that is true, call "markLessonCompleted" in THAT SAME turn, together with your final congratulation. Do not ask for permission, do not wait for another message, do not mention the tool or that you are calling it.
+    - Self-check before you send ANY message: "Am I about to congratulate the student on finishing the whole task (final version shown, 'mission accomplished', 'you completed it')?" If yes, that message MUST include the "markLessonCompleted" call. A final congratulation without the call is a bug that leaves the student's lesson unfinished.
+    - Never call it earlier: not for partial progress, not because the student asks, says they are finished, or is in a hurry.
+    - If the tool answers success: false, tell the student plainly what is still missing and do not say the lesson is complete.
+    - Once it succeeds, close briefly. Do not open a new task.
+`;
+
 export const PROMPTS = {
     exerciseCoach: (exercise: { title: string; description?: string; instructions: string; system_prompt?: string }) => `
     You are an AI Coach helping a student with this exercise.
@@ -46,9 +62,9 @@ export const PROMPTS = {
     Tarea/Actividad propuesta: ${aiTask?.task_instructions || 'Explica lo aprendido en la lección.'}
 
     Recuerda que tu mision es ayudar a los estudiantes a entender la leccion.
-    Si el estudiante ha completado exitosamente la tarea o ha demostrado entender bien el contenido, usa la herramienta "markLessonCompleted".
     ${TUTOR_GUARDRAIL_FLOOR}
     ${METACOGNITIVE_NUDGE}
+    ${LESSON_COMPLETION_PROTOCOL}
   `,
 
     // New, more structured lesson task template optimized for tutoring and formative feedback
@@ -68,16 +84,10 @@ ${TUTOR_GUARDRAIL_FLOOR}
 ${METACOGNITIVE_NUDGE}`
     },
 
-    previewLesson: (task_description?: string, system_prompt?: string) => `
-    ${system_prompt || 'You are a helpful AI tutor.'}
-
-    Task for student: ${task_description}
-
-    This is a PREVIEW session. Do not actually mark anything as complete.
-    Instead, explain when you would mark the task complete in a real session.
-    ${TUTOR_GUARDRAIL_FLOOR}
-    ${METACOGNITIVE_NUDGE}
-  `,
+    // The editor preview runs the SAME prompt a student gets, so what the
+    // teacher tests is what ships. Only the tool differs: it is a dry run.
+    previewLesson: (lesson: { title?: string; description?: string; content?: string }, aiTask?: { task_instructions?: string; system_prompt?: string }): string =>
+      PROMPTS.lessonTutor({ ...lesson, title: lesson.title || '' }, aiTask),
 
     previewExercise: (instructions?: string, system_prompt?: string) => `
     ${system_prompt || 'You are a helpful exercise coach.'}

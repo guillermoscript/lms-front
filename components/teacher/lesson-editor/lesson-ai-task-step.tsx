@@ -122,6 +122,11 @@ export function LessonAITaskStep() {
               config={{
                 task_description: formData.ai_task_description,
                 system_prompt: formData.ai_task_instructions,
+                lesson: {
+                  title: formData.title,
+                  description: formData.description,
+                  content: formData.content,
+                },
               }}
             />
           </div>

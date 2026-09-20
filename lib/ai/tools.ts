@@ -76,15 +76,33 @@ export const createExerciseTools = (
     }),
 });
 
+// One definition for the real tool and its preview twin: the model must see
+// the exact same tool in the editor preview as in the student's lesson.
+const MARK_LESSON_COMPLETED = {
+    description:
+        'Marks this lesson as completed for the student. Call it in the same turn the student has met every requirement of the task (including any closing phase the instructions define). Never call it for partial progress or because the student asks.',
+    inputSchema: z.object({
+        feedback: z.string().describe('Brief positive feedback about the completion, in the language you use with the student.'),
+    }),
+};
+
+/**
+ * Editor preview: same tool, no writes. The teacher sees exactly when the
+ * tutor would have completed the lesson.
+ */
+export const createPreviewLessonTools = () => ({
+    markLessonCompleted: tool({
+        ...MARK_LESSON_COMPLETED,
+        execute: async ({ feedback }) => ({ success: true, preview: true, feedback }),
+    }),
+});
+
 export const createLessonTools = (
     supabase: SupabaseClient,
     context: { lessonId?: string; userId: string }
 ) => ({
     markLessonCompleted: tool({
-        description: 'Mark the lesson as completed when the student successfully finishes the task or demonstrates understanding.',
-        inputSchema: z.object({
-            feedback: z.string().describe('Brief positive feedback about the completion.'),
-        }),
+        ...MARK_LESSON_COMPLETED,
         execute: async ({ feedback }) => {
             if (!context.lessonId) throw new Error('Lesson ID is required');
 

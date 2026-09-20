@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useChat } from '@ai-sdk/react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { IconRobot, IconPlayerPlay, IconSparkles } from '@tabler/icons-react'
+import { IconRobot, IconPlayerPlay, IconRotateClockwise2, IconSparkles } from '@tabler/icons-react'
 import {
   Conversation,
   ConversationContent,
@@ -23,6 +23,9 @@ import {
   PromptInputTools
 } from '@/components/ai-elements'
 import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion"
+import { Shimmer } from '@/components/ai-elements/shimmer'
+import { LessonCompletionCard } from '@/components/ai/lesson-completion-card'
+import { findLessonCompletion, lessonCompletionOutput } from '@/lib/ai/lesson-completion'
 import { DefaultChatTransport } from 'ai'
 import {
   ChatAttachButton,
@@ -38,6 +41,8 @@ interface AIPreviewModalProps {
     task_description?: string
     system_prompt?: string
     instructions?: string
+    /** Lesson draft the tutor grounds itself in — same context a student's tutor gets. */
+    lesson?: { title?: string; description?: string; content?: string }
   }
 }
 
@@ -46,32 +51,40 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
   const [open, setOpen] = useState(false)
   const { textInput } = usePromptInputController()
 
+  // What a student might actually say — including the two that must NOT work.
   const suggestions = [
-    t('suggestions.affect'),
-    t('suggestions.sample'),
-    t('suggestions.tone'),
-    t('suggestions.trigger')
+    t('suggestions.start'),
+    t('suggestions.confused'),
+    t('suggestions.giveAnswer'),
+    t('suggestions.claimDone')
   ]
 
   const endpoint = type === 'lesson'
     ? '/api/teacher/preview/lesson-task'
     : '/api/teacher/preview/exercise'
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: endpoint,
-      body: {
-        ...config
-      }
-    }),
-  })
+  // useChat keeps its first transport, so a transport-level `body` froze the
+  // prompts at mount: edits made after opening the preview were never sent.
+  // The draft travels with each request instead.
+  const [transport] = useState(() => new DefaultChatTransport({ api: endpoint }))
+  const { messages, sendMessage: send, setMessages, status, stop, error, clearError, regenerate } = useChat({ transport })
+  const sendMessage = (message: Parameters<typeof send>[0]) => send(message, { body: config })
+
+  const isBusy = status === 'submitted' || status === 'streaming'
+  const isCompleted = Boolean(findLessonCompletion(messages))
+
+  const handleRestart = () => {
+    stop()
+    clearError()
+    setMessages([])
+  }
 
   const handleTest = () => {
     setOpen(true)
   }
 
   const attachmentInputProps = useChatAttachmentInputProps()
-  const handleSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
+  const handleSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear, disabled: isCompleted })
 
   const handleSuggestionClick = (suggestion: string) => {
     sendMessage({ text: suggestion });
@@ -103,11 +116,26 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                   <p className="text-xs text-muted-foreground">{t('modalSubtitle')}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 rounded-lg border border-warning/30">
-                <div className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-warning">
-                  {t('previewSession')}
-                </span>
+              {/* pr-8 keeps clear of the dialog's own close button */}
+              <div className="flex items-center gap-2 pr-8">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 rounded-lg border border-warning/30">
+                  <div className="w-1.5 h-1.5 rounded-full bg-warning motion-safe:animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-warning">
+                    {t('previewSession')}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={handleRestart}
+                  disabled={messages.length === 0 && !error}
+                  aria-label={t('restartAria')}
+                >
+                  <IconRotateClockwise2 aria-hidden="true" className="h-4 w-4" />
+                  {t('restart')}
+                </Button>
               </div>
             </div>
 
@@ -132,11 +160,37 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                         if (part.type === 'text') {
                           return <MessageResponse key={index}>{part.text}</MessageResponse>
                         }
+                        const completion = lessonCompletionOutput(part)
+                        if (completion?.success) {
+                          return (
+                            <LessonCompletionCard
+                              key={index}
+                              title={t('completedTitle')}
+                              feedback={completion.feedback}
+                              note={t('completedNote')}
+                            />
+                          )
+                        }
                         return null
                       })}
                     </MessageContent>
                   </Message>
                 ))}
+                {status === 'submitted' && (
+                  <Message from="assistant">
+                    <MessageContent>
+                      <Shimmer className="text-sm">{t('generating')}</Shimmer>
+                    </MessageContent>
+                  </Message>
+                )}
+                {error && (
+                  <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                    <span>{t('error')}</span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { clearError(); regenerate({ body: config }) }}>
+                      {t('retry')}
+                    </Button>
+                  </div>
+                )}
               </ConversationContent>
               <ConversationScrollButton />
             </Conversation>
@@ -159,15 +213,18 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 <ChatAttachmentsPreview />
                 <PromptInputBody>
                   <PromptInputTextarea
-                    placeholder={t('placeholder')}
+                    placeholder={isCompleted ? t('placeholderCompleted') : t('placeholder')}
                     className="min-h-[60px]"
+                    disabled={isCompleted}
                   />
                 </PromptInputBody>
                 <PromptInputFooter>
                   <PromptInputTools>
-                    <ChatAttachButton />
+                    <ChatAttachButton disabled={isBusy || isCompleted} />
                   </PromptInputTools>
-                  <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
+                  {!isCompleted && (
+                    <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
+                  )}
                 </PromptInputFooter>
               </PromptInput>
             </div>

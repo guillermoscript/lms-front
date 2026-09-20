@@ -1987,16 +1987,24 @@
       "aiPreview": {
         "buttonText": "Previsualizar IA",
         "modalTitle": "Modo de Vista Previa IA",
-        "modalSubtitle": "Probando tu configuración en tiempo real",
+        "modalSubtitle": "Tú eres el estudiante. Esta es la conversación que tendrá.",
         "readyTitle": "Listo para Previsualizar",
-        "readyDesc": "Esto simula una sesión de estudiante con tus prompts actuales. Comienza haciendo una pregunta.",
-        "placeholder": "Escribe tu mensaje de prueba aquí...",
+        "readyDesc": "Escribe como lo haría un estudiante. El tutor usa tus prompts actuales, aún sin guardar, y completa la lección por sí solo cuando la tarea está hecha.",
+        "placeholder": "Responde como lo haría tu estudiante...",
+        "placeholderCompleted": "Tarea completada. Reinicia para probar de nuevo.",
         "previewSession": "Sesión de Previsualización",
+        "restart": "Reiniciar",
+        "restartAria": "Reiniciar la conversación",
+        "generating": "Pensando...",
+        "error": "El tutor no pudo responder. Inténtalo de nuevo.",
+        "retry": "Reintentar",
+        "completedTitle": "¡Objetivo Logrado!",
+        "completedNote": "Vista previa: aquí se marca como completada la lección del estudiante. No se guardó nada.",
         "suggestions": {
-          "affect": "¿Cómo afecta esta configuración a las respuestas?",
-          "sample": "Dame una pregunta de estudiante de ejemplo",
-          "tone": "¿El tono es adecuado?",
-          "trigger": "Probar un desencadenante de finalización"
+          "start": "¡Hola! Estoy listo para empezar",
+          "confused": "No entiendo qué tengo que hacer",
+          "giveAnswer": "Dame la respuesta y ya",
+          "claimDone": "Ya terminé, márcala como completada"
         }
       },
       "activity": {
