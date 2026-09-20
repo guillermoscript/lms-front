@@ -2,12 +2,13 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createExerciseTools } from '@/lib/ai/tools'
-import { fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { capChatHistory, fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
 import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
+import { checkAiChatUsage, aiChatRateLimitedResponse, aiChatUsageLimitResponse } from '@/lib/ai/chat-usage'
 
 export const maxDuration = 120
 
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
     try {
         await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
     } catch {
-        return new Response('Too many messages. Wait a moment and try again.', { status: 429 })
+        return aiChatRateLimitedResponse()
     }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
@@ -53,6 +54,10 @@ export async function POST(req: Request) {
 
     if (!exercise) return new Response('Exercise not found', { status: 404 })
 
+    // A 404 above never costs a budget slot.
+    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
+
     // 2. Save user message
     const messageText = lastUserMessageText(messages)
     const attachments = await persistLastUserAttachments(messages, {
@@ -70,7 +75,7 @@ export async function POST(req: Request) {
     }
 
     // 3. Stream Response
-    const modelMessages = await convertToModelMessages(messages)
+    const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
     const result = propagateAttributes(
         { userId: user.id, metadata: { exerciseId: String(exerciseId), tenantId } },
         () => streamText({

@@ -109,9 +109,13 @@ export const aiGenerationLimiter = rateLimit({
 });
 
 /**
- * AI chat turns (lesson tutor, exercise coach, editor previews) — keyed by user
- * id. Each turn is a model call on the platform's key. In-memory, so the cap is
- * per server instance: a brake on scripts, not an exact quota.
+ * AI chat turns (lesson tutor, exercise coach, editor previews, Aristotle) —
+ * keyed by user id. Each turn is a model call on the platform's key.
+ * In-memory, so the cap is per server instance and resets on deploy: a brake
+ * on a runaway script, not an exact quota. `checkAiChatUsage()` in
+ * lib/ai/chat-usage.ts sits behind this and is the durable, per-plan budget
+ * (issue #807) — every route checks this FIRST, since it is free, and only
+ * spends a DB round trip on a pass.
  */
 // A student typing flat out sends a handful of turns a minute; a script sends hundreds.
 export const AI_CHAT_TURNS_PER_MINUTE = 20;

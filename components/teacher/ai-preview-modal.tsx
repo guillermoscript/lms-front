@@ -26,6 +26,7 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion"
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { LessonCompletionCard } from '@/components/ai/lesson-completion-card'
 import { findLessonCompletion, lessonCompletionOutput } from '@/lib/ai/lesson-completion'
+import { classifyAiChatError } from '@/lib/ai/chat-error'
 import { DefaultChatTransport } from 'ai'
 import {
   ChatAttachButton,
@@ -59,6 +60,7 @@ function exerciseCompletion(part: { type: string; state?: string; output?: unkno
 
 function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
   const t = useTranslations('dashboard.teacher.aiPreview')
+  const tChatLimits = useTranslations('aiChatLimits')
   const [open, setOpen] = useState(false)
   const { textInput } = usePromptInputController()
 
@@ -80,6 +82,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
   const [transport] = useState(() => new DefaultChatTransport({ api: endpoint }))
   const { messages, sendMessage: send, setMessages, status, stop, error, clearError, regenerate } = useChat({ transport })
   const sendMessage = (message: Parameters<typeof send>[0]) => send(message, { body: config })
+  const errorKind = error ? classifyAiChatError(error) : 'generic'
 
   const isBusy = status === 'submitted' || status === 'streaming'
   const isCompleted = Boolean(findLessonCompletion(messages)) || messages.some((message) => message.parts.some((part) => exerciseCompletion(part)?.success))
@@ -207,7 +210,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                 )}
                 {error && (
                   <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    <span>{t('error')}</span>
+                    <span>{errorKind === 'generic' ? t('error') : tChatLimits(errorKind)}</span>
                     <Button type="button" variant="outline" size="sm" onClick={() => { clearError(); regenerate({ body: config }) }}>
                       {t('retry')}
                     </Button>

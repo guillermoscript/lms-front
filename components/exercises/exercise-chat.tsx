@@ -36,6 +36,7 @@ import {
     useChatAttachmentInputProps,
 } from "@/components/ai/chat-attachments";
 import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
+import { classifyAiChatError } from "@/lib/ai/chat-error";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import type { ComponentProps } from "react";
 
@@ -58,6 +59,7 @@ function InnerExerciseChat({
     const router = useRouter();
     const tGamification = useTranslations("gamification");
     const t = useTranslations("exercises.coach");
+    const tChatLimits = useTranslations("aiChatLimits");
     const suggestions = SUGGESTION_KEYS.map((key) => t(`suggestions.${key}`));
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
     const [isRestarting, setIsRestarting] = useState(false);
@@ -76,6 +78,10 @@ function InnerExerciseChat({
             },
         }),
         messages: initialMessages,
+        onError: (error) => {
+            const kind = classifyAiChatError(error);
+            toast.error(kind === 'generic' ? t('error') : tChatLimits(kind));
+        },
     });
 
     const isLoading = status === 'submitted' || status === 'streaming';
