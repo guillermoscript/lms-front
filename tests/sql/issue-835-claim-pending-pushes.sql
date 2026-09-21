@@ -17,7 +17,7 @@ begin
   update user_notifications set push_sent = true where push_sent = false;
 
   insert into notifications (tenant_id, title, content, notification_type, priority, metadata, status)
-  values ('00000000-0000-0000-0000-000000000001', '#835 fresh', 'body', 'info', 'high', '{"url":"/x"}', 'sent')
+  values ('00000000-0000-0000-0000-000000000001', '#835 fresh', 'body', 'info', 'high', '{"url":"/x","kind":"daily_digest"}', 'sent')
   returning id into n_fresh;
   insert into notifications (tenant_id, title, content, notification_type, status)
   values ('00000000-0000-0000-0000-000000000001', '#835 stale', 'body', 'info', 'sent')
@@ -53,7 +53,7 @@ begin
   if not (r.tokens @> array['ExponentPushToken[835-a]','ExponentPushToken[835-b]'] and cardinality(r.tokens) = 2) then
     raise exception '§2 tokens %', r.tokens;
   end if;
-  if r.url <> '/x' or r.priority <> 'high' then raise exception '§2 payload % %', r.url, r.priority; end if;
+  if r.url <> '/x' or r.priority <> 'high' or r.kind is distinct from 'daily_digest' then raise exception '§2 payload % % %', r.url, r.priority, r.kind; end if;
 
   -- §3 every claimed row is marked sent with a timestamp
   if exists (select 1 from user_notifications where notification_id = n_fresh and (not push_sent or push_sent_at is null)) then

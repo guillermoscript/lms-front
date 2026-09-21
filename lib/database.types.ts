@@ -6844,6 +6844,7 @@ export type Database = {
         Args: { _max_age?: unknown; _max_notifications?: number }
         Returns: {
           content: string
+          kind: string
           notification_id: number
           priority: string
           recipients: number
