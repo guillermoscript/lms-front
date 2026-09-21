@@ -17,7 +17,7 @@ export function ExerciseBuilderToolbar() {
   const {
     activeStep, setActiveStep, steps,
     loading, saveSuccess, formData, handleSave,
-    initialData,
+    exerciseId,
   } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
   const router = useRouter()
@@ -57,10 +57,10 @@ export function ExerciseBuilderToolbar() {
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        {initialData && (
+        {exerciseId !== null && (
           <VersionHistorySheet
             contentType="exercise"
-            contentId={initialData.id}
+            contentId={exerciseId}
             currentSnapshot={formData as unknown as Record<string, unknown>}
             onRestore={() => router.refresh()}
           />
