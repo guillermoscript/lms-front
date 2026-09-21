@@ -5,6 +5,7 @@ import {
   normalizeAnswerText,
 } from '../../lib/checkpoints/grading'
 import {
+  mergeAnswerKey,
   parseCheckpointQuestions,
   toClientCheckpointQuestions,
   type CheckpointQuestion,
@@ -136,5 +137,66 @@ describe('toClientCheckpointQuestions', () => {
   it('returns null for empty input', () => {
     expect(toClientCheckpointQuestions(null)).toBeNull()
     expect(toClientCheckpointQuestions([])).toBeNull()
+  })
+})
+
+describe('mergeAnswerKey', () => {
+  // exercise_config as students can SELECT it since #829: answers stripped.
+  const stripped = {
+    passing_score: 80,
+    questions: [
+      { id: 'q1', type: 'multiple_choice', prompt: 'Pick B', options: ['A', 'B', 'C'] },
+      { id: 'q2', type: 'true_false', prompt: 'Sky is blue' },
+      { id: 'q3', type: 'fill_in_the_blank', prompt: 'Capital of France' },
+      { type: 'true_false', prompt: 'no id' },
+    ],
+  }
+  const keyRow = {
+    questions: {
+      q1: { correctIndex: 1, explanation: 'B is right' },
+      q2: { correctAnswer: true },
+      q3: { acceptedAnswers: ['Paris'] },
+    },
+  }
+
+  it('restores a gradable question set from the stripped config and the key row', () => {
+    const merged = mergeAnswerKey(stripped, keyRow)
+    expect(merged.passing_score).toBe(80)
+    const parsed = parseCheckpointQuestions(merged)!
+    expect(parsed.map((q) => q.id)).toEqual(['q1', 'q2', 'q3'])
+    expect(parsed[0].correctIndex).toBe(1)
+    expect(parsed[0].explanation).toBe('B is right')
+    const grade = gradeCheckpointQuestions(parsed, [
+      { questionId: 'q1', value: 1 },
+      { questionId: 'q2', value: true },
+      { questionId: 'q3', value: ' paris ' },
+    ])
+    expect(grade.score).toBe(100)
+  })
+
+  it('accepts the embed as an array (to-many shape) too', () => {
+    expect(parseCheckpointQuestions(mergeAnswerKey(stripped, [keyRow]))).toHaveLength(3)
+  })
+
+  it('without a key the stripped questions stay ungradable, so nothing parses', () => {
+    expect(mergeAnswerKey(stripped, null)).toBe(stripped)
+    expect(parseCheckpointQuestions(mergeAnswerKey(stripped, null))).toBeNull()
+    expect(parseCheckpointQuestions(mergeAnswerKey(stripped, { questions: 'junk' }))).toBeNull()
+  })
+
+  it('leaves configs without a questions array alone', () => {
+    const essay = { evaluation_criteria: 'x' }
+    expect(mergeAnswerKey(essay, keyRow)).toBe(essay)
+    expect(mergeAnswerKey(null, keyRow)).toEqual({})
+  })
+
+  it('round-trips to a client projection that still carries no answers', () => {
+    const client = toClientCheckpointQuestions(
+      parseCheckpointQuestions(mergeAnswerKey(stripped, keyRow))
+    )
+    const serialized = JSON.stringify(client)
+    expect(serialized).not.toContain('correctIndex')
+    expect(serialized).not.toContain('acceptedAnswers')
+    expect(serialized).not.toContain('explanation')
   })
 })
