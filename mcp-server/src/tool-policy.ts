@@ -39,6 +39,8 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_browse_catalog",
   // AI-tutor practice tools (Epic #348) — all self-scoped.
   "lms_get_exercise_for_student",
+  // #829 — closed questions are graded server-side; the key never reaches the host.
+  "lms_check_exercise_answers",
   "lms_complete_exercise",
   "lms_practice_quiz",
   "lms_record_practice_attempt",

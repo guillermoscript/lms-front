@@ -372,7 +372,7 @@ export function registerPracticeTools(server: LmsServer) {
     {
       name: "lms_get_exercise_for_student",
       description:
-        "Fetch a published exercise as a learner, WITH the caller's full attempt history (scores, pass/fail, feedback per attempt). Use the history to pitch the next drill variation at the right difficulty. Grading fields (system prompt, evaluation criteria, rubric) are never included.",
+        "Fetch a published exercise as a learner, WITH the caller's full attempt history (scores, pass/fail, feedback per attempt). Use the history to pitch the next drill variation at the right difficulty. Grading fields (system prompt, evaluation criteria, rubric) are never included, and closed questions in exercise_config.questions come WITHOUT their answers — grade those with lms_check_exercise_answers, never by guessing the key.",
       schema: z.object({
         exercise_id: z.number().describe("The exercise ID to fetch"),
       }),
@@ -479,6 +479,101 @@ export function registerPracticeTools(server: LmsServer) {
               : null,
           },
           `Exercise "${exercise.title}" (${exercise.exercise_type}, ${exercise.difficulty_level})${completed ? " — already completed" : ""}. ${attempts.length} prior attempt(s)${attempts.length > 0 ? `, latest: ${attempts[0].passed ? "passed" : "not passed"} at ${attempts[0].score}` : ""}.${gradable ? "" : " NOTE: this exercise type is evaluated in the app, not via lms_complete_exercise."}${checkpointLocked ? ` NOTE: this exercise is a lesson checkpoint — the student answers it inside lesson ${checkpoint!.lesson_id}${checkpoint!.lesson_title ? ` ("${checkpoint!.lesson_title}")` : ""}; lms_complete_exercise will refuse it. Coach or drill variations (source_exercise_id=${exercise.id}) here instead.` : ""}`
+        );
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    }
+  );
+
+  // ── lms_check_exercise_answers ─────────────────────────────────────────────
+  // Closed-question answer keys live in `exercise_answer_keys`, which students
+  // cannot read (#829), so the host can no longer grade quiz/multiple_choice/
+  // true_false/fill_in_the_blank questions itself. The database grades them
+  // (`grade_exercise_answers`, same rules as the lesson checkpoints) and hands
+  // back only the result.
+  server.tool(
+    {
+      name: "lms_check_exercise_answers",
+      description:
+        "Grade the caller's answers to a REAL exercise's closed questions (exercise_config.questions from lms_get_exercise_for_student) on the server. Returns score (0-100), passed (against the exercise's passing_score), and per-question correct/correctValue/explanation — reveal those only after the student has answered. Values: multiple_choice → option index (number), true_false → boolean, fill_in_the_blank → string. Records nothing: after grading, call lms_complete_exercise with this score if the student wants the attempt recorded. Lesson-checkpoint exercises are refused (answered inside the lesson).",
+      schema: z.object({
+        exercise_id: z.number().describe("The exercise whose questions were answered"),
+        answers: z
+          .array(
+            z.object({
+              question_id: z.string().min(1).max(100).describe("The question's id"),
+              value: z
+                .union([z.string().max(2000), z.number(), z.boolean()])
+                .describe("Option index, boolean, or text, by question type"),
+            })
+          )
+          .min(1)
+          .max(50)
+          .describe("One entry per answered question; unanswered ones count as wrong"),
+      }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input, ctx) => {
+      let session: LmsSession;
+      try {
+        session = LmsSession.fromContext(ctx);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+
+      try {
+        const { data, error } = await session.getClient().rpc("grade_exercise_answers", {
+          _exercise_id: input.exercise_id,
+          _answers: input.answers.map((a) => ({ questionId: a.question_id, value: a.value })),
+        });
+        if (error) {
+          if (error.message.includes("exercise_is_lesson_checkpoint"))
+            return errorResult(
+              `Exercise ${input.exercise_id} is a lesson checkpoint — the student answers it inside the lesson.`
+            );
+          if (error.message.includes("exercise_not_found"))
+            return errorResult(`Exercise ${input.exercise_id} not found`);
+          return errorResult(`Grading answers: ${error.message}`);
+        }
+        const grade = data as {
+          score: number;
+          correctCount: number;
+          total: number;
+          passingScore: number;
+          passed: boolean;
+          perQuestion: Array<{
+            questionId: string;
+            correct: boolean;
+            correctValue: string | number | boolean | null;
+            explanation?: string;
+          }>;
+        };
+        if (grade.total === 0)
+          return errorResult(
+            `Exercise ${input.exercise_id} has no closed questions to grade — evaluate it against its instructions instead.`
+          );
+        return ok(
+          {
+            exercise_id: input.exercise_id,
+            score: grade.score,
+            passed: grade.passed,
+            passing_score: grade.passingScore,
+            correct_count: grade.correctCount,
+            total: grade.total,
+            per_question: grade.perQuestion.map((q) => ({
+              question_id: q.questionId,
+              correct: q.correct,
+              correct_value: q.correctValue,
+              ...(q.explanation ? { explanation: q.explanation } : {}),
+            })),
+          },
+          `${grade.correctCount}/${grade.total} correct — score ${grade.score} (${grade.passed ? "passes" : "below"} the ${grade.passingScore} passing score).`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
