@@ -3,7 +3,7 @@
 -- student a1…01 is entitled to course 1001 in the default tenant, owner a1…02
 -- is its admin). Everything rolls back.
 BEGIN;
-SELECT plan(14);
+SELECT plan(16);
 
 INSERT INTO public.exercises (course_id, tenant_id, title, instructions, exercise_type, difficulty_level, status, created_by, exercise_config)
 VALUES (1001, '00000000-0000-0000-0000-000000000001', 'pgtap answer keys', 'Answer', 'quiz', 'easy', 'published',
@@ -82,8 +82,16 @@ SELECT is(
 );
 SELECT is(
   (SELECT public.grade_exercise_answers((SELECT id FROM t), '[{"questionId":"q1","value":1}]') -> 'perQuestion' -> 0),
-  '{"questionId":"q1","correct":true,"correctValue":"4","explanation":"math"}'::jsonb,
-  'per-question result carries correctValue and explanation'
+  '{"questionId":"q1","correct":true}'::jsonb,
+  'a student gets right/wrong per question, nothing more'
+);
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(public.grade_exercise_answers((SELECT id FROM t), '[]') -> 'perQuestion') q
+    WHERE q ?| ARRAY['correctValue', 'explanation']
+  ),
+  'grading no answers hands a student no correctValue or explanation'
 );
 SELECT is(
   (SELECT public.grade_exercise_answers((SELECT id FROM t), '[]') ->> 'score'), '0',
@@ -116,6 +124,11 @@ SELECT is(
   (SELECT questions -> 'q2' FROM public.exercise_answer_keys WHERE exercise_id = (SELECT id FROM t)),
   '{"correctAnswer":true}'::jsonb,
   'staff read the key'
+);
+SELECT is(
+  (SELECT public.grade_exercise_answers((SELECT id FROM t), '[]') -> 'perQuestion' -> 0),
+  '{"questionId":"q1","correct":false,"correctValue":"4","explanation":"math"}'::jsonb,
+  'staff get correctValue and explanation'
 );
 
 -- ── as anon ──

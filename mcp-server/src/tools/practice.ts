@@ -496,7 +496,7 @@ export function registerPracticeTools(server: LmsServer) {
     {
       name: "lms_check_exercise_answers",
       description:
-        "Grade the caller's answers to a REAL exercise's closed questions (exercise_config.questions from lms_get_exercise_for_student) on the server. Returns score (0-100), passed (against the exercise's passing_score), and per-question correct/correctValue/explanation — reveal those only after the student has answered. Values: multiple_choice → option index (number), true_false → boolean, fill_in_the_blank → string. Records nothing: after grading, call lms_complete_exercise with this score if the student wants the attempt recorded. Lesson-checkpoint exercises are refused (answered inside the lesson).",
+        "Grade the caller's answers to a REAL exercise's closed questions (exercise_config.questions from lms_get_exercise_for_student) on the server. Returns score (0-100), passed (against the exercise's passing_score), and per question only whether it was right — never the correct answer (students cannot learn the key; teachers also get correct_value/explanation). Values: multiple_choice → option index (number), true_false → boolean, fill_in_the_blank → string. Records nothing: after grading, call lms_complete_exercise with this score if the student wants the attempt recorded. Lesson-checkpoint exercises are refused (answered inside the lesson).",
       schema: z.object({
         exercise_id: z.number().describe("The exercise whose questions were answered"),
         answers: z
@@ -550,7 +550,8 @@ export function registerPracticeTools(server: LmsServer) {
           perQuestion: Array<{
             questionId: string;
             correct: boolean;
-            correctValue: string | number | boolean | null;
+            // Staff callers only (#829).
+            correctValue?: string | number | boolean | null;
             explanation?: string;
           }>;
         };
@@ -569,7 +570,7 @@ export function registerPracticeTools(server: LmsServer) {
             per_question: grade.perQuestion.map((q) => ({
               question_id: q.questionId,
               correct: q.correct,
-              correct_value: q.correctValue,
+              ...(q.correctValue !== undefined ? { correct_value: q.correctValue } : {}),
               ...(q.explanation ? { explanation: q.explanation } : {}),
             })),
           },

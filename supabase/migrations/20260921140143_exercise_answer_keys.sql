@@ -238,7 +238,10 @@ $$;
 -- goes through normalize_answer_text().
 --
 -- `_answers` is `[{ questionId, value }]`. Returns
--- `{ score, correctCount, total, passingScore, passed, perQuestion: [{ questionId, correct, correctValue, explanation? }] }`.
+-- `{ score, correctCount, total, passingScore, passed, perQuestion: [{ questionId, correct }] }`;
+-- staff (tenant staff or the course author) also get `correctValue` and
+-- `explanation?` per question. A student never does — otherwise calling it
+-- with no answers would return the whole key.
 --
 -- Who may call it is who may read the exercise (the `exercises` SELECT policy),
 -- except that a student cannot grade an exercise that is an enabled lesson
@@ -368,9 +371,14 @@ BEGIN
 
       _total := _total + 1;
       IF _correct THEN _correct_count := _correct_count + 1; END IF;
+      -- A student learns right or wrong, never the answer: with correctValue in
+      -- the result, grading `[]` would read the whole key back.
       _per_question := _per_question || jsonb_build_array(
-        jsonb_build_object('questionId', _id, 'correct', _correct, 'correctValue', _correct_value)
-        || CASE WHEN jsonb_typeof(_entry -> 'explanation') = 'string'
+        jsonb_build_object('questionId', _id, 'correct', _correct)
+        || CASE WHEN _is_staff
+                THEN jsonb_build_object('correctValue', _correct_value)
+                ELSE '{}'::jsonb END
+        || CASE WHEN _is_staff AND jsonb_typeof(_entry -> 'explanation') = 'string'
                 THEN jsonb_build_object('explanation', _entry -> 'explanation')
                 ELSE '{}'::jsonb END
       );
@@ -396,4 +404,4 @@ REVOKE EXECUTE ON FUNCTION public.grade_exercise_answers(bigint, jsonb) FROM PUB
 GRANT EXECUTE ON FUNCTION public.grade_exercise_answers(bigint, jsonb) TO authenticated;
 
 COMMENT ON FUNCTION public.grade_exercise_answers(bigint, jsonb) IS
-  'Grade closed-question answers server-side against exercise_answer_keys (#829). Same rules as lib/checkpoints/grading.ts. Refuses students on enabled lesson-checkpoint exercises.';
+  'Grade closed-question answers server-side against exercise_answer_keys (#829). Same rules as lib/checkpoints/grading.ts. Students get right/wrong only (no correctValue/explanation) and are refused on enabled lesson-checkpoint exercises.';
