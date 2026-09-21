@@ -135,10 +135,6 @@ export function WeeklyLeague() {
     const tier = data.tier;
     const accent = (tier && TIER_ACCENTS[tier.slug]) || "text-muted-foreground";
     const standings = data.standings ?? [];
-    const promoteCount = data.promote_count ?? 0;
-    const demoteCount = data.demote_count ?? 0;
-    const cohortSize = data.cohort_size ?? standings.length;
-    const showDemote = cohortSize > promoteCount + demoteCount;
 
     return (
         <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
@@ -169,8 +165,11 @@ export function WeeklyLeague() {
             <div className="p-2 space-y-1">
                 {standings.length > 0 ? (
                     standings.map((row) => {
-                        const inPromoteZone = row.rank <= promoteCount;
-                        const inDemoteZone = showDemote && row.rank > cohortSize - demoteCount;
+                        // The RPC marks each row with the rollover's own rule (active
+                        // members only, scaled bands, tier floor/ceiling). Re-deriving
+                        // it here from rank promised moves that never happened.
+                        const inPromoteZone = row.zone === "promote";
+                        const inDemoteZone = row.zone === "demote";
 
                         return (
                             <div
