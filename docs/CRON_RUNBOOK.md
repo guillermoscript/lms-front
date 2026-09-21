@@ -50,6 +50,8 @@ these routes.
   `public.invoke_cron_route('send-pushes')`. GitHub cannot keep a one-minute
   cadence, so `cron.yml` offers it under `workflow_dispatch` only. It needs the
   same two Vault secrets; without them no push is ever sent.
+  `prune-send-pushes-cron-runs` (daily `30 4`) keeps only 7 days of its
+  `cron_runs` rows, since a run a minute is about 1,440 rows a day.
 
 Running two schedulers means every route fires twice. The routes tolerate it,
 but it doubles load and makes logs unreadable. **If you move to Dokploy

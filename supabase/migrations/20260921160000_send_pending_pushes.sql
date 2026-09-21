@@ -12,7 +12,7 @@
 -- 2. A partial index keeps the sweep a scan of the (small) pending set.
 -- 3. claim_pending_pushes() claims rows atomically and hands back, per
 --    notification, the device tokens to push to.
--- 4. Schedule.
+-- 4. Schedule, plus a daily prune of this route's cron_runs rows.
 
 -- ---------------------------------------------------------------------------
 -- 1. Backfill
@@ -129,6 +129,13 @@ BEGIN
       'send-pushes-every-minute',
       '* * * * *',
       $cron$SELECT public.invoke_cron_route('send-pushes')$cron$
+    );
+    -- A run a minute is ~1,440 cron_runs rows a day. Keep a week of them;
+    -- other routes' rows are left alone (billing-health reads them).
+    PERFORM cron.schedule(
+      'prune-send-pushes-cron-runs',
+      '30 4 * * *',
+      $cron$DELETE FROM public.cron_runs WHERE route = 'send-pushes' AND requested_at < now() - interval '7 days'$cron$
     );
   ELSE
     RAISE NOTICE 'pg_cron not installed; send-pushes has no scheduler';

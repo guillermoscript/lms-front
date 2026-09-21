@@ -82,6 +82,24 @@ begin
     raise exception '§7 schedule missing';
   end if;
 
+  -- §8 the daily prune drops only send-pushes rows older than 7 days
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    insert into cron_runs (route, requested_at) values
+      ('send-pushes', now() - interval '8 days'),
+      ('send-pushes', now() - interval '6 days'),
+      ('enforce-plan-limits', now() - interval '30 days');
+    execute (select command from cron.job where jobname = 'prune-send-pushes-cron-runs');
+    if exists (select 1 from cron_runs where route = 'send-pushes' and requested_at < now() - interval '7 days') then
+      raise exception '§8 old send-pushes row kept';
+    end if;
+    if not exists (select 1 from cron_runs where route = 'send-pushes' and requested_at between now() - interval '7 days' and now() - interval '5 days') then
+      raise exception '§8 recent send-pushes row deleted';
+    end if;
+    if not exists (select 1 from cron_runs where route = 'enforce-plan-limits' and requested_at < now() - interval '29 days') then
+      raise exception '§8 other route row deleted';
+    end if;
+  end if;
+
   raise notice 'issue-835 claim_pending_pushes: all checks passed';
 end $$;
 
