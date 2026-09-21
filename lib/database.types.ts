@@ -6840,6 +6840,18 @@ export type Database = {
           event_id: string
         }[]
       }
+      claim_pending_pushes: {
+        Args: { _max_age?: unknown; _max_notifications?: number }
+        Returns: {
+          content: string
+          notification_id: number
+          priority: string
+          recipients: number
+          title: string
+          tokens: string[]
+          url: string
+        }[]
+      }
       claim_solana_platform_activation: {
         Args: {
           _claim_token: string

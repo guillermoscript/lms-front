@@ -59,6 +59,9 @@ on:
           - reconcile-solana-platform-activations
           - expire-stale-checkouts
           - expire-payment-requests
+          # Scheduled by pg_cron every minute (#835) — a cadence GitHub cannot
+          # keep. Listed here for manual runs only.
+          - send-pushes
           # Never scheduled: solana-pull submits on-chain USDC transfers and has
           # never had a scheduler in vercel.json either. Available here for
           # manual runs only — putting it on a timer needs its own review.
