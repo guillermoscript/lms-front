@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { hasPlanFeature } from '@/lib/plans/server'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import {
   CONVERSATION_OVERRUN_SLACK_SECONDS,
   CONVERSATION_TAB_KEY,
@@ -36,11 +37,13 @@ export async function POST(req: Request) {
     return new Response('exerciseId and tab are required', { status: 400 })
   }
 
-  const { data: exercise, error } = await adminClient
+  const { data: storedExercise, error } = await adminClient
     .from('exercises')
-    .select('id, title, instructions, system_prompt, exercise_type, exercise_config, course_id, tenant_id')
+    .select(`id, title, instructions, system_prompt, exercise_type, exercise_config, course_id, tenant_id, ${GRADING_SECRETS_EMBED}`)
     .eq('id', exerciseId)
     .single()
+  // The teacher's notes live outside the student-readable row (#833).
+  const exercise = storedExercise ? withGradingSecrets(storedExercise) : null
 
   if (error || !exercise || exercise.tenant_id !== tenantId) {
     return new Response('Exercise not found', { status: 404 })

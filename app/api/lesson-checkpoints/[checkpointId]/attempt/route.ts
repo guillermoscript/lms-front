@@ -6,13 +6,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { AI_MODELS } from '@/lib/ai/config'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import {
   CLOSED_EXERCISE_TYPES,
   EXTERNAL_EXERCISE_TYPES,
   evaluatorTypeForExternal,
-  mergeAnswerKey,
   parseCheckpointQuestions,
   type CheckpointAttemptResult,
   type CheckpointEvaluatorType,
@@ -76,7 +76,7 @@ export async function POST(
   const { data: checkpoint } = await adminClient
     .from('lesson_checkpoints')
     .select(
-      'id, tenant_id, lesson_id, exercise_id, placement_type, allow_skip, max_ai_attempts, is_required, is_enabled, exercises(id, title, instructions, description, exercise_type, system_prompt, exercise_config, course_id, tenant_id, exercise_answer_keys(questions))'
+      `id, tenant_id, lesson_id, exercise_id, placement_type, allow_skip, max_ai_attempts, is_required, is_enabled, exercises(id, title, instructions, description, exercise_type, system_prompt, exercise_config, course_id, tenant_id, ${GRADING_SECRETS_EMBED})`
     )
     .eq('id', checkpointId)
     .single()
@@ -84,7 +84,7 @@ export async function POST(
   if (!checkpoint || checkpoint.tenant_id !== tenantId || !checkpoint.is_enabled) {
     return Response.json({ error: 'Checkpoint not found' }, { status: 404 })
   }
-  const exercise = checkpoint.exercises as unknown as {
+  const storedExercise = checkpoint.exercises as unknown as {
     id: number
     title: string
     instructions: string
@@ -94,11 +94,14 @@ export async function POST(
     exercise_config: Record<string, unknown> | null
     course_id: number
     tenant_id: string
-    exercise_answer_keys: unknown
+    exercise_grading_secrets: unknown
   } | null
-  if (!exercise || exercise.tenant_id !== tenantId) {
+  if (!storedExercise || storedExercise.tenant_id !== tenantId) {
     return Response.json({ error: 'Checkpoint not found' }, { status: 404 })
   }
+  // Answer keys, the grader prompt and criteria live outside the row (#829,
+  // #833); merged back here, on the server, to grade.
+  const exercise = withGradingSecrets(storedExercise)
 
   // Course access required (issue #532). This route reads through the admin
   // client, so #509's RLS backstop on content never applies here — the gate
@@ -124,8 +127,7 @@ export async function POST(
     )
   }
 
-  // Answer keys live outside exercise_config (#829); merge them back to grade.
-  const config = mergeAnswerKey(exercise.exercise_config, exercise.exercise_answer_keys)
+  const config = exercise.exercise_config ?? {}
   const passingScore =
     typeof config.passing_score === 'number' ? config.passing_score : 70
   const questions = parseCheckpointQuestions(config)

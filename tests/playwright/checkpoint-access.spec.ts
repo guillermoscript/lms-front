@@ -337,14 +337,14 @@ test.describe('the answer key stays on the server (#829)', () => {
     expect(JSON.stringify(config)).not.toContain('correctIndex')
 
     const { data: keys } = await client
-      .from('exercise_answer_keys')
+      .from('exercise_grading_secrets')
       .select('questions')
       .eq('exercise_id', exerciseId)
     expect(keys ?? []).toHaveLength(0)
 
     // The seeded answer still grades: the key sits where only the server reads it.
     const { data: key } = await getAdmin()
-      .from('exercise_answer_keys')
+      .from('exercise_grading_secrets')
       .select('questions')
       .eq('exercise_id', exerciseId)
       .single()

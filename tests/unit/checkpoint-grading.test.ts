@@ -4,8 +4,8 @@ import {
   gradeCheckpointQuestions,
   normalizeAnswerText,
 } from '../../lib/checkpoints/grading'
+import { mergeGradingSecrets, withGradingSecrets } from '../../lib/exercises/grading-secrets'
 import {
-  mergeAnswerKey,
   parseCheckpointQuestions,
   toClientCheckpointQuestions,
   type CheckpointQuestion,
@@ -140,7 +140,7 @@ describe('toClientCheckpointQuestions', () => {
   })
 })
 
-describe('mergeAnswerKey', () => {
+describe('mergeGradingSecrets', () => {
   // exercise_config as students can SELECT it since #829: answers stripped.
   const stripped = {
     passing_score: 80,
@@ -160,7 +160,7 @@ describe('mergeAnswerKey', () => {
   }
 
   it('restores a gradable question set from the stripped config and the key row', () => {
-    const merged = mergeAnswerKey(stripped, keyRow)
+    const merged = mergeGradingSecrets(stripped, keyRow)
     expect(merged.passing_score).toBe(80)
     const parsed = parseCheckpointQuestions(merged)!
     expect(parsed.map((q) => q.id)).toEqual(['q1', 'q2', 'q3'])
@@ -175,28 +175,66 @@ describe('mergeAnswerKey', () => {
   })
 
   it('accepts the embed as an array (to-many shape) too', () => {
-    expect(parseCheckpointQuestions(mergeAnswerKey(stripped, [keyRow]))).toHaveLength(3)
+    expect(parseCheckpointQuestions(mergeGradingSecrets(stripped, [keyRow]))).toHaveLength(3)
   })
 
   it('without a key the stripped questions stay ungradable, so nothing parses', () => {
-    expect(mergeAnswerKey(stripped, null)).toBe(stripped)
-    expect(parseCheckpointQuestions(mergeAnswerKey(stripped, null))).toBeNull()
-    expect(parseCheckpointQuestions(mergeAnswerKey(stripped, { questions: 'junk' }))).toBeNull()
+    expect(mergeGradingSecrets(stripped, null)).toBe(stripped)
+    expect(parseCheckpointQuestions(mergeGradingSecrets(stripped, null))).toBeNull()
+    expect(parseCheckpointQuestions(mergeGradingSecrets(stripped, { questions: 'junk' }))).toBeNull()
   })
 
   it('leaves configs without a questions array alone', () => {
     const essay = { evaluation_criteria: 'x' }
-    expect(mergeAnswerKey(essay, keyRow)).toBe(essay)
-    expect(mergeAnswerKey(null, keyRow)).toEqual({})
+    expect(mergeGradingSecrets(essay, keyRow)).toBe(essay)
+    expect(mergeGradingSecrets(null, keyRow)).toEqual({})
   })
 
   it('round-trips to a client projection that still carries no answers', () => {
     const client = toClientCheckpointQuestions(
-      parseCheckpointQuestions(mergeAnswerKey(stripped, keyRow))
+      parseCheckpointQuestions(mergeGradingSecrets(stripped, keyRow))
     )
     const serialized = JSON.stringify(client)
     expect(serialized).not.toContain('correctIndex')
     expect(serialized).not.toContain('acceptedAnswers')
     expect(serialized).not.toContain('explanation')
+  })
+})
+
+describe('grading secrets (#833)', () => {
+  // The row as a student can SELECT it: no prompt, no criteria.
+  const stored = {
+    id: 7,
+    system_prompt: null,
+    template_variables: null,
+    exercise_config: { passing_score: 70 },
+  }
+  const secrets = {
+    questions: {},
+    config: { evaluation_criteria: 'Mentions photosynthesis', expected_keywords: ['light'] },
+    system_prompt: 'Model answer: plants make sugar from light.',
+    template_variables: { topic: 'plants' },
+  }
+
+  it('puts the secret config keys back next to the public ones', () => {
+    expect(mergeGradingSecrets(stored.exercise_config, secrets)).toEqual({
+      passing_score: 70,
+      evaluation_criteria: 'Mentions photosynthesis',
+      expected_keywords: ['light'],
+    })
+  })
+
+  it('restores the prompt and template variables and drops the embed', () => {
+    const merged = withGradingSecrets({ ...stored, exercise_grading_secrets: secrets })
+    expect(merged.system_prompt).toBe(secrets.system_prompt)
+    expect(merged.template_variables).toEqual({ topic: 'plants' })
+    expect(merged.exercise_config).toMatchObject({ evaluation_criteria: 'Mentions photosynthesis' })
+    expect('exercise_grading_secrets' in merged).toBe(false)
+  })
+
+  it('leaves the row as stored when there are no secrets', () => {
+    const merged = withGradingSecrets({ ...stored, exercise_grading_secrets: null })
+    expect(merged.system_prompt).toBeNull()
+    expect(merged.exercise_config).toEqual({ passing_score: 70 })
   })
 })

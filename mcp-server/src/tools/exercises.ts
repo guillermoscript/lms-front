@@ -5,7 +5,11 @@ import { text } from "mcp-use";
 // satisfies v2's compile-time outputSchema enforcement (see format.ts).
 import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
-import { mergeAnswerKey } from "../answer-keys.js";
+import {
+  GRADING_SECRETS_EMBED,
+  mergeGradingSecrets,
+  withGradingSecrets,
+} from "../grading-secrets.js";
 import {
   ok,
   okText,
@@ -168,14 +172,16 @@ export function registerExerciseTools(server: LmsServer) {
         await session.verifyExerciseOwnership(exercise_id);
         const supabase = session.getClient();
 
-        const { data, error } = await supabase
+        const { data: stored, error } = await supabase
           .from("exercises")
-          .select("*")
+          .select(`*, ${GRADING_SECRETS_EMBED}`)
           .eq("id", exercise_id)
           .single();
 
-        if (error || !data)
+        if (error || !stored)
           return errorResult(`Exercise ${exercise_id} not found.`);
+        // The prompt and template variables live in the staff-only side table (#833).
+        const data = withGradingSecrets(stored as Record<string, any>) as Record<string, any>;
 
         const output = {
           exercise: {
@@ -256,7 +262,7 @@ export function registerExerciseTools(server: LmsServer) {
         const { data, error } = await supabase
           .from("exercises")
           .select(
-            "id, title, instructions, exercise_type, difficulty_level, exercise_config"
+            `id, title, instructions, exercise_type, difficulty_level, exercise_config, ${GRADING_SECRETS_EMBED}`
           )
           .eq("id", exercise_id)
           .single();
@@ -269,7 +275,11 @@ export function registerExerciseTools(server: LmsServer) {
           );
         }
 
-        const config = (data.exercise_config as Record<string, any>) ?? {};
+        // Criteria and grader prompt live in the staff-only side table (#833).
+        const config: Record<string, any> = mergeGradingSecrets(
+          data.exercise_config as Record<string, unknown> | null,
+          data.exercise_grading_secrets
+        );
         const html = (config.artifact_html as string) ?? "";
 
         const props = {
@@ -990,17 +1000,21 @@ export function registerExerciseTools(server: LmsServer) {
         await session.verifyExerciseOwnership(input.exercise_id);
         const supabase = session.getClient();
 
-        const { data: source, error: srcError } = await supabase
+        const { data: storedSource, error: srcError } = await supabase
           .from("exercises")
           .select(
-            "course_id, lesson_id, title, instructions, exercise_type, difficulty_level, system_prompt, time_limit, exercise_config, template_id, template_variables, exercise_answer_keys(questions)"
+            `course_id, lesson_id, title, instructions, exercise_type, difficulty_level, system_prompt, time_limit, exercise_config, template_id, template_variables, ${GRADING_SECRETS_EMBED}`
           )
           .eq("id", input.exercise_id)
           .single();
-        if (srcError || !source)
+        if (srcError || !storedSource)
           return errorResult(
             `Loading exercise ${input.exercise_id}: ${srcError?.message ?? "not found"}`
           );
+        // Answer keys, grading config, prompt and template variables live in
+        // exercise_grading_secrets (#829, #833); merged back so the insert
+        // trigger files them for the copy.
+        const source = withGradingSecrets(storedSource as Record<string, any>) as Record<string, any>;
 
         // status is intentionally not set — the DB default 'draft' applies,
         // so copies are never student-visible until the teacher publishes.
@@ -1015,14 +1029,7 @@ export function registerExerciseTools(server: LmsServer) {
             difficulty_level: input.difficulty_level ?? source.difficulty_level,
             system_prompt: input.system_prompt ?? source.system_prompt,
             time_limit: input.time_limit ?? source.time_limit,
-            // The source's closed-question answers live in exercise_answer_keys
-            // (#829); merged back so the insert trigger files them for the copy.
-            exercise_config:
-              input.exercise_config ??
-              mergeAnswerKey(
-                source.exercise_config as Record<string, unknown> | null,
-                source.exercise_answer_keys
-              ),
+            exercise_config: input.exercise_config ?? source.exercise_config,
             template_id: source.template_id,
             template_variables: source.template_variables,
             created_by: session.getUserId(),

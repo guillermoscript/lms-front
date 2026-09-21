@@ -2109,42 +2109,6 @@ export type Database = {
           },
         ]
       }
-      exercise_answer_keys: {
-        Row: {
-          exercise_id: number
-          questions: Json
-          tenant_id: string
-          updated_at: string
-        }
-        Insert: {
-          exercise_id: number
-          questions?: Json
-          tenant_id: string
-          updated_at?: string
-        }
-        Update: {
-          exercise_id?: number
-          questions?: Json
-          tenant_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "exercise_answer_keys_exercise_id_fkey"
-            columns: ["exercise_id"]
-            isOneToOne: true
-            referencedRelation: "exercises"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exercise_answer_keys_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       exercise_code_student_submissions: {
         Row: {
           created_at: string | null
@@ -2345,6 +2309,51 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercise_grading_secrets: {
+        Row: {
+          config: Json
+          exercise_id: number
+          questions: Json
+          system_prompt: string | null
+          template_variables: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          exercise_id: number
+          questions?: Json
+          system_prompt?: string | null
+          template_variables?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          exercise_id?: number
+          questions?: Json
+          system_prompt?: string | null
+          template_variables?: Json | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_grading_secrets_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: true
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_grading_secrets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
