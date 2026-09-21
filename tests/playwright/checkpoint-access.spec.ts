@@ -313,3 +313,76 @@ test.describe('checkpoint attempts are server-written (#543)', () => {
     }
   })
 })
+
+test.describe('the answer key stays on the server (#829)', () => {
+  test("a student's own token reads the exercise but not its answers", async () => {
+    const client = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: ACCOUNTS.student.email,
+      password: ACCOUNTS.student.password,
+    })
+    expect(signInError).toBeNull()
+
+    const { data: exercise } = await client
+      .from('exercises')
+      .select('exercise_config')
+      .eq('id', exerciseId)
+      .single()
+    const config = exercise?.exercise_config as { questions?: Array<Record<string, unknown>> }
+    expect(config.questions?.[0]?.options).toEqual(['Hammer', 'Vitest', 'Bicycle'])
+    expect(JSON.stringify(config)).not.toContain('correctIndex')
+
+    const { data: keys } = await client
+      .from('exercise_answer_keys')
+      .select('questions')
+      .eq('exercise_id', exerciseId)
+    expect(keys ?? []).toHaveLength(0)
+
+    // The seeded answer still grades: the key sits where only the server reads it.
+    const { data: key } = await getAdmin()
+      .from('exercise_answer_keys')
+      .select('questions')
+      .eq('exercise_id', exerciseId)
+      .single()
+    expect(key?.questions).toEqual({ q1: { correctIndex: 1 } })
+  })
+
+  test('GET /api/lessons/:id/checkpoints lists the checkpoint without answers', async () => {
+    const client = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { data: session } = await client.auth.signInWithPassword({
+      email: ACCOUNTS.student.email,
+      password: ACCOUNTS.student.password,
+    })
+    const token = session.session!.access_token
+
+    // Bearer, as the native app sends it — no cookies, no subdomain.
+    const res = await fetch(`${BASE}/api/lessons/${LESSON_ID}/checkpoints`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as Array<{
+      id: number
+      exercise: { questions: Array<Record<string, unknown>> | null }
+    }>
+    const checkpoint = body.find((c) => c.id === checkpointId)
+    expect(checkpoint?.exercise.questions).toEqual([
+      {
+        id: 'q1',
+        type: 'multiple_choice',
+        prompt: 'Which one is a testing framework?',
+        options: ['Hammer', 'Vitest', 'Bicycle'],
+      },
+    ])
+
+    const anonymous = await fetch(`${BASE}/api/lessons/${LESSON_ID}/checkpoints`)
+    expect(anonymous.status).toBe(401)
+  })
+})
