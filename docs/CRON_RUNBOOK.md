@@ -45,6 +45,11 @@ these routes.
   With the Vault secrets missing the job records a `cron_runs` row with
   `error` set and does nothing else, so an unconfigured environment is loud on
   the billing-health page rather than silently idle.
+- pg_cron is the **only** scheduler for `send-pushes` (#835): job
+  `send-pushes-every-minute` (`* * * * *`) calls
+  `public.invoke_cron_route('send-pushes')`. GitHub cannot keep a one-minute
+  cadence, so `cron.yml` offers it under `workflow_dispatch` only. It needs the
+  same two Vault secrets; without them no push is ever sent.
 
 Running two schedulers means every route fires twice. The routes tolerate it,
 but it doubles load and makes logs unreadable. **If you move to Dokploy
@@ -88,6 +93,7 @@ gh workflow enable cron.yml
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
 | `expire-platform-subscriptions` | `0 2` | No renewal reminders, no grace period, no downgrade to free: a school that stopped paying keeps its paid plan |
 | `enforce-plan-limits` | `0 3` | pg_cron is primary (#660); this is the fallback. If neither runs: a tenant that grows past its plan limits with no plan-change event is never cut off, a pending cutoff never completes, and no reminder email is ever sent |
+| `send-pushes` | every minute (pg_cron only) | No push notification reaches the mobile app. Pending rows older than a day are then marked sent without a push, so a long outage drops those pushes rather than flooding devices when it recovers |
 | `solana-pull` | **never** | See §5 |
 
 Every route is idempotent, so a late or repeated run is safe. `league-rollover`
