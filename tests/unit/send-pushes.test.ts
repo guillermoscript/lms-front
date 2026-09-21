@@ -22,6 +22,7 @@ function push(overrides: Partial<ClaimedPush> = {}): ClaimedPush {
     content: 'Lesson 3 is out',
     priority: 'normal',
     url: '/dashboard/student/courses/1',
+    kind: 'lesson',
     recipients: 1,
     tokens: ['ExponentPushToken[a]'],
     ...overrides,
@@ -84,11 +85,20 @@ describe('sendPendingPushes (#835)', () => {
       to: ['ExponentPushToken[a]'],
       title: 'New lesson',
       body: 'Lesson 3 is out',
-      data: { notification_id: 1, url: '/dashboard/student/courses/1' },
+      data: { notification_id: 1, url: '/dashboard/student/courses/1', kind: 'lesson' },
       sound: 'default',
       priority: 'high',
     })
     expect(result).toMatchObject({ notifications: 1, recipients: 1, devices: 1, sent: 1, pruned_tokens: 0, errors: [] })
+  })
+
+  it('sends a null kind when the notification has none, so the app can fall back (#825)', async () => {
+    const { admin } = fakeAdmin([push({ url: null, kind: null })])
+    const { fetchMock, bodies } = fakeExpo()
+
+    await sendPendingPushes(admin, { fetch: fetchMock as typeof fetch, expoUrl: 'http://stub/push' })
+
+    expect(bodies[0].data).toEqual({ notification_id: 1, url: null, kind: null })
   })
 
   it('batches tokens in chunks of 100', async () => {
