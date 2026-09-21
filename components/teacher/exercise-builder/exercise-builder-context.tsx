@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, createContext, use } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, createContext, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createExercise, updateExercise } from '@/app/actions/teacher/exercises'
+import { createExerciseSaveTarget } from './save-target'
 import { CONVERSATION_DEFAULTS } from '@/lib/speech/conversation'
 import { SPEECH_RUBRIC_DEFAULTS } from '@/lib/speech/learner-rubric'
 import {
@@ -83,6 +84,8 @@ export interface ExerciseBuilderContextValue {
   // Props pass-through
   initialData: ExerciseBuilderProps['initialData']
   courseId: number
+  /** The saved row's id — set from the first Save Draft on `/new` too. */
+  exerciseId: number | null
 
   // Derived
   isAudioType: boolean
@@ -120,6 +123,8 @@ export function ExerciseBuilderProvider({
   const [error, setError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [activeStep, setActiveStep] = useState<ExerciseStep>('details')
+  const saveTarget = useRef(createExerciseSaveTarget(initialData?.id)).current
+  const [exerciseId, setExerciseId] = useState<number | null>(initialData?.id ?? null)
 
   const [formData, setFormData] = useState<ExerciseFormData>({
     title: initialData?.title || '',
@@ -172,9 +177,6 @@ export function ExerciseBuilderProvider({
   }, [saveSuccess])
 
   const handleSave = async (publish: boolean) => {
-    setLoading(true)
-    setError(null)
-
     try {
       const data = {
         title: formData.title,
@@ -209,9 +211,15 @@ export function ExerciseBuilderProvider({
         conv_max_minutes: formData.conv_max_minutes,
       }
 
-      const result = initialData
-        ? await updateExercise(courseId, initialData.id, data)
-        : await createExercise(courseId, data)
+      const pending = saveTarget.save(
+        () => createExercise(courseId, data),
+        (id) => updateExercise(courseId, id, data)
+      )
+      setLoading(true)
+      setError(null)
+      const result = await pending
+      // Another save was already running; that one owns the loading state.
+      if (!result) return
 
       if (!result.success) {
         setError(result.error)
@@ -223,6 +231,17 @@ export function ExerciseBuilderProvider({
         router.push(`/dashboard/teacher/courses/${courseId}/exercises`)
         router.refresh()
       } else {
+        if (exerciseId === null) {
+          setExerciseId(result.data.exerciseId)
+          // Put the edit URL in the address bar without remounting the
+          // builder, so a reload opens the saved exercise instead of a blank
+          // `/new` form.
+          window.history.replaceState(
+            null,
+            '',
+            window.location.pathname.replace(/\/new\/?$/, `/${result.data.exerciseId}`)
+          )
+        }
         setSaveSuccess(true)
         setLoading(false)
       }
@@ -266,11 +285,11 @@ export function ExerciseBuilderProvider({
 
   const value = useMemo(() => ({
     formData, loading, error, saveSuccess, activeStep,
-    initialData, courseId,
+    initialData, courseId, exerciseId,
     isAudioType, isConversationType, isDetailsComplete, hasAIConfig, steps,
     updateField, setFormData, handleSave, setActiveStep, setError,
   }), [formData, loading, error, saveSuccess, activeStep,
-    initialData, courseId, isAudioType, isConversationType, isDetailsComplete, hasAIConfig])
+    initialData, courseId, exerciseId, isAudioType, isConversationType, isDetailsComplete, hasAIConfig])
 
   return (
     <ExerciseBuilderContext value={value}>
