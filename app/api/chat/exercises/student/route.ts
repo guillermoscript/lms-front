@@ -2,6 +2,8 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createExerciseTools } from '@/lib/ai/tools'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { capChatHistory, fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
@@ -21,7 +23,6 @@ interface ExerciseRow {
     title: string
     description?: string
     instructions: string
-    system_prompt?: string
     course_id: number
     exercise_type?: string
     course: { tenant_id: string } | { tenant_id: string }[] | null
@@ -49,10 +50,15 @@ export async function POST(req: Request) {
         supabase,
         exerciseId,
         tenantId,
-        'title, description, instructions, system_prompt, course_id, exercise_type, course:courses!inner(tenant_id)'
+        'title, description, instructions, course_id, exercise_type, course:courses!inner(tenant_id)'
     )
 
     if (!exercise) return new Response('Exercise not found', { status: 404 })
+
+    // The teacher's prompt is staff-only (#833); the student's own read above
+    // established access, so the admin client fetches it for the coach.
+    const secrets = await fetchGradingSecrets(createAdminClient(), exerciseId)
+    const systemPrompt = secrets?.system_prompt ?? undefined
 
     // A 404 above never costs a budget slot.
     const usage = await checkAiChatUsage(supabase, tenantId, user.id)
@@ -80,7 +86,7 @@ export async function POST(req: Request) {
         { userId: user.id, metadata: { exerciseId: String(exerciseId), tenantId } },
         () => streamText({
         model: AI_MODELS.coach,
-        system: PROMPTS.exerciseCoach(exercise),
+        system: PROMPTS.exerciseCoach({ ...exercise, system_prompt: systemPrompt }),
         messages: modelMessages,
         tools: createExerciseTools(supabase, { exerciseId: String(exerciseId), userId: user.id, tenantId, exerciseType: exercise.exercise_type }),
         experimental_telemetry: { functionId: 'exercise-coach' },

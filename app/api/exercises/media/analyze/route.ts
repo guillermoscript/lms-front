@@ -5,6 +5,7 @@ import { runSpeechPipeline } from '@/lib/speech/pipeline'
 import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
 import { getPipeline } from '@/lib/speech/registry'
 import type { ExerciseContext } from '@/lib/speech/types'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 
 export const maxDuration = 120
 
@@ -24,6 +25,7 @@ type JoinedExercise = {
     stt_provider?: string
     ai_coach?: string
   } | null
+  exercise_grading_secrets?: unknown
 }
 
 export async function POST(req: Request) {
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
   // 3. Fetch submission via admin client + manual ownership checks
   const { data: submission, error: fetchError } = await adminClient
     .from('exercise_media_submissions')
-    .select('*, exercises(id, title, instructions, exercise_config, course_id, tenant_id)')
+    .select(`*, exercises(id, title, instructions, exercise_config, course_id, tenant_id, ${GRADING_SECRETS_EMBED})`)
     .eq('id', submissionId)
     .single()
 
@@ -62,7 +64,9 @@ export async function POST(req: Request) {
     return new Response('Submission not found', { status: 404 })
   }
 
-  const exercise = submission.exercises as unknown as JoinedExercise | null
+  // The rubric lives outside the student-readable row (#833).
+  const joined = submission.exercises as unknown as JoinedExercise | null
+  const exercise = joined ? withGradingSecrets(joined) : null
 
   // 5. Status guard — only pending submissions can be analyzed (prevents re-triggering)
   const passingScore = exercise?.exercise_config?.passing_score ?? 70

@@ -158,7 +158,8 @@ export async function updateExercise(
       exercise_type: data.exercise_type,
       difficulty_level: data.difficulty_level,
       time_limit: data.time_limit,
-      system_prompt: data.system_prompt || null,
+      // '' clears it; NULL would keep the stored prompt (#833).
+      system_prompt: data.system_prompt ?? '',
       status: data.publish ? 'published' : data.status,
     }
 

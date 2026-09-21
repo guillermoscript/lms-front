@@ -36,7 +36,9 @@ const TEXT_ENGINE_TYPES = new Set([
 ]);
 
 /** Keys inside exercise_config that can carry grading answers. */
-const CONFIG_SECRET_KEYS = ["evaluation_criteria", "rubric"];
+// They no longer sit on the row at all (exercise_grading_secrets, #833); kept
+// as a second line should a key be written some way the trigger misses.
+const CONFIG_SECRET_KEYS = ["evaluation_criteria", "rubric", "expected_keywords", "system_prompt"];
 
 // Conversation-style exercise types (Epic #348 Phase 2, issue #362). Their
 // exercise_config shape is newer/less predictable than the text types above,
@@ -487,7 +489,7 @@ export function registerPracticeTools(server: LmsServer) {
   );
 
   // ── lms_check_exercise_answers ─────────────────────────────────────────────
-  // Closed-question answer keys live in `exercise_answer_keys`, which students
+  // Closed-question answer keys live in `exercise_grading_secrets`, which students
   // cannot read (#829), so the host can no longer grade quiz/multiple_choice/
   // true_false/fill_in_the_blank questions itself. The database grades them
   // (`grade_exercise_answers`, same rules as the lesson checkpoints) and hands
