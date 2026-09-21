@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
+  mergeAnswerKey,
   parseCheckpointQuestions,
   parseStoredEvaluation,
   parseStoredResponse,
@@ -73,7 +74,7 @@ export async function loadLessonCheckpoints(
   const { data: checkpoints } = await adminClient
     .from('lesson_checkpoints')
     .select(
-      'id, placement_type, content_block_id, video_timestamp_seconds, label, allow_skip, max_ai_attempts, is_required, exercises(id, title, description, instructions, exercise_type, exercise_config, tenant_id)'
+      'id, placement_type, content_block_id, video_timestamp_seconds, label, allow_skip, max_ai_attempts, is_required, exercises(id, title, description, instructions, exercise_type, exercise_config, tenant_id, exercise_answer_keys(questions))'
     )
     .eq('lesson_id', args.lessonId)
     .eq('tenant_id', args.tenantId)
@@ -126,9 +127,12 @@ export async function loadLessonCheckpoints(
       exercise_type: string
       exercise_config: Record<string, unknown> | null
       tenant_id: string
+      exercise_answer_keys: unknown
     } | null
     if (!exercise || exercise.tenant_id !== args.tenantId) continue
-    const config = exercise.exercise_config ?? {}
+    // The parser drops a question it cannot grade, so the key is merged back
+    // before parsing and stripped again by toClientCheckpointQuestions.
+    const config = mergeAnswerKey(exercise.exercise_config, exercise.exercise_answer_keys)
     result.push({
       id: row.id,
       placementType: row.placement_type,

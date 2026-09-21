@@ -5,6 +5,7 @@ import { text } from "mcp-use";
 // satisfies v2's compile-time outputSchema enforcement (see format.ts).
 import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
+import { mergeAnswerKey } from "../answer-keys.js";
 import {
   ok,
   okText,
@@ -992,7 +993,7 @@ export function registerExerciseTools(server: LmsServer) {
         const { data: source, error: srcError } = await supabase
           .from("exercises")
           .select(
-            "course_id, lesson_id, title, instructions, exercise_type, difficulty_level, system_prompt, time_limit, exercise_config, template_id, template_variables"
+            "course_id, lesson_id, title, instructions, exercise_type, difficulty_level, system_prompt, time_limit, exercise_config, template_id, template_variables, exercise_answer_keys(questions)"
           )
           .eq("id", input.exercise_id)
           .single();
@@ -1014,7 +1015,14 @@ export function registerExerciseTools(server: LmsServer) {
             difficulty_level: input.difficulty_level ?? source.difficulty_level,
             system_prompt: input.system_prompt ?? source.system_prompt,
             time_limit: input.time_limit ?? source.time_limit,
-            exercise_config: input.exercise_config ?? source.exercise_config ?? {},
+            // The source's closed-question answers live in exercise_answer_keys
+            // (#829); merged back so the insert trigger files them for the copy.
+            exercise_config:
+              input.exercise_config ??
+              mergeAnswerKey(
+                source.exercise_config as Record<string, unknown> | null,
+                source.exercise_answer_keys
+              ),
             template_id: source.template_id,
             template_variables: source.template_variables,
             created_by: session.getUserId(),

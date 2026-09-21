@@ -236,6 +236,41 @@ export function toClientCheckpointQuestions(
   }))
 }
 
+/**
+ * The answer fields (`correctIndex`, `correctAnswer`, `acceptedAnswers`,
+ * `explanation`) live in `exercise_answer_keys.questions`, keyed by question
+ * id — not in `exercise_config`, which students can SELECT (#829). The
+ * `exercises_split_answer_key` trigger strips them on every write. Server code
+ * that grades embeds `exercise_answer_keys(questions)` and merges it back here
+ * before calling `parseCheckpointQuestions`.
+ *
+ * `keyRow` is the embed as PostgREST returns it: an object for the one-to-one
+ * relation, tolerated as an array or null.
+ */
+export function mergeAnswerKey(
+  config: Record<string, unknown> | null | undefined,
+  keyRow: unknown
+): Record<string, unknown> {
+  const base = config ?? {}
+  const row = Array.isArray(keyRow) ? keyRow[0] : keyRow
+  const key = (row as { questions?: unknown } | null | undefined)?.questions
+  const raw = (base as { questions?: unknown }).questions
+  if (!key || typeof key !== 'object' || Array.isArray(key) || !Array.isArray(raw)) {
+    return base
+  }
+  const entries = key as Record<string, unknown>
+  return {
+    ...base,
+    questions: raw.map((item) => {
+      if (!item || typeof item !== 'object') return item
+      const id = (item as { id?: unknown }).id
+      const entry = typeof id === 'string' ? entries[id] : undefined
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return item
+      return { ...(item as Record<string, unknown>), ...(entry as Record<string, unknown>) }
+    }),
+  }
+}
+
 /** Parse exercise_config.questions defensively — teacher-authored JSON. */
 export function parseCheckpointQuestions(
   config: Record<string, unknown> | null | undefined

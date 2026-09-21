@@ -2109,6 +2109,42 @@ export type Database = {
           },
         ]
       }
+      exercise_answer_keys: {
+        Row: {
+          exercise_id: number
+          questions: Json
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          exercise_id: number
+          questions?: Json
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          exercise_id?: number
+          questions?: Json
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_answer_keys_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: true
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_answer_keys_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_code_student_submissions: {
         Row: {
           created_at: string | null
@@ -7079,6 +7115,10 @@ export type Database = {
       grant_free_entitlement: {
         Args: { _course_id: number; _user_id: string }
         Returns: undefined
+      }
+      grade_exercise_answers: {
+        Args: { _answers: Json; _exercise_id: number }
+        Returns: Json
       }
       grant_free_subscription: {
         Args: { _plan_id: number; _user_id: string }
