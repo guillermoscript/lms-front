@@ -1,6 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { generateText } from 'ai'
 import { AI_MODELS } from '@/lib/ai/config'
 import { hasCourseAccess } from '@/lib/services/course-access'
@@ -11,13 +10,11 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 export const maxDuration = 120
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
+  // 1. Auth — session cookie (web) or Bearer token (native app, #839)
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new Response('Unauthorized', { status: 401 })
+  const { user, tenantId } = auth
   const adminClient = createAdminClient()
-  const tenantId = await getCurrentTenantId()
-
-  // 1. Auth
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Response('Unauthorized', { status: 401 })
 
   // 2. Parse input
   let exerciseId: number
