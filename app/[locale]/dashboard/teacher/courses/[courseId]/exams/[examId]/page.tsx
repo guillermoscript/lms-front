@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from '@/lib/exams/grading-secrets'
 
 const ExamBuilder = dynamic(
   () => import('@/components/teacher/exam-builder').then(m => m.ExamBuilder),
@@ -57,7 +58,8 @@ export default async function EditExamPage({ params }: PageProps) {
       *,
       questions:exam_questions(
         *,
-        options:question_options(*)
+        options:question_options(*),
+        ${EXAM_GRADING_SECRETS_EMBED}
       )
     `)
     .eq('exam_id', parseInt(examId))
@@ -74,7 +76,7 @@ export default async function EditExamPage({ params }: PageProps) {
       <ExamBuilder
         courseId={parseInt(courseId)}
         courseTitle={course.title}
-        initialData={exam}
+        initialData={{ ...exam, questions: exam.questions.map((q: { question_id: number }) => withExamGradingSecrets(q)) }}
       />
     </div>
   )

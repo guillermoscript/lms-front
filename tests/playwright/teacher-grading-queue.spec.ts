@@ -216,9 +216,15 @@ test.beforeAll(async () => {
         { question_id: q4.question_id, option_text: 'True', is_correct: true },
         { question_id: q4.question_id, option_text: 'False', is_correct: false },
       ])
-      .select('option_id, question_id, option_text, is_correct'),
+      .select('option_id, question_id, option_text'),
     'seed question options'
   )
+  // is_correct reads NULL since #840 (the key is in exam_grading_secrets);
+  // the seed above is the source of truth.
+  const CORRECT_TEXTS = new Set(['def', 'tuple', 'True'])
+  for (const o of options as Array<{ option_text: string; is_correct?: boolean }>) {
+    o.is_correct = CORRECT_TEXTS.has(o.option_text)
+  }
   mcRight = {
     question_id: q1.question_id,
     text: q1.question_text,

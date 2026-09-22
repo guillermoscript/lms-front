@@ -9,6 +9,7 @@ import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { revalidatePath } from 'next/cache'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from '@/lib/exams/grading-secrets'
 
 /** The stored value when it is the teacher's own prose, empty when it is a status code. */
 function teacherOwnFeedback(value: unknown): string {
@@ -50,13 +51,11 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         question_text,
         question_type,
         points,
-        ai_grading_criteria,
-        expected_keywords,
         question_options (
           option_id,
-          option_text,
-          is_correct
-        )
+          option_text
+        ),
+        ${EXAM_GRADING_SECRETS_EMBED}
       `)
       .eq('exam_id', parseInt(examId))
       // exam_questions has no tenant_id column; isolation is enforced by RLS
@@ -77,7 +76,8 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   ])
 
   // Build per-question data combining questions, answers, and AI scores
-  const questionData = (questions || []).map((q: any) => {
+  const questionData = (questions || []).map((raw: any) => {
+    const q = withExamGradingSecrets(raw)
     const answer = answers?.find(a => a.question_id === q.question_id)
     const qScore = questionScores?.find(qs => qs.question_id === q.question_id)
 

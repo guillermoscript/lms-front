@@ -11,6 +11,7 @@ import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
+import { withExamAnswerKey } from '@/lib/exams/grading-secrets'
 
 type ExamQuestionTypeKey = `questionType.${'multiple_choice' | 'true_false' | 'free_text'}`
 
@@ -52,10 +53,8 @@ export default async function ExamResultPage({ params }: PageProps) {
           question_id,
           question_text,
           question_type,
-          correct_answer,
           question_options (
             option_id,
-            is_correct,
             option_text
           )
         ),
@@ -103,6 +102,12 @@ export default async function ExamResultPage({ params }: PageProps) {
     if (!submission) {
         redirect(`/dashboard/student/courses/${courseId}/exams/${examId}`)
     }
+
+    // The key comes from the RPC: nothing before grading, own submission only (#840).
+    const { data: answerKey } = await supabase.rpc('get_exam_answer_key', {
+        p_submission_id: submission.submission_id,
+    })
+    examData.exam_questions = withExamAnswerKey(examData.exam_questions ?? [], answerKey)
 
     // Check if a certificate was issued for this course
     const { data: certificate } = await supabase

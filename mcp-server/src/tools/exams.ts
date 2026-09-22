@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, ResponseFormat, PaginationSchema } from "../format.js";
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from "../exam-grading-secrets.js";
 
 const questionTypes = ["true_false", "multiple_choice", "free_text"] as const;
 
@@ -133,8 +134,9 @@ export function registerExamTools(server: LmsServer) {
           .from("exams")
           .select(
             `exam_id, title, description, exam_date, duration, status, course_id,
-            exam_questions(question_id, question_text, question_type, ai_grading_criteria, expected_keywords,
-              question_options(option_id, option_text, is_correct)
+            exam_questions(question_id, question_text, question_type,
+              question_options(option_id, option_text),
+              ${EXAM_GRADING_SECRETS_EMBED}
             )`
           )
           .eq("exam_id", exam_id)
@@ -153,7 +155,7 @@ export function registerExamTools(server: LmsServer) {
             status: data.status,
             course_id: data.course_id,
           },
-          questions: (data.exam_questions as any[]).map((q) => ({
+          questions: (data.exam_questions as any[]).map(withExamGradingSecrets).map((q: any) => ({
             id: q.question_id,
             text: q.question_text,
             type: q.question_type,
@@ -313,7 +315,9 @@ export function registerExamTools(server: LmsServer) {
             if (oError) {
               errors.push(`Q${i + 1} options: ${oError.message}`);
             } else {
-              createdOptions = opts || [];
+              // The split trigger stores the flag in exam_grading_secrets and reads back NULL (#840);
+              // RETURNING keeps VALUES order, so echo what was written.
+              createdOptions = (opts || []).map((o, idx) => ({ ...o, is_correct: optionsData[idx]?.is_correct ?? false }));
             }
           }
 
@@ -465,7 +469,9 @@ export function registerExamTools(server: LmsServer) {
           if (oError) {
             return errorResult(`Question created (ID: ${question.question_id}) but options failed: ${oError.message}`);
           }
-          createdOptions = opts || [];
+          // The split trigger stores the flag in exam_grading_secrets and reads back NULL (#840);
+          // RETURNING keeps VALUES order, so echo what was written.
+          createdOptions = (opts || []).map((o, idx) => ({ ...o, is_correct: optionsData[idx]?.is_correct ?? false }));
         }
 
         return ok(
