@@ -121,8 +121,8 @@ test.describe('Exam grading route (#839)', () => {
         { question_id: mcQuestionId, option_text: 'Right', is_correct: true },
         { question_id: mcQuestionId, option_text: 'Wrong', is_correct: false },
       ])
-      .select('option_id, is_correct')
-    rightOptionId = options!.find((o) => o.is_correct)!.option_id
+      .select('option_id, option_text')
+    rightOptionId = options!.find((o) => o.option_text === 'Right')!.option_id
 
     const { data: tf } = await admin
       .from('exam_questions')

@@ -13,6 +13,7 @@ import {
 } from '@tabler/icons-react'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
+import { withExamAnswerKey } from '@/lib/exams/grading-secrets'
 
 interface PageProps {
   params: Promise<{ courseId: string; examId: string }>
@@ -67,20 +68,24 @@ export default async function ExamReviewPage({ params }: PageProps) {
     .single()
 
   // Get questions with answers
-  const { data: questions } = await supabase
-    .from('exam_questions')
-    .select(`
-      question_id,
-      question_text,
-      question_type,
-      question_options (
-        option_id,
-        option_text,
-        is_correct
-      )
-    `)
-    .eq('exam_id', parseInt(examId))
-    .order('question_id', { ascending: true })
+  // The key comes from the RPC: nothing before grading, own submission only (#840).
+  const [{ data: questionRows }, { data: answerKey }] = await Promise.all([
+    supabase
+      .from('exam_questions')
+      .select(`
+        question_id,
+        question_text,
+        question_type,
+        question_options (
+          option_id,
+          option_text
+        )
+      `)
+      .eq('exam_id', parseInt(examId))
+      .order('question_id', { ascending: true }),
+    supabase.rpc('get_exam_answer_key', { p_submission_id: submission.submission_id }),
+  ])
+  const questions = withExamAnswerKey(questionRows ?? [], answerKey)
 
   // Get user's answers
   const { data: answers } = await supabase

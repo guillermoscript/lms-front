@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { hasPlanFeature } from '@/lib/plans/server'
 import { AI_MODELS, DEFAULT_MODEL_ID } from '@/lib/ai/config'
 import { EXAM_FEEDBACK_CODES } from '@/lib/exams/feedback-codes'
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from '@/lib/exams/grading-secrets'
 
 /**
  * Exam grading, shared by the web's server action and
@@ -16,9 +17,9 @@ import { EXAM_FEEDBACK_CODES } from '@/lib/exams/feedback-codes'
  *   request, so a client cannot grade answers it did not hand in.
  * - A submission that has already been graded is refused. Grading is not
  *   idempotent (it costs a model call and rewrites the score).
- * - The answer key (`is_correct`, `correct_answer`, rubric, criteria, keywords)
+ * - The answer key lives in the staff-only `exam_grading_secrets` (#840). It
  *   is read with the service role, and only after the caller's own RLS read
- *   of the exam succeeded. The student-readable surface never has to carry it (#840).
+ *   of the exam succeeded.
  * - Results are written with the service role. `save_exam_feedback` is not
  *   executable by `authenticated` or `anon` (it trusts every argument).
  */
@@ -149,16 +150,16 @@ export async function gradeExamSubmission(args: GradeExamArgs): Promise<GradeExa
   const { data: questionRows, error: questionsError } = await admin
     .from('exam_questions')
     .select(
-      `question_id, question_text, question_type, points, correct_answer,
-       grading_rubric, ai_grading_criteria, expected_keywords,
-       options:question_options (option_id, option_text, is_correct)`
+      `question_id, question_text, question_type, points,
+       options:question_options (option_id, option_text),
+       ${EXAM_GRADING_SECRETS_EMBED}`
     )
     .eq('exam_id', examId)
   if (questionsError) {
     console.error('Exam questions query failed:', questionsError)
     return { ok: false, status: 500, error: 'Failed to load exam' }
   }
-  const questions = (questionRows ?? []) as unknown as KeyedQuestion[]
+  const questions = (questionRows ?? []).map((q) => withExamGradingSecrets(q)) as unknown as KeyedQuestion[]
 
   // 4. What the student actually handed in.
   const { data: answerRows } = await supabase

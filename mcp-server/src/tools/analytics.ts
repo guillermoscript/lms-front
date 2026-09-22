@@ -5,6 +5,7 @@ import { text } from "mcp-use";
 // satisfies v2's compile-time outputSchema enforcement (see format.ts).
 import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from "../exam-grading-secrets.js";
 import { ok, okText, errorResult, ResponseFormat, PaginationSchema } from "../format.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { propsSchema as examSubmissionsPropsSchema } from "../../views/exam-submissions/schema.js";
@@ -413,7 +414,7 @@ export function registerAnalyticsTools(server: LmsServer) {
             supabase
               .from("exam_questions")
               .select(
-                "question_id, question_text, question_type, question_options(option_text, is_correct)"
+                `question_id, question_text, question_type, question_options(option_id, option_text), ${EXAM_GRADING_SECRETS_EMBED}`
               )
               .eq("exam_id", sub.exam_id)
               .order("question_id"),
@@ -441,7 +442,8 @@ export function registerAnalyticsTools(server: LmsServer) {
         let possible = 0;
         let graded = 0;
 
-        const questionRows = ((questions as any[]) ?? []).map((q) => {
+        // Option flags come from staff-only exam_grading_secrets (#840).
+        const questionRows = ((questions as any[]) ?? []).map(withExamGradingSecrets).map((q: any) => {
           const s = scoreByQ.get(q.question_id);
           const a = answerByQ.get(q.question_id);
           const aif = aiFeedback[String(q.question_id)] ?? {};

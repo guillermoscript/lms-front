@@ -1,6 +1,7 @@
 import type { LmsServer } from "./server-types.js";
 import { object, error } from "mcp-use";
 import { LmsSession } from "./session.js";
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from "./exam-grading-secrets.js";
 
 export function registerResources(server: LmsServer) {
   // ── course://{courseId} ────────────────────────────────────────────────────
@@ -123,8 +124,9 @@ export function registerResources(server: LmsServer) {
         const { data, error: dbError } = await supabase
           .from("exams")
           .select(
-            `*, exam_questions(question_id, question_text, question_type, ai_grading_criteria, expected_keywords,
-              question_options(option_id, option_text, is_correct)
+            `*, exam_questions(question_id, question_text, question_type,
+              question_options(option_id, option_text),
+              ${EXAM_GRADING_SECRETS_EMBED}
             )`
           )
           .eq("exam_id", examId)
@@ -134,7 +136,14 @@ export function registerResources(server: LmsServer) {
           return error(`Exam ${examId} not found`);
         }
 
-        return object(data as Record<string, unknown>);
+        // The key lives in staff-only exam_grading_secrets (#840); put back the
+        // fields this resource always carried.
+        const exam = data as Record<string, unknown> & { exam_questions?: any[] | null };
+        const examQuestions = (exam.exam_questions ?? []).map((q) => {
+          const { correct_answer: _a, grading_rubric: _r, ...merged } = withExamGradingSecrets(q);
+          return merged;
+        });
+        return object({ ...exam, exam_questions: examQuestions } as Record<string, unknown>);
       } catch (err) {
         return error(err instanceof Error ? err.message : String(err));
       }

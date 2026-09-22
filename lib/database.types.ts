@@ -1774,6 +1774,64 @@ export type Database = {
           },
         ]
       }
+      exam_grading_secrets: {
+        Row: {
+          ai_grading_criteria: string | null
+          correct_answer: string | null
+          correct_option_ids: number[]
+          exam_id: number
+          expected_keywords: string[] | null
+          grading_rubric: string | null
+          question_id: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_grading_criteria?: string | null
+          correct_answer?: string | null
+          correct_option_ids?: number[]
+          exam_id: number
+          expected_keywords?: string[] | null
+          grading_rubric?: string | null
+          question_id: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_grading_criteria?: string | null
+          correct_answer?: string | null
+          correct_option_ids?: number[]
+          exam_id?: number
+          expected_keywords?: string[] | null
+          grading_rubric?: string | null
+          question_id?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_grading_secrets_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_grading_secrets_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "exam_questions"
+            referencedColumns: ["question_id"]
+          },
+          {
+            foreignKeyName: "exam_grading_secrets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_question_scores: {
         Row: {
           ai_confidence: number | null
@@ -5518,19 +5576,19 @@ export type Database = {
       }
       question_options: {
         Row: {
-          is_correct: boolean
+          is_correct: boolean | null
           option_id: number
           option_text: string
           question_id: number
         }
         Insert: {
-          is_correct?: boolean
+          is_correct?: boolean | null
           option_id?: number
           option_text: string
           question_id: number
         }
         Update: {
-          is_correct?: boolean
+          is_correct?: boolean | null
           option_id?: number
           option_text?: string
           question_id?: number
@@ -7099,6 +7157,14 @@ export type Database = {
           last_activity_date: string
           tenant_id: string
           user_id: string
+        }[]
+      }
+      get_exam_answer_key: {
+        Args: { p_submission_id: number }
+        Returns: {
+          correct_answer: string
+          correct_option_ids: number[]
+          question_id: number
         }[]
       }
       get_exam_submissions: {
