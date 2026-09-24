@@ -7076,10 +7076,6 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_preview_sessions: { Args: never; Returns: undefined }
-      create_exam_submission: {
-        Args: { p_answers: Json; p_exam_id: number; p_student_id: string }
-        Returns: number
-      }
       create_notification:
         | {
             Args: {
@@ -7324,6 +7320,10 @@ export type Database = {
       settle_expired_checkout: {
         Args: { _transaction_id: number }
         Returns: string
+      }
+      submit_exam: {
+        Args: { p_answers: Json; p_exam_id: number }
+        Returns: number
       }
       tenant_plan_limit: {
         Args: { _key: string; _tenant_id: string }

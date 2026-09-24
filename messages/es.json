@@ -4420,7 +4420,8 @@
       "false": "Falso",
       "noQuestionsTitle": "No se encontraron preguntas",
       "noQuestionsDescription": "Este examen todavía no tiene preguntas. Vuelve a intentarlo más tarde.",
-      "returnToAssessments": "Volver a las evaluaciones"
+      "returnToAssessments": "Volver a las evaluaciones",
+      "submitFailed": "No pudimos enviar tu examen. Tus respuestas siguen aquí; inténtalo de nuevo."
     },
     "courseFilters": {
       "searchPlaceholder": "Buscar tus cursos...",
@@ -6593,6 +6594,13 @@
       "correct": "¡Respuesta correcta!",
       "incorrect": "Incorrecta.",
       "incorrectWithAnswer": "Incorrecta. La respuesta correcta es: {answer}"
+    },
+    "gradingFailed": {
+      "title": "Tu examen aún no se ha calificado",
+      "description": "Tus respuestas se guardaron, pero la calificación no terminó. Vuelve a intentarlo; tus respuestas no cambiarán.",
+      "retry": "Reintentar calificación",
+      "retrying": "Calificando…",
+      "retryFailed": "La calificación volvió a fallar. Inténtalo de nuevo en un momento."
     }
   },
   "puck": {

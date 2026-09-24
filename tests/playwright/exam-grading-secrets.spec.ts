@@ -238,13 +238,12 @@ test.describe('Exam grading secrets (#840)', () => {
   })
 
   test('get_exam_answer_key: nothing before grading, the answer after, only for the owner', async () => {
-    const { data: submission, error: submissionError } = await alice
-      .from('exam_submissions')
-      .insert({ exam_id: examId, student_id: ALICE_ID, tenant_id: CODE_ACADEMY_TENANT })
-      .select('submission_id')
-      .single()
+    const { data: submitted, error: submissionError } = await alice.rpc('submit_exam', {
+      p_exam_id: examId,
+      p_answers: {},
+    })
     expect(submissionError).toBeNull()
-    submissionId = submission!.submission_id
+    submissionId = submitted!
 
     const { error: anonError } = await anonClient().rpc('get_exam_answer_key', { p_submission_id: submissionId })
     expect(anonError?.message).toMatch(/permission denied/i)

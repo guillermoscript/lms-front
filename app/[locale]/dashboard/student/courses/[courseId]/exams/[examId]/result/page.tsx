@@ -12,6 +12,7 @@ import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getFormatter, getTranslations } from 'next-intl/server'
 import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
 import { withExamAnswerKey } from '@/lib/exams/grading-secrets'
+import { RetryGrading } from './retry-grading'
 
 type ExamQuestionTypeKey = `questionType.${'multiple_choice' | 'true_false' | 'free_text'}`
 
@@ -251,6 +252,10 @@ export default async function ExamResultPage({ params }: PageProps) {
             </div>
 
             {/* Review Status Banner */}
+            {(reviewStatus === null || reviewStatus === 'pending') && (
+                <RetryGrading examId={examData.exam_id} submissionId={submission.submission_id} />
+            )}
+
             {reviewStatus === 'pending_teacher_review' && (
                 <Card className="border-2 border-warning/30 shadow-lg overflow-hidden bg-warning/10">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">

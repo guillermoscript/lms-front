@@ -410,7 +410,7 @@ Student exam submissions. **Order column is `submission_date`** (NOT `submitted_
 | `requires_attention` | BOOLEAN | Flags low-confidence AI grades for a human |
 | `ai_model_used` / `ai_processing_time_ms` / `ai_confidence_score` | | Grading telemetry |
 
-Processed by `create_exam_submission()` and `save_exam_feedback()` RPCs.
+Written only by `submit_exam()` (clients have no INSERT grant on `exam_submissions` / `exam_answers`, #847) and graded by `save_exam_feedback()` (service role).
 
 ---
 
@@ -880,7 +880,7 @@ Manual bank transfer requests for plan upgrades (LATAM schools).
 
 | Function | Purpose |
 |----------|---------|
-| `create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)` | Creates exam submission, returns `submission_id` |
+| `submit_exam(p_exam_id integer, p_answers jsonb)` | The caller's submission + one `exam_answers` row per question in one transaction; `p_answers` = `{"<question_id>": "<answer_text>"}`. Idempotent per student (returns the existing `submission_id`, fills in one left without answers). Grade it with `POST /api/exams/[examId]/grade`; a `pending` submission can be graded again |
 | `save_exam_feedback(p_submission_id integer, p_exam_id integer, p_student_id uuid, p_answers jsonb, p_overall_feedback text, p_score numeric, p_question_feedback jsonb, p_ai_model varchar, p_processing_time_ms integer)` | Saves AI feedback. **All params are `p_`-prefixed and there are nine of them** |
 
 ### Gamification

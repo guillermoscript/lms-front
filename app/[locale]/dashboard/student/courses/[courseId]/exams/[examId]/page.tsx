@@ -93,7 +93,6 @@ export default async function TakeExamPage({ params }: PageProps) {
       description={exam.description}
       duration={exam.duration}
       questions={formattedQuestions}
-      tenantId={tenantId}
     />
   )
 }

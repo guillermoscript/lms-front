@@ -210,14 +210,14 @@ test.describe('lesson_completions INSERT is gated on course access (#543)', () =
   })
 })
 
-test.describe('exam_submissions INSERT is gated on course access (#543)', () => {
+// Since #847 a client can't INSERT exam_submissions at all; `submit_exam` is
+// the only write path, and it carries the same course-access gate.
+test.describe('submit_exam is gated on course access (#543, #847)', () => {
   test('a student with no entitlement cannot open a submission', async () => {
     const client = await asStudent()
     await withRevokedEntitlement(STUDENT_ID, OWNED_COURSE, async () => {
-      const { error } = await client
-        .from('exam_submissions')
-        .insert({ exam_id: qaExamId, student_id: STUDENT_ID, tenant_id: DEFAULT_TENANT })
-      expect(error, 'RLS must refuse an ungated exam submission').not.toBeNull()
+      const { error } = await client.rpc('submit_exam', { p_exam_id: qaExamId, p_answers: {} })
+      expect(error, 'submit_exam must refuse an ungated exam submission').not.toBeNull()
       expect(error!.code).toBe('42501')
     })
 
@@ -230,13 +230,9 @@ test.describe('exam_submissions INSERT is gated on course access (#543)', () => 
 
   test('an entitled student still submits', async () => {
     const client = await asStudent()
-    const { data, error } = await client
-      .from('exam_submissions')
-      .insert({ exam_id: qaExamId, student_id: STUDENT_ID, tenant_id: DEFAULT_TENANT })
-      .select('submission_id')
-      .single()
+    const { data, error } = await client.rpc('submit_exam', { p_exam_id: qaExamId, p_answers: {} })
     expect(error).toBeNull()
-    expect(data?.submission_id).toBeTruthy()
+    expect(data).toBeTruthy()
   })
 })
 

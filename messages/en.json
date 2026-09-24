@@ -4539,7 +4539,8 @@
       "false": "False",
       "noQuestionsTitle": "No Questions Found",
       "noQuestionsDescription": "This exam doesn't have any questions yet. Please check back later.",
-      "returnToAssessments": "Return to Assessments"
+      "returnToAssessments": "Return to Assessments",
+      "submitFailed": "We couldn't submit your exam. Your answers are still here — try again."
     },
     "courseFilters": {
       "searchPlaceholder": "Search your courses...",
@@ -6593,6 +6594,13 @@
       "correct": "Correct answer!",
       "incorrect": "Incorrect.",
       "incorrectWithAnswer": "Incorrect. The correct answer is: {answer}"
+    },
+    "gradingFailed": {
+      "title": "Your exam hasn't been graded yet",
+      "description": "Your answers were saved, but grading didn't finish. Try again — your answers won't change.",
+      "retry": "Retry grading",
+      "retrying": "Grading…",
+      "retryFailed": "Grading failed again. Try again in a moment."
     }
   },
   "puck": {

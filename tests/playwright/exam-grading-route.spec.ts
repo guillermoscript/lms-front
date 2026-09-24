@@ -157,20 +157,12 @@ test.describe('Exam grading route (#839)', () => {
   test('grades the stored answers over Bearer, then refuses a regrade', async () => {
     const { client, token } = await signIn(ALICE)
 
-    const { data: submission, error: submissionError } = await client
-      .from('exam_submissions')
-      .insert({ exam_id: examId, student_id: ALICE_ID, tenant_id: CODE_ACADEMY_TENANT })
-      .select('submission_id')
-      .single()
-    expect(submissionError).toBeNull()
-    const submissionId = submission!.submission_id
-
     // MC right, TF wrong → 50%.
-    const { error: answersError } = await client.from('exam_answers').insert([
-      { submission_id: submissionId, question_id: mcQuestionId, answer_text: String(rightOptionId) },
-      { submission_id: submissionId, question_id: tfQuestionId, answer_text: 'true' },
-    ])
-    expect(answersError).toBeNull()
+    const { data: submissionId, error: submissionError } = await client.rpc('submit_exam', {
+      p_exam_id: examId,
+      p_answers: { [mcQuestionId]: String(rightOptionId), [tfQuestionId]: 'true' },
+    })
+    expect(submissionError).toBeNull()
 
     const url = `${BASE}/api/exams/${examId}/grade`
     const post = (body: unknown, headers: Record<string, string> = { Authorization: `Bearer ${token}` }) =>
