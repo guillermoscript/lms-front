@@ -162,18 +162,20 @@ export default async function ExercisePage({ params }: PageProps) {
             .neq('id', parseInt(exerciseId))
             .limit(6),
         supabase
+            // exercise_files and exercise_code_student_submissions have no
+            // tenant_id — they are scoped through the exercise (already checked
+            // against this tenant above) and the student.
             .from('exercise_files')
             .select('file_path, content')
-            .eq('exercise_id', parseInt(exerciseId))
-            .eq('tenant_id', tenantId),
+            .eq('exercise_id', parseInt(exerciseId)),
         supabase
             .from('exercise_code_student_submissions')
             .select('submission_code')
             .eq('exercise_id', parseInt(exerciseId))
             .eq('user_id', userId)
-            .eq('tenant_id', tenantId)
             .order('created_at', { ascending: false })
-            .single(),
+            .limit(1)
+            .maybeSingle(),
     ])
 
     // "More exercises" suggestions — hide checkpoint-linked ones here too
