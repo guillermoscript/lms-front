@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import {
   IconPin,
   IconLock,
   IconFlag,
+  IconBan,
   IconPhoto,
   IconLink,
 } from '@tabler/icons-react'
@@ -26,7 +28,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { deletePost } from '@/app/actions/community'
+import { blockUser, deletePost } from '@/app/actions/community'
 import { ReactionBar } from './reaction-bar'
 import { CommentThread } from './comment-thread'
 import { ModerationToolbar } from './moderation-toolbar'
@@ -51,7 +53,7 @@ interface CommunityPost {
   lesson_id: number | null
   is_graded: boolean
   milestone_type: string | null
-  milestone_data: any
+  milestone_data: unknown
   author: { id: string; full_name: string | null; avatar_url: string | null }
   user_reactions: string[]
   poll_options?: { id: string; option_text: string; vote_count: number; sort_order: number }[]
@@ -72,8 +74,23 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
   const [showFlagDialog, setShowFlagDialog] = useState(false)
   const [isDeleted, setIsDeleted] = useState(false)
 
+  const router = useRouter()
   const isOwn = userId === post.author_id
   const canModerate = userRole === 'admin' || userRole === 'teacher'
+
+  async function handleBlock() {
+    const name = post.author.full_name || t('unknownUser')
+    if (!confirm(t('blockConfirm', { name }))) return
+    const result = await blockUser(post.author_id)
+    if (result.success) {
+      setIsDeleted(true)
+      toast.success(t('blocked'))
+      // Their other posts leave the feed with the next render.
+      router.refresh()
+    } else {
+      toast.error(result.error)
+    }
+  }
 
   async function handleDelete() {
     if (!confirm(t('confirmDelete'))) return
@@ -164,6 +181,12 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
               <DropdownMenuItem onClick={() => setShowFlagDialog(true)}>
                 <IconFlag size={12} />
                 {t('flag')}
+              </DropdownMenuItem>
+            )}
+            {!isOwn && !canModerate && (
+              <DropdownMenuItem onClick={handleBlock}>
+                <IconBan size={12} />
+                {t('block')}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

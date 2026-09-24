@@ -17,7 +17,7 @@ The LMS database is built on PostgreSQL 15 via Supabase. As of the latest migrat
 - **Certificates**: `certificates`, `certificate_templates`, `certificate_shares`, `certificate_verification_log`, `issuer_keys`
 - **AI Tutoring**: `course_ai_tutors`, `aristotle_sessions`, `aristotle_messages`, `exam_ai_configs`
 - **Landing Pages**: `landing_pages`, `landing_page_templates`
-- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`
+- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`, `community_user_blocks`
 - **Social / Messaging**: `messages`, `chats`, `chat_conversations`, `chat_messages`, `lesson_comments`, `comments`, `comment_reactions`, `comment_flags`, `reviews`, `item_ratings`
 - **Support**: `tickets`, `ticket_messages`
 - **Notifications**: `notifications`, `user_notifications`, `notification_templates`, `notification_preferences`, `device_push_tokens`
@@ -998,7 +998,7 @@ const supabase = createAdminClient()
 
 Adding `.eq('tenant_id', …)` to any of these **errors the whole query** — a common cause of blank pages. Isolation for the child tables comes from RLS through their parent row.
 
-`aristotle_messages`, `assignments`, `certificate_shares`, `certificate_verification_log`, `chats`, `comment_flags`, `comment_reactions`, `comments`, `community_poll_options`, `content_versions`, `device_push_tokens`, `exam_ai_configs`, `exam_answers`, `exam_question_scores`, `exam_questions`, `exam_scores`, `exam_views`, `exercise_code_student_submissions`, `exercise_completions`, `exercise_files`, `exercise_messages`, `gamification_levels`, `grades`, `issuer_keys`, `landing_page_templates`, `league_tiers`, `lesson_comments`, `lesson_completions`, `lesson_passed`, `lesson_views`, `lessons_ai_task_messages`, `lessons_ai_tasks`, `mcp_api_tokens`, `mcp_audit_log`, `messages`, `notification_preferences`, `permissions`, `plan_courses`, `platform_plans`, `profiles`, `question_options`, `reviews`, `role_permissions`, `roles`, `submissions`, `super_admins`, `system_settings`, `teacher_preview_sessions`, `tenants`, `ticket_messages`, `tickets`, `user_notifications`, `user_roles`, `user_ui_state`, `webhook_events`
+`aristotle_messages`, `assignments`, `certificate_shares`, `certificate_verification_log`, `chats`, `comment_flags`, `comment_reactions`, `comments`, `community_poll_options`, `community_user_blocks`, `content_versions`, `device_push_tokens`, `exam_ai_configs`, `exam_answers`, `exam_question_scores`, `exam_questions`, `exam_scores`, `exam_views`, `exercise_code_student_submissions`, `exercise_completions`, `exercise_files`, `exercise_messages`, `gamification_levels`, `grades`, `issuer_keys`, `landing_page_templates`, `league_tiers`, `lesson_comments`, `lesson_completions`, `lesson_passed`, `lesson_views`, `lessons_ai_task_messages`, `lessons_ai_tasks`, `mcp_api_tokens`, `mcp_audit_log`, `messages`, `notification_preferences`, `permissions`, `plan_courses`, `platform_plans`, `profiles`, `question_options`, `reviews`, `role_permissions`, `roles`, `submissions`, `super_admins`, `system_settings`, `teacher_preview_sessions`, `tenants`, `ticket_messages`, `tickets`, `user_notifications`, `user_roles`, `user_ui_state`, `webhook_events`
 
 Regenerate that list any time:
 
