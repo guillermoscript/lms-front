@@ -80,10 +80,10 @@ async function seedPoll(): Promise<{ postId: string; optionIds: string[] }> {
       { post_id: postId, option_text: 'A', sort_order: 0 },
       { post_id: postId, option_text: 'B', sort_order: 1 },
     ])
-    .select('id')
-    .order('sort_order')
+    .select('id, sort_order')
   expect(error).toBeNull()
-  return { postId, optionIds: data!.map((o) => o.id) }
+  const options = [...data!].sort((a, b) => a.sort_order - b.sort_order)
+  return { postId, optionIds: options.map((o) => o.id) }
 }
 
 async function voteCount(optionId: string): Promise<number> {
