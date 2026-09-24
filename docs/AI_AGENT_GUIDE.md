@@ -318,8 +318,9 @@ Signatures below are the real ones — verify with `pg_get_function_identity_arg
    - Single source of truth for feature gating
    - `SECURITY DEFINER` — works regardless of caller's RLS context
 
-4. **`create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)`**
-   - Creates exam submission, returns `submission_id`
+4. **`submit_exam(p_exam_id integer, p_answers jsonb)`**
+   - The caller's submission and its answers in one transaction, returns `submission_id`; `p_answers` = `{"<question_id>": "<answer_text>"}`
+   - Idempotent per student; the only client write path into `exam_submissions` / `exam_answers` (#847)
 
 5. **`save_exam_feedback(p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms)`**
    - Saves AI feedback to the exam and updates the score
@@ -386,7 +387,7 @@ If query returns empty when it shouldn't:
 **RLS is enabled on ALL tenant-scoped tables** (116 tables in `public`, 61 of them carrying a `tenant_id`). Standard policy pattern:
 - SELECT: users who are members of the tenant (checked via `tenant_users`)
 - INSERT/UPDATE/DELETE: users with `teacher` or `admin` role in the tenant
-- Special cases: students can INSERT own `enrollments`, `lesson_completions`, `exam_submissions`
+- Special cases: students can INSERT own `enrollments`, `lesson_completions`; exam submissions go through `submit_exam()`
 
 **Public pages** (e.g. `/verify/[code]`, `/platform-pricing`) must use `createAdminClient()` since unauthenticated users get blocked by RLS.
 

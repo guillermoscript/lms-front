@@ -322,7 +322,7 @@ This is the loop that determines whether schools *renew*. It's also the highest-
 | `video_progress` | client, **throttled to 25/50/75/100% only** | `percent`, `lesson_id` |
 | `checkpoint_attempted` | **server** — `app/api/lesson-checkpoints/[checkpointId]/attempt` | `is_correct`, `attempt_number` |
 | `exercise_submitted` | **server** — `app/api/exercises/artifact/evaluate` | `exercise_id`, `score`, `attempt_number` |
-| `exam_submitted` | **server** — `create_exam_submission` RPC call site | `exam_id`, `question_count` |
+| `exam_submitted` | **client** — `…/exams/[examId]/exam-taker.tsx`, after `submit_exam` returns | `exam_id`, `question_count` |
 | `exam_graded` | **server** — `app/api/teacher/exams/[examId]/grade` | `score`, `passed`, `graded_by` (`ai` \| `human`), `duration_ms` |
 | `ai_tutor_message_sent` | **server** — `app/api/chat/aristotle` | `message_index`, `session_id` |
 | `certificate_issued` | **server** — `app/api/certificates/issue` | `course_id`, `days_to_complete` |

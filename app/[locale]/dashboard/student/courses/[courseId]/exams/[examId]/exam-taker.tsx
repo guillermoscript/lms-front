@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useEventListener } from 'usehooks-ts'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -41,7 +42,6 @@ interface ExamTakerProps {
   description: string | null
   duration: number | null
   questions: Question[]
-  tenantId: string
 }
 
 export function ExamTaker({
@@ -51,7 +51,6 @@ export function ExamTaker({
   description,
   duration,
   questions,
-  tenantId,
 }: ExamTakerProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
@@ -97,47 +96,27 @@ export function ExamTaker({
         return
       }
 
-      // Create exam submission
-      const { data: submission, error: submissionError } = await supabase
-        .from('exam_submissions')
-        .insert({
-          exam_id: examId,
-          student_id: user.id,
-          tenant_id: tenantId,
-        })
-        .select('submission_id')
-        .single()
+      // One transaction for the submission and its answers (#847). Idempotent:
+      // pressing submit again after a failure returns the same submission.
+      const { data: submissionId, error: submitError } = await supabase.rpc('submit_exam', {
+        p_exam_id: examId,
+        p_answers: answers,
+      })
 
-      if (submissionError || !submission) {
-        console.error('Failed to create submission:', submissionError)
+      if (submitError || !submissionId) {
+        console.error('Failed to submit exam:', submitError)
+        toast.error(t('submitFailed'))
         setSubmitting(false)
         return
       }
 
-      // Insert answers
-      const answerRecords = questions.map((q) => ({
-        submission_id: submission.submission_id,
-        question_id: q.id,
-        answer_text: answers[q.id] || '',
-      }))
-
-      const { error: answersError } = await supabase
-        .from('exam_answers')
-        .insert(answerRecords)
-
-      if (answersError) {
-        console.error('Failed to save answers:', answersError)
-        setSubmitting(false)
-        return
-      }
-
-      // After both inserts land. `was_auto_submitted` matters: the timer calls
+      // After the submission lands. `was_auto_submitted` matters: the timer calls
       // this same handler at zero, and an exam the student never chose to hand
       // in is a different event from one they did.
       analytics.track(ANALYTICS_EVENTS.EXAM_SUBMITTED, {
         exam_id: examId,
         course_id: courseId,
-        submission_id: submission.submission_id,
+        submission_id: submissionId,
         question_count: questions.length,
         answered_count: Object.keys(answers).length,
         was_auto_submitted: timeLeft !== null && timeLeft <= 0,
@@ -148,7 +127,7 @@ export function ExamTaker({
         const { gradeExamWithAI } = await import('@/app/actions/exam-grading')
         const gradingResult = await gradeExamWithAI({
           examId,
-          submissionId: submission.submission_id,
+          submissionId,
         })
         if (!gradingResult.success) {
           console.error('AI grading returned error:', gradingResult.error)
@@ -162,6 +141,7 @@ export function ExamTaker({
       router.push(`/dashboard/student/courses/${courseId}/exams/${examId}/result`)
     } catch (error) {
       console.error('Submission error:', error)
+      toast.error(t('submitFailed'))
       setSubmitting(false)
     }
   }

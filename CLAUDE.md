@@ -134,7 +134,7 @@ supabase.rpc('enroll_user', { _user_id, _product_id })
 supabase.rpc('handle_new_subscription', { _user_id, _plan_id, _transaction_id, _start_date })  // trigger-invoked; writes to entitlements
 supabase.rpc('has_course_access', { _user_id, _course_id })  // access check; _course_id is integer — cast ::int from SQL
 supabase.rpc('award_xp', { _user_id, _action_type, _xp_amount, _reference_id, _reference_type })  // overload adds _tenant_id
-supabase.rpc('create_exam_submission', { p_student_id, p_exam_id, p_answers })
+supabase.rpc('submit_exam', { p_exam_id, p_answers })  // only client write path for exam_submissions/exam_answers; p_answers = { [question_id]: answer_text }; idempotent
 supabase.rpc('save_exam_feedback', { p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms })
 supabase.rpc('get_plan_features', { _tenant_id })
 ```
