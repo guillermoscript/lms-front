@@ -10,10 +10,10 @@ import {
     useSandpack
 } from "@codesandbox/sandpack-react";
 import { Button } from "@/components/ui/button";
-import { IconPlayerPlay, IconCheck } from "@tabler/icons-react";
+import { IconPlayerPlay, IconCheck, IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { createClient } from "@/lib/supabase/client";
+import ExerciseResultSummary from "@/components/exercises/exercise-result-summary";
 
 interface CodeChallengeWrapperProps {
     exercise: { active_file?: string | null; visible_files?: string[] | null };
@@ -23,18 +23,45 @@ interface CodeChallengeWrapperProps {
     userCode?: string;
 }
 
-const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
+interface CodeEvaluation {
+    score: number;
+    passed: boolean;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+    passingScore: number;
+    attemptNumber: number | null;
+}
+
+/** Every file of the project, path-labelled, as the grader reads it. */
+function serializeFiles(files: Record<string, { code: string }>): string {
+    return Object.entries(files)
+        .map(([path, file]) => `// ── ${path} ──\n${file.code}`)
+        .join("\n\n");
+}
+
+const SubmitButton = ({ exerciseId, onEvaluated }: { exerciseId: number; onEvaluated: (evaluation: CodeEvaluation) => void }) => {
     const { sandpack } = useSandpack();
     const [loading, setLoading] = useState(false);
+    const t = useTranslations("exercises.code");
 
+    // The platform grades the code (#843). The browser never writes a score.
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            await new Promise(r => setTimeout(r, 2000));
-            onComplete();
-            toast.success("Solution submitted and verified!");
-        } catch (e) {
-            toast.error("Evaluation failed. Check your code.");
+            const res = await fetch("/api/exercises/evaluate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ exerciseId, content: serializeFiles(sandpack.files) }),
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toast.error(res.status === 429 ? t("rateLimited") : t("evaluationFailed"));
+                return;
+            }
+            onEvaluated(body as CodeEvaluation);
+        } catch {
+            toast.error(t("evaluationFailed"));
         } finally {
             setLoading(false);
         }
@@ -46,8 +73,8 @@ const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
             disabled={loading}
             className="bg-success hover:bg-success/90 text-success-foreground gap-2"
         >
-            {loading ? <span className="animate-spin text-lg">⌛</span> : <IconPlayerPlay size={18} />}
-            Run & Verify
+            {loading ? <IconLoader2 size={18} className="animate-spin" aria-hidden="true" /> : <IconPlayerPlay size={18} aria-hidden="true" />}
+            {loading ? t("checking") : t("submit")}
         </Button>
     );
 }
@@ -57,26 +84,16 @@ export default function CodeChallengeWrapper({
     files,
     exerciseId,
     isExerciseCompleted: initialCompleted,
-    userCode,
 }: CodeChallengeWrapperProps) {
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
+    const [evaluation, setEvaluation] = useState<CodeEvaluation | null>(null);
     const tGamification = useTranslations("components.gamification");
     const t = useTranslations("exercises.code");
-    const supabase = createClient();
 
-    const handleComplete = async () => {
-        setIsCompleted(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user;
-        if (user) {
-            // exercise_completions has NO tenant_id column — isolation is via
-            // RLS through exercise_id. Sending tenant_id 400s the insert.
-            await supabase.from('exercise_completions').insert({
-                exercise_id: exerciseId,
-                user_id: user.id,
-                completed_by: user.id,
-                score: 100,
-            });
+    const handleEvaluated = (result: CodeEvaluation) => {
+        setEvaluation(result);
+        if (result.passed && !isCompleted) {
+            setIsCompleted(true);
             toast.success(tGamification("xpAwarded.exercise_completion"));
         }
     }
@@ -171,7 +188,7 @@ export default function CodeChallengeWrapper({
                             <div className="p-3 border-b flex items-center justify-between bg-muted/30 shrink-0">
                                 <span className="text-sm font-semibold">{t("output")}</span>
                                 <div className="flex items-center gap-2">
-                                    <SubmitButton onComplete={handleComplete} />
+                                    <SubmitButton exerciseId={exerciseId} onEvaluated={handleEvaluated} />
                                 </div>
                             </div>
                             <SandpackPreview
@@ -183,7 +200,20 @@ export default function CodeChallengeWrapper({
                     </SandpackLayout>
                 </SandpackProvider>
 
-                {isCompleted && (
+                {evaluation && (
+                    <ExerciseResultSummary
+                        className="lg:shrink-0 lg:max-h-[40%] lg:overflow-y-auto lg:border-t lg:p-4"
+                        score={evaluation.score}
+                        passed={evaluation.passed}
+                        feedback={evaluation.feedback}
+                        strengths={evaluation.strengths}
+                        improvements={evaluation.improvements}
+                        attemptNumber={evaluation.attemptNumber}
+                        passingScore={evaluation.passingScore}
+                    />
+                )}
+
+                {isCompleted && !evaluation && (
                     // A status line. It used to be a tinted card with an icon
                     // medallion and a "Next Activity" button wired to nothing.
                     <p className="flex items-center gap-2 text-sm font-medium text-success lg:shrink-0 lg:border-t lg:px-4 lg:py-3" role="status">

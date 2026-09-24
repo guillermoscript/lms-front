@@ -7,21 +7,25 @@ import { text } from "mcp-use";
 import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import { getAppOrigin } from "../env.js";
 import { propsSchema as practicePlayerPropsSchema } from "../../views/practice-player/schema.js";
 import { propsSchema as examReadinessPropsSchema } from "../../views/exam-readiness/schema.js";
 
 /**
- * AI-tutor practice tools (Epic #348 Phase 1). The host LLM is the tutor AND
- * the grader; these tools give it exercise context, attempt lineage, practice
- * storage, and the student model. All are self-scoped under the caller's RLS
+ * AI-tutor practice tools (Epic #348 Phase 1). The host LLM is the tutor and
+ * grades its own PRACTICE drills; a REAL exercise attempt is graded by the
+ * platform (lms_complete_exercise → the app's /api/exercises/evaluate, #843).
+ * These tools give it exercise context, attempt lineage, practice storage,
+ * and the student model. All are self-scoped under the caller's RLS
  * client — teachers/admins may call them too, "my" resolves to the caller.
  *
  * Hard guardrails honored here:
  * - Practice never writes real grades (`exam_submissions` untouched).
  * - Grading secrets (`system_prompt`, `exercise_config.evaluation_criteria`,
  *   `exercise_config.rubric`) never leave the server through student tools.
- * - `exercise_completions` has NO tenant_id (sending one 400s);
- *   `exercise_evaluations` and `practice_attempts` REQUIRE it.
+ * - `exercise_completions` / `exercise_evaluations` are read-only for users
+ *   (#843) — only the app's grader writes them. `exercise_completions` has
+ *   NO tenant_id (filtering by one 400s); `practice_attempts` REQUIRES it.
  */
 
 // Text-engine exercise types the host can grade conversationally. The other
@@ -48,16 +52,153 @@ const CONFIG_SECRET_KEYS = ["evaluation_criteria", "rubric", "expected_keywords"
 const CONVERSATION_CONFIG_TYPES = new Set(["real_time_conversation", "discussion"]);
 const CONVERSATION_SAFE_CONFIG_KEYS = ["topic_prompt"];
 
-/** exercise_type → engine_type for exercise_evaluations, mirroring the app's
- *  lib/exercises/engine.ts. Only text and real-time-conversation types are
- *  gradable via MCP — audio/video/artifact/coding need the app's media or
- *  code-execution pipeline (engine_type 'audio' | 'video' | 'simulation' for
- *  artifact | 'code' respectively).
+/** exercise_type → engine, mirroring the app's lib/exercises/engine.ts, for
+ *  the types the platform grader (`/api/exercises/evaluate`) accepts: text
+ *  types and coding_challenge. audio/video/artifact/real_time_conversation
+ *  need the app's own media/simulation flows and return null.
  */
-function engineTypeFor(exerciseType: string): "text" | "simulation" | null {
+export function engineTypeFor(exerciseType: string): "text" | "code" | null {
   if (TEXT_ENGINE_TYPES.has(exerciseType)) return "text";
-  if (exerciseType === "real_time_conversation") return "simulation";
+  if (exerciseType === "coding_challenge") return "code";
   return null;
+}
+
+/** 200 body of the app's `POST /api/exercises/evaluate`. */
+export interface PlatformGrade {
+  score: number;
+  passed: boolean;
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  passingScore: number;
+  attemptNumber: number | null;
+  completed: boolean;
+  alreadyCompleted: boolean;
+}
+
+export type PlatformGradeOutcome =
+  | { ok: true; grade: PlatformGrade }
+  | { ok: false; kind: "checkpoint"; message: string; checkpointLessonId: number | null }
+  | { ok: false; kind: "rate_limited" | "error"; message: string };
+
+const GRADER_TIMEOUT_MS = 60_000;
+
+/**
+ * Send the student's answer to the platform grader (#843). The app scores it,
+ * writes exercise_evaluations (and exercise_completions on a pass) with the
+ * service role, and returns the result — the host never picks the score.
+ */
+export async function gradeWithPlatform(
+  appOrigin: string,
+  accessToken: string,
+  exerciseId: number,
+  content: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<PlatformGradeOutcome> {
+  let res: Response;
+  try {
+    res = await fetchImpl(`${appOrigin}/api/exercises/evaluate`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ exerciseId, content }),
+      signal: AbortSignal.timeout(GRADER_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const name = (err as { name?: string } | null)?.name;
+    return {
+      ok: false,
+      kind: "error",
+      message:
+        name === "TimeoutError" || name === "AbortError"
+          ? "The platform grader did not answer within 60 seconds. The attempt may still be recorded — check the exercise before submitting again."
+          : `Could not reach the platform grader: ${err instanceof Error ? err.message : String(err)}. Nothing was recorded.`,
+    };
+  }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = ((await res.json()) ?? {}) as Record<string, unknown>;
+  } catch {
+    // Non-JSON body (proxy error page etc.) — fall through with no detail.
+  }
+  const detail = typeof body.error === "string" && body.error ? body.error : null;
+
+  if (res.ok) {
+    if (typeof body.score !== "number" || typeof body.passed !== "boolean") {
+      return {
+        ok: false,
+        kind: "error",
+        message: "The platform grader returned an unexpected response. Nothing was recorded.",
+      };
+    }
+    const list = (v: unknown) =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+    return {
+      ok: true,
+      grade: {
+        score: body.score,
+        passed: body.passed,
+        feedback: typeof body.feedback === "string" ? body.feedback : "",
+        strengths: list(body.strengths),
+        improvements: list(body.improvements),
+        passingScore: typeof body.passingScore === "number" ? body.passingScore : 70,
+        attemptNumber: typeof body.attemptNumber === "number" ? body.attemptNumber : null,
+        completed: body.completed === true,
+        alreadyCompleted: body.alreadyCompleted === true,
+      },
+    };
+  }
+
+  switch (res.status) {
+    case 409:
+      return {
+        ok: false,
+        kind: "checkpoint",
+        message: detail ?? "This exercise is a lesson checkpoint.",
+        checkpointLessonId:
+          typeof body.checkpointLessonId === "number" ? body.checkpointLessonId : null,
+      };
+    case 429:
+      return {
+        ok: false,
+        kind: "rate_limited",
+        message:
+          "The platform grader is rate-limited right now — too many attempts in a short time. Nothing was recorded; wait a few minutes and try again (keep coaching or drilling variations meanwhile).",
+      };
+    case 401:
+      return {
+        ok: false,
+        kind: "error",
+        message: `The platform grader rejected the session${detail ? `: ${detail}` : ""}. Ask the student to reconnect, or to submit the answer in the LMS app.`,
+      };
+    case 403:
+      return {
+        ok: false,
+        kind: "error",
+        message: `Access denied by the platform grader${detail ? `: ${detail}` : ""}.`,
+      };
+    case 404:
+      return {
+        ok: false,
+        kind: "error",
+        message: detail ?? `Exercise ${exerciseId} not found.`,
+      };
+    case 400:
+      return {
+        ok: false,
+        kind: "error",
+        message: `The platform grader refused the answer${detail ? `: ${detail}` : ""}.`,
+      };
+    default:
+      return {
+        ok: false,
+        kind: "error",
+        message: `The platform grader failed (HTTP ${res.status})${detail ? `: ${detail}` : ""}. Nothing was recorded — try again later, or submit in the LMS app.`,
+      };
+  }
 }
 
 /**
@@ -66,8 +207,8 @@ function engineTypeFor(exerciseType: string): "text" | "simulation" | null {
  * attempt API records lesson_checkpoint_attempts, while completing them here
  * would mark the exercise done without counting toward the checkpoint.
  * External types keep their dedicated flows (the checkpoint links out and
- * syncs), so real_time_conversation grading via lms_complete_exercise and the
- * in-app code/media pipelines stay allowed.
+ * syncs); the platform grader also refuses checkpoint exercises (409), so this
+ * pre-check is just the friendlier, earlier message.
  * Returns the first embedding lesson, or null — including when the table
  * doesn't exist yet or RLS hides the row (degrade open, matching
  * checkpoint_struggles in lms_get_my_weak_spots).
@@ -480,7 +621,7 @@ export function registerPracticeTools(server: LmsServer) {
               ? { ...checkpoint, must_complete_in_lesson: checkpointLocked }
               : null,
           },
-          `Exercise "${exercise.title}" (${exercise.exercise_type}, ${exercise.difficulty_level})${completed ? " — already completed" : ""}. ${attempts.length} prior attempt(s)${attempts.length > 0 ? `, latest: ${attempts[0].passed ? "passed" : "not passed"} at ${attempts[0].score}` : ""}.${gradable ? "" : " NOTE: this exercise type is evaluated in the app, not via lms_complete_exercise."}${checkpointLocked ? ` NOTE: this exercise is a lesson checkpoint — the student answers it inside lesson ${checkpoint!.lesson_id}${checkpoint!.lesson_title ? ` ("${checkpoint!.lesson_title}")` : ""}; lms_complete_exercise will refuse it. Coach or drill variations (source_exercise_id=${exercise.id}) here instead.` : ""}`
+          `Exercise "${exercise.title}" (${exercise.exercise_type}, ${exercise.difficulty_level})${completed ? " — already completed" : ""}. ${attempts.length} prior attempt(s)${attempts.length > 0 ? `, latest: ${attempts[0].passed ? "passed" : "not passed"} at ${attempts[0].score}` : ""}.${gradable ? "" : " NOTE: this exercise type is completed in the LMS app, not via lms_complete_exercise."}${checkpointLocked ? ` NOTE: this exercise is a lesson checkpoint — the student answers it inside lesson ${checkpoint!.lesson_id}${checkpoint!.lesson_title ? ` ("${checkpoint!.lesson_title}")` : ""}; lms_complete_exercise will refuse it. Coach or drill variations (source_exercise_id=${exercise.id}) here instead.` : ""}`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -498,7 +639,7 @@ export function registerPracticeTools(server: LmsServer) {
     {
       name: "lms_check_exercise_answers",
       description:
-        "Grade the caller's answers to a REAL exercise's closed questions (exercise_config.questions from lms_get_exercise_for_student) on the server. Returns score (0-100), passed (against the exercise's passing_score), and per question only whether it was right — never the correct answer (students cannot learn the key; teachers also get correct_value/explanation). Values: multiple_choice → option index (number), true_false → boolean, fill_in_the_blank → string. Records nothing: after grading, call lms_complete_exercise with this score if the student wants the attempt recorded. Lesson-checkpoint exercises are refused (answered inside the lesson).",
+        "Grade the caller's answers to a REAL exercise's closed questions (exercise_config.questions from lms_get_exercise_for_student) on the server. Returns score (0-100), passed (against the exercise's passing_score), and per question only whether it was right — never the correct answer (students cannot learn the key; teachers also get correct_value/explanation). Values: multiple_choice → option index (number), true_false → boolean, fill_in_the_blank → string. Records nothing and is only a check: to make an attempt count, submit the student's answers written out via lms_complete_exercise, which the platform grades and records. Lesson-checkpoint exercises are refused (answered inside the lesson).",
       schema: z.object({
         exercise_id: z.number().describe("The exercise whose questions were answered"),
         answers: z
@@ -585,49 +726,22 @@ export function registerPracticeTools(server: LmsServer) {
   );
 
   // ── lms_complete_exercise ──────────────────────────────────────────────────
+  // The platform grades (#843): the host sends the student's answer verbatim,
+  // the app's /api/exercises/evaluate scores it with the platform grader and
+  // writes exercise_evaluations / exercise_completions with the service role.
+  // Those tables are read-only for users, so no score the host picks can land.
   server.tool(
     {
       name: "lms_complete_exercise",
       description:
-        "Record the caller's graded attempt on a REAL teacher exercise after you (the host) evaluated their work against its instructions. Every call appends an evaluation to the attempt history; a passing attempt also marks the exercise completed (XP is awarded automatically by the platform). Text-engine exercises (essay, discussion, quiz, multiple_choice, true_false, fill_in_the_blank) plus real_time_conversation (voice/chat conversation practice you ran and graded live — recorded as engine_type 'simulation', matching the app's convention; requires conversation_summary and turns_count). Text exercises embedded as a lesson checkpoint are refused — those must be answered inside the lesson (drill variations via practice tools instead).",
+        "Submit the student's answer to a REAL teacher exercise for grading by the PLATFORM (not by you). Send their full answer verbatim — the platform grader scores it against the exercise's criteria, records the attempt (a passing one marks the exercise completed; XP is awarded automatically), and returns its score, pass/fail, feedback, strengths and improvements for you to relay and explain. You never choose the score. Supported: text exercises (essay, discussion, quiz, multiple_choice, true_false, fill_in_the_blank — for closed questions, write the student's chosen answers out) and coding_challenge (send the source code). audio/video/artifact/real_time_conversation exercises are completed in the LMS app. Text exercises embedded as a lesson checkpoint are refused — those must be answered inside the lesson (drill variations via practice tools instead). Only submit when the student wants this attempt to count.",
       schema: z.object({
         exercise_id: z.number().describe("The exercise being attempted"),
-        score: z
-          .number()
-          .min(0)
-          .max(100)
-          .describe("Your score for the student's work, 0-100"),
-        passed: z
-          .boolean()
-          .describe(
-            "Whether the attempt passes the exercise (typical threshold 70). Only a passing attempt marks the exercise completed."
-          ),
-        feedback: z
+        answer: z
           .string()
           .min(1)
-          .describe("Your feedback on the student's work"),
-        strengths: z
-          .array(z.string())
-          .optional()
-          .describe("What the student did well"),
-        improvements: z
-          .array(z.string())
-          .optional()
-          .describe("What the student should improve"),
-        conversation_summary: z
-          .string()
-          .min(1)
-          .optional()
           .describe(
-            "real_time_conversation only (REQUIRED for that type): a few sentences on what was discussed and how the student performed"
-          ),
-        turns_count: z
-          .number()
-          .int()
-          .min(0)
-          .optional()
-          .describe(
-            "real_time_conversation only (REQUIRED for that type): how many conversational turns took place"
+            "The student's full answer, verbatim — their essay text or their source code. Never your paraphrase or a summary."
           ),
       }),
       annotations: {
@@ -647,7 +761,6 @@ export function registerPracticeTools(server: LmsServer) {
 
       try {
         const supabase = session.getClient();
-        const userId = session.getUserId();
 
         const { data: exercise, error } = await supabase
           .from("exercises")
@@ -665,28 +778,18 @@ export function registerPracticeTools(server: LmsServer) {
         const engineType = engineTypeFor(exercise.exercise_type as string);
         if (!engineType) {
           return errorResult(
-            `Exercise "${exercise.title}" is a ${exercise.exercise_type} exercise — its evaluation needs the app's media/code pipeline. Ask the student to complete it in the LMS app; you can still coach them here.`
+            `Exercise "${exercise.title}" is a ${exercise.exercise_type} exercise — complete it in the LMS app; you can still coach them here.`
           );
-        }
-        if (engineType === "simulation") {
-          if (!input.conversation_summary?.trim()) {
-            return errorResult(
-              "real_time_conversation exercises require conversation_summary (a few sentences on what was discussed and how the student performed)"
-            );
-          }
-          if (input.turns_count === undefined) {
-            return errorResult(
-              "real_time_conversation exercises require turns_count (how many conversational turns took place)"
-            );
-          }
         }
 
         await session.verifyCourseAccess(exercise.course_id);
 
+        const checkpointMessage = (lessonId: number, lessonTitle: string | null) =>
+          `Exercise "${exercise.title}" is embedded as a checkpoint in lesson ${lessonId}${lessonTitle ? ` ("${lessonTitle}")` : ""} — the student must answer it inside that lesson so the attempt counts toward the checkpoint. You can still coach them here, or drill a variation quiz with source_exercise_id=${exercise.id} recorded via lms_record_practice_attempt.`;
+
         // Checkpoint-embedded text exercises must be answered inside the
         // lesson so the attempt counts toward the checkpoint (see
-        // findEnabledCheckpointLesson). Simulation stays allowed — this tool
-        // IS the dedicated flow the checkpoint syncs from.
+        // findEnabledCheckpointLesson). The grader refuses them too (409).
         if (engineType === "text") {
           const checkpoint = await findEnabledCheckpointLesson(
             supabase,
@@ -695,89 +798,62 @@ export function registerPracticeTools(server: LmsServer) {
           );
           if (checkpoint) {
             return errorResult(
-              `Exercise "${exercise.title}" is embedded as a checkpoint in lesson ${checkpoint.lesson_id}${checkpoint.lesson_title ? ` ("${checkpoint.lesson_title}")` : ""} — the student must answer it inside that lesson so the attempt counts toward the checkpoint. You can still coach them here, or drill a variation quiz with source_exercise_id=${exercise.id} recorded via lms_record_practice_attempt.`
+              checkpointMessage(checkpoint.lesson_id, checkpoint.lesson_title)
             );
           }
         }
 
-        // A passing attempt marks the exercise completed. exercise_completions
-        // has NO tenant_id and NO unique constraint — a duplicate insert would
-        // silently double the +50 XP trigger, so check first (and still treat
-        // a racing 23505 as already-completed, matching the app).
-        let alreadyCompleted = false;
-        if (input.passed) {
-          const { data: existing, error: existingError } = await supabase
-            .from("exercise_completions")
-            .select("exercise_id")
-            .eq("exercise_id", exercise.id)
-            .eq("user_id", userId)
-            .limit(1);
-          if (existingError)
+        const appOrigin = getAppOrigin();
+        if (!appOrigin) {
+          return errorResult(
+            `Grading is unavailable here: this MCP server is not configured with the LMS app's address, so it cannot reach the platform grader. Nothing was recorded — ask the student to submit "${exercise.title}" in the LMS app. You can still coach them here.`
+          );
+        }
+
+        const outcome = await gradeWithPlatform(
+          appOrigin,
+          session.getAccessToken(),
+          exercise.id,
+          input.answer
+        );
+        if (!outcome.ok) {
+          if (outcome.kind === "checkpoint") {
             return errorResult(
-              `Checking completion: ${existingError.message}`
+              outcome.checkpointLessonId !== null
+                ? checkpointMessage(outcome.checkpointLessonId, null)
+                : `${outcome.message} The student must answer it inside the lesson. You can still coach them here, or drill a variation quiz with source_exercise_id=${exercise.id} recorded via lms_record_practice_attempt.`
             );
-          alreadyCompleted = (existing ?? []).length > 0;
-
-          if (!alreadyCompleted) {
-            const { error: completionError } = await supabase
-              .from("exercise_completions")
-              .insert({
-                exercise_id: exercise.id,
-                user_id: userId,
-                completed_by: userId,
-                score: input.score,
-              });
-            if (completionError) {
-              if (completionError.code === "23505") alreadyCompleted = true;
-              else
-                return errorResult(
-                  `Marking exercise complete: ${completionError.message}`
-                );
-            }
           }
+          return errorResult(outcome.message);
         }
 
-        // Evaluation row records the attempt regardless of pass/fail —
-        // attempt_number is auto-assigned by a DB trigger.
-        const aiResult: Record<string, unknown> = {
-          feedback: input.feedback,
-          strengths: input.strengths ?? [],
-          improvements: input.improvements ?? [],
-          source: "mcp-tutor",
-        };
-        if (engineType === "simulation") {
-          aiResult.conversation_summary = input.conversation_summary;
-          aiResult.turns_count = input.turns_count;
-        }
-
-        const { data: evaluation, error: evalError } = await supabase
-          .from("exercise_evaluations")
-          .insert({
-            exercise_id: exercise.id,
-            user_id: userId,
-            tenant_id: session.getTenantId(),
-            engine_type: engineType,
-            score: input.score,
-            passed: input.passed,
-            ai_result: aiResult,
-          })
-          .select("attempt_number")
-          .single();
-        if (evalError)
-          return errorResult(`Recording evaluation: ${evalError.message}`);
+        const g = outcome.grade;
+        const attempt = g.attemptNumber !== null ? `Attempt ${g.attemptNumber}` : "Attempt";
+        const detail = [
+          g.feedback ? `Platform feedback: ${g.feedback}` : "",
+          g.strengths.length ? `Strengths: ${g.strengths.join("; ")}.` : "",
+          g.improvements.length ? `Improvements: ${g.improvements.join("; ")}.` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
 
         return ok(
           {
             exercise_id: exercise.id,
-            attempt_number: evaluation.attempt_number,
-            score: input.score,
-            passed: input.passed,
-            completed: input.passed,
-            already_completed: alreadyCompleted,
+            attempt_number: g.attemptNumber,
+            score: g.score,
+            passed: g.passed,
+            passing_score: g.passingScore,
+            feedback: g.feedback,
+            strengths: g.strengths,
+            improvements: g.improvements,
+            completed: g.completed,
+            already_completed: g.alreadyCompleted,
+            graded_by: "platform",
           },
-          input.passed
-            ? `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: PASSED at ${input.score}.${alreadyCompleted ? " (Exercise was already completed — no duplicate completion.)" : " Exercise marked completed; XP is awarded automatically."}${exercise.difficulty_level === "hard" ? " Hard exercise: occasionally (~1 in 4 such passes) ask the student to explain in one sentence why their approach works — skip if you've already nudged this exchange." : ""}`
-            : `Attempt ${evaluation.attempt_number} on "${exercise.title}" recorded: not passed (${input.score}). Make the feedback explanatory — name what went wrong AND the concept behind it, never a bare score. Before reteaching, ask the student ONE short question about their reasoning on the miss and tailor the reteach to their answer (skippable — if they don't engage, explain anyway). Then generate a fresh variation of the same skill and keep drilling.`
+          g.passed
+            ? `${attempt} on "${exercise.title}" graded by the platform: PASSED at ${g.score} (passing score ${g.passingScore}).${g.alreadyCompleted ? " (Exercise was already completed — no duplicate completion.)" : g.completed ? " Exercise marked completed; XP is awarded automatically." : ""} ${detail} Relay the platform's score and feedback — don't re-grade it.${exercise.difficulty_level === "hard" ? " Hard exercise: occasionally (~1 in 4 such passes) ask the student to explain in one sentence why their approach works — skip if you've already nudged this exchange." : ""}`
+            : `${attempt} on "${exercise.title}" graded by the platform: not passed (${g.score}, passing score ${g.passingScore}). ${detail} Relay the platform's score — don't re-grade it — and make your explanation of the feedback explanatory: name what went wrong AND the concept behind it, never a bare score. Before reteaching, ask the student ONE short question about their reasoning on the miss and tailor the reteach to their answer (skippable — if they don't engage, explain anyway). Then generate a fresh variation of the same skill and keep drilling.`
         );
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -1368,7 +1444,7 @@ export function registerPracticeTools(server: LmsServer) {
               },
             ],
             last_seen: (row.created_at as string) ?? null,
-            suggested_action: `Drill it: lms_get_exercise_for_student(${row.exercise_id}) for lineage, then variation quizzes with source_exercise_id=${row.exercise_id} until they pass, then lms_complete_exercise.`,
+            suggested_action: `Drill it: lms_get_exercise_for_student(${row.exercise_id}) for lineage, then variation quizzes with source_exercise_id=${row.exercise_id} until they pass, then submit the real attempt via lms_complete_exercise.`,
           });
         }
 

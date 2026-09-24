@@ -28,8 +28,8 @@ implementation.
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
   with attempt history, `lms_check_exercise_answers` to grade closed
-  questions server-side, `lms_complete_exercise` for host-graded text +
-  real_time_conversation exercises, `lms_practice_quiz`,
+  questions server-side, `lms_complete_exercise` to submit a text or
+  coding_challenge answer to the platform grader (`/api/exercises/evaluate`), `lms_practice_quiz`,
   `lms_record_practice_attempt`, `lms_get_my_weak_spots`,
   `lms_get_tutor_config`), course ingest (`lms_get_course_content` paginated
   bulk pull, `lms_search_content` snippet search over entitled courses),

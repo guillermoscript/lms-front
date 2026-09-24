@@ -10,7 +10,7 @@
  *   1. anonymous /courses/<id> → "Enroll for Free" → login (next kept) →
  *      "Sign up" (next kept) → sign-up → /courses/<id>?enroll=1 auto-enrolls,
  *      joins the school and lands on the course
- *   2. lesson 1 → exercise → lesson 2 → exam → 100% result
+ *   2. lesson 1 → exercise (platform-graded) → lesson 2 → exam → 100% result
  *   3. certificate card → Download PDF is a real PDF → Verify page shows the
  *      student's name to an anonymous visitor
  *   4. log out → Forgot password → request → recovery link →
@@ -147,7 +147,7 @@ test.beforeAll(async () => {
         lesson_id: lessonIds[0],
         title: `${FIXTURE_PREFIX} Exercise — Hello`,
         description: 'Print hello.',
-        instructions: 'Make the editor print "hello" and press Run & Verify.',
+        instructions: 'Make the editor print "hello" and press Check my solution.',
         exercise_type: 'coding_challenge',
         difficulty_level: 'easy',
         status: 'published',
@@ -445,13 +445,23 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
         .toBe(1)
     })
 
-    await test.step('exercise submits and records a completion', async () => {
+    await test.step('exercise is graded by the platform, never by the browser', async () => {
       await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${courseId}/exercises/${exerciseId}`, {
         waitUntil: 'domcontentloaded',
       })
-      const run = page.getByRole('button', { name: /run & verify/i })
-      await expect(run).toBeVisible({ timeout: 60_000 })
-      await domClick(page, run)
+      const check = page.getByRole('button', { name: /check my solution/i })
+      await expect(check).toBeVisible({ timeout: 60_000 })
+      const graded = page.waitForResponse(
+        (res) => res.url().includes('/api/exercises/evaluate') && res.request().method() === 'POST',
+        { timeout: 120_000 }
+      )
+      await domClick(page, check)
+      const res = await graded
+
+      // The grader is a model: without OPENAI_API_KEY (CI) the route answers
+      // 500 and records nothing; with one, the verdict decides. Either way the
+      // completion row must match the verdict — the browser cannot write one (#843).
+      const body = res.ok() ? ((await res.json()) as { passed: boolean }) : null
       await expect
         .poll(
           async () => {
@@ -464,7 +474,7 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
           },
           { timeout: 30_000 }
         )
-        .toBe(1)
+        .toBe(body?.passed ? 1 : 0)
     })
 
     await test.step('lesson 2 completes (no certificate yet — the exam is still open)', async () => {

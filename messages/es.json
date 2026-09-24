@@ -6507,7 +6507,11 @@
       "typeLabel": "Reto de código",
       "task": "Tarea",
       "output": "Salida",
-      "solved": "Todas las pruebas pasan. Reto completado."
+      "solved": "Reto completado.",
+      "submit": "Revisar mi solución",
+      "checking": "Revisando…",
+      "evaluationFailed": "No se pudo revisar tu solución. Inténtalo de nuevo.",
+      "rateLimited": "Demasiadas revisiones por ahora. Inténtalo en una hora."
     },
     "filter": {
       "label": "Filtrar por tipo de ejercicio",

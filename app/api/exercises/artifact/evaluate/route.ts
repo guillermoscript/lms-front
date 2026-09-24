@@ -3,6 +3,7 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { generateText } from 'ai'
 import { AI_MODELS } from '@/lib/ai/config'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -153,18 +154,8 @@ End "feedback" with one short reflective question tied to the most important imp
 
     // 11. Record completion if passed
     if (passed) {
-      // exercise_completions has NO tenant_id column — sending it 400s the insert.
-      await adminClient
-        .from('exercise_completions')
-        .insert({
-          exercise_id: exerciseId,
-          user_id: user.id,
-          completed_by: user.id,
-          score: evaluation.score,
-        })
-        .select('id')
-        .single()
-      // unique index (exercise_id, user_id) prevents duplicates — error is expected on re-pass
+      const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score: evaluation.score })
+      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
     }
 
     // 12. Track the submission. No `attempt_number`: the only count this route

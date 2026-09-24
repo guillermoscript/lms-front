@@ -1,6 +1,8 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { recordExerciseCompletion } from '@/lib/exercises/record-completion';
 import { getEngineType } from '@/lib/exercises/engine';
 import { EXTERNAL_EXERCISE_TYPES } from '@/lib/checkpoints/types';
 import type { CompletionVerdict } from '@/lib/ai/lesson-completion-verifier';
@@ -51,24 +53,24 @@ export const createExerciseTools = (
                 }
             }
 
-            // exercise_completions has NO tenant_id column — sending it 400s the insert.
-            // There is no unique constraint, so a duplicate (23505) is treated as success.
-            const { error: completionError } = await supabase.from('exercise_completions').insert({
-                exercise_id: context.exerciseId,
-                user_id: context.userId,
-                completed_by: context.userId,
-                score: score,
+            // The coach is the platform's own model with the platform's prompt, so its
+            // verdict is trusted — but the tables are server-write-only (#843), so
+            // both rows go through the service-role client, never the student's.
+            const adminClient = createAdminClient();
+            const completion = await recordExerciseCompletion(adminClient, {
+                exerciseId: Number(context.exerciseId),
+                userId: context.userId,
+                score,
             });
-
-            if (completionError && completionError.code !== '23505') {
-                console.error('Failed to insert exercise completion:', completionError);
+            if (completion.error) {
+                console.error('Failed to insert exercise completion:', completion.error);
                 return { success: false, error: 'Failed to mark exercise as completed.' };
             }
 
             // Insert unified evaluation for text-based exercises
             const engineType = getEngineType(context.exerciseType ?? 'essay');
             if (engineType === 'text' || engineType === 'simulation') {
-                const { error: evaluationError } = await supabase.from('exercise_evaluations').insert({
+                const { error: evaluationError } = await adminClient.from('exercise_evaluations').insert({
                     exercise_id: context.exerciseId,
                     user_id: context.userId,
                     tenant_id: context.tenantId,

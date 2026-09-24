@@ -6507,7 +6507,11 @@
       "typeLabel": "Coding challenge",
       "task": "Task",
       "output": "Output",
-      "solved": "All tests pass. Challenge completed."
+      "solved": "Challenge completed.",
+      "submit": "Check my solution",
+      "checking": "Checking…",
+      "evaluationFailed": "Your solution couldn't be checked. Try again.",
+      "rateLimited": "Too many checks for now. Try again in an hour."
     },
     "filter": {
       "label": "Filter by exercise type",
