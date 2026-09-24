@@ -4,7 +4,9 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { CommunityFeed } from '@/components/community/community-feed'
+import { getBlockedAuthorIds } from '@/lib/community/blocks'
+import { BlockedMembers } from '@/components/community/blocked-members'
+import { CommunityFeed, type CommunityPost } from '@/components/community/community-feed'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import Link from 'next/link'
 import { IconArrowLeft } from '@tabler/icons-react'
@@ -68,6 +70,9 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
   }
 
   // Fetch course-scoped posts and user reactions in parallel
+  // RLS hides blocked authors, but this page reads with the service role (#846).
+  const blockedIds = await getBlockedAuthorIds(userId)
+
   const [{ data: posts }, { data: userReactions }] = await Promise.all([
     adminClient
       .from('community_posts')
@@ -80,6 +85,7 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
       .eq('tenant_id', tenantId)
       .eq('course_id', numericCourseId)
       .eq('is_hidden', false)
+      .not('author_id', 'in', `(${blockedIds.join(',')})`)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(20),
@@ -113,8 +119,8 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
   // For poll posts, fetch poll options and user votes
   const pollPostIds = (posts ?? []).filter((p) => p.post_type === 'poll').map((p) => p.id)
 
-  let pollOptionsMap = new Map<string, Array<{ id: string; option_text: string; vote_count: number }>>()
-  let userPollVotes = new Map<string, string>()
+  const pollOptionsMap = new Map<string, Array<{ id: string; option_text: string; vote_count: number }>>()
+  const userPollVotes = new Map<string, string>()
 
   if (pollPostIds.length > 0) {
     const [{ data: pollOptions }, { data: pollVotes }] = await Promise.all([
@@ -143,10 +149,10 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
   // Build enriched post objects
   const enrichedPosts = (posts ?? []).map((post) => ({
     ...post,
-    media_urls: (post.media_urls as any) || [],
+    media_urls: (post.media_urls as unknown as CommunityPost['media_urls'] | null) ?? [],
     author: profileMap.get(post.author_id) ?? { id: post.author_id, full_name: null, avatar_url: null },
     user_reactions: reactionsMap.get(post.id) ?? [],
-    poll_options: (pollOptionsMap.get(post.id) ?? undefined) as any,
+    poll_options: pollOptionsMap.get(post.id) as CommunityPost['poll_options'],
     user_voted_option: userPollVotes.get(post.id) ?? null,
   }))
 
@@ -163,6 +169,9 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{course.title} — {t('title')}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{t('courseFeedDescription')}</p>
+          <div className="mt-2 -ml-3">
+            <BlockedMembers />
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">

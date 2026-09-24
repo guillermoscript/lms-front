@@ -16,6 +16,7 @@ import {
   IconDots,
   IconCornerDownRight,
   IconFlag,
+  IconBan,
   IconMessageCircle,
 } from '@tabler/icons-react'
 import { useTranslations, useLocale } from 'next-intl'
@@ -25,7 +26,9 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { FlagDialog } from './flag-dialog'
 import { buttonVariants } from '@/components/ui/button'
-import { createComment, deleteComment, getComments } from '@/app/actions/community'
+import { blockUser, createComment, deleteComment, getComments } from '@/app/actions/community'
+
+type CommunityT = ReturnType<typeof useTranslations<'community'>>
 
 interface CommentUser {
   id: string
@@ -82,9 +85,9 @@ export function CommentThread({ postId, userId, tenantId, isLocked, userRole }: 
         return
       }
 
-      const profilesMap = new Map(profiles.map((p: any) => [p.id, p]))
+      const profilesMap = new Map(profiles.map((p) => [p.id, p]))
 
-      const allComments: Comment[] = commentsData.map((c: any) => ({
+      const allComments: Comment[] = commentsData.map((c) => ({
         ...c,
         author: profilesMap.get(c.author_id) || {
           id: c.author_id,
@@ -119,6 +122,17 @@ export function CommentThread({ postId, userId, tenantId, isLocked, userRole }: 
       toast.error(t('errorLoading'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleBlock(author: CommentUser) {
+    if (!confirm(t('blockConfirm', { name: author.full_name || t('unknownUser') }))) return
+    const result = await blockUser(author.id)
+    if (result.success) {
+      toast.success(t('blocked'))
+      loadComments()
+    } else {
+      toast.error(result.error)
     }
   }
 
@@ -221,6 +235,7 @@ export function CommentThread({ postId, userId, tenantId, isLocked, userRole }: 
               onReply={handlePost}
               onDelete={handleDelete}
               onFlag={(id) => setFlagTarget({ id, type: 'comment' })}
+              onBlock={handleBlock}
               submitting={submitting}
               isLocked={isLocked}
             />
@@ -251,7 +266,7 @@ function CommentReplyForm({
 }: {
   onSubmit: (content: string) => void
   submitting: boolean
-  t: any
+  t: CommunityT
 }) {
   const [content, setContent] = useState('')
 
@@ -290,12 +305,13 @@ interface CommentItemProps {
   userId: string
   userRole: string
   locale: string
-  t: any
+  t: CommunityT
   replyingTo: string | null
   setReplyingTo: (id: string | null) => void
   onReply: (content: string, parentId: string) => void
   onDelete: (commentId: string) => void
   onFlag: (commentId: string) => void
+  onBlock: (author: CommentUser) => void
   submitting: boolean
   isLocked: boolean
 }
@@ -312,6 +328,7 @@ function CommentItem({
   onReply,
   onDelete,
   onFlag,
+  onBlock,
   submitting,
   isLocked,
 }: CommentItemProps) {
@@ -342,34 +359,39 @@ function CommentItem({
             </span>
           </div>
 
-          {(isOwn || canModerate) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={cn(
-                  buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                  'opacity-0 group-hover/comment:opacity-100 transition-opacity'
-                )}
-              >
-                <IconDots size={12} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {isOwn && (
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onDelete(comment.id)}
-                  >
-                    {t('deletePost')}
-                  </DropdownMenuItem>
-                )}
-                {!isOwn && (
-                  <DropdownMenuItem onClick={() => onFlag(comment.id)}>
-                    <IconFlag size={12} />
-                    {t('flag')}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label={t('commentActions')}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                'opacity-0 group-hover/comment:opacity-100 focus-visible:opacity-100 transition-opacity'
+              )}
+            >
+              <IconDots size={12} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isOwn && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(comment.id)}
+                >
+                  {t('deletePost')}
+                </DropdownMenuItem>
+              )}
+              {!isOwn && (
+                <DropdownMenuItem onClick={() => onFlag(comment.id)}>
+                  <IconFlag size={12} />
+                  {t('flag')}
+                </DropdownMenuItem>
+              )}
+              {!isOwn && !canModerate && (
+                <DropdownMenuItem onClick={() => onBlock(comment.author)}>
+                  <IconBan size={12} />
+                  {t('block')}
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground/90 break-words">
@@ -420,6 +442,7 @@ function CommentItem({
                 onReply={onReply}
                 onDelete={onDelete}
                 onFlag={onFlag}
+                onBlock={onBlock}
                 submitting={submitting}
                 isLocked={isLocked}
               />

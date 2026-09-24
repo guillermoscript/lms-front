@@ -9,6 +9,25 @@ import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { getBlockedAuthorIds } from '@/lib/community/blocks'
+import type { CommunityPost } from '@/components/community/community-feed'
+
+type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
+type CommentRow = {
+  id: string
+  content: string
+  created_at: string
+  author_id: string
+  parent_comment_id: string | null
+  is_hidden: boolean
+}
+type PollOptionRow = {
+  id: string
+  post_id: string
+  option_text: string
+  vote_count: number
+  sort_order: number
+}
 
 const MAX_CONTENT_LENGTH = 5000
 const MAX_COMMENT_LENGTH = 2000
@@ -750,23 +769,7 @@ export async function castVote(postId: string, optionId: string): Promise<Action
 
     if (voteError) throw voteError
 
-    // Increment vote count on the option.
-    // NOTE: This SELECT+UPDATE has a theoretical race condition if two users vote
-    // simultaneously, but supabase-js does not support SQL expressions (e.g. vote_count + 1)
-    // in .update(). The risk is minimal for polls, and the canonical count can always be
-    // recomputed from community_poll_votes if needed.
-    const { data: currentOption } = await adminClient
-      .from('community_poll_options')
-      .select('vote_count')
-      .eq('id', optionId)
-      .single()
-
-    if (currentOption) {
-      await adminClient
-        .from('community_poll_options')
-        .update({ vote_count: (currentOption.vote_count || 0) + 1 })
-        .eq('id', optionId)
-    }
+    // vote_count is maintained by the trg_community_poll_vote_count trigger (#846).
 
     // One vote per user per poll is enforced above, so this cannot double-count.
     await track(
@@ -902,23 +905,113 @@ export async function createFlag(
 }
 
 /**
+ * Block a member: their posts and comments stop showing for the caller.
+ * Written through RLS — the row can only ever name the caller as blocker.
+ */
+export async function blockUser(blockedId: string): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await getAuthenticatedUser()
+    if (blockedId === userId) {
+      return { success: false, error: 'You cannot block yourself' }
+    }
+
+    const { error } = await supabase
+      .from('community_user_blocks')
+      .upsert(
+        { blocker_id: userId, blocked_id: blockedId },
+        { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true }
+      )
+
+    if (error) throw error
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (err) {
+    console.error('Failed to block user:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to block user',
+    }
+  }
+}
+
+export async function unblockUser(blockedId: string): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await getAuthenticatedUser()
+
+    const { error } = await supabase
+      .from('community_user_blocks')
+      .delete()
+      .eq('blocker_id', userId)
+      .eq('blocked_id', blockedId)
+
+    if (error) throw error
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (err) {
+    console.error('Failed to unblock user:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to unblock user',
+    }
+  }
+}
+
+/**
+ * The members the caller has blocked, with their names, for the unblock list.
+ */
+export async function getBlockedMembers(): Promise<
+  ActionResult<{ members: ProfileSummary[] }>
+> {
+  try {
+    const { userId } = await getAuthenticatedUser()
+    const blockedIds = await getBlockedAuthorIds(userId)
+    if (blockedIds.length === 0) {
+      return { success: true, data: { members: [] } }
+    }
+
+    const { data: profiles, error } = await createAdminClient()
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', blockedIds)
+
+    if (error) throw error
+    return { success: true, data: { members: profiles ?? [] } }
+  } catch (err) {
+    console.error('Failed to load blocked members:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to load blocked members',
+    }
+  }
+}
+
+/**
  * Get comments for a post (uses admin client to bypass RLS tenant mismatch)
  */
 export async function getComments(
   postId: string,
   tenantId: string
-): Promise<ActionResult<{ comments: any[]; profiles: any[] }>> {
+): Promise<ActionResult<{ comments: CommentRow[]; profiles: ProfileSummary[] }>> {
   try {
-    await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const adminClient = createAdminClient()
+    const blockedIds = await getBlockedAuthorIds(userId)
 
-    const { data: commentsData, error } = await adminClient
+    let commentsQuery = adminClient
       .from('community_comments')
       .select('id, content, created_at, author_id, parent_comment_id, is_hidden')
       .eq('post_id', postId)
       .eq('tenant_id', tenantId)
       .eq('is_hidden', false)
       .order('created_at', { ascending: true })
+
+    if (blockedIds.length > 0) {
+      commentsQuery = commentsQuery.not('author_id', 'in', `(${blockedIds.join(',')})`)
+    }
+
+    const { data: commentsData, error } = await commentsQuery
 
     if (error) throw error
     if (!commentsData || commentsData.length === 0) {
@@ -955,10 +1048,11 @@ export async function loadMorePosts(
   scope: 'school' | 'course',
   cursor: string, // created_at of last post
   courseId?: number
-): Promise<ActionResult<{ posts: any[]; hasMore: boolean }>> {
+): Promise<ActionResult<{ posts: CommunityPost[]; hasMore: boolean }>> {
   try {
-    await getAuthenticatedUser()
+    const { userId: viewerId } = await getAuthenticatedUser()
     const adminClient = createAdminClient()
+    const blockedIds = await getBlockedAuthorIds(viewerId)
 
     let query = adminClient
       .from('community_posts')
@@ -974,6 +1068,10 @@ export async function loadMorePosts(
       .lt('created_at', cursor)
       .order('created_at', { ascending: false })
       .limit(POSTS_PAGE_SIZE)
+
+    if (blockedIds.length > 0) {
+      query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
+    }
 
     if (scope === 'course' && courseId) {
       query = query.eq('course_id', courseId)
@@ -1006,7 +1104,7 @@ export async function loadMorePosts(
       existing.push(r.reaction_type)
       reactionsMap.set(r.post_id, existing)
     }
-    const pollOptionsMap = new Map<string, any[]>()
+    const pollOptionsMap = new Map<string, PollOptionRow[]>()
     for (const o of pollOptions ?? []) {
       const existing = pollOptionsMap.get(o.post_id) ?? []
       existing.push(o)

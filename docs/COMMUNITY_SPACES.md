@@ -15,7 +15,7 @@ Community Spaces adds a school-wide social feed and per-course discussion feeds 
 
 ## Architecture
 
-### Database Tables (7 tables)
+### Database Tables (8 tables)
 
 | Table | Purpose |
 |-------|---------|
@@ -26,6 +26,7 @@ Community Spaces adds a school-wide social feed and per-course discussion feeds 
 | `community_poll_votes` | One vote per user per poll (unique constraint) |
 | `community_user_mutes` | Admin-managed mutes with optional expiration |
 | `community_flags` | Content reports with pending/reviewed/dismissed workflow |
+| `community_user_blocks` | A member hides another member's posts and comments from themselves. Global (no `tenant_id`), private to the blocker |
 
 ### Migrations
 
@@ -33,6 +34,7 @@ Community Spaces adds a school-wide social feed and per-course discussion feeds 
 supabase/migrations/20260314200000_create_community_tables.sql     # Tables, indexes, triggers, RLS, storage
 supabase/migrations/20260314210000_community_security_fixes.sql    # Hardened triggers, storage policies, flag dedup
 supabase/migrations/20260314220000_community_edge_case_fixes.sql   # Self-reply constraint, depth limit, enrollment RLS
+supabase/migrations/20260924160000_community_rules_in_db.sql       # #846: every write rule in RLS, vote_count trigger, blocks, hardened reports
 ```
 
 ### Triggers
@@ -44,17 +46,25 @@ supabase/migrations/20260314220000_community_edge_case_fixes.sql   # Self-reply 
 | `trg_community_comment_count` | `community_comments` | Increment/decrement `community_posts.comment_count` |
 | `trg_community_reaction_count` | `community_reactions` | Increment/decrement `community_posts.reaction_count` |
 | `trg_check_comment_depth` | `community_comments` | Reject comments nested deeper than 5 levels |
+| `trg_community_poll_vote_count` | `community_poll_votes` | Increment/decrement `community_poll_options.vote_count` — never write it by hand |
 
 ### RLS Policies
 
 All tables have RLS enabled with tenant-scoped policies using `get_tenant_id()`, `get_tenant_role()`, and `auth.uid()`.
 
+**The database is the authority (#846).** The native app writes posts, comments, reactions, votes, reports and blocks straight through RLS, so every rule the web actions check is also a policy. The actions keep their checks for the friendly error message; they write with the service role, which bypasses RLS.
+
 **Key access rules:**
-- **Posts SELECT**: school-level visible to all tenant members; course posts require enrollment or teacher/admin role
-- **Posts INSERT**: authenticated + tenant match; students can't create `discussion_prompt` or `milestone` types
-- **Comments INSERT**: requires unlocked post + enrollment for course-scoped posts
-- **Reactions**: users can create/delete own reactions
-- **Mutes/Flags**: admin-only management; users can view own mute status and create flags
+- **Every write** (post, comment, reaction, vote) requires `community_can_write(tenant_id)`: the JWT tenant, a plan with `features.community`, and no active mute
+- **Posts SELECT**: school-level visible to all tenant members; course posts require enrollment or teacher/admin role. A post by an author the viewer blocked is hidden (restrictive policy; teachers and admins are exempt)
+- **Posts INSERT**: author = caller; never pinned, locked, hidden or with non-zero counters. Students: only `standard` / `poll` (polls only if `community_student_polls` is on), never graded or milestone. School feed needs `community_student_posts_school_feed` on for students; a course post needs a course of this tenant and `has_course_access` (staff always). A lesson must belong to the course
+- **Posts / comments UPDATE**: authors edit text only (column grants: `title, content, media_urls, updated_at` / `content, updated_at`). Moderation columns and counters belong to the admin actions and triggers
+- **Comments INSERT**: post in the tenant, not hidden, not locked, reachable course; a reply's parent is a visible comment on the same post
+- **Reactions**: on visible content only; users delete their own
+- **Poll votes**: one per poll, on an option of that poll. **Poll options**: staff or the poll's author, `vote_count = 0`
+- **Flags (reports)**: filed `pending`, about a post or comment (exactly one) in the reporter's tenant; allowed while muted. Reviewing is service-role only (`reviewFlag`)
+- **Blocks**: the blocker inserts / deletes / reads their own rows; the blocked member cannot see them
+- **Mutes**: admin-only management; users can view own mute status
 
 ### Storage
 
@@ -147,6 +157,8 @@ Keys added under `community` namespace in `messages/en.json` and `messages/es.js
 | React/vote while muted | Blocked |
 | Post/comment while muted | Blocked |
 | Flag content while muted | Allowed (can report harassment) |
+| Block a member | Students and members only — staff hide content instead. Their posts and comments disappear for the blocker (RLS + `getBlockedAuthorIds` on the service-role feeds) |
+| Post/comment/react/vote when the plan has no community | Blocked (RLS) |
 | Pin/lock/hide post | Admin only (`verifyAdminAccess()`) |
 | Mute user | Admin only, can't self-mute, expiration must be future |
 | Cross-tenant operations | Blocked by explicit `tenant_id` check on every mutation |
@@ -160,6 +172,8 @@ Keys added under `community` namespace in `messages/en.json` and `messages/es.js
 | `idx_community_flags_unique_report_post` | One pending flag per user per post |
 | `idx_community_flags_unique_report_comment` | One pending flag per user per comment |
 | `community_poll_votes_one_per_user` | One vote per user per poll |
+| `community_flags_one_target` CHECK | A report names exactly one of post_id/comment_id |
+| `community_user_blocks_not_self` CHECK | Nobody blocks themselves |
 | `reaction_target_check` CHECK | Exactly one of post_id/comment_id must be set |
 | Unique reaction indexes | One reaction type per user per target |
 
