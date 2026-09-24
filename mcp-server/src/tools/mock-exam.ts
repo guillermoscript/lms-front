@@ -2,20 +2,21 @@ import { z } from "zod";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import type { ExamAnswerKeyRow } from "../exam-grading-secrets.js";
 
 /**
  * Mock-exam source tool (Epic #348 Phase 2, issue #364). Feeds the
  * `mock-exam` prompt real misses from a student's OWN submitted exams so the
  * host can author a fresh variation exam and re-test them.
  *
- * Hard guardrail: this exposes grading-sensitive fields (correct answers,
- * rubrics, keyword lists) that are normally withheld from students — that is
- * only safe here because the student has ALREADY submitted and seen the
- * results for these specific questions. The carve-out must be enforced by the
- * QUERY (starting from the caller's own `exam_submissions` rows and joining
- * outward), never merely by prompt wording, because `exam_questions` /
- * `exam_question_scores` / `question_options` have no tenant_id and their RLS
- * SELECT policies are `USING (true)` for any authenticated user.
+ * Hard guardrail: the query starts from the caller's own `exam_submissions`
+ * rows and joins outward, because `exam_questions` / `exam_question_scores` /
+ * `question_options` have no tenant_id.
+ *
+ * The answer key lives in staff-only `exam_grading_secrets` (#840). A student
+ * gets only the right answer (`correct_answer`, option flags), only for their
+ * own GRADED submission, via the `get_exam_answer_key` RPC. Rubrics, AI
+ * criteria and keyword lists are never available to students.
  */
 
 const MISS_RATIO_THRESHOLD = 0.7;
@@ -39,10 +40,6 @@ interface QuestionEmbed {
   question_text: string;
   question_type: string;
   points: number | null;
-  correct_answer: string | null;
-  grading_rubric: string | null;
-  ai_grading_criteria: string | null;
-  expected_keywords: string[] | null;
 }
 
 interface ScoreRow {
@@ -62,7 +59,7 @@ export function registerMockExamTools(server: LmsServer) {
     {
       name: "lms_get_mock_exam_source",
       description:
-        "Fetch the caller's missed/weak questions from their OWN already-submitted exams, with rubrics and correct answers, so you can author a mock variation exam. ONLY covers exams the caller has actually submitted — an exam_id they never took returns an empty result, never its questions.",
+        "Fetch the caller's missed/weak questions from their OWN already-submitted exams, with the correct answers once the exam is graded, so you can author a mock variation exam. ONLY covers exams the caller has actually submitted — an exam_id they never took returns an empty result, never its questions.",
       schema: z.object({
         course_id: z
           .number()
@@ -145,7 +142,7 @@ export function registerMockExamTools(server: LmsServer) {
         const scoresRes = await supabase
           .from("exam_question_scores")
           .select(
-            "submission_id, question_id, student_answer, points_earned, points_possible, is_correct, ai_feedback, exam_questions(question_id, question_text, question_type, points, correct_answer, grading_rubric, ai_grading_criteria, expected_keywords)"
+            "submission_id, question_id, student_answer, points_earned, points_possible, is_correct, ai_feedback, exam_questions(question_id, question_text, question_type, points)"
           )
           .in("submission_id", submissionIds);
         if (scoresRes.error)
@@ -165,6 +162,22 @@ export function registerMockExamTools(server: LmsServer) {
           }
         );
 
+        // The key for the caller's own graded submissions (empty before
+        // grading). Only submissions that actually have misses are asked.
+        const keyByQuestion = new Map<number, ExamAnswerKeyRow>();
+        const missedSubmissionIds = Array.from(new Set(misses.map((m) => m.submission_id)));
+        const keyResults = await Promise.all(
+          missedSubmissionIds.map((id) =>
+            supabase.rpc("get_exam_answer_key", { p_submission_id: id })
+          )
+        );
+        for (const res of keyResults) {
+          if (res.error)
+            return errorResult(`Loading answer key: ${res.error.message}`);
+          for (const row of (res.data ?? []) as ExamAnswerKeyRow[])
+            keyByQuestion.set(row.question_id, row);
+        }
+
         // Options are only needed for multiple_choice misses — question_options
         // has no tenant_id either, but the question_ids here are derived
         // exclusively from the join above, never from caller input.
@@ -182,7 +195,7 @@ export function registerMockExamTools(server: LmsServer) {
         if (mcQuestionIds.length > 0) {
           const optionsRes = await supabase
             .from("question_options")
-            .select("option_id, question_id, option_text, is_correct")
+            .select("option_id, question_id, option_text")
             .in("question_id", mcQuestionIds);
           if (optionsRes.error)
             return errorResult(
@@ -193,7 +206,9 @@ export function registerMockExamTools(server: LmsServer) {
             list.push({
               option_id: opt.option_id,
               option_text: opt.option_text,
-              is_correct: opt.is_correct,
+              is_correct: (
+                keyByQuestion.get(opt.question_id)?.correct_option_ids ?? []
+              ).includes(opt.option_id),
             });
             optionsByQuestion.set(opt.question_id, list);
           }
@@ -225,10 +240,8 @@ export function registerMockExamTools(server: LmsServer) {
                   question_text: q?.question_text ?? "",
                   question_type: q?.question_type ?? null,
                   points: q?.points ?? null,
-                  correct_answer: q?.correct_answer ?? null,
-                  grading_rubric: q?.grading_rubric ?? null,
-                  ai_grading_criteria: q?.ai_grading_criteria ?? null,
-                  expected_keywords: q?.expected_keywords ?? null,
+                  correct_answer:
+                    keyByQuestion.get(m.question_id)?.correct_answer ?? null,
                   options:
                     q?.question_type === "multiple_choice"
                       ? optionsByQuestion.get(m.question_id) ?? []

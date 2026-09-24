@@ -491,8 +491,8 @@ ${TUTOR_GUARDRAILS}`
 
 Steps:
 1. Call \`lms_get_mock_exam_source\`${exam_id ? ` (exam_id ${exam_id})` : course_id ? ` (course_id ${course_id})` : ""} — this ONLY returns questions from exams I've actually submitted. If it comes back with zero source exams or zero weak questions, tell me plainly (I have nothing missed there, or I never submitted that exam) and suggest \`lms_get_my_weak_spots\` or \`lms_my_exam_results\` instead — do not invent questions.
-2. From the weak/missed questions returned, author ${question_count ?? "up to 8"} FRESH variation questions — same underlying concept and difficulty as each source question, but never reuse its exact wording verbatim. Use each question's \`grading_rubric\`, \`ai_grading_criteria\`, and \`expected_keywords\` to keep variations testing the same thing; for multiple_choice, write new distractors around the same correct concept.
-3. Render the closed-type variations (multiple_choice, true_false, fill_blank, match, order) as one \`lms_practice_quiz\`; deliver any free_text variations in chat and grade them yourself afterward against the source question's rubric/criteria/keywords.
+2. From the weak/missed questions returned, author ${question_count ?? "up to 8"} FRESH variation questions — same underlying concept and difficulty as each source question, but never reuse its exact wording verbatim. Use each question's \`correct_answer\` (and correct options) plus my answer and feedback to keep variations testing the same thing; for multiple_choice, write new distractors around the same correct concept.
+3. Render the closed-type variations (multiple_choice, true_false, fill_blank, match, order) as one \`lms_practice_quiz\`; deliver any free_text variations in chat and grade them yourself afterward against the source question's correct answer and the concept it tests.
 4. Wait for my answers. Closed types grade themselves in the widget; grade free_text answers yourself.
 5. Record every attempt with \`lms_record_practice_attempt\`, setting \`topic: 'mock-exam:<exam_id>'\` for the relevant source exam(s) so this drill links back to the real exam it mocks.
 6. Compute my overall mock-exam score and compare it to the original score(s) from \`lms_get_mock_exam_source\` (the \`score\` field per source exam). Tell me plainly: which previously-missed concepts I've now fixed, which are still shaky, and whether I look ready to retake the real thing.
@@ -500,7 +500,7 @@ Steps:
 
 This is practice — my real exam score and submission are never touched, only \`practice_attempts\`.
 
-The source questions' \`correct_answer\`, \`grading_rubric\`, \`ai_grading_criteria\`, and \`expected_keywords\` are for authoring variations and grading my answers ONLY — never paste them into chat or confirm a variation's answer before I've attempted it.
+The source questions' \`correct_answer\` and option flags (present only once the real exam is graded) are for authoring variations and grading my answers ONLY — never paste them into chat or confirm a variation's answer before I've attempted it.
 
 ${TUTOR_GUARDRAILS}`
       )

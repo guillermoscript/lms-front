@@ -216,19 +216,23 @@ test.beforeAll(async () => {
         { question_id: q4.question_id, option_text: 'True', is_correct: true },
         { question_id: q4.question_id, option_text: 'False', is_correct: false },
       ])
-      .select('option_id, question_id, option_text, is_correct'),
+      .select('option_id, question_id, option_text'),
     'seed question options'
   )
+  // is_correct reads NULL since #840 (the key is in exam_grading_secrets);
+  // the seed above is the source of truth.
+  const CORRECT_TEXTS = new Set(['def', 'tuple', 'True'])
+  const isCorrect = (o: { option_text: string }) => CORRECT_TEXTS.has(o.option_text)
   mcRight = {
     question_id: q1.question_id,
     text: q1.question_text,
-    correctOptionId: options.find((o) => o.question_id === q1.question_id && o.is_correct)!.option_id,
+    correctOptionId: options.find((o) => o.question_id === q1.question_id && isCorrect(o))!.option_id,
   }
   mcWrong = {
     question_id: q2.question_id,
     text: q2.question_text,
-    wrongOptionId: options.find((o) => o.question_id === q2.question_id && !o.is_correct)!.option_id,
-    correctOptionText: options.find((o) => o.question_id === q2.question_id && o.is_correct)!.option_text,
+    wrongOptionId: options.find((o) => o.question_id === q2.question_id && !isCorrect(o))!.option_id,
+    correctOptionText: options.find((o) => o.question_id === q2.question_id && isCorrect(o))!.option_text,
   }
   freeText = { question_id: q3.question_id, text: q3.question_text }
 

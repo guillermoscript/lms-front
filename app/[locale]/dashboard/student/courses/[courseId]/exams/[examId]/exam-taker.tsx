@@ -149,7 +149,6 @@ export function ExamTaker({
         const gradingResult = await gradeExamWithAI({
           examId,
           submissionId: submission.submission_id,
-          answers,
         })
         if (!gradingResult.success) {
           console.error('AI grading returned error:', gradingResult.error)

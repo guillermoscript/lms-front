@@ -202,12 +202,14 @@ test.beforeAll(async () => {
         { question_id: mc.question_id, option_text: 'Two', is_correct: true },
         { question_id: mc.question_id, option_text: 'Ten', is_correct: false },
       ])
-      .select('option_id, question_id, is_correct'),
+      .select('option_id, question_id, option_text'),
     'seed question options'
   )
+  // is_correct reads NULL since #840 (the key lives in exam_grading_secrets),
+  // so the right option is found by its text.
   correctAnswers = {
     [tf.question_id]: 'true',
-    [mc.question_id]: String(options.find((o) => o.question_id === mc.question_id && o.is_correct)!.option_id),
+    [mc.question_id]: String(options.find((o) => o.question_id === mc.question_id && o.option_text === 'Two')!.option_id),
   }
 
   // A $0 product is what makes the public page say "Enroll for Free" —
