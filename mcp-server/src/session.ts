@@ -82,7 +82,8 @@ export class LmsSession {
     private readonly client: SupabaseClient,
     private readonly userId: string,
     private readonly tenantId: string,
-    private readonly tenantRole: string
+    private readonly tenantRole: string,
+    private readonly accessToken: string
   ) {}
 
   /**
@@ -122,7 +123,8 @@ export class LmsSession {
       createUserClient(auth.accessToken),
       auth.userId,
       tenantId,
-      tenantRole
+      tenantRole,
+      auth.accessToken
     );
   }
 
@@ -144,6 +146,14 @@ export class LmsSession {
 
   getTenantId(): string {
     return this.tenantId;
+  }
+
+  /**
+   * The caller's Supabase access token — for forwarding to LMS app routes
+   * that authenticate the same user (e.g. the platform grader, #843).
+   */
+  getAccessToken(): string {
+    return this.accessToken;
   }
 
   // --- Student access guard --------------------------------------------------

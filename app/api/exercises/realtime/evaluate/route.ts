@@ -2,6 +2,7 @@ import { generateText, Output } from 'ai'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { AI_MODELS } from '@/lib/ai/config'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -171,13 +172,8 @@ export async function POST(req: Request) {
     })
 
     if (passed) {
-      // exercise_completions has NO tenant_id column — sending it 400s the insert.
-      await adminClient
-        .from('exercise_completions')
-        .insert({ exercise_id: exerciseId, user_id: user.id, completed_by: user.id, score })
-        .select('id')
-        .single()
-      // unique index (exercise_id, user_id) — an error on re-pass is expected
+      const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score })
+      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
     }
 
     await track(

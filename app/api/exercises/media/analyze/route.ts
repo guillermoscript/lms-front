@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { runSpeechPipeline } from '@/lib/speech/pipeline'
 import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
 import { getPipeline } from '@/lib/speech/registry'
@@ -170,14 +171,12 @@ export async function POST(req: Request) {
 
     // 12. Record exercise completion only if score meets passing threshold
     if (passed) {
-      // exercise_completions has NO tenant_id column — sending it 400s the insert.
-      await adminClient.from('exercise_completions').insert({
-        exercise_id: submission.exercise_id,
-        user_id: user.id,
-        completed_by: user.id,
+      const completion = await recordExerciseCompletion(adminClient, {
+        exerciseId: submission.exercise_id,
+        userId: user.id,
         score: evaluation.score,
-      }).select('id').single()
-      // unique index (exercise_id, user_id) prevents duplicates
+      })
+      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
     }
 
     return Response.json({ evaluation, passed, passingScore })

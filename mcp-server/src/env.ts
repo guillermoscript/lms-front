@@ -60,6 +60,45 @@ export function getPlatformDomain(): string | undefined {
 }
 
 /**
+ * Origin of the LMS Next.js app (e.g. `https://lmsplatform.com`, or
+ * `http://lvh.me:3000` locally), used to call app routes that must run with
+ * the service role — today `POST /api/exercises/evaluate`, the platform grader
+ * (#843). Resolution order:
+ *
+ *   1. `LMS_APP_URL` (explicit).
+ *   2. `MCP_URL` / `MCP_SERVER_URL` when it is the app's proxied `/api/mcp`
+ *      base — the app origin is that URL minus the suffix.
+ *   3. `getPlatformDomain()` — `http://` for lvh.me/localhost/127.*, else
+ *      `https://`.
+ *
+ * Undefined when none is set; callers must degrade (tell the student to use
+ * the app) rather than guess.
+ */
+export function getAppOrigin(): string | undefined {
+  const strip = (u: string) => u.trim().replace(/\/+$/, "");
+
+  const explicit = process.env.LMS_APP_URL;
+  if (explicit && strip(explicit)) return strip(explicit);
+
+  for (const raw of [process.env.MCP_URL, process.env.MCP_SERVER_URL]) {
+    if (!raw) continue;
+    const u = strip(raw);
+    if (u.endsWith("/api/mcp")) {
+      const origin = strip(u.slice(0, -"/api/mcp".length));
+      if (origin) return origin;
+    }
+  }
+
+  const domain = getPlatformDomain();
+  if (domain) {
+    const local = /^(lvh\.me|localhost|127\.)/.test(domain);
+    return `${local ? "http" : "https"}://${domain}`;
+  }
+
+  return undefined;
+}
+
+/**
  * Legacy HS256 JWT signing secret for `oauthSupabaseProvider`.
  *
  * mcp-use v2 always verifies access tokens: ES256 tokens against the project

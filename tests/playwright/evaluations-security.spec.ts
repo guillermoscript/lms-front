@@ -11,7 +11,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsTeacher, loginAsTenantStudent } from './utils/auth'
-import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
+import { ACCOUNTS, BASE, TENANT_BASE, LOCALE } from './utils/constants'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -335,7 +335,73 @@ test.describe('Exercise page tenant isolation', () => {
 })
 
 /* ================================================================== */
-/*  DB-Level: exercise_completions                                     */
+/*  Exercise results are server-written (#843)                         */
+/* ================================================================== */
+test.describe('exercise results are server-written (#843)', () => {
+  async function studentClient() {
+    const client = createSupabaseClient(
+      supabaseUrl,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    const { error } = await client.auth.signInWithPassword({
+      email: ACCOUNTS.student.email,
+      password: ACCOUNTS.student.password,
+    })
+    expect(error).toBeNull()
+    return client
+  }
+
+  test('a student cannot write their own completion or evaluation', async () => {
+    const admin = getAdmin()
+    const client = await studentClient()
+
+    // A self-awarded 100: this is what "Run & Verify" used to write from the
+    // browser, and it fires the +50 XP trigger and counts toward certificates.
+    const completion = await client.from('exercise_completions').insert({
+      exercise_id: seededExerciseId,
+      user_id: STUDENT_ID,
+      completed_by: STUDENT_ID,
+      score: 100,
+    })
+    expect(completion.error?.message).toMatch(/permission denied/i)
+
+    // A self-declared pass: the lesson-checkpoint sync trusts the newest one.
+    const evaluation = await client.from('exercise_evaluations').insert({
+      exercise_id: seededExerciseId,
+      user_id: STUDENT_ID,
+      tenant_id: DEFAULT_TENANT,
+      engine_type: 'text',
+      score: 100,
+      passed: true,
+    })
+    expect(evaluation.error?.message).toMatch(/permission denied/i)
+
+    const { count } = await admin
+      .from('exercise_evaluations')
+      .select('id', { count: 'exact', head: true })
+      .eq('exercise_id', seededExerciseId)
+      .eq('user_id', STUDENT_ID)
+    expect(count).toBe(0)
+  })
+
+  test('the grading route answers a Bearer caller and grades nothing it cannot find', async () => {
+    const client = await studentClient()
+    const { data: { session } } = await client.auth.getSession()
+
+    // An unknown exercise is refused before any grading, so this needs no AI
+    // key. The Bearer path is the one the native app and the MCP tutor use.
+    const res = await fetch(`${BASE}/api/exercises/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session!.access_token}` },
+      body: JSON.stringify({ exerciseId: 999999999, content: 'x', score: 100, passed: true }),
+    })
+    expect(res.status).toBe(404)
+  })
+})
+
+/* ================================================================== */
+/*  DB-level: exercise_completions                                     */
 /* ================================================================== */
 test.describe.serial('DB-level: exercise_completions', () => {
   // Requires the seeded exercise to carry a lesson_id so handle_exercise_completion_xp can resolve a tenant.
