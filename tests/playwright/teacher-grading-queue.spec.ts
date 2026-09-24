@@ -222,19 +222,17 @@ test.beforeAll(async () => {
   // is_correct reads NULL since #840 (the key is in exam_grading_secrets);
   // the seed above is the source of truth.
   const CORRECT_TEXTS = new Set(['def', 'tuple', 'True'])
-  for (const o of options as Array<{ option_text: string; is_correct?: boolean }>) {
-    o.is_correct = CORRECT_TEXTS.has(o.option_text)
-  }
+  const isCorrect = (o: { option_text: string }) => CORRECT_TEXTS.has(o.option_text)
   mcRight = {
     question_id: q1.question_id,
     text: q1.question_text,
-    correctOptionId: options.find((o) => o.question_id === q1.question_id && o.is_correct)!.option_id,
+    correctOptionId: options.find((o) => o.question_id === q1.question_id && isCorrect(o))!.option_id,
   }
   mcWrong = {
     question_id: q2.question_id,
     text: q2.question_text,
-    wrongOptionId: options.find((o) => o.question_id === q2.question_id && !o.is_correct)!.option_id,
-    correctOptionText: options.find((o) => o.question_id === q2.question_id && o.is_correct)!.option_text,
+    wrongOptionId: options.find((o) => o.question_id === q2.question_id && !isCorrect(o))!.option_id,
+    correctOptionText: options.find((o) => o.question_id === q2.question_id && isCorrect(o))!.option_text,
   }
   freeText = { question_id: q3.question_id, text: q3.question_text }
 
