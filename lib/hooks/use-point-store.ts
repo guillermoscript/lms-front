@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useTenant } from "@/components/tenant/tenant-provider";
 
 export interface StoreItem {
     id: string;
@@ -11,7 +12,7 @@ export interface StoreItem {
     price_coins: number;
     category: string;
     icon: string;
-    metadata: any;
+    metadata: Record<string, unknown> | null;
     is_available: boolean;
 }
 
@@ -19,18 +20,22 @@ export function usePointStore(options?: { onPurchase?: () => void }) {
     const [items, setItems] = useState<StoreItem[]>([]);
     const [loading, setLoading] = useState(false);
     const supabase = createClient();
+    const tenantId = useTenant()?.id;
 
     const fetchItems = async () => {
+        if (!tenantId) return;
         try {
             setLoading(true);
             const { data, error } = await supabase
                 .from("gamification_store_items")
                 .select("*")
+                // Global items (tenant_id NULL) + this school's, same as the RLS policy
+                .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
                 .eq("is_available", true);
 
             if (error) throw error;
             setItems(data || []);
-        } catch (err: any) {
+        } catch (err) {
             console.error(err);
         } finally {
             setLoading(false);
@@ -61,8 +66,8 @@ export function usePointStore(options?: { onPurchase?: () => void }) {
             } else {
                 return { success: false, error: result.error };
             }
-        } catch (err: any) {
-            return { success: false, error: err.message };
+        } catch (err) {
+            return { success: false, error: err instanceof Error ? err.message : String(err) };
         }
     };
 
