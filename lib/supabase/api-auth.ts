@@ -39,6 +39,34 @@ export async function getApiAuthContext(req: Request): Promise<ApiAuthContext | 
     return getBearerContext(bearerToken)
 }
 
+/**
+ * Resolve only WHO is calling, over cookie or `Authorization: Bearer` auth —
+ * no tenant. For routes whose job is to pick the tenant (`/api/tenant/switch`,
+ * #845): `getApiAuthContext` refuses a Bearer token with no `tenant_id` claim
+ * and zero or several memberships, which is exactly the caller that needs to
+ * choose a school. Returns null when unauthenticated (routes respond 401).
+ */
+export async function getApiUser(req: Request): Promise<User | null> {
+    const bearerToken = (req.headers.get('authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1]
+    const cookieStore = await cookies()
+    const hasSessionCookies = cookieStore.getAll().some((c) => c.name.startsWith('sb-'))
+
+    if (!bearerToken || hasSessionCookies) {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        return user ?? null
+    }
+
+    const authClient = createBearerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+    )
+    // Server-side verification of signature and expiry.
+    const { data, error } = await authClient.auth.getUser(bearerToken)
+    return error || !data?.user ? null : data.user
+}
+
 async function getBearerContext(token: string): Promise<ApiAuthContext | null> {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!
