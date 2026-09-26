@@ -6511,7 +6511,10 @@
       "submit": "Check my solution",
       "checking": "Checking…",
       "evaluationFailed": "Your solution couldn't be checked. Try again.",
-      "rateLimited": "Too many checks for now. Try again in an hour."
+      "rateLimited": "Too many checks for now. Try again in an hour.",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "saveFailed": "Couldn't save your code"
     },
     "filter": {
       "label": "Filter by exercise type",
