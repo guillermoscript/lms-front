@@ -2204,22 +2204,28 @@ export type Database = {
         Row: {
           created_at: string | null
           exercise_id: number
+          files: Json | null
           id: number
           submission_code: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
           exercise_id: number
+          files?: Json | null
           id?: number
           submission_code: string
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string | null
           exercise_id?: number
+          files?: Json | null
           id?: number
           submission_code?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [

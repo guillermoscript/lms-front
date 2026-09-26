@@ -6511,7 +6511,10 @@
       "submit": "Revisar mi solución",
       "checking": "Revisando…",
       "evaluationFailed": "No se pudo revisar tu solución. Inténtalo de nuevo.",
-      "rateLimited": "Demasiadas revisiones por ahora. Inténtalo en una hora."
+      "rateLimited": "Demasiadas revisiones por ahora. Inténtalo en una hora.",
+      "saving": "Guardando…",
+      "saved": "Guardado",
+      "saveFailed": "No se pudo guardar tu código"
     },
     "filter": {
       "label": "Filtrar por tipo de ejercicio",
