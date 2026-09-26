@@ -10,6 +10,8 @@ import { nanoid } from 'nanoid'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { getBlockedAuthorIds } from '@/lib/community/blocks'
+import { getFeedPage } from '@/lib/community/feed'
+import { parsePostMedia } from '@/lib/community/media'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
@@ -20,13 +22,6 @@ type CommentRow = {
   author_id: string
   parent_comment_id: string | null
   is_hidden: boolean
-}
-type PollOptionRow = {
-  id: string
-  post_id: string
-  option_text: string
-  vote_count: number
-  sort_order: number
 }
 
 const MAX_CONTENT_LENGTH = 5000
@@ -56,6 +51,67 @@ async function getAuthenticatedUser() {
 }
 
 /**
+ * Where a new post or poll may go (#860). Mirrors `community_can_post_to` in
+ * RLS: a course of this tenant the caller can reach (staff always), a lesson
+ * of that course, and — for students — the school feed only while the school
+ * allows it. The service-role insert below bypasses RLS, so this is the gate.
+ */
+async function checkPostTarget(
+  tenantId: string,
+  userId: string,
+  role: string | null,
+  courseId: number | null,
+  lessonId: number | null
+): Promise<string | null> {
+  if (!role) return 'You are not a member of this school'
+  const adminClient = createAdminClient()
+
+  if (courseId === null) {
+    if (lessonId !== null) return 'A lesson needs a course'
+    if (role !== 'student') return null
+    const { data: setting } = await adminClient
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'community_student_posts_school_feed')
+      .maybeSingle()
+    return (setting?.setting_value as { enabled?: boolean } | null)?.enabled === false
+      ? 'Students are not allowed to post in the school feed'
+      : null
+  }
+
+  const { data: course } = await adminClient
+    .from('courses')
+    .select('course_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!course) return 'Course not found'
+
+  if (role !== 'teacher' && role !== 'admin' && !(await hasCourseAccess(adminClient, userId, courseId))) {
+    return 'You must be enrolled in this course to post'
+  }
+
+  if (lessonId !== null) {
+    const { data: lesson } = await adminClient
+      .from('lessons')
+      .select('id')
+      .eq('id', lessonId)
+      .eq('course_id', courseId)
+      .maybeSingle()
+    if (!lesson) return 'Lesson not found in this course'
+  }
+
+  return null
+}
+
+function parsePositiveId(raw: FormDataEntryValue | null): number | null | 'invalid' {
+  if (raw === null || raw === '') return null
+  const n = Number(raw)
+  return Number.isInteger(n) && n > 0 ? n : 'invalid'
+}
+
+/**
  * Create a post (standard or discussion_prompt)
  */
 export async function createPost(formData: FormData): Promise<ActionResult<{ id: string }>> {
@@ -72,8 +128,8 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
     const content = formData.get('content') as string
     const title = formData.get('title') as string | null
     const postType = (formData.get('post_type') as string) || 'standard'
-    const courseId = formData.get('course_id') as string | null
-    const lessonId = formData.get('lesson_id') as string | null
+    const courseId = parsePositiveId(formData.get('course_id'))
+    const lessonId = parsePositiveId(formData.get('lesson_id'))
     const isGraded = formData.get('is_graded') === 'true'
 
     if (!content || content.trim().length === 0) {
@@ -84,67 +140,30 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
       return { success: false, error: `Content must be under ${MAX_CONTENT_LENGTH} characters` }
     }
 
-    // Validate IDs are positive integers
-    if (courseId && (isNaN(parseInt(courseId)) || parseInt(courseId) <= 0)) {
-      return { success: false, error: 'Invalid course ID' }
-    }
-    if (lessonId && (isNaN(parseInt(lessonId)) || parseInt(lessonId) <= 0)) {
-      return { success: false, error: 'Invalid lesson ID' }
+    if (courseId === 'invalid') return { success: false, error: 'Invalid course ID' }
+    if (lessonId === 'invalid') return { success: false, error: 'Invalid lesson ID' }
+
+    // Polls go through createPoll (they need options); milestones are system posts.
+    if (postType !== 'standard' && postType !== 'discussion_prompt') {
+      return { success: false, error: 'Invalid post type' }
     }
 
-    // Students cannot create discussion_prompt or milestone posts
-    if (role === 'student' && (postType === 'discussion_prompt' || postType === 'milestone')) {
+    // Students cannot create discussion prompts or graded posts
+    if (role === 'student' && (postType === 'discussion_prompt' || isGraded)) {
       return { success: false, error: 'Only teachers and admins can create this type of post' }
     }
 
-    // Validate courseId belongs to tenant before insert
-    if (courseId) {
-      const verifyClient = createAdminClient()
-      const { data: course } = await verifyClient
-        .from('courses')
-        .select('course_id')
-        .eq('course_id', parseInt(courseId))
-        .eq('tenant_id', tenantId)
-        .single()
-      if (!course) {
-        return { success: false, error: 'Course not found' }
-      }
-
-      // Verify access for students posting to a course feed
-      if (role === 'student') {
-        if (!(await hasCourseAccess(verifyClient, userId, parseInt(courseId)))) {
-          return { success: false, error: 'You must be enrolled in this course to post' }
-        }
-      }
-
-      // If lessonId is provided, verify it belongs to the course
-      if (lessonId) {
-        const { data: lesson } = await verifyClient
-          .from('lessons')
-          .select('id')
-          .eq('id', parseInt(lessonId))
-          .eq('course_id', parseInt(courseId))
-          .single()
-        if (!lesson) {
-          return { success: false, error: 'Lesson not found in this course' }
-        }
-      }
+    const media = parsePostMedia(formData.get('media_urls') as string | null, {
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      tenantId,
+      userId,
+    })
+    if (media === null) {
+      return { success: false, error: 'Invalid attachments' }
     }
 
-    // For school-level posts (no course_id) by students, check tenant setting
-    if (!courseId && role === 'student') {
-      const adminClient = createAdminClient()
-      const { data: setting } = await adminClient
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('setting_key', 'community_student_posts_school_feed')
-        .single()
-
-      if (setting && setting.setting_value?.enabled === false) {
-        return { success: false, error: 'Students are not allowed to post in the school feed' }
-      }
-    }
+    const targetError = await checkPostTarget(tenantId, userId, role, courseId, lessonId)
+    if (targetError) return { success: false, error: targetError }
 
     // Use admin client to bypass RLS for insert (JWT tenant_id may not match header tenant_id)
     const adminClient = createAdminClient()
@@ -156,8 +175,9 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
         content: content.trim(),
         title: title?.trim() || null,
         post_type: postType,
-        course_id: courseId ? parseInt(courseId) : null,
-        lesson_id: lessonId ? parseInt(lessonId) : null,
+        media_urls: media,
+        course_id: courseId,
+        lesson_id: lessonId,
         is_graded: isGraded,
       })
       .select('id')
@@ -177,6 +197,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
         course_scoped: Boolean(courseId),
         lesson_scoped: Boolean(lessonId),
         is_graded: isGraded,
+        media_count: media.length,
         content_length: content.trim().length,
       },
       { userId, tenantId, role }
@@ -199,7 +220,8 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
 }
 
 /**
- * Update a post
+ * Edit your own post's text (#860). Authors only — moderators hide, they do
+ * not rewrite; that matches the author-only UPDATE policy the native app hits.
  */
 export async function updatePost(
   postId: string,
@@ -207,43 +229,49 @@ export async function updatePost(
   title?: string
 ): Promise<ActionResult> {
   try {
-    const { supabase, userId } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
-    const role = await getUserRole()
 
-    if (!content || content.trim().length === 0) {
-      return { success: false, error: 'Content is required' }
+    if (content.length > MAX_CONTENT_LENGTH) {
+      return { success: false, error: `Content must be under ${MAX_CONTENT_LENGTH} characters` }
     }
 
-    // Fetch the post to verify ownership or admin role
-    const adminClient = createAdminClient()
-    const { data: post, error: fetchError } = await adminClient
-      .from('community_posts')
-      .select('id, author_id, tenant_id')
-      .eq('id', postId)
-      .single()
+    if (await isUserMuted(tenantId, userId)) {
+      return { success: false, error: 'You are currently muted and cannot edit posts' }
+    }
 
-    if (fetchError || !post) {
+    const adminClient = createAdminClient()
+    const { data: post } = await adminClient
+      .from('community_posts')
+      .select('id, author_id, post_type, is_hidden')
+      .eq('id', postId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (!post || post.is_hidden) {
       return { success: false, error: 'Post not found' }
     }
-
-    if (post.tenant_id !== tenantId) {
-      return { success: false, error: 'Access denied' }
-    }
-
-    if (post.author_id !== userId && role !== 'admin' && role !== 'teacher') {
+    if (post.author_id !== userId) {
       return { success: false, error: 'You can only edit your own posts' }
     }
 
-    const { error } = await supabase
+    const trimmedTitle = title?.trim() || null
+    if (post.post_type === 'poll') {
+      if (!trimmedTitle) return { success: false, error: 'Title is required for polls' }
+    } else if (content.trim().length === 0) {
+      return { success: false, error: 'Content is required' }
+    }
+
+    const { error } = await adminClient
       .from('community_posts')
       .update({
         content: content.trim(),
-        title: title?.trim() || null,
+        title: trimmedTitle,
         updated_at: new Date().toISOString(),
       })
       .eq('id', postId)
       .eq('tenant_id', tenantId)
+      .eq('author_id', userId)
 
     if (error) throw error
 
@@ -571,15 +599,16 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
     const title = formData.get('title') as string
     const content = formData.get('content') as string
     const optionsRaw = formData.get('options') as string
-    const courseId = formData.get('course_id') as string | null
+    const courseId = parsePositiveId(formData.get('course_id'))
+
+    if (courseId === 'invalid') return { success: false, error: 'Invalid course ID' }
 
     if (!title || title.trim().length === 0) {
       return { success: false, error: 'Title is required for polls' }
     }
 
-    if (!content || content.trim().length === 0) {
-      return { success: false, error: 'Content is required' }
-    }
+    // The question is the title; the body is optional context.
+    const body = (content ?? '').trim()
 
     let options: string[]
     try {
@@ -607,6 +636,10 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
       return { success: false, error: 'Each poll option must be under 200 characters' }
     }
 
+    if (title.length > 200 || body.length > MAX_CONTENT_LENGTH) {
+      return { success: false, error: `Content must be under ${MAX_CONTENT_LENGTH} characters` }
+    }
+
     // Check student poll setting if applicable
     if (role === 'student') {
       const adminClient = createAdminClient()
@@ -615,12 +648,15 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
         .select('setting_value')
         .eq('tenant_id', tenantId)
         .eq('setting_key', 'community_student_polls')
-        .single()
+        .maybeSingle()
 
-      if (setting && setting.setting_value?.enabled === false) {
+      if ((setting?.setting_value as { enabled?: boolean } | null)?.enabled === false) {
         return { success: false, error: 'Students are not allowed to create polls' }
       }
     }
+
+    const targetError = await checkPostTarget(tenantId, userId, role, courseId, null)
+    if (targetError) return { success: false, error: targetError }
 
     // Use admin client for transaction-like behavior (insert post + options)
     const adminClient = createAdminClient()
@@ -632,9 +668,9 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
         tenant_id: tenantId,
         author_id: userId,
         title: title.trim(),
-        content: content.trim(),
+        content: body,
         post_type: 'poll',
-        course_id: courseId || null,
+        course_id: courseId,
       })
       .select('id')
       .single()
@@ -677,7 +713,7 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
         course_scoped: Boolean(courseId),
         lesson_scoped: false,
         option_count: options.length,
-        content_length: content.trim().length,
+        content_length: body.length,
       },
       { userId, tenantId, role }
     )
@@ -1037,97 +1073,47 @@ export async function getComments(
   }
 }
 
-const POSTS_PAGE_SIZE = 20
-
 /**
- * Load more posts for infinite scroll (uses admin client to bypass RLS tenant mismatch)
+ * Next page of a feed for infinite scroll (#860).
+ *
+ * Tenant and viewer come from the request, never the client, and a course
+ * feed re-checks access: `getFeedPage` reads with the service role, so this
+ * is the only thing between a caller and another school's or course's feed.
  */
 export async function loadMorePosts(
-  tenantId: string,
-  userId: string,
   scope: 'school' | 'course',
   cursor: string, // created_at of last post
   courseId?: number
 ): Promise<ActionResult<{ posts: CommunityPost[]; hasMore: boolean }>> {
   try {
-    const { userId: viewerId } = await getAuthenticatedUser()
-    const adminClient = createAdminClient()
-    const blockedIds = await getBlockedAuthorIds(viewerId)
+    const { userId } = await getAuthenticatedUser()
+    const tenantId = await getCurrentTenantId()
+    const role = await getUserRole()
+    if (!role) return { success: false, error: 'Access denied' }
 
-    let query = adminClient
-      .from('community_posts')
-      .select(`
-        id, author_id, post_type, title, content, media_urls,
-        is_pinned, is_locked, comment_count, reaction_count,
-        created_at, course_id, lesson_id, is_graded,
-        milestone_type, milestone_data
-      `)
-      .eq('tenant_id', tenantId)
-      .eq('is_hidden', false)
-      .eq('is_pinned', false)
-      .lt('created_at', cursor)
-      .order('created_at', { ascending: false })
-      .limit(POSTS_PAGE_SIZE)
-
-    if (blockedIds.length > 0) {
-      query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
+    if (Number.isNaN(Date.parse(cursor))) {
+      return { success: false, error: 'Invalid cursor' }
     }
 
-    if (scope === 'course' && courseId) {
-      query = query.eq('course_id', courseId)
-    } else if (scope === 'school') {
-      query = query.is('course_id', null)
+    if (scope === 'course') {
+      if (!courseId || !Number.isInteger(courseId) || courseId <= 0) {
+        return { success: false, error: 'Invalid course ID' }
+      }
+      const adminClient = createAdminClient()
+      const { data: course } = await adminClient
+        .from('courses')
+        .select('course_id')
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!course) return { success: false, error: 'Course not found' }
+      if (role === 'student' && !(await hasCourseAccess(adminClient, userId, courseId))) {
+        return { success: false, error: 'Access denied' }
+      }
     }
 
-    const { data: posts, error } = await query
-    if (error) throw error
-    if (!posts || posts.length === 0) {
-      return { success: true, data: { posts: [], hasMore: false } }
-    }
-
-    // Enrich with profiles, reactions, poll data
-    const authorIds = [...new Set(posts.map((p) => p.author_id))]
-    const postIds = posts.map((p) => p.id)
-
-    const [{ data: profiles }, { data: reactions }, { data: pollOptions }, { data: pollVotes }] =
-      await Promise.all([
-        adminClient.from('profiles').select('id, full_name, avatar_url').in('id', authorIds),
-        adminClient.from('community_reactions').select('post_id, reaction_type').eq('user_id', userId).in('post_id', postIds),
-        adminClient.from('community_poll_options').select('id, post_id, option_text, vote_count, sort_order').in('post_id', postIds),
-        adminClient.from('community_poll_votes').select('post_id, option_id').eq('user_id', userId).in('post_id', postIds),
-      ])
-
-    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
-    const reactionsMap = new Map<string, string[]>()
-    for (const r of reactions ?? []) {
-      const existing = reactionsMap.get(r.post_id) ?? []
-      existing.push(r.reaction_type)
-      reactionsMap.set(r.post_id, existing)
-    }
-    const pollOptionsMap = new Map<string, PollOptionRow[]>()
-    for (const o of pollOptions ?? []) {
-      const existing = pollOptionsMap.get(o.post_id) ?? []
-      existing.push(o)
-      pollOptionsMap.set(o.post_id, existing)
-    }
-    const pollVotesMap = new Map<string, string>()
-    for (const v of pollVotes ?? []) {
-      pollVotesMap.set(v.post_id, v.option_id)
-    }
-
-    const enrichedPosts = posts.map((post) => ({
-      ...post,
-      media_urls: post.media_urls || [],
-      author: profileMap.get(post.author_id) ?? { id: post.author_id, full_name: null, avatar_url: null },
-      user_reactions: reactionsMap.get(post.id) ?? [],
-      poll_options: pollOptionsMap.get(post.id) ?? undefined,
-      user_voted_option: pollVotesMap.get(post.id) ?? null,
-    }))
-
-    return {
-      success: true,
-      data: { posts: enrichedPosts, hasMore: posts.length >= POSTS_PAGE_SIZE },
-    }
+    const page = await getFeedPage({ tenantId, viewerId: userId, scope, courseId, cursor })
+    return { success: true, data: page }
   } catch (err) {
     console.error('Failed to load more posts:', err)
     return {

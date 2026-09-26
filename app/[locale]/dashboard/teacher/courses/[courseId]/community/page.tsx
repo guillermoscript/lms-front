@@ -4,6 +4,8 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
+import { getFeedPage } from '@/lib/community/feed'
+import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import Link from 'next/link'
 import { IconArrowLeft } from '@tabler/icons-react'
@@ -72,88 +74,10 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
     )
   }
 
-  // Fetch course-scoped posts and user reactions in parallel
-  const [{ data: posts }, { data: userReactions }] = await Promise.all([
-    supabase
-      .from('community_posts')
-      .select(`
-        id, author_id, post_type, title, content, media_urls,
-        is_pinned, is_locked, comment_count, reaction_count,
-        created_at, course_id, lesson_id, is_graded,
-        milestone_type, milestone_data
-      `)
-      .eq('tenant_id', tenantId)
-      .eq('course_id', numericCourseId)
-      .eq('is_hidden', false)
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(20),
-    supabase
-      .from('community_reactions')
-      .select('post_id, reaction_type')
-      .eq('user_id', userId)
-      .eq('tenant_id', tenantId),
+  const [feed, settings] = await Promise.all([
+    getFeedPage({ tenantId, viewerId: userId, scope: 'course', courseId: numericCourseId }),
+    getCommunitySettings(tenantId),
   ])
-
-  // Collect unique author IDs and fetch profiles
-  const authorIds = [...new Set((posts ?? []).map((p) => p.author_id).filter(Boolean))]
-  const { data: authorProfiles } = authorIds.length > 0
-    ? await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .in('id', authorIds)
-    : { data: [] }
-
-  const profileMap = new Map(
-    (authorProfiles ?? []).map((p) => [p.id, p])
-  )
-
-  const reactionsMap = new Map<string, string[]>()
-  for (const r of userReactions ?? []) {
-    const existing = reactionsMap.get(r.post_id) ?? []
-    existing.push(r.reaction_type)
-    reactionsMap.set(r.post_id, existing)
-  }
-
-  // For poll posts, fetch poll options and user votes
-  const pollPostIds = (posts ?? []).filter((p) => p.post_type === 'poll').map((p) => p.id)
-
-  let pollOptionsMap = new Map<string, Array<{ id: string; option_text: string; vote_count: number }>>()
-  let userPollVotes = new Map<string, string>()
-
-  if (pollPostIds.length > 0) {
-    const [{ data: pollOptions }, { data: pollVotes }] = await Promise.all([
-      supabase
-        .from('community_poll_options')
-        .select('id, post_id, option_text, vote_count')
-        .in('post_id', pollPostIds),
-      supabase
-        .from('community_poll_votes')
-        .select('post_id, option_id')
-        .eq('user_id', userId)
-        .in('post_id', pollPostIds),
-    ])
-
-    for (const opt of pollOptions ?? []) {
-      const existing = pollOptionsMap.get(opt.post_id) ?? []
-      existing.push({ id: opt.id, option_text: opt.option_text, vote_count: opt.vote_count })
-      pollOptionsMap.set(opt.post_id, existing)
-    }
-
-    for (const vote of pollVotes ?? []) {
-      userPollVotes.set(vote.post_id, vote.option_id)
-    }
-  }
-
-  // Build enriched post objects
-  const enrichedPosts = (posts ?? []).map((post) => ({
-    ...post,
-    media_urls: (post.media_urls as any) || [],
-    author: profileMap.get(post.author_id) ?? { id: post.author_id, full_name: null, avatar_url: null },
-    user_reactions: reactionsMap.get(post.id) ?? [],
-    poll_options: (pollOptionsMap.get(post.id) ?? undefined) as any,
-    user_voted_option: userPollVotes.get(post.id) ?? null,
-  }))
 
   return (
     <div className="min-h-screen bg-background">
@@ -174,11 +98,12 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
         <CommunityFeed
           scope="course"
           courseId={numericCourseId}
-          initialPosts={enrichedPosts}
-          initialHasMore={enrichedPosts.length >= 20}
+          initialPosts={feed.posts}
+          initialHasMore={feed.hasMore}
           userRole={role}
           userId={userId}
           tenantId={tenantId}
+          settings={settings}
         />
       </main>
     </div>

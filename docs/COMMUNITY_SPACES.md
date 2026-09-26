@@ -80,7 +80,7 @@ Bucket: `community-assets` (public read, 10MB limit)
 
 | File | Functions |
 |------|-----------|
-| `app/actions/community.ts` | `createPost`, `updatePost`, `deletePost`, `createComment`, `deleteComment`, `toggleReaction`, `createPoll`, `castVote`, `uploadCommunityAsset`, `createFlag`, `getComments`, `loadMorePosts` |
+| `app/actions/community.ts` | `createPost` (with attachments), `updatePost` (author only), `deletePost`, `createComment`, `deleteComment`, `toggleReaction`, `createPoll`, `castVote`, `uploadCommunityAsset`, `createFlag`, `getComments`, `loadMorePosts` |
 | `app/actions/admin/community.ts` | `pinPost`, `unpinPost`, `lockPost`, `unlockPost`, `hidePost`, `hideComment`, `muteUser`, `unmuteUser`, `reviewFlag`, `updateCommunitySettings` |
 
 ### Pages
@@ -100,7 +100,8 @@ Bucket: `community-assets` (public read, 10MB limit)
 |-----------|------|---------|
 | `community-feed.tsx` | Client | Main feed — filters, composer, post list |
 | `post-card.tsx` | Client | Single post — author, content, media, reactions, comments |
-| `post-composer.tsx` | Client | New post form — textarea, title, image upload, post type |
+| `post-composer.tsx` | Client | New post form — textarea, title, attachments, poll mode, discussion prompt |
+| `community-settings-dialog.tsx` | Client | Admin switches: student posts in school feed, student polls |
 | `comment-thread.tsx` | Client | Threaded comments — load via server action, reply forms |
 | `reaction-bar.tsx` | Client | 4 reaction buttons with optimistic updates |
 | `post-filters.tsx` | Client | Type filters (All/Posts/Discussions/Polls/Milestones) + role filters |
@@ -195,7 +196,13 @@ This ensures all RLS policies using `get_tenant_id()` return the correct tenant 
 
 **Mutations** (createPost, createComment, etc.) use server actions with `createAdminClient()` to ensure writes succeed regardless of JWT timing.
 
-**Infinite scroll** uses cursor-based pagination via the `loadMorePosts()` server action, triggered by IntersectionObserver when the user scrolls near the bottom.
+**Feed reads (#860)** all go through `getFeedPage()` in `lib/community/feed.ts` — the five pages and `loadMorePosts()` share one query + enrichment (author profile, author's `tenant_users.role` for the role filter/badge, the viewer's reactions and votes, poll options). It reads with the service role, so the caller owns access: `loadMorePosts(scope, cursor, courseId?)` takes NO tenant or user from the client and re-checks course access.
+
+**Infinite scroll** uses cursor-based pagination via `loadMorePosts()`, triggered by IntersectionObserver when the user scrolls near the bottom.
+
+**Attachments (#860)** are uploaded by `uploadCommunityAsset()`, then sent with the post as `media_urls`. `parsePostMedia()` (`lib/community/media.ts`) accepts at most 4, and only public URLs inside the poster's own `community-assets/{tenant}/{user}/` folder — never an arbitrary URL.
+
+**School switches (#860)**: `getCommunitySettings()` (`lib/community/settings.ts`) reads `community_student_posts_school_feed` / `community_student_polls` (missing row = ON, same as `community_setting_on()` in RLS). Admins toggle them from the **Settings** dialog on `/dashboard/admin/community`; the composer hides what the school has turned off.
 
 **Post creation** triggers `router.refresh()` which causes a server re-render with fresh data, ensuring new posts appear immediately.
 
@@ -293,8 +300,6 @@ export async function loadMorePosts(
 
 - **No real-time updates** — feed refreshes via `router.refresh()`, not WebSocket/Supabase Realtime
 - **No rich text rendering** — post content displayed as `whitespace-pre-wrap` plain text (no markdown)
-- **Role filter** — "By Teachers" / "By Students" filter UI exists but is not yet functional (author role not stored on posts)
-- **Media URLs not attached to posts** — file upload works but URLs must be manually referenced in content
 
 ## Future Phases
 
@@ -302,5 +307,4 @@ Per the implementation plan, these features are planned but not yet implemented:
 
 - **Phase 3** — Milestone auto-generation triggers (course completion, certificate, level-up, streaks)
 - **Phase 4** — Gamification wiring (XP for posts/comments/reactions, daily caps, community achievements)
-- **Phase 5** — Admin settings tab integration in the settings page
 - **Phase 6** — Course highlights (pin community posts to course detail pages)

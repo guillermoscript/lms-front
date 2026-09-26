@@ -7005,7 +7005,10 @@
       "vote": "Vote",
       "voted": "You voted",
       "totalVotes": "{count, plural, one {# vote} other {# votes}}",
-      "results": "Results"
+      "results": "Results",
+      "badge": "Poll",
+      "optionPlaceholder": "Option {n}",
+      "detailsPlaceholder": "Add context (optional)"
     },
     "milestone": {
       "courseCompleted": "{name} completed the course {course}!",
@@ -7040,7 +7043,9 @@
       "studentPolls": "Allow student polls",
       "studentPollsDesc": "Students can create polls in the community",
       "milestonePosts": "Auto-generate milestone posts",
-      "milestonePostsDesc": "Automatically create celebration posts for achievements like course completions"
+      "milestonePostsDesc": "Automatically create celebration posts for achievements like course completions",
+      "open": "Settings",
+      "saved": "Setting saved"
     },
     "uploadImage": "Upload image",
     "uploading": "Uploading...",
@@ -7075,7 +7080,17 @@
     "upgrade": {
       "title": "Community is a premium feature",
       "description": "Upgrade to the Starter plan or higher to access the community feed."
-    }
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "postUpdated": "Post updated",
+    "removeAttachment": "Remove attachment",
+    "schoolFeedStaffOnly": "Only teachers and admins can post in the school feed. You can still react and comment.",
+    "roleBadge": {
+      "teacher": "Teacher",
+      "admin": "Admin"
+    },
+    "postActions": "Post actions"
   },
   "schoolLanding": {
     "tagline": "Learn with us. Enroll in courses and grow your skills.",
