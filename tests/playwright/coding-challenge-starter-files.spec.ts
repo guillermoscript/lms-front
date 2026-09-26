@@ -4,6 +4,9 @@
  * coding challenge opened with Sandpack's template instead of the teacher's
  * starter files.
  *
+ * #858 — nothing wrote exercise_code_student_submissions and the editor
+ * ignored it, so a student coming back saw the starter code again.
+ *
  * Seed: course 1001 (Default School), student@e2etest.com enrolled.
  */
 import { test, expect } from '@playwright/test'
@@ -27,7 +30,16 @@ function getAdmin() {
   )
 }
 
+const STUDENT_EMAIL = 'student@e2etest.com'
+const EDIT_MARKER = 'e2e858StudentEdit'
+const NATIVE_MARKER = 'e2e858NativeRow'
+
 let exerciseId: number
+let studentId: string
+
+async function clearSubmissions() {
+  await getAdmin().from('exercise_code_student_submissions').delete().eq('exercise_id', exerciseId)
+}
 
 test.beforeAll(async () => {
   const admin = getAdmin()
@@ -60,10 +72,18 @@ test.beforeAll(async () => {
     content: `export default function App() {\n  const ${MARKER} = 1\n  return null\n}\n`,
   })
   if (fileError) throw new Error(fileError.message)
+
+  const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const student = users?.users.find((u) => u.email === STUDENT_EMAIL)
+  if (!student) throw new Error(`${STUDENT_EMAIL} not seeded`)
+  studentId = student.id
 })
+
+test.beforeEach(clearSubmissions)
 
 test.afterAll(async () => {
   const admin = getAdmin()
+  await clearSubmissions()
   await admin.from('exercise_files').delete().eq('exercise_id', exerciseId)
   await admin.from('exercises').delete().eq('id', exerciseId)
 })
@@ -74,4 +94,46 @@ test('a coding challenge opens with the teacher’s starter files (#844)', async
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
 
   await expect(page.locator('.cm-content').filter({ hasText: MARKER })).toBeVisible({ timeout: 30_000 })
+})
+
+test('the student’s edits are saved and come back after a reload (#858)', async ({ page }) => {
+  test.setTimeout(120_000)
+  await loginAsStudent(page)
+  await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+
+  const editor = page.locator('.cm-content').filter({ hasText: MARKER })
+  await expect(editor).toBeVisible({ timeout: 30_000 })
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+End')
+  await page.keyboard.type(`\n// ${EDIT_MARKER}`)
+
+  await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible({ timeout: 15_000 })
+
+  const { data: rows } = await getAdmin()
+    .from('exercise_code_student_submissions')
+    .select('submission_code, files, user_id')
+    .eq('exercise_id', exerciseId)
+  expect(rows).toHaveLength(1)
+  expect(rows![0].user_id).toBe(studentId)
+  // Only the file the student touched, keyed by path; the primary file mirrors it for the native app.
+  expect(Object.keys(rows![0].files as Record<string, string>)).toEqual([FILE_PATH])
+  expect(rows![0].submission_code).toContain(EDIT_MARKER)
+
+  await page.reload()
+  await expect(page.locator('.cm-content').filter({ hasText: EDIT_MARKER })).toBeVisible({ timeout: 30_000 })
+})
+
+test('a row saved by the native app restores into the primary file (#858)', async ({ page }) => {
+  test.setTimeout(90_000)
+  // The native app writes only submission_code, for the active file.
+  const { error } = await getAdmin().from('exercise_code_student_submissions').insert({
+    exercise_id: exerciseId,
+    user_id: studentId,
+    submission_code: `export default function App() {\n  const ${NATIVE_MARKER} = 2\n  return null\n}\n`,
+  })
+  if (error) throw new Error(error.message)
+
+  await loginAsStudent(page)
+  await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+  await expect(page.locator('.cm-content').filter({ hasText: NATIVE_MARKER })).toBeVisible({ timeout: 30_000 })
 })

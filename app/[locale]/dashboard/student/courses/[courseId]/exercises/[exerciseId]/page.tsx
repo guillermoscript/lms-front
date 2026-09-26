@@ -167,10 +167,11 @@ export default async function ExercisePage({ params }: PageProps) {
             .eq('exercise_id', parseInt(exerciseId)),
         supabase
             .from('exercise_code_student_submissions')
-            .select('submission_code')
+            .select('id, submission_code, files')
             .eq('exercise_id', parseInt(exerciseId))
             .eq('user_id', userId)
-            .order('created_at', { ascending: false })
+            // The web autosaves into one row; the native app inserts. Newest code wins.
+            .order('updated_at', { ascending: false })
             .limit(1)
             .maybeSingle(),
     ])
@@ -371,7 +372,8 @@ export default async function ExercisePage({ params }: PageProps) {
                         files={files}
                         exerciseId={exercise.id}
                         isExerciseCompleted={isExerciseCompleted}
-                        userCode={lastSubmission?.submission_code}
+                        userId={userId}
+                        savedSubmission={lastSubmission}
                     />
 
                 </CodeExercise>
