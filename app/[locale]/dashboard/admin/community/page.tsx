@@ -122,7 +122,6 @@ export default async function AdminCommunityPage() {
           initialHasMore={feed.hasMore}
           userRole={role}
           userId={userId}
-          tenantId={tenantId}
           settings={settings}
         />
       </main>

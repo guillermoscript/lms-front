@@ -78,7 +78,6 @@ export default async function StudentCommunityPage() {
           initialHasMore={feed.hasMore}
           userRole={role}
           userId={userId}
-          tenantId={tenantId}
           settings={settings}
         />
       </main>

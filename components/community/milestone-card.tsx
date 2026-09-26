@@ -17,7 +17,7 @@ interface CommunityPost {
   lesson_id: number | null
   is_graded: boolean
   milestone_type: string | null
-  milestone_data: any
+  milestone_data: unknown
   author: { id: string; full_name: string | null; avatar_url: string | null }
   user_reactions: string[]
   poll_options?: { id: string; option_text: string; vote_count: number; sort_order: number }[]

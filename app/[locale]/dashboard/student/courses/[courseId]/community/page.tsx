@@ -101,7 +101,6 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
           initialHasMore={feed.hasMore}
           userRole={role as 'student' | 'teacher' | 'admin'}
           userId={userId}
-          tenantId={tenantId}
           settings={settings}
         />
       </main>

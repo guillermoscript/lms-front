@@ -43,7 +43,6 @@ interface CommunityFeedProps {
   initialHasMore: boolean
   userRole: 'student' | 'teacher' | 'admin'
   userId: string
-  tenantId: string
   mutedUntil?: string | null
   /** The school's student switches (#860); staff ignore them. */
   settings: CommunitySettings
@@ -56,7 +55,6 @@ export function CommunityFeed({
   initialHasMore = false,
   userRole,
   userId,
-  tenantId,
   mutedUntil,
   settings,
 }: CommunityFeedProps) {
@@ -192,7 +190,6 @@ export function CommunityFeed({
               post={post}
               userId={userId}
               userRole={userRole}
-              tenantId={tenantId}
             />
           ))}
 

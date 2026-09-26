@@ -281,7 +281,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
               onClick={togglePoll}
             >
               <IconChartBar size={12} />
-              {t('filters.polls')}
+              {t('poll.badge')}
             </Button>
           )}
           {canCreateDiscussion && (
@@ -304,7 +304,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
           size="sm"
           onClick={handleSubmit}
           disabled={submitting || uploading || !canSubmit}
-          className="gap-1"
+          className="ml-auto gap-1"
         >
           {submitting ? t('posting') : t('post')}
           <IconSend size={12} />

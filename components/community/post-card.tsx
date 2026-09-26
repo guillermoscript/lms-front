@@ -44,10 +44,9 @@ interface PostCardProps {
   post: CommunityPost
   userId: string
   userRole: string
-  tenantId: string
 }
 
-export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
+export function PostCard({ post, userId, userRole }: PostCardProps) {
   const t = useTranslations('community')
   const locale = useLocale()
   const [showComments, setShowComments] = useState(false)
@@ -352,7 +351,6 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
         <CommentThread
           postId={post.id}
           userId={userId}
-          tenantId={tenantId}
           isLocked={post.is_locked}
           userRole={userRole}
         />

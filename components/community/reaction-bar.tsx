@@ -1,5 +1,6 @@
 'use client'
 
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { IconThumbUp, IconBulb, IconMoodSmile, IconFlame } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
@@ -50,9 +51,12 @@ export function ReactionBar({
     }
 
     try {
-      await toggleReaction('post', postId, reactionType)
+      // An action returns its failure; only a network error throws.
+      const result = await toggleReaction('post', postId, reactionType)
+      if (!result.success) throw new Error(result.error)
       onReactionToggled?.()
-    } catch {
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
       // Revert on error
       if (hadReaction) {
         setOptimisticReactions((prev) => [...prev, reactionType])

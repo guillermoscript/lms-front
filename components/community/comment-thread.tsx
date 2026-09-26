@@ -49,12 +49,11 @@ interface Comment {
 interface CommentThreadProps {
   postId: string
   userId: string
-  tenantId: string
   isLocked: boolean
   userRole: string
 }
 
-export function CommentThread({ postId, userId, tenantId, isLocked, userRole }: CommentThreadProps) {
+export function CommentThread({ postId, userId, isLocked, userRole }: CommentThreadProps) {
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(true)
@@ -68,12 +67,12 @@ export function CommentThread({ postId, userId, tenantId, isLocked, userRole }: 
   useEffect(() => {
     loadComments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId, tenantId])
+  }, [postId])
 
   async function loadComments() {
     setLoading(true)
     try {
-      const result = await getComments(postId, tenantId)
+      const result = await getComments(postId)
       if (!result.success || !result.data) {
         setComments([])
         return

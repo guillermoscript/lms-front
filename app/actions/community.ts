@@ -105,6 +105,43 @@ async function checkPostTarget(
   return null
 }
 
+type ReachablePost = { id: string; course_id: number | null; post_type: string; is_locked: boolean }
+
+/**
+ * The post a comment, reaction, vote or comment read is about — only when the
+ * caller can see it (#860). Mirrors the posts SELECT policy: a member of THIS
+ * school, the post in this school and not hidden, and for a course post
+ * staff or a student with access. Every caller below reads or writes with the
+ * service role, so without this a post id from another school (or a course
+ * the student never bought) was enough. Returns an error message otherwise.
+ */
+async function resolveReachablePost(
+  postId: string,
+  tenantId: string,
+  userId: string,
+  role: string | null
+): Promise<ReachablePost | string> {
+  if (!role) return 'You are not a member of this school'
+
+  const adminClient = createAdminClient()
+  const { data: post } = await adminClient
+    .from('community_posts')
+    .select('id, course_id, post_type, is_locked, is_hidden')
+    .eq('id', postId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (!post || post.is_hidden) return 'Post not found'
+
+  if (post.course_id && role === 'student' && !(await hasCourseAccess(adminClient, userId, post.course_id))) {
+    return 'You must be enrolled in this course'
+  }
+
+  return { id: post.id, course_id: post.course_id, post_type: post.post_type, is_locked: post.is_locked }
+}
+
+const REACTION_TYPES = ['like', 'helpful', 'insightful', 'fire'] as const
+
 function parsePositiveId(raw: FormDataEntryValue | null): number | null | 'invalid' {
   if (raw === null || raw === '') return null
   const n = Number(raw)
@@ -359,48 +396,22 @@ export async function createComment(
       return { success: false, error: 'You are currently muted and cannot comment' }
     }
 
-    // Verify post exists, belongs to tenant, and is not locked
-    const adminClient = createAdminClient()
-    const { data: post, error: postError } = await adminClient
-      .from('community_posts')
-      .select('id, tenant_id, course_id, is_locked, is_hidden')
-      .eq('id', postId)
-      .single()
-
-    if (postError || !post) {
-      return { success: false, error: 'Post not found' }
-    }
-
-    if (post.tenant_id !== tenantId) {
-      return { success: false, error: 'Access denied' }
-    }
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
     if (post.is_locked) {
       return { success: false, error: 'This post is locked and does not accept new comments' }
     }
 
-    if (post.is_hidden) {
-      return { success: false, error: 'This post has been removed' }
-    }
-
-    // For course-scoped posts, verify access (students only)
-    if (post.course_id) {
-      const role = await getUserRole()
-      if (role === 'student') {
-        if (!(await hasCourseAccess(adminClient, userId, post.course_id))) {
-          return { success: false, error: 'You must be enrolled in this course to comment' }
-        }
-      }
-    }
-
     // If replying to a parent comment, verify it exists
     if (parentCommentId) {
-      const { data: parentComment } = await adminClient
+      const { data: parentComment } = await createAdminClient()
         .from('community_comments')
         .select('id, post_id')
         .eq('id', parentCommentId)
         .eq('post_id', postId)
-        .single()
+        .eq('is_hidden', false)
+        .maybeSingle()
 
       if (!parentComment) {
         return { success: false, error: 'Parent comment not found' }
@@ -506,12 +517,31 @@ export async function toggleReaction(
     const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
+    if (!REACTION_TYPES.includes(reactionType)) {
+      return { success: false, error: 'Invalid reaction' }
+    }
+
     // Muted users cannot react
     if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted' }
     }
 
     const adminClient = createAdminClient()
+
+    // The target must be visible to the caller, in this school.
+    let postId = targetId
+    if (targetType === 'comment') {
+      const { data: comment } = await adminClient
+        .from('community_comments')
+        .select('post_id, is_hidden')
+        .eq('id', targetId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!comment || comment.is_hidden) return { success: false, error: 'Comment not found' }
+      postId = comment.post_id
+    }
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
     // Check if reaction already exists
     let query = adminClient
@@ -749,23 +779,11 @@ export async function castVote(postId: string, optionId: string): Promise<Action
 
     const adminClient = createAdminClient()
 
-    // Verify the post is a poll and belongs to this tenant
-    const { data: post } = await adminClient
-      .from('community_posts')
-      .select('id, tenant_id, post_type, is_hidden')
-      .eq('id', postId)
-      .single()
-
-    if (!post || post.tenant_id !== tenantId) {
-      return { success: false, error: 'Poll not found' }
-    }
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
     if (post.post_type !== 'poll') {
       return { success: false, error: 'This post is not a poll' }
-    }
-
-    if (post.is_hidden) {
-      return { success: false, error: 'This poll has been removed' }
     }
 
     // Verify the option belongs to this post
@@ -1027,11 +1045,15 @@ export async function getBlockedMembers(): Promise<
  * Get comments for a post (uses admin client to bypass RLS tenant mismatch)
  */
 export async function getComments(
-  postId: string,
-  tenantId: string
+  postId: string
 ): Promise<ActionResult<{ comments: CommentRow[]; profiles: ProfileSummary[] }>> {
   try {
     const { userId } = await getAuthenticatedUser()
+    // Tenant from the request, never the client (#860).
+    const tenantId = await getCurrentTenantId()
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
+
     const adminClient = createAdminClient()
     const blockedIds = await getBlockedAuthorIds(userId)
 

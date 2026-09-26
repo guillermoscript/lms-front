@@ -102,7 +102,6 @@ export default async function TeacherCourseCommunityPage({ params }: PageProps) 
           initialHasMore={feed.hasMore}
           userRole={role}
           userId={userId}
-          tenantId={tenantId}
           settings={settings}
         />
       </main>
