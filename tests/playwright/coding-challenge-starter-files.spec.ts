@@ -137,3 +137,28 @@ test('a row saved by the native app restores into the primary file (#858)', asyn
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
   await expect(page.locator('.cm-content').filter({ hasText: NATIVE_MARKER })).toBeVisible({ timeout: 30_000 })
 })
+
+test('an edit made right before a reload is not lost (#858)', async ({ page }) => {
+  test.setTimeout(120_000)
+  await loginAsStudent(page)
+  await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+
+  const editor = page.locator('.cm-content').filter({ hasText: MARKER })
+  await expect(editor).toBeVisible({ timeout: 30_000 })
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+End')
+  await page.keyboard.type(`\n// ${EDIT_MARKER}Unload`)
+  // Well inside the autosave debounce: only the unload flush can save this.
+  await page.reload()
+
+  // The keepalive request can land after the reloaded page has rendered.
+  await expect
+    .poll(async () => {
+      const { data } = await getAdmin().from('exercise_code_student_submissions').select('files').eq('exercise_id', exerciseId)
+      return JSON.stringify(data)
+    }, { timeout: 10_000 })
+    .toContain(`${EDIT_MARKER}Unload`)
+
+  await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+  await expect(page.locator('.cm-content').filter({ hasText: `${EDIT_MARKER}Unload` })).toBeVisible({ timeout: 30_000 })
+})

@@ -160,15 +160,60 @@ function useCodeAutosave({
         return () => clearTimeout(timer);
     }, [sandpack.files, save]);
 
+    // The unload flush can't await supabase-js reading the session, so it keeps the token at hand.
+    const accessToken = useRef<string | null>(null);
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data }) => {
+            accessToken.current = data.session?.access_token ?? null;
+        });
+        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+            accessToken.current = session?.access_token ?? null;
+        });
+        return () => data.subscription.unsubscribe();
+    }, [supabase]);
+
+    /**
+     * Closing or reloading the tab aborts an ordinary request, and supabase-js
+     * awaits the session before it even sends one. So the last keystrokes go
+     * out synchronously, as a keepalive request the browser finishes on its own.
+     */
+    const flushOnUnload = useCallback(() => {
+        const { changed, code, key } = snapshot(latestFiles.current);
+        if (key === lastSavedKey.current) return;
+        const body = JSON.stringify(
+            rowId.current
+                ? { submission_code: code, files: changed }
+                : { submission_code: code, files: changed, exercise_id: exerciseId, user_id: userId }
+        );
+        // Browsers cap keepalive bodies at 64 KB; past that, try the ordinary save.
+        if (!accessToken.current || body.length > 60_000) {
+            void save();
+            return;
+        }
+        const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/exercise_code_student_submissions`;
+        void fetch(rowId.current ? `${base}?id=eq.${rowId.current}` : base, {
+            method: rowId.current ? "PATCH" : "POST",
+            keepalive: true,
+            headers: {
+                apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+                Authorization: `Bearer ${accessToken.current}`,
+                "Content-Type": "application/json",
+                Prefer: "return=minimal",
+            },
+            body,
+        }).catch(() => {});
+        lastSavedKey.current = key;
+    }, [snapshot, save, exerciseId, userId]);
+
     // Leaving before the debounce fires would drop the last keystrokes.
     useEffect(() => {
-        const flush = () => void save();
-        window.addEventListener("pagehide", flush);
+        window.addEventListener("pagehide", flushOnUnload);
         return () => {
-            window.removeEventListener("pagehide", flush);
-            flush();
+            window.removeEventListener("pagehide", flushOnUnload);
+            // In-app navigation: the page lives on, so the ordinary save completes.
+            void save();
         };
-    }, [save]);
+    }, [save, flushOnUnload]);
 
     return { save, status };
 }
