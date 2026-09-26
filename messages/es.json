@@ -7005,7 +7005,10 @@
       "vote": "Votar",
       "voted": "Votaste",
       "totalVotes": "{count, plural, one {# voto} other {# votos}}",
-      "results": "Resultados"
+      "results": "Resultados",
+      "badge": "Encuesta",
+      "optionPlaceholder": "Opción {n}",
+      "detailsPlaceholder": "Añade contexto (opcional)"
     },
     "milestone": {
       "courseCompleted": "¡{name} completó el curso {course}!",
@@ -7040,7 +7043,9 @@
       "studentPolls": "Permitir encuestas de estudiantes",
       "studentPollsDesc": "Los estudiantes pueden crear encuestas en la comunidad",
       "milestonePosts": "Generar publicaciones de logros automáticamente",
-      "milestonePostsDesc": "Crear automáticamente publicaciones de celebración para logros como completar cursos"
+      "milestonePostsDesc": "Crear automáticamente publicaciones de celebración para logros como completar cursos",
+      "open": "Ajustes",
+      "saved": "Ajuste guardado"
     },
     "uploadImage": "Subir imagen",
     "uploading": "Subiendo...",
@@ -7075,7 +7080,17 @@
     "upgrade": {
       "title": "La comunidad es una función premium",
       "description": "Mejora al plan Starter o superior para acceder al feed de comunidad."
-    }
+    },
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "postUpdated": "Publicación actualizada",
+    "removeAttachment": "Quitar adjunto",
+    "schoolFeedStaffOnly": "Solo profesores y administradores pueden publicar en el feed de la escuela. Puedes seguir reaccionando y comentando.",
+    "roleBadge": {
+      "teacher": "Profesor",
+      "admin": "Admin"
+    },
+    "postActions": "Acciones de la publicación"
   },
   "schoolLanding": {
     "tagline": "Aprende con nosotros. Inscríbete en cursos y desarrolla tus habilidades.",

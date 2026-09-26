@@ -420,7 +420,6 @@ export async function reviewFlag(
 export async function updateCommunitySettings(settings: {
   community_student_posts_school_feed?: boolean
   community_student_polls?: boolean
-  community_milestone_posts?: boolean
 }): Promise<ActionResult> {
   try {
     await verifyAdminAccess()

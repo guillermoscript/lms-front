@@ -22,13 +22,15 @@ import {
   IconBan,
   IconPhoto,
   IconLink,
+  IconPencil,
 } from '@tabler/icons-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { blockUser, deletePost } from '@/app/actions/community'
+import { blockUser, deletePost, updatePost } from '@/app/actions/community'
+import { Textarea } from '@/components/ui/textarea'
 import { ReactionBar } from './reaction-bar'
 import { CommentThread } from './comment-thread'
 import { ModerationToolbar } from './moderation-toolbar'
@@ -36,43 +38,24 @@ import { FlagDialog } from './flag-dialog'
 import { PollCard } from './poll-card'
 import { MilestoneCard } from './milestone-card'
 import { DiscussionPromptCard } from './discussion-prompt-card'
-
-interface CommunityPost {
-  id: string
-  author_id: string
-  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll'
-  title: string | null
-  content: string
-  media_urls: { url: string; type: 'image' | 'video' | 'file'; name: string }[]
-  is_pinned: boolean
-  is_locked: boolean
-  comment_count: number
-  reaction_count: number
-  created_at: string
-  course_id: number | null
-  lesson_id: number | null
-  is_graded: boolean
-  milestone_type: string | null
-  milestone_data: unknown
-  author: { id: string; full_name: string | null; avatar_url: string | null }
-  user_reactions: string[]
-  poll_options?: { id: string; option_text: string; vote_count: number; sort_order: number }[]
-  user_voted_option?: string | null
-}
+import type { CommunityPost } from './community-feed'
 
 interface PostCardProps {
   post: CommunityPost
   userId: string
   userRole: string
-  tenantId: string
 }
 
-export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
+export function PostCard({ post, userId, userRole }: PostCardProps) {
   const t = useTranslations('community')
   const locale = useLocale()
   const [showComments, setShowComments] = useState(false)
   const [showFlagDialog, setShowFlagDialog] = useState(false)
   const [isDeleted, setIsDeleted] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(post.title ?? '')
+  const [editContent, setEditContent] = useState(post.content)
+  const [saving, setSaving] = useState(false)
 
   const router = useRouter()
   const isOwn = userId === post.author_id
@@ -107,14 +90,42 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
     }
   }
 
+  function startEditing() {
+    setEditTitle(post.title ?? '')
+    setEditContent(post.content)
+    setIsEditing(true)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      const result = await updatePost(post.id, editContent, editTitle)
+      if (result.success) {
+        setIsEditing(false)
+        toast.success(t('postUpdated'))
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    } catch {
+      toast.error(t('errorPosting'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (isDeleted) return null
+
+  const isPoll = post.post_type === 'poll'
+  const canSave = isPoll ? editTitle.trim().length > 0 : editContent.trim().length > 0
+  const authorIsStaff = post.author.role === 'teacher' || post.author.role === 'admin'
 
   const postTypeBadge = () => {
     switch (post.post_type) {
       case 'discussion_prompt':
         return null // DiscussionPromptCard handles its own badge
       case 'poll':
-        return <Badge variant="secondary">{t('poll.title')}</Badge>
+        return <Badge variant="secondary">{t('poll.badge')}</Badge>
       case 'milestone':
         return null // MilestoneCard handles its own display
       default:
@@ -136,8 +147,13 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-sm truncate">
-                {post.author.full_name || 'User'}
+                {post.author.full_name || t('unknownUser')}
               </span>
+              {authorIsStaff && (
+                <Badge variant="secondary" className="text-[10px]">
+                  {t(post.author.role === 'admin' ? 'roleBadge.admin' : 'roleBadge.teacher')}
+                </Badge>
+              )}
               {post.is_pinned && (
                 <Badge variant="outline" className="gap-0.5 text-[10px]">
                   <IconPin size={8} />
@@ -161,13 +177,19 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
         {/* Actions menu */}
         <DropdownMenu>
           <DropdownMenuTrigger render={
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={t('postActions')} />
           }>
             <IconDots size={14} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {isOwn && (
               <>
+                {post.post_type !== 'milestone' && (
+                  <DropdownMenuItem onClick={startEditing}>
+                    <IconPencil size={12} />
+                    {t('editPost')}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={handleDelete}
@@ -194,7 +216,36 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
       </div>
 
       {/* Body */}
-      {post.post_type === 'discussion_prompt' ? (
+      {isEditing ? (
+        <div className="space-y-2">
+          {(isPoll || post.title !== null) && (
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder={isPoll ? t('poll.question') : t('addTitle')}
+              aria-label={isPoll ? t('poll.question') : t('addTitle')}
+              maxLength={200}
+              className="flex h-8 w-full rounded-md border border-input bg-input/20 px-3 text-sm font-medium outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
+            />
+          )}
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            aria-label={t('editPost')}
+            maxLength={5000}
+            className="min-h-[80px] resize-none"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} disabled={saving}>
+              {t('cancel')}
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={saving || !canSave}>
+              {saving ? t('saving') : t('save')}
+            </Button>
+          </div>
+        </div>
+      ) : post.post_type === 'discussion_prompt' ? (
         <DiscussionPromptCard post={post} />
       ) : post.post_type === 'milestone' ? (
         <MilestoneCard post={post} />
@@ -203,9 +254,11 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
           {post.title && (
             <h3 className="font-bold text-sm leading-tight">{post.title}</h3>
           )}
-          <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
-            {post.content}
-          </p>
+          {post.content && (
+            <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
+              {post.content}
+            </p>
+          )}
         </div>
       )}
 
@@ -298,7 +351,6 @@ export function PostCard({ post, userId, userRole, tenantId }: PostCardProps) {
         <CommentThread
           postId={post.id}
           userId={userId}
-          tenantId={tenantId}
           isLocked={post.is_locked}
           userRole={userRole}
         />

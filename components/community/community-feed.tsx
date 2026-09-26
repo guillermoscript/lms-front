@@ -10,6 +10,7 @@ import { PostFilters } from './post-filters'
 import { EmptyFeed } from './empty-feed'
 import { MutedBanner } from './muted-banner'
 import { PostSkeleton } from './post-skeleton'
+import type { CommunitySettings } from '@/lib/community/settings'
 
 export interface CommunityPost {
   id: string
@@ -27,8 +28,9 @@ export interface CommunityPost {
   lesson_id: number | null
   is_graded: boolean
   milestone_type: string | null
-  milestone_data: any
-  author: { id: string; full_name: string | null; avatar_url: string | null }
+  milestone_data: unknown
+  /** `role` is the author's role in THIS school, null when they left it. */
+  author: { id: string; full_name: string | null; avatar_url: string | null; role: string | null }
   user_reactions: string[]
   poll_options?: { id: string; option_text: string; vote_count: number; sort_order: number }[]
   user_voted_option?: string | null
@@ -41,8 +43,9 @@ interface CommunityFeedProps {
   initialHasMore: boolean
   userRole: 'student' | 'teacher' | 'admin'
   userId: string
-  tenantId: string
   mutedUntil?: string | null
+  /** The school's student switches (#860); staff ignore them. */
+  settings: CommunitySettings
 }
 
 export function CommunityFeed({
@@ -52,8 +55,8 @@ export function CommunityFeed({
   initialHasMore = false,
   userRole,
   userId,
-  tenantId,
   mutedUntil,
+  settings,
 }: CommunityFeedProps) {
   const t = useTranslations('community')
   const router = useRouter()
@@ -68,6 +71,9 @@ export function CommunityFeed({
   const observerRef = useRef<IntersectionObserver | null>(null)
 
   const isMuted = mutedUntil ? new Date(mutedUntil) > new Date() : false
+  const isStudent = userRole === 'student'
+  const canPost = !isStudent || scope === 'course' || settings.studentPostsSchoolFeed
+  const canCreatePoll = !isStudent || settings.studentPolls
 
   // All posts = server-rendered initial + client-loaded extras
   const allPosts = [...initialPosts, ...extraPosts]
@@ -90,13 +96,7 @@ export function CommunityFeed({
     }
 
     try {
-      const result = await loadMorePosts(
-        tenantId,
-        userId,
-        scope,
-        lastPost.created_at,
-        courseId
-      )
+      const result = await loadMorePosts(scope, lastPost.created_at, courseId)
 
       if (result.success && result.data) {
         setExtraPosts((prev) => [...prev, ...result.data!.posts])
@@ -109,7 +109,7 @@ export function CommunityFeed({
     } finally {
       setIsFetching(false)
     }
-  }, [isFetching, hasMore, allPosts, tenantId, userId, scope, courseId])
+  }, [isFetching, hasMore, allPosts, scope, courseId])
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -136,6 +136,8 @@ export function CommunityFeed({
   // Apply filters client-side
   const filteredPosts = allPosts.filter((p) => {
     if (activeType && p.post_type !== activeType) return false
+    if (activeRole === 'teacher' && p.author.role !== 'teacher' && p.author.role !== 'admin') return false
+    if (activeRole === 'student' && p.author.role !== 'student') return false
     return true
   })
 
@@ -150,10 +152,21 @@ export function CommunityFeed({
       {isMuted && <MutedBanner mutedUntil={mutedUntil} />}
 
       {/* Composer */}
-      {!isMuted && (
+      {!isMuted && canPost && (
         <div data-tour="community-composer">
-          <PostComposer scope={scope} courseId={courseId} userRole={userRole} onPostCreated={refreshFeed} />
+          <PostComposer
+            scope={scope}
+            courseId={courseId}
+            userRole={userRole}
+            canCreatePoll={canCreatePoll}
+            onPostCreated={refreshFeed}
+          />
         </div>
+      )}
+      {!isMuted && !canPost && (
+        <p className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          {t('schoolFeedStaffOnly')}
+        </p>
       )}
 
       {/* Filters */}
@@ -177,7 +190,6 @@ export function CommunityFeed({
               post={post}
               userId={userId}
               userRole={userRole}
-              tenantId={tenantId}
             />
           ))}
 
