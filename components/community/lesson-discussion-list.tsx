@@ -11,9 +11,10 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { IconCheck, IconLock } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { studentCourseFeedHref } from '@/lib/community/deep-link'
+import { cn } from '@/lib/utils'
 import {
   answerStateFromThread,
   createAnswerMemory,
@@ -176,16 +177,16 @@ function LessonPromptItem({
           <CollapsibleTrigger render={<Button variant="outline" className="h-10 px-4 text-sm" />}>
             {open ? t('hideAnswers') : prompt.is_locked ? t('readAnswers') : t('answer')}
           </CollapsibleTrigger>
-          <Button
-            variant="ghost"
-            className="h-10 px-4 text-sm"
-            nativeButton={false}
-            render={<Link href={feedHref} />}
+          {/* A real link styled as a button: `<Button nativeButton={false}>` would
+              announce navigation as a button. */}
+          <Link
+            href={feedHref}
+            className={cn(buttonVariants({ variant: 'ghost' }), 'h-10 px-4 text-sm')}
             // Starts with the visible text, so voice control still finds it (WCAG 2.5.3).
             aria-label={t('viewInCommunityLabel', { title: name })}
           >
             {t('viewInCommunity')}
-          </Button>
+          </Link>
         </div>
         <CollapsibleContent className="pt-4">
           <CommentThread
