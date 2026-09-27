@@ -13,6 +13,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
 import { ToursToggle } from '@/components/shared/tours-toggle'
+import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
 import { getMailerStatus } from '@/lib/email/status'
@@ -224,6 +225,8 @@ export default async function SettingsPage({
               <ToursToggle initialEnabled={areToursEnabled(uiState)} />
             </CardContent>
           </Card>
+
+          <DeleteAccountCard />
         </div>
       </main>
     </div>

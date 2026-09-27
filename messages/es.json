@@ -4875,6 +4875,31 @@
         "courses": "cursos",
         "students": "estudiantes"
       }
+    },
+    "deleteAccount": {
+      "title": "Eliminar cuenta",
+      "description": "Elimina para siempre tu cuenta y tus datos de todas las escuelas de esta plataforma.",
+      "button": "Eliminar cuenta…",
+      "dialogTitle": "¿Eliminar tu cuenta?",
+      "dialogDescription": "Esto elimina tu cuenta en toda la plataforma, no solo en esta escuela.",
+      "loading": "Revisando tu cuenta",
+      "loadError": "No pudimos revisar tu cuenta. Cierra esto e inténtalo de nuevo.",
+      "blockedTitle": "Todavía no puedes eliminar tu cuenta:",
+      "blockers": {
+        "soleAdmin": "Eres el único administrador de {school}. Nombra a otra persona administradora primero, para que la escuela no quede sin uno.",
+        "liveSubscription": "Tu suscripción {plan} sigue renovándose. Cancélala primero desde Facturación, para que no te vuelvan a cobrar.",
+        "superAdmin": "Eres operador de la plataforma. Otro operador tiene que quitarte ese rol primero."
+      },
+      "consequences": {
+        "removed": "Se eliminan tu perfil, progreso, entregas, certificados, publicaciones en la comunidad y chats.",
+        "kept": "Los registros de pago se quedan con la escuela para su contabilidad, sin tu nombre.",
+        "final": "Esto no se puede deshacer."
+      },
+      "confirmLabel": "Escribe {phrase} para confirmar",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar mi cuenta",
+      "mismatch": "No coincide. Escríbelo tal como aparece.",
+      "error": "No pudimos eliminar tu cuenta. Inténtalo de nuevo en un momento."
     }
   },
   "creators": {
@@ -7590,5 +7615,33 @@
     "burst": "Estás enviando mensajes muy rápido. Espera un momento e inténtalo de nuevo.",
     "daily": "Has alcanzado el límite de práctica de hoy. Inténtalo de nuevo mañana.",
     "monthly": "El presupuesto mensual de IA de tu escuela se agotó este mes. Pide a un administrador que mejore el plan."
+  },
+  "deleteAccountPage": {
+    "metaTitle": "Eliminar tu cuenta",
+    "metaDescription": "Cómo eliminar tu cuenta y qué pasa con tus datos.",
+    "deletedNotice": "Tu cuenta fue eliminada. Gracias por aprender con nosotros.",
+    "title": "Eliminar tu cuenta",
+    "intro": "Puedes eliminar tu cuenta de {appName} cuando quieras, desde la web o la app. Al eliminarla, sales de todas las escuelas a las que perteneces.",
+    "stepsTitle": "Cómo eliminarla",
+    "steps": {
+      "signIn": "Inicia sesión en tu escuela.",
+      "open": "Abre tu perfil (estudiantes) o Configuración (profesores y administradores).",
+      "confirm": "Elige “Eliminar cuenta”, escribe tu correo para confirmar y elimínala."
+    },
+    "app": "En la app móvil: Perfil → Eliminar cuenta.",
+    "cta": "Ir a mi configuración",
+    "removedTitle": "Qué se elimina",
+    "removed": "Tu acceso, perfil, progreso en los cursos, entregas de exámenes y ejercicios, certificados, XP y logros, publicaciones, comentarios y reacciones en la comunidad, chats con IA, notificaciones y archivos subidos. La eliminación es inmediata.",
+    "keptTitle": "Qué se conserva",
+    "kept": {
+      "payments": "Los registros de los pagos que hiciste se quedan con la escuela, sin tu nombre ni tu cuenta, porque las escuelas deben conservarlos por contabilidad e impuestos.",
+      "content": "Los cursos, lecciones y exámenes que creaste como profesor se quedan con la escuela, ya sin tu nombre."
+    },
+    "beforeTitle": "Antes de eliminarla",
+    "before": {
+      "subscription": "Cancela cualquier suscripción que siga renovándose, para que no te vuelvan a cobrar.",
+      "admin": "Si eres el único administrador de una escuela, nombra a otra persona administradora primero."
+    },
+    "final": "Eliminar tu cuenta no se puede deshacer. Para volver a aprender más adelante, crea una cuenta nueva."
   }
 }

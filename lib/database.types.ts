@@ -6863,6 +6863,13 @@ export type Database = {
       }
     }
     Functions: {
+      account_deletion_blockers: {
+        Args: { _user_id: string }
+        Returns: {
+          detail: string
+          reason: string
+        }[]
+      }
       apply_self_managed_platform_period: {
         Args: {
           _interval: string
@@ -7026,6 +7033,13 @@ export type Database = {
           current_activation_state: string
           current_signature: string
           observation_status: string
+        }[]
+      }
+      prepare_account_deletion: {
+        Args: { _user_id: string }
+        Returns: {
+          bucket_id: string
+          name: string
         }[]
       }
       promote_platform_subscription_switch: {

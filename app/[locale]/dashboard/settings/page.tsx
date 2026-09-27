@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ProfileForm } from '@/components/student/profile-form'
 import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
+import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -74,6 +75,8 @@ export default async function DashboardSettingsPage() {
         <Link href="/dashboard/teacher/api-tokens">
           <Button variant="outline">{t('manageTokens')}</Button>
         </Link>
+
+        <DeleteAccountCard />
       </div>
     </div>
   )

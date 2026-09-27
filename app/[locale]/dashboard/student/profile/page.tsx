@@ -25,6 +25,7 @@ import { StreakCalendar } from '@/components/gamification/streak-calendar'
 import { ProfileGamificationStats } from '@/components/gamification/profile-stats'
 import { LeagueOptOutToggle } from '@/components/gamification/league-opt-out-toggle'
 import { ToursToggle } from '@/components/shared/tours-toggle'
+import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import Link from 'next/link'
 import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
@@ -418,6 +419,8 @@ export default async function ProfilePage() {
                                 <ToursToggle initialEnabled={areToursEnabled(uiState)} />
                             </CardContent>
                         </Card>
+
+                        <DeleteAccountCard />
 
                         {/* ── Purchased Courses ──────────────────────── */}
                         <Card className="border border-border overflow-hidden">
