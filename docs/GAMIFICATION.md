@@ -33,6 +33,7 @@ The gamification system motivates students through:
 - **Tenant-scoped**: All gamification data (XP, levels, streaks, achievements, store, leaderboard) is scoped per tenant. A user has separate progression per school.
 - **Plan-gated features**: Advanced features are locked behind plan tiers (see [Plan-Gated Features](#plan-gated-features) below)
 - **Automatic XP**: All XP is awarded via database triggers — no client-side logic needed
+- **Community milestones (#871)**: reaching level 5+ or a 7/30/100-day streak posts once to the school's community feed (a trigger on `gamification_profiles`, see `docs/COMMUNITY_SPACES.md`). Never award XP for milestone posts — post → XP → level-up → post would loop
 - **Lazy profile creation**: Gamification profiles are created on first XP award via UPSERT in `award_xp()`, not on user signup
 - **SECURITY DEFINER**: All write operations go through `SECURITY DEFINER` functions; RLS handles reads
 - **Lazy loading**: The dashboard header only fetches the summary; leaderboard/achievements/store load on demand

@@ -69,6 +69,7 @@ For the exact current list, don't trust this page — ask the database (see [Ver
 | `data_person` | JSONB | |
 | `onboarding_completed` | BOOLEAN | |
 | `deactivated_at` | TIMESTAMPTZ | |
+| `share_milestones` | BOOLEAN NOT NULL DEFAULT true | #871: false = no new automatic community milestone posts about this person, in any school. Own-row UPDATE policy |
 | `created_at` | TIMESTAMPTZ | |
 
 **No `email` column** and **no `updated_at`**. Emails come from `createAdminClient().auth.admin.getUserById()`.
