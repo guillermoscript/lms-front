@@ -489,17 +489,13 @@ test('no notification across a block, in either direction', async () => {
   expect((await alice.from('community_user_blocks').delete().eq('blocker_id', ALICE_ID).eq('blocked_id', bId)).error).toBeNull()
 
   expect((await b.from('community_user_blocks').insert({ blocker_id: bId, blocked_id: ALICE_ID })).error).toBeNull()
-  // RLS hides Alice's post from B now, so B cannot comment on it through RLS
-  // (#846). The web writes comments with the service role, so the trigger must
-  // still hold on that path.
-  const viaRls = await b
+  // RLS hides Alice's post (and its comments) from B now (#846), so the insert
+  // cannot read its own row back — `commentAs`'s `.select()` would 42501. Write
+  // it without the read-back.
+  const { error: insertError } = await b
     .from('community_comments')
     .insert({ tenant_id: CODE_ACADEMY, post_id: postId, author_id: bId, content: 'i blocked alice' })
-  expect(viaRls.error?.code).toBe('42501')
-  const viaService = await admin()
-    .from('community_comments')
-    .insert({ tenant_id: CODE_ACADEMY, post_id: postId, author_id: bId, content: 'i blocked alice' })
-  expect(viaService.error).toBeNull()
+  expect(insertError).toBeNull()
   expect(await deliveries(ALICE_ID, postId)).toEqual([])
   expect((await b.from('community_user_blocks').delete().eq('blocker_id', bId).eq('blocked_id', ALICE_ID)).error).toBeNull()
 })
