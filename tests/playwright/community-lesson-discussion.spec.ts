@@ -47,6 +47,8 @@ const FEEDS = {
   adminSchool: `${TENANT_BASE}/${LOCALE}/dashboard/admin/community`,
 }
 const UNAVAILABLE = "This post isn't available. It may have been removed."
+// `.first()` on its visibility checks: a `goto` onto the same route can briefly
+// hold two copies of the page (seen app-wide, e.g. `profile-page` on master's CI).
 
 function admin() {
   return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -368,14 +370,14 @@ test('?post= focuses the post on all five feeds and refuses posts from elsewhere
 
   // Another course's post, on this course's feed: a notice, and not one word of it.
   await student.goto(`${FEEDS.studentCourse}?post=${otherCoursePost}`)
-  await expect(student.getByText(UNAVAILABLE)).toBeVisible({ timeout: 20_000 })
+  await expect(student.getByText(UNAVAILABLE).first()).toBeVisible({ timeout: 20_000 })
   await expect(student.getByText(otherCourseText)).toHaveCount(0)
   // A school post is not in a course feed either.
   await student.goto(`${FEEDS.studentCourse}?post=${schoolPost}`)
-  await expect(student.getByText(UNAVAILABLE)).toBeVisible({ timeout: 20_000 })
+  await expect(student.getByText(UNAVAILABLE).first()).toBeVisible({ timeout: 20_000 })
   // An id that does not exist.
   await student.goto(`${FEEDS.studentSchool}?post=00000000-0000-4000-8000-000000000000`)
-  await expect(student.getByText(UNAVAILABLE)).toBeVisible({ timeout: 20_000 })
+  await expect(student.getByText(UNAVAILABLE).first()).toBeVisible({ timeout: 20_000 })
   // A malformed id is ignored — no notice, the feed as usual.
   await student.goto(`${FEEDS.studentSchool}?post=not-a-uuid`)
   await expect(student.locator('[data-tour="community-filters"]')).toBeVisible({ timeout: 20_000 })
@@ -460,7 +462,7 @@ test('hidden prompts and blocked authors stay out of the lesson, like the feed',
     await expect(promptArticle(page, controlTitle)).toBeVisible({ timeout: 30_000 })
     await expect(page.getByText(BASE_PROMPT)).toHaveCount(0)
     await page.goto(`${COURSE_FEED}?post=${basePromptId}`)
-    await expect(page.getByText(UNAVAILABLE)).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(UNAVAILABLE).first()).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText(BASE_PROMPT)).toHaveCount(0)
   } finally {
     await unblock()
