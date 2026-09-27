@@ -5,6 +5,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { canPinInCourse } from '@/lib/community/access'
 import { revalidatePath } from 'next/cache'
+import { isCommunitySettingKey, type CommunitySettingKey } from '@/lib/community/setting-keys'
 
 /**
  * Who may pin or unpin a post (#868): an admin anywhere in the school, or the
@@ -409,22 +410,25 @@ export async function reviewFlag(
 }
 
 /**
- * Update community-related tenant settings
+ * Update the school's community switches (#860, #871). Only the known keys,
+ * only booleans: anything else from the wire is dropped, so this can never
+ * write an arbitrary tenant_settings row.
  */
-export async function updateCommunitySettings(settings: {
-  community_student_posts_school_feed?: boolean
-  community_student_polls?: boolean
-}): Promise<ActionResult> {
+export async function updateCommunitySettings(
+  settings: Partial<Record<CommunitySettingKey, boolean>>
+): Promise<ActionResult> {
   try {
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
-    const rows = Object.entries(settings).map(([key, value]) => ({
-      tenant_id: tenantId,
-      setting_key: key,
-      setting_value: { enabled: value },
-    }))
+    const rows = Object.entries(settings ?? {})
+      .filter(([key, value]) => isCommunitySettingKey(key) && typeof value === 'boolean')
+      .map(([key, value]) => ({
+        tenant_id: tenantId,
+        setting_key: key,
+        setting_value: { enabled: value },
+      }))
 
     if (rows.length === 0) {
       return { success: false, error: 'No settings provided' }

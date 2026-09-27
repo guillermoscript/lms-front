@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +24,7 @@ import {
   IconPhoto,
   IconLink,
   IconPencil,
+  IconAdjustments,
 } from '@tabler/icons-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
@@ -230,6 +232,14 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
                   <DropdownMenuItem onClick={startEditing}>
                     <IconPencil size={12} />
                     {t('editPost')}
+                  </DropdownMenuItem>
+                )}
+                {/* #871: the opt-out, where the automatic post appears. Locale-prefixed:
+                    proxy.ts redirects a locale-less path and the fragment is lost. */}
+                {post.post_type === 'milestone' && userRole === 'student' && (
+                  <DropdownMenuItem render={<Link href={`/${locale}/dashboard/student/profile#share-milestones`} />}>
+                    <IconAdjustments size={12} />
+                    {t('milestones.share.settingsLink')}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem

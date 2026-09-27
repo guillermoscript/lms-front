@@ -7138,11 +7138,24 @@
       "optionPlaceholder": "Option {n}",
       "detailsPlaceholder": "Add context (optional)"
     },
-    "milestone": {
-      "courseCompleted": "{name} completed the course {course}!",
-      "certificateEarned": "{name} earned a certificate!",
-      "levelUp": "{name} reached level {level}!",
-      "streak": "{name} is on a {days}-day streak!"
+    "milestones": {
+      "courseCompleted": "Completed <strong>{course}</strong>",
+      "courseCompletedWithCertificate": "Completed <strong>{course}</strong> and earned the certificate",
+      "courseCompletedFallback": "Completed a course",
+      "certificateEarned": "Earned the certificate for <strong>{course}</strong>",
+      "certificateEarnedFallback": "Earned a certificate",
+      "levelUp": "Reached level <strong>{level}</strong>",
+      "streak": "Reached a <strong>{days}-day streak</strong>",
+      "fallback": "Reached a milestone",
+      "share": {
+        "label": "Share my milestones in the community",
+        "description": "Finishing a course, earning a certificate, reaching level 5 and up, and 7, 30 and 100-day streaks are posted automatically. Applies in every school you belong to. Turning it off stops new posts; you can delete earlier ones from the feed.",
+        "enabledToast": "Your milestones will be shared",
+        "disabledToast": "Your milestones will no longer be shared",
+        "error": "Could not save your preference. Please try again.",
+        "settingsLink": "Sharing settings",
+        "schoolOff": "This school isn't posting milestones right now. Your choice applies wherever milestones are on."
+      }
     },
     "moderation": {
       "title": "Community Moderation",
@@ -7170,8 +7183,8 @@
       "studentPostsSchoolFeedDesc": "Students can create posts in the school-wide community feed",
       "studentPolls": "Allow student polls",
       "studentPollsDesc": "Students can create polls in the community",
-      "milestonePosts": "Auto-generate milestone posts",
-      "milestonePostsDesc": "Automatically create celebration posts for achievements like course completions",
+      "milestonePosts": "Share student milestones",
+      "milestonePostsDesc": "Course completions and certificates are posted in the course feed; level 5 and up and 7, 30 and 100-day streaks in the school feed. Students can opt out.",
       "open": "Settings",
       "saved": "Setting saved"
     },

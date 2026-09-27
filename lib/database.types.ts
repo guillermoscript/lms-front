@@ -5539,6 +5539,7 @@ export type Database = {
           full_name: string | null
           id: string
           onboarding_completed: boolean
+          share_milestones: boolean
           stripe_customer_id: string | null
           stripeCustomerID: string | null
           username: string | null
@@ -5554,6 +5555,7 @@ export type Database = {
           full_name?: string | null
           id: string
           onboarding_completed?: boolean
+          share_milestones?: boolean
           stripe_customer_id?: string | null
           stripeCustomerID?: string | null
           username?: string | null
@@ -5569,6 +5571,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean
+          share_milestones?: boolean
           stripe_customer_id?: string | null
           stripeCustomerID?: string | null
           username?: string | null
@@ -7146,6 +7149,24 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_preview_sessions: { Args: never; Returns: undefined }
+      community_create_milestone: {
+        Args: {
+          _course_id: number
+          _data: Json
+          _tenant_id: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      community_milestone_allowed: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      community_milestone_check_completion: {
+        Args: { _course_id: number; _tenant_id: string; _user_id: string }
+        Returns: undefined
+      }
       community_notification_excerpt: {
         Args: { _max: number; _text: string }
         Returns: string
@@ -7344,6 +7365,10 @@ export type Database = {
           subscription_id: number
           user_id: string
         }[]
+      }
+      is_course_complete: {
+        Args: { _course_id: number; _user_id: string }
+        Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
       is_tenant_staff: { Args: never; Returns: boolean }

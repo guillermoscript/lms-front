@@ -18,20 +18,22 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { updateCommunitySettings } from '@/app/actions/admin/community'
 import type { CommunitySettings } from '@/lib/community/settings'
+import { COMMUNITY_SETTING_KEYS, type CommunitySettingKey } from '@/lib/community/setting-keys'
 
-const SWITCHES = [
-  { field: 'studentPostsSchoolFeed', key: 'community_student_posts_school_feed', label: 'studentPostsSchoolFeed' },
-  { field: 'studentPolls', key: 'community_student_polls', label: 'studentPolls' },
-] as const
+// The field doubles as the i18n label key (`<field>` + `<field>Desc`).
+const SWITCHES = (['studentPostsSchoolFeed', 'studentPolls', 'milestonePosts'] as const).map((field) => ({
+  field,
+  key: COMMUNITY_SETTING_KEYS[field],
+}))
 
-/** Admin switches for what students may do in the community (#860). Saves on toggle. */
+/** Admin switches for the school's community (#860, #871). Saves on toggle. */
 export function CommunitySettingsDialog({ settings }: { settings: CommunitySettings }) {
   const t = useTranslations('community.settings')
   const router = useRouter()
   const [values, setValues] = useState(settings)
   const [pending, setPending] = useState<string | null>(null)
 
-  async function toggle(field: keyof CommunitySettings, key: string, enabled: boolean) {
+  async function toggle(field: keyof CommunitySettings, key: CommunitySettingKey, enabled: boolean) {
     setPending(key)
     setValues((prev) => ({ ...prev, [field]: enabled }))
     const result = await updateCommunitySettings({ [key]: enabled })
@@ -57,11 +59,11 @@ export function CommunitySettingsDialog({ settings }: { settings: CommunitySetti
           <DialogDescription>{t('description')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          {SWITCHES.map(({ field, key, label }) => (
+          {SWITCHES.map(({ field, key }) => (
             <div key={key} className="flex items-start justify-between gap-4">
               <div className="space-y-0.5">
-                <Label htmlFor={key}>{t(label)}</Label>
-                <p className="text-xs text-muted-foreground">{t(`${label}Desc`)}</p>
+                <Label htmlFor={key}>{t(field)}</Label>
+                <p className="text-xs text-muted-foreground">{t(`${field}Desc`)}</p>
               </div>
               <Switch
                 id={key}
