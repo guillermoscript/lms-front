@@ -7132,6 +7132,24 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_preview_sessions: { Args: never; Returns: undefined }
+      community_create_milestone: {
+        Args: {
+          _course_id: number
+          _data: Json
+          _tenant_id: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      community_milestone_allowed: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      community_milestone_check_completion: {
+        Args: { _course_id: number; _tenant_id: string; _user_id: string }
+        Returns: undefined
+      }
       create_notification:
         | {
             Args: {
@@ -7286,6 +7304,10 @@ export type Database = {
           subscription_id: number
           user_id: string
         }[]
+      }
+      is_course_complete: {
+        Args: { _course_id: number; _user_id: string }
+        Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
       is_tenant_staff: { Args: never; Returns: boolean }
