@@ -68,9 +68,8 @@ vi.mock('@/lib/community/feed', () => ({ getFeedPage: (args: unknown) => getFeed
 
 vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://db.example.co')
 
-const { loadMorePosts, createPoll, createPost, getComments, toggleReaction, castVote, createComment } = await import(
-  '@/app/actions/community'
-)
+const { loadMorePosts, createPoll, createPost, getComments, toggleReaction, castVote, createComment, updatePost } =
+  await import('@/app/actions/community')
 
 const CURSOR = '2026-09-01T00:00:00.000Z'
 
@@ -87,6 +86,8 @@ beforeEach(() => {
     { id: 'p-course', tenant_id: 't1', course_id: 1, post_type: 'poll', is_hidden: false, is_locked: false },
     { id: 'p-hidden', tenant_id: 't1', course_id: null, post_type: 'standard', is_hidden: true, is_locked: false },
     { id: 'p-other', tenant_id: 't2', course_id: null, post_type: 'poll', is_hidden: false, is_locked: false },
+    // A school-feed milestone the database wrote about u1 (#871).
+    { id: 'p-milestone', tenant_id: 't1', author_id: 'u1', course_id: null, post_type: 'milestone', is_hidden: false, is_locked: false },
   ]
   state.comments = [{ id: 'c-other', tenant_id: 't2', post_id: 'p-other', is_hidden: false }]
   state.access = false
@@ -240,5 +241,22 @@ describe('comments, reactions and votes reach only visible posts', () => {
   it('a reachable post still works', async () => {
     expect((await toggleReaction('post', 'p-school', 'like')).success).toBe(true)
     expect(state.inserted[0]).toMatchObject({ table: 'community_reactions', row: { post_id: 'p-school' } })
+  })
+})
+
+describe('milestone posts (#871)', () => {
+  it('updatePost refuses a milestone, even from the student it is about', async () => {
+    expect(await updatePost('p-milestone', 'rewritten')).toEqual({
+      success: false,
+      error: 'Milestone posts cannot be edited',
+    })
+  })
+
+  it('reactions and comments work on a reachable milestone', async () => {
+    state.userId = 'u2'
+    expect((await toggleReaction('post', 'p-milestone', 'like')).success).toBe(true)
+    expect((await createComment('p-milestone', 'Well done')).success).toBe(true)
+    expect(state.inserted.map((i) => i.table)).toEqual(['community_reactions', 'community_comments'])
+    expect(state.inserted[1]).toMatchObject({ row: { post_id: 'p-milestone', author_id: 'u2', content: 'Well done' } })
   })
 })
