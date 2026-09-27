@@ -455,6 +455,13 @@ begin
   update user_notifications un set push_sent_at = now() - interval '16 minutes'
     from notifications n
    where n.id = un.notification_id and un.user_id = a and n.metadata ->> 'kind' = 'community_prompt';
+  -- B's queued 601 push was cancelled by B's block of T above (push_sent set,
+  -- no push_sent_at), so the claim sent B nothing. Put B inside the window
+  -- explicitly: pushed 5 minutes ago.
+  update user_notifications un set push_sent_at = now() - interval '5 minutes'
+    from notifications n
+   where n.id = un.notification_id and un.user_id = b
+     and n.community_post_id = '87000000-0000-0000-0000-000000000601';
   insert into community_posts (id, tenant_id, author_id, course_id, post_type, content)
   values ('87000000-0000-0000-0000-000000000608', ca, t, 2001, 'discussion_prompt', 'Prompt eight');
   if (select un.push_sent from notifications n join user_notifications un on un.notification_id = n.id and un.user_id = a
