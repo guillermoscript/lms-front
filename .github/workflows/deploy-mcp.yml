@@ -40,11 +40,12 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          if git diff --quiet HEAD^ HEAD -- mcp-server; then
-            echo "mcp-server/ untouched by ${GITHUB_SHA::7}; skipping deploy"
+          # packages/core is bundled into the image too (#849).
+          if git diff --quiet HEAD^ HEAD -- mcp-server packages/core; then
+            echo "mcp-server/ and packages/core/ untouched by ${GITHUB_SHA::7}; skipping deploy"
             echo "deploy=false" >> "$GITHUB_OUTPUT"
           else
-            git diff --name-only HEAD^ HEAD -- mcp-server
+            git diff --name-only HEAD^ HEAD -- mcp-server packages/core
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -84,6 +85,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./mcp-server
+          # The shared @lms/core source the build inlines (#849).
+          build-contexts: |
+            core=./packages/core
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

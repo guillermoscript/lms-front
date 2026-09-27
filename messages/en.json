@@ -699,6 +699,30 @@
             "payerPhone": "Phone used to pay"
           }
         }
+      },
+      "reviews": {
+        "title": "Flashcard review",
+        "subtitle": "Recall each answer before you reveal it, then rate how well you knew it. Cards you find easy come back less often.",
+        "dueCount": "{count, plural, one {# card due for review} other {# cards due for review}}",
+        "dueHint": "A few minutes of recall keeps what you learned.",
+        "start": "Review",
+        "showAnswer": "Show answer",
+        "keyboardHint": "Space to reveal · 1–4 to rate",
+        "howWell": "How well did you know it?",
+        "rating": {
+          "again": "Again",
+          "hard": "Hard",
+          "good": "Good",
+          "easy": "Easy"
+        },
+        "progress": "{done} of {total}",
+        "gradeError": "Couldn't save that rating. Try again.",
+        "emptyTitle": "Nothing to review right now",
+        "emptyDescription": "Flashcards your AI tutor makes from your lessons show up here when they're due. Come back later.",
+        "doneTitle": "Session complete",
+        "doneDescription": "{count, plural, one {You reviewed # card.} other {You reviewed # cards.}}",
+        "reviewMore": "Review {count} more",
+        "backToDashboard": "Back to dashboard"
       }
     },
     "teacher": {
@@ -4420,7 +4444,8 @@
     "myPayments": "My Payments",
     "myBilling": "Billing & Receipts",
     "community": "Community",
-    "profile": "Profile"
+    "profile": "Profile",
+    "flashcardReviews": "Flashcard Review"
   },
   "userNav": {
     "profile": "Profile",

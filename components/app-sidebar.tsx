@@ -201,6 +201,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('completed'), href: "/dashboard/student/courses?status=completed" },
                         { title: t('myCertificates'), href: "/dashboard/student/certificates" },
                         { title: t('progressReport'), href: "/dashboard/student/progress", tourId: 'sidebar-progress' },
+                        { title: t('flashcardReviews'), href: "/dashboard/student/reviews" },
                     ],
                 },
                 {

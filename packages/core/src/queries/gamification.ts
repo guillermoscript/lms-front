@@ -1,13 +1,12 @@
 import type { DbClient, DbResult } from '../client'
 
 /**
- * Leagues (#394) and the review-due count the daily digest is built from (#397),
- * for a client that has no server of its own (#821, guillermoscript/lms-app#12).
+ * Leagues (#394), for a client that has no server of its own (#821,
+ * guillermoscript/lms-app#12). The review-due count lives in `./reviews`.
  *
- * Neither needs the `get-gamification-summary` edge function: the standings RPC
- * is granted to `authenticated` and scopes itself with `auth.uid()` +
- * `get_tenant_id()`, and `review_cards` is own-row under RLS. Both run on the
- * caller's own token.
+ * No `get-gamification-summary` edge function needed: the standings RPC is
+ * granted to `authenticated` and scopes itself with `auth.uid()` +
+ * `get_tenant_id()`, so it runs on the caller's own token.
  */
 
 export interface LeagueStanding {
@@ -45,22 +44,4 @@ export type LeagueStandings =
 
 export function getLeagueStandings(supabase: DbClient): DbResult<LeagueStandings> {
   return supabase.rpc('get_league_standings')
-}
-
-/**
- * Cards due now — the same predicate `get_daily_digest_candidates` counts with,
- * so the number in the app is the number the nudge was sent about.
- */
-export function getDueReviewCount(
-  supabase: DbClient,
-  userId: string,
-  tenantId: string
-): PromiseLike<{ count: number | null; error: { message: string } | null }> {
-  return supabase
-    .from('review_cards')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('tenant_id', tenantId)
-    .eq('suspended', false)
-    .lte('due_at', new Date().toISOString())
 }

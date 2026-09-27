@@ -699,6 +699,30 @@
             "payerPhone": "Teléfono con el que pagaste"
           }
         }
+      },
+      "reviews": {
+        "title": "Repaso de tarjetas",
+        "subtitle": "Intenta recordar cada respuesta antes de verla y luego indica qué tan bien la sabías. Las que te resulten fáciles volverán con menos frecuencia.",
+        "dueCount": "{count, plural, one {# tarjeta por repasar} other {# tarjetas por repasar}}",
+        "dueHint": "Unos minutos de repaso fijan lo que aprendiste.",
+        "start": "Repasar",
+        "showAnswer": "Mostrar respuesta",
+        "keyboardHint": "Espacio para ver · 1–4 para calificar",
+        "howWell": "¿Qué tan bien la sabías?",
+        "rating": {
+          "again": "Otra vez",
+          "hard": "Difícil",
+          "good": "Bien",
+          "easy": "Fácil"
+        },
+        "progress": "{done} de {total}",
+        "gradeError": "No se pudo guardar la calificación. Inténtalo de nuevo.",
+        "emptyTitle": "Nada que repasar por ahora",
+        "emptyDescription": "Las tarjetas que tu tutor de IA crea a partir de tus lecciones aparecen aquí cuando toca repasarlas. Vuelve más tarde.",
+        "doneTitle": "Sesión completada",
+        "doneDescription": "{count, plural, one {Repasaste # tarjeta.} other {Repasaste # tarjetas.}}",
+        "reviewMore": "Repasar {count} más",
+        "backToDashboard": "Volver al panel"
       }
     },
     "teacher": {
@@ -4301,7 +4325,8 @@
     "invoices": "Facturas",
     "myPayments": "Mis Pagos",
     "myBilling": "Facturación y Recibos",
-    "community": "Comunidad"
+    "community": "Comunidad",
+    "flashcardReviews": "Repaso de Tarjetas"
   },
   "userNav": {
     "profile": "Perfil",

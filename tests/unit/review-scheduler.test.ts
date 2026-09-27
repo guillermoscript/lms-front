@@ -1,10 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { gradeCard, cardFromRow } from "./flashcards.js";
+import { gradeCard, cardFromRow } from "@lms/core";
 
 /**
  * Characterization tests (issue #549) — these capture current behaviour of
- * `cardFromRow`/`gradeCard` in mcp-server/src/tools/flashcards.ts so a later
- * refactor shows up as a visible test diff. Do NOT change source behaviour
+ * `cardFromRow`/`gradeCard`, which moved from the MCP server into `@lms/core`
+ * (#849) so web, app and MCP schedule identically. A later refactor shows up
+ * as a visible test diff. Do NOT change source behaviour
  * to make these pass; if source is wrong, the test documents the bug.
  */
 
