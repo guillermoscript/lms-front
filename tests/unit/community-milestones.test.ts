@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createElement, type ComponentProps } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NextIntlClientProvider } from 'next-intl'
@@ -6,6 +6,10 @@ import en from '../../messages/en.json'
 import es from '../../messages/es.json'
 import { readMilestone } from '@/lib/community/milestones'
 import { MilestoneCard } from '@/components/community/milestone-card'
+import { ShareMilestonesToggle } from '@/components/student/share-milestones-toggle'
+
+// The toggle's server action pulls in the request-scoped Supabase client.
+vi.mock('@/app/[locale]/dashboard/student/profile/actions', () => ({ updateShareMilestones: vi.fn() }))
 
 /**
  * Milestone posts are written by the database with empty `content` (#871);
@@ -112,5 +116,30 @@ describe('MilestoneCard', () => {
     const html = render('en', 'course_completion', { course_title: 'Intro to Python' })
     expect(html).not.toContain('{name}')
     expect(Object.values(en.community.milestones).join(' ')).not.toContain('{name}')
+  })
+})
+
+function renderToggle(locale: 'en' | 'es', schoolSharing: boolean): string {
+  const provider: ComponentProps<typeof NextIntlClientProvider> = {
+    locale,
+    messages: locale === 'en' ? en : es,
+    timeZone: 'UTC',
+    children: createElement(ShareMilestonesToggle, { initialEnabled: true, schoolSharing }),
+  }
+  return renderToStaticMarkup(createElement(NextIntlClientProvider, provider))
+}
+
+describe('ShareMilestonesToggle', () => {
+  // The preference is global, so the profile shows it even where this
+  // school's switch is off — the "Sharing settings" link on an earlier
+  // milestone post lands here — and says why nothing is posted here.
+  it('says when this school is not posting milestones', () => {
+    const on = renderToggle('en', true)
+    expect(on).toContain('id="share-milestones"')
+    expect(on).toContain(en.community.milestones.share.label)
+    expect(on).not.toContain(en.community.milestones.share.schoolOff.replace("'", '&#x27;'))
+
+    expect(renderToggle('en', false)).toContain(en.community.milestones.share.schoolOff.replace("'", '&#x27;'))
+    expect(renderToggle('es', false)).toContain(es.community.milestones.share.schoolOff)
   })
 })

@@ -272,7 +272,6 @@ function PurchasedCourseCard({ course: ec, labels }: { course: EnrolledCourse; l
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ProfilePage() {
     const tenantId = await getCurrentTenantId()
-    const supabase = createAdminClient()
     const user = await getSessionUser()
     if (!user) {
         redirect('/auth/login')
@@ -284,9 +283,6 @@ export default async function ProfilePage() {
         hasPlanFeature(tenantId, 'community'),
         getCommunitySettings(tenantId),
     ])
-    // The preference is global, but only offered where it does something:
-    // a school with the community whose milestone switch is on (#871).
-    const showShareMilestones = hasCommunity && communitySettings.milestonePosts
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
     const t = await getTranslations('dashboard.student.profile')
@@ -434,8 +430,15 @@ export default async function ProfilePage() {
                             <CardContent className="p-6 space-y-6">
                                 <ProfileForm profile={profile} />
                                 <LeagueOptOutToggle />
-                                {showShareMilestones && (
-                                    <ShareMilestonesToggle initialEnabled={profile?.share_milestones ?? true} />
+                                {/* Global preference (#871): offered wherever the plan has the
+                                    community, even with this school's milestone switch off —
+                                    it still applies in the student's other schools, and a
+                                    milestone post's "Sharing settings" link lands here. */}
+                                {hasCommunity && (
+                                    <ShareMilestonesToggle
+                                        initialEnabled={profile?.share_milestones ?? true}
+                                        schoolSharing={communitySettings.milestonePosts}
+                                    />
                                 )}
                                 <ToursToggle initialEnabled={areToursEnabled(uiState)} />
                             </CardContent>

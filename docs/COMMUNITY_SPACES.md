@@ -294,12 +294,12 @@ The database writes a milestone post when a student reaches one. Nothing in the 
 
 | `milestone_type` | When | Feed |
 |---|---|---|
-| `course_completion` | The lesson completion or exam score that completes the course | Course feed |
+| `course_completion` | The lesson completion or exam score that completes the course (a regrade of a score that already passed never does) | Course feed |
 | `certificate` | An eligible certificate is issued (folded into the completion post when both happen in the same step) | Course feed |
 | `level_up` | Level rises to 5 or higher (a jump announces the level reached) | School feed |
 | `streak` | The streak crosses 7, 30 or 100 days (the highest threshold crossed) | School feed |
 
-Lesson completions are not posts. "Complete" is `is_course_complete()`: `calculate_course_completion().eligible` when the course has an active certificate template, and the same rule with the template defaults (100% of published lessons, every published exam >= 70) when it does not — completion never depends on a certificate existing. `tests/sql/issue-871-community-milestones.sql` checks the two stay in step.
+Lesson completions are not posts. "Complete" is `is_course_complete()`, one rule for every course: 100% of the published lessons and every published exam scored >= 70 — `calculate_course_completion()`'s rule with the template defaults. A certificate template's thresholds decide the **certificate**, never "completed": with an 80% template the certificate posts on its own at 80% and "Completed X" follows at 100%, so the feed never says a student finished a course with lessons left. Completion never depends on a certificate existing either. `tests/sql/issue-871-community-milestones.sql` checks `is_course_complete()` and `calculate_course_completion()` stay in step.
 
 ### Gates
 
@@ -313,11 +313,13 @@ Lesson completions are not posts. "Complete" is `is_course_complete()`: `calcula
 
 A course milestone also needs `has_course_access()` and a course of that school.
 
+`award_xp()` is not callable by `anon` or `authenticated` (both overloads, revoked in the same migration): it trusts the caller's user, amount and tenant, and the level and streak it sets now publish posts, so an open `award_xp` would let anyone post "Reached level N" under any student's name. The XP triggers run as the owner; `check-achievements` uses the service role.
+
 ### Once, and only once
 
 - A partial unique index allows one milestone per (school, student, type, course / level / days). Hidden (deleted) posts count, so a milestone the student deleted is never posted again; an admin hard delete forgets it.
 - A streak threshold is announced once per school, ever — rebuilding a 7-day streak after a break is not news.
-- **The fold**: when the last lesson (or score) completes the course and the same step issues the certificate, the certificate trigger finds the completion post written in the same transaction and adds `certificate: true` to it — one post says "Completed X and earned the certificate". This relies on the completion triggers sorting before the certificate triggers on the same table (Postgres fires same-event triggers in name order); a rename degrades to two posts, and the SQL test guards the order. A certificate issued later gets its own post, once.
+- **The fold**: when the last lesson (or score) completes the course and the same step issues the certificate, the certificate trigger finds the completion post written in the same transaction and adds `certificate: true` to it — one post says "Completed X and earned the certificate". This relies on the completion triggers sorting before the certificate triggers on the same table (Postgres fires same-event triggers in name order); a rename degrades to two posts, and the SQL test guards the order. A certificate issued earlier or later (a template below 100%, a template added afterwards) gets its own post, once.
 - A certificate only posts when the course has an active template and the student is actually eligible — a student can insert their own certificate row through RLS, and that must not become a public post.
 
 ### Failure isolation
@@ -339,13 +341,13 @@ Milestone posts have `content = ''`. Every client renders the sentence from `mil
 
 ### The preference
 
-`profiles.share_milestones` (default `true`) is global like blocks: a student who does not want their progress announced does not want it in any school. They change it on their profile ("Share my milestones in the community", shown where the plan has the community and the school switch is on) or from the **Sharing settings** item in their own milestone post's menu. Turning it off stops new posts; earlier ones stay until the student deletes them.
+`profiles.share_milestones` (default `true`) is global like blocks: a student who does not want their progress announced does not want it in any school. They change it on their profile ("Share my milestones in the community", shown wherever the plan has the community — with this school's switch off it stays, noting that nothing is posted here, because the choice still applies in the student's other schools) or from the **Sharing settings** item in their own milestone post's menu. Turning it off stops new posts; earlier ones stay until the student deletes them.
 
 Reactions and comments on milestones work like on any post.
 
 ### Known edges
 
-- No backfill: only events after the migration announce.
+- No backfill: only events after the migration announce. The database keeps no record of a first completion, though: unticking and re-ticking a lesson of a course finished before the migration (or while sharing was off) announces it then. A regrade of an already-passing score never does.
 - Two concurrent transactions completing the same course for the same student can each miss the other's last row and announce nothing.
 - A certificate issued by the `exam_submissions` triggers before the `exam_scores` row exists is not folded (two posts).
 - Revoking a certificate does not hide its milestone (`revokeCertificate` has no caller yet).

@@ -7053,7 +7053,8 @@
         "enabledToast": "Tus logros se compartirán",
         "disabledToast": "Tus logros ya no se compartirán",
         "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo.",
-        "settingsLink": "Configuración de logros"
+        "settingsLink": "Configuración de logros",
+        "schoolOff": "Esta escuela no está publicando logros por ahora. Tu preferencia se aplica donde estén activados."
       }
     },
     "moderation": {

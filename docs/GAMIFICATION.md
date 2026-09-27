@@ -251,7 +251,7 @@ Core function that:
 5. Adds XP to `gamification_profiles.total_xp`
 6. Auto-levels up by checking `gamification_levels`
 
-**Security**: `SECURITY DEFINER` — called by triggers, not directly by users.
+**Security**: `SECURITY DEFINER` — called by triggers, not directly by users. Since #871 both overloads have `EXECUTE` revoked from `anon` and `authenticated` (it trusts the caller's `_user_id`, `_xp_amount` and `_tenant_id`, and a level or streak it sets can publish a community milestone post); the `handle_*_xp` triggers run as the owner and `check-achievements` uses the service role.
 
 ### `refresh_leaderboard_cache()`
 

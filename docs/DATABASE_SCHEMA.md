@@ -889,7 +889,7 @@ Manual bank transfer requests for plan upgrades (LATAM schools).
 | Function | Purpose |
 |----------|---------|
 | `award_xp(_user_id uuid, _action_type text, _xp_amount integer, _reference_id text, _reference_type text)` | Awards XP, updates streaks, levels up. Creates the gamification profile lazily via UPSERT |
-| `award_xp(…, _tenant_id uuid)` | Overload — same, scoped to an explicit tenant. Trigger functions call this one |
+| `award_xp(…, _tenant_id uuid)` | Overload — same, scoped to an explicit tenant. Trigger functions call this one. **Neither overload is an API** (#871): `EXECUTE` is revoked from `anon`/`authenticated` — it trusts the caller's user, amount and tenant, and level/streak now publish community posts. Triggers and `service_role` only |
 
 ### Certificates
 

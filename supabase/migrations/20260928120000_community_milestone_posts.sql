@@ -26,10 +26,16 @@
 --     Hidden posts count, so a milestone the student deleted is never posted
 --     again. Levels announce from 5 up; streaks at 7, 30 and 100 days, once
 --     per threshold per school — a streak rebuilt after a break is not news.
---   * "Complete" is calculate_course_completion() (#696) when the course has
---     an active certificate template, and the same rule with the template
---     defaults (100% lessons, every exam >= 70) when it does not. Completion
---     must not depend on a certificate existing: auto-issue is template-gated.
+--   * "Complete" is one rule for every course: every published lesson done and
+--     every published exam scored >= 70 — calculate_course_completion()'s
+--     (#696) rule with the template defaults. A template's own thresholds
+--     decide the certificate, never "completed": an 80% template must not
+--     announce "Completed X" with lessons left, so there the certificate posts
+--     on its own and the completion follows at 100%. Completion must not
+--     depend on a certificate existing either: auto-issue is template-gated.
+--   * Only the event that completes the course announces it: a regrade of a
+--     score that already passed never does (a teacher override of an old 80
+--     is not news).
 --   * The certificate folds into the completion post when both happen in the
 --     same transaction (the usual case: the last lesson issues it), so the
 --     course feed gets one post saying "completed X and earned the
@@ -48,7 +54,11 @@
 -- Deferred: no backfill (only new events announce); hiding a milestone when
 -- its certificate is revoked (revokeCertificate has no caller yet). A
 -- completion is announced once: a later regrade below the bar does not take
--- the post back.
+-- the post back. The database keeps no record of a first completion, so
+-- unticking and re-ticking a lesson of a course finished before this shipped
+-- (or while sharing was off) announces it then.
+--
+-- Also here: award_xp() stops being callable by anon and authenticated (9).
 
 -- 0) the student's preference -------------------------------------------------
 
@@ -103,21 +113,12 @@ DECLARE
   v_scored_exams integer;
   v_all_passed boolean;
 BEGIN
-  -- With a template the certificate rule IS the rule: zero drift between
-  -- "completed" and "earned the certificate".
-  IF EXISTS (
-    SELECT 1 FROM public.certificate_templates t
-    WHERE t.course_id = _course_id AND t.is_active = true
-  ) THEN
-    RETURN COALESCE(
-      (public.calculate_course_completion(_user_id, _course_id) ->> 'eligible')::boolean,
-      false
-    );
-  END IF;
-
-  -- Without one: calculate_course_completion's counts and branches with the
-  -- template defaults (min_lesson_completion_pct 100, min_exam_pass_score 70,
+  -- The same rule with or without a certificate template: a template with
+  -- lower thresholds makes the certificate, not the course, done. These are
+  -- calculate_course_completion's counts and branches with the template
+  -- defaults (min_lesson_completion_pct 100, min_exam_pass_score 70,
   -- requires_all_exams true). Keep the two in step; tests/sql/issue-871 checks.
+  -- The exam-score trigger relies on the 70 too.
   SELECT count(*) INTO v_total_lessons
   FROM public.lessons l
   WHERE l.course_id = _course_id AND l.status = 'published';
@@ -165,7 +166,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.is_course_complete(uuid, integer) IS
-  '#871: the student completed the course — calculate_course_completion().eligible with an active certificate template, the same rule with the template defaults (100/70/all exams) without one.';
+  '#871: the student completed the course — every published lesson done and every published exam scored >= 70 (calculate_course_completion''s rule with the template defaults), whatever a certificate template says.';
 
 -- 4) may this student's milestones be announced in this school? ---------------
 
@@ -413,6 +414,16 @@ DECLARE
   v_course_id integer;
   v_tenant_id uuid;
 BEGIN
+  -- A regrade of a score that already passed (>= 70, is_course_complete's
+  -- bar) changes nothing about completion: if the course is complete now it
+  -- was before, so this is not the event that completed it. Without this a
+  -- teacher override of an old 80 would announce a completion from before
+  -- milestones existed. (OLD cannot sit in the WHEN of an INSERT OR UPDATE
+  -- trigger.)
+  IF TG_OP = 'UPDATE' AND OLD.score >= 70 THEN
+    RETURN NULL;
+  END IF;
+
   BEGIN
     SELECT c.course_id, c.tenant_id INTO v_course_id, v_tenant_id
     FROM public.exams e
@@ -431,7 +442,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.community_milestone_on_exam_scored() IS
-  '#871: a scored exam may complete its course. Never fails the write.';
+  '#871: a scored exam may complete its course; a regrade of a passing score never does. Never fails the write.';
 
 -- Name sorts before trigger_auto_issue_cert_on_exam_scores (same reason).
 DROP TRIGGER IF EXISTS on_exam_score_community_milestone ON public.exam_scores;
@@ -599,3 +610,22 @@ REVOKE ALL ON FUNCTION
   public.community_milestone_on_gamification_progress(),
   public.community_milestones_on_course_deleted()
 FROM PUBLIC, anon, authenticated, service_role;
+
+-- 9) award_xp() is not an API ----------------------------------------------------
+
+-- Both overloads are SECURITY DEFINER, take the user, the amount and the
+-- tenant from the caller without checking any of them, and were executable by
+-- anon and authenticated through the default ACL. That used to fake a
+-- leaderboard; with the level/streak trigger above it would publish "Reached
+-- level N" under any student's name in any school. The only callers are the
+-- SECURITY DEFINER handle_*_xp triggers (they run as the owner) and the
+-- check-achievements edge function (service_role).
+REVOKE ALL ON FUNCTION
+  public.award_xp(uuid, text, integer, text, text),
+  public.award_xp(uuid, text, integer, text, text, uuid)
+FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION
+  public.award_xp(uuid, text, integer, text, text),
+  public.award_xp(uuid, text, integer, text, text, uuid)
+TO service_role;

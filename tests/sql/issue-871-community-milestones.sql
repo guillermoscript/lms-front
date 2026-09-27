@@ -477,7 +477,37 @@ begin
       end if;
     end loop;
   end loop;
+
+  -- award_xp() sets level and streak, which now publish posts: triggers and
+  -- the service role only.
+  foreach v_fn in array array[
+    'public.award_xp(uuid,text,integer,text,text)',
+    'public.award_xp(uuid,text,integer,text,text,uuid)'
+  ] loop
+    foreach v_role in array array['anon', 'authenticated'] loop
+      if has_function_privilege(v_role, v_fn, 'EXECUTE') then
+        raise exception '§9 % must not be able to execute %', v_role, v_fn;
+      end if;
+    end loop;
+    if not has_function_privilege('service_role', v_fn, 'EXECUTE') then
+      raise exception '§9 service_role (check-achievements) must keep %', v_fn;
+    end if;
+  end loop;
 end $$;
+
+-- Alice cannot level up someone else (or herself) by calling award_xp.
+set local role authenticated;
+do $$ begin perform set_config('request.jwt.claims', '{"sub":"a1000000-0000-0000-0000-000000000004","role":"authenticated","tenant_id":"00000000-0000-0000-0000-000000000002","tenant_role":"student"}', true); end $$;
+do $$
+begin
+  begin
+    perform public.award_xp('a1000000-0000-0000-0000-000000000003', 'forged', 1000000, null, null, '00000000-0000-0000-0000-000000000002');
+    raise exception '§9 an authenticated user called award_xp';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+do $$ begin perform set_config('request.jwt.claims', '', true); end $$;
 
 -- The creator (Code Academy admin) through RLS.
 set local role authenticated;
@@ -575,14 +605,22 @@ begin
   perform pg_temp.t871_complete(v_alice, v_lessons, 1);
   if not pg_temp.t871_parity(v_alice, v_lessons) then raise exception '§10 a done lessons-only course is complete'; end if;
 
-  -- With a real template, is_course_complete follows ITS thresholds.
+  -- A real template with lower thresholds decides the certificate, not
+  -- "completed": half the lessons earn it, the course is not done.
   insert into public.certificate_templates (course_id, tenant_id, template_name, is_active, min_lesson_completion_pct)
   values (v_half, v_ca, '871 half', true, 50);
   perform pg_temp.t871_complete(v_alice, v_half, 1);
-  if not public.is_course_complete(v_alice, v_half) then
-    raise exception '§10 a 50%% template must make half the lessons complete';
+  if not coalesce((public.calculate_course_completion(v_alice, v_half) ->> 'eligible')::boolean, false) then
+    raise exception '§10 fixture: a 50%% template makes half the lessons certificate-eligible';
   end if;
-  raise notice 'PASS: §10 is_course_complete matches calculate_course_completion';
+  if public.is_course_complete(v_alice, v_half) then
+    raise exception '§10 a 50%% template must not make half the lessons a completed course';
+  end if;
+  perform pg_temp.t871_complete(v_alice, v_half, 2);
+  if not public.is_course_complete(v_alice, v_half) then
+    raise exception '§10 every lesson of a 50%% template course is complete';
+  end if;
+  raise notice 'PASS: §10 is_course_complete matches calculate_course_completion, whatever the template';
 end $$;
 
 -- ── 11. a deleted course takes its milestones, nothing else ──────────────────
@@ -647,6 +685,73 @@ begin
     raise exception '§12 a milestone trigger is missing';
   end if;
   raise notice 'PASS: §12 trigger order guards the fold';
+end $$;
+
+-- ── 13. only the event that completes the course announces it ──────────────
+do $$
+declare
+  v_ca    constant uuid := '00000000-0000-0000-0000-000000000002';
+  v_alice constant uuid := 'a1000000-0000-0000-0000-000000000004';
+  v_s int := pg_temp.t871_course(v_ca, '871 S regraded', 1, 1, false, v_alice);
+  v_sub int;
+begin
+  -- Completed while sharing was off (or before this shipped): nothing posted.
+  update public.profiles set share_milestones = false where id = v_alice;
+  perform pg_temp.t871_complete(v_alice, v_s, 1);
+  v_sub := pg_temp.t871_score(v_alice, v_s, 80);
+  update public.profiles set share_milestones = true where id = v_alice;
+  if pg_temp.t871_posts(v_alice, 'course_completion', v_s) <> 0 then
+    raise exception '§13 fixture: an opted-out completion must not post';
+  end if;
+
+  -- A teacher regrades the passing 80: old news, not a completion.
+  update public.exam_scores set score = 90 where submission_id = v_sub;
+  if pg_temp.t871_posts(v_alice, 'course_completion', v_s) <> 0 then
+    raise exception '§13 regrading a passing score must not announce a completion';
+  end if;
+
+  -- Down below the bar and back up: that regrade IS the one that completes it.
+  update public.exam_scores set score = 50 where submission_id = v_sub;
+  update public.exam_scores set score = 75 where submission_id = v_sub;
+  if pg_temp.t871_posts(v_alice, 'course_completion', v_s) <> 1 then
+    raise exception '§13 a regrade from failing to passing must announce, got %',
+      pg_temp.t871_posts(v_alice, 'course_completion', v_s);
+  end if;
+  raise notice 'PASS: §13 a regrade of a passing score never announces';
+end $$;
+
+-- ── 14. a template below 100%: the certificate alone, the completion later ─
+do $$
+declare
+  v_ca    constant uuid := '00000000-0000-0000-0000-000000000002';
+  v_alice constant uuid := 'a1000000-0000-0000-0000-000000000004';
+  v_t int := pg_temp.t871_course(v_ca, '871 T half template', 2, 0, false, v_alice);
+begin
+  insert into public.certificate_templates (course_id, tenant_id, template_name, is_active, min_lesson_completion_pct)
+  values (v_t, v_ca, '871 T half', true, 50);
+
+  perform pg_temp.t871_complete(v_alice, v_t, 1);
+  if not exists (select 1 from public.certificates where user_id = v_alice and course_id = v_t and revoked_at is null) then
+    raise exception '§14 fixture: half the lessons should auto-issue the certificate';
+  end if;
+  if pg_temp.t871_posts(v_alice, 'certificate', v_t) <> 1 or pg_temp.t871_posts(v_alice, 'course_completion', v_t) <> 0 then
+    raise exception '§14 half the lessons: expected 1 certificate and 0 completion posts, got % / %',
+      pg_temp.t871_posts(v_alice, 'certificate', v_t), pg_temp.t871_posts(v_alice, 'course_completion', v_t);
+  end if;
+
+  perform pg_temp.t871_complete(v_alice, v_t, 2);
+  if pg_temp.t871_posts(v_alice, 'course_completion', v_t) <> 1 or pg_temp.t871_posts(v_alice, 'certificate', v_t) <> 1 then
+    raise exception '§14 every lesson: expected 1 completion and still 1 certificate post, got % / %',
+      pg_temp.t871_posts(v_alice, 'course_completion', v_t), pg_temp.t871_posts(v_alice, 'certificate', v_t);
+  end if;
+  if exists (
+    select 1 from public.community_posts
+    where author_id = v_alice and milestone_type = 'course_completion' and course_id = v_t
+      and milestone_data ? 'certificate'
+  ) then
+    raise exception '§14 a completion after an earlier certificate must not claim it';
+  end if;
+  raise notice 'PASS: §14 "Completed" waits for every lesson; the certificate posts on its own';
 end $$;
 
 -- ── 8. a failing milestone never breaks the event (last: it breaks the writer) ─

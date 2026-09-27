@@ -7053,7 +7053,8 @@
         "enabledToast": "Your milestones will be shared",
         "disabledToast": "Your milestones will no longer be shared",
         "error": "Could not save your preference. Please try again.",
-        "settingsLink": "Sharing settings"
+        "settingsLink": "Sharing settings",
+        "schoolOff": "This school isn't posting milestones right now. Your choice applies wherever milestones are on."
       }
     },
     "moderation": {

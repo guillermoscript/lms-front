@@ -213,7 +213,9 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   const db = admin()
   await removeFixtures(db)
-  await deleteAliceSchoolMilestones()
+  // Restoring the snapshot can itself cross a level or streak threshold (test
+  // 6 leaves Alice at level 5 / 7 days) and write a post: restore first, then
+  // clear her school milestones.
   if (gamification) {
     await db.from('gamification_profiles').update(gamification).eq('user_id', ALICE_ID).eq('tenant_id', CODE_ACADEMY_TENANT)
   }
@@ -224,6 +226,15 @@ test.afterAll(async () => {
       .from('tenant_settings')
       .insert({ tenant_id: CODE_ACADEMY_TENANT, setting_key: SETTING_KEY, setting_value: settingRow.setting_value })
   }
+  await deleteAliceSchoolMilestones()
+  // Nothing of this spec's may leak into later specs that read the feed.
+  const { count } = await db
+    .from('community_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', CODE_ACADEMY_TENANT)
+    .eq('author_id', ALICE_ID)
+    .eq('post_type', 'milestone')
+  expect(count).toBe(0)
 })
 
 test('completing the last lesson posts one milestone in the course feed', async ({ page }) => {
