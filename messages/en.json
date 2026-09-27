@@ -4994,6 +4994,31 @@
         "courses": "courses",
         "students": "students"
       }
+    },
+    "deleteAccount": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and your data from every school on this platform.",
+      "button": "Delete account…",
+      "dialogTitle": "Delete your account?",
+      "dialogDescription": "This deletes your account everywhere on the platform, not just in this school.",
+      "loading": "Checking your account",
+      "loadError": "We couldn't check your account. Close this and try again.",
+      "blockedTitle": "You can't delete your account yet:",
+      "blockers": {
+        "soleAdmin": "You're the only admin of {school}. Make someone else an admin first, so the school isn't left without one.",
+        "liveSubscription": "Your subscription {plan} is still renewing. Cancel it from Billing first, so you aren't charged again.",
+        "superAdmin": "You're a platform operator. Another operator has to remove that role first."
+      },
+      "consequences": {
+        "removed": "Your profile, progress, submissions, certificates, community posts and chats are deleted.",
+        "kept": "Payment records stay with the school for accounting, without your name.",
+        "final": "This can't be undone."
+      },
+      "confirmLabel": "Type {phrase} to confirm",
+      "cancel": "Cancel",
+      "confirm": "Delete my account",
+      "mismatch": "That doesn't match. Type it exactly as shown.",
+      "error": "We couldn't delete your account. Try again in a moment."
     }
   },
   "courseDetails": {
@@ -7590,5 +7615,33 @@
     "burst": "You're sending messages a bit fast. Wait a moment and try again.",
     "daily": "You've reached today's practice limit. Try again tomorrow.",
     "monthly": "Your school's monthly AI budget is spent for this month. Ask an admin to upgrade the plan."
+  },
+  "deleteAccountPage": {
+    "metaTitle": "Delete your account",
+    "metaDescription": "How to delete your account and what happens to your data.",
+    "deletedNotice": "Your account has been deleted. Thanks for learning with us.",
+    "title": "Delete your account",
+    "intro": "You can delete your {appName} account at any time, from the website or the app. Deleting it removes your account from every school you belong to.",
+    "stepsTitle": "How to delete it",
+    "steps": {
+      "signIn": "Sign in to your school.",
+      "open": "Open your profile (students) or Settings (teachers and admins).",
+      "confirm": "Choose “Delete account”, type your email to confirm, and delete."
+    },
+    "app": "In the mobile app: Profile → Delete account.",
+    "cta": "Go to my settings",
+    "removedTitle": "What is deleted",
+    "removed": "Your sign-in, profile, course progress, exam and exercise submissions, certificates, XP and achievements, community posts, comments and reactions, AI chats, notifications and uploaded files. Deletion is immediate.",
+    "keptTitle": "What is kept",
+    "kept": {
+      "payments": "Records of payments you made stay with the school, without your name or account, because schools must keep them for accounting and tax purposes.",
+      "content": "Courses, lessons and exams you created as a teacher stay with the school, no longer attributed to you."
+    },
+    "beforeTitle": "Before you delete",
+    "before": {
+      "subscription": "Cancel any subscription that is still renewing, so you aren't charged again.",
+      "admin": "If you are the only admin of a school, make someone else an admin first."
+    },
+    "final": "Deleting your account can't be undone. To learn again later, create a new account."
   }
 }
