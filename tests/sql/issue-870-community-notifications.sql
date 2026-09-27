@@ -499,7 +499,8 @@ begin
     select p.oid, p.proname, p.prosecdef, p.proconfig
       from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
      where ns.nspname = 'public'
-       and p.proname in ('community_notification_excerpt', 'community_notify_blocked', 'community_notify_can_reach',
+       and p.proname in ('community_notification_excerpt', 'community_notification_post_label',
+                         'community_notification_place_label', 'community_notify_blocked', 'community_notify_can_reach',
                          'community_notify_wants', 'community_reply_recipients', 'community_prompt_recipients',
                          'community_upsert_reply_notification', 'community_notify_answer_accepted',
                          'community_notify_on_comment', 'community_notify_on_prompt',
@@ -598,6 +599,93 @@ begin
    where n.id = un.notification_id and un.user_id = a and n.notification_type = 'community';
   if coalesce((select community_replies from get_daily_digest_candidates(null, null, 1000) where user_id = a and tenant_id = ca), 0) <> 0 then
     raise exception '§19 replies older than a day counted';
+  end if;
+
+  -- §20 a post with nothing to name it by — a milestone post has no title and
+  -- empty content — never gives an empty title or a bare "(2) ": the milestone's
+  -- course names it, else the stored (push) title names where the post lives
+  -- (course, else school) and metadata.post_label stays NULL for the web to say
+  -- "your post" / "a post"
+  insert into community_posts (id, tenant_id, author_id, course_id, post_type, title, content, milestone_type, milestone_data)
+  values ('87000000-0000-0000-0000-000000000901', ca, a, 2001, 'milestone', null, '', 'course_completion',
+          '{"course_title": "  Loops   Mastered "}');
+  perform pg_temp.say('87000000-0000-0000-0000-000000000911', '87000000-0000-0000-0000-000000000901', b);
+  select * into r from pg_temp.open_reply('87000000-0000-0000-0000-000000000901', a);
+  if r.title is distinct from 'Loops Mastered' or r.metadata ->> 'post_label' is distinct from 'Loops Mastered' then
+    raise exception '§20 milestone course label "%" %', r.title, r.metadata;
+  end if;
+  perform pg_temp.say('87000000-0000-0000-0000-000000000912', '87000000-0000-0000-0000-000000000901', b);
+  select * into r from pg_temp.open_reply('87000000-0000-0000-0000-000000000901', a);
+  if r.title is distinct from '(2) Loops Mastered' then raise exception '§20 milestone batch title "%"', r.title; end if;
+  -- and that is what the push says
+  select * into r from claim_pending_pushes(1000, interval '1 day') cp where cp.notification_id = r.nid;
+  if r.title is distinct from '(2) Loops Mastered' then raise exception '§20 milestone push title "%"', r.title; end if;
+
+  -- course post with no title, blank content, no milestone data: the course names it
+  insert into community_posts (id, tenant_id, author_id, course_id, post_type, title, content, milestone_type)
+  values ('87000000-0000-0000-0000-000000000902', ca, a, 2001, 'milestone', '  ', E' \n ', 'streak');
+  perform pg_temp.say('87000000-0000-0000-0000-000000000921', '87000000-0000-0000-0000-000000000902', b);
+  select * into r from pg_temp.open_reply('87000000-0000-0000-0000-000000000902', a);
+  if r.title is distinct from 'Python for Beginners' or r.metadata ->> 'post_label' is not null then
+    raise exception '§20 course fallback "%" %', r.title, r.metadata;
+  end if;
+  perform pg_temp.say('87000000-0000-0000-0000-000000000922', '87000000-0000-0000-0000-000000000902', b);
+  select * into r from pg_temp.open_reply('87000000-0000-0000-0000-000000000902', a);
+  if r.title is distinct from '(2) Python for Beginners' or (r.metadata ->> 'count')::int <> 2 then
+    raise exception '§20 course fallback batch "%" %', r.title, r.metadata;
+  end if;
+  -- taking the latest reply back decrements to the fallback, not to ""
+  update community_comments set is_hidden = true where id = '87000000-0000-0000-0000-000000000922';
+  select * into r from pg_temp.open_reply('87000000-0000-0000-0000-000000000902', a);
+  if r.title is distinct from 'Python for Beginners' or r.content is distinct from 'Python for Beginners'
+     or (r.metadata ->> 'count')::int <> 1 then
+    raise exception '§20 decremented to "%" / "%" %', r.title, r.content, r.metadata;
+  end if;
+  -- an accepted answer on it
+  n_id := community_notify_answer_accepted('87000000-0000-0000-0000-000000000921', a);
+  select * into r from notifications where id = n_id;
+  if r.title is distinct from 'Python for Beginners' or r.metadata ->> 'post_label' is not null then
+    raise exception '§20 accepted answer title "%" %', r.title, r.metadata;
+  end if;
+  -- hiding it scrubs the content back to the fallback title, not to ""
+  update community_comments set is_hidden = true where id = '87000000-0000-0000-0000-000000000921';
+  if (select content from notifications where id = n_id) is distinct from 'Python for Beginners' then
+    raise exception '§20 accepted answer scrubbed to "%"', (select content from notifications where id = n_id);
+  end if;
+
+  -- school-feed post with nothing to name it by: the school names it
+  insert into community_posts (id, tenant_id, author_id, post_type, title, content, milestone_type, milestone_data)
+  values ('87000000-0000-0000-0000-000000000903', ca, a, 'milestone', null, '', 'level_up', '{"level": 5}');
+  perform pg_temp.say('87000000-0000-0000-0000-000000000931', '87000000-0000-0000-0000-000000000903', b);
+  perform pg_temp.say('87000000-0000-0000-0000-000000000932', '87000000-0000-0000-0000-000000000903', b);
+  select * into r from pg_temp.open_reply('87000000-0000-0000-0000-000000000903', a);
+  if r.title is distinct from '(2) ' || (select name from tenants where id = ca) or r.metadata ->> 'post_label' is not null then
+    raise exception '§20 school fallback "%" %', r.title, r.metadata;
+  end if;
+
+  -- a prompt with no text: the course title leads, the body is empty, nothing is NULL
+  insert into community_posts (id, tenant_id, author_id, course_id, post_type, title, content)
+  values ('87000000-0000-0000-0000-000000000904', ca, t, 2001, 'discussion_prompt', null, '');
+  select * into r from notifications where community_post_id = '87000000-0000-0000-0000-000000000904';
+  if r.id is null or r.title is distinct from 'Python for Beginners' or r.content is distinct from ''
+     or r.metadata ->> 'post_label' is not null then
+    raise exception '§20 empty prompt "%" "%" %', r.title, r.content, r.metadata;
+  end if;
+
+  -- the helpers on their own
+  if community_notification_post_label(null, null, null) is not null
+     or community_notification_post_label('', '  ', '{"course_title": ""}') is not null
+     or community_notification_post_label(null, '', '["course_title"]') is not null
+     or community_notification_post_label(' T ', 'c', '{"course_title": "x"}') <> 'T'
+     or community_notification_post_label(null, ' c ', '{"course_title": "x"}') <> 'c' then
+    raise exception '§20 post_label helper';
+  end if;
+  if community_notification_place_label(ca, null) <> (select name from tenants where id = ca)
+     or community_notification_place_label(ca, 2001) <> 'Python for Beginners'
+     -- another school's course never names a post here
+     or community_notification_place_label(def, 2001) <> (select name from tenants where id = def)
+     or community_notification_place_label('00000000-0000-0000-0000-0000000000ff', null) <> 'Community' then
+    raise exception '§20 place_label helper';
   end if;
 
   raise notice 'issue-870 community notifications: all checks passed';

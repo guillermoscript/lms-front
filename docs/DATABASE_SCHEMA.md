@@ -642,7 +642,7 @@ Admin broadcasts, system notices (digest, certificates, payments) and community 
 |--------|------|-------|
 | `id` | BIGSERIAL PK | |
 | `tenant_id` | UUID FK → tenants | |
-| `title` | TEXT | Push title. Community rows: the post label (a batch reads `(3) <post>`) |
+| `title` | TEXT | Push title. Community rows: the post label (a batch reads `(3) <post>`); a post with no label (a milestone post) falls back to the course title, else the school name — never empty |
 | `content` | TEXT | Push body |
 | `notification_type` | TEXT | `announcement`, `alert`, `info`, `success`, `warning`, `error`, `certificate_issued`, `community` |
 | `priority` | TEXT | `low`, `normal`, `high`, `urgent` |

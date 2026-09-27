@@ -7029,6 +7029,8 @@
       "promptNoCourse": "New discussion prompt",
       "answerAccepted": "Your answer was accepted",
       "onPost": "On “{post}”",
+      "onYourPost": "On your post",
+      "onAPost": "On a post",
       "snippet": "{name}: {snippet}",
       "unknownActor": "Someone",
       "sidebarUnread": "{count, plural, one {# unread community notification} other {# unread community notifications}}",

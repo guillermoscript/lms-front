@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import {
   communityNotificationHref,
   communityNotificationMessage,
+  communityNotificationPostLine,
   communityNotificationSnippet,
   parseCommunityNotificationMeta,
   type ViewerRole,
@@ -104,6 +105,7 @@ export function NotificationItem({ row, role, variant, onOpened, onNavigate, onM
     const unknown = tc('notifications.unknownActor')
     const message = communityNotificationMessage(community, unknown)
     const snippet = communityNotificationSnippet(community, unknown)
+    const postLine = communityNotificationPostLine(community)
     const staffRole = community.kind === 'community_reply' && community.staffReply ? community.actorRole : null
     body = (
       <>
@@ -117,12 +119,15 @@ export function NotificationItem({ row, role, variant, onOpened, onNavigate, onM
             </Badge>
           )}
         </span>
-        {community.postLabel && (
+        {postLine ? (
           <span className="block truncate text-muted-foreground">
-            {community.kind === 'community_prompt'
-              ? community.postLabel
-              : tc('notifications.onPost', { post: community.postLabel })}
+            {tc(`notifications.${postLine.key}`, postLine.values)}
           </span>
+        ) : (
+          community.kind === 'community_prompt' &&
+          community.postLabel && (
+            <span className="block truncate text-muted-foreground">{community.postLabel}</span>
+          )
         )}
         {snippet && (
           <span className={cn('block text-muted-foreground', variant === 'compact' ? 'line-clamp-1' : 'line-clamp-2')}>

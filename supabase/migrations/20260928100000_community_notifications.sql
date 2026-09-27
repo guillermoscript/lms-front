@@ -67,6 +67,13 @@
 --     dismisses the blocker's community notifications from the blocked member
 --     and about the blocked member's posts. Un-hiding restores nothing.
 --
+--   * A post is named by its title, else an excerpt of its text, else (a
+--     milestone post has neither) milestone_data.course_title. metadata.
+--     post_label is NULL when none of those exists, and the web says "your
+--     post" / "a post"; the stored title — the push title — then falls back to
+--     where the post lives (the course, else the school), so it is never ""
+--     or a bare "(2) ".
+--
 --   * No URL is stored. The web builds the link from the ids for the viewer's
 --     role (lib/community/notifications.ts); the push carries the ids plus
 --     tenant_id in its `data` so the app can do the same.
@@ -196,6 +203,52 @@ $$;
 
 COMMENT ON FUNCTION public.community_notification_excerpt(text, integer) IS
   'Issue #870: whitespace collapsed to single spaces, trimmed, cut to _max characters with a trailing ellipsis.';
+
+-- What a notification calls a post: its title, else an excerpt of its text,
+-- else the course a milestone post celebrates. NULL when there is nothing to
+-- say (a milestone with no course, an image-only post) — never ''.
+CREATE OR REPLACE FUNCTION public.community_notification_post_label(
+  _title text,
+  _content text,
+  _milestone_data jsonb
+)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path = ''
+AS $$
+  SELECT coalesce(
+    nullif(btrim(_title), ''),
+    nullif(public.community_notification_excerpt(_content, 80), ''),
+    nullif(public.community_notification_excerpt(_milestone_data ->> 'course_title', 80), '')
+  );
+$$;
+
+COMMENT ON FUNCTION public.community_notification_post_label(text, text, jsonb) IS
+  'Issue #870: the post''s title, else an 80-character excerpt of its content, else milestone_data.course_title. NULL (never '''') when none has text.';
+
+-- Stand-in for a post with no label in the stored (push) title: where the post
+-- lives. Language-neutral, since the push text is not localized.
+CREATE OR REPLACE FUNCTION public.community_notification_place_label(_tenant uuid, _course bigint)
+RETURNS text
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT coalesce(
+    (SELECT nullif(btrim(co.title), '')
+       FROM public.courses co
+      WHERE co.course_id = _course
+        AND co.tenant_id = _tenant),
+    (SELECT nullif(btrim(t.name), '')
+       FROM public.tenants t
+      WHERE t.id = _tenant),
+    'Community'
+  );
+$$;
+
+COMMENT ON FUNCTION public.community_notification_place_label(uuid, bigint) IS
+  'Issue #870: the course title (course post) or school name — the stored title of a notification about a post with no label, so a push title is never empty.';
 
 CREATE OR REPLACE FUNCTION public.community_notify_blocked(_a uuid, _b uuid)
 RETURNS boolean
@@ -416,6 +469,7 @@ DECLARE
   v_staff boolean;
   v_staff_reply boolean;
   v_post_label text;
+  v_title_label text;
   v_snippet text;
   v_content text;
   v_cooldown boolean;
@@ -430,7 +484,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  SELECT cp.id, cp.tenant_id, cp.course_id, cp.lesson_id, cp.title, cp.content
+  SELECT cp.id, cp.tenant_id, cp.course_id, cp.lesson_id, cp.title, cp.content, cp.milestone_data
     INTO p
     FROM public.community_posts cp
    WHERE cp.id = c.post_id;
@@ -455,10 +509,10 @@ BEGIN
      AND tu.status = 'active';
 
   v_staff := coalesce(v_actor_role IN ('teacher', 'admin'), false);
-  v_post_label := coalesce(
-    nullif(btrim(p.title), ''),
-    public.community_notification_excerpt(p.content, 80)
-  );
+  -- NULL for a post with nothing to name it by; the stored title then names
+  -- where it lives, so a push never reads "" or "(2) ".
+  v_post_label := public.community_notification_post_label(p.title, p.content, p.milestone_data);
+  v_title_label := coalesce(v_post_label, public.community_notification_place_label(p.tenant_id, p.course_id));
   v_snippet := public.community_notification_excerpt(c.content, 140);
   -- Stored text is what a push shows; the web renders its own copy from the
   -- metadata. No name → just the snippet.
@@ -503,7 +557,7 @@ BEGIN
     v_staff_reply := v_staff OR (v_open.metadata ->> 'staff_reply') = 'true';
 
     UPDATE public.notifications n
-       SET title = '(' || v_count || ') ' || v_post_label,
+       SET title = '(' || v_count || ') ' || v_title_label,
            content = v_content,
            priority = CASE WHEN v_staff_reply THEN 'high' ELSE 'normal' END,
            metadata = n.metadata || jsonb_build_object(
@@ -539,7 +593,7 @@ BEGIN
     delivery_channels, status, sent_at, created_by, metadata
   ) VALUES (
     p.tenant_id,
-    v_post_label,
+    v_title_label,
     v_content,
     'community',
     CASE WHEN v_staff THEN 'high' ELSE 'normal' END,
@@ -652,10 +706,7 @@ BEGIN
        AND tu.user_id = NEW.author_id
        AND tu.status = 'active';
 
-    v_post_label := coalesce(
-      nullif(btrim(NEW.title), ''),
-      public.community_notification_excerpt(NEW.content, 80)
-    );
+    v_post_label := public.community_notification_post_label(NEW.title, NEW.content, NEW.milestone_data);
 
     INSERT INTO public.notifications (
       tenant_id, title, content, notification_type, priority,
@@ -663,8 +714,12 @@ BEGIN
       delivery_channels, status, sent_at, created_by, metadata
     ) VALUES (
       NEW.tenant_id,
-      coalesce(nullif(btrim(v_course_title), ''), v_post_label),
-      v_post_label,
+      coalesce(
+        nullif(btrim(v_course_title), ''),
+        v_post_label,
+        public.community_notification_place_label(NEW.tenant_id, NEW.course_id)
+      ),
+      coalesce(v_post_label, ''),
       'community',
       'normal',
       'course',
@@ -794,7 +849,7 @@ BEGIN
     END IF;
 
     FOR r IN
-      SELECT n.id, n.metadata
+      SELECT n.id, n.tenant_id, n.target_course_id, n.metadata
         FROM public.notifications n
        WHERE n.community_post_id = c.post_id
          AND n.tenant_id = c.tenant_id
@@ -806,7 +861,10 @@ BEGIN
 
       IF r.metadata ->> 'kind' = 'community_reply' AND v_count > 1 THEN
         v_count := v_count - 1;
-        v_label := coalesce(r.metadata ->> 'post_label', '');
+        v_label := coalesce(
+          nullif(btrim(r.metadata ->> 'post_label'), ''),
+          public.community_notification_place_label(r.tenant_id, r.target_course_id)
+        );
         UPDATE public.notifications n
            SET title = CASE WHEN v_count > 1 THEN '(' || v_count || ') ' || v_label ELSE v_label END,
                content = v_label,
@@ -815,7 +873,7 @@ BEGIN
          WHERE n.id = r.id;
       ELSE
         UPDATE public.notifications n
-           SET content = coalesce(n.metadata ->> 'post_label', n.title),
+           SET content = coalesce(nullif(btrim(n.metadata ->> 'post_label'), ''), n.title),
                metadata = n.metadata - ARRAY['comment_id', 'actor_id', 'actor_name', 'actor_role', 'snippet', 'reply_to']
          WHERE n.id = r.id;
         UPDATE public.user_notifications un
@@ -921,7 +979,8 @@ BEGIN
       RETURN NULL;
     END IF;
 
-    SELECT cp.id, cp.tenant_id, cp.course_id, cp.lesson_id, cp.author_id, cp.title, cp.content, cp.is_hidden
+    SELECT cp.id, cp.tenant_id, cp.course_id, cp.lesson_id, cp.author_id, cp.title, cp.content, cp.milestone_data,
+           cp.is_hidden
       INTO p
       FROM public.community_posts cp
      WHERE cp.id = c.post_id;
@@ -961,7 +1020,7 @@ BEGIN
       FROM public.tenant_users tu
      WHERE tu.tenant_id = p.tenant_id AND tu.user_id = _actor_id AND tu.status = 'active';
 
-    v_post_label := coalesce(nullif(btrim(p.title), ''), public.community_notification_excerpt(p.content, 80));
+    v_post_label := public.community_notification_post_label(p.title, p.content, p.milestone_data);
     v_snippet := public.community_notification_excerpt(c.content, 140);
 
     INSERT INTO public.notifications (
@@ -970,7 +1029,7 @@ BEGIN
       delivery_channels, status, sent_at, created_by, metadata
     ) VALUES (
       p.tenant_id,
-      v_post_label,
+      coalesce(v_post_label, public.community_notification_place_label(p.tenant_id, p.course_id)),
       v_snippet,
       'community',
       'normal',
@@ -1019,6 +1078,8 @@ COMMENT ON FUNCTION public.community_notify_answer_accepted(uuid, uuid) IS
 -- member probe other people's blocks and preferences, and the writer / hook
 -- would let them forge notifications.
 REVOKE ALL ON FUNCTION public.community_notification_excerpt(text, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.community_notification_post_label(text, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.community_notification_place_label(uuid, bigint) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.community_notify_blocked(uuid, uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.community_notify_can_reach(uuid, uuid, integer) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.community_notify_wants(uuid, text) FROM PUBLIC, anon, authenticated;

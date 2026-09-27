@@ -7146,6 +7146,49 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_preview_sessions: { Args: never; Returns: undefined }
+      community_notification_excerpt: {
+        Args: { _max: number; _text: string }
+        Returns: string
+      }
+      community_notification_place_label: {
+        Args: { _course: number; _tenant: string }
+        Returns: string
+      }
+      community_notification_post_label: {
+        Args: { _content: string; _milestone_data: Json; _title: string }
+        Returns: string
+      }
+      community_notify_answer_accepted: {
+        Args: { _actor_id: string; _comment_id: string }
+        Returns: number
+      }
+      community_notify_blocked: {
+        Args: { _a: string; _b: string }
+        Returns: boolean
+      }
+      community_notify_can_reach: {
+        Args: { _course: number; _tenant: string; _user: string }
+        Returns: boolean
+      }
+      community_notify_wants: {
+        Args: { _category: string; _user: string }
+        Returns: boolean
+      }
+      community_prompt_recipients: {
+        Args: { _post_id: string }
+        Returns: string[]
+      }
+      community_reply_recipients: {
+        Args: { _comment_id: string }
+        Returns: {
+          reply_to: string
+          user_id: string
+        }[]
+      }
+      community_upsert_reply_notification: {
+        Args: { _comment_id: string; _recipient: string; _reply_to: string }
+        Returns: number
+      }
       create_notification:
         | {
             Args: {

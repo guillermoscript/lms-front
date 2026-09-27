@@ -206,6 +206,25 @@ export function communityNotificationMessage(meta: CommunityNotificationMeta, fa
   }
 }
 
+export type CommunityPostLineKey = 'onPost' | 'onYourPost' | 'onAPost'
+
+/**
+ * The line under the headline that names the post, as a key under
+ * `community.notifications` + values. A post with no label — a milestone post
+ * has no title and no text, and nothing else to name it by — is "your post"
+ * when the reply was to the recipient's own post, else "a post"; never an
+ * empty quote. None for a prompt: its headline names the course, and the
+ * caller shows the prompt's own label, if any, as it is.
+ */
+export function communityNotificationPostLine(
+  meta: CommunityNotificationMeta
+): { key: CommunityPostLineKey; values: Record<string, string> } | null {
+  if (meta.kind === 'community_prompt') return null
+  if (meta.postLabel) return { key: 'onPost', values: { post: meta.postLabel } }
+  const own = meta.kind === 'community_reply' && meta.replyTo === 'post'
+  return { key: own ? 'onYourPost' : 'onAPost', values: {} }
+}
+
 /**
  * The quoted reply under the headline: the latest reply of a batch. None for a
  * prompt or an accepted answer (the headline says it all), and none once the

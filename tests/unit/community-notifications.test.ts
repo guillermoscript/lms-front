@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import en from '@/messages/en.json'
+import es from '@/messages/es.json'
 import {
   communityNotificationHref,
   communityNotificationMessage,
+  communityNotificationPostLine,
   communityNotificationSnippet,
   deriveUnreadCounts,
   formatBadgeCount,
@@ -239,6 +242,58 @@ describe('communityNotificationSnippet', () => {
         'Someone'
       )
     ).toBeNull()
+  })
+})
+
+describe('communityNotificationPostLine', () => {
+  it('quotes the post label', () => {
+    expect(communityNotificationPostLine(parsed(replyMetadata()))).toEqual({
+      key: 'onPost',
+      values: { post: 'Help with loops' },
+    })
+  })
+
+  // A milestone post has no title and empty content: the trigger stores a
+  // NULL label (older rows may carry ""), and the line must not read On “”.
+  it('says "your post" for a reply to the recipient\'s own post with no label', () => {
+    for (const label of [null, '', '   ', undefined]) {
+      expect(communityNotificationPostLine(parsed(replyMetadata({ post_label: label })))).toEqual({
+        key: 'onYourPost',
+        values: {},
+      })
+    }
+    // a batch of 2 whose latest reply was to the post
+    expect(communityNotificationPostLine(parsed(replyMetadata({ post_label: null, count: 2 })))?.key).toBe('onYourPost')
+  })
+
+  it('says "a post" when the post is not necessarily the recipient\'s', () => {
+    expect(communityNotificationPostLine(parsed(replyMetadata({ post_label: null, reply_to: 'comment' })))).toEqual({
+      key: 'onAPost',
+      values: {},
+    })
+    // scrubbed: reply_to was removed with the reply
+    expect(
+      communityNotificationPostLine(parsed({ kind: 'community_reply', post_id: POST, count: 2, post_label: null }))?.key
+    ).toBe('onAPost')
+    expect(
+      communityNotificationPostLine(
+        parsed({ kind: 'community_answer_accepted', post_id: POST, comment_id: COMMENT, actor_id: ACTOR, post_label: '' })
+      )
+    ).toEqual({ key: 'onAPost', values: {} })
+  })
+
+  it('leaves a prompt to its headline', () => {
+    expect(communityNotificationPostLine(parsed({ kind: 'community_prompt', post_id: POST, post_label: 'Week 1' }))).toBeNull()
+    expect(communityNotificationPostLine(parsed({ kind: 'community_prompt', post_id: POST, post_label: null }))).toBeNull()
+  })
+
+  it('has copy for every key it returns, in both locales', () => {
+    for (const catalog of [en, es]) {
+      const copy = catalog.community.notifications
+      for (const key of ['onPost', 'onYourPost', 'onAPost'] as const) {
+        expect(copy[key], key).toMatch(/\S/)
+      }
+    }
   })
 })
 

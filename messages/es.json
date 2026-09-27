@@ -7029,6 +7029,8 @@
       "promptNoCourse": "Nuevo tema de discusión",
       "answerAccepted": "Tu respuesta fue aceptada",
       "onPost": "En «{post}»",
+      "onYourPost": "En tu publicación",
+      "onAPost": "En una publicación",
       "snippet": "{name}: {snippet}",
       "unknownActor": "Alguien",
       "sidebarUnread": "{count, plural, one {# notificación de la comunidad sin leer} other {# notificaciones de la comunidad sin leer}}",

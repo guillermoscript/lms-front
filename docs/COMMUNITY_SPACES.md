@@ -325,11 +325,13 @@ Yourself; anyone across a block, in either direction (`community_user_blocks` is
 
 ### How it is produced
 
-AFTER triggers, so the web (service role), the native app and MCP (RLS) all produce the same notifications. Every function is `SECURITY DEFINER` with `search_path = ''`, uses `NEW.author_id` as the actor (never `auth.uid()`, which is NULL on the service-role path), and wraps its whole body in an `EXCEPTION` block that only raises a `WARNING` — a notification can never be the reason a comment or a prompt fails to save. Helpers (`community_reply_recipients`, `community_prompt_recipients`, `community_notify_can_reach`, `community_notify_wants`, `community_notify_blocked`, `community_upsert_reply_notification`) are revoked from every client role.
+AFTER triggers, so the web (service role), the native app and MCP (RLS) all produce the same notifications. Every function is `SECURITY DEFINER` with `search_path = ''`, uses `NEW.author_id` as the actor (never `auth.uid()`, which is NULL on the service-role path), and wraps its whole body in an `EXCEPTION` block that only raises a `WARNING` — a notification can never be the reason a comment or a prompt fails to save. Helpers (`community_reply_recipients`, `community_prompt_recipients`, `community_notify_can_reach`, `community_notify_wants`, `community_notify_blocked`, `community_upsert_reply_notification`, `community_notification_post_label`, `community_notification_place_label`) are revoked from every client role.
 
 `created_by` is NULL on every community row. "Teachers can view their notifications" is `created_by = auth.uid()` with no tenant predicate; recording the replier there would let them read the recipient's aggregated row. The actor lives in `metadata.actor_id` / `actor_name` / `actor_role`.
 
 Community rows are system-written: RESTRICTIVE policies refuse any client INSERT/UPDATE of a `community` row (or a row with `community_post_id`), staff included. Admin DELETE still works. Recipients may only update the read/dismiss columns of their own `user_notifications` row.
+
+**Naming the post.** `metadata.post_label` is the post's title, else an 80-character excerpt of its text, else `milestone_data.course_title` (`community_notification_post_label()`). A post with none of those — a milestone post has no title and empty content, an image-only post has no text — gets `post_label: null`, and the web says "On your post" (a reply to the recipient's own post) or "On a post" instead of an empty quote. The stored `title`, which is the push title and is not localized, then names where the post lives: the course title, else the school name (`community_notification_place_label()`) — so a push never reads `""` or `(2) `.
 
 Prompt fan-out is one `INSERT … SELECT` over the partial index `idx_enrollments_course_active`: **~66 ms for 5,000 enrolled students** (measured locally, rolled back).
 
