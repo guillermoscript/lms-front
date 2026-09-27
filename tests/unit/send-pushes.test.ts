@@ -101,6 +101,37 @@ describe('sendPendingPushes (#835)', () => {
     expect(bodies[0].data).toEqual({ notification_id: 1, url: null, kind: null })
   })
 
+  it('passes the community ids through so the app opens the exact comment (#870)', async () => {
+    const data = {
+      tenant_id: '00000000-0000-0000-0000-000000000002',
+      course_id: 2001,
+      post_id: '11111111-1111-4111-8111-111111111111',
+      comment_id: '22222222-2222-4222-8222-222222222222',
+    }
+    const { admin } = fakeAdmin([push({ url: null, kind: 'community_reply', data })])
+    const { fetchMock, bodies } = fakeExpo()
+
+    await sendPendingPushes(admin, { fetch: fetchMock as typeof fetch, expoUrl: 'http://stub/push' })
+
+    expect(bodies[0].data).toEqual({ ...data, notification_id: 1, url: null, kind: 'community_reply' })
+  })
+
+  it('never lets data overwrite the keys the app already routes on (#870)', async () => {
+    const { admin } = fakeAdmin([
+      push({ data: { notification_id: 999, url: 'https://evil.example', kind: 'forged', tenant_id: 't' } }),
+    ])
+    const { fetchMock, bodies } = fakeExpo()
+
+    await sendPendingPushes(admin, { fetch: fetchMock as typeof fetch, expoUrl: 'http://stub/push' })
+
+    expect(bodies[0].data).toEqual({
+      tenant_id: 't',
+      notification_id: 1,
+      url: '/dashboard/student/courses/1',
+      kind: 'lesson',
+    })
+  })
+
   it('batches tokens in chunks of 100', async () => {
     const tokens = Array.from({ length: 250 }, (_, i) => `ExponentPushToken[${i}]`)
     const { admin } = fakeAdmin([push({ tokens, recipients: 250 })])

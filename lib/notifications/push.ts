@@ -30,6 +30,12 @@ export interface ClaimedPush {
   url: string | null
   /** `metadata.kind` — lets the app route kinds whose link is web-only (#825). */
   kind: string | null
+  /**
+   * Ids the app routes with (#870): `tenant_id` always, plus `course_id`,
+   * `post_id` and `comment_id` when the notification has them — a community
+   * reply opens that exact comment in that school.
+   */
+  data?: Record<string, unknown> | null
   recipients: number
   tokens: string[]
 }
@@ -89,7 +95,14 @@ export async function sendPendingPushes(
     const message = {
       title: push.title,
       body: truncatePushBody(push.content),
-      data: { notification_id: push.notification_id, url: push.url ?? null, kind: push.kind ?? null },
+      // The fixed keys go last: nothing in `data` can overwrite what the app
+      // already routes on.
+      data: {
+        ...(push.data && typeof push.data === 'object' && !Array.isArray(push.data) ? push.data : {}),
+        notification_id: push.notification_id,
+        url: push.url ?? null,
+        kind: push.kind ?? null,
+      },
       sound: 'default',
       priority: ['high', 'urgent'].includes(push.priority) ? 'high' : 'default',
     }

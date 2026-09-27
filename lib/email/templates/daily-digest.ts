@@ -10,6 +10,10 @@ export interface DailyDigestEmailData {
   goalsPending: number
   /** Streak to warn about; 0 = no streak line. */
   streak: number
+  /** Unread community replies (#870); 0 or absent = no community line. */
+  communityReplies?: number
+  /** Where the community line links: the school's notifications page. */
+  notificationsUrl?: string
   actionUrl: string
   brand: SchoolBrand
 }
@@ -29,6 +33,7 @@ const DIGEST_COPY = {
     intro: 'Here is what is waiting for you today:',
     cards: (n: number) => `${n} review ${n === 1 ? 'card' : 'cards'} due`,
     goals: (n: number) => `${n} study ${n === 1 ? 'goal' : 'goals'} left this week`,
+    community: (n: number) => `${n} new ${n === 1 ? 'reply' : 'replies'} in the community`,
     streak: (n: number) => `Your ${n}-day streak ends tonight`,
     cta: 'Pick up where you left off',
     footer: 'A few minutes today keeps you on track.',
@@ -39,6 +44,7 @@ const DIGEST_COPY = {
     intro: 'Esto es lo que te espera hoy:',
     cards: (n: number) => `${n} ${n === 1 ? 'tarjeta pendiente' : 'tarjetas pendientes'} de repaso`,
     goals: (n: number) => `${n} ${n === 1 ? 'meta' : 'metas'} de estudio esta semana`,
+    community: (n: number) => `${n} ${n === 1 ? 'respuesta nueva' : 'respuestas nuevas'} en la comunidad`,
     streak: (n: number) => `Tu racha de ${n} días termina esta noche`,
     cta: 'Continúa donde lo dejaste',
     footer: 'Unos minutos hoy te mantienen al día.',
@@ -86,6 +92,14 @@ export function dailyDigestEmailTemplate(
   const items: string[] = []
   if (data.dueCards > 0) items.push(copy.cards(data.dueCards))
   if (data.goalsPending > 0) items.push(copy.goals(data.goalsPending))
+  const replies = data.communityReplies ?? 0
+  if (replies > 0) {
+    items.push(
+      data.notificationsUrl
+        ? `<a href="${escapeHtml(data.notificationsUrl)}" style="color:inherit">${copy.community(replies)}</a>`
+        : copy.community(replies)
+    )
+  }
   if (data.streak > 0) items.push(copy.streak(data.streak))
   const list = items.map((item) => `    <li style="margin:8px 0">${item}</li>`).join('\n')
   return {
