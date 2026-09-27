@@ -28,6 +28,8 @@ import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { loadCourseCommunityEntry } from '@/lib/community/access'
+import { CourseCommunityEntry } from '@/components/community/course-community-entry'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -74,6 +76,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     { data: userReview },
     { data: tutorConfig },
     { data: reviewsData },
+    communityEntry,
   ] = await Promise.all([
     course.author_id
       ? supabase.from('profiles').select('full_name, avatar_url').eq('id', course.author_id).single()
@@ -120,6 +123,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .eq('entity_type', 'courses')
       .eq('entity_id', numericCourseId)
       .order('created_at', { ascending: false }),
+    // #868: after the access gate above, so only a viewer who can open the
+    // course feed ever gets a link to it.
+    loadCourseCommunityEntry({ tenantId, viewerId: userId, courseId: numericCourseId }),
   ])
 
   const authorProfile = authorData
@@ -222,31 +228,41 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-3 sm:pt-4">
-                {nextLesson && (
-                  <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
-                    <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold shadow-md hover:shadow-lg active:shadow-lg transition-all">
-                      <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
-                      {completedCount > 0 ? t('continue') : t('startNow')}
-                    </Button>
-                  </Link>
-                )}
-                {exerciseCount > 0 && (
-                  <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
-                      <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                      {t('exercises', { count: exerciseCount })}
-                    </Button>
-                  </Link>
-                )}
-                {examCount > 0 && (
-                  <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
-                      <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                      {t('exams', { count: examCount })}
-                    </Button>
-                  </Link>
+              <div className="space-y-2.5 sm:space-y-3 pt-3 sm:pt-4">
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                  {nextLesson && (
+                    <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
+                      <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold shadow-md hover:shadow-lg active:shadow-lg transition-all">
+                        <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
+                        {completedCount > 0 ? t('continue') : t('startNow')}
+                      </Button>
+                    </Link>
+                  )}
+                  {exerciseCount > 0 && (
+                    <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
+                      <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
+                        <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
+                        {t('exercises', { count: exerciseCount })}
+                      </Button>
+                    </Link>
+                  )}
+                  {examCount > 0 && (
+                    <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
+                      <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
+                        <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
+                        {t('exams', { count: examCount })}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+
+                {/* Course community (#868) — its own row, so Spanish labels never squeeze the actions */}
+                {communityEntry.enabled && (
+                  <CourseCommunityEntry
+                    href={`/dashboard/student/courses/${courseId}/community`}
+                    activity={communityEntry.activity}
+                  />
                 )}
               </div>
             </div>

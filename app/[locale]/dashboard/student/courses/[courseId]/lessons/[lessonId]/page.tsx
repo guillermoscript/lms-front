@@ -39,6 +39,7 @@ import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-a
 import { loadLessonCheckpoints } from '@/lib/checkpoints/load'
 import { CheckpointsProvider } from '@/components/lesson/checkpoints/checkpoints-provider'
 import { parseStructuredRequirements, structuredRequirementsSummary } from '@/lib/ai/lesson-requirements'
+import { isCommunityEnabled } from '@/lib/community/access'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -59,6 +60,10 @@ export default async function LessonPage({ params }: PageProps) {
   // student never causes the lesson body to be read at all.
   const numericCourseId = parseInt(courseId)
   await requireCourseAccess(supabase, userId, numericCourseId)
+
+  // #868: the sidebar links to the course feed when the plan includes it.
+  // Started now, awaited below; it never rejects.
+  const communityEnabled = isCommunityEnabled(tenantId)
 
   // Last-seen tracking (#650): one lesson_views row per (user, lesson), stamped
   // on every open. The teacher Students tab reads it as "last activity", so a
@@ -239,6 +244,9 @@ export default async function LessonPage({ params }: PageProps) {
       .order('display_order', { ascending: true }),
     loadLessonCheckpoints(supabase, { tenantId, lessonId: lesson.id, userId }),
   ])
+  const communityHref = (await communityEnabled)
+    ? `/dashboard/student/courses/${courseId}/community`
+    : undefined
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
 
@@ -325,6 +333,7 @@ export default async function LessonPage({ params }: PageProps) {
             lessons={sidebarLessons}
             currentLessonId={lesson.id}
             requireSequentialCompletion={requireSequential}
+            communityHref={communityHref}
           />
         </div>
       </div>
@@ -362,7 +371,7 @@ export default async function LessonPage({ params }: PageProps) {
               <Sheet>
                 <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('sidebarTitle')}>
                       <IconMenu2 className="h-5 w-5" />
                     </Button>
                   }
@@ -378,6 +387,7 @@ export default async function LessonPage({ params }: PageProps) {
                     lessons={sidebarLessons}
                     currentLessonId={lesson.id}
                     requireSequentialCompletion={requireSequential}
+                    communityHref={communityHref}
                   />
                 </SheetContent>
               </Sheet>
@@ -476,6 +486,7 @@ export default async function LessonPage({ params }: PageProps) {
           lessons={sidebarLessons}
           currentLessonId={lesson.id}
           requireSequentialCompletion={requireSequential}
+          communityHref={communityHref}
         />
       </div>
     </div>

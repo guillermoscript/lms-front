@@ -7,6 +7,8 @@ import { BlockedMembers } from '@/components/community/blocked-members'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { getFeedPage } from '@/lib/community/feed'
 import { getCommunitySettings } from '@/lib/community/settings'
+import { getCommunityCourses } from '@/lib/community/access'
+import { CourseCommunityLinks } from '@/components/community/course-community-links'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { CommunityTour } from '@/components/tours/community-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -46,12 +48,13 @@ export default async function StudentCommunityPage() {
     )
   }
 
-  const adminClient = createAdminClient()
-
-  const [feed, uiState, settings] = await Promise.all([
+  const [feed, uiState, settings, courseLinks] = await Promise.all([
     getFeedPage({ tenantId, viewerId: userId, scope: 'school' }),
     getUiState(userId),
     getCommunitySettings(tenantId),
+    // #868: the course feeds this student can open (entitlements, like the
+    // course feed pages' own gate). Staff reach course feeds from their courses.
+    role === 'student' ? getCommunityCourses({ tenantId, userId }) : Promise.resolve([]),
   ])
 
   return (
@@ -69,6 +72,7 @@ export default async function StudentCommunityPage() {
           <div className="mt-2 -ml-3">
             <BlockedMembers />
           </div>
+          <CourseCommunityLinks courses={courseLinks} />
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">

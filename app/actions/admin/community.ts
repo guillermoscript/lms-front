@@ -2,43 +2,65 @@
 
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
+import { canPinInCourse } from '@/lib/community/access'
 import { revalidatePath } from 'next/cache'
+
+/**
+ * Who may pin or unpin a post (#868): an admin anywhere in the school, or the
+ * course's author for posts in that course — the teacher who seeds a course
+ * feed with a pinned welcome prompt must also be able to take it down. The
+ * school feed, lock, hide and mute stay admin-only (`verifyAdminAccess`).
+ * Returns the post (this tenant's) or an error message.
+ */
+async function authorizePin(
+  postId: string
+): Promise<{ tenantId: string; post: { id: string; course_id: number | null } } | string> {
+  const [role, userId, tenantId] = await Promise.all([getUserRole(), getCurrentUserId(), getCurrentTenantId()])
+  if (!role || !userId) return 'Access denied'
+
+  const { data: post } = await createAdminClient()
+    .from('community_posts')
+    .select('id, course_id')
+    .eq('id', postId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!post) return 'Post not found'
+
+  const allowed =
+    role === 'admin' ||
+    (post.course_id !== null && (await canPinInCourse({ tenantId, userId, role, courseId: post.course_id })))
+  return allowed ? { tenantId, post } : 'Access denied'
+}
+
+async function setPinned(postId: string, isPinned: boolean): Promise<ActionResult> {
+  const auth = await authorizePin(postId)
+  if (typeof auth === 'string') return { success: false, error: auth }
+  const { tenantId, post } = auth
+
+  const { error } = await createAdminClient()
+    .from('community_posts')
+    .update({ is_pinned: isPinned, updated_at: new Date().toISOString() })
+    .eq('id', postId)
+    .eq('tenant_id', tenantId)
+
+  if (error) throw error
+
+  revalidatePath('/dashboard/admin/community')
+  revalidatePath('/dashboard')
+  if (post.course_id !== null) {
+    revalidatePath(`/dashboard/student/courses/${post.course_id}/community`)
+    revalidatePath(`/dashboard/teacher/courses/${post.course_id}/community`)
+  }
+  return { success: true }
+}
 
 /**
  * Pin a post to the top of the feed
  */
 export async function pinPost(postId: string): Promise<ActionResult> {
   try {
-    await verifyAdminAccess()
-    const tenantId = await getCurrentTenantId()
-    const adminClient = createAdminClient()
-
-    // Verify post belongs to this tenant
-    const { data: post, error: fetchError } = await adminClient
-      .from('community_posts')
-      .select('id, tenant_id')
-      .eq('id', postId)
-      .single()
-
-    if (fetchError || !post) {
-      return { success: false, error: 'Post not found' }
-    }
-
-    if (post.tenant_id !== tenantId) {
-      return { success: false, error: 'Access denied' }
-    }
-
-    const { error } = await adminClient
-      .from('community_posts')
-      .update({ is_pinned: true, updated_at: new Date().toISOString() })
-      .eq('id', postId)
-      .eq('tenant_id', tenantId)
-
-    if (error) throw error
-
-    revalidatePath('/dashboard/admin/community')
-    revalidatePath('/dashboard')
-    return { success: true }
+    return await setPinned(postId, true)
   } catch (err) {
     console.error('Failed to pin post:', err)
     return {
@@ -53,35 +75,7 @@ export async function pinPost(postId: string): Promise<ActionResult> {
  */
 export async function unpinPost(postId: string): Promise<ActionResult> {
   try {
-    await verifyAdminAccess()
-    const tenantId = await getCurrentTenantId()
-    const adminClient = createAdminClient()
-
-    const { data: post, error: fetchError } = await adminClient
-      .from('community_posts')
-      .select('id, tenant_id')
-      .eq('id', postId)
-      .single()
-
-    if (fetchError || !post) {
-      return { success: false, error: 'Post not found' }
-    }
-
-    if (post.tenant_id !== tenantId) {
-      return { success: false, error: 'Access denied' }
-    }
-
-    const { error } = await adminClient
-      .from('community_posts')
-      .update({ is_pinned: false, updated_at: new Date().toISOString() })
-      .eq('id', postId)
-      .eq('tenant_id', tenantId)
-
-    if (error) throw error
-
-    revalidatePath('/dashboard/admin/community')
-    revalidatePath('/dashboard')
-    return { success: true }
+    return await setPinned(postId, false)
   } catch (err) {
     console.error('Failed to unpin post:', err)
     return {
