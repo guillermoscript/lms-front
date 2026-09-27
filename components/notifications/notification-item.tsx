@@ -159,7 +159,8 @@ export function NotificationItem({ row, role, variant, onOpened, onNavigate, onM
       {unreadDot}
       <span className="min-w-0 flex-1 space-y-0.5">
         {body}
-        <span className="block text-[10px] text-muted-foreground">
+        {/* Relative time differs between the server render and hydration. */}
+        <span className="block text-[10px] text-muted-foreground" suppressHydrationWarning>
           {typeLabel} · {when}
         </span>
         {!read && <span className="sr-only">{t('unread')}</span>}
