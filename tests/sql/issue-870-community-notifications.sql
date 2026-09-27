@@ -74,6 +74,9 @@ declare
   p4  constant uuid := '87000000-0000-0000-0000-000000000104';
   p5  constant uuid := '87000000-0000-0000-0000-000000000105';
   p6  constant uuid := '87000000-0000-0000-0000-000000000106';
+  p7  constant uuid := '87000000-0000-0000-0000-000000000107';
+  p8  constant uuid := '87000000-0000-0000-0000-000000000108';
+  p9  constant uuid := '87000000-0000-0000-0000-000000000109';
   r record;
   n_first bigint;
   n_planted bigint;
@@ -83,7 +86,9 @@ declare
   audience uuid[];
 begin
   -- ---------------------------------------------------------------- setup
-  update user_notifications set push_sent = true where push_sent = false;
+  -- Nothing queued and no push inside the 15-minute window, whatever other runs left.
+  update user_notifications set push_sent = true, push_sent_at = now() - interval '1 hour'
+   where push_sent = false or push_sent_at > now() - interval '15 minutes';
   delete from notification_preferences where user_id in (a, b, c, t);
   delete from community_user_blocks where blocker_id in (a, b, c, t) or blocked_id in (a, b, c, t);
   delete from community_user_mutes where tenant_id = ca;
@@ -147,11 +152,17 @@ begin
   select * into r from pg_temp.open_reply(p1, a);
   if (r.metadata ->> 'count')::int <> 2 then raise exception '§3 self comment counted'; end if;
 
-  -- §4 a reply to A's comment: one notification, reply_to 'comment' wins over 'post'
+  -- §4 a reply to A's comment: one notification, reply_to 'comment' wins over 'post'.
+  -- The row's push is still queued, so it keeps its place in the push queue
+  -- (created_at is claim_pending_pushes' order) instead of moving to the back.
+  update user_notifications set created_at = now() - interval '5 minutes' where id = r.unid;
   perform pg_temp.say('87000000-0000-0000-0000-000000000204', p1, b, '87000000-0000-0000-0000-000000000203');
   select * into r from pg_temp.open_reply(p1, a);
   if (r.metadata ->> 'count')::int <> 3 or r.metadata ->> 'reply_to' <> 'comment' then
     raise exception '§4 % ', r.metadata;
+  end if;
+  if r.push_sent is not false or r.created_at <> now() - interval '5 minutes' then
+    raise exception '§4 a queued push lost its place: % %', r.push_sent, r.created_at;
   end if;
 
   -- §5 push: claimed once with the ids; inside 15 minutes no re-arm; after, re-armed
@@ -195,6 +206,24 @@ begin
     raise exception '§7 % %', r.priority, r.metadata;
   end if;
 
+  -- §7b a third member replies to B's comment on A's post: B is told about their
+  -- comment, A about their post — one row each
+  insert into community_posts (id, tenant_id, author_id, course_id, title, content)
+  values (p7, ca, a, 2001, 'Parent and post', 'x');
+  perform pg_temp.say('87000000-0000-0000-0000-000000000251', p7, b);
+  perform pg_temp.say('87000000-0000-0000-0000-000000000252', p7, t, '87000000-0000-0000-0000-000000000251');
+  select * into r from pg_temp.open_reply(p7, b);
+  if r.nid is null or r.metadata ->> 'reply_to' <> 'comment' or (r.metadata ->> 'count')::int <> 1
+     or r.metadata ->> 'comment_id' <> '87000000-0000-0000-0000-000000000252' then
+    raise exception '§7b parent author: %', r.metadata;
+  end if;
+  select * into r from pg_temp.open_reply(p7, a);
+  if r.nid is null or r.metadata ->> 'reply_to' <> 'post' or (r.metadata ->> 'count')::int <> 2
+     or r.metadata ->> 'comment_id' <> '87000000-0000-0000-0000-000000000252' then
+    raise exception '§7b post author: %', r.metadata;
+  end if;
+  if pg_temp.live(p7, t) <> 0 then raise exception '§7b the replier was notified'; end if;
+
   -- §8 blocks, either direction; a new block retracts the blocked member's notifications
   insert into community_user_blocks (blocker_id, blocked_id) values (a, b);
   perform pg_temp.say('87000000-0000-0000-0000-000000000209', p1, b);
@@ -209,6 +238,20 @@ begin
   insert into community_user_blocks (blocker_id, blocked_id) values (a, b);
   if pg_temp.live(p1, a) <> 0 then raise exception '§8 block did not retract'; end if;
   delete from community_user_blocks where blocker_id = a;
+
+  -- §8b a post by someone you blocked is hidden from you: a reply to your comment
+  -- on it neither reaches you, nor stays in your list once you block its author
+  insert into community_posts (id, tenant_id, author_id, course_id, title, content)
+  values (p8, ca, a, 2001, 'Blocked author''s post', 'x');
+  perform pg_temp.say('87000000-0000-0000-0000-000000000261', p8, b);
+  perform pg_temp.say('87000000-0000-0000-0000-000000000262', p8, t, '87000000-0000-0000-0000-000000000261');
+  if pg_temp.live(p8, b) <> 1 then raise exception '§8b setup: B not told about the reply'; end if;
+  insert into community_user_blocks (blocker_id, blocked_id) values (b, a);
+  if pg_temp.live(p8, b) <> 0 then raise exception '§8b blocking the post author did not retract'; end if;
+  perform pg_temp.say('87000000-0000-0000-0000-000000000263', p8, t, '87000000-0000-0000-0000-000000000261');
+  if pg_temp.live(p8, b) <> 0 then raise exception '§8b notified about a blocked author''s post'; end if;
+  if pg_temp.live(p8, a) <> 1 then raise exception '§8b the post author was not notified'; end if;
+  delete from community_user_blocks where blocker_id = b;
 
   -- §9 preferences: replies off, or in-app off, means nothing at all
   insert into notification_preferences (user_id, community_replies) values (a, false);
@@ -264,6 +307,14 @@ begin
   if (select push_sent from user_notifications where notification_id = n_id) is not true then
     raise exception '§11 queued push not cancelled';
   end if;
+  -- Dismissed is not enough: the recipient and the school's teachers can still
+  -- select the row. Nothing of the removed reply or its author may be left.
+  select * into r from notifications where id = n_id;
+  if r.content <> 'A post with no title that is long enough to be cut somewhere after eighty chara…'
+     or r.content like '%reply 301%' or r.content like '%Test Student%'
+     or r.metadata ?| array['comment_id', 'actor_id', 'actor_name', 'actor_role', 'snippet', 'reply_to'] then
+    raise exception '§11 hidden only reply not scrubbed: "%" %', r.content, r.metadata;
+  end if;
 
   perform pg_temp.say('87000000-0000-0000-0000-000000000302', p4, b);
   perform pg_temp.say('87000000-0000-0000-0000-000000000303', p4, b);
@@ -284,7 +335,24 @@ begin
   if (r.metadata ->> 'count')::int <> 2 or r.metadata ? 'comment_id' then raise exception '§11 hard delete: %', r.metadata; end if;
 
   update community_posts set is_hidden = true where id = p4;
-  if pg_temp.live(p4, a) <> 0 then raise exception '§11 hiding the post did not dismiss'; end if;
+  if pg_temp.live(p4, a) <> 0 then raise exception '§11 hiding the post did not retract'; end if;
+  if exists (select 1 from notifications where community_post_id = p4) then
+    raise exception '§11 notifications about a hidden post survived (title and snippets stay readable)';
+  end if;
+
+  -- the only reply hard-deleted (account deletion cascades comments, #850):
+  -- dismissed, and neither the words nor the name survive
+  insert into community_posts (id, tenant_id, author_id, course_id, title, content)
+  values (p9, ca, a, 2001, 'Deleted member', 'x');
+  perform pg_temp.say('87000000-0000-0000-0000-000000000351', p9, b);
+  select * into r from pg_temp.open_reply(p9, a);
+  n_id := r.nid;
+  delete from community_comments where id = '87000000-0000-0000-0000-000000000351';
+  if pg_temp.live(p9, a) <> 0 then raise exception '§11 deleting the only reply did not dismiss'; end if;
+  select * into r from notifications where id = n_id;
+  if r.content <> 'Deleted member' or r.metadata ?| array['comment_id', 'actor_id', 'actor_name', 'snippet'] then
+    raise exception '§11 deleted only reply not scrubbed: "%" %', r.content, r.metadata;
+  end if;
 
   -- §12 forged rows: no client writes a community notification; a planted one is never adopted
   perform set_config('request.jwt.claims', json_build_object(
@@ -355,6 +423,16 @@ begin
   if pg_temp.prompt_audience('87000000-0000-0000-0000-000000000602') <> array[a] then
     raise exception '§13 no-access / inactive: %', pg_temp.prompt_audience('87000000-0000-0000-0000-000000000602');
   end if;
+  -- prompt pushes: the first queues one; a second prompt while it is still
+  -- queued lands in-app only
+  if exists (select 1 from notifications n join user_notifications un on un.notification_id = n.id
+              where n.community_post_id = '87000000-0000-0000-0000-000000000601' and un.push_sent) then
+    raise exception '§13 first prompt push not queued';
+  end if;
+  if (select un.push_sent from notifications n join user_notifications un on un.notification_id = n.id and un.user_id = a
+       where n.community_post_id = '87000000-0000-0000-0000-000000000602') is not true then
+    raise exception '§13 second prompt pushed again inside the window';
+  end if;
   update tenant_users set status = 'active' where tenant_id = ca and user_id = b;
 
   -- prompts off, and a block either way
@@ -371,6 +449,22 @@ begin
     raise exception '§13 zero recipients left a row';
   end if;
   delete from community_user_blocks where blocker_id in (b, t);
+
+  -- once the window has passed, a prompt pushes again; still inside it, it does not
+  perform count(*) from claim_pending_pushes(1000, interval '1 day');
+  update user_notifications un set push_sent_at = now() - interval '16 minutes'
+    from notifications n
+   where n.id = un.notification_id and un.user_id = a and n.metadata ->> 'kind' = 'community_prompt';
+  insert into community_posts (id, tenant_id, author_id, course_id, post_type, content)
+  values ('87000000-0000-0000-0000-000000000608', ca, t, 2001, 'discussion_prompt', 'Prompt eight');
+  if (select un.push_sent from notifications n join user_notifications un on un.notification_id = n.id and un.user_id = a
+       where n.community_post_id = '87000000-0000-0000-0000-000000000608') is not false then
+    raise exception '§13 prompt push not re-armed after the window';
+  end if;
+  if (select un.push_sent from notifications n join user_notifications un on un.notification_id = n.id and un.user_id = b
+       where n.community_post_id = '87000000-0000-0000-0000-000000000608') is not true then
+    raise exception '§13 prompt pushed inside the window';
+  end if;
 
   -- school-feed prompts and courses nobody is enrolled in notify nobody, leave no row
   insert into community_posts (id, tenant_id, author_id, post_type, content)
@@ -462,10 +556,24 @@ begin
     raise exception '§18 wrong row';
   end if;
   if community_notify_answer_accepted('87000000-0000-0000-0000-000000000801', b) is not null then raise exception '§18 self'; end if;
+  -- hiding an accepted answer scrubs its text out of the notification too
+  update community_comments set is_hidden = true where id = '87000000-0000-0000-0000-000000000801';
+  select * into r from notifications where id = n_id;
+  if r.content <> 'Question' or r.metadata ?| array['comment_id', 'actor_id', 'actor_name', 'snippet'] then
+    raise exception '§18 hidden accepted answer not scrubbed: "%" %', r.content, r.metadata;
+  end if;
+  if exists (select 1 from user_notifications where notification_id = n_id and dismissed is not true) then
+    raise exception '§18 hidden accepted answer not dismissed';
+  end if;
   perform pg_temp.say('87000000-0000-0000-0000-000000000802', p6, b);
   insert into community_user_blocks (blocker_id, blocked_id) values (b, a);
   if community_notify_answer_accepted('87000000-0000-0000-0000-000000000802', a) is not null then raise exception '§18 across a block'; end if;
+  -- accepted by staff, but B blocked the post's author: the post is hidden from B
+  if community_notify_answer_accepted('87000000-0000-0000-0000-000000000802', t) is not null then
+    raise exception '§18 notified about a blocked author''s post';
+  end if;
   delete from community_user_blocks where blocker_id = b;
+  if community_notify_answer_accepted('87000000-0000-0000-0000-000000000802', t) is null then raise exception '§18 staff accept'; end if;
 
   -- §19 digest candidates count unread replies with activity inside the last day
   -- (A's only live reply row now is P6's, count 1; P5's planted row is another tenant's)

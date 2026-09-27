@@ -27,9 +27,14 @@
 --   * Replies are one row PER RECIPIENT (target_type 'user') and are BATCHED:
 --     one unread reply notification per (recipient, post) whose count, title,
 --     snippet and actor are updated in place ("(3) Post title"), and whose
---     user_notifications.created_at moves to the latest activity. A push is
---     sent at most once per (recipient, post) every 15 minutes; replies in
+--     user_notifications.created_at moves to the latest activity (except while
+--     its push is still queued: created_at is the push queue's order). A push
+--     is sent at most once per (recipient, post) every 15 minutes; replies in
 --     between update the text of the one already queued or sent.
+--
+--   * Prompt pushes are rate-limited the same way per (student, course): a
+--     teacher adding prompts to ten lessons in one sitting sends ten in-app
+--     rows but one push every 15 minutes.
 --
 --   * A prompt is ONE shared row (target_type 'course') plus a set-based
 --     fan-out: active students of the school with an ACTIVE ENROLLMENT in the
@@ -46,17 +51,21 @@
 --     client — staff included — from inserting or editing one. Only definer
 --     code and the service role write them.
 --
---   * Never notify: yourself; across a block (either direction); hidden
+--   * Never notify: yourself; across a block (either direction); about a post
+--     whose author the recipient blocked (RLS hides it from them); hidden
 --     content (the comment, its post, the parent comment); a muted actor; a
 --     recipient who left the school or lost access to the course; a school
 --     whose plan has no community; a comment whose tenant differs from its
 --     post's; a recipient who turned the category (or in-app) off.
 --
---   * Retraction: hiding or deleting a post dismisses everything about it;
---     hiding or deleting a comment decrements the batch and scrubs its text (or
---     dismisses the row when it was the only reply); a new block dismisses the
---     blocker's community notifications from the blocked member. Un-hiding
---     restores nothing.
+--   * Retraction: hiding or deleting a post deletes every notification about
+--     it; hiding or deleting a comment scrubs its text, author and snippet out
+--     of the notification that names it and decrements the batch (or, when it
+--     was the only reply or the accepted answer, also dismisses the row). No
+--     removed words or deleted member's name stay readable by the recipient or
+--     by the staff who can read the school's notifications. A new block
+--     dismisses the blocker's community notifications from the blocked member
+--     and about the blocked member's posts. Un-hiding restores nothing.
 --
 --   * No URL is stored. The web builds the link from the ids for the viewer's
 --     role (lib/community/notifications.ts); the push carries the ids plus
@@ -307,13 +316,19 @@ BEGIN
    WHERE cand.uid <> c.author_id
      AND public.community_notify_can_reach(cand.uid, p.tenant_id, p.course_id)
      AND NOT public.community_notify_blocked(cand.uid, c.author_id)
+     -- RLS hides a blocked member's posts from the blocker: no notification
+     -- that names such a post and links to it.
+     AND NOT EXISTS (
+           SELECT 1 FROM public.community_user_blocks b
+            WHERE b.blocker_id = cand.uid AND b.blocked_id = p.author_id
+         )
      AND public.community_notify_wants(cand.uid, 'replies')
    ORDER BY cand.uid, cand.rank;
 END;
 $$;
 
 COMMENT ON FUNCTION public.community_reply_recipients(uuid) IS
-  'Issue #870: recipients of a reply notification for a comment (post author, parent comment author), after every never-notify rule. Ordered by user_id.';
+  'Issue #870: recipients of a reply notification for a comment (post author, parent comment author), after every never-notify rule (including a recipient who blocked the post''s author). Ordered by user_id.';
 
 -- Who a new discussion prompt notifies. Set-based: one pass over the course's
 -- active enrollments, each probe an index lookup.
@@ -504,8 +519,13 @@ BEGIN
            )
      WHERE n.id = v_open.notification_id;
 
+    -- created_at is both the list's "latest activity" and claim_pending_pushes'
+    -- queue order. While this row's push is still queued it keeps its place:
+    -- moving it to now() on every reply would send a busy thread's push to the
+    -- back of the queue again and again. The next reply after the push went
+    -- out moves it.
     UPDATE public.user_notifications un
-       SET created_at = now(),
+       SET created_at = CASE WHEN un.push_sent = false THEN un.created_at ELSE now() END,
            push_sent = CASE WHEN v_cooldown THEN un.push_sent ELSE false END,
            push_sent_at = CASE WHEN v_cooldown THEN un.push_sent_at ELSE NULL END
      WHERE un.id = v_open.user_notification_id;
@@ -668,8 +688,24 @@ BEGIN
     )
     RETURNING id INTO v_id;
 
-    INSERT INTO public.user_notifications (notification_id, user_id)
-    SELECT v_id, u
+    -- One push per (student, course) every 15 minutes: a student with a
+    -- prompt push for this course still queued, or sent less than 15 minutes
+    -- ago, gets this one in-app only (landed already "sent").
+    INSERT INTO public.user_notifications (notification_id, user_id, push_sent)
+    SELECT v_id, u,
+           EXISTS (
+             SELECT 1
+               FROM public.user_notifications un
+               JOIN public.notifications n ON n.id = un.notification_id
+              WHERE un.user_id = u
+                AND un.created_at > now() - interval '1 day'
+                AND (un.push_sent = false OR un.push_sent_at > now() - interval '15 minutes')
+                AND n.id <> v_id
+                AND n.tenant_id = NEW.tenant_id
+                AND n.target_course_id = NEW.course_id
+                AND n.notification_type = 'community'
+                AND n.metadata ->> 'kind' = 'community_prompt'
+           )
       FROM public.community_prompt_recipients(NEW.id) u;
     GET DIAGNOSTICS v_recipients = ROW_COUNT;
 
@@ -692,8 +728,13 @@ CREATE TRIGGER trg_community_notify_on_prompt
   WHEN (NEW.post_type = 'discussion_prompt' AND NEW.course_id IS NOT NULL AND NOT NEW.is_hidden)
   EXECUTE FUNCTION public.community_notify_on_prompt();
 
--- 8c. Hiding (soft-deleting / moderating) a post dismisses everything about it.
--- A hard DELETE is the FK cascade on community_post_id.
+-- 8c. Hiding (soft-deleting / moderating) a post deletes every notification
+-- about it, as a hard DELETE does through the FK cascade on community_post_id.
+-- Dismissing would not be enough: the rows carry the post's title or excerpt
+-- and reply snippets, which the recipient can still select and every teacher of
+-- the school can read ("Staff can view tenant notifications") — while only
+-- admins can read a hidden post. Its user_notifications rows cascade, queued
+-- pushes included. Un-hiding restores nothing.
 CREATE OR REPLACE FUNCTION public.community_retract_post_notifications()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -702,15 +743,9 @@ SET search_path = ''
 AS $$
 BEGIN
   BEGIN
-    UPDATE public.user_notifications un
-       SET dismissed = true,
-           dismissed_at = now(),
-           push_sent = true
-      FROM public.notifications n
-     WHERE n.id = un.notification_id
-       AND n.community_post_id = NEW.id
-       AND n.notification_type = 'community'
-       AND un.dismissed IS NOT TRUE;
+    DELETE FROM public.notifications n
+     WHERE n.community_post_id = NEW.id
+       AND n.notification_type = 'community';
   EXCEPTION WHEN OTHERS THEN
     RAISE WARNING '[#870 community_retract_post_notifications] % (%)', SQLERRM, SQLSTATE;
   END;
@@ -726,10 +761,14 @@ CREATE TRIGGER trg_community_retract_post
   EXECUTE FUNCTION public.community_retract_post_notifications();
 
 -- 8d. Hiding or deleting a comment takes it back out of the notification that
--- names it: the batch loses one and its text is scrubbed to the post label, or
--- — when it was the only reply — the notification is dismissed. Only the LATEST
--- reply of a batch is named in metadata, so an earlier one leaves the count as
--- it is; none of its text was stored.
+-- names it: its text, author and snippet are scrubbed (content falls back to
+-- the post label) and the batch loses one — or, when it was the only reply or
+-- the accepted answer, the notification is also dismissed. Scrubbed, not just
+-- dismissed: a dismissed row is still readable by its recipient and by every
+-- teacher of the school, and neither may read a hidden comment; after account
+-- deletion (#850) the member's name and words must not outlive them either.
+-- Only the LATEST reply of a batch is named in metadata, so an earlier one
+-- leaves the count as it is; none of its text was stored.
 CREATE OR REPLACE FUNCTION public.community_retract_comment_notifications()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -775,6 +814,10 @@ BEGIN
                           || jsonb_build_object('count', v_count)
          WHERE n.id = r.id;
       ELSE
+        UPDATE public.notifications n
+           SET content = coalesce(n.metadata ->> 'post_label', n.title),
+               metadata = n.metadata - ARRAY['comment_id', 'actor_id', 'actor_name', 'actor_role', 'snippet', 'reply_to']
+         WHERE n.id = r.id;
         UPDATE public.user_notifications un
            SET dismissed = true,
                dismissed_at = now(),
@@ -806,7 +849,9 @@ CREATE TRIGGER trg_community_retract_comment_delete
   EXECUTE FUNCTION public.community_retract_comment_notifications();
 
 -- 8e. Blocking someone takes their community notifications out of the
--- blocker's list, the same moment their posts and comments disappear.
+-- blocker's list, the same moment their posts and comments disappear: the ones
+-- they caused, and the ones about their posts (someone else replying to the
+-- blocker's comment on them) — RLS now hides those posts from the blocker.
 CREATE OR REPLACE FUNCTION public.community_retract_on_block()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -824,7 +869,14 @@ BEGIN
        AND un.dismissed IS NOT TRUE
        AND n.id = un.notification_id
        AND n.notification_type = 'community'
-       AND n.metadata ->> 'actor_id' = NEW.blocked_id::text;
+       AND (
+         n.metadata ->> 'actor_id' = NEW.blocked_id::text
+         OR EXISTS (
+              SELECT 1 FROM public.community_posts cp
+               WHERE cp.id = n.community_post_id
+                 AND cp.author_id = NEW.blocked_id
+            )
+       );
   EXCEPTION WHEN OTHERS THEN
     RAISE WARNING '[#870 community_retract_on_block] % (%)', SQLERRM, SQLSTATE;
   END;
@@ -869,7 +921,7 @@ BEGIN
       RETURN NULL;
     END IF;
 
-    SELECT cp.id, cp.tenant_id, cp.course_id, cp.lesson_id, cp.title, cp.content, cp.is_hidden
+    SELECT cp.id, cp.tenant_id, cp.course_id, cp.lesson_id, cp.author_id, cp.title, cp.content, cp.is_hidden
       INTO p
       FROM public.community_posts cp
      WHERE cp.id = c.post_id;
@@ -879,6 +931,11 @@ BEGIN
 
     IF NOT public.community_enabled(p.tenant_id)
        OR public.community_notify_blocked(c.author_id, _actor_id)
+       -- The answer's author blocked the post's author: RLS hides the post.
+       OR EXISTS (
+            SELECT 1 FROM public.community_user_blocks b
+             WHERE b.blocker_id = c.author_id AND b.blocked_id = p.author_id
+          )
        OR NOT public.community_notify_can_reach(c.author_id, p.tenant_id, p.course_id)
        OR NOT public.community_notify_wants(c.author_id, 'replies') THEN
       RETURN NULL;
