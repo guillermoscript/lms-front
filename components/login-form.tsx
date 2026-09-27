@@ -1,5 +1,6 @@
 'use client'
 
+import { googleAuthEnabled } from '@/lib/auth/social-providers'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -207,6 +208,8 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
                 {isLoading ? t('submitting') : t('submit')}
               </Button>
 
+              {googleAuthEnabled && (
+              <>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -243,6 +246,8 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
                 </svg>
                 {isSocialLoading ? t('submitting') : t('continueWithGoogle')}
               </Button>
+              </>
+              )}
             </div>
             <div className="mt-4 text-center text-sm">
               {t('noAccount')}{' '}

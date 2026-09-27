@@ -42,9 +42,11 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
-import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
+import { isTourCompleted, areToursEnabled, isChecklistDismissed } from '@/lib/ui-state-keys'
 import { getCourseProgressReport, type CourseItem } from '@/lib/analytics/student-progress'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { hasVisibleCoursePosts, isCommunityEnabled } from '@/lib/community/access'
+import { CourseWelcomePrompt } from '@/components/community/course-welcome-prompt'
 import { getLessonPromptCounts } from '@/lib/community/lesson-prompts'
 import { AddDiscussionPromptTrigger, DiscussionPromptShortcuts } from '@/components/community/discussion-prompt-shortcuts'
 
@@ -150,6 +152,14 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
     )
   }
 
+  // Course community (#868): started here, awaited after the batch below.
+  // The welcome offer is for the author of a published course, not for an
+  // admin browsing someone else's; the feed count is only read when it could show.
+  const communityEnabledP = isCommunityEnabled(tenantId)
+  const welcomeEligible = course.status === 'published' && isOwner
+  const feedHasPostsP = welcomeEligible
+    ? hasVisibleCoursePosts({ tenantId, courseId: course.course_id })
+    : Promise.resolve(null)
   // Discussion prompts per lesson (#869); null when the plan has no community.
   const promptCountsPromise = getLessonPromptCounts(supabase, { tenantId, courseId: parseInt(courseId) })
 
@@ -195,6 +205,15 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   ])
   const promptCounts = await promptCountsPromise
   const tDiscussion = await getTranslations('community.lessonDiscussion')
+
+  const communityOn = await communityEnabledP
+  const welcomeKey = `community-welcome-${course.course_id}`
+  const showWelcome =
+    communityOn &&
+    welcomeEligible &&
+    !isChecklistDismissed(uiState, welcomeKey) &&
+    (await feedHasPostsP) === false
+  const tc = await getTranslations('community')
 
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
@@ -291,7 +310,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link href={`/dashboard/teacher/courses/${courseId}/preview`} data-tour="course-preview">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconEye className="h-3.5 w-3.5" />
@@ -304,6 +323,23 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                   {t('analytics')}
                 </Button>
               </Link>
+              {communityOn && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href={`/dashboard/teacher/courses/${courseId}/community`}
+                      data-testid="teacher-course-community-link"
+                    />
+                  }
+                >
+                  <IconMessages className="h-3.5 w-3.5" />
+                  {tc('title')}
+                </Button>
+              )}
               <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconSettings className="h-3.5 w-3.5" />
@@ -316,6 +352,14 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
       </header>
 
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
+        {showWelcome && (
+          <CourseWelcomePrompt
+            courseId={course.course_id}
+            dismissKey={welcomeKey}
+            defaultTitle={tc('courseEntry.welcome.defaultTitle')}
+            defaultContent={tc('courseEntry.welcome.defaultContent', { course: course.title })}
+          />
+        )}
         <Tabs defaultValue={activeTab} className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList data-tour="course-tabs" className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">

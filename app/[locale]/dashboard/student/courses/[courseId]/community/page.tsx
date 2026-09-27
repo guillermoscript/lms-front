@@ -60,7 +60,7 @@ export default async function StudentCourseCommunityPage({ params, searchParams 
               className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <IconArrowLeft className="h-4 w-4" />
-              {t('backToCourse')}
+              {t('courseEntry.backToCourse')}
             </Link>
             <h1 className="text-2xl font-bold tracking-tight">{course.title} — {t('title')}</h1>
           </div>
@@ -93,7 +93,7 @@ export default async function StudentCourseCommunityPage({ params, searchParams 
             className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <IconArrowLeft className="h-4 w-4" />
-            {t('backToCourse')}
+            {t('courseEntry.backToCourse')}
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{course.title} — {t('title')}</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{t('courseFeedDescription')}</p>

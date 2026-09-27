@@ -222,6 +222,11 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Google sign-in is off by default (lib/auth/social-providers.ts);
+          # E2E builds with it on so create-school-google-fallback.spec.ts
+          # keeps covering the button.
+          NEXT_PUBLIC_AUTH_GOOGLE_ENABLED: 'true'
 
       - name: Playwright
         run: |

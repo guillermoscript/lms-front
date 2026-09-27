@@ -16,7 +16,15 @@ const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
  * This route is at /api/auth/callback to bypass the intl middleware.
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const url = new URL(request.url)
+  const { searchParams } = url
+  // Behind a reverse proxy (Dokploy/Traefik) request.url carries the server's
+  // bind address (0.0.0.0:3000), not the public host — every redirect built
+  // from it sends the user to an unreachable page. Trust the forwarded/Host
+  // header instead, same pattern as app/api/payments/checkout/route.ts.
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? url.host
+  const proto = request.headers.get('x-forwarded-proto') ?? url.protocol.replace(':', '')
+  const origin = `${proto}://${host}`
   const code = searchParams.get('code')
   const next = getSafeNextPath(searchParams.get('next'), '/dashboard/student')
 
@@ -71,16 +79,7 @@ export async function GET(request: Request) {
         }
 
         const redirectTo = next === '/dashboard/student' ? `/dashboard/${userRole}` : next
-        const forwardedHost = request.headers.get('x-forwarded-host')
-        const isLocalEnv = process.env.NODE_ENV === 'development'
-
-        if (isLocalEnv) {
-          return NextResponse.redirect(`${origin}${redirectTo}`)
-        } else if (forwardedHost) {
-          return NextResponse.redirect(`https://${forwardedHost}${redirectTo}`)
-        } else {
-          return NextResponse.redirect(`${origin}${redirectTo}`)
-        }
+        return NextResponse.redirect(`${origin}${redirectTo}`)
       }
 
       return NextResponse.redirect(`${origin}${next}`)
