@@ -291,6 +291,10 @@ export async function updatePost(
     if (post.author_id !== userId) {
       return { success: false, error: 'You can only edit your own posts' }
     }
+    // The database writes milestones (#871); RLS refuses edits to them too.
+    if (post.post_type === 'milestone') {
+      return { success: false, error: 'Milestone posts cannot be edited' }
+    }
 
     const trimmedTitle = title?.trim() || null
     if (post.post_type === 'poll') {

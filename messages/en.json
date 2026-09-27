@@ -7038,13 +7038,15 @@
       "optionPlaceholder": "Option {n}",
       "detailsPlaceholder": "Add context (optional)"
     },
-    "milestone": {
-      "courseCompleted": "{name} completed the course {course}!",
-      "certificateEarned": "{name} earned a certificate!",
-      "levelUp": "{name} reached level {level}!",
-      "streak": "{name} is on a {days}-day streak!"
-    },
     "milestones": {
+      "courseCompleted": "Completed <strong>{course}</strong>",
+      "courseCompletedWithCertificate": "Completed <strong>{course}</strong> and earned the certificate",
+      "courseCompletedFallback": "Completed a course",
+      "certificateEarned": "Earned the certificate for <strong>{course}</strong>",
+      "certificateEarnedFallback": "Earned a certificate",
+      "levelUp": "Reached level <strong>{level}</strong>",
+      "streak": "Reached a <strong>{days}-day streak</strong>",
+      "fallback": "Reached a milestone",
       "share": {
         "label": "Share my milestones in the community",
         "description": "Finishing a course, earning a certificate, reaching level 5 and up, and 7, 30 and 100-day streaks are posted automatically. Applies in every school you belong to. Turning it off stops new posts; you can delete earlier ones from the feed.",

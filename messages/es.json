@@ -7038,13 +7038,15 @@
       "optionPlaceholder": "Opción {n}",
       "detailsPlaceholder": "Añade contexto (opcional)"
     },
-    "milestone": {
-      "courseCompleted": "¡{name} completó el curso {course}!",
-      "certificateEarned": "¡{name} obtuvo un certificado!",
-      "levelUp": "¡{name} alcanzó el nivel {level}!",
-      "streak": "¡{name} lleva una racha de {days} días!"
-    },
     "milestones": {
+      "courseCompleted": "Completó <strong>{course}</strong>",
+      "courseCompletedWithCertificate": "Completó <strong>{course}</strong> y obtuvo el certificado",
+      "courseCompletedFallback": "Completó un curso",
+      "certificateEarned": "Obtuvo el certificado de <strong>{course}</strong>",
+      "certificateEarnedFallback": "Obtuvo un certificado",
+      "levelUp": "Alcanzó el nivel <strong>{level}</strong>",
+      "streak": "Alcanzó una racha de <strong>{days} días</strong>",
+      "fallback": "Alcanzó un logro",
       "share": {
         "label": "Compartir mis logros en la comunidad",
         "description": "Terminar un curso, obtener un certificado, llegar al nivel 5 o superior y las rachas de 7, 30 y 100 días se publican automáticamente. Se aplica en todas las escuelas a las que perteneces. Al desactivarlo dejan de publicarse logros nuevos; los anteriores puedes eliminarlos desde el feed.",
