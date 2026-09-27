@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createElement } from 'react'
+import { createElement, type ComponentProps } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { NextIntlClientProvider } from 'next-intl'
 import en from '../../messages/en.json'
@@ -48,14 +48,14 @@ describe('readMilestone', () => {
 })
 
 function render(locale: 'en' | 'es', milestone_type: string | null, milestone_data: unknown): string {
-  const html = renderToStaticMarkup(
-    createElement(NextIntlClientProvider, {
-      locale,
-      messages: locale === 'en' ? en : es,
-      timeZone: 'UTC',
-      children: createElement(MilestoneCard, { post: { milestone_type, milestone_data } }),
-    })
-  )
+  // No JSX in a .test.ts: the provider's typed props carry the card as `children`.
+  const provider: ComponentProps<typeof NextIntlClientProvider> = {
+    locale,
+    messages: locale === 'en' ? en : es,
+    timeZone: 'UTC',
+    children: createElement(MilestoneCard, { post: { milestone_type, milestone_data } }),
+  }
+  const html = renderToStaticMarkup(createElement(NextIntlClientProvider, provider))
   expect(html).not.toContain('undefined')
   expect(html).not.toMatch(/<strong[^>]*><\/strong>/)
   return html
