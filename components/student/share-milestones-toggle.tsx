@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { IconMessages } from '@tabler/icons-react'
@@ -15,6 +15,8 @@ interface ShareMilestonesToggleProps {
   schoolSharing: boolean
 }
 
+const ANCHOR = 'share-milestones'
+
 // "Share my milestones in the community" (#871). The database announces a
 // finished course, a certificate, level 5+ and 7/30/100-day streaks; this is
 // the student's way to stop that. `id` is the target of the "Sharing settings"
@@ -22,7 +24,15 @@ interface ShareMilestonesToggleProps {
 export function ShareMilestonesToggle({ initialEnabled, schoolSharing }: ShareMilestonesToggleProps) {
   const [enabled, setEnabled] = useState(initialEnabled)
   const [isSaving, setIsSaving] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
   const t = useTranslations('community.milestones.share')
+
+  // The router's own #hash scroll runs while profile/loading.tsx is still on
+  // screen, finds no #share-milestones and leaves the page at the top. Scroll
+  // once this is actually rendered.
+  useEffect(() => {
+    if (window.location.hash === `#${ANCHOR}`) ref.current?.scrollIntoView({ block: 'start' })
+  }, [])
 
   const handleChange = async (checked: boolean) => {
     setIsSaving(true)
@@ -41,7 +51,8 @@ export function ShareMilestonesToggle({ initialEnabled, schoolSharing }: ShareMi
 
   return (
     <div
-      id="share-milestones"
+      ref={ref}
+      id={ANCHOR}
       data-testid="share-milestones-toggle"
       className="flex scroll-mt-24 items-center justify-between gap-4 rounded-xl border border-border p-4"
     >
