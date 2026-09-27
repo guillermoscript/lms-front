@@ -576,7 +576,7 @@ begin
   if community_notify_answer_accepted('87000000-0000-0000-0000-000000000802', t) is null then raise exception '§18 staff accept'; end if;
 
   -- §19 digest candidates count unread replies with activity inside the last day
-  -- (A's only live reply row now is P6's, count 1; P5's planted row is another tenant's)
+  -- (A has live reply rows on P5–P8 by now; P5's planted row is another tenant's and does not count)
   select coalesce(sum((n.metadata ->> 'count')::int), 0) into v
     from notifications n join user_notifications un on un.notification_id = n.id
    where un.user_id = a and un.in_app_read = false and un.dismissed is not true and n.tenant_id = ca
