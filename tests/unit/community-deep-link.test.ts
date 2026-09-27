@@ -68,6 +68,11 @@ describe('parseCommentHash', () => {
     expect(parseCommentHash(`comment-${A}`)).toBe(A)
   })
 
+  it('takes the last fragment when the router stacked two hashes', () => {
+    expect(parseCommentHash(`#comment-${A}#comment-${B}`)).toBe(B)
+    expect(parseCommentHash(`#comment-${A}#post-${B}`)).toBeNull()
+  })
+
   it('ignores a bare uuid, another anchor and garbage', () => {
     expect(parseCommentHash(`#${A}`)).toBeNull()
     expect(parseCommentHash(`#post-${A}`)).toBeNull()

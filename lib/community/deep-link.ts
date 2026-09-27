@@ -25,9 +25,13 @@ export function parsePostParam(raw: string | string[] | undefined): string | nul
   return value && UUID.test(value) ? value.toLowerCase() : null
 }
 
-/** `#comment-<uuid>` as a comment id, or null. */
+/**
+ * `#comment-<uuid>` as a comment id, or null. Only the last fragment counts: a
+ * router.push that changes nothing but the hash makes Next's production router
+ * append the new hash to the old one (`#comment-A#comment-B`), and B is the target.
+ */
 export function parseCommentHash(hash: string | null | undefined): string | null {
-  const match = /^#?comment-(.+)$/.exec(hash ?? '')
+  const match = /^comment-(.+)$/.exec((hash ?? '').split('#').pop() ?? '')
   return match && UUID.test(match[1]) ? match[1].toLowerCase() : null
 }
 
