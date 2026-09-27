@@ -20,13 +20,11 @@ const state: {
   failing: Set<string>
   calls: Call[]
   rpc: (name: string, args: unknown) => Promise<{ data: unknown; error: { message: string } | null }>
-  blocked: string[] | Error
 } = {
   tables: {},
   failing: new Set(),
   calls: [],
   rpc: async () => ({ data: true, error: null }),
-  blocked: [],
 }
 
 function query(table: string) {
@@ -84,12 +82,9 @@ function query(table: string) {
 vi.mock('@/lib/supabase/admin', () => ({
   createAdminClient: () => ({ from: query, rpc: (name: string, args: unknown) => state.rpc(name, args) }),
 }))
-vi.mock('@/lib/community/blocks', () => ({
-  getBlockedAuthorIds: async () => {
-    if (state.blocked instanceof Error) throw state.blocked
-    return state.blocked
-  },
-}))
+// `@/lib/community/blocks` is NOT mocked: it reads through the fake above, so
+// a failing blocks read comes back the way PostgREST reports one — as
+// `{ data: null, error }`, never as a throw.
 
 const {
   communityPostLabel,
@@ -101,6 +96,7 @@ const {
   getCommunityCourses,
   canPinInCourse,
 } = await import('@/lib/community/access')
+const { getBlockedAuthorIds, readBlockedAuthorIds } = await import('@/lib/community/blocks')
 
 const NOW = new Date('2026-09-27T12:00:00.000Z')
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 24 * 60 * 60 * 1000).toISOString()
@@ -112,7 +108,6 @@ beforeEach(() => {
   state.failing = new Set()
   state.calls = []
   state.rpc = async () => ({ data: true, error: null })
-  state.blocked = []
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
@@ -275,13 +270,23 @@ describe('loadCourseCommunityEntry', () => {
   })
 
   it('leaves out the authors the viewer blocked, on both reads', async () => {
-    state.blocked = ['blocked-1', 'blocked-2']
-    state.tables.community_posts = [post({ id: 'from-blocked', author_id: 'blocked-1', created_at: daysAgo(0.1) })]
+    state.tables.community_user_blocks = [
+      { blocker_id: 'v1', blocked_id: 'blocked-1' },
+      { blocker_id: 'v1', blocked_id: 'blocked-2' },
+      // Someone else's block is not the viewer's.
+      { blocker_id: 'v2', blocked_id: 'author-1' },
+    ]
+    state.tables.community_posts = [
+      post({ id: 'from-blocked', author_id: 'blocked-1', created_at: daysAgo(0.1) }),
+      post({ id: 'visible', author_id: 'author-1', content: 'Still here', created_at: daysAgo(2) }),
+    ]
 
     expect(await loadCourseCommunityEntry(args)).toEqual({
       enabled: true,
-      activity: { recentCount: 0, latest: null },
+      activity: { recentCount: 1, latest: { id: 'visible', label: 'Still here' } },
     })
+    const [blocks] = callsTo('community_user_blocks')
+    expect(hasOp(blocks, 'eq', 'blocker_id', 'v1')).toBe(true)
     for (const call of callsTo('community_posts')) {
       expect(hasOp(call, 'not', 'author_id', 'in', '(blocked-1,blocked-2)')).toBe(true)
     }
@@ -299,11 +304,31 @@ describe('loadCourseCommunityEntry', () => {
     expect(await loadCourseCommunityEntry(args)).toEqual({ enabled: true, activity: null })
   })
 
-  it('returns no activity when the blocks cannot be read', async () => {
-    state.blocked = new Error('blocks down')
-    state.tables.community_posts = [post({})]
+  it('returns no activity when the blocks read reports an error', async () => {
+    // The newest post is by an author the viewer blocked. Reading the failed
+    // blocks as "none" would quote it on the course page.
+    state.failing.add('community_user_blocks')
+    state.tables.community_user_blocks = [{ blocker_id: 'v1', blocked_id: 'blocked-1' }]
+    state.tables.community_posts = [post({ author_id: 'blocked-1', title: 'From a blocked author' })]
+
     expect(await loadCourseCommunityEntry(args)).toEqual({ enabled: true, activity: null })
     expect(callsTo('community_posts')).toHaveLength(0)
+  })
+})
+
+describe('readBlockedAuthorIds', () => {
+  it('returns the viewer’s blocks', async () => {
+    state.tables.community_user_blocks = [
+      { blocker_id: 'v1', blocked_id: 'b1' },
+      { blocker_id: 'v2', blocked_id: 'b2' },
+    ]
+    expect(await readBlockedAuthorIds('v1')).toEqual(['b1'])
+  })
+
+  it('is null on a read error, where getBlockedAuthorIds would say "no blocks"', async () => {
+    state.failing.add('community_user_blocks')
+    expect(await readBlockedAuthorIds('v1')).toBeNull()
+    expect(await getBlockedAuthorIds('v1')).toEqual([])
   })
 })
 

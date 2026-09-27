@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getBlockedAuthorIds } from '@/lib/community/blocks'
+import { readBlockedAuthorIds } from '@/lib/community/blocks'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 
@@ -126,7 +126,8 @@ export async function loadCourseCommunityEntry({
 }): Promise<CourseCommunityEntry> {
   const [enabled, blockedIds] = await Promise.all([
     isCommunityEnabled(tenantId),
-    getBlockedAuthorIds(viewerId).catch((err: unknown) => {
+    // Fails closed: a hint that ignored the blocks could quote a blocked author.
+    readBlockedAuthorIds(viewerId).catch((err: unknown) => {
       console.error('course community entry: blocks read failed:', err)
       return null
     }),
