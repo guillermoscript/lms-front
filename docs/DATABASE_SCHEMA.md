@@ -669,7 +669,7 @@ Per-user notification delivery tracking. One row per recipient; the web, the app
 | `in_app_read` / `in_app_read_at` | BOOLEAN / TIMESTAMPTZ | |
 | `push_sent` / `push_sent_at` | BOOLEAN / TIMESTAMPTZ | `false` = queued for `claim_pending_pushes()` (#835) |
 | `dismissed` / `dismissed_at` | BOOLEAN / TIMESTAMPTZ | |
-| `created_at` | TIMESTAMPTZ | A batched community reply moves it to the latest reply |
+| `created_at` | TIMESTAMPTZ | Also the push queue's order. A batched community reply moves it to the latest reply — except while its push is still queued |
 
 Recipients may UPDATE only `in_app_read`, `in_app_read_at`, `dismissed`, `dismissed_at`, `action_taken`, `action_taken_at` (column grant, #870): re-pointing `notification_id` used to make any notification in the school readable.
 

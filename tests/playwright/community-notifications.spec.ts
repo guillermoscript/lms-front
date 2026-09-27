@@ -2,10 +2,13 @@
  * Community notifications — issue #870.
  *
  *   headline   student A posts in the course feed, student B replies in the
- *              UI; A sees the sidebar badge and the bell, and the bell item
- *              opens the exact post/comment and marks it read
+ *              UI; A sees the sidebar badge and the bell, the school feed the
+ *              badge links to lists the reply, and the bell item opens the
+ *              exact post/comment and marks it read
  *   batching   B replies 5 times through RLS (the native app's path): A has
  *              ONE unread notification, "5 new replies"
+ *   parent     a third member replies to B's comment on A's post: B hears
+ *              about their comment, A about their post
  *   self       A's own comment notifies nobody
  *   prefs      A turns Replies off in the Preferences sheet: nothing arrives
  *   blocks     no notification across a block, in either direction
@@ -20,7 +23,8 @@
  * Runs on Code Academy (community enabled). B is a throwaway student created
  * here with Code Academy as its JWT tenant; every post carries MARK and is
  * removed afterwards (comments and notifications cascade), and Alice's
- * preferences and blocks are put back as they were.
+ * preferences and blocks are put back as they were. Desktop only: it rewrites
+ * shared rows, and on mobile the sidebar badge sits in a closed sheet.
  */
 import { test, expect, type Browser, type Page } from '@playwright/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -39,6 +43,7 @@ const B_PASSWORD = 'password123'
 const B_NAME = 'QA Replier 870'
 
 const COURSE_FEED = `${TENANT_BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/community`
+const SCHOOL_FEED = `${TENANT_BASE}/${LOCALE}/dashboard/student/community`
 const NOTIFICATIONS_PAGE = `${TENANT_BASE}/${LOCALE}/dashboard/notifications`
 
 function admin() {
@@ -180,9 +185,17 @@ async function newStudentPage(browser: Browser, email: string, password: string)
   return page
 }
 
+/** Projects this spec runs in: it rewrites shared rows (Alice's preferences and blocks). */
+const RUNS_IN = ['desktop-chromium', 'human']
+
 test.describe.configure({ mode: 'serial' })
 
-test.beforeAll(async () => {
+test.beforeEach(async ({}, testInfo) => {
+  test.skip(!RUNS_IN.includes(testInfo.project.name), 'runs once — DB state is shared')
+})
+
+test.beforeAll(async ({}, testInfo) => {
+  if (!RUNS_IN.includes(testInfo.project.name)) return
   const db = admin()
   await removeMarkedPosts()
 
@@ -225,7 +238,8 @@ test.beforeAll(async () => {
   await clearAliceUnread()
 })
 
-test.afterAll(async () => {
+test.afterAll(async ({}, testInfo) => {
+  if (!RUNS_IN.includes(testInfo.project.name)) return
   const db = admin()
   await removeMarkedPosts()
 
@@ -319,6 +333,16 @@ test('B replies to A\'s post; A sees the badge and the bell, and the item opens 
   await expect(page.getByTestId('sidebar-community-badge')).toHaveText('1', { timeout: 30_000 })
   await expect(page.getByTestId('notification-bell-count')).toHaveText('1')
 
+  // The badge links to the school feed, where a course-feed reply never shows:
+  // the unread list above the feed does.
+  await page.goto(SCHOOL_FEED)
+  await expect(
+    page
+      .getByTestId('community-unread')
+      .getByTestId('notification-link')
+      .filter({ hasText: `${B_NAME} replied to your post` })
+  ).toBeVisible({ timeout: 30_000 })
+
   await page.getByTestId('notification-bell').click()
   const item = page
     .getByTestId('notification-popover')
@@ -356,6 +380,45 @@ test('five replies through RLS collapse into one notification', async ({ page })
   await page.goto(NOTIFICATIONS_PAGE)
   const list = page.getByTestId('notifications-list')
   await expect(list.getByTestId('notification-item').filter({ hasText: '5 new replies' })).toBeVisible({ timeout: 30_000 })
+})
+
+test('a reply to B\'s comment on A\'s post tells B about the comment and A about the post', async () => {
+  const postId = await seedAlicePost('parent')
+  const b = await signIn(B_EMAIL, B_PASSWORD)
+  const bComment = await commentAs(b, bId, postId, 'first thought')
+
+  // A third member — the school's admin — replies to B's comment.
+  const { data, error } = await admin()
+    .from('community_comments')
+    .insert({
+      tenant_id: CODE_ACADEMY,
+      post_id: postId,
+      author_id: CREATOR_ID,
+      parent_comment_id: bComment,
+      content: 'Good point',
+    })
+    .select('id')
+    .single()
+  expect(error).toBeNull()
+  const replyId = data!.id as string
+
+  const toB = await deliveries(bId, postId)
+  expect(toB).toHaveLength(1)
+  expect(toB[0].notification.metadata).toMatchObject({
+    kind: 'community_reply',
+    reply_to: 'comment',
+    count: 1,
+    comment_id: replyId,
+  })
+  const toA = await deliveries(ALICE_ID, postId)
+  expect(toA).toHaveLength(1)
+  expect(toA[0].notification.metadata).toMatchObject({
+    kind: 'community_reply',
+    reply_to: 'post',
+    count: 2,
+    comment_id: replyId,
+  })
+  expect(await deliveries(CREATOR_ID, postId)).toEqual([])
 })
 
 test('your own comment notifies nobody', async () => {

@@ -50,9 +50,9 @@ supabase/migrations/20260928100000_community_notifications.sql     # #870: reply
 | `trg_community_poll_vote_count` | `community_poll_votes` | Increment/decrement `community_poll_options.vote_count` — never write it by hand |
 | `trg_community_notify_on_comment` | `community_comments` | #870: notify the post author and the parent comment's author (batched) |
 | `trg_community_notify_on_prompt` | `community_posts` | #870: notify the course's students of a new discussion prompt |
-| `trg_community_retract_post` | `community_posts` | #870: hiding a post dismisses its notifications |
-| `trg_community_retract_comment` / `trg_community_retract_comment_delete` | `community_comments` | #870: hiding or deleting a comment takes it back out of the notification that names it |
-| `trg_community_retract_on_block` | `community_user_blocks` | #870: blocking someone dismisses their community notifications for the blocker |
+| `trg_community_retract_post` | `community_posts` | #870: hiding a post deletes its notifications |
+| `trg_community_retract_comment` / `trg_community_retract_comment_delete` | `community_comments` | #870: hiding or deleting a comment scrubs it out of the notification that names it |
+| `trg_community_retract_on_block` | `community_user_blocks` | #870: blocking someone dismisses the blocker's community notifications from them and about their posts |
 
 ### RLS Policies
 
@@ -313,7 +313,7 @@ One `notification_type = 'community'`; `metadata.kind` says which event. `commun
 | `metadata.kind` | Recipient | Row shape | Push |
 |---|---|---|---|
 | `community_reply` | The post author (`reply_to: 'post'`) and the parent comment's author (`reply_to: 'comment'` — wins when they are the same person) | One row per recipient (`target_type 'user'`), batched per post | Yes, at most once per (recipient, post) per 15 min. A teacher/admin reply is `priority 'high'` + `staff_reply` |
-| `community_prompt` | Active students of the school with an **active enrollment** in the course who still have access (`has_course_access`) | One shared row (`target_type 'course'`) + one `user_notifications` row each | Yes |
+| `community_prompt` | Active students of the school with an **active enrollment** in the course who still have access (`has_course_access`) | One shared row (`target_type 'course'`) + one `user_notifications` row each | Yes, at most once per (student, course) per 15 min |
 | `community_answer_accepted` | The answer's author | One row per answer, idempotent | Yes |
 | `community_mention` | — | Reserved for #876 | — |
 
@@ -321,7 +321,7 @@ Prompts use enrollment, not just access: the RLS course feed itself requires an 
 
 ### Who is never notified
 
-Yourself; anyone across a block, in either direction (`community_user_blocks` is global); anything hidden — the comment, its post, or the parent comment; replies from a muted member; a recipient who is no longer an active member of the school or lost access to the course (staff always keep access); schools whose plan has no community; a comment whose `tenant_id` differs from its post's; a recipient who turned the category off — or turned `in_app_enabled` off, which we read conservatively as "no community notifications at all".
+Yourself; anyone across a block, in either direction (`community_user_blocks` is global); anything about a post whose author the recipient blocked (RLS hides that post from them — a reply to their comment on it included); anything hidden — the comment, its post, or the parent comment; replies from a muted member; a recipient who is no longer an active member of the school or lost access to the course (staff always keep access); schools whose plan has no community; a comment whose `tenant_id` differs from its post's; a recipient who turned the category off — or turned `in_app_enabled` off, which we read conservatively as "no community notifications at all".
 
 ### How it is produced
 
@@ -335,16 +335,22 @@ Prompt fan-out is one `INSERT … SELECT` over the partial index `idx_enrollment
 
 ### Batching and the push cooldown
 
-One **unread** reply notification per (recipient, post). A new reply updates it in place — `count`, title `(3) <post>`, the latest `comment_id`, actor and snippet — and moves `user_notifications.created_at` to now, so it rises to the top. A pg advisory lock per (recipient, post) makes "update the open row, else insert" safe under concurrent replies, and the lookup is pinned to the post's tenant.
+One **unread** reply notification per (recipient, post). A new reply updates it in place — `count`, title `(3) <post>`, the latest `comment_id`, actor and snippet — and moves `user_notifications.created_at` to now, so it rises to the top. Except while its push is still queued: `created_at` is also `claim_pending_pushes()`' queue order, and moving it on every reply sent a busy thread's push to the back of the queue again and again; the next reply after the push went out moves it. A pg advisory lock per (recipient, post) makes "update the open row, else insert" safe under concurrent replies, and the lookup is pinned to the post's tenant.
 
 Push: while a push for the pair is still queued, or went out less than 15 minutes ago, a reply does not queue another one — the queued push simply carries the updated text. After that, the next reply re-arms it. Once the recipient reads the row, the next reply opens a fresh one (in-app only if still inside the cooldown).
 
+Prompts keep one in-app row each (each is its own thing to answer), but their pushes follow the same rule per (student, course): a teacher adding prompts to ten lessons in one sitting sends one push, not ten.
+
+The push sweep (`sendPendingPushes()`) claims 25 notifications at a time and claims again while claims come back full — up to 10 claims or 30 s per run. Reply and digest notifications have one recipient each, so a single claim a minute let the 17:00 digest queue a reply's push for an hour.
+
 ### Retraction
 
-- **Hiding a post** (soft delete or moderation) dismisses every notification about it and cancels queued pushes. A hard delete cascades.
-- **Hiding or deleting a comment** that a notification names: a batch loses one and its text is scrubbed back to the post label (the actor and snippet are removed), or — when it was the only reply — the notification is dismissed. Only the *latest* reply of a batch is named, so hiding an earlier one leaves the count as it is; none of its text was stored.
-- **Blocking someone** dismisses the blocker's community notifications whose latest actor is the blocked member.
+- **Hiding a post** (soft delete or moderation) deletes every notification about it, queued pushes included — as a hard delete does through the cascade.
+- **Hiding or deleting a comment** that a notification names: its text is scrubbed back to the post label and the actor, snippet and `comment_id` are removed; a batch also loses one, and a notification that named only that reply — or an accepted answer — is also dismissed. Only the *latest* reply of a batch is named, so hiding an earlier one leaves the count as it is; none of its text was stored.
+- **Blocking someone** dismisses the blocker's community notifications whose latest actor is the blocked member, and those about the blocked member's posts.
 - Un-hiding restores nothing.
+
+Why delete and scrub rather than dismiss: a dismissed row is still selectable by its recipient, and every teacher of the school can read the school's notifications ("Staff can view tenant notifications") — while only admins may read hidden posts and comments, and a member who deletes their account (#850) must not leave their name and words behind.
 
 ### Links
 
@@ -365,11 +371,14 @@ No URL is stored. `lib/community/notifications.ts` builds it from the ids for th
 ### Web surfaces
 
 - **Counts** — `components/notifications/notification-counts.tsx`, mounted in the dashboard layout: one browser-client RLS read of this school's unread rows (`notifications!inner` + explicit `tenant_id`), on mount, on navigation (≤ 1 per 10 s), on focus, every 60 s while visible, and after any read/dismiss. No badge while loading or after an error.
-- **Sidebar** — the Community entry (student, teacher) shows a tonal count chip (`99+` cap), an sr-only "N unread community notifications", and a dot on the icon with the count in the tooltip when the sidebar is collapsed. For admins Community is under People, so the chip is on the sub-item; a collapsed People group shows nothing and the bell covers it. The badge clears when notifications are read, not when the feed is visited.
+- **Sidebar** — the Community entry (student, teacher) shows a tonal count chip (`99+` cap), an sr-only "N unread community notifications", and a dot on the icon with the count in the tooltip when the sidebar is collapsed. For admins Community is under People, so the chip is on the sub-item; a collapsed People group shows nothing and the bell covers it. The badge clears when notifications are read, not when the feed is visited. The community figure has its own capped read — counted inside the all-types page it went missing behind 100 newer unread digests.
+- **Unread list on the community page** — the badge links to the school feed, where a course-feed reply never shows. `components/notifications/community-unread.tsx` lists the latest 3 unread community notifications above the school feed (student, teacher, admin pages), with "View all notifications"; opening one lands on the post and marks it read, and the list disappears when nothing is unread.
 - **Bell** — header, before the language switcher. Lists the latest 8 on open (loading / error + retry / "all caught up"), "Mark all read" (this school only) and "View all". Opening a community item marks it read with a direct own-row update.
-- **Notifications page** — this school's rows only, a flat hairline list, an error state, localized community rows with a staff role chip for teacher/admin replies.
+- **Notifications page** — this school's rows only, a flat hairline list, an error state with "Try again", localized community rows with a staff role chip for teacher/admin replies. The list is the server's rows with this tab's reads/dismissals on top (`lib/notifications/local-overrides.ts`), never a one-time copy, so a retry or a mark-all from the bell shows up.
 
-Staff can read per-user reply notifications of their school through the existing "Staff can view tenant notifications" policy — known and accepted.
+`createNotification()` (the admin/teacher broadcast tool) inserts with the service role, so it refuses any type but a broadcast type and lists its columns: a spread of the request could have forged a `community` row past the RESTRICTIVE policy.
+
+Staff can read per-user reply notifications of their school through the existing "Staff can view tenant notifications" policy — known and accepted; retraction deletes or scrubs what they must not read.
 
 ### Push `data` contract (native app)
 
@@ -385,7 +394,7 @@ Staff can read per-user reply notifications of their school through the existing
 
 ### Tests
 
-`tests/sql/issue-870-community-notifications.sql` (recipients, batching, cooldown, retraction, RLS, privileges, prompt audience, failure isolation, digest count — rolled back), `tests/unit/community-notifications.test.ts`, `tests/unit/notification-preferences-action.test.ts`, the push/digest suites, and `tests/playwright/community-notifications.spec.ts` (student A posts, student B replies, A sees it and opens it).
+`tests/sql/issue-870-community-notifications.sql` (recipients incl. a parent author who is not the post author, batching, cooldown and queue order, retraction and scrubbing, blocked post authors, RLS, privileges, prompt audience and push cooldown, failure isolation, digest count — rolled back), `tests/unit/community-notifications.test.ts`, `tests/unit/notification-preferences-action.test.ts`, `tests/unit/notification-local-overrides.test.ts`, `tests/unit/admin-create-notification.test.ts`, the push/digest suites, and `tests/playwright/community-notifications.spec.ts` (student A posts, student B replies, A sees it — badge, bell, the community page's unread list — and opens it; desktop projects only).
 
 ### Deferred
 
