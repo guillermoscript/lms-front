@@ -223,18 +223,29 @@ interface UnreadRow {
   notification?: { notification_type?: string | null } | Array<{ notification_type?: string | null }> | null
 }
 
+function embeddedType(row: UnreadRow): { notification_type?: string | null } | null {
+  return (Array.isArray(row.notification) ? row.notification[0] : row.notification) ?? null
+}
+
 /**
  * Totals for the bell and the sidebar Community badge, from the unread rows of
  * one school (the caller filters by tenant — see notification-counts.tsx).
+ *
+ * Two reads, each capped: every unread row, and the community ones on their
+ * own. Counting community rows inside the all-types page under-counted them
+ * as soon as 100 newer unread digests or nudges pushed them out of it.
  */
-export function deriveUnreadCounts(rows: UnreadRow[] | null | undefined): { unread: number; community: number } {
+export function deriveUnreadCounts(
+  allRows: UnreadRow[] | null | undefined,
+  communityRows: UnreadRow[] | null | undefined
+): { unread: number; community: number } {
   let unread = 0
+  for (const row of allRows ?? []) {
+    if (embeddedType(row)) unread++
+  }
   let community = 0
-  for (const row of rows ?? []) {
-    const embedded = Array.isArray(row.notification) ? row.notification[0] : row.notification
-    if (!embedded) continue
-    unread++
-    if (embedded.notification_type === COMMUNITY_NOTIFICATION_TYPE) community++
+  for (const row of communityRows ?? []) {
+    if (embeddedType(row)?.notification_type === COMMUNITY_NOTIFICATION_TYPE) community++
   }
   return { unread, community }
 }

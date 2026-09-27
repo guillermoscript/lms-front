@@ -16,6 +16,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendPendingPushes } from '@/lib/notifications/push'
 
 export const runtime = 'nodejs'
+// A run keeps claiming for up to RUN_TIME_BUDGET_MS (30 s) plus its last sends.
+export const maxDuration = 60
 
 function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a)

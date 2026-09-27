@@ -22,7 +22,7 @@ import { COMMUNITY_NOTIFICATION_TYPE, deriveUnreadCounts } from '@/lib/community
  * badge then: a failed read is not "0 unread".
  */
 
-/** Unread rows read per poll; a badge shows `99+` past 99. */
+/** Unread rows read per poll, per figure; a badge shows `99+` past 99. */
 const COUNT_LIMIT = 100
 const POLL_MS = 60_000
 /** Navigating refreshes, at most once per this window. */
@@ -47,23 +47,38 @@ interface NotificationCountsValue {
 
 const NOOP = () => {}
 
-/** This school's unread rows for the user, counted; null when the read fails. */
+/**
+ * This school's unread rows for the user, counted; null when a read fails. The
+ * community figure has its own read: inside the all-types page it would miss
+ * community rows pushed out by 100 newer unread ones of other types.
+ */
 async function readCounts(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   tenantId: string
 ): Promise<NotificationCounts | null> {
   try {
-    const { data, error } = await supabase
-      .from('user_notifications')
-      .select('id, notification:notifications!inner(notification_type, tenant_id)')
-      .eq('user_id', userId)
-      .eq('in_app_read', false)
-      .not('dismissed', 'is', true)
-      .eq('notification.tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(COUNT_LIMIT)
-    return error ? null : deriveUnreadCounts(data)
+    const [all, community] = await Promise.all([
+      supabase
+        .from('user_notifications')
+        .select('id, notification:notifications!inner(notification_type, tenant_id)')
+        .eq('user_id', userId)
+        .eq('in_app_read', false)
+        .not('dismissed', 'is', true)
+        .eq('notification.tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(COUNT_LIMIT),
+      supabase
+        .from('user_notifications')
+        .select('id, notification:notifications!inner(notification_type, tenant_id)')
+        .eq('user_id', userId)
+        .eq('in_app_read', false)
+        .not('dismissed', 'is', true)
+        .eq('notification.tenant_id', tenantId)
+        .eq('notification.notification_type', COMMUNITY_NOTIFICATION_TYPE)
+        .limit(COUNT_LIMIT),
+    ])
+    return all.error || community.error ? null : deriveUnreadCounts(all.data, community.data)
   } catch {
     return null
   }

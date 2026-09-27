@@ -243,20 +243,38 @@ describe('communityNotificationSnippet', () => {
 })
 
 describe('deriveUnreadCounts', () => {
-  it('counts every unread row and the community ones apart', () => {
+  it('counts every unread row, and the community ones from their own read', () => {
     expect(
-      deriveUnreadCounts([
-        { notification: { notification_type: 'community' } },
-        { notification: [{ notification_type: 'community' }] },
-        { notification: { notification_type: 'info' } },
-        { notification: null },
-      ])
+      deriveUnreadCounts(
+        [
+          { notification: { notification_type: 'community' } },
+          { notification: [{ notification_type: 'community' }] },
+          { notification: { notification_type: 'info' } },
+          { notification: null },
+        ],
+        [{ notification: { notification_type: 'community' } }, { notification: [{ notification_type: 'community' }] }]
+      )
     ).toEqual({ unread: 3, community: 2 })
   })
 
+  it('does not derive the community figure from the capped all-types page', () => {
+    // 100 newer unread digests fill the all-types page; the community rows are
+    // only in their own read — the badge must still count them.
+    const digests = Array.from({ length: 100 }, () => ({ notification: { notification_type: 'info' } }))
+    const community = Array.from({ length: 3 }, () => ({ notification: { notification_type: 'community' } }))
+    expect(deriveUnreadCounts(digests, community)).toEqual({ unread: 100, community: 3 })
+  })
+
+  it('ignores a non-community row in the community read', () => {
+    expect(deriveUnreadCounts([], [{ notification: { notification_type: 'info' } }, { notification: null }])).toEqual({
+      unread: 0,
+      community: 0,
+    })
+  })
+
   it('is zero for nothing', () => {
-    expect(deriveUnreadCounts([])).toEqual({ unread: 0, community: 0 })
-    expect(deriveUnreadCounts(null)).toEqual({ unread: 0, community: 0 })
+    expect(deriveUnreadCounts([], [])).toEqual({ unread: 0, community: 0 })
+    expect(deriveUnreadCounts(null, undefined)).toEqual({ unread: 0, community: 0 })
   })
 })
 

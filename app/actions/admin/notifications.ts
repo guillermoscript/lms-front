@@ -6,7 +6,12 @@ import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 
-type NotificationType = 'announcement' | 'alert' | 'info' | 'success' | 'warning' | 'error'
+/**
+ * The types a person may broadcast. `certificate_issued` and `community` (#870)
+ * are system-written and deliberately absent.
+ */
+const BROADCAST_TYPES = ['announcement', 'alert', 'info', 'success', 'warning', 'error'] as const
+type NotificationType = (typeof BROADCAST_TYPES)[number]
 type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent'
 type TargetType = 'all' | 'role' | 'course' | 'user' | 'custom'
 type NotificationStatus = 'draft' | 'scheduled' | 'sent' | 'cancelled'
@@ -75,6 +80,13 @@ export async function createNotification(data: NotificationData): Promise<Action
       return { success: false, error: 'Unauthorized' }
     }
 
+    // The insert below runs with the service role, past RLS — including the
+    // policy that keeps community rows (#870) system-written. Types are not
+    // enforced on server-action input, so refuse anything but a broadcast type.
+    if (!BROADCAST_TYPES.includes(data?.notification_type)) {
+      return { success: false, error: 'Invalid notification type' }
+    }
+
     // Teachers can only create course notifications for their own courses
     if (role === 'teacher') {
       if (data.target_type !== 'course' || !data.target_course_id) {
@@ -96,11 +108,25 @@ export async function createNotification(data: NotificationData): Promise<Action
 
     const adminClient = createAdminClient()
 
-    // Create notification
+    // Create notification. Columns are listed, never spread from the request:
+    // a spread let the caller set community_post_id, status, created_by or any
+    // other column on a service-role insert.
     const { data: notification, error } = await adminClient
       .from('notifications')
       .insert({
-        ...data,
+        title: data.title,
+        content: data.content,
+        notification_type: data.notification_type,
+        priority: data.priority,
+        target_type: data.target_type,
+        target_roles: data.target_roles,
+        target_course_id: data.target_course_id,
+        target_user_ids: data.target_user_ids,
+        delivery_channels: data.delivery_channels,
+        scheduled_for: data.scheduled_for,
+        expires_at: data.expires_at,
+        template_id: data.template_id,
+        metadata: data.metadata,
         created_by: userId,
         status: data.scheduled_for ? 'scheduled' : 'draft',
         tenant_id: tenantId

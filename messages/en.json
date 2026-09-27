@@ -7033,6 +7033,9 @@
       "snippet": "{name}: {snippet}",
       "unknownActor": "Someone",
       "sidebarUnread": "{count, plural, one {# unread community notification} other {# unread community notifications}}",
+      "unreadHeading": "New for you",
+      "viewAll": "View all notifications",
+      "unreadFallback": "{count, plural, one {You have # unread community notification.} other {You have # unread community notifications.}}",
       "preferences": {
         "title": "Notification preferences",
         "description": "Choose what the community lets you know about.",

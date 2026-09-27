@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { toast } from "sonner"
@@ -14,6 +14,7 @@ import {
 } from "@/app/actions/admin/notifications"
 import type { ViewerRole } from "@/lib/community/notifications"
 import { useNotificationCounts } from "@/components/notifications/notification-counts"
+import { applyLocalOverrides, withIds } from "@/lib/notifications/local-overrides"
 import { NotificationItem, type NotificationRow } from "@/components/notifications/notification-item"
 import {
   NotificationPreferences,
@@ -31,7 +32,7 @@ interface NotificationsClientProps {
 type Filter = "all" | "unread" | "read"
 
 export function NotificationsClient({
-  notifications: initialNotifications,
+  notifications: serverRows,
   role,
   preferences,
   loadError = false,
@@ -39,8 +40,17 @@ export function NotificationsClient({
   const t = useTranslations("dashboard.student.notifications")
   const router = useRouter()
   const { refresh, markedRead, markedAllRead } = useNotificationCounts()
+  const [retrying, startRetry] = useTransition()
 
-  const [notifications, setNotifications] = useState(initialNotifications)
+  // The server's rows, with what this tab did on top — never a one-time copy,
+  // so "Try again" and a mark-all from the bell (both re-render the page's
+  // props) show up here. See lib/notifications/local-overrides.ts.
+  const [readIds, setReadIds] = useState<ReadonlySet<number>>(() => new Set())
+  const [dismissedIds, setDismissedIds] = useState<ReadonlySet<number>>(() => new Set())
+  const notifications = useMemo(
+    () => applyLocalOverrides(serverRows, { read: readIds, dismissed: dismissedIds }),
+    [serverRows, readIds, dismissedIds]
+  )
   const [filter, setFilter] = useState<Filter>("all")
 
   const unreadCount = notifications.filter((n) => !n.in_app_read).length
@@ -51,8 +61,7 @@ export function NotificationsClient({
     return true
   })
 
-  const setRead = (id: number) =>
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, in_app_read: true } : n)))
+  const setRead = (id: number) => setReadIds((prev) => withIds(prev, [id]))
 
   const handleMarkAsRead = async (id: number) => {
     try {
@@ -76,7 +85,7 @@ export function NotificationsClient({
     try {
       const result = await markAllNotificationsAsRead()
       if (result.success) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, in_app_read: true })))
+        setReadIds((prev) => withIds(prev, notifications.map((n) => n.id)))
         markedAllRead()
         toast.success(t("toasts.markAllAsReadSuccess"))
       } else {
@@ -93,7 +102,7 @@ export function NotificationsClient({
     try {
       const result = await dismissNotification(id)
       if (result.success) {
-        setNotifications((prev) => prev.filter((n) => n.id !== id))
+        setDismissedIds((prev) => withIds(prev, [id]))
         toast.success(t("toasts.dismissSuccess"))
       } else {
         toast.error(result.error || t("toasts.dismissError"))
@@ -137,7 +146,12 @@ export function NotificationsClient({
       {loadError ? (
         <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border px-4 py-12 text-center">
           <p className="text-sm text-muted-foreground">{t("errorLoading")}</p>
-          <Button variant="outline" size="sm" onClick={() => router.refresh()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={retrying}
+            onClick={() => startRetry(() => router.refresh())}
+          >
             {t("retry")}
           </Button>
         </div>

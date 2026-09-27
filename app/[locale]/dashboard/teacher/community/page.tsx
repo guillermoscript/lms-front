@@ -4,6 +4,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
+import { CommunityUnread } from '@/components/notifications/community-unread'
 import { getFeedPage } from '@/lib/community/feed'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
@@ -68,6 +69,7 @@ export default async function TeacherCommunityPage() {
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+        <CommunityUnread role={role} />
         <CommunityFeed
           scope="school"
           initialPosts={feed.posts}
