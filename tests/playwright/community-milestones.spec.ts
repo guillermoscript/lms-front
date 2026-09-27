@@ -276,7 +276,25 @@ test('completing the last lesson posts one milestone in the course feed', async 
   await reply.fill(comment)
   await domClick(card.locator('textarea + button'))
   await expect.poll(async () => (await courseMilestones())[0]?.comment_count, { timeout: 20_000 }).toBe(1)
+  // The row lands before createComment returns, and React mirrors a controlled
+  // textarea's value into its text, so getByText(comment) matches the box until
+  // it is cleared. Cleared = the action returned; only then is the text the comment.
+  await expect(reply).toHaveValue('', { timeout: 20_000 })
   await expect(card.getByText(comment)).toBeVisible({ timeout: 20_000 })
+
+  // "Sharing settings" lands on the toggle itself. The href carries the locale:
+  // a locale-less one is redirected by proxy.ts and the fragment is dropped.
+  const settingsPath = `/${LOCALE}/dashboard/student/profile#share-milestones`
+  await domClick(card.getByRole('button', { name: 'Post actions' }))
+  const settingsLink = page.getByRole('menuitem', { name: 'Sharing settings' })
+  await expect(settingsLink).toHaveAttribute('href', settingsPath, { timeout: 10_000 })
+  await domClick(settingsLink)
+  await expect(page).toHaveURL(`${TENANT_BASE}${settingsPath}`, { timeout: 30_000 })
+  const shareToggle = page
+    .getByTestId('share-milestones-toggle')
+    .getByRole('switch', { name: 'Share my milestones in the community' })
+  await expect(shareToggle).toBeVisible({ timeout: 30_000 })
+  await expect(shareToggle).toBeInViewport()
 })
 
 test('through RLS: reactions and comments work, milestone inserts are refused', async () => {
