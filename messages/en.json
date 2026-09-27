@@ -408,7 +408,10 @@
           "caughtUp": "You're all caught up!"
         },
         "actions": {
-          "markAllAsRead": "Mark all as read"
+          "markAllAsRead": "Mark all as read",
+          "preferences": "Preferences",
+          "markAsRead": "Mark as read",
+          "dismiss": "Dismiss"
         },
         "toasts": {
           "markAsReadSuccess": "Notification marked as read",
@@ -436,8 +439,23 @@
           "comment_reply": "Reply",
           "exam_review": "Exam review",
           "order_renewal": "Order renewal",
-          "subscription_renewal": "Subscription renewal"
-        }
+          "subscription_renewal": "Subscription renewal",
+          "community": "Community"
+        },
+        "bell": {
+          "label": "{count, plural, =0 {Notifications} one {Notifications, # unread} other {Notifications, # unread}}",
+          "title": "Notifications",
+          "viewAll": "View all",
+          "markAllRead": "Mark all read",
+          "loading": "Loading notifications…",
+          "error": "Couldn't load notifications.",
+          "retry": "Try again",
+          "empty": "No notifications yet",
+          "caughtUp": "You're all caught up"
+        },
+        "errorLoading": "We couldn't load your notifications.",
+        "retry": "Try again",
+        "unread": "Unread"
       },
       "title": "My Learning",
       "welcome": "Welcome back! Continue where you left off.",
@@ -7004,6 +7022,29 @@
     "mutedUntil": "You are muted until {date}",
     "mutedIndefinite": "You are muted from posting. Contact an admin for more information.",
     "unknownUser": "Unknown user",
+    "notifications": {
+      "replyToPost": "{name} replied to your post",
+      "replyToComment": "{name} replied to your comment",
+      "replies": "{count, plural, one {# new reply} other {# new replies}}",
+      "prompt": "New discussion prompt in {course}",
+      "promptNoCourse": "New discussion prompt",
+      "answerAccepted": "Your answer was accepted",
+      "onPost": "On “{post}”",
+      "snippet": "{name}: {snippet}",
+      "unknownActor": "Someone",
+      "sidebarUnread": "{count, plural, one {# unread community notification} other {# unread community notifications}}",
+      "preferences": {
+        "title": "Notification preferences",
+        "description": "Choose what the community lets you know about.",
+        "group": "Community",
+        "replies": "Replies",
+        "repliesDescription": "Replies to your posts and comments, and when your answer is accepted.",
+        "prompts": "New discussion prompts",
+        "promptsDescription": "When a teacher starts a discussion in one of your courses.",
+        "everySchool": "These settings apply in every school you belong to.",
+        "error": "Couldn't save your preference. Try again."
+      }
+    },
     "emptySchool": "No posts yet. Be the first to share something!",
     "emptyCourse": "No discussions yet. Start the conversation!",
     "loadMore": "Load more",

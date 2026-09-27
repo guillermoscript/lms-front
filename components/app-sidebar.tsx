@@ -31,6 +31,7 @@ import {
     SidebarHeader,
     SidebarMenu,
     SidebarMenuAction,
+    SidebarMenuBadge,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarMenuSub,
@@ -46,12 +47,18 @@ import {
 import { useTenant } from "@/components/tenant/tenant-provider"
 import { useLogout } from "@/hooks/use-logout"
 import { useActiveNav } from "@/hooks/use-active-nav"
+import { useNotificationCounts } from "@/components/notifications/notification-counts"
+import { formatBadgeCount } from "@/lib/community/notifications"
 import Image from "next/image"
+
+/** Which unread count an entry carries (#870). */
+type NavBadgeKey = 'community'
 
 interface NavSubItem {
     title: string
     href: string
     tourId?: string
+    badgeKey?: NavBadgeKey
 }
 
 interface NavItem {
@@ -60,6 +67,30 @@ interface NavItem {
     icon: React.ComponentType<{ className?: string }>
     tourId?: string
     items?: NavSubItem[]
+    badgeKey?: NavBadgeKey
+}
+
+/**
+ * Unread community notifications for an entry that carries the badge; 0 while
+ * the count is loading or failed (no badge rather than a made-up number).
+ */
+function useNavBadge(badgeKey: NavBadgeKey | undefined): number {
+    const { counts } = useNotificationCounts()
+    return badgeKey === 'community' ? counts?.community ?? 0 : 0
+}
+
+/** The tonal chip — tenant-safe (brand tint + brand text), never destructive red. */
+const BADGE_CHIP =
+    "bg-brand-tint text-brand-text peer-hover/menu-button:text-brand-text peer-data-active/menu-button:text-brand-text"
+
+function UnreadLabel({ title, count }: { title: string; count: number }) {
+    const t = useTranslations('community.notifications')
+    return (
+        <span>
+            {title}
+            {count > 0 && <span className="sr-only">, {t('sidebarUnread', { count })}</span>}
+        </span>
+    )
 }
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
@@ -70,6 +101,7 @@ function NavEntry({ item }: { item: NavItem }) {
     const { isActive } = useActiveNav()
     const active = isActive(item.href)
     const tourProps = item.tourId ? { 'data-tour': item.tourId } : {}
+    const badge = useNavBadge(item.badgeKey)
 
     if (!item.items?.length) {
         return (
@@ -77,11 +109,31 @@ function NavEntry({ item }: { item: NavItem }) {
                 <SidebarMenuButton
                     render={<Link href={item.href} />}
                     isActive={active}
-                    tooltip={item.title}
+                    // Collapsed to icons the chip is hidden: the tooltip and the
+                    // dot on the icon carry the count instead.
+                    tooltip={badge > 0 ? `${item.title} (${formatBadgeCount(badge)})` : item.title}
+                    className={badge > 0 ? "pr-9" : undefined}
                 >
-                    <item.icon />
-                    <span>{item.title}</span>
+                    <span className="relative flex shrink-0">
+                        <item.icon />
+                        {badge > 0 && (
+                            <span
+                                aria-hidden
+                                className="absolute -top-0.5 -right-0.5 hidden size-1.5 rounded-full bg-primary ring-1 ring-sidebar group-data-[collapsible=icon]:block"
+                            />
+                        )}
+                    </span>
+                    <UnreadLabel title={item.title} count={badge} />
                 </SidebarMenuButton>
+                {badge > 0 && (
+                    <SidebarMenuBadge
+                        aria-hidden
+                        data-testid="sidebar-community-badge"
+                        className={BADGE_CHIP}
+                    >
+                        {formatBadgeCount(badge)}
+                    </SidebarMenuBadge>
+                )}
             </SidebarMenuItem>
         )
     }
@@ -110,21 +162,31 @@ function NavEntry({ item }: { item: NavItem }) {
             <CollapsibleContent>
                 <SidebarMenuSub>
                     {item.items.map((sub) => (
-                        <SidebarMenuSubItem
-                            key={sub.href}
-                            {...(sub.tourId ? { 'data-tour': sub.tourId } : {})}
-                        >
-                            <SidebarMenuSubButton
-                                render={<Link href={sub.href} />}
-                                isActive={isActive(sub.href)}
-                            >
-                                <span>{sub.title}</span>
-                            </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
+                        <NavSubEntry key={sub.href} sub={sub} active={isActive(sub.href)} />
                     ))}
                 </SidebarMenuSub>
             </CollapsibleContent>
         </Collapsible>
+    )
+}
+
+function NavSubEntry({ sub, active }: { sub: NavSubItem; active: boolean }) {
+    const badge = useNavBadge(sub.badgeKey)
+    return (
+        <SidebarMenuSubItem {...(sub.tourId ? { 'data-tour': sub.tourId } : {})}>
+            <SidebarMenuSubButton render={<Link href={sub.href} />} isActive={active}>
+                <UnreadLabel title={sub.title} count={badge} />
+                {badge > 0 && (
+                    <span
+                        aria-hidden
+                        data-testid="sidebar-community-badge"
+                        className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-[calc(var(--radius-sm)-2px)] bg-brand-tint px-1 text-xs font-medium tabular-nums text-brand-text"
+                    >
+                        {formatBadgeCount(badge)}
+                    </span>
+                )}
+            </SidebarMenuSubButton>
+        </SidebarMenuSubItem>
     )
 }
 
@@ -155,7 +217,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                 {
                     title: t('people'), href: "/dashboard/admin/users", icon: IconUsers,
                     items: [
-                        { title: t('community'), href: "/dashboard/admin/community" },
+                        { title: t('community'), href: "/dashboard/admin/community", badgeKey: 'community' },
                     ],
                 },
                 {
@@ -189,7 +251,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
             teacher: [
                 { title: t('dashboard'), href: "/dashboard/teacher", icon: IconDashboard },
                 { title: t('myCourses'), href: "/dashboard/teacher/courses", icon: IconBook, tourId: 'sidebar-courses' },
-                { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages },
+                { title: t('community'), href: "/dashboard/teacher/community", icon: IconMessages, badgeKey: 'community' },
                 { title: t('revenue'), href: "/dashboard/teacher/revenue", icon: IconCurrencyDollar },
                 { title: t('apiTokens'), href: "/dashboard/teacher/api-tokens", icon: IconKey },
             ],
@@ -209,7 +271,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('courseCatalog'), href: "/courses" },
                     ],
                 },
-                { title: t('community'), href: "/dashboard/student/community", icon: IconMessages },
+                { title: t('community'), href: "/dashboard/student/community", icon: IconMessages, badgeKey: 'community' },
                 { title: t('aiAssistant'), href: "/dashboard/student/ai-assistant", icon: IconSparkles },
                 {
                     title: t('myBilling'), href: "/dashboard/student/billing", icon: IconReceipt,
