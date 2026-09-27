@@ -32,6 +32,7 @@ import {
   IconVideo,
   IconChevronRight,
   IconChartBar,
+  IconMessages,
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
@@ -44,6 +45,8 @@ import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 import { getCourseProgressReport, type CourseItem } from '@/lib/analytics/student-progress'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { getLessonPromptCounts } from '@/lib/community/lesson-prompts'
+import { AddDiscussionPromptTrigger, DiscussionPromptShortcuts } from '@/components/community/discussion-prompt-shortcuts'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -147,6 +150,9 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
     )
   }
 
+  // Discussion prompts per lesson (#869); null when the plan has no community.
+  const promptCountsPromise = getLessonPromptCounts(supabase, { tenantId, courseId: parseInt(courseId) })
+
   // Fetch all related data in parallel
   const [lessonsRes, exercisesRes, examsRes, enrollmentsRes, certificateTemplateRes, issuedCertificatesRes, uiState] = await Promise.all([
     supabase
@@ -187,6 +193,8 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
       .order('issued_at', { ascending: false }),
     getUiState(userId),
   ])
+  const promptCounts = await promptCountsPromise
+  const tDiscussion = await getTranslations('community.lessonDiscussion')
 
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
@@ -345,77 +353,92 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               </Link>
             </div>
 
-            <div className="grid gap-2">
-              {lessons.length > 0 ? (
-                lessons.map((lesson) => (
-                  // The row is a card with an overlay link rather than a card
-                  // wrapped in one: the free-preview switch (#791) is
-                  // interactive content, which cannot live inside an anchor.
-                  <Card key={lesson.id} className="group relative transition-all duration-200 hover:shadow-md">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <Link
-                        href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`}
-                        className="absolute inset-0 rounded-[inherit]"
-                        aria-label={t('curriculum.editLesson')}
-                      />
-                      <div className="pointer-events-none flex items-center gap-4">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
-                          {lesson.sequence}
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {lesson.status !== 'published' && (
-                              <Badge variant="secondary" className="text-[10px] h-4">
-                                {t(`status.${lesson.status}`)}
-                              </Badge>
-                            )}
-                            {lesson.video_url && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <IconVideo className="h-3 w-3" />
-                                {t('video')}
-                              </span>
-                            )}
+            {/* Without the community (plan off) it renders the list alone. */}
+            <DiscussionPromptShortcuts
+              courseId={parseInt(courseId)}
+              lessons={promptCounts ? lessons.map((l) => ({ id: l.id, title: l.title ?? '' })) : null}
+            >
+              <div className="grid gap-2">
+                {lessons.length > 0 ? (
+                  lessons.map((lesson) => (
+                    // The row is a card with an overlay link rather than a card
+                    // wrapped in one: the free-preview switch (#791) is
+                    // interactive content, which cannot live inside an anchor.
+                    <Card key={lesson.id} className="group relative transition-all duration-200 hover:shadow-md">
+                      <CardContent className="flex items-center justify-between p-4">
+                        <Link
+                          href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`}
+                          className="absolute inset-0 rounded-[inherit]"
+                          aria-label={t('curriculum.editLesson')}
+                        />
+                        <div className="pointer-events-none flex items-center gap-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
+                            {lesson.sequence}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {lesson.status !== 'published' && (
+                                <Badge variant="secondary" className="text-[10px] h-4">
+                                  {t(`status.${lesson.status}`)}
+                                </Badge>
+                              )}
+                              {lesson.video_url && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <IconVideo className="h-3 w-3" />
+                                  {t('video')}
+                                </span>
+                              )}
+                              {(promptCounts?.get(lesson.id) ?? 0) > 0 && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <IconMessages className="h-3 w-3" aria-hidden="true" />
+                                  {tDiscussion('promptCount', { count: promptCounts?.get(lesson.id) ?? 0 })}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        <div className="relative flex items-center gap-3 shrink-0">
+                          {promptCounts && (
+                            <AddDiscussionPromptTrigger lessonId={lesson.id} lessonTitle={lesson.title ?? ''} />
+                          )}
+                          <LessonPreviewToggle
+                            courseId={parseInt(courseId)}
+                            lessonId={lesson.id}
+                            isPreview={Boolean(lesson.is_preview)}
+                            lessonTitle={lesson.title}
+                          />
+                          <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="border-dashed border-2">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                        <IconBook size={28} className="text-muted-foreground/40" />
                       </div>
-                      <div className="relative flex items-center gap-3 shrink-0">
-                        <LessonPreviewToggle
-                          courseId={parseInt(courseId)}
-                          lessonId={lesson.id}
-                          isPreview={Boolean(lesson.is_preview)}
-                          lessonTitle={lesson.title}
-                        />
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
+                      <h3 className="text-xl font-bold mb-1.5">{t('curriculum.noLessons')}</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                        {t('curriculum.description')}
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button
+                          className="gap-2"
+                          nativeButton={false}
+                          render={<Link href={`/dashboard/teacher/courses/${courseId}/lessons/new?from=new-course`} />}
+                        >
+                          <IconPlus className="h-4 w-4" />
+                          {t('curriculum.createFirst')}
+                        </Button>
+                        <GenerateLessonsButton courseId={course.course_id} />
                       </div>
                     </CardContent>
                   </Card>
-                ))
-              ) : (
-                <Card className="border-dashed border-2">
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
-                      <IconBook size={28} className="text-muted-foreground/40" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-1.5">{t('curriculum.noLessons')}</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                      {t('curriculum.description')}
-                    </p>
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                      <Button
-                        className="gap-2"
-                        nativeButton={false}
-                        render={<Link href={`/dashboard/teacher/courses/${courseId}/lessons/new?from=new-course`} />}
-                      >
-                        <IconPlus className="h-4 w-4" />
-                        {t('curriculum.createFirst')}
-                      </Button>
-                      <GenerateLessonsButton courseId={course.course_id} />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                )}
+              </div>
+            </DiscussionPromptShortcuts>
           </TabsContent>
 
           {/* Exercises Tab */}
