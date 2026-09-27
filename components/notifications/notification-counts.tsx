@@ -1,6 +1,16 @@
 'use client'
 
-import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTenant } from '@/components/tenant/tenant-provider'
@@ -20,6 +30,18 @@ import { COMMUNITY_NOTIFICATION_TYPE, deriveUnreadCounts } from '@/lib/community
  *
  * Counts are null while loading and after an error, and consumers render no
  * badge then: a failed read is not "0 unread".
+ *
+ * The counts live in a small external store, NOT in the context value. This
+ * provider wraps the whole dashboard, page included, and a context value that
+ * changes reaches every Suspense boundary under it. On a hard load the first
+ * read lands (~50 ms after hydration) while the page's streamed boundary is
+ * still waiting for React's batched reveal (up to ~300 ms), and React answers
+ * a context change on a boundary it cannot hydrate yet by throwing the server
+ * HTML away and rendering the page again on the client. Until the reveal
+ * script ran, the DOM then held the page twice — the client copy in <main>
+ * and the server copy in its hidden `<div hidden id="S:n">` — on every
+ * dashboard page. With `useSyncExternalStore` only the bell and the sidebar
+ * badge re-render, and the context value never changes during hydration.
  */
 
 /** Unread rows read per poll, per figure; a badge shows `99+` past 99. */
@@ -33,8 +55,42 @@ export interface NotificationCounts {
   community: number
 }
 
+/** Holds the counts outside React, so an update re-renders only its readers. */
+interface CountsStore {
+  get: () => NotificationCounts | null
+  set: (next: NotificationCounts | null | ((current: NotificationCounts | null) => NotificationCounts | null)) => void
+  subscribe: (listener: () => void) => () => void
+}
+
+function createCountsStore(): CountsStore {
+  let counts: NotificationCounts | null = null
+  const listeners = new Set<() => void>()
+  return {
+    get: () => counts,
+    set: (next) => {
+      const value = typeof next === 'function' ? next(counts) : next
+      // A poll that finds nothing new must not re-render the readers.
+      const same =
+        value === counts ||
+        (value !== null && counts !== null && value.unread === counts.unread && value.community === counts.community)
+      if (same) return
+      counts = value
+      for (const listener of listeners) listener()
+    },
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+  }
+}
+
+/** The server render — and so the hydrating one — always has no counts yet. */
+const getServerCounts = () => null
+
 interface NotificationCountsValue {
-  counts: NotificationCounts | null
+  store: CountsStore
   userId: string | null
   tenantId: string | null
   /** Re-read now (after marking something read, dismissing, …). */
@@ -85,7 +141,7 @@ async function readCounts(
 }
 
 const NotificationCountsContext = createContext<NotificationCountsValue>({
-  counts: null,
+  store: createCountsStore(),
   userId: null,
   tenantId: null,
   refresh: NOOP,
@@ -94,7 +150,9 @@ const NotificationCountsContext = createContext<NotificationCountsValue>({
 })
 
 export function useNotificationCounts() {
-  return use(NotificationCountsContext)
+  const { store, ...rest } = use(NotificationCountsContext)
+  const counts = useSyncExternalStore(store.subscribe, store.get, getServerCounts)
+  return { counts, ...rest }
 }
 
 export function NotificationCountsProvider({ userId, children }: { userId: string | null; children: ReactNode }) {
@@ -103,7 +161,7 @@ export function NotificationCountsProvider({ userId, children }: { userId: strin
   const pathname = usePathname()
   const supabase = useMemo(() => createClient(), [])
 
-  const [counts, setCounts] = useState<NotificationCounts | null>(null)
+  const [store] = useState(createCountsStore)
   const inFlight = useRef(false)
   const again = useRef(false)
   const lastRead = useRef(0)
@@ -122,25 +180,23 @@ export function NotificationCountsProvider({ userId, children }: { userId: strin
       do {
         again.current = false
         lastRead.current = Date.now()
-        setCounts(await readCounts(supabase, userId, tenantId))
+        store.set(await readCounts(supabase, userId, tenantId))
       } while (again.current)
     } finally {
       inFlight.current = false
     }
-  }, [supabase, userId, tenantId])
+  }, [store, supabase, userId, tenantId])
 
-  // First read, and again whenever the user or the school changes. The empty
-  // `then` moves the state update into an async continuation
-  // (react-hooks/set-state-in-effect), as plan-change-dialog does.
+  // First read, again whenever the user or the school changes (a new `load`),
+  // and on navigation — throttled there, since a user clicking through lessons
+  // would otherwise read on every page. One effect, not two: both would run on
+  // mount and every page load would read everything twice.
+  const readFor = useRef<typeof load | null>(null)
   useEffect(() => {
-    void Promise.resolve().then(load)
-  }, [load])
-
-  // Navigating is a good moment to catch up — throttled, since a user clicking
-  // through lessons would otherwise read on every page.
-  useEffect(() => {
-    if (Date.now() - lastRead.current < NAVIGATION_THROTTLE_MS) return
-    void Promise.resolve().then(load)
+    const fresh = readFor.current !== load
+    if (!fresh && Date.now() - lastRead.current < NAVIGATION_THROTTLE_MS) return
+    readFor.current = load
+    void load()
   }, [pathname, load])
 
   // Coming back to the tab, and a slow poll while it is visible.
@@ -163,25 +219,30 @@ export function NotificationCountsProvider({ userId, children }: { userId: strin
     void load()
   }, [load])
 
-  const markedRead = useCallback((notificationType: string | null) => {
-    setCounts((current) =>
-      current
-        ? {
-            unread: Math.max(0, current.unread - 1),
-            community:
-              notificationType === COMMUNITY_NOTIFICATION_TYPE ? Math.max(0, current.community - 1) : current.community,
-          }
-        : current
-    )
-  }, [])
+  const markedRead = useCallback(
+    (notificationType: string | null) => {
+      store.set((current) =>
+        current
+          ? {
+              unread: Math.max(0, current.unread - 1),
+              community:
+                notificationType === COMMUNITY_NOTIFICATION_TYPE ? Math.max(0, current.community - 1) : current.community,
+            }
+          : current
+      )
+    },
+    [store]
+  )
 
   const markedAllRead = useCallback(() => {
-    setCounts((current) => (current ? { unread: 0, community: 0 } : current))
-  }, [])
+    store.set((current) => (current ? { unread: 0, community: 0 } : current))
+  }, [store])
 
+  // Stable for the life of the page (user and school do not change during a
+  // load): counts reach their readers through the store, never through here.
   const value = useMemo(
-    () => ({ counts, userId, tenantId, refresh, markedRead, markedAllRead }),
-    [counts, userId, tenantId, refresh, markedRead, markedAllRead]
+    () => ({ store, userId, tenantId, refresh, markedRead, markedAllRead }),
+    [store, userId, tenantId, refresh, markedRead, markedAllRead]
   )
 
   return <NotificationCountsContext.Provider value={value}>{children}</NotificationCountsContext.Provider>
