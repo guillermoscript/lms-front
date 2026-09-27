@@ -636,35 +636,53 @@ Course reviews (1-5 rating). `UNIQUE(course_id, user_id)`.
 ### Notifications
 
 #### `notifications`
-Admin-created notifications. Tenant-scoped.
+Admin broadcasts, system notices (digest, certificates, payments) and community notifications (#870). Tenant-scoped.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | BIGSERIAL PK | |
 | `tenant_id` | UUID FK → tenants | |
-| `title` | TEXT | |
-| `content` | TEXT | |
-| `notification_type` | TEXT | `announcement`, `alert`, `info`, `success`, `warning`, `error`, `certificate_issued` |
+| `title` | TEXT | Push title. Community rows: the post label (a batch reads `(3) <post>`) |
+| `content` | TEXT | Push body |
+| `notification_type` | TEXT | `announcement`, `alert`, `info`, `success`, `warning`, `error`, `certificate_issued`, `community` |
 | `priority` | TEXT | `low`, `normal`, `high`, `urgent` |
 | `target_type` | TEXT | `all`, `role`, `course`, `user`, `custom` |
 | `target_roles` | TEXT[] | |
-| `target_course_id` | BIGINT FK → courses | |
+| `target_course_id` | BIGINT FK → courses | ON DELETE CASCADE |
 | `target_user_ids` | UUID[] | |
+| `community_post_id` | UUID FK → community_posts | #870. Only on `community` rows (CHECK `notifications_community_post_is_community`); ON DELETE CASCADE |
 | `status` | TEXT | `draft`, `scheduled`, `sent`, `cancelled` |
-| `created_by` | UUID FK → auth.users | |
+| `created_by` | UUID FK → auth.users | NULL on every `community` row — the actor is `metadata.actor_id` |
+| `metadata` | JSONB | `kind` routes the push and the web copy (`daily_digest`, `community_reply`, `community_prompt`, `community_answer_accepted`, …) |
 | `created_at` | TIMESTAMPTZ | |
 
+**`community` rows are system-written (#870).** They are inserted and updated only by the SECURITY DEFINER triggers in `20260928100000_community_notifications.sql` (and the service role). Two RESTRICTIVE policies — "Community notifications are system-written" (INSERT) and "Community notifications are system-updated" (UPDATE) — stop every client, staff included, from creating or editing one; admins can still delete. See `docs/COMMUNITY_SPACES.md` → Notifications.
+
 #### `user_notifications`
-Per-user notification delivery tracking.
+Per-user notification delivery tracking. One row per recipient; the web, the app and the push sweep all read it.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | BIGSERIAL PK | |
-| `notification_id` | BIGINT FK → notifications | |
+| `notification_id` | BIGINT FK → notifications | ON DELETE CASCADE |
 | `user_id` | UUID FK → auth.users | |
-| `in_app_read` | BOOLEAN | |
-| `dismissed` | BOOLEAN | |
-| `created_at` | TIMESTAMPTZ | |
+| `in_app_read` / `in_app_read_at` | BOOLEAN / TIMESTAMPTZ | |
+| `push_sent` / `push_sent_at` | BOOLEAN / TIMESTAMPTZ | `false` = queued for `claim_pending_pushes()` (#835) |
+| `dismissed` / `dismissed_at` | BOOLEAN / TIMESTAMPTZ | |
+| `created_at` | TIMESTAMPTZ | A batched community reply moves it to the latest reply |
+
+Recipients may UPDATE only `in_app_read`, `in_app_read_at`, `dismissed`, `dismissed_at`, `action_taken`, `action_taken_at` (column grant, #870): re-pointing `notification_id` used to make any notification in the school readable.
+
+#### `notification_preferences`
+Global per user (`user_id` UNIQUE, no `tenant_id`); own-row SELECT/INSERT/UPDATE. A missing row means the defaults.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `in_app_enabled` | BOOLEAN | `false` also stops community notifications |
+| `email_enabled` / `email_frequency` | BOOLEAN / TEXT | Read by the daily digest |
+| `push_enabled` | BOOLEAN | Default `true` since #870 (a missing row already meant push-on) |
+| `community_replies` | BOOLEAN NOT NULL DEFAULT true | #870 — replies to my posts/comments, accepted answers |
+| `community_prompts` | BOOLEAN NOT NULL DEFAULT true | #870 — new discussion prompts in my courses |
 
 ---
 

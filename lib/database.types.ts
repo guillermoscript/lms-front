@@ -4291,6 +4291,8 @@ export type Database = {
       }
       notification_preferences: {
         Row: {
+          community_prompts: boolean
+          community_replies: boolean
           course_notifications: boolean | null
           created_at: string
           email_enabled: boolean | null
@@ -4308,6 +4310,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          community_prompts?: boolean
+          community_replies?: boolean
           course_notifications?: boolean | null
           created_at?: string
           email_enabled?: boolean | null
@@ -4325,6 +4329,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          community_prompts?: boolean
+          community_replies?: boolean
           course_notifications?: boolean | null
           created_at?: string
           email_enabled?: boolean | null
@@ -4392,6 +4398,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          community_post_id: string | null
           content: string
           created_at: string
           created_by: string | null
@@ -4414,6 +4421,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          community_post_id?: string | null
           content: string
           created_at?: string
           created_by?: string | null
@@ -4436,6 +4444,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          community_post_id?: string | null
           content?: string
           created_at?: string
           created_by?: string | null
@@ -4458,6 +4467,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_community_post_id_fkey"
+            columns: ["community_post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_created_by_profile_fkey"
             columns: ["created_by"]
@@ -6957,6 +6973,7 @@ export type Database = {
         Args: { _max_age?: unknown; _max_notifications?: number }
         Returns: {
           content: string
+          data: Json
           kind: string
           notification_id: number
           priority: string
@@ -7198,6 +7215,7 @@ export type Database = {
           _limit?: number
         }
         Returns: {
+          community_replies: number
           current_streak: number
           due_cards: number
           email: string
