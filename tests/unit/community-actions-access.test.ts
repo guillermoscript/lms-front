@@ -63,7 +63,7 @@ vi.mock('@/lib/supabase/get-user-role', () => ({ getUserRole: async () => state.
 vi.mock('@/lib/services/course-access', () => ({ hasCourseAccess: async () => state.access }))
 const { revalidatePath, track } = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
-  track: vi.fn(async (..._args: unknown[]) => {}),
+  track: vi.fn(async () => {}),
 }))
 vi.mock('@/lib/analytics/server', () => ({ track }))
 vi.mock('next/cache', () => ({ revalidatePath }))
