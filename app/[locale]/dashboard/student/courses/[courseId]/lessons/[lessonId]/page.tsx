@@ -9,6 +9,7 @@ import { LessonResources } from '@/components/student/lesson-resources'
 import { IconMenu2, IconSparkles, IconLock } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
+import { LessonDiscussion } from '@/components/community/lesson-discussion'
 import dynamic from 'next/dynamic'
 import type { UIMessage } from 'ai'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -455,6 +456,8 @@ export default async function LessonPage({ params }: PageProps) {
               </section>
               </AnimatedSection>
             )}
+
+            <LessonDiscussion tenantId={tenantId} userId={userId} courseId={numericCourseId} lessonId={lesson.id} />
 
             {/* Comments Section */}
             <section className="border-t pt-10">

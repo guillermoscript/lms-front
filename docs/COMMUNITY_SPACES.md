@@ -80,7 +80,7 @@ Bucket: `community-assets` (public read, 10MB limit)
 
 | File | Functions |
 |------|-----------|
-| `app/actions/community.ts` | `createPost` (with attachments), `updatePost` (author only), `deletePost`, `createComment`, `deleteComment`, `toggleReaction`, `createPoll`, `castVote`, `uploadCommunityAsset`, `createFlag`, `getComments`, `loadMorePosts` |
+| `app/actions/community.ts` | `createPost` (with attachments), `updatePost` (author only), `deletePost`, `createComment(postId, content, parentId?, { surface? })`, `deleteComment`, `toggleReaction`, `createPoll`, `castVote`, `uploadCommunityAsset`, `createFlag`, `getComments`, `loadMorePosts` |
 | `app/actions/admin/community.ts` | `pinPost`, `unpinPost`, `lockPost`, `unlockPost`, `hidePost`, `hideComment`, `muteUser`, `unmuteUser`, `reviewFlag`, `updateCommunitySettings` |
 
 ### Pages
@@ -93,6 +93,10 @@ Bucket: `community-assets` (public read, 10MB limit)
 | `/dashboard/admin/community/moderation` | Admin | Flagged content + muted users management |
 | `/dashboard/student/courses/[courseId]/community` | Student | Course-scoped feed (course access required — entitlements, via `requireCourseAccess`, not enrollment) |
 | `/dashboard/teacher/courses/[courseId]/community` | Teacher | Course-scoped feed (course author or admin) |
+| `/dashboard/student/courses/[courseId]/lessons/[lessonId]` | Student | The lesson's discussion prompts, answered in place (#869) |
+| `/dashboard/teacher/courses/[courseId]` | Teacher | Lessons tab: prompt count per lesson + "Add discussion prompt" (#869) |
+
+Every feed page takes `?post=<uuid>` (and `#comment-<uuid>`) — see [Deep links](#deep-links-869).
 
 ### Components (`components/community/`)
 
@@ -102,13 +106,16 @@ Bucket: `community-assets` (public read, 10MB limit)
 | `post-card.tsx` | Client | Single post — author, content, media, reactions, comments |
 | `post-composer.tsx` | Client | New post form — textarea, title, attachments, poll mode, discussion prompt |
 | `community-settings-dialog.tsx` | Client | Admin switches: student posts in school feed, student polls |
-| `comment-thread.tsx` | Client | Threaded comments — load via server action, reply forms |
+| `comment-thread.tsx` | Client | Threaded comments — load via server action, reply forms. `variant="learner"` for the lesson page, `surface`, `focusCommentId`; every comment is anchored `id="comment-<id>"` |
 | `reaction-bar.tsx` | Client | 4 reaction buttons with optimistic updates |
 | `post-filters.tsx` | Client | Type filters (All/Posts/Discussions/Polls/Milestones) + role filters |
 | `poll-card.tsx` | Client | Poll voting UI with results bar chart |
 | `milestone-card.tsx` | Component | Celebratory milestone display |
-| `discussion-prompt-card.tsx` | Client | Discussion prompt with accent border + lesson link |
-| `discussion-prompt-composer.tsx` | Client | Teacher form — title, content, lesson selector, graded toggle |
+| `discussion-prompt-card.tsx` | Client | Discussion prompt in the feed — "Linked to lesson" badge (no link yet), graded badge, comment count |
+| `discussion-prompt-composer.tsx` | Client | Teacher form — title, content, lesson selector, graded toggle. Props `{ courseId, lessons: { id, title }[], defaultLessonId?, onCreated?(postId), heading?, className? }`; mounted by `discussion-prompt-shortcuts.tsx` |
+| `discussion-prompt-shortcuts.tsx` | Client | Teacher lesson list: one sheet for the list + a per-row `AddDiscussionPromptTrigger` (#869) |
+| `lesson-discussion.tsx` | Server | The lesson's prompts behind their own `<Suspense>`; loads through `getLessonPrompts` (#869) |
+| `lesson-discussion-list.tsx` | Client | Learner-register prompt list — answer count, answered/closed/graded chips, inline answer, "View in community". Answer state from `lib/community/lesson-answers.ts` |
 | `moderation-toolbar.tsx` | Client | Admin inline buttons — pin/lock/hide |
 | `flag-dialog.tsx` | Client | Report content dialog (calls `createFlag` server action) |
 | `muted-banner.tsx` | Component | Muted user warning banner |
@@ -201,7 +208,7 @@ This ensures all RLS policies using `get_tenant_id()` return the correct tenant 
 
 **Mutations** (createPost, createComment, etc.) use server actions with `createAdminClient()` to ensure writes succeed regardless of JWT timing.
 
-**Feed reads (#860)** all go through `getFeedPage()` in `lib/community/feed.ts` — the five pages and `loadMorePosts()` share one query + enrichment (author profile, author's `tenant_users.role` for the role filter/badge, the viewer's reactions and votes, poll options). It reads with the service role, so the caller owns access: `loadMorePosts(scope, cursor, courseId?)` takes NO tenant or user from the client and re-checks course access.
+**Feed reads (#860)** all go through `getFeedPage()` in `lib/community/feed.ts` — the five pages and `loadMorePosts()` share one query + enrichment (author profile, author's `tenant_users.role` for the role filter/badge, the viewer's reactions and votes, poll options). It reads with the service role, so the caller owns access: `loadMorePosts(scope, cursor, courseId?)` takes NO tenant or user from the client and re-checks course access. The visibility half of that query — this tenant, not hidden, the right feed (a course feed without a course id throws rather than reading the school feed), no blocked authors — is `visiblePostsQuery()`, shared with the lesson page (#869) so the two cannot drift.
 
 **Infinite scroll** uses cursor-based pagination via `loadMorePosts()`, triggered by IntersectionObserver when the user scrolls near the bottom.
 
@@ -210,6 +217,41 @@ This ensures all RLS policies using `get_tenant_id()` return the correct tenant 
 **School switches (#860)**: `getCommunitySettings()` (`lib/community/settings.ts`) reads `community_student_posts_school_feed` / `community_student_polls` (missing row = ON, same as `community_setting_on()` in RLS). Admins toggle them from the **Settings** dialog on `/dashboard/admin/community`; the composer hides what the school has turned off.
 
 **Post creation** triggers `router.refresh()` which causes a server re-render with fresh data, ensuring new posts appear immediately.
+
+## Lesson discussion (#869)
+
+A teacher's `discussion_prompt` tied to a lesson (`community_posts.lesson_id`) now shows on that lesson, after the lesson content and the AI task and before the lesson's own comments.
+
+- **Data path.** `getLessonPrompts()` (`lib/community/lesson-prompts.ts`) reads with the service role, behind the lesson page's gates (`requireCourseAccess` + `requireRowInCourse`), through `visiblePostsQuery()` plus `lesson_id` and `post_type = 'discussion_prompt'`. Not a user-scoped read, on purpose: the course-posts SELECT policy still checks `enrollments.status = 'active'`, so a student entitled through a subscription and never enrolled would see an empty discussion that the feed shows them in full.
+- **Order and cap.** Pinned first, then oldest first (the order the teacher asked them), at most `LESSON_PROMPT_LIMIT` (10); a "More prompts in the course community" link covers the rest.
+- **Streaming.** `<LessonDiscussion>` wraps its own `<Suspense fallback={null}>`, so the community queries (plan check + blocks, then the prompts, then the viewer's answers + one head count per prompt — three round trips) never delay the lesson. Plan off or no prompts renders nothing; a failed read renders a quiet notice with a link to the course feed, never an empty list.
+- **An answer is a `community_comments` row** on the prompt, written by `createComment` with every existing check (reachable post, mute, lock, parent). It shows in the course feed under the prompt.
+- **The answer count** is counted, not read from `comment_count`: one `count: 'exact', head: true` query per prompt (at most ten, in parallel — a row fetch would stop at PostgREST's `max_rows`) over visible, top-level comments by nobody the viewer blocked, the same rules the prompt's thread (`getComments`) shows them by. The feed's `comment_count` counts replies and never drops on a removal (see Known Limitations), so the two numbers can differ; each matches what its own view lists.
+- **Once the thread has loaded it is the source of truth** (`lib/community/lesson-answers.ts`): every load — after posting, deleting or blocking — replaces the count, the "You answered" chip and the comment "View in community" lands on. Because answering from the lesson skips revalidation, the lesson's cached payload never learns about the answer, and browser Back re-renders from that cache; a module-level memory keyed by prompt and by the server read (`loadId`, new on every `getLessonPrompts`) gives the card back what its thread last saw. A newer server read always wins.
+- **"Answered"** means the viewer has a visible top-level comment on the prompt; a reply to someone else's answer does not count.
+- **`surface`.** `createComment(…, { surface: 'lesson' })` skips `revalidatePath`: in Next 16 any revalidation inside a server action re-renders the *current* route in the action's response, which for a lesson re-runs the MDX, the tutor history signing and the view stamp for a comment the thread already shows. The feed (the default) keeps revalidating. `surface` is tracked on `community_comment_created`.
+- **Locked** prompts show "Answers are closed" and "Read answers"; the thread has no composer. **Hidden** prompts and **blocked** authors are filtered exactly as in the feed.
+- `lesson_comments` (the lesson's own comments, reactions and XP) stay a separate system; no data moves between the two.
+
+## Deep links (#869)
+
+The URL contract other features link to (notifications, #870):
+
+```
+/dashboard/{student|teacher}/courses/<courseId>/community?post=<postId>#comment-<commentId>
+/dashboard/{student|teacher|admin}/community?post=<postId>
+```
+
+- `parsePostParam()` (`lib/community/deep-link.ts`) accepts only a UUID — anything else is ignored (no notice), and never reaches PostgREST (22P02).
+- Each page resolves it with `getFeedFocus()`, which calls `getFeedPage({ postId })` — the same tenant, hidden, scope and blocked filters as the feed. A post from another course, the school feed on a course page, a removed post or a blocked author resolves to nothing and the feed shows "This post isn't available…". `getFeedFocus` never throws.
+- The focused post is scrolled to, focused, outlined and has its comments open. When it is not on the first page it leads the feed (above pinned posts) and is dropped from later pages; the pagination cursor ignores it.
+- `#comment-<id>` is read on the client (the server never sees a hash) and scrolls to, focuses and highlights that comment once the thread loads. Every comment is anchored `id="comment-<id>"`, every post `id="post-<id>"`.
+- The hash follows in-app navigation too. Next's router moves the URL with `pushState`, which fires no `hashchange`, so a `<Link>` from `?post=P#comment-A` to `?post=P#comment-B` (a second notification on the same post) would otherwise keep A highlighted. `CommunityFeed` re-reads the hash after every router navigation (`useSearchParams()` returns a new object on each, hash-only ones included).
+- The URL is left as is, so refreshing or sharing keeps the focus.
+
+## Teacher prompt shortcut (#869)
+
+The Lessons tab of `/dashboard/teacher/courses/[courseId]` shows "N discussion prompts" per lesson (`getLessonPromptCounts()`, the page's user-scoped client — staff see every visible prompt of the course) and an "Add discussion prompt" button per row. All rows share ONE sheet rendered outside the rows (each row is an overlay link, and React events bubble through portals); it opens `DiscussionPromptComposer` with that lesson pre-selected. On success the sheet closes and a toast links to the new post in the course feed. `createPost` already revalidates the course page, so the count updates without a `router.refresh()`. Without the community plan the list renders as before, with no counts and no button.
 
 ## Feature Gate
 
@@ -356,15 +398,15 @@ The feed uses cursor-based pagination with IntersectionObserver:
 5. When `hasMore = false`, shows "You've reached the end"
 6. Pinned posts always render first (from `initialPosts`), pagination only loads non-pinned posts
 
+A deep-linked post (`?post=`) that is not on the first page renders first and is filtered out of later pages.
+
 ```typescript
-// Server action signature
+// Server action signature — tenant and viewer come from the request, never the client
 export async function loadMorePosts(
-  tenantId: string,
-  userId: string,
   scope: 'school' | 'course',
   cursor: string,       // created_at of last post
   courseId?: number
-): Promise<ActionResult<{ posts: any[]; hasMore: boolean }>>
+): Promise<ActionResult<{ posts: CommunityPost[]; hasMore: boolean }>>
 ```
 
 ## Known Limitations (v1)
@@ -372,6 +414,10 @@ export async function loadMorePosts(
 - **No real-time updates** — feed refreshes via `router.refresh()`, not WebSocket/Supabase Realtime
 - **No rich text rendering** — post content displayed as `whitespace-pre-wrap` plain text (no markdown)
 - **Course-post RLS still keys on enrollments** — the SELECT policy "Enrolled users can view visible course posts" checks active `enrollments`, while the web (service role + entitlements) lets any student with course access read the feed. RLS clients (the native app) therefore show nothing to a student who is entitled but never enrolled (e.g. through a subscription). Switching the policy to `has_course_access()` is a follow-up
+- **`comment_count` includes soft-hidden comments and replies** — `trg_community_comment_count` fires on INSERT/DELETE only, and removing a comment sets `is_hidden`, so the feed's "N comments" drifts upward. The lesson counts its answers itself and is unaffected. Fixing the trigger (`UPDATE OF is_hidden`) needs a migration and is left for a follow-up.
+- **The muted banner is not wired** — no page passes `mutedUntil`; a muted member finds out from the server action's refusal toast (feed and lesson alike).
+- **The web actions have no plan gate of their own** — the pages and the lesson hide the community when the plan lacks it, and RLS refuses user-scoped writes, but `createPost`/`createComment` write with the service role.
+- **Deleting or blocking from the lesson thread re-renders the lesson** (those actions still revalidate); only `createComment` from the lesson skips it.
 
 ## Future Phases
 

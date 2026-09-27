@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBlockedAuthorIds } from '@/lib/community/blocks'
+import { parsePostParam } from '@/lib/community/deep-link'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 export const FEED_PAGE_SIZE = 20
@@ -11,6 +12,49 @@ const POST_COLUMNS = `
   milestone_type, milestone_data
 `
 
+type AdminClient = ReturnType<typeof createAdminClient>
+
+/**
+ * The posts a member may see in one feed, before paging (#869): this school,
+ * not removed, the right feed, and nobody the viewer blocked. The feed and the
+ * lesson page both start here, so what a lesson shows can never drift from
+ * what the feed shows. Service role — the caller owns the access decision.
+ *
+ * A course feed without a course id throws instead of quietly reading the
+ * school feed.
+ */
+export function visiblePostsQuery<Columns extends string>(
+  admin: AdminClient,
+  {
+    columns,
+    tenantId,
+    scope,
+    courseId,
+    blockedIds,
+  }: {
+    columns: Columns
+    tenantId: string
+    scope: 'school' | 'course'
+    courseId?: number
+    blockedIds: string[]
+  }
+) {
+  if (scope === 'course' && !courseId) {
+    throw new Error('A course feed needs a course id')
+  }
+
+  let query = admin.from('community_posts').select(columns).eq('tenant_id', tenantId).eq('is_hidden', false)
+
+  query = scope === 'course' ? query.eq('course_id', courseId!) : query.is('course_id', null)
+
+  // RLS hides blocked authors, but the service role does not (#846).
+  if (blockedIds.length > 0) {
+    query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
+  }
+
+  return query
+}
+
 /**
  * One page of a community feed, enriched for `CommunityFeed` (#860).
  *
@@ -20,7 +64,8 @@ const POST_COLUMNS = `
  * role, reactions, polls) cannot drift between the first page and the rest.
  *
  * Without a cursor the page leads with pinned posts; with one it continues the
- * unpinned timeline strictly before `cursor` (a `created_at`).
+ * unpinned timeline strictly before `cursor` (a `created_at`). `postId` narrows
+ * it to that one post (a deep link, #869) through the same filters.
  */
 export async function getFeedPage({
   tenantId,
@@ -28,28 +73,21 @@ export async function getFeedPage({
   scope,
   courseId,
   cursor,
+  postId,
 }: {
   tenantId: string
   viewerId: string
   scope: 'school' | 'course'
   courseId?: number
   cursor?: string
+  postId?: string
 }): Promise<{ posts: CommunityPost[]; hasMore: boolean }> {
   const admin = createAdminClient()
-  // RLS hides blocked authors, but the service role does not (#846).
   const blockedIds = await getBlockedAuthorIds(viewerId)
 
-  let query = admin
-    .from('community_posts')
-    .select(POST_COLUMNS)
-    .eq('tenant_id', tenantId)
-    .eq('is_hidden', false)
+  let query = visiblePostsQuery(admin, { columns: POST_COLUMNS, tenantId, scope, courseId, blockedIds })
 
-  query = scope === 'course' && courseId ? query.eq('course_id', courseId) : query.is('course_id', null)
-
-  if (blockedIds.length > 0) {
-    query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
-  }
+  if (postId) query = query.eq('id', postId)
 
   query = cursor
     ? query.eq('is_pinned', false).lt('created_at', cursor)
@@ -117,5 +155,36 @@ export async function getFeedPage({
       }
     }),
     hasMore: posts.length >= FEED_PAGE_SIZE,
+  }
+}
+
+/**
+ * The post a feed page was deep-linked to with `?post=` (#869), or null when it
+ * is not in THIS feed for this viewer: removed, another school, another course
+ * (or the school feed on a course page), or by someone they blocked. The same
+ * query as the feed, so a deep link can never reveal a post the feed would
+ * not. `focusPostId` is null for a missing or malformed param — then no
+ * "not available" notice is shown either.
+ *
+ * Never throws: a failed lookup must not take the whole feed down with it.
+ */
+export async function getFeedFocus(
+  rawPostParam: string | string[] | undefined,
+  {
+    tenantId,
+    viewerId,
+    scope,
+    courseId,
+  }: { tenantId: string; viewerId: string; scope: 'school' | 'course'; courseId?: number }
+): Promise<{ focusPostId: string | null; focusPost: CommunityPost | null }> {
+  const focusPostId = parsePostParam(rawPostParam)
+  if (!focusPostId) return { focusPostId: null, focusPost: null }
+
+  try {
+    const { posts } = await getFeedPage({ tenantId, viewerId, scope, courseId, postId: focusPostId })
+    return { focusPostId, focusPost: posts[0] ?? null }
+  } catch (error) {
+    console.error('Failed to load the deep-linked post:', error)
+    return { focusPostId, focusPost: null }
   }
 }
