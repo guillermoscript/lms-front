@@ -11,6 +11,7 @@ import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { getBlockedAuthorIds } from '@/lib/community/blocks'
 import { getFeedPage } from '@/lib/community/feed'
+import { canPinInCourse } from '@/lib/community/access'
 import { parsePostMedia } from '@/lib/community/media'
 import type { CommunityPost } from '@/components/community/community-feed'
 
@@ -168,6 +169,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
     const courseId = parsePositiveId(formData.get('course_id'))
     const lessonId = parsePositiveId(formData.get('lesson_id'))
     const isGraded = formData.get('is_graded') === 'true'
+    const pin = formData.get('is_pinned') === 'true'
 
     if (!content || content.trim().length === 0) {
       return { success: false, error: 'Content is required' }
@@ -202,6 +204,17 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
     const targetError = await checkPostTarget(tenantId, userId, role, courseId, lessonId)
     if (targetError) return { success: false, error: targetError }
 
+    // Posting pinned (#868, the course welcome prompt) follows the same rule as
+    // `pinPost`: the course's author or an admin, and only in a course feed.
+    // RLS refuses a pinned insert from members outright, so this service-role
+    // insert is the only way in and this check is its gate.
+    if (pin && courseId === null) {
+      return { success: false, error: 'Only course posts can be pinned when posting' }
+    }
+    if (pin && courseId !== null && !(await canPinInCourse({ tenantId, userId, role, courseId }))) {
+      return { success: false, error: 'Only the course author or an admin can pin posts' }
+    }
+
     // Use admin client to bypass RLS for insert (JWT tenant_id may not match header tenant_id)
     const adminClient = createAdminClient()
     const { data, error } = await adminClient
@@ -216,6 +229,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
         course_id: courseId,
         lesson_id: lessonId,
         is_graded: isGraded,
+        is_pinned: pin,
       })
       .select('id')
       .single()

@@ -1,5 +1,6 @@
 'use client'
 
+import { googleAuthEnabled } from '@/lib/auth/social-providers'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -287,6 +288,8 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
         <Card>
           <CardContent className="pt-6">
             <form onSubmit={handleSignUp} className="space-y-4">
+              {googleAuthEnabled && (
+              <>
               <Button
                 type="button"
                 variant="outline"
@@ -324,6 +327,8 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                   <span className="bg-card px-2 text-muted-foreground">{t('orEmail')}</span>
                 </div>
               </div>
+              </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="owner-name">{t('nameLabel')}</Label>
