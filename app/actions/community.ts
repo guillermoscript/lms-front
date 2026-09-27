@@ -372,15 +372,24 @@ export async function deletePost(postId: string): Promise<ActionResult> {
 }
 
 /**
- * Create a comment on a post
+ * Create a comment on a post.
+ *
+ * `surface` says where it was written (#869). From the lesson page it skips
+ * `revalidatePath`: in Next 16 any revalidation inside an action re-renders the
+ * CURRENT route in the action's response, which for a lesson means the MDX,
+ * the tutor history and the view stamp all over again — for a comment the
+ * thread already shows. The feed keeps revalidating.
  */
 export async function createComment(
   postId: string,
   content: string,
-  parentCommentId?: string
+  parentCommentId?: string,
+  options?: { surface?: 'feed' | 'lesson' }
 ): Promise<ActionResult<{ id: string }>> {
+  // From the wire: anything but 'lesson' is the feed.
+  const surface = options?.surface === 'lesson' ? 'lesson' : 'feed'
   try {
-    const { supabase, userId } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     if (!content || content.trim().length === 0) {
@@ -442,11 +451,12 @@ export async function createComment(
         post_id: postId,
         is_reply: Boolean(parentCommentId),
         content_length: content.trim().length,
+        surface,
       },
       { userId, tenantId }
     )
 
-    revalidatePath('/dashboard')
+    if (surface === 'feed') revalidatePath('/dashboard')
     return { success: true, data: { id: data.id } }
   } catch (err) {
     console.error('Failed to create comment:', err)
