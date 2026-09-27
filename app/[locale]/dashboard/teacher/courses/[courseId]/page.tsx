@@ -371,13 +371,13 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                           className="absolute inset-0 rounded-[inherit]"
                           aria-label={t('curriculum.editLesson')}
                         />
-                        <div className="pointer-events-none flex items-center gap-4">
+                        <div className="pointer-events-none flex min-w-0 items-center gap-4">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
                             {lesson.sequence}
                           </div>
                           <div className="min-w-0">
                             <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                               {lesson.status !== 'published' && (
                                 <Badge variant="secondary" className="text-[10px] h-4">
                                   {t(`status.${lesson.status}`)}
