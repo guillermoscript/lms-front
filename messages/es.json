@@ -7044,6 +7044,16 @@
       "levelUp": "¡{name} alcanzó el nivel {level}!",
       "streak": "¡{name} lleva una racha de {days} días!"
     },
+    "milestones": {
+      "share": {
+        "label": "Compartir mis logros en la comunidad",
+        "description": "Terminar un curso, obtener un certificado, llegar al nivel 5 o superior y las rachas de 7, 30 y 100 días se publican automáticamente. Se aplica en todas las escuelas a las que perteneces. Al desactivarlo dejan de publicarse logros nuevos; los anteriores puedes eliminarlos desde el feed.",
+        "enabledToast": "Tus logros se compartirán",
+        "disabledToast": "Tus logros ya no se compartirán",
+        "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo.",
+        "settingsLink": "Configuración de logros"
+      }
+    },
     "moderation": {
       "title": "Moderación de Comunidad",
       "description": "Gestiona contenido reportado y usuarios silenciados",
@@ -7070,8 +7080,8 @@
       "studentPostsSchoolFeedDesc": "Los estudiantes pueden crear publicaciones en el feed general de la comunidad",
       "studentPolls": "Permitir encuestas de estudiantes",
       "studentPollsDesc": "Los estudiantes pueden crear encuestas en la comunidad",
-      "milestonePosts": "Generar publicaciones de logros automáticamente",
-      "milestonePostsDesc": "Crear automáticamente publicaciones de celebración para logros como completar cursos",
+      "milestonePosts": "Compartir los logros de los estudiantes",
+      "milestonePostsDesc": "Los cursos completados y los certificados se publican en el feed del curso; el nivel 5 o superior y las rachas de 7, 30 y 100 días, en el feed de la escuela. Los estudiantes pueden desactivarlo.",
       "open": "Ajustes",
       "saved": "Ajuste guardado"
     },

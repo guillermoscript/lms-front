@@ -25,6 +25,7 @@ import { StreakCalendar } from '@/components/gamification/streak-calendar'
 import { ProfileGamificationStats } from '@/components/gamification/profile-stats'
 import { LeagueOptOutToggle } from '@/components/gamification/league-opt-out-toggle'
 import { ToursToggle } from '@/components/shared/tours-toggle'
+import { ShareMilestonesToggle } from '@/components/student/share-milestones-toggle'
 import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -33,6 +34,16 @@ import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
+import { hasPlanFeature } from '@/lib/plans/server'
+import { getCommunitySettings } from '@/lib/community/settings'
+
+type EnrolledCourse = {
+    enrollment_id: number
+    course: { course_id: number; title: string; thumbnail_url: string | null }
+    completedLessons: number
+    totalLessons: number
+    progress: number
+}
 
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
@@ -89,7 +100,7 @@ async function getProfileData(userId: string, tenantId: string) {
     const enrollmentRows = enrollmentsRes.data || []
     const courseIds = enrollmentRows.map(e => e.course_id)
 
-    let enrolledCourses: any[] = []
+    let enrolledCourses: EnrolledCourse[] = []
 
     if (courseIds.length > 0) {
         const [coursesRes, lessonsRes] = await Promise.all([
@@ -133,7 +144,7 @@ async function getProfileData(userId: string, tenantId: string) {
                 const progress = total > 0 ? Math.round((completed / total) * 100) : 0
                 return { ...enrollment, course, completedLessons: completed, totalLessons: total, progress }
             })
-            .filter(Boolean)
+            .filter((course): course is NonNullable<typeof course> => course !== null)
     }
 
     return {
@@ -183,7 +194,7 @@ function SectionHeader({
 }
 
 // ─── Purchased Course Card ────────────────────────────────────────────────────
-function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
+function PurchasedCourseCard({ course: ec, labels }: { course: EnrolledCourse; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
     const isCompleted = ec.progress === 100
     const hasStarted = ec.completedLessons > 0
 
@@ -268,7 +279,14 @@ export default async function ProfilePage() {
     }
 
     const { profile, subscription, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
-    const uiState = await getUiState(user.id)
+    const [uiState, hasCommunity, communitySettings] = await Promise.all([
+        getUiState(user.id),
+        hasPlanFeature(tenantId, 'community'),
+        getCommunitySettings(tenantId),
+    ])
+    // The preference is global, but only offered where it does something:
+    // a school with the community whose milestone switch is on (#871).
+    const showShareMilestones = hasCommunity && communitySettings.milestonePosts
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
     const t = await getTranslations('dashboard.student.profile')
@@ -318,7 +336,7 @@ export default async function ProfilePage() {
                                     <h2 className="text-xl font-bold tracking-tight truncate">{profile?.full_name || user.email?.split('@')[0]}</h2>
                                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                     <div className="flex justify-center gap-2 pt-1">
-                                        {profile?.user_roles?.map((ur: any) => (
+                                        {profile?.user_roles?.map((ur: { role: string }) => (
                                             <Badge key={ur.role} variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
                                                 {ur.role}
                                             </Badge>
@@ -416,6 +434,9 @@ export default async function ProfilePage() {
                             <CardContent className="p-6 space-y-6">
                                 <ProfileForm profile={profile} />
                                 <LeagueOptOutToggle />
+                                {showShareMilestones && (
+                                    <ShareMilestonesToggle initialEnabled={profile?.share_milestones ?? true} />
+                                )}
                                 <ToursToggle initialEnabled={areToursEnabled(uiState)} />
                             </CardContent>
                         </Card>
@@ -449,7 +470,7 @@ export default async function ProfilePage() {
                             <CardContent className="p-6">
                                 {enrolledCourses.length > 0 ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {enrolledCourses.map((ec: any) => (
+                                        {enrolledCourses.map((ec) => (
                                             <PurchasedCourseCard
                                                 key={ec.enrollment_id}
                                                 course={ec}
@@ -508,7 +529,7 @@ export default async function ProfilePage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
-                                                {transactions.map((tx: any) => (
+                                                {transactions.map((tx) => (
                                                     <tr key={tx.transaction_id} className="hover:bg-muted/10 transition-colors">
                                                         <td className="px-6 py-4 text-sm font-medium text-muted-foreground tabular-nums">#{tx.transaction_id}</td>
                                                         <td className="px-6 py-4 text-sm font-medium">{dateFormatter.format(new Date(tx.transaction_date))}</td>
@@ -550,7 +571,7 @@ export default async function ProfilePage() {
 
                             {certificates.length > 0 ? (
                                 <div className="grid gap-4">
-                                    {certificates.map((cert: any) => (
+                                    {certificates.map((cert) => (
                                         <StudentCertificateCard key={cert.id} certificate={cert} />
                                     ))}
                                 </div>

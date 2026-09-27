@@ -58,3 +58,30 @@ export async function updateProfile(formData: FormData): Promise<UpdateProfileRe
     revalidatePath("/dashboard/settings");
     return { success: true };
 }
+
+export type UpdateShareMilestonesResult = { success: true } | { success: false; code: 'unauthorized' | 'invalid' | 'unknown' }
+
+/** "Share my milestones in the community" (#871). Global, like the profile it
+ *  lives on: the milestone triggers read `profiles.share_milestones` in every
+ *  school. Written through the caller's own-row UPDATE policy — no service
+ *  role. Turning it off stops NEW posts; earlier ones stay until deleted. */
+export async function updateShareMilestones(enabled: boolean): Promise<UpdateShareMilestonesResult> {
+    if (typeof enabled !== 'boolean') return { success: false, code: 'invalid' }
+
+    const userId = await getCurrentUserId()
+    if (!userId) return { success: false, code: 'unauthorized' }
+
+    const supabase = await createClient()
+    const { data, error } = await supabase
+        .from('profiles')
+        .update({ share_milestones: enabled })
+        .eq('id', userId)
+        .select('id')
+        .maybeSingle()
+
+    // No row back = RLS matched nothing, which is a failure, not a no-op.
+    if (error || !data) return { success: false, code: 'unknown' }
+
+    revalidatePath('/dashboard/student/profile')
+    return { success: true }
+}

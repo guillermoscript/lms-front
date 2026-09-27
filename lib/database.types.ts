@@ -5523,6 +5523,7 @@ export type Database = {
           full_name: string | null
           id: string
           onboarding_completed: boolean
+          share_milestones: boolean
           stripe_customer_id: string | null
           stripeCustomerID: string | null
           username: string | null
@@ -5538,6 +5539,7 @@ export type Database = {
           full_name?: string | null
           id: string
           onboarding_completed?: boolean
+          share_milestones?: boolean
           stripe_customer_id?: string | null
           stripeCustomerID?: string | null
           username?: string | null
@@ -5553,6 +5555,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean
+          share_milestones?: boolean
           stripe_customer_id?: string | null
           stripeCustomerID?: string | null
           username?: string | null
