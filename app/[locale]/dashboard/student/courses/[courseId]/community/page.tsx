@@ -6,7 +6,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { BlockedMembers } from '@/components/community/blocked-members'
 import { CommunityFeed } from '@/components/community/community-feed'
-import { getFeedPage } from '@/lib/community/feed'
+import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import Link from 'next/link'
@@ -14,9 +14,11 @@ import { IconArrowLeft } from '@tabler/icons-react'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
+  // `?post=<id>` focuses one post of THIS course (#869).
+  searchParams: Promise<{ post?: string | string[] }>
 }
 
-export default async function StudentCourseCommunityPage({ params }: PageProps) {
+export default async function StudentCourseCommunityPage({ params, searchParams }: PageProps) {
   const { courseId } = await params
   const t = await getTranslations('community')
   const supabase = createAdminClient()
@@ -70,10 +72,17 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
     )
   }
 
+  const focusPromise = getFeedFocus((await searchParams).post, {
+    tenantId,
+    viewerId: userId,
+    scope: 'course',
+    courseId: numericCourseId,
+  })
   const [feed, settings] = await Promise.all([
     getFeedPage({ tenantId, viewerId: userId, scope: 'course', courseId: numericCourseId }),
     getCommunitySettings(tenantId),
   ])
+  const focus = await focusPromise
 
   return (
     <div className="min-h-screen bg-background">
@@ -102,6 +111,8 @@ export default async function StudentCourseCommunityPage({ params }: PageProps) 
           userRole={role as 'student' | 'teacher' | 'admin'}
           userId={userId}
           settings={settings}
+          focusPostId={focus.focusPostId}
+          focusPost={focus.focusPost}
         />
       </main>
     </div>

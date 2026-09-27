@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -39,17 +39,31 @@ import { PollCard } from './poll-card'
 import { MilestoneCard } from './milestone-card'
 import { DiscussionPromptCard } from './discussion-prompt-card'
 import type { CommunityPost } from './community-feed'
+import { postAnchorId, scrollBehavior } from '@/lib/community/deep-link'
 
 interface PostCardProps {
   post: CommunityPost
   userId: string
   userRole: string
+  /** The post a `?post=` deep link points at (#869): opened, highlighted, scrolled to. */
+  focused?: boolean
+  /** A `#comment-` inside it, handed to the thread. */
+  focusCommentId?: string | null
 }
 
-export function PostCard({ post, userId, userRole }: PostCardProps) {
+export function PostCard({ post, userId, userRole, focused = false, focusCommentId = null }: PostCardProps) {
   const t = useTranslations('community')
   const locale = useLocale()
-  const [showComments, setShowComments] = useState(false)
+  const [showComments, setShowComments] = useState(focused)
+  const [wasFocused, setWasFocused] = useState(focused)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const scrolledForRef = useRef<string | null>(null)
+
+  // A later deep link to this post (a new `?post=`) opens its comments too.
+  if (focused !== wasFocused) {
+    setWasFocused(focused)
+    if (focused) setShowComments(true)
+  }
   const [showFlagDialog, setShowFlagDialog] = useState(false)
   const [isDeleted, setIsDeleted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -60,6 +74,24 @@ export function PostCard({ post, userId, userRole }: PostCardProps) {
   const router = useRouter()
   const isOwn = userId === post.author_id
   const canModerate = userRole === 'admin' || userRole === 'teacher'
+
+  // Bring the deep-linked post into view once. The ref is set inside the frame
+  // so a cancelled first run (Strict Mode) does not count as done.
+  useEffect(() => {
+    if (!focused) {
+      scrolledForRef.current = null
+      return
+    }
+    if (scrolledForRef.current === post.id) return
+    const frame = requestAnimationFrame(() => {
+      scrolledForRef.current = post.id
+      const el = rootRef.current
+      if (!el) return
+      el.scrollIntoView({ block: 'start', behavior: scrollBehavior() })
+      el.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [focused, post.id])
 
   async function handleBlock() {
     const name = post.author.full_name || t('unknownUser')
@@ -134,7 +166,17 @@ export function PostCard({ post, userId, userRole }: PostCardProps) {
   }
 
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-3 transition-colors hover:bg-card/80">
+    <div
+      ref={rootRef}
+      id={postAnchorId(post.id)}
+      // Focusable only as a deep-link target, so it is announced on arrival.
+      tabIndex={focused ? -1 : undefined}
+      data-focused={focused ? '' : undefined}
+      className={cn(
+        'rounded-xl border bg-card p-4 space-y-3 transition-colors hover:bg-card/80 scroll-mt-4 outline-none',
+        focused && 'ring-2 ring-ring/40'
+      )}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
@@ -331,6 +373,7 @@ export function PostCard({ post, userId, userRole }: PostCardProps) {
           size="sm"
           className="h-7 gap-1 text-xs text-muted-foreground"
           onClick={() => setShowComments((prev) => !prev)}
+          aria-expanded={showComments}
         >
           <IconMessageCircle size={14} />
           {post.comment_count > 0 ? t('comments', { count: post.comment_count }) : t('showComments')}
@@ -353,6 +396,7 @@ export function PostCard({ post, userId, userRole }: PostCardProps) {
           userId={userId}
           isLocked={post.is_locked}
           userRole={userRole}
+          focusCommentId={focused ? focusCommentId : null}
         />
       )}
 

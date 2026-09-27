@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { loadMorePosts } from '@/app/actions/community'
@@ -11,6 +11,7 @@ import { EmptyFeed } from './empty-feed'
 import { MutedBanner } from './muted-banner'
 import { PostSkeleton } from './post-skeleton'
 import type { CommunitySettings } from '@/lib/community/settings'
+import { parseCommentHash, splitFocusedPost } from '@/lib/community/deep-link'
 
 export interface CommunityPost {
   id: string
@@ -46,7 +47,20 @@ interface CommunityFeedProps {
   mutedUntil?: string | null
   /** The school's student switches (#860); staff ignore them. */
   settings: CommunitySettings
+  /** A valid `?post=` id (#869), whether or not this viewer can see that post. */
+  focusPostId?: string | null
+  /** That post, when it is in this feed for this viewer; null shows a notice. */
+  focusPost?: CommunityPost | null
 }
+
+// The URL hash, read on the client only: the server never sees it, so reading
+// it during render would not hydrate. Follows hash-only navigation too.
+function subscribeToHash(onChange: () => void) {
+  window.addEventListener('hashchange', onChange)
+  return () => window.removeEventListener('hashchange', onChange)
+}
+const getHash = () => window.location.hash
+const getServerHash = () => ''
 
 export function CommunityFeed({
   scope,
@@ -57,6 +71,8 @@ export function CommunityFeed({
   userId,
   mutedUntil,
   settings,
+  focusPostId = null,
+  focusPost = null,
 }: CommunityFeedProps) {
   const t = useTranslations('community')
   const router = useRouter()
@@ -75,8 +91,14 @@ export function CommunityFeed({
   const canPost = !isStudent || scope === 'course' || settings.studentPostsSchoolFeed
   const canCreatePoll = !isStudent || settings.studentPolls
 
-  // All posts = server-rendered initial + client-loaded extras
-  const allPosts = [...initialPosts, ...extraPosts]
+  // All posts = server-rendered initial + client-loaded extras. A deep-linked
+  // post that is not on the first page leads the feed and never repeats.
+  const { focused, timeline: allPosts, cursorPost } = useMemo(
+    () => splitFocusedPost({ focusPost, initialPosts, extraPosts }),
+    [focusPost, initialPosts, extraPosts]
+  )
+  const hash = useSyncExternalStore(subscribeToHash, getHash, getServerHash)
+  const focusCommentId = focusPostId ? parseCommentHash(hash) : null
 
   const refreshFeed = useCallback(() => {
     setExtraPosts([])
@@ -89,14 +111,13 @@ export function CommunityFeed({
     if (isFetching || !hasMore) return
     setIsFetching(true)
 
-    const lastPost = allPosts[allPosts.length - 1]
-    if (!lastPost) {
+    if (!cursorPost) {
       setIsFetching(false)
       return
     }
 
     try {
-      const result = await loadMorePosts(scope, lastPost.created_at, courseId)
+      const result = await loadMorePosts(scope, cursorPost.created_at, courseId)
 
       if (result.success && result.data) {
         setExtraPosts((prev) => [...prev, ...result.data!.posts])
@@ -109,7 +130,7 @@ export function CommunityFeed({
     } finally {
       setIsFetching(false)
     }
-  }, [isFetching, hasMore, allPosts, scope, courseId])
+  }, [isFetching, hasMore, cursorPost, scope, courseId])
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -134,22 +155,34 @@ export function CommunityFeed({
   }, [hasMore, isFetching, fetchNextPage])
 
   // Apply filters client-side
-  const filteredPosts = allPosts.filter((p) => {
+  const matchesFilters = (p: CommunityPost) => {
     if (activeType && p.post_type !== activeType) return false
     if (activeRole === 'teacher' && p.author.role !== 'teacher' && p.author.role !== 'admin') return false
     if (activeRole === 'student' && p.author.role !== 'student') return false
     return true
-  })
+  }
+  const filteredPosts = allPosts.filter(matchesFilters)
 
-  // Separate pinned and regular posts
+  // Separate pinned and regular posts; the deep-linked one (off page 1) leads.
   const pinnedPosts = filteredPosts.filter((p) => p.is_pinned)
   const regularPosts = filteredPosts.filter((p) => !p.is_pinned)
-  const displayPosts = [...pinnedPosts, ...regularPosts]
+  const displayPosts = [
+    ...(focused && matchesFilters(focused) ? [focused] : []),
+    ...pinnedPosts,
+    ...regularPosts,
+  ]
 
   return (
     <div className="space-y-4">
       {/* Muted banner */}
       {isMuted && <MutedBanner mutedUntil={mutedUntil} />}
+
+      {/* A deep link to a post this viewer cannot see here (#869) */}
+      {focusPostId && !focusPost && (
+        <p role="status" className="rounded-xl border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          {t('lessonDiscussion.focusUnavailable')}
+        </p>
+      )}
 
       {/* Composer */}
       {!isMuted && canPost && (
@@ -190,6 +223,8 @@ export function CommunityFeed({
               post={post}
               userId={userId}
               userRole={userRole}
+              focused={post.id === focusPostId}
+              focusCommentId={post.id === focusPostId ? focusCommentId : null}
             />
           ))}
 
@@ -200,7 +235,7 @@ export function CommunityFeed({
           {hasMore && <div ref={sentinelRef} className="h-px" />}
 
           {/* End of feed */}
-          {!hasMore && allPosts.length > 0 && (
+          {!hasMore && (allPosts.length > 0 || focused) && (
             <p className="text-center text-xs text-muted-foreground py-4">
               {t('noMorePosts')}
             </p>
