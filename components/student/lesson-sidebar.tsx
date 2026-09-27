@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { IconCheck, IconPlayerPlay, IconArrowLeft, IconLock } from '@tabler/icons-react'
+import { IconCheck, IconPlayerPlay, IconArrowLeft, IconLock, IconMessages } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface Lesson {
@@ -18,6 +18,8 @@ interface LessonSidebarProps {
   lessons: Lesson[]
   currentLessonId?: number
   requireSequentialCompletion?: boolean
+  /** The course feed (#868); omitted when the school has no community. */
+  communityHref?: string
 }
 
 export function LessonSidebar({
@@ -26,8 +28,10 @@ export function LessonSidebar({
   lessons,
   currentLessonId,
   requireSequentialCompletion = false,
+  communityHref,
 }: LessonSidebarProps) {
   const t = useTranslations('components.lessonSidebar')
+  const tc = useTranslations('community')
   const completedCount = lessons.filter(l => l.isCompleted).length
   const progress = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0
 
@@ -57,6 +61,18 @@ export function LessonSidebar({
             />
           </div>
         </div>
+
+        {/* Quiet on purpose: the lesson is the content, the community is a side door */}
+        {communityHref && (
+          <Link
+            href={communityHref}
+            data-testid="lesson-sidebar-community-link"
+            className="mt-3 -mx-1 inline-flex min-h-6 items-center gap-1.5 rounded px-1 text-xs text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            <IconMessages aria-hidden="true" className="h-3.5 w-3.5" />
+            {tc('courseEntry.title')}
+          </Link>
+        )}
       </div>
 
       {/* Lesson list */}
