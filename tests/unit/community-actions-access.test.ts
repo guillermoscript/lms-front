@@ -10,6 +10,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  *     student's access.
  *   - `createPoll` validates its course like `createPost` (it used not to).
  *   - Non-members of the school cannot post anywhere.
+ *   - `createComment` from the lesson page (#869) skips revalidation — in
+ *     Next 16 it would re-render the whole lesson in the action's response.
  */
 
 type Row = Record<string, unknown>
@@ -59,8 +61,12 @@ vi.mock('@/lib/supabase/tenant', () => ({
 }))
 vi.mock('@/lib/supabase/get-user-role', () => ({ getUserRole: async () => state.role }))
 vi.mock('@/lib/services/course-access', () => ({ hasCourseAccess: async () => state.access }))
-vi.mock('@/lib/analytics/server', () => ({ track: async () => {} }))
-vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
+const { revalidatePath, track } = vi.hoisted(() => ({
+  revalidatePath: vi.fn(),
+  track: vi.fn(async () => {}),
+}))
+vi.mock('@/lib/analytics/server', () => ({ track }))
+vi.mock('next/cache', () => ({ revalidatePath }))
 vi.mock('@/lib/community/blocks', () => ({ getBlockedAuthorIds: async () => [] }))
 
 const getFeedPage = vi.fn(async (_args: unknown) => ({ posts: [], hasMore: false }))
@@ -93,6 +99,8 @@ beforeEach(() => {
   state.access = false
   state.inserted = []
   getFeedPage.mockClear()
+  revalidatePath.mockClear()
+  track.mockClear()
 })
 
 describe('loadMorePosts', () => {
@@ -258,5 +266,39 @@ describe('milestone posts (#871)', () => {
     expect((await createComment('p-milestone', 'Well done')).success).toBe(true)
     expect(state.inserted.map((i) => i.table)).toEqual(['community_reactions', 'community_comments'])
     expect(state.inserted[1]).toMatchObject({ row: { post_id: 'p-milestone', author_id: 'u2', content: 'Well done' } })
+  })
+})
+
+describe('createComment surface (#869)', () => {
+  it('refuses a locked post', async () => {
+    state.posts.push({ id: 'p-locked', tenant_id: 't1', course_id: null, post_type: 'discussion_prompt', is_hidden: false, is_locked: true })
+    const result = await createComment('p-locked', 'hi')
+    expect(result.success).toBe(false)
+    expect(state.inserted).toHaveLength(0)
+  })
+
+  it('from the lesson: no revalidation, tracked as the lesson', async () => {
+    const result = await createComment('p-school', 'my answer', undefined, { surface: 'lesson' })
+    expect(result.success).toBe(true)
+    expect(state.inserted[0]).toMatchObject({ table: 'community_comments', row: { post_id: 'p-school', content: 'my answer' } })
+    expect(revalidatePath).not.toHaveBeenCalled()
+    expect(track).toHaveBeenCalledWith(
+      'community_comment_created',
+      expect.objectContaining({ surface: 'lesson', is_reply: false }),
+      expect.anything()
+    )
+  })
+
+  it('from the feed (the default): revalidates, tracked as the feed', async () => {
+    expect((await createComment('p-school', 'hi')).success).toBe(true)
+    expect(revalidatePath).toHaveBeenCalledWith('/dashboard')
+    expect(track).toHaveBeenCalledWith('community_comment_created', expect.objectContaining({ surface: 'feed' }), expect.anything())
+  })
+
+  it('treats an unknown surface from the wire as the feed', async () => {
+    // @ts-expect-error — a forged surface value
+    expect((await createComment('p-school', 'hi', undefined, { surface: 'admin' })).success).toBe(true)
+    expect(revalidatePath).toHaveBeenCalledWith('/dashboard')
+    expect(track).toHaveBeenCalledWith('community_comment_created', expect.objectContaining({ surface: 'feed' }), expect.anything())
   })
 })

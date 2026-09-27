@@ -4,14 +4,19 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
-import { getFeedPage } from '@/lib/community/feed'
+import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { CommunityTour } from '@/components/tours/community-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
-export default async function TeacherCommunityPage() {
+interface PageProps {
+  // `?post=<id>` focuses one post (#869).
+  searchParams: Promise<{ post?: string | string[] }>
+}
+
+export default async function TeacherCommunityPage({ searchParams }: PageProps) {
   const t = await getTranslations('community')
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
@@ -47,11 +52,13 @@ export default async function TeacherCommunityPage() {
 
   const adminClient = createAdminClient()
 
+  const focusPromise = getFeedFocus((await searchParams).post, { tenantId, viewerId: userId, scope: 'school' })
   const [feed, uiState, settings] = await Promise.all([
     getFeedPage({ tenantId, viewerId: userId, scope: 'school' }),
     getUiState(userId),
     getCommunitySettings(tenantId),
   ])
+  const focus = await focusPromise
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,6 +82,8 @@ export default async function TeacherCommunityPage() {
           userRole={role}
           userId={userId}
           settings={settings}
+          focusPostId={focus.focusPostId}
+          focusPost={focus.focusPost}
         />
       </main>
     </div>
