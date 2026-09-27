@@ -489,7 +489,17 @@ test('no notification across a block, in either direction', async () => {
   expect((await alice.from('community_user_blocks').delete().eq('blocker_id', ALICE_ID).eq('blocked_id', bId)).error).toBeNull()
 
   expect((await b.from('community_user_blocks').insert({ blocker_id: bId, blocked_id: ALICE_ID })).error).toBeNull()
-  await commentAs(b, bId, postId, 'i blocked alice')
+  // RLS hides Alice's post from B now, so B cannot comment on it through RLS
+  // (#846). The web writes comments with the service role, so the trigger must
+  // still hold on that path.
+  const viaRls = await b
+    .from('community_comments')
+    .insert({ tenant_id: CODE_ACADEMY, post_id: postId, author_id: bId, content: 'i blocked alice' })
+  expect(viaRls.error?.code).toBe('42501')
+  const viaService = await admin()
+    .from('community_comments')
+    .insert({ tenant_id: CODE_ACADEMY, post_id: postId, author_id: bId, content: 'i blocked alice' })
+  expect(viaService.error).toBeNull()
   expect(await deliveries(ALICE_ID, postId)).toEqual([])
   expect((await b.from('community_user_blocks').delete().eq('blocker_id', bId).eq('blocked_id', ALICE_ID)).error).toBeNull()
 })
