@@ -166,7 +166,7 @@ export function NotificationBell({ role }: { role: ViewerRole }) {
           {state.status === "ready" && state.rows.length === 0 && (
             <div className="flex flex-col items-center gap-1.5 px-3 py-8 text-center text-muted-foreground">
               <IconInbox aria-hidden className="size-6 opacity-60" />
-              <p>{t("bell.caughtUp")}</p>
+              <p>{t("bell.empty")}</p>
             </div>
           )}
 

@@ -450,8 +450,7 @@
           "loading": "Loading notifications…",
           "error": "Couldn't load notifications.",
           "retry": "Try again",
-          "empty": "No notifications yet",
-          "caughtUp": "You're all caught up"
+          "empty": "No notifications yet"
         },
         "errorLoading": "We couldn't load your notifications.",
         "retry": "Try again",

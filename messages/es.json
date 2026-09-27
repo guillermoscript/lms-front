@@ -450,8 +450,7 @@
           "loading": "Cargando notificaciones…",
           "error": "No se pudieron cargar las notificaciones.",
           "retry": "Reintentar",
-          "empty": "Aún no tienes notificaciones",
-          "caughtUp": "Estás al día"
+          "empty": "Aún no tienes notificaciones"
         },
         "errorLoading": "No pudimos cargar tus notificaciones.",
         "retry": "Reintentar",
