@@ -374,7 +374,9 @@ test.describe('Course community entry points (#868)', () => {
     await expect(page.getByTestId('course-community-entry')).toHaveCount(0)
 
     await page.goto(`${BASE}/en/dashboard/student/courses/1001/lessons/1001`)
-    await expect(page.getByRole('heading', { level: 1, name: 'What is Software Testing?' })).toBeVisible({
+    // The seeded lesson body opens with its own `# What is Software Testing?`,
+    // so the title is an h1 twice (lesson header + content): take the header's.
+    await expect(page.getByRole('heading', { level: 1, name: 'What is Software Testing?' }).first()).toBeVisible({
       timeout: 20_000,
     })
     await expect(page.getByTestId('lesson-sidebar-community-link')).toHaveCount(0)
