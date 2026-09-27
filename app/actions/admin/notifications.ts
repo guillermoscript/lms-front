@@ -24,19 +24,43 @@ interface NotificationData {
   scheduled_for?: string | null
   expires_at?: string | null
   template_id?: number | null
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
-interface ActionResponse<T = any> {
+interface ActionResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
 }
 
+/** A broadcast as the admin list renders it (components/admin/notifications-list.tsx). */
+export interface AdminNotificationRow {
+  id: number
+  title: string
+  content: string
+  notification_type: string
+  priority: string
+  status: string
+  target_type: string
+  sent_at: string | null
+  scheduled_for: string | null
+  created_at: string
+  created_by_user?: { full_name: string; email: string }
+  course?: { title: string }
+}
+
+export interface AdminNotificationStats {
+  total: number
+  sent: number
+  scheduled: number
+  draft: number
+  recent: Array<{ id: number; title: string; status: string; created_at: string }>
+}
+
 /**
  * Create a new notification
  */
-export async function createNotification(data: NotificationData): Promise<ActionResponse> {
+export async function createNotification(data: NotificationData): Promise<ActionResponse<{ id: number }>> {
   try {
     const role = await getUserRole()
     const tenantId = await getCurrentTenantId()
@@ -102,7 +126,9 @@ export async function createNotification(data: NotificationData): Promise<Action
 /**
  * Dispatch notification to target users (create user_notifications records)
  */
-export async function dispatchNotification(notificationId: number): Promise<ActionResponse> {
+export async function dispatchNotification(
+  notificationId: number
+): Promise<ActionResponse<{ usersNotified: number }>> {
   try {
     const role = await getUserRole()
     const tenantId = await getCurrentTenantId()
@@ -128,6 +154,11 @@ export async function dispatchNotification(notificationId: number): Promise<Acti
     // Verify notification belongs to tenant (unless super_admin)
     if (!isSuperAdminUser && notification.tenant_id !== tenantId) {
       throw new Error('Notification not found or access denied')
+    }
+
+    // Community rows (#870) are fanned out by the database, once.
+    if (notification.notification_type === 'community') {
+      throw new Error('Community notifications cannot be dispatched')
     }
 
     // Get target users based on target_type
@@ -200,7 +231,7 @@ export async function dispatchNotification(notificationId: number): Promise<Acti
 export async function getNotifications(
   status?: NotificationStatus,
   limit = 50
-): Promise<ActionResponse> {
+): Promise<ActionResponse<AdminNotificationRow[]>> {
   try {
     const role = await getUserRole()
     if (role !== 'admin' && role !== 'teacher') {
@@ -210,6 +241,9 @@ export async function getNotifications(
     const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
 
+    // Broadcasts only. Community rows (#870) are per-recipient system
+    // notifications: they would flood this list, and must not be dispatched or
+    // edited from it (RLS refuses the edit anyway).
     let query = supabase
       .from('notifications')
       .select(`
@@ -218,6 +252,7 @@ export async function getNotifications(
         course:courses(title)
       `)
       .eq('tenant_id', tenantId)
+      .neq('notification_type', 'community')
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -232,45 +267,6 @@ export async function getNotifications(
     return { success: true, data }
   } catch (error) {
     console.error('Error fetching notifications:', error)
-    return { success: false, error: 'Failed to fetch notifications' }
-  }
-}
-
-/**
- * Get user's notifications (for notification bell)
- */
-export async function getUserNotifications(
-  unreadOnly = false,
-  limit = 20
-): Promise<ActionResponse> {
-  try {
-    const supabase = await createClient()
-    const userId = await getCurrentUserId()
-    if (!userId) {
-      return { success: false, error: 'Not authenticated' }
-    }
-
-    let query = supabase
-      .from('user_notifications')
-      .select(`
-        *,
-        notification:notifications(*)
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
-
-    if (unreadOnly) {
-      query = query.eq('in_app_read', false)
-    }
-
-    const { data, error } = await query
-
-    if (error) throw error
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Error fetching user notifications:', error)
     return { success: false, error: 'Failed to fetch notifications' }
   }
 }
@@ -307,8 +303,20 @@ export async function markNotificationAsRead(
   }
 }
 
+/** Rows marked read per round trip by `markAllNotificationsAsRead`. */
+const MARK_ALL_BATCH = 200
+/** Runaway guard: 50 × 200 = 10,000 unread notifications. */
+const MARK_ALL_MAX_BATCHES = 50
+
 /**
- * Mark all notifications as read for current user
+ * Mark all of the current user's notifications IN THIS SCHOOL as read.
+ *
+ * It used to flip every unread row the user had, across every school they
+ * belong to, from whichever school they pressed the button in. The page and
+ * the bell only show this school's rows (#870), so that is all this touches.
+ * Each round reads the next batch of unread ids (bounded, #548) and marks
+ * them; a marked row drops out of the next read, so the loop ends on an empty
+ * batch.
  */
 export async function markAllNotificationsAsRead(): Promise<ActionResponse> {
   try {
@@ -317,17 +325,38 @@ export async function markAllNotificationsAsRead(): Promise<ActionResponse> {
     if (!userId) {
       return { success: false, error: 'Not authenticated' }
     }
+    const tenantId = await getCurrentTenantId()
 
-    const { error } = await supabase
-      .from('user_notifications')
-      .update({
-        in_app_read: true,
-        in_app_read_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-      .eq('in_app_read', false)
+    let previousFirstId: number | null = null
+    for (let batch = 0; batch < MARK_ALL_MAX_BATCHES; batch++) {
+      const { data: unread, error: readError } = await supabase
+        .from('user_notifications')
+        .select('id, notification:notifications!inner(tenant_id)')
+        .eq('user_id', userId)
+        .eq('in_app_read', false)
+        .not('dismissed', 'is', true)
+        .eq('notification.tenant_id', tenantId)
+        .order('id')
+        .limit(MARK_ALL_BATCH)
 
-    if (error) throw error
+      if (readError) throw readError
+      const ids = (unread ?? []).map((row) => row.id as number)
+      // Empty: done. Same first row as last time: the update did not take, and
+      // looping again would not change that.
+      if (ids.length === 0 || ids[0] === previousFirstId) break
+      previousFirstId = ids[0]
+
+      const { error } = await supabase
+        .from('user_notifications')
+        .update({
+          in_app_read: true,
+          in_app_read_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .in('id', ids)
+
+      if (error) throw error
+    }
 
     revalidatePath('/dashboard')
     return { success: true }
@@ -387,17 +416,21 @@ export async function updateNotificationStatus(
 
     const adminClient = createAdminClient()
 
-    // Verify notification belongs to tenant (unless super_admin)
-    if (!isSuperAdminUser) {
-      const { data: notification, error: verifyError } = await adminClient
-        .from('notifications')
-        .select('tenant_id')
-        .eq('id', notificationId)
-        .single()
+    // Verify notification belongs to tenant (unless super_admin), and is a
+    // broadcast — community rows (#870) are system-written.
+    const { data: notification, error: verifyError } = await adminClient
+      .from('notifications')
+      .select('tenant_id, notification_type')
+      .eq('id', notificationId)
+      .single()
 
-      if (verifyError || !notification || notification.tenant_id !== tenantId) {
-        return { success: false, error: 'Notification not found or access denied' }
-      }
+    if (
+      verifyError ||
+      !notification ||
+      (!isSuperAdminUser && notification.tenant_id !== tenantId) ||
+      notification.notification_type === 'community'
+    ) {
+      return { success: false, error: 'Notification not found or access denied' }
     }
 
     const { error } = await adminClient
@@ -461,9 +494,10 @@ export async function deleteNotification(notificationId: number): Promise<Action
 }
 
 /**
- * Get notification statistics
+ * Get notification statistics — of the broadcasts; community rows (#870) are
+ * system notifications and are not counted.
  */
-export async function getNotificationStats(): Promise<ActionResponse> {
+export async function getNotificationStats(): Promise<ActionResponse<AdminNotificationStats>> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -480,14 +514,15 @@ export async function getNotificationStats(): Promise<ActionResponse> {
       { count: draftNotifications },
       { data: recentNotifications },
     ] = await Promise.all([
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'sent'),
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'scheduled'),
-      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'draft'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('notification_type', 'community'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('notification_type', 'community').eq('status', 'sent'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('notification_type', 'community').eq('status', 'scheduled'),
+      adminClient.from('notifications').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).neq('notification_type', 'community').eq('status', 'draft'),
       adminClient
         .from('notifications')
         .select('id, title, status, created_at')
         .eq('tenant_id', tenantId)
+        .neq('notification_type', 'community')
         .order('created_at', { ascending: false })
         .limit(5),
     ])
