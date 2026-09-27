@@ -35,7 +35,7 @@ supabase/migrations/20260314200000_create_community_tables.sql     # Tables, ind
 supabase/migrations/20260314210000_community_security_fixes.sql    # Hardened triggers, storage policies, flag dedup
 supabase/migrations/20260314220000_community_edge_case_fixes.sql   # Self-reply constraint, depth limit, enrollment RLS
 supabase/migrations/20260924160000_community_rules_in_db.sql       # #846: every write rule in RLS, vote_count trigger, blocks, hardened reports
-supabase/migrations/20260928100000_community_notifications.sql     # #870: reply/prompt notifications, batching, retraction, push ids, digest count
+supabase/migrations/20260928130000_community_notifications.sql     # #870: reply/prompt notifications, batching, retraction, push ids, digest count
 ```
 
 ### Triggers

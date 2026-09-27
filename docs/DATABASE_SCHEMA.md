@@ -656,7 +656,7 @@ Admin broadcasts, system notices (digest, certificates, payments) and community 
 | `metadata` | JSONB | `kind` routes the push and the web copy (`daily_digest`, `community_reply`, `community_prompt`, `community_answer_accepted`, …) |
 | `created_at` | TIMESTAMPTZ | |
 
-**`community` rows are system-written (#870).** They are inserted and updated only by the SECURITY DEFINER triggers in `20260928100000_community_notifications.sql` (and the service role). Two RESTRICTIVE policies — "Community notifications are system-written" (INSERT) and "Community notifications are system-updated" (UPDATE) — stop every client, staff included, from creating or editing one; admins can still delete. See `docs/COMMUNITY_SPACES.md` → Notifications.
+**`community` rows are system-written (#870).** They are inserted and updated only by the SECURITY DEFINER triggers in `20260928130000_community_notifications.sql` (and the service role). Two RESTRICTIVE policies — "Community notifications are system-written" (INSERT) and "Community notifications are system-updated" (UPDATE) — stop every client, staff included, from creating or editing one; admins can still delete. See `docs/COMMUNITY_SPACES.md` → Notifications.
 
 #### `user_notifications`
 Per-user notification delivery tracking. One row per recipient; the web, the app and the push sweep all read it.

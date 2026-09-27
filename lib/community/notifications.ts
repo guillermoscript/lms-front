@@ -2,7 +2,7 @@
  * Community notifications on the web (issue #870).
  *
  * The database writes them (AFTER triggers in
- * `20260928100000_community_notifications.sql`) with one
+ * `20260928130000_community_notifications.sql`) with one
  * `notification_type = 'community'` and the event in `metadata.kind`. It stores
  * ids, not URLs: the right link depends on who is looking (a teacher cannot open
  * the student course feed — `proxy.ts` sends them away), so it is built here
