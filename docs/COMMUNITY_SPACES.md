@@ -6,7 +6,7 @@ Community Spaces adds a school-wide social feed and per-course discussion feeds 
 
 - **School Feed** — visible to all tenant members, post updates and discussions
 - **Course Feed** — scoped to enrolled students + teachers of that course
-- **Post Types** — standard posts, discussion prompts (teacher/admin), polls, milestone celebrations
+- **Post Types** — standard posts, discussion prompts (teacher/admin), polls, milestones (written by the database when a student completes a course, earns a certificate, levels up or keeps a streak — see [Milestone posts](#milestone-posts-871))
 - **Reactions** — like, helpful, insightful, fire (with optimistic UI updates)
 - **Threaded Comments** — nested replies up to 5 levels deep
 - **Moderation** — pin, lock, hide posts; mute users; review flagged content
@@ -35,6 +35,7 @@ supabase/migrations/20260314200000_create_community_tables.sql     # Tables, ind
 supabase/migrations/20260314210000_community_security_fixes.sql    # Hardened triggers, storage policies, flag dedup
 supabase/migrations/20260314220000_community_edge_case_fixes.sql   # Self-reply constraint, depth limit, enrollment RLS
 supabase/migrations/20260924160000_community_rules_in_db.sql       # #846: every write rule in RLS, vote_count trigger, blocks, hardened reports
+supabase/migrations/20260928120000_community_milestone_posts.sql   # #871: milestone writer + source triggers, profiles.share_milestones, milestone RLS
 ```
 
 ### Triggers
@@ -47,6 +48,11 @@ supabase/migrations/20260924160000_community_rules_in_db.sql       # #846: every
 | `trg_community_reaction_count` | `community_reactions` | Increment/decrement `community_posts.reaction_count` |
 | `trg_check_comment_depth` | `community_comments` | Reject comments nested deeper than 5 levels |
 | `trg_community_poll_vote_count` | `community_poll_votes` | Increment/decrement `community_poll_options.vote_count` — never write it by hand |
+| `on_lesson_completed_community_milestone` | `lesson_completions` | #871: the lesson may complete its course → `course_completion` milestone |
+| `on_exam_score_community_milestone` | `exam_scores` | #871: the score may complete its course → `course_completion` milestone |
+| `on_certificate_issued_community_milestone` | `certificates` | #871: an eligible certificate → `certificate` milestone, or folded into a same-transaction completion post |
+| `on_gamification_progress_community_milestone` | `gamification_profiles` | #871: level 5+ → `level_up`; 7/30/100-day streak → `streak` (school feed) |
+| `on_course_deleted_community_milestones` | `courses` (BEFORE DELETE) | #871: a deleted course takes its milestone posts with it |
 
 ### RLS Policies
 
@@ -57,8 +63,9 @@ All tables have RLS enabled with tenant-scoped policies using `get_tenant_id()`,
 **Key access rules:**
 - **Every write** (post, comment, reaction, vote) requires `community_can_write(tenant_id)`: the JWT tenant, a plan with `features.community`, and no active mute
 - **Posts SELECT**: school-level visible to all tenant members; course posts require enrollment or teacher/admin role. A post by an author the viewer blocked is hidden (restrictive policy; teachers and admins are exempt)
-- **Posts INSERT**: author = caller; never pinned, locked, hidden or with non-zero counters. Students: only `standard` / `poll` (polls only if `community_student_polls` is on), never graded or milestone. School feed needs `community_student_posts_school_feed` on for students; a course post needs a course of this tenant and `has_course_access` (staff always). A lesson must belong to the course
-- **Posts / comments UPDATE**: authors edit text only (column grants: `title, content, media_urls, updated_at` / `content, updated_at`). Moderation columns and counters belong to the admin actions and triggers
+- **Posts INSERT**: author = caller; never pinned, locked, hidden or with non-zero counters. Students: only `standard` / `poll` (polls only if `community_student_polls` is on), never graded. School feed needs `community_student_posts_school_feed` on for students; a course post needs a course of this tenant and `has_course_access` (staff always). A lesson must belong to the course
+- **Milestones are system posts (#871)**: a restrictive policy refuses `post_type = 'milestone'` or any `milestone_*` column from everyone, staff included; only `community_create_milestone()` writes them
+- **Posts / comments UPDATE**: authors edit text only (column grants: `title, content, media_urls, updated_at` / `content, updated_at`). Moderation columns and counters belong to the admin actions and triggers. A milestone post is never edited, not even by its student or staff (restrictive policy)
 - **Comments INSERT**: post in the tenant, not hidden, not locked, reachable course; a reply's parent is a visible comment on the same post
 - **Reactions**: on visible content only; users delete their own
 - **Poll votes**: one per poll, on an option of that poll. **Poll options**: staff or the poll's author, `vote_count = 0`
@@ -80,7 +87,7 @@ Bucket: `community-assets` (public read, 10MB limit)
 
 | File | Functions |
 |------|-----------|
-| `app/actions/community.ts` | `createPost` (with attachments), `updatePost` (author only), `deletePost`, `createComment(postId, content, parentId?, { surface? })`, `deleteComment`, `toggleReaction`, `createPoll`, `castVote`, `uploadCommunityAsset`, `createFlag`, `getComments`, `loadMorePosts` |
+| `app/actions/community.ts` | `createPost` (with attachments), `updatePost` (author only, never a milestone), `deletePost`, `createComment(postId, content, parentId?, { surface? })`, `deleteComment`, `toggleReaction`, `createPoll`, `castVote`, `uploadCommunityAsset`, `createFlag`, `getComments`, `loadMorePosts` |
 | `app/actions/admin/community.ts` | `pinPost`, `unpinPost`, `lockPost`, `unlockPost`, `hidePost`, `hideComment`, `muteUser`, `unmuteUser`, `reviewFlag`, `updateCommunitySettings` |
 
 ### Pages
@@ -105,12 +112,12 @@ Every feed page takes `?post=<uuid>` (and `#comment-<uuid>`) — see [Deep links
 | `community-feed.tsx` | Client | Main feed — filters, composer, post list |
 | `post-card.tsx` | Client | Single post — author, content, media, reactions, comments |
 | `post-composer.tsx` | Client | New post form — textarea, title, attachments, poll mode, discussion prompt |
-| `community-settings-dialog.tsx` | Client | Admin switches: student posts in school feed, student polls |
+| `community-settings-dialog.tsx` | Client | Admin switches: student posts in school feed, student polls, student milestones (from `COMMUNITY_SETTING_KEYS`) |
 | `comment-thread.tsx` | Client | Threaded comments — load via server action, reply forms. `variant="learner"` for the lesson page, `surface`, `focusCommentId`; every comment is anchored `id="comment-<id>"` |
 | `reaction-bar.tsx` | Client | 4 reaction buttons with optimistic updates |
 | `post-filters.tsx` | Client | Type filters (All/Posts/Discussions/Polls/Milestones) + role filters |
 | `poll-card.tsx` | Client | Poll voting UI with results bar chart |
-| `milestone-card.tsx` | Component | Celebratory milestone display |
+| `milestone-card.tsx` | Component | A milestone's one-line sentence from `milestone_type` + `milestone_data` (`readMilestone()`), plain fallback for malformed data |
 | `discussion-prompt-card.tsx` | Client | Discussion prompt in the feed — "Linked to lesson" badge (no link yet), graded badge, comment count |
 | `discussion-prompt-composer.tsx` | Client | Teacher form — title, content, lesson selector, graded toggle. Props `{ courseId, lessons: { id, title }[], defaultLessonId?, onCreated?(postId), heading?, className? }`; mounted by `discussion-prompt-shortcuts.tsx` |
 | `discussion-prompt-shortcuts.tsx` | Client | Teacher lesson list: one sheet for the list + a per-row `AddDiscussionPromptTrigger` (#869) |
@@ -124,6 +131,7 @@ Every feed page takes `?post=<uuid>` (and `#comment-<uuid>`) — see [Deep links
 | `course-community-entry.tsx` | Server | Course page "Course community" row with the activity hint (#868) |
 | `course-community-links.tsx` | Server | School feed list of the student's course feeds (#868) |
 | `course-welcome-prompt.tsx` | Client | Teacher offer to post a pinned "Introduce yourself" prompt (#868) |
+| `components/student/share-milestones-toggle.tsx` | Client | Student profile: "Share my milestones in the community" (`profiles.share_milestones`) |
 
 ### Tour
 
@@ -137,7 +145,7 @@ Every feed page takes `?post=<uuid>` (and `#comment-<uuid>`) — see [Deep links
 Keys added under `community` namespace in `messages/en.json` and `messages/es.json` (~100 keys total), including:
 - Post CRUD, comments, reactions, filters
 - Poll creation and voting
-- Milestone celebrations
+- Milestone sentences and the sharing preference (`community.milestones`)
 - Moderation actions and settings
 - Tour steps
 - Error messages and validation
@@ -165,7 +173,8 @@ Keys added under `community` namespace in `messages/en.json` and `messages/es.js
 | Post to course feed | Student must be enrolled |
 | Comment on course post | Student must be enrolled |
 | Create discussion prompt | Teacher or admin only |
-| Create milestone post | Teacher or admin only |
+| Create milestone post | System only — `community_create_milestone()` from the source triggers; refused through RLS for everyone |
+| Edit milestone post | Nobody (`updatePost` and RLS refuse) |
 | React/vote while muted | Blocked |
 | Post/comment while muted | Blocked |
 | Flag content while muted | Allowed (can report harassment) |
@@ -189,6 +198,7 @@ Keys added under `community` namespace in `messages/en.json` and `messages/es.js
 | `community_user_blocks_not_self` CHECK | Nobody blocks themselves |
 | `reaction_target_check` CHECK | Exactly one of post_id/comment_id must be set |
 | Unique reaction indexes | One reaction type per user per target |
+| `community_posts_milestone_once` | One milestone per (school, student, type, course/level/days) — hidden posts count |
 
 ### Data Flow & RLS
 
@@ -214,7 +224,7 @@ This ensures all RLS policies using `get_tenant_id()` return the correct tenant 
 
 **Attachments (#860)** are uploaded by `uploadCommunityAsset()`, then sent with the post as `media_urls`. `parsePostMedia()` (`lib/community/media.ts`) accepts at most 4, and only public URLs inside the poster's own `community-assets/{tenant}/{user}/` folder — never an arbitrary URL.
 
-**School switches (#860)**: `getCommunitySettings()` (`lib/community/settings.ts`) reads `community_student_posts_school_feed` / `community_student_polls` (missing row = ON, same as `community_setting_on()` in RLS). Admins toggle them from the **Settings** dialog on `/dashboard/admin/community`; the composer hides what the school has turned off.
+**School switches (#860, #871)**: `getCommunitySettings()` (`lib/community/settings.ts`) reads the keys in `COMMUNITY_SETTING_KEYS` (`lib/community/setting-keys.ts`): `community_student_posts_school_feed`, `community_student_polls`, `community_milestone_posts` (missing row = ON, same as `community_setting_on()` in RLS and the milestone triggers). Admins toggle them from the **Settings** dialog on `/dashboard/admin/community`; `updateCommunitySettings()` accepts only those keys with boolean values. The composer hides what the school has turned off.
 
 **Post creation** triggers `router.refresh()` which causes a server re-render with fresh data, ensuring new posts appear immediately.
 
@@ -379,13 +389,83 @@ The community tour uses Driver.js (same library as other tours in the project).
 
 Community settings stored in `tenant_settings` table:
 
+A missing row means ON for every key; `{ "enabled": false }` turns one off.
+
 | Key | Default | Purpose |
 |-----|---------|---------|
 | `community_student_posts_school_feed` | `true` | Allow students to post in school feed |
-| `community_student_polls` | `false` | Allow students to create polls |
-| `community_milestone_posts` | `true` | Auto-generate milestone celebration posts |
+| `community_student_polls` | `true` | Allow students to create polls |
+| `community_milestone_posts` | `true` | Post student milestones automatically (#871) |
 
-Updated via `updateCommunitySettings()` admin action.
+Updated via `updateCommunitySettings()` admin action (known keys, boolean values only).
+
+## Milestone posts (#871)
+
+The database writes a milestone post when a student reaches one. Nothing in the app writes them; migration `20260928120000_community_milestone_posts.sql` holds the whole rule.
+
+### Events and feeds
+
+| `milestone_type` | When | Feed |
+|---|---|---|
+| `course_completion` | The lesson completion or exam score that completes the course (a regrade of a score that already passed never does) | Course feed |
+| `certificate` | An eligible certificate is issued (folded into the completion post when both happen in the same step) | Course feed |
+| `level_up` | Level rises to 5 or higher (a jump announces the level reached) | School feed |
+| `streak` | The streak crosses 7, 30 or 100 days (the highest threshold crossed) | School feed |
+
+Lesson completions are not posts. "Complete" is `is_course_complete()`, one rule for every course: 100% of the published lessons and every published exam scored >= 70 — `calculate_course_completion()`'s rule with the template defaults. A certificate template's thresholds decide the **certificate**, never "completed": with an 80% template the certificate posts on its own at 80% and "Completed X" follows at 100%, so the feed never says a student finished a course with lessons left. Completion never depends on a certificate existing either. `tests/sql/issue-871-community-milestones.sql` checks `is_course_complete()` and `calculate_course_completion()` stay in step.
+
+### Gates
+
+`community_create_milestone(_user_id, _tenant_id, _course_id, _type, _data)` is the only writer (SECURITY DEFINER, `EXECUTE` revoked from `anon`, `authenticated` and `service_role`). It posts only when `community_milestone_allowed()` holds:
+
+1. an active **student** of the school (staff previewing a course never announce)
+2. `profiles.share_milestones` is on (the student's preference)
+3. the school's `community_milestone_posts` switch is on (missing row = ON)
+4. the student is not muted there
+5. the plan includes the community (`community_enabled`)
+
+A course milestone also needs `has_course_access()` and a course of that school.
+
+`award_xp()` is not callable by `anon` or `authenticated` (both overloads, revoked in the same migration): it trusts the caller's user, amount and tenant, and the level and streak it sets now publish posts, so an open `award_xp` would let anyone post "Reached level N" under any student's name. The XP triggers run as the owner; `check-achievements` uses the service role.
+
+### Once, and only once
+
+- A partial unique index allows one milestone per (school, student, type, course / level / days). Hidden (deleted) posts count, so a milestone the student deleted is never posted again; an admin hard delete forgets it.
+- A streak threshold is announced once per school, ever — rebuilding a 7-day streak after a break is not news.
+- **The fold**: when the last lesson (or score) completes the course and the same step issues the certificate, the certificate trigger finds the completion post written in the same transaction and adds `certificate: true` to it — one post says "Completed X and earned the certificate". This relies on the completion triggers sorting before the certificate triggers on the same table (Postgres fires same-event triggers in name order); a rename degrades to two posts, and the SQL test guards the order. A certificate issued earlier or later (a template below 100%, a template added afterwards) gets its own post, once.
+- A certificate only posts when the course has an active template and the student is actually eligible — a student can insert their own certificate row through RLS, and that must not become a public post.
+
+### Failure isolation
+
+Every source trigger catches everything and raises a `WARNING` (`#871 milestone <source>: …`): a failing milestone never breaks the lesson completion, the score, the certificate or the XP award. The course-deletion trigger is the exception on purpose — a silent failure there would move the course's milestones into the school feed.
+
+### Data contract
+
+Milestone posts have `content = ''`. Every client renders the sentence from `milestone_type` + `milestone_data` (web: `readMilestone()` in `lib/community/milestones.ts`), so the native app and notifications can localise it:
+
+| `milestone_type` | `milestone_data` |
+|---|---|
+| `course_completion` | `{ course_id, course_title, certificate?: true }` |
+| `certificate` | `{ course_id, course_title }` |
+| `level_up` | `{ level }` |
+| `streak` | `{ days }` |
+
+`course_title` is a snapshot taken when the post is written.
+
+### The preference
+
+`profiles.share_milestones` (default `true`) is global like blocks: a student who does not want their progress announced does not want it in any school. They change it on their profile ("Share my milestones in the community", shown wherever the plan has the community — with this school's switch off it stays, noting that nothing is posted here, because the choice still applies in the student's other schools) or from the **Sharing settings** item in their own milestone post's menu. Turning it off stops new posts; earlier ones stay until the student deletes them.
+
+Reactions and comments on milestones work like on any post.
+
+### Known edges
+
+- No backfill: only events after the migration announce. The database keeps no record of a first completion, though: unticking and re-ticking a lesson of a course finished before the migration (or while sharing was off) announces it then. A regrade of an already-passing score never does.
+- Two concurrent transactions completing the same course for the same student can each miss the other's last row and announce nothing.
+- A certificate issued by the `exam_submissions` triggers before the `exam_scores` row exists is not folded (two posts).
+- Revoking a certificate does not hide its milestone (`revokeCertificate` has no caller yet).
+- A regrade below the bar does not take a completion post back.
+- A course hard delete removes its milestones; human course posts keep the FK's `SET NULL` and move to the school feed (pre-existing).
 
 ## Infinite Scroll
 
@@ -423,6 +503,5 @@ export async function loadMorePosts(
 
 Per the implementation plan, these features are planned but not yet implemented:
 
-- **Phase 3** — Milestone auto-generation triggers (course completion, certificate, level-up, streaks)
 - **Phase 4** — Gamification wiring (XP for posts/comments/reactions, daily caps, community achievements)
 - **Phase 6** — Course highlights (pin community posts to course detail pages)
