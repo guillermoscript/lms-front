@@ -91,8 +91,8 @@ Bucket: `community-assets` (public read, 10MB limit)
 | `/dashboard/teacher/community` | Teacher | School feed + discussion prompt creation |
 | `/dashboard/admin/community` | Admin | School feed + moderation toolbar + moderation link |
 | `/dashboard/admin/community/moderation` | Admin | Flagged content + muted users management |
-| `/dashboard/student/courses/[courseId]/community` | Student | Course-scoped feed (enrollment required) |
-| `/dashboard/teacher/courses/[courseId]/community` | Teacher | Course-scoped feed (course ownership required) |
+| `/dashboard/student/courses/[courseId]/community` | Student | Course-scoped feed (course access required — entitlements, via `requireCourseAccess`, not enrollment) |
+| `/dashboard/teacher/courses/[courseId]/community` | Teacher | Course-scoped feed (course author or admin) |
 
 ### Components (`components/community/`)
 
@@ -114,6 +114,9 @@ Bucket: `community-assets` (public read, 10MB limit)
 | `muted-banner.tsx` | Component | Muted user warning banner |
 | `empty-feed.tsx` | Component | Empty state with scope-specific messaging |
 | `post-skeleton.tsx` | Component | Loading skeleton placeholder |
+| `course-community-entry.tsx` | Server | Course page "Course community" row with the activity hint (#868) |
+| `course-community-links.tsx` | Server | School feed list of the student's course feeds (#868) |
+| `course-welcome-prompt.tsx` | Client | Teacher offer to post a pinned "Introduce yourself" prompt (#868) |
 
 ### Tour
 
@@ -131,6 +134,7 @@ Keys added under `community` namespace in `messages/en.json` and `messages/es.js
 - Moderation actions and settings
 - Tour steps
 - Error messages and validation
+- `community.courseEntry` — the course/lesson/school-feed entry points and the welcome offer (#868)
 
 ## Security
 
@@ -160,7 +164,8 @@ Keys added under `community` namespace in `messages/en.json` and `messages/es.js
 | Flag content while muted | Allowed (can report harassment) |
 | Block a member | Students and members only — staff hide content instead. Their posts and comments disappear for the blocker (RLS + `getBlockedAuthorIds` on the service-role feeds) |
 | Post/comment/react/vote when the plan has no community | Blocked (RLS) |
-| Pin/lock/hide post | Admin only (`verifyAdminAccess()`) |
+| Pin/unpin post | Admin, or the course's author for posts in that course (`authorizePin` → `canPinInCourse`); also `createPost` with `is_pinned=true`, course posts only (#868) |
+| Lock/hide post, mute | Admin only (`verifyAdminAccess()`) |
 | Mute user | Admin only, can't self-mute, expiration must be future |
 | Cross-tenant operations | Blocked by explicit `tenant_id` check on every mutation |
 
@@ -239,6 +244,70 @@ Community link added for all three roles in `components/app-sidebar.tsx`:
 | Teacher | Main group, after Dashboard | `IconMessages` |
 | Admin | Management group, after Users | `IconMessages` |
 
+## Entry Points (#868)
+
+The course feeds used to be reachable only by typing the URL. Every way in is
+now gated twice: the plan must include the community, and the viewer must be
+able to open the feed.
+
+### Helpers (`lib/community/access.ts`)
+
+Server-only, service role, same contract as `getFeedPage`: the caller has
+already made the access decision. The service role is deliberate — the RLS
+course-post SELECT still keys on `enrollments` (see Known Limitations), so an
+RLS read would tell an entitled-but-not-enrolled student "No posts yet" while
+the feed they open shows posts. Client components never import this file;
+they get hrefs and strings as props.
+
+| Helper | Returns |
+|--------|---------|
+| `isCommunityEnabled(tenantId)` | `community_enabled()` RPC, React `cache()`d. The same gate as RLS `community_can_write` and the feed pages' `get_plan_features` check (not `hasPlanFeature`, which ignores `is_active`). Closed on error, never throws |
+| `loadCourseCommunityEntry({ tenantId, viewerId, courseId })` | `{ enabled: false }` or `{ enabled: true, activity }`; `activity` is the visible-post count of the last 7 days plus the newest post, or `null` when a read failed |
+| `courseActivityHint(activity)` / `communityPostLabel(post)` | Pure: which hint to show, and a post as one line of text |
+| `hasVisibleCoursePosts({ tenantId, courseId })` | `true`/`false`, or `null` (couldn't tell → don't offer) |
+| `getCommunityCourses({ tenantId, userId })` | The course feeds a student can open |
+| `liveEntitledCourseIds(rows, cutoffAt, now)` | Pure TS mirror of `has_course_access()` for many courses at once |
+| `canPinInCourse({ tenantId, userId, role, courseId })` | Admin, or the course's author |
+
+**The hint** (`course-community-entry.tsx`) counts what the viewer would see on
+the feed: a rolling 7-day window, hidden posts and blocked authors excluded.
+Milestones are never quoted (their `content` is not human text). It reads, in
+order: "N posts in the last 7 days · Latest: “title”", "Latest: “title”", "No
+posts yet · Be the first to introduce yourself" — only when both reads
+succeeded and found nothing — or a neutral invitation when the activity could
+not be read. A failed read never renders as an empty feed.
+
+### Surfaces
+
+| Surface | Shown when | Link |
+|---------|-----------|------|
+| Student course page — row under the course actions | plan has community; after `requireCourseAccess` | `/dashboard/student/courses/{id}/community` |
+| Lesson sidebar — quiet text link under the progress bar (desktop, mobile sheet, locked view) | plan has community; after `requireCourseAccess` + `requireRowInCourse` | same |
+| Teacher course page — header button | plan has community; course author or admin | `/dashboard/teacher/courses/{id}/community` |
+| Student school feed — "Your course communities" | plan has community; role `student` | one link per course feed |
+
+The school feed list is every course the student's **active, unexpired
+entitlements** open in this school, unless the school is past its
+`access_cutoff_at` — the rule `has_course_access()` applies
+(`20260724130000_access_cutoff_enforcement.sql`; keep the two in step).
+Enrolled courses come first, then by title; six are visible and the rest fold
+into a native `<details>` ("N more courses"). Entitlements and enrollments are
+paged with `fetchAllRows`, course titles with `fetchAllRowsIn`.
+
+### Welcome offer
+
+A published course whose feed has no visible posts shows its **author** (not
+an admin browsing it) a panel above the tabs offering a pinned "Introduce
+yourself" `discussion_prompt`: pre-filled in the teacher's UI language,
+editable inline, posted through `createPost` with `is_pinned=true`, then the
+teacher lands on the course feed. It is based on state rather than on the
+publish event, so it covers every way a course gets published (course form,
+`createCourse`, MCP). "Not now" stores
+`checklist:community-welcome-{courseId}` = `dismissed` in `user_ui_state`.
+
+Pinning at post time is the only exception to RLS refusing a member's pinned
+insert: the service-role insert in `createPost` is gated by `canPinInCourse`.
+
 ## Guided Tour
 
 The community tour uses Driver.js (same library as other tours in the project).
@@ -300,6 +369,7 @@ export async function loadMorePosts(
 
 - **No real-time updates** — feed refreshes via `router.refresh()`, not WebSocket/Supabase Realtime
 - **No rich text rendering** — post content displayed as `whitespace-pre-wrap` plain text (no markdown)
+- **Course-post RLS still keys on enrollments** — the SELECT policy "Enrolled users can view visible course posts" checks active `enrollments`, while the web (service role + entitlements) lets any student with course access read the feed. RLS clients (the native app) therefore show nothing to a student who is entitled but never enrolled (e.g. through a subscription). Switching the policy to `has_course_access()` is a follow-up
 
 ## Future Phases
 
