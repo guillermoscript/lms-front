@@ -6,7 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { CommunityUnread } from '@/components/notifications/community-unread'
-import { getFeedPage } from '@/lib/community/feed'
+import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +18,12 @@ import { CommunitySettingsDialog } from '@/components/community/community-settin
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
-export default async function AdminCommunityPage() {
+interface PageProps {
+  // `?post=<id>` focuses one post (#869).
+  searchParams: Promise<{ post?: string | string[] }>
+}
+
+export default async function AdminCommunityPage({ searchParams }: PageProps) {
   const t = await getTranslations('community')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = createAdminClient()
@@ -65,6 +70,7 @@ export default async function AdminCommunityPage() {
   const adminClient = createAdminClient()
 
   // Fetch the feed and the flagged content count in parallel
+  const focusPromise = getFeedFocus((await searchParams).post, { tenantId, viewerId: userId, scope: 'school' })
   const [feed, { count: flaggedCount }, uiState, settings] = await Promise.all([
     getFeedPage({ tenantId, viewerId: userId, scope: 'school' }),
     adminClient
@@ -75,6 +81,7 @@ export default async function AdminCommunityPage() {
     getUiState(userId),
     getCommunitySettings(tenantId),
   ])
+  const focus = await focusPromise
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,6 +132,8 @@ export default async function AdminCommunityPage() {
           userRole={role}
           userId={userId}
           settings={settings}
+          focusPostId={focus.focusPostId}
+          focusPost={focus.focusPost}
         />
       </main>
     </div>

@@ -6,7 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import { BlockedMembers } from '@/components/community/blocked-members'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { CommunityUnread } from '@/components/notifications/community-unread'
-import { getFeedPage } from '@/lib/community/feed'
+import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { getCommunityCourses } from '@/lib/community/access'
 import { CourseCommunityLinks } from '@/components/community/course-community-links'
@@ -15,7 +15,12 @@ import { CommunityTour } from '@/components/tours/community-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
-export default async function StudentCommunityPage() {
+interface PageProps {
+  // `?post=<id>` focuses one post (#869).
+  searchParams: Promise<{ post?: string | string[] }>
+}
+
+export default async function StudentCommunityPage({ searchParams }: PageProps) {
   const t = await getTranslations('community')
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
@@ -49,6 +54,7 @@ export default async function StudentCommunityPage() {
     )
   }
 
+  const focusPromise = getFeedFocus((await searchParams).post, { tenantId, viewerId: userId, scope: 'school' })
   const [feed, uiState, settings, courseLinks] = await Promise.all([
     getFeedPage({ tenantId, viewerId: userId, scope: 'school' }),
     getUiState(userId),
@@ -57,6 +63,7 @@ export default async function StudentCommunityPage() {
     // course feed pages' own gate). Staff reach course feeds from their courses.
     role === 'student' ? getCommunityCourses({ tenantId, userId }) : Promise.resolve([]),
   ])
+  const focus = await focusPromise
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,6 +92,8 @@ export default async function StudentCommunityPage() {
           userRole={role}
           userId={userId}
           settings={settings}
+          focusPostId={focus.focusPostId}
+          focusPost={focus.focusPost}
         />
       </main>
     </div>
