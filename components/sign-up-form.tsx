@@ -1,5 +1,6 @@
 'use client'
 
+import { googleAuthEnabled } from '@/lib/auth/social-providers'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -193,6 +194,8 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         <CardContent>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
+              {googleAuthEnabled && (
+              <>
               <Button
                 type="button"
                 variant="outline"
@@ -229,6 +232,8 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                   <span className="bg-card px-2 text-muted-foreground">{t('orContinueWith')}</span>
                 </div>
               </div>
+              </>
+              )}
 
               <div className="grid gap-2">
                 <Label htmlFor="full-name">{t('fullNameOptional')}</Label>
