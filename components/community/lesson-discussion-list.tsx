@@ -4,7 +4,7 @@
 // cards. Nothing here is filled — the lesson footer's next action stays the
 // single filled element on the page.
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -14,8 +14,19 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { studentCourseFeedHref } from '@/lib/community/deep-link'
+import {
+  answerStateFromThread,
+  createAnswerMemory,
+  withPostedAnswer,
+  type AnswerState,
+} from '@/lib/community/lesson-answers'
 import type { LessonPrompt } from '@/lib/community/lesson-prompts'
 import { CommentThread } from './comment-thread'
+
+// Outlives a remount, so browser Back (served from the lesson's cached
+// payload) still shows answers posted here. Written only from an effect,
+// which runs in the browser: on the server it stays empty.
+const answerMemory = createAnswerMemory()
 
 interface LessonDiscussionListProps {
   courseId: number
@@ -25,9 +36,18 @@ interface LessonDiscussionListProps {
   answeredIds: string[]
   /** More prompts than the lesson shows; the rest are in the course feed. */
   hasMore: boolean
+  /** Identifies the server read these props came from. */
+  loadId: string
 }
 
-export function LessonDiscussionList({ courseId, userId, prompts, answeredIds, hasMore }: LessonDiscussionListProps) {
+export function LessonDiscussionList({
+  courseId,
+  userId,
+  prompts,
+  answeredIds,
+  hasMore,
+  loadId,
+}: LessonDiscussionListProps) {
   const t = useTranslations('community.lessonDiscussion')
   const headingId = useId()
   const answered = new Set(answeredIds)
@@ -47,6 +67,7 @@ export function LessonDiscussionList({ courseId, userId, prompts, answeredIds, h
             courseId={courseId}
             userId={userId}
             answered={answered.has(prompt.id)}
+            loadId={loadId}
           />
         ))}
       </div>
@@ -74,42 +95,43 @@ function LessonPromptItem({
   courseId,
   userId,
   answered: answeredOnLoad,
+  loadId,
 }: {
   prompt: LessonPrompt
   courseId: number
   userId: string
   answered: boolean
+  loadId: string
 }) {
   const t = useTranslations('community.lessonDiscussion')
   const tCommunity = useTranslations('community')
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [answeredHere, setAnsweredHere] = useState(false)
-  const [lastAnswerId, setLastAnswerId] = useState<string | null>(null)
 
-  // Counted here after an answer, and taken from the server again whenever it
-  // sends a new number (a delete or block re-renders the lesson).
-  const [count, setCount] = useState(prompt.comment_count)
-  const [serverCount, setServerCount] = useState(prompt.comment_count)
-  if (prompt.comment_count !== serverCount) {
-    setServerCount(prompt.comment_count)
-    setCount(prompt.comment_count)
+  // The server's numbers, until the thread loads and knows better. A newer
+  // server read (a delete or block re-renders the lesson) wins again.
+  const fromServer: AnswerState = { count: prompt.answer_count, answered: answeredOnLoad, lastAnswerId: null }
+  const [answers, setAnswers] = useState<AnswerState>(() => answerMemory.recall(prompt.id, loadId) ?? fromServer)
+  const [shownLoadId, setShownLoadId] = useState(loadId)
+  if (loadId !== shownLoadId) {
+    setShownLoadId(loadId)
+    setAnswers(fromServer)
   }
 
-  const answered = answeredOnLoad || answeredHere
+  useEffect(() => {
+    answerMemory.remember(prompt.id, loadId, answers)
+  }, [prompt.id, loadId, answers])
+
+  const { count, answered, lastAnswerId } = answers
   const titleId = `prompt-title-${prompt.id}`
   const name = prompt.title ?? excerpt(prompt.content)
   const feedHref = studentCourseFeedHref(courseId, prompt.id, lastAnswerId)
 
   function handleCreated(commentId: string, { isReply }: { isReply: boolean }) {
-    // comment_count counts replies too, so the number keeps matching the feed.
-    setCount((c) => c + 1)
-    if (!isReply) {
-      setAnsweredHere(true)
-      setLastAnswerId(commentId)
-    }
+    // Functional: the thread's reload has just updated `answers`.
+    if (!isReply) setAnswers((current) => withPostedAnswer(current, commentId))
     const href = studentCourseFeedHref(courseId, prompt.id, commentId)
-    toast.success(t('answerPosted'), {
+    toast.success(isReply ? tCommunity('replyPosted') : t('answerPosted'), {
       action: { label: t('view'), onClick: () => router.push(href) },
     })
   }
@@ -177,8 +199,9 @@ function LessonPromptItem({
             placeholder={t('answerPlaceholder')}
             composerLabel={t('answerLabel')}
             submitLabel={t('postAnswer')}
-            emptyText={t('answerCount', { count: 0 })}
+            emptyText={prompt.is_locked ? t('answerCount', { count: 0 }) : t('beFirstAnswer')}
             onCommentCreated={handleCreated}
+            onCommentsLoaded={(roots) => setAnswers(answerStateFromThread(roots, userId))}
           />
         </CollapsibleContent>
       </Collapsible>

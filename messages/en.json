@@ -7020,6 +7020,7 @@
       "title": "Discussion",
       "description": "Questions about this lesson. Your answers are shared with everyone in the course.",
       "answerCount": "{count, plural, =0 {No answers yet} one {# answer} other {# answers}}",
+      "beFirstAnswer": "Be the first to answer.",
       "answer": "Answer",
       "readAnswers": "Read answers",
       "hideAnswers": "Hide answers",

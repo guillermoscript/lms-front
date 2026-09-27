@@ -7020,6 +7020,7 @@
       "title": "Discusión",
       "description": "Preguntas sobre esta lección. Tus respuestas las verá todo el curso.",
       "answerCount": "{count, plural, =0 {Aún no hay respuestas} one {# respuesta} other {# respuestas}}",
+      "beFirstAnswer": "Sé el primero en responder.",
       "answer": "Responder",
       "readAnswers": "Ver respuestas",
       "hideAnswers": "Ocultar respuestas",

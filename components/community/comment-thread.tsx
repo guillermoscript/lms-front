@@ -69,6 +69,8 @@ interface CommentThreadProps {
   submitLabel?: string
   autoFocusComposer?: boolean
   onCommentCreated?: (commentId: string, meta: { isReply: boolean }) => void
+  /** After every successful load (post, delete, block included): the visible top-level comments. */
+  onCommentsLoaded?: (roots: { id: string; author_id: string }[]) => void
   /** A deep-linked comment (#869): scrolled to, focused and highlighted once loaded. */
   focusCommentId?: string | null
 }
@@ -86,6 +88,7 @@ export function CommentThread({
   submitLabel,
   autoFocusComposer = false,
   onCommentCreated,
+  onCommentsLoaded,
   focusCommentId = null,
 }: CommentThreadProps) {
   const [comments, setComments] = useState<Comment[]>([])
@@ -143,6 +146,7 @@ export function CommentThread({
       }
 
       const { comments: commentsData, profiles } = result.data
+      onCommentsLoaded?.(commentsData.filter((c) => c.parent_comment_id === null))
       if (commentsData.length === 0) {
         setComments([])
         return
@@ -404,6 +408,8 @@ function CommentReplyForm({
       <Button
         type="submit"
         size="icon"
+        // Tonal on the lesson: its next action stays the one filled element.
+        variant={isLearner ? 'secondary' : 'default'}
         className={cn('shrink-0 self-end', isLearner ? 'size-10' : 'h-7 w-7')}
         disabled={submitting || !content.trim()}
         aria-label={t('reply')}

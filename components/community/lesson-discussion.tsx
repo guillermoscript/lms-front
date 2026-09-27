@@ -63,6 +63,7 @@ async function LessonDiscussionContent({ tenantId, userId, courseId, lessonId }:
       prompts={result.prompts}
       answeredIds={[...result.answeredIds]}
       hasMore={result.hasMore}
+      loadId={result.loadId}
     />
   )
 }

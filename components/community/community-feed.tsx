@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { loadMorePosts } from '@/app/actions/community'
 import { PostComposer } from './post-composer'
@@ -54,13 +54,33 @@ interface CommunityFeedProps {
 }
 
 // The URL hash, read on the client only: the server never sees it, so reading
-// it during render would not hydrate. Follows hash-only navigation too.
+// it during render would not hydrate. `hashchange` covers the browser's own
+// hash moves (a typed hash, Back between two); Next's router moves the URL
+// with pushState, which fires none, so `useLocationHash` also re-reads it
+// after every router navigation.
+const hashListeners = new Set<() => void>()
 function subscribeToHash(onChange: () => void) {
+  hashListeners.add(onChange)
   window.addEventListener('hashchange', onChange)
-  return () => window.removeEventListener('hashchange', onChange)
+  return () => {
+    hashListeners.delete(onChange)
+    window.removeEventListener('hashchange', onChange)
+  }
 }
 const getHash = () => window.location.hash
 const getServerHash = () => ''
+
+function useLocationHash() {
+  // A new object on every router navigation, hash-only ones included (Next
+  // derives it from the whole URL); the effect runs once the URL has moved.
+  // Without it, a link from ?post=P#comment-A to #comment-B (a second
+  // notification on the same post) would keep A highlighted.
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    hashListeners.forEach((notify) => notify())
+  }, [searchParams])
+  return useSyncExternalStore(subscribeToHash, getHash, getServerHash)
+}
 
 export function CommunityFeed({
   scope,
@@ -97,7 +117,7 @@ export function CommunityFeed({
     () => splitFocusedPost({ focusPost, initialPosts, extraPosts }),
     [focusPost, initialPosts, extraPosts]
   )
-  const hash = useSyncExternalStore(subscribeToHash, getHash, getServerHash)
+  const hash = useLocationHash()
   const focusCommentId = focusPostId ? parseCommentHash(hash) : null
 
   const refreshFeed = useCallback(() => {

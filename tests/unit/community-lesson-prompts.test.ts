@@ -11,7 +11,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  */
 
 type Call = [string, ...unknown[]]
-type Result = { data: unknown; error: unknown }
+type Result = { data: unknown; error: unknown; count?: number | null }
 
 const state: {
   queries: { table: string; calls: Call[] }[]
@@ -75,10 +75,23 @@ function prompts(n: number) {
     is_pinned: false,
     is_locked: false,
     is_graded: false,
-    comment_count: i,
     created_at: '2026-09-01T00:00:00Z',
     author_id: 'teacher',
   }))
+}
+
+/** A head-count query (`select('id', { count: 'exact', head: true })`). */
+function isCount(calls: Call[]) {
+  return calls.some(([m, , opts]) => m === 'select' && (opts as { head?: boolean } | undefined)?.head === true)
+}
+
+/** The comment queries: the viewer's answers, then one count per prompt. */
+function commentResults(answers: { post_id: string }[], counts: Record<string, number>) {
+  return (calls: Call[]): Result => {
+    if (!isCount(calls)) return { data: answers, error: null }
+    const post = calls.find(([m, c]) => m === 'eq' && c === 'post_id')?.[2] as string
+    return { data: null, error: null, count: counts[post] ?? 0 }
+  }
 }
 
 const ARGS = { tenantId: TENANT, viewerId: VIEWER, courseId: 2001, lessonId: 3001 }
@@ -114,6 +127,9 @@ describe('getLessonPrompts', () => {
       ['order', 'created_at', { ascending: true }],
     ])
     expect(posts.calls.some(([m]) => m === 'not')).toBe(false)
+    // The feed's counter is not the lesson's number (it counts replies and
+    // never drops on a removal).
+    expect(posts.calls).toContainEqual(['select', expect.not.stringContaining('comment_count')])
     expect(result).toMatchObject({ enabled: true, hasMore: false })
   })
 
@@ -145,16 +161,22 @@ describe('getLessonPrompts', () => {
 
   it('skips the answers query when the lesson has no prompts', async () => {
     const result = await getLessonPrompts(ARGS)
-    expect(result).toEqual({ enabled: true, prompts: [], answeredIds: new Set(), hasMore: false })
+    expect(result).toEqual({
+      enabled: true,
+      prompts: [],
+      answeredIds: new Set(),
+      hasMore: false,
+      loadId: expect.any(String),
+    })
     expect(queriesOf('community_comments')).toHaveLength(0)
   })
 
   it('counts only the viewer’s own visible top-level answers as answering', async () => {
     state.results.community_posts = { data: prompts(3), error: null }
-    state.results.community_comments = { data: [{ post_id: 'p0' }, { post_id: 'p2' }, { post_id: 'p2' }], error: null }
+    state.results.community_comments = commentResults([{ post_id: 'p0' }, { post_id: 'p2' }, { post_id: 'p2' }], {})
     const result = await getLessonPrompts(ARGS)
 
-    const [answers] = queriesOf('community_comments')
+    const [answers] = queriesOf('community_comments').filter((q) => !isCount(q.calls))
     expect(answers.calls).toEqual(
       expect.arrayContaining([
         ['eq', 'tenant_id', TENANT],
@@ -165,6 +187,45 @@ describe('getLessonPrompts', () => {
       ])
     )
     expect(result.enabled && [...result.answeredIds].sort()).toEqual(['p0', 'p2'])
+  })
+
+  it('counts each prompt’s answers the way its thread shows them: visible, top-level, not blocked', async () => {
+    state.blocked = ['b1']
+    state.results.community_posts = { data: prompts(3), error: null }
+    state.results.community_comments = commentResults([], { p0: 4, p2: 1 })
+    const result = await getLessonPrompts(ARGS)
+
+    const counts = queriesOf('community_comments').filter((q) => isCount(q.calls))
+    expect(counts).toHaveLength(3)
+    counts.forEach((q, i) => {
+      expect(q.calls).toEqual(
+        expect.arrayContaining([
+          ['eq', 'tenant_id', TENANT],
+          ['eq', 'post_id', `p${i}`],
+          ['eq', 'is_hidden', false],
+          ['is', 'parent_comment_id', null],
+          ['not', 'author_id', 'in', '(b1)'],
+        ])
+      )
+    })
+    expect(result.enabled && result.prompts.map((p) => [p.id, p.answer_count])).toEqual([
+      ['p0', 4],
+      ['p1', 0],
+      ['p2', 1],
+    ])
+  })
+
+  it('throws when a count fails instead of showing a wrong number', async () => {
+    state.results.community_posts = { data: prompts(2), error: null }
+    state.results.community_comments = (calls) =>
+      isCount(calls) ? { data: null, error: new Error('count down'), count: null } : { data: [], error: null }
+    await expect(getLessonPrompts(ARGS)).rejects.toThrow('count down')
+  })
+
+  it('tells every read apart, so a cached render can be recognised', async () => {
+    const a = await getLessonPrompts(ARGS)
+    const b = await getLessonPrompts(ARGS)
+    expect(a.enabled && b.enabled && a.loadId !== b.loadId).toBe(true)
   })
 
   it('throws on a failed read instead of reporting no prompts', async () => {

@@ -3,8 +3,11 @@
  *
  *   flow      a teacher adds a prompt from the lesson list (pre-filled), the
  *             student answers it on the lesson, the answer is in the feed and
- *             "View in community" lands on it (?post=…#comment-…)
+ *             "View in community" lands on it (?post=…#comment-…); Back still
+ *             counts it, and deleting it takes the count and the chip down
  *   paging    a deep link to a post beyond page 1 leads the feed, once
+ *   hash      an in-app link to another comment on the focused post moves
+ *             the highlight without a reload
  *   feeds     ?post= works on all five feeds; another course's post, a school
  *             post on a course feed and an unknown id show the notice
  *   locked    a locked prompt reads, never answers — lesson and feed
@@ -212,6 +215,19 @@ test('a teacher adds a prompt to a lesson, the student answers it there, and it 
   await expect(article).toContainText('1 answer')
   await expect(article).toContainText('You answered')
 
+  // A reply counts as a reply, not an answer. The reply form's submit is tonal
+  // like the rest of the discussion: the lesson's next action stays the one
+  // filled element (DESIGN.md).
+  await press(article.getByRole('button', { name: 'Reply', exact: true }))
+  await expect(article.getByRole('textbox', { name: 'Write a reply...' })).toBeVisible({ timeout: 10_000 })
+  await expect(discussion(student).locator('.bg-primary')).toHaveCount(0)
+  const reply = `${MARK} and True + True is 2`
+  await article.getByRole('textbox', { name: 'Write a reply...' }).fill(reply)
+  const replyForm = article.locator('form', { has: student.getByRole('textbox', { name: 'Write a reply...' }) })
+  await press(replyForm.getByRole('button', { name: 'Reply', exact: true }))
+  await expect(article.getByText(reply)).toBeVisible({ timeout: 20_000 })
+  await expect(article).toContainText('1 answer')
+
   let commentId = ''
   await expect
     .poll(
@@ -240,6 +256,27 @@ test('a teacher adds a prompt to a lesson, the student answers it there, and it 
   const comment = student.locator(`#comment-${commentId}`)
   await expect(comment).toBeInViewport({ timeout: 10_000 })
   await expect(comment).toBeFocused()
+
+  // Back re-renders the lesson from its cached payload, which predates the
+  // answer (answering from the lesson skips revalidation): it still counts.
+  await student.goBack()
+  const back = promptArticle(student, title)
+  await expect(back).toContainText('1 answer', { timeout: 30_000 })
+  await expect(back).toContainText('You answered')
+
+  // Deleting it from the lesson takes the count, the chip and the anchor down.
+  await press(back.getByRole('button', { name: 'Answer', exact: true }))
+  await expect(back.getByText(answer)).toBeVisible({ timeout: 20_000 })
+  await press(back.getByRole('button', { name: 'Comment actions' }).first())
+  await press(student.getByRole('menuitem', { name: 'Delete Post' }))
+  await expect(back.getByText(answer)).toHaveCount(0, { timeout: 20_000 })
+  await expect(back).toContainText('No answers yet')
+  await expect(back).toContainText('Be the first to answer.')
+  await expect(back).not.toContainText('You answered')
+  await expect(back.getByRole('link', { name: `View in community: ${title}` })).toHaveAttribute(
+    'href',
+    new RegExp(`\\?post=${promptId}$`)
+  )
 })
 
 test('a deep link to a post beyond the first page leads the feed, exactly once', async ({ page }) => {
@@ -284,6 +321,30 @@ test('a deep link to a post beyond the first page leads the feed, exactly once',
   }
   await expect(end).toBeVisible({ timeout: 20_000 })
   await expect(page.locator(`[id="post-${oldPrompt}"]`)).toHaveCount(1)
+})
+
+test('an in-app link to another comment on the focused post moves the highlight', async ({ page }) => {
+  test.setTimeout(120_000)
+  const postId = await insertPost({ course_id: COURSE_ID, content: `${MARK} two comments` })
+  const first = await insertComment(postId, `${MARK} first comment`)
+  const second = await insertComment(postId, `${MARK} second comment`)
+
+  await loginAsTenantStudent(page)
+  await page.goto(`${COURSE_FEED}?post=${postId}#comment-${first}`)
+  await expect(page.locator(`#comment-${first}`)).toHaveAttribute('data-focused', '', { timeout: 20_000 })
+
+  // A client-side navigation, as a notification link makes it (#870). Next
+  // moves the URL with pushState, which fires no hashchange. window.next.router
+  // is Next's debugging handle on the same router a <Link> uses.
+  await page.evaluate(() => ((window as unknown as { __sameDocument: boolean }).__sameDocument = true))
+  await page.evaluate(
+    (href) => (window as unknown as { next: { router: { push(href: string): void } } }).next.router.push(href),
+    `${new URL(COURSE_FEED).pathname}?post=${postId}#comment-${second}`
+  )
+  await expect(page.locator(`#comment-${second}`)).toHaveAttribute('data-focused', '', { timeout: 10_000 })
+  await expect(page.locator(`#comment-${second}`)).toBeFocused()
+  await expect(page.locator(`#comment-${first}`)).not.toHaveAttribute('data-focused', '')
+  expect(await page.evaluate(() => (window as unknown as { __sameDocument?: boolean }).__sameDocument)).toBe(true)
 })
 
 test('?post= focuses the post on all five feeds and refuses posts from elsewhere', async ({ browser }) => {

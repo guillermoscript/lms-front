@@ -6,24 +6,38 @@ import { visiblePostsQuery } from '@/lib/community/feed'
 /** The lesson shows at most this many prompts; the rest are in the course feed. */
 export const LESSON_PROMPT_LIMIT = 10
 
-const PROMPT_COLUMNS = 'id, title, content, is_pinned, is_locked, is_graded, comment_count, created_at, author_id'
+const PROMPT_COLUMNS = 'id, title, content, is_pinned, is_locked, is_graded, created_at, author_id'
 
-export type LessonPrompt = {
+type PromptRow = {
   id: string
   title: string | null
   content: string
   is_pinned: boolean
   is_locked: boolean
   is_graded: boolean
-  /** The feed's own count: replies included, the same number the feed shows. */
-  comment_count: number
   created_at: string
   author_id: string
 }
 
+export type LessonPrompt = PromptRow & {
+  /**
+   * Answers as the prompt's thread shows them: visible, top-level, by nobody
+   * the viewer blocked. Not the feed's `comment_count`, which counts replies
+   * and never drops when a comment is removed (it only sets `is_hidden`).
+   */
+  answer_count: number
+}
+
 export type LessonPrompts =
   | { enabled: false }
-  | { enabled: true; prompts: LessonPrompt[]; answeredIds: Set<string>; hasMore: boolean }
+  | {
+      enabled: true
+      prompts: LessonPrompt[]
+      answeredIds: Set<string>
+      hasMore: boolean
+      /** New on every read: tells a fresh render from a cached one (see `lesson-answers.ts`). */
+      loadId: string
+    }
 
 /**
  * A lesson's discussion prompts, as the course feed would show them (#869).
@@ -55,6 +69,7 @@ export async function getLessonPrompts({
   lessonId: number
 }): Promise<LessonPrompts> {
   const admin = createAdminClient()
+  const loadId = crypto.randomUUID()
 
   const [{ data: enabled, error: planError }, blockedIds] = await Promise.all([
     admin.rpc('community_enabled', { _tenant_id: tenantId }),
@@ -78,31 +93,56 @@ export async function getLessonPrompts({
 
   if (error) throw error
 
-  const rows = (data ?? []) as LessonPrompt[]
-  const prompts = rows.slice(0, LESSON_PROMPT_LIMIT)
-  const hasMore = rows.length > LESSON_PROMPT_LIMIT
-  if (prompts.length === 0) return { enabled: true, prompts, answeredIds: new Set(), hasMore }
+  const rows = ((data ?? []) as PromptRow[]).slice(0, LESSON_PROMPT_LIMIT)
+  const hasMore = (data ?? []).length > LESSON_PROMPT_LIMIT
+  if (rows.length === 0) return { enabled: true, prompts: [], answeredIds: new Set(), hasMore, loadId }
 
-  const { data: answers, error: answersError } = await admin
-    .from('community_comments')
-    .select('post_id')
-    .eq('tenant_id', tenantId)
-    .eq('author_id', viewerId)
-    .eq('is_hidden', false)
-    .is('parent_comment_id', null)
-    .in(
-      'post_id',
-      prompts.map((p) => p.id)
-    )
+  // One count per prompt (at most ten, in parallel): a single row fetch would
+  // be cut off at PostgREST's max_rows on a large cohort.
+  const [{ data: answers, error: answersError }, ...counts] = await Promise.all([
+    admin
+      .from('community_comments')
+      .select('post_id')
+      .eq('tenant_id', tenantId)
+      .eq('author_id', viewerId)
+      .eq('is_hidden', false)
+      .is('parent_comment_id', null)
+      .in(
+        'post_id',
+        rows.map((p) => p.id)
+      ),
+    ...rows.map((p) => answerCountQuery(admin, { tenantId, postId: p.id, blockedIds })),
+  ])
 
   if (answersError) throw answersError
+  const countError = counts.find((c) => c.error)?.error
+  if (countError) throw countError
 
   return {
     enabled: true,
-    prompts,
+    prompts: rows.map((p, i) => ({ ...p, answer_count: counts[i].count ?? 0 })),
     answeredIds: new Set((answers ?? []).map((a) => a.post_id as string)),
     hasMore,
+    loadId,
   }
+}
+
+/** A prompt's answers, counted by the rules its thread (`getComments`) shows them by. */
+function answerCountQuery(
+  admin: ReturnType<typeof createAdminClient>,
+  { tenantId, postId, blockedIds }: { tenantId: string; postId: string; blockedIds: string[] }
+) {
+  let query = admin
+    .from('community_comments')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('post_id', postId)
+    .eq('is_hidden', false)
+    .is('parent_comment_id', null)
+  if (blockedIds.length > 0) {
+    query = query.not('author_id', 'in', `(${blockedIds.join(',')})`)
+  }
+  return query
 }
 
 /**
