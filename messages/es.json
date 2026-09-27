@@ -6956,7 +6956,7 @@
       "welcome": {
         "title": "Da la bienvenida a tus estudiantes",
         "description": "Tu curso ya está publicado. Fija una publicación «Preséntate» para que su comunidad no empiece vacía.",
-        "start": "Escribir bienvenida",
+        "edit": "Editar",
         "dismiss": "Ahora no",
         "titleLabel": "Título",
         "contentLabel": "Mensaje",

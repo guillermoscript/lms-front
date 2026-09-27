@@ -6956,7 +6956,7 @@
       "welcome": {
         "title": "Welcome your students",
         "description": "Your course is live. Pin an “Introduce yourself” prompt so its community doesn’t start empty.",
-        "start": "Write welcome post",
+        "edit": "Edit",
         "dismiss": "Not now",
         "titleLabel": "Title",
         "contentLabel": "Message",

@@ -262,7 +262,7 @@ they get hrefs and strings as props.
 | Helper | Returns |
 |--------|---------|
 | `isCommunityEnabled(tenantId)` | `community_enabled()` RPC, React `cache()`d. The same gate as RLS `community_can_write` and the feed pages' `get_plan_features` check (not `hasPlanFeature`, which ignores `is_active`). Closed on error, never throws |
-| `loadCourseCommunityEntry({ tenantId, viewerId, courseId })` | `{ enabled: false }` or `{ enabled: true, activity }`; `activity` is the visible-post count of the last 7 days plus the newest post, or `null` when a read failed |
+| `loadCourseCommunityEntry({ tenantId, viewerId, courseId })` | `{ enabled: false }` or `{ enabled: true, activity }`; `activity` is the visible-post count of the last 7 days plus the newest post, or `null` when a read failed — the viewer's blocks included (`readBlockedAuthorIds` fails closed, where `getBlockedAuthorIds` reads an error as "no blocks") |
 | `courseActivityHint(activity)` / `communityPostLabel(post)` | Pure: which hint to show, and a post as one line of text |
 | `hasVisibleCoursePosts({ tenantId, courseId })` | `true`/`false`, or `null` (couldn't tell → don't offer) |
 | `getCommunityCourses({ tenantId, userId })` | The course feeds a student can open |
@@ -298,9 +298,11 @@ paged with `fetchAllRows`, course titles with `fetchAllRowsIn`.
 
 A published course whose feed has no visible posts shows its **author** (not
 an admin browsing it) a panel above the tabs offering a pinned "Introduce
-yourself" `discussion_prompt`: pre-filled in the teacher's UI language,
-editable inline, posted through `createPost` with `is_pinned=true`, then the
-teacher lands on the course feed. It is based on state rather than on the
+yourself" `discussion_prompt`, pre-filled in the teacher's UI language. The
+panel shows the pre-filled title and message, so "Post and pin" publishes them
+in one click; "Edit" opens them in fields first ("Cancel" drops the edit). It
+posts through `createPost` with `is_pinned=true`, then the teacher lands on the
+course feed. It is based on state rather than on the
 publish event, so it covers every way a course gets published (course form,
 `createCourse`, MCP). "Not now" stores
 `checklist:community-welcome-{courseId}` = `dismissed` in `user_ui_state`.

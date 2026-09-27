@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -26,9 +26,11 @@ interface CourseWelcomePromptProps {
 
 /**
  * Offer to seed a freshly published course's feed with a pinned "Introduce
- * yourself" prompt (#868). The page decides when it shows (published, the
- * author, community on, feed empty, not dismissed); this only writes, through
- * `createPost`, which re-checks the pin rule on the server.
+ * yourself" prompt (#868). The pre-filled text is shown up front, so posting it
+ * as is takes one click; "Edit" opens it in fields first. The page decides when
+ * it shows (published, the author, community on, feed empty, not dismissed);
+ * this only writes, through `createPost`, which re-checks the pin rule on the
+ * server.
  */
 export function CourseWelcomePrompt({ courseId, dismissKey, defaultTitle, defaultContent }: CourseWelcomePromptProps) {
   const t = useTranslations('community.courseEntry.welcome')
@@ -41,6 +43,16 @@ export function CourseWelcomePrompt({ courseId, dismissKey, defaultTitle, defaul
   const [title, setTitle] = useState(defaultTitle)
   const [content, setContent] = useState(defaultContent)
   const [submitting, setSubmitting] = useState(false)
+  const editRef = useRef<HTMLButtonElement>(null)
+  const returnFocus = useRef(false)
+
+  // Closing the fields removes the focused control; hand focus back to "Edit".
+  useEffect(() => {
+    if (!expanded && returnFocus.current) {
+      returnFocus.current = false
+      editRef.current?.focus()
+    }
+  }, [expanded])
 
   if (hidden) return null
 
@@ -50,9 +62,20 @@ export function CourseWelcomePrompt({ courseId, dismissKey, defaultTitle, defaul
     if (result.success) router.refresh()
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleCancel() {
+    setTitle(defaultTitle)
+    setContent(defaultContent)
+    returnFocus.current = true
+    setExpanded(false)
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!title.trim() || !content.trim()) return
+    void publish()
+  }
+
+  async function publish() {
+    if (submitting || !title.trim() || !content.trim()) return
 
     setSubmitting(true)
     try {
@@ -117,20 +140,29 @@ export function CourseWelcomePrompt({ courseId, dismissKey, defaultTitle, defaul
               <Button type="submit" variant="outline" disabled={submitting || !title.trim() || !content.trim()}>
                 {submitting ? t('submitting') : t('submit')}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setExpanded(false)} disabled={submitting}>
+              <Button type="button" variant="ghost" onClick={handleCancel} disabled={submitting}>
                 {t('cancel')}
               </Button>
             </div>
           </form>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => setExpanded(true)}>
-              {t('start')}
-            </Button>
-            <Button variant="ghost" onClick={handleDismiss}>
-              {t('dismiss')}
-            </Button>
-          </div>
+          <>
+            <blockquote data-testid="course-welcome-preview" className="rounded-md border bg-muted/40 px-3 py-2">
+              <p className="font-medium">{title}</p>
+              <p className="mt-1 line-clamp-3 whitespace-pre-line text-muted-foreground">{content}</p>
+            </blockquote>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => void publish()} disabled={submitting}>
+                {submitting ? t('submitting') : t('submit')}
+              </Button>
+              <Button ref={editRef} variant="ghost" onClick={() => setExpanded(true)} disabled={submitting}>
+                {t('edit')}
+              </Button>
+              <Button variant="ghost" onClick={handleDismiss} disabled={submitting}>
+                {t('dismiss')}
+              </Button>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

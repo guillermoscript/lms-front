@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsTeacher, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
@@ -222,13 +222,13 @@ async function removeCourseFixtures(admin: SupabaseClient) {
 }
 
 /**
- * Press a base-ui button until `settled` holds: a click that lands before
- * hydration does nothing. Once pressed for real the button may be gone, so a
- * retry only clicks while it is still there.
+ * Press a base-ui button (by its exact name, within `scope`) until `settled`
+ * holds: a click that lands before hydration does nothing. Once pressed for
+ * real the button may be gone, so a retry only clicks while it is still there.
  */
-async function pressUntil(page: Page, name: string, settled: () => Promise<void>) {
+async function pressUntil(scope: Page | Locator, name: string, settled: () => Promise<void>) {
   await expect(async () => {
-    const button = page.getByRole('button', { name })
+    const button = scope.getByRole('button', { name, exact: true })
     if (await button.isVisible()) await button.click({ timeout: 2_000 })
     await settled()
   }).toPass({ timeout: 20_000 })
@@ -412,27 +412,46 @@ test.describe('Course community entry points (#868)', () => {
 
     const prompt = page.getByTestId('course-welcome-prompt')
     await expect(prompt).toBeVisible({ timeout: 20_000 })
-    const title = prompt.getByLabel('Title')
-    await pressUntil(page, 'Write welcome post', () => expect(title).toBeVisible({ timeout: 2_000 }))
-    await expect(title).toHaveValue('Introduce yourself')
-    await expect(prompt.getByLabel('Message')).toHaveValue(
-      `Welcome to ${COURSE_PREFIX} welcome. Tell us who you are, where you’re joining from and what you hope to learn in this course.`
-    )
+    const defaultContent = `Welcome to ${COURSE_PREFIX} welcome. Tell us who you are, where you’re joining from and what you hope to learn in this course.`
 
-    await title.fill(`${POST_PREFIX} Introduce yourself`)
-    await prompt.getByRole('button', { name: 'Post and pin' }).click()
+    // The pre-filled text is on show before anything is pressed.
+    const preview = prompt.getByTestId('course-welcome-preview')
+    await expect(preview).toContainText('Introduce yourself')
+    await expect(preview).toContainText(defaultContent)
+
+    // "Edit" opens it in fields; "Cancel" drops the edit and goes back.
+    const title = prompt.getByLabel('Title')
+    await pressUntil(prompt, 'Edit', () => expect(title).toBeVisible({ timeout: 2_000 }))
+    await expect(title).toHaveValue('Introduce yourself')
+    await expect(prompt.getByLabel('Message')).toHaveValue(defaultContent)
+    await title.fill(`${POST_PREFIX} discarded draft`)
+    await prompt.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(title).toHaveCount(0)
+    await expect(preview).toContainText('Introduce yourself')
+    await expect(preview).not.toContainText('discarded draft')
+    await expect(prompt.getByRole('button', { name: 'Edit', exact: true })).toBeFocused()
+
+    // One click posts the pre-filled prompt as it is.
+    await prompt.getByRole('button', { name: 'Post and pin', exact: true }).click()
 
     await page.waitForURL(new RegExp(`/dashboard/teacher/courses/${fixture.welcome}/community$`), { timeout: 20_000 })
     const feed = page.locator('[data-tour="community-feed"]')
-    await expect(feed.getByText(`${POST_PREFIX} Introduce yourself`).first()).toBeVisible({ timeout: 20_000 })
+    await expect(feed.getByText('Introduce yourself', { exact: true }).first()).toBeVisible({ timeout: 20_000 })
     await expect(feed.getByText('Pinned', { exact: true })).toBeVisible()
 
     const { data: posts } = await getAdmin()
       .from('community_posts')
-      .select('post_type, is_pinned, author_id, tenant_id')
+      .select('post_type, is_pinned, author_id, tenant_id, title, content')
       .eq('course_id', fixture.welcome)
     expect(posts).toEqual([
-      { post_type: 'discussion_prompt', is_pinned: true, author_id: CREATOR_ID, tenant_id: CODE_ACADEMY },
+      {
+        post_type: 'discussion_prompt',
+        is_pinned: true,
+        author_id: CREATOR_ID,
+        tenant_id: CODE_ACADEMY,
+        title: 'Introduce yourself',
+        content: defaultContent,
+      },
     ])
 
     await page.goto(`${TENANT_BASE}/en/dashboard/teacher/courses/${fixture.welcome}`)
