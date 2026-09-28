@@ -1,79 +1,83 @@
 "use client"
 
-import { useState } from "react"
-import { IconCheck, IconTrash, IconFilter, IconInbox } from "@tabler/icons-react"
+import { useMemo, useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { toast } from "sonner"
+import { IconCheck, IconInbox } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   dismissNotification,
 } from "@/app/actions/admin/notifications"
-import { toast } from "sonner"
-import { formatDistanceToNow } from "date-fns"
-import { es, enUS } from "date-fns/locale"
-import { useTranslations } from "next-intl"
-import { useParams } from "next/navigation"
-
-type UserNotification = {
-  id: number
-  notification_id: number
-  in_app_read: boolean
-  dismissed_at: string | null
-  created_at: string
-  notification: {
-    id: number
-    title: string
-    content: string
-    notification_type: string
-    priority: string
-  }
-}
+import type { ViewerRole } from "@/lib/community/notifications"
+import { useNotificationCounts } from "@/components/notifications/notification-counts"
+import { applyLocalOverrides, withIds } from "@/lib/notifications/local-overrides"
+import { NotificationItem, type NotificationRow } from "@/components/notifications/notification-item"
+import {
+  NotificationPreferences,
+  type CommunityPreferences,
+} from "@/components/notifications/notification-preferences"
 
 interface NotificationsClientProps {
-  notifications: UserNotification[]
+  notifications: NotificationRow[]
+  role: ViewerRole
+  preferences: CommunityPreferences
+  /** The list read failed: say so, instead of "no notifications". */
+  loadError?: boolean
 }
 
-export function NotificationsClient({ notifications: initialNotifications }: NotificationsClientProps) {
-  const t = useTranslations('dashboard.student.notifications')
-  const { locale } = useParams()
-  const dateLocale = locale === 'es' ? es : enUS
+type Filter = "all" | "unread" | "read"
 
-  const [notifications, setNotifications] = useState(initialNotifications)
-  const [filter, setFilter] = useState<"all" | "unread" | "read">("all")
+export function NotificationsClient({
+  notifications: serverRows,
+  role,
+  preferences,
+  loadError = false,
+}: NotificationsClientProps) {
+  const t = useTranslations("dashboard.student.notifications")
+  const router = useRouter()
+  const { refresh, markedRead, markedAllRead } = useNotificationCounts()
+  const [retrying, startRetry] = useTransition()
 
+  // The server's rows, with what this tab did on top — never a one-time copy,
+  // so "Try again" and a mark-all from the bell (both re-render the page's
+  // props) show up here. See lib/notifications/local-overrides.ts.
+  const [readIds, setReadIds] = useState<ReadonlySet<number>>(() => new Set())
+  const [dismissedIds, setDismissedIds] = useState<ReadonlySet<number>>(() => new Set())
+  const notifications = useMemo(
+    () => applyLocalOverrides(serverRows, { read: readIds, dismissed: dismissedIds }),
+    [serverRows, readIds, dismissedIds]
+  )
+  const [filter, setFilter] = useState<Filter>("all")
+
+  const unreadCount = notifications.filter((n) => !n.in_app_read).length
+  const readCount = notifications.length - unreadCount
   const filteredNotifications = notifications.filter((n) => {
-    if (n.dismissed_at) return false
     if (filter === "unread") return !n.in_app_read
-    if (filter === "read") return n.in_app_read
+    if (filter === "read") return Boolean(n.in_app_read)
     return true
   })
 
-  const unreadCount = notifications.filter((n) => !n.in_app_read && !n.dismissed_at).length
+  const setRead = (id: number) => setReadIds((prev) => withIds(prev, [id]))
 
-  const handleMarkAsRead = async (notificationId: number) => {
+  const handleMarkAsRead = async (id: number) => {
     try {
-      const result = await markNotificationAsRead(notificationId)
+      const result = await markNotificationAsRead(id)
       if (result.success) {
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notificationId ? { ...n, in_app_read: true } : n
-          )
-        )
-        toast.success(t('toasts.markAsReadSuccess'))
+        const row = notifications.find((n) => n.id === id)
+        setRead(id)
+        markedRead(row?.notification.notification_type ?? null)
+        toast.success(t("toasts.markAsReadSuccess"))
       } else {
-        toast.error(result.error || t('toasts.markAsReadError'))
+        toast.error(result.error || t("toasts.markAsReadError"))
       }
-    } catch (error) {
-      toast.error(t('toasts.error'))
+    } catch {
+      toast.error(t("toasts.error"))
+    } finally {
+      refresh()
     }
   }
 
@@ -81,173 +85,99 @@ export function NotificationsClient({ notifications: initialNotifications }: Not
     try {
       const result = await markAllNotificationsAsRead()
       if (result.success) {
-        setNotifications((prev) =>
-          prev.map((n) => ({ ...n, in_app_read: true }))
-        )
-        toast.success(t('toasts.markAllAsReadSuccess'))
+        setReadIds((prev) => withIds(prev, notifications.map((n) => n.id)))
+        markedAllRead()
+        toast.success(t("toasts.markAllAsReadSuccess"))
       } else {
-        toast.error(result.error || t('toasts.markAllAsReadError'))
+        toast.error(result.error || t("toasts.markAllAsReadError"))
       }
-    } catch (error) {
-      toast.error(t('toasts.error'))
+    } catch {
+      toast.error(t("toasts.error"))
+    } finally {
+      refresh()
     }
   }
 
-  const handleDismiss = async (notificationId: number) => {
+  const handleDismiss = async (id: number) => {
     try {
-      const result = await dismissNotification(notificationId)
+      const result = await dismissNotification(id)
       if (result.success) {
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === notificationId
-              ? { ...n, dismissed_at: new Date().toISOString() }
-              : n
-          )
-        )
-        toast.success(t('toasts.dismissSuccess'))
+        setDismissedIds((prev) => withIds(prev, [id]))
+        toast.success(t("toasts.dismissSuccess"))
       } else {
-        toast.error(result.error || t('toasts.dismissError'))
+        toast.error(result.error || t("toasts.dismissError"))
       }
-    } catch (error) {
-      toast.error(t('toasts.error'))
-    }
-  }
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "success":
-        return "bg-success/10 text-success border-success/20"
-      case "warning":
-        return "bg-warning/10 text-warning border-warning/20"
-      case "error":
-      case "alert":
-        return "bg-destructive/10 text-destructive border-destructive/20"
-      case "info":
-        return "bg-brand-tint text-brand-text border-primary/20"
-      default:
-        return "bg-muted text-muted-foreground border-border"
-    }
-  }
-
-  const getPriorityColor = (priority: string): React.ComponentProps<typeof Badge>["variant"] => {
-    switch (priority) {
-      case "urgent":
-        return "destructive"
-      case "high":
-        return "destructive"
-      case "normal":
-        return "default"
-      case "low":
-        return "secondary"
-      default:
-        return "default"
+    } catch {
+      toast.error(t("toasts.error"))
+    } finally {
+      refresh()
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "unread" | "read")} className="w-auto">
+      {/* Actions bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as Filter)} className="w-auto">
           <TabsList>
             <TabsTrigger value="all">
-              {t('tabs.all')} ({notifications.filter((n) => !n.dismissed_at).length})
+              {t("tabs.all")} ({notifications.length})
             </TabsTrigger>
-            <TabsTrigger value="unread">{t('tabs.unread')} ({unreadCount})</TabsTrigger>
+            <TabsTrigger value="unread">
+              {t("tabs.unread")} ({unreadCount})
+            </TabsTrigger>
             <TabsTrigger value="read">
-              {t('tabs.read')} ({notifications.filter((n) => n.in_app_read && !n.dismissed_at).length})
+              {t("tabs.read")} ({readCount})
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
-            <IconCheck className="h-4 w-4 mr-2" />
-            {t('actions.markAllAsRead')}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
+              <IconCheck aria-hidden />
+              {t("actions.markAllAsRead")}
+            </Button>
+          )}
+          <NotificationPreferences initial={preferences} />
+        </div>
       </div>
 
-      {/* Notifications List */}
-      {filteredNotifications.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <IconInbox className="h-16 w-16 text-muted-foreground mb-4 opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">{t('empty.title')}</h3>
-            <p className="text-sm text-muted-foreground">
-              {filter === "unread"
-                ? t('empty.caughtUp')
-                : t('empty.none')}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredNotifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={`${!notification.in_app_read ? "border-l-4 border-l-primary" : ""}`}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CardTitle className="text-lg">
-                        {notification.notification.title}
-                      </CardTitle>
-                      {!notification.in_app_read && (
-                        <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        variant={getPriorityColor(notification.notification.priority)}
-                        className="text-xs"
-                      >
-                        {t(`priority.${notification.notification.priority}`) || notification.notification.priority}
-                      </Badge>
-                      <Badge variant="outline" className={`text-xs ${getTypeColor(notification.notification.notification_type)}`}>
-                        {t.has(`types.${notification.notification.notification_type}`)
-                          ? t(`types.${notification.notification.notification_type}`)
-                          : notification.notification.notification_type}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(notification.created_at), {
-                          addSuffix: true,
-                          locale: dateLocale,
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 shrink-0">
-                    {!notification.in_app_read && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleMarkAsRead(notification.id)}
-                      >
-                        <IconCheck className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDismiss(notification.id)}
-                    >
-                      <IconTrash className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-                  {notification.notification.content}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+      {loadError ? (
+        <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border px-4 py-12 text-center">
+          <p className="text-sm text-muted-foreground">{t("errorLoading")}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={retrying}
+            onClick={() => startRetry(() => router.refresh())}
+          >
+            {t("retry")}
+          </Button>
         </div>
+      ) : filteredNotifications.length === 0 ? (
+        <div className="flex flex-col items-center rounded-lg border px-4 py-12 text-center">
+          <IconInbox aria-hidden className="mb-3 size-10 text-muted-foreground opacity-60" />
+          <h2 className="mb-1 text-sm font-medium">{t("empty.title")}</h2>
+          <p className="text-sm text-muted-foreground">
+            {filter === "unread" ? t("empty.caughtUp") : t("empty.none")}
+          </p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border rounded-lg border" data-testid="notifications-list">
+          {filteredNotifications.map((row) => (
+            <li key={row.id}>
+              <NotificationItem
+                row={row}
+                role={role}
+                variant="full"
+                onOpened={setRead}
+                onMarkRead={handleMarkAsRead}
+                onDismiss={handleDismiss}
+              />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )

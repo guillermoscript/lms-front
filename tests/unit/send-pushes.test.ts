@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   EXPO_CHUNK_SIZE,
+  MAX_CLAIMS_PER_RUN,
   MAX_NOTIFICATIONS_PER_RUN,
+  RUN_TIME_BUDGET_MS,
   sendPendingPushes,
   truncatePushBody,
   type ClaimedPush,
@@ -101,6 +103,37 @@ describe('sendPendingPushes (#835)', () => {
     expect(bodies[0].data).toEqual({ notification_id: 1, url: null, kind: null })
   })
 
+  it('passes the community ids through so the app opens the exact comment (#870)', async () => {
+    const data = {
+      tenant_id: '00000000-0000-0000-0000-000000000002',
+      course_id: 2001,
+      post_id: '11111111-1111-4111-8111-111111111111',
+      comment_id: '22222222-2222-4222-8222-222222222222',
+    }
+    const { admin } = fakeAdmin([push({ url: null, kind: 'community_reply', data })])
+    const { fetchMock, bodies } = fakeExpo()
+
+    await sendPendingPushes(admin, { fetch: fetchMock as typeof fetch, expoUrl: 'http://stub/push' })
+
+    expect(bodies[0].data).toEqual({ ...data, notification_id: 1, url: null, kind: 'community_reply' })
+  })
+
+  it('never lets data overwrite the keys the app already routes on (#870)', async () => {
+    const { admin } = fakeAdmin([
+      push({ data: { notification_id: 999, url: 'https://evil.example', kind: 'forged', tenant_id: 't' } }),
+    ])
+    const { fetchMock, bodies } = fakeExpo()
+
+    await sendPendingPushes(admin, { fetch: fetchMock as typeof fetch, expoUrl: 'http://stub/push' })
+
+    expect(bodies[0].data).toEqual({
+      tenant_id: 't',
+      notification_id: 1,
+      url: '/dashboard/student/courses/1',
+      kind: 'lesson',
+    })
+  })
+
   it('batches tokens in chunks of 100', async () => {
     const tokens = Array.from({ length: 250 }, (_, i) => `ExponentPushToken[${i}]`)
     const { admin } = fakeAdmin([push({ tokens, recipients: 250 })])
@@ -158,6 +191,52 @@ describe('sendPendingPushes (#835)', () => {
     expect(rpc).toHaveBeenCalledTimes(2)
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(second).toMatchObject({ notifications: 0, sent: 0 })
+  })
+
+  describe('claiming again within a run (#870)', () => {
+    /** `n` claims of one recipient and no device each, so nothing is fetched. */
+    const full = (n: number, from = 1) =>
+      Array.from({ length: n }, (_, i) => push({ notification_id: from + i, tokens: [], recipients: 1 }))
+
+    /** Answers each rpc call with the next queued claim (or error), then nothing. */
+    function queuedAdmin(queue: Array<ClaimedPush[] | Error>) {
+      const rpc = vi.fn(async () => {
+        const next = queue.shift() ?? []
+        return next instanceof Error ? { data: null, error: next } : { data: next, error: null }
+      })
+      return { admin: { rpc } as unknown as SupabaseClient, rpc }
+    }
+
+    it('claims again while claims come back full, and stops at a short one', async () => {
+      const { admin, rpc } = queuedAdmin([full(MAX_NOTIFICATIONS_PER_RUN), full(3, 100)])
+      const result = await sendPendingPushes(admin, { fetch: vi.fn() as unknown as typeof fetch })
+      expect(rpc).toHaveBeenCalledTimes(2)
+      expect(result).toMatchObject({ notifications: MAX_NOTIFICATIONS_PER_RUN + 3, recipients: MAX_NOTIFICATIONS_PER_RUN + 3 })
+    })
+
+    it('stops after MAX_CLAIMS_PER_RUN claims, leaving the rest for the next minute', async () => {
+      const rpc = vi.fn(async () => ({ data: full(MAX_NOTIFICATIONS_PER_RUN), error: null }))
+      const result = await sendPendingPushes({ rpc } as unknown as SupabaseClient, {
+        fetch: vi.fn() as unknown as typeof fetch,
+      })
+      expect(rpc).toHaveBeenCalledTimes(MAX_CLAIMS_PER_RUN)
+      expect(result.notifications).toBe(MAX_CLAIMS_PER_RUN * MAX_NOTIFICATIONS_PER_RUN)
+    })
+
+    it('starts no new claim once the time budget is spent', async () => {
+      const { admin, rpc } = queuedAdmin([full(MAX_NOTIFICATIONS_PER_RUN), full(MAX_NOTIFICATIONS_PER_RUN)])
+      const clock = [0, RUN_TIME_BUDGET_MS]
+      await sendPendingPushes(admin, { fetch: vi.fn() as unknown as typeof fetch, now: () => clock.shift() ?? RUN_TIME_BUDGET_MS })
+      expect(rpc).toHaveBeenCalledOnce()
+    })
+
+    it('a later claim failing ends the run without undoing what was sent', async () => {
+      const { admin, rpc } = queuedAdmin([full(MAX_NOTIFICATIONS_PER_RUN), new Error('connection reset')])
+      const result = await sendPendingPushes(admin, { fetch: vi.fn() as unknown as typeof fetch })
+      expect(rpc).toHaveBeenCalledTimes(2)
+      expect(result.notifications).toBe(MAX_NOTIFICATIONS_PER_RUN)
+      expect(result.errors).toEqual(['claim: connection reset'])
+    })
   })
 
   it('throws when the claim fails, so the route answers 500', async () => {

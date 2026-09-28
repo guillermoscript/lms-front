@@ -4291,6 +4291,8 @@ export type Database = {
       }
       notification_preferences: {
         Row: {
+          community_prompts: boolean
+          community_replies: boolean
           course_notifications: boolean | null
           created_at: string
           email_enabled: boolean | null
@@ -4308,6 +4310,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          community_prompts?: boolean
+          community_replies?: boolean
           course_notifications?: boolean | null
           created_at?: string
           email_enabled?: boolean | null
@@ -4325,6 +4329,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          community_prompts?: boolean
+          community_replies?: boolean
           course_notifications?: boolean | null
           created_at?: string
           email_enabled?: boolean | null
@@ -4392,6 +4398,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          community_post_id: string | null
           content: string
           created_at: string
           created_by: string | null
@@ -4414,6 +4421,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          community_post_id?: string | null
           content: string
           created_at?: string
           created_by?: string | null
@@ -4436,6 +4444,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          community_post_id?: string | null
           content?: string
           created_at?: string
           created_by?: string | null
@@ -4458,6 +4467,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_community_post_id_fkey"
+            columns: ["community_post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_created_by_profile_fkey"
             columns: ["created_by"]
@@ -6960,6 +6976,7 @@ export type Database = {
         Args: { _max_age?: unknown; _max_notifications?: number }
         Returns: {
           content: string
+          data: Json
           kind: string
           notification_id: number
           priority: string
@@ -7150,6 +7167,49 @@ export type Database = {
         Args: { _course_id: number; _tenant_id: string; _user_id: string }
         Returns: undefined
       }
+      community_notification_excerpt: {
+        Args: { _max: number; _text: string }
+        Returns: string
+      }
+      community_notification_place_label: {
+        Args: { _course: number; _tenant: string }
+        Returns: string
+      }
+      community_notification_post_label: {
+        Args: { _content: string; _milestone_data: Json; _title: string }
+        Returns: string
+      }
+      community_notify_answer_accepted: {
+        Args: { _actor_id: string; _comment_id: string }
+        Returns: number
+      }
+      community_notify_blocked: {
+        Args: { _a: string; _b: string }
+        Returns: boolean
+      }
+      community_notify_can_reach: {
+        Args: { _course: number; _tenant: string; _user: string }
+        Returns: boolean
+      }
+      community_notify_wants: {
+        Args: { _category: string; _user: string }
+        Returns: boolean
+      }
+      community_prompt_recipients: {
+        Args: { _post_id: string }
+        Returns: string[]
+      }
+      community_reply_recipients: {
+        Args: { _comment_id: string }
+        Returns: {
+          reply_to: string
+          user_id: string
+        }[]
+      }
+      community_upsert_reply_notification: {
+        Args: { _comment_id: string; _recipient: string; _reply_to: string }
+        Returns: number
+      }
       create_notification:
         | {
             Args: {
@@ -7219,6 +7279,7 @@ export type Database = {
           _limit?: number
         }
         Returns: {
+          community_replies: number
           current_streak: number
           due_cards: number
           email: string

@@ -204,6 +204,7 @@ function candidates(n: number, tenant = TENANT): Row[] {
     goals_pending: 0,
     current_streak: 0,
     last_activity_date: null,
+    community_replies: 0,
   }))
 }
 
@@ -328,6 +329,23 @@ describe('runDailyDigest past the row cap', () => {
     expect(result.digestsSent).toBe(0)
     expect(sentEmails).toEqual([])
     expect(result.errors.join(' ')).toMatch(/preferences read failed/)
+  })
+
+  it('#870: a student whose only news is community replies still gets a digest', async () => {
+    const [only] = candidates(1)
+    const { client, db } = makeServer({
+      serverCap: CAP,
+      candidates: [{ ...only, due_cards: 0, community_replies: 3 }],
+    })
+
+    const result = await runDailyDigest(client, NOW)
+
+    expect(result.errors).toEqual([])
+    expect(result.digestsSent).toBe(1)
+    const [notification] = db.notifications as Array<{ content: string; metadata: Record<string, unknown> }>
+    expect(notification.metadata).toMatchObject({ kind: 'daily_digest', community_replies: 3 })
+    expect(notification.content).toContain('3 new replies in the community')
+    expect(sentEmails).toHaveLength(1)
   })
 
   it('spans multiple tenants, each read completely', async () => {

@@ -408,7 +408,10 @@
           "caughtUp": "¡Estás al día!"
         },
         "actions": {
-          "markAllAsRead": "Marcar todas como leídas"
+          "markAllAsRead": "Marcar todas como leídas",
+          "preferences": "Preferencias",
+          "markAsRead": "Marcar como leída",
+          "dismiss": "Descartar"
         },
         "toasts": {
           "markAsReadSuccess": "Notificación marcada como leída",
@@ -436,8 +439,22 @@
           "comment_reply": "Respuesta",
           "exam_review": "Revisión de examen",
           "order_renewal": "Renovación de pedido",
-          "subscription_renewal": "Renovación de suscripción"
-        }
+          "subscription_renewal": "Renovación de suscripción",
+          "community": "Comunidad"
+        },
+        "bell": {
+          "label": "{count, plural, =0 {Notificaciones} one {Notificaciones, # sin leer} other {Notificaciones, # sin leer}}",
+          "title": "Notificaciones",
+          "viewAll": "Ver todas",
+          "markAllRead": "Marcar todas como leídas",
+          "loading": "Cargando notificaciones…",
+          "error": "No se pudieron cargar las notificaciones.",
+          "retry": "Reintentar",
+          "empty": "Aún no tienes notificaciones"
+        },
+        "errorLoading": "No pudimos cargar tus notificaciones.",
+        "retry": "Reintentar",
+        "unread": "Sin leer"
       },
       "title": "Mi Aprendizaje",
       "welcome": "¡Bienvenido de nuevo! Continúa donde lo dejaste.",
@@ -7030,6 +7047,34 @@
     "mutedUntil": "Estás silenciado hasta {date}",
     "mutedIndefinite": "Estás silenciado. Contacta a un administrador para más información.",
     "unknownUser": "Usuario desconocido",
+    "notifications": {
+      "replyToPost": "{name} respondió a tu publicación",
+      "replyToComment": "{name} respondió a tu comentario",
+      "replies": "{count, plural, one {# respuesta nueva} other {# respuestas nuevas}}",
+      "prompt": "Nuevo tema de discusión en {course}",
+      "promptNoCourse": "Nuevo tema de discusión",
+      "answerAccepted": "Tu respuesta fue aceptada",
+      "onPost": "En «{post}»",
+      "onYourPost": "En tu publicación",
+      "onAPost": "En una publicación",
+      "snippet": "{name}: {snippet}",
+      "unknownActor": "Alguien",
+      "sidebarUnread": "{count, plural, one {# notificación de la comunidad sin leer} other {# notificaciones de la comunidad sin leer}}",
+      "unreadHeading": "Novedades para ti",
+      "viewAll": "Ver todas las notificaciones",
+      "unreadFallback": "{count, plural, one {Tienes # notificación de la comunidad sin leer.} other {Tienes # notificaciones de la comunidad sin leer.}}",
+      "preferences": {
+        "title": "Preferencias de notificación",
+        "description": "Elige de qué te avisa la comunidad.",
+        "group": "Comunidad",
+        "replies": "Respuestas",
+        "repliesDescription": "Respuestas a tus publicaciones y comentarios, y cuando aceptan tu respuesta.",
+        "prompts": "Nuevos temas de discusión",
+        "promptsDescription": "Cuando un docente abre una discusión en uno de tus cursos.",
+        "everySchool": "Estos ajustes se aplican en todas las escuelas a las que perteneces.",
+        "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo."
+      }
+    },
     "emptySchool": "No hay publicaciones aún. ¡Sé el primero en compartir algo!",
     "emptyCourse": "No hay discusiones aún. ¡Inicia la conversación!",
     "loadMore": "Cargar más",
