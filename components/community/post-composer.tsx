@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { createPoll, createPost, uploadCommunityAsset } from '@/app/actions/community'
 import { MAX_POST_MEDIA } from '@/lib/community/media'
+import { CommunityMarkdownField } from './community-markdown'
 
 interface PostComposerProps {
   scope: 'school' | 'course'
@@ -153,13 +154,15 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
               className="flex h-8 w-full rounded-md border border-input bg-input/20 px-3 text-sm font-medium outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
             />
           )}
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={isPoll ? t('poll.detailsPlaceholder') : t('writePost')}
-            aria-label={t('writePost')}
-            className={isPoll ? 'min-h-[48px] resize-none' : 'min-h-[80px] resize-none'}
-          />
+          <CommunityMarkdownField value={content}>
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={isPoll ? t('poll.detailsPlaceholder') : t('writePost')}
+              aria-label={t('writePost')}
+              className={isPoll ? 'min-h-[48px] resize-y' : 'min-h-[80px] resize-y'}
+            />
+          </CommunityMarkdownField>
           {isPoll && (
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">{t('poll.options')}</p>

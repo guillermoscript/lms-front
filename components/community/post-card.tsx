@@ -40,6 +40,7 @@ import { FlagDialog } from './flag-dialog'
 import { PollCard } from './poll-card'
 import { MilestoneCard } from './milestone-card'
 import { DiscussionPromptCard } from './discussion-prompt-card'
+import { CommunityMarkdown, CommunityMarkdownField } from './community-markdown'
 import type { CommunityPost } from './community-feed'
 import { postAnchorId, scrollBehavior } from '@/lib/community/deep-link'
 
@@ -281,13 +282,15 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
               className="flex h-8 w-full rounded-md border border-input bg-input/20 px-3 text-sm font-medium outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
             />
           )}
-          <Textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            aria-label={t('editPost')}
-            maxLength={5000}
-            className="min-h-[80px] resize-none"
-          />
+          <CommunityMarkdownField value={editContent}>
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              aria-label={t('editPost')}
+              maxLength={5000}
+              className="min-h-[80px] resize-y"
+            />
+          </CommunityMarkdownField>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)} disabled={saving}>
               {t('cancel')}
@@ -307,9 +310,7 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
             <h3 className="font-bold text-sm leading-tight">{post.title}</h3>
           )}
           {post.content && (
-            <p className="text-sm text-foreground/90 whitespace-pre-wrap break-words">
-              {post.content}
-            </p>
+            <CommunityMarkdown content={post.content} className="text-sm" collapsible />
           )}
         </div>
       )}
