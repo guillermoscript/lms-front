@@ -25,6 +25,7 @@ const MAX_POLL_OPTIONS = 10
 
 export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostCreated }: PostComposerProps) {
   const t = useTranslations('community')
+  const tGamification = useTranslations('components.gamification')
   const [content, setContent] = useState('')
   const [title, setTitle] = useState('')
   const [showTitle, setShowTitle] = useState(false)
@@ -110,6 +111,8 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
       }
 
       let result
+      // #874: the XP the post earned (polls earn none; 0 past the daily cap).
+      let xp = 0
       if (isPoll) {
         formData.append('title', title.trim())
         formData.append('options', JSON.stringify(filledOptions))
@@ -122,11 +125,13 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
         if (mediaFiles.length > 0) {
           formData.append('media_urls', JSON.stringify(mediaFiles))
         }
-        result = await createPost(formData)
+        const postResult = await createPost(formData)
+        if (postResult.success) xp = postResult.data?.xp.amount ?? 0
+        result = postResult
       }
 
       if (result.success) {
-        toast.success(t('posted'))
+        toast.success(t('posted'), xp > 0 ? { description: tGamification('xpAwarded.community', { xp }) } : undefined)
         reset()
         onPostCreated?.()
       } else {

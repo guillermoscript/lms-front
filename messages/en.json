@@ -4970,7 +4970,9 @@
       "xpAwarded": {
         "lesson_completion": "+100 XP — Lesson completed!",
         "exercise_completion": "+50 XP — Exercise completed!",
-        "exam_submission": "+200 XP — Exam submitted!"
+        "exam_submission": "+200 XP — Exam submitted!",
+        "community": "+{xp} XP",
+        "community_prompt_answer": "+{xp} XP — Discussion prompt answered!"
       }
     },
     "paymentRequestForm": {

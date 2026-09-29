@@ -14,6 +14,7 @@ import { getFeedPage } from '@/lib/community/feed'
 import { canPinInCourse } from '@/lib/community/access'
 import { parsePostMedia } from '@/lib/community/media'
 import { acceptAnswerErrorKey, canAcceptAnswers, parseQuestionFilter } from '@/lib/community/questions'
+import { readCommunityXpEarned, type CommunityXpEarned } from '@/lib/community/xp'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
@@ -180,7 +181,9 @@ function parsePositiveId(raw: FormDataEntryValue | null): number | null | 'inval
 /**
  * Create a post (standard or discussion_prompt)
  */
-export async function createPost(formData: FormData): Promise<ActionResult<{ id: string }>> {
+export async function createPost(
+  formData: FormData
+): Promise<ActionResult<{ id: string; xp: CommunityXpEarned }>> {
   try {
     const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
@@ -259,10 +262,18 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
         is_graded: isGraded,
         is_pinned: pin,
       })
-      .select('id')
+      .select('id, created_at')
       .single()
 
     if (error) throw error
+
+    // #874: the insert's trigger awarded any XP; read it back for the toast.
+    const xp = await readCommunityXpEarned(adminClient, {
+      userId,
+      tenantId,
+      referenceIds: [data.id],
+      since: data.created_at,
+    })
 
     // The server action, not the composer: this is the accurate chokepoint and
     // the only one that survives an adblocker. `course_scoped` separates a
@@ -288,7 +299,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
       revalidatePath(`/dashboard/teacher/courses/${courseId}`)
     }
 
-    return { success: true, data: { id: data.id } }
+    return { success: true, data: { id: data.id, xp } }
   } catch (err) {
     console.error('Failed to create post:', err)
     return {
@@ -431,7 +442,7 @@ export async function createComment(
   content: string,
   parentCommentId?: string,
   options?: { surface?: 'feed' | 'lesson' }
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; xp: CommunityXpEarned }>> {
   // From the wire: anything but 'lesson' is the feed.
   const surface = options?.surface === 'lesson' ? 'lesson' : 'feed'
   try {
@@ -484,10 +495,19 @@ export async function createComment(
         content: content.trim(),
         parent_comment_id: parentCommentId || null,
       })
-      .select('id')
+      .select('id, created_at')
       .single()
 
     if (error) throw error
+
+    // #874: a comment earns under its own id, a prompt answer under the
+    // prompt's id (once per prompt).
+    const xp = await readCommunityXpEarned(insertClient, {
+      userId,
+      tenantId,
+      referenceIds: [data.id, postId],
+      since: data.created_at,
+    })
 
     // `is_reply` is the interesting cut: a top-level comment is a response to
     // the school, a threaded reply is students talking to each other.
@@ -503,7 +523,7 @@ export async function createComment(
     )
 
     if (surface === 'feed') revalidatePath('/dashboard')
-    return { success: true, data: { id: data.id } }
+    return { success: true, data: { id: data.id, xp } }
   } catch (err) {
     console.error('Failed to create comment:', err)
     return {

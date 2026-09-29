@@ -611,7 +611,7 @@ Mentions and realtime delivery (#876); follower/reaction notifications (noise); 
 
 Per the implementation plan, these features are planned but not yet implemented:
 
-- **Phase 4** — Gamification wiring (XP for posts/comments/reactions, daily caps, community achievements)
+- **Phase 4** — Community achievements (XP shipped in #874, below)
 - **Phase 6** — Course highlights (pin community posts to course detail pages)
 
 ## Questions and accepted answers (#875)
@@ -622,8 +622,28 @@ Migration `20260929150000_community_questions_875.sql`.
 - **Columns**: `community_posts.accepted_comment_id` (FK → `community_comments`, `ON DELETE SET NULL`), `accepted_by` (FK → `profiles`, `ON DELETE SET NULL`), `accepted_at`. CHECK: only a question may have one.
 - **The rule** (`community_guard_accepted_answer()`, BEFORE INSERT / UPDATE OF `accepted_comment_id`, every writer): the actor is the question's author or an ACTIVE teacher/admin of the post's school (`tenant_users`), not muted, on a plan with the community (`community_can_accept_answer()`); the answer is a visible TOP-LEVEL comment of the same post in the same school. On the RLS path the actor is `auth.uid()` and the trigger stamps it into `accepted_by`; the service role (web action `setAcceptedAnswer`) must write `accepted_by` and is held to the same rule. `authenticated` has UPDATE on `accepted_comment_id` only. Refusals: SQLSTATE `42501` (who) / `23514` (what) — map with `acceptAnswerErrorKey()`.
 - **Clears**: hiding the accepted comment (`community_clear_hidden_accepted_answer()`) or deleting it (FK) un-accepts it; those run from triggers (`pg_trigger_depth() > 1`) and skip the actor check.
-- **Consequences**: `community_on_answer_accepted()` (AFTER UPDATE, when a new non-null answer is set) notifies the answer's author (#870). It is the one place an accepted answer happens — #874's XP goes there too.
+- **Consequences**: `community_on_answer_accepted()` (AFTER UPDATE, when a new non-null answer is set) notifies the answer's author (#870). It is the one place an accepted answer happens — #874's XP is awarded there too.
 - **Thread** (`comment-thread.tsx`): the accepted answer is pinned first and highlighted; the other top-level answers are ranked by `helpful` reactions, then oldest (`rankAnswers()`); replies stay chronological. Answers carry a "Helpful" toggle, Accept / Unaccept for the author and staff, and staff authors show their role badge.
 - **Filters**: `?questions=questions|unanswered|answered` on every feed page, applied by the server (`getFeedPage({ questionFilter })`, `loadMorePosts`), so the list is complete. Index `idx_community_posts_questions`.
 - **Teacher dashboard**: `UnansweredQuestionsCard` counts unanswered questions in the teacher's courses and links each course to `/dashboard/teacher/courses/<id>/community?questions=unanswered`.
 - **Tests**: `tests/sql/issue-875-community-questions.sql`, `tests/unit/community-questions.test.ts`, `tests/playwright/community-questions.spec.ts` (ask → answer → accept, filters, dashboard; desktop only).
+
+## XP for participation (#874)
+
+Migration `20260929160000_community_xp_874.sql`. The database awards; no client can.
+
+| Action type | XP | Limit | `reference_id` |
+|---|---|---|---|
+| `community_prompt_answer` — first top-level comment on a discussion prompt | 15 | once per prompt (instead of the comment XP) | prompt post id |
+| `community_post` — standard/question/prompt post in a course feed | 5 | 3 / UTC day | post id |
+| `community_comment` — comment or reply | 3 | 10 / UTC day | comment id |
+| `community_helpful_received` — `helpful` on your post/comment, never self | 2 | 20 / UTC day, once per (target, reactor) | `<target id>:<reactor id>` |
+| `community_answer_accepted` — your answer accepted, never your own question | 25 | once per question | question post id |
+| `community_prompt_graded` — registered for #873 | 20 | once per prompt | prompt post id |
+
+- `community_xp_rule(action)` is the registry (amount, cap, once); `community_award_xp()` applies it under a per-(user, action) advisory lock and calls `award_xp(..., _tenant_id)` with the host row's school. Both are revoked from clients.
+- Triggers: `trg_community_xp_on_post`, `trg_community_xp_on_comment`, `trg_community_xp_on_helpful` (AFTER INSERT) and the extended `community_on_answer_accepted()`. Each award is wrapped in `EXCEPTION WHEN OTHERS -> RAISE WARNING`, so XP never blocks posting.
+- Daily caps count `gamification_xp_transactions` for (user, action, tenant) since UTC midnight. Polls, milestone posts, school-feed posts, content inserted hidden and `like`/`insightful`/`fire` earn nothing. Deleting or hiding later does not revoke XP (v1).
+- Leagues and leaderboards sum every XP row regardless of type, so community XP counts toward weekly leagues with no change. It also extends the daily streak like any other XP.
+- Web: `createPost` / `createComment` read back what the insert earned (`readCommunityXpEarned()`, `lib/community/xp.ts`) and the composer/thread show "+N XP" (`components.gamification.xpAwarded.community*`).
+- **Tests**: `tests/sql/issue-874-community-xp.sql`, `tests/unit/community-xp.test.ts`.

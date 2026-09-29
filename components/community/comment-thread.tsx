@@ -131,6 +131,7 @@ export function CommentThread({
   const justPostedRef = useRef<string | null>(null)
 
   const t = useTranslations('community')
+  const tGamification = useTranslations('components.gamification')
   const locale = useLocale()
   const isLearner = variant === 'learner'
 
@@ -265,6 +266,15 @@ export function CommentThread({
 
       setNewComment('')
       setReplyingTo(null)
+      // #874: the XP this comment earned (0 past a daily cap).
+      const xp = result.data?.xp
+      if (xp && xp.amount > 0) {
+        toast.success(
+          xp.action === 'community_prompt_answer'
+            ? tGamification('xpAwarded.community_prompt_answer', { xp: xp.amount })
+            : tGamification('xpAwarded.community', { xp: xp.amount })
+        )
+      }
       const newId = result.data?.id
       if (newId && isLearner) justPostedRef.current = newId
       await loadComments({ silent: true })
