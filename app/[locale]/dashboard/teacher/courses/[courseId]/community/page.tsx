@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
+import { parseQuestionFilter } from '@/lib/community/questions'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import Link from 'next/link'
@@ -13,7 +14,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 interface PageProps {
   params: Promise<{ courseId: string }>
   // `?post=<id>` focuses one post of THIS course (#869).
-  searchParams: Promise<{ post?: string | string[] }>
+  searchParams: Promise<{ post?: string | string[]; questions?: string | string[] }>
 }
 
 export default async function TeacherCourseCommunityPage({ params, searchParams }: PageProps) {
@@ -76,14 +77,17 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
     )
   }
 
-  const focusPromise = getFeedFocus((await searchParams).post, {
+  const query = await searchParams
+  // `?questions=` (#875): questions, unanswered or answered ones.
+  const questionFilter = parseQuestionFilter(query.questions)
+  const focusPromise = getFeedFocus(query.post, {
     tenantId,
     viewerId: userId,
     scope: 'course',
     courseId: numericCourseId,
   })
   const [feed, settings] = await Promise.all([
-    getFeedPage({ tenantId, viewerId: userId, scope: 'course', courseId: numericCourseId }),
+    getFeedPage({ tenantId, viewerId: userId, scope: 'course', courseId: numericCourseId, questionFilter }),
     getCommunitySettings(tenantId),
   ])
   const focus = await focusPromise
@@ -105,6 +109,8 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
       </header>
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
         <CommunityFeed
+          key={questionFilter ?? 'all'}
+          questionFilter={questionFilter}
           scope="course"
           courseId={numericCourseId}
           initialPosts={feed.posts}

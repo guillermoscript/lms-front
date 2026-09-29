@@ -1058,6 +1058,9 @@ export type Database = {
       }
       community_posts: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          accepted_comment_id: string | null
           author_id: string
           comment_count: number
           content: string
@@ -1079,6 +1082,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_comment_id?: string | null
           author_id: string
           comment_count?: number
           content: string
@@ -1100,6 +1106,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_comment_id?: string | null
           author_id?: string
           comment_count?: number
           content?: string
@@ -1121,6 +1130,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "community_posts_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_posts_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_accepted_comment_id_fkey"
+            columns: ["accepted_comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "community_posts_author_id_fkey"
             columns: ["author_id"]

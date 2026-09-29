@@ -21,7 +21,9 @@ import {
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { Suspense } from 'react'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
+import { UnansweredQuestionsCard } from '@/components/community/unanswered-questions-card'
 import { TeacherDashboardTour } from '@/components/tours/teacher-dashboard-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
@@ -248,6 +250,11 @@ export default async function TeacherDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Unanswered questions in the teacher's courses (#875) */}
+      <Suspense fallback={null}>
+        <UnansweredQuestionsCard tenantId={tenantId} courses={courses} />
+      </Suspense>
 
       {/* Getting Started Checklist — shown until dismissed */}
       <OnboardingChecklist

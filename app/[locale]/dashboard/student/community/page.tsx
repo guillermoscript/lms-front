@@ -7,6 +7,7 @@ import { BlockedMembers } from '@/components/community/blocked-members'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { CommunityUnread } from '@/components/notifications/community-unread'
 import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
+import { parseQuestionFilter } from '@/lib/community/questions'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { getCommunityCourses } from '@/lib/community/access'
 import { CourseCommunityLinks } from '@/components/community/course-community-links'
@@ -17,7 +18,7 @@ import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   // `?post=<id>` focuses one post (#869).
-  searchParams: Promise<{ post?: string | string[] }>
+  searchParams: Promise<{ post?: string | string[]; questions?: string | string[] }>
 }
 
 export default async function StudentCommunityPage({ searchParams }: PageProps) {
@@ -54,9 +55,12 @@ export default async function StudentCommunityPage({ searchParams }: PageProps) 
     )
   }
 
-  const focusPromise = getFeedFocus((await searchParams).post, { tenantId, viewerId: userId, scope: 'school' })
+  const query = await searchParams
+  // `?questions=` (#875): questions, unanswered or answered ones.
+  const questionFilter = parseQuestionFilter(query.questions)
+  const focusPromise = getFeedFocus(query.post, { tenantId, viewerId: userId, scope: 'school' })
   const [feed, uiState, settings, courseLinks] = await Promise.all([
-    getFeedPage({ tenantId, viewerId: userId, scope: 'school' }),
+    getFeedPage({ tenantId, viewerId: userId, scope: 'school', questionFilter }),
     getUiState(userId),
     getCommunitySettings(tenantId),
     // #868: the course feeds this student can open (entitlements, like the
@@ -86,6 +90,8 @@ export default async function StudentCommunityPage({ searchParams }: PageProps) 
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
         <CommunityUnread role={role} />
         <CommunityFeed
+          key={questionFilter ?? 'all'}
+          questionFilter={questionFilter}
           scope="school"
           initialPosts={feed.posts}
           initialHasMore={feed.hasMore}

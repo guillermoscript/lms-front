@@ -8,7 +8,7 @@ import { CommunityMarkdown } from './community-markdown'
 interface CommunityPost {
   id: string
   author_id: string
-  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll'
+  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll' | 'question'
   title: string | null
   content: string
   media_urls: { url: string; type: 'image' | 'video' | 'file'; name: string }[]

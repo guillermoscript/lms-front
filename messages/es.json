@@ -7042,7 +7042,11 @@
       "polls": "Encuestas",
       "milestones": "Logros",
       "byTeachers": "De Profesores",
-      "byStudents": "De Estudiantes"
+      "byStudents": "De Estudiantes",
+      "questions": "Preguntas",
+      "allQuestions": "Todas las preguntas",
+      "unanswered": "Sin responder",
+      "answered": "Respondidas"
     },
     "pinned": "Fijado",
     "locked": "Bloqueado",
@@ -7264,6 +7268,33 @@
       "showMore": "Ver más",
       "showLess": "Ver menos",
       "copyCode": "Copiar código"
+    },
+    "questions": {
+      "toggle": "Pregunta",
+      "badge": "Pregunta",
+      "answered": "Respondida",
+      "unanswered": "Sin responder",
+      "titlePlaceholder": "Tu pregunta en una línea",
+      "bodyPlaceholder": "¿Qué intentaste y dónde te atascaste?",
+      "accept": "Aceptar respuesta",
+      "unaccept": "Quitar aceptación",
+      "accepted": "Respuesta aceptada",
+      "unaccepted": "Se quitó la respuesta aceptada",
+      "acceptedAnswer": "Respuesta aceptada",
+      "helpful": "Útil",
+      "helpfulCount": "Útil · {count}",
+      "empty": {
+        "questions": "Aún no hay preguntas.",
+        "unanswered": "No hay preguntas sin responder. ¡Buen trabajo!",
+        "answered": "Aún no hay preguntas respondidas."
+      },
+      "dashboard": {
+        "title": "Preguntas sin responder",
+        "summary": "{count, plural, one {# pregunta sin responder en tus cursos} other {# preguntas sin responder en tus cursos}}",
+        "allAnswered": "Todas las preguntas de tus cursos tienen una respuesta aceptada.",
+        "courseCount": "{count, plural, one {# pregunta} other {# preguntas}}",
+        "untitledCourse": "Curso sin título"
+      }
     }
   },
   "schoolLanding": {

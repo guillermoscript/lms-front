@@ -7042,7 +7042,11 @@
       "polls": "Polls",
       "milestones": "Milestones",
       "byTeachers": "By Teachers",
-      "byStudents": "By Students"
+      "byStudents": "By Students",
+      "questions": "Questions",
+      "allQuestions": "All questions",
+      "unanswered": "Unanswered",
+      "answered": "Answered"
     },
     "pinned": "Pinned",
     "locked": "Locked",
@@ -7264,6 +7268,33 @@
       "showMore": "Show more",
       "showLess": "Show less",
       "copyCode": "Copy code"
+    },
+    "questions": {
+      "toggle": "Question",
+      "badge": "Question",
+      "answered": "Answered",
+      "unanswered": "Unanswered",
+      "titlePlaceholder": "Your question in one line",
+      "bodyPlaceholder": "What did you try, and where are you stuck?",
+      "accept": "Accept answer",
+      "unaccept": "Unaccept",
+      "accepted": "Answer accepted",
+      "unaccepted": "Answer unaccepted",
+      "acceptedAnswer": "Accepted answer",
+      "helpful": "Helpful",
+      "helpfulCount": "Helpful · {count}",
+      "empty": {
+        "questions": "No questions yet.",
+        "unanswered": "No unanswered questions. Nice work.",
+        "answered": "No answered questions yet."
+      },
+      "dashboard": {
+        "title": "Unanswered questions",
+        "summary": "{count, plural, one {# unanswered question in your courses} other {# unanswered questions in your courses}}",
+        "allAnswered": "Every question in your courses has an accepted answer.",
+        "courseCount": "{count, plural, one {# question} other {# questions}}",
+        "untitledCourse": "Untitled course"
+      }
     }
   },
   "schoolLanding": {

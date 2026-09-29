@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { IconSend, IconPhoto, IconPlus, IconX, IconUser, IconChartBar } from '@tabler/icons-react'
+import { IconSend, IconPhoto, IconPlus, IconX, IconUser, IconChartBar, IconHelpCircle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { createPoll, createPost, uploadCommunityAsset } from '@/app/actions/community'
@@ -28,7 +28,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
   const [content, setContent] = useState('')
   const [title, setTitle] = useState('')
   const [showTitle, setShowTitle] = useState(false)
-  const [postType, setPostType] = useState<'standard' | 'discussion_prompt' | 'poll'>('standard')
+  const [postType, setPostType] = useState<'standard' | 'discussion_prompt' | 'poll' | 'question'>('standard')
   const [pollOptions, setPollOptions] = useState<string[]>(['', ''])
   const [mediaFiles, setMediaFiles] = useState<{ url: string; type: 'image' | 'video' | 'file'; name: string }[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -75,6 +75,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
   }
 
   const isPoll = postType === 'poll'
+  const isQuestion = postType === 'question'
   const filledOptions = pollOptions.map((o) => o.trim()).filter(Boolean)
   const canSubmit = isPoll
     ? title.trim().length > 0 && filledOptions.length >= MIN_POLL_OPTIONS
@@ -91,6 +92,10 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
 
   function togglePoll() {
     setPostType((prev) => (prev === 'poll' ? 'standard' : 'poll'))
+  }
+
+  function toggleQuestion() {
+    setPostType((prev) => (prev === 'question' ? 'standard' : 'question'))
   }
 
   async function handleSubmit() {
@@ -111,7 +116,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
         result = await createPoll(formData)
       } else {
         formData.append('post_type', postType)
-        if (showTitle && title.trim()) {
+        if ((showTitle || isQuestion) && title.trim()) {
           formData.append('title', title.trim())
         }
         if (mediaFiles.length > 0) {
@@ -143,13 +148,13 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-2">
-          {(showTitle || isPoll) && (
+          {(showTitle || isPoll || isQuestion) && (
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isPoll ? t('poll.question') : t('addTitle')}
-              aria-label={isPoll ? t('poll.question') : t('addTitle')}
+              placeholder={isPoll ? t('poll.question') : isQuestion ? t('questions.titlePlaceholder') : t('addTitle')}
+              aria-label={isPoll ? t('poll.question') : isQuestion ? t('questions.titlePlaceholder') : t('addTitle')}
               maxLength={200}
               className="flex h-8 w-full rounded-md border border-input bg-input/20 px-3 text-sm font-medium outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
             />
@@ -158,7 +163,9 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder={isPoll ? t('poll.detailsPlaceholder') : t('writePost')}
+              placeholder={
+                isPoll ? t('poll.detailsPlaceholder') : isQuestion ? t('questions.bodyPlaceholder') : t('writePost')
+              }
               aria-label={t('writePost')}
               className={isPoll ? 'min-h-[48px] resize-y' : 'min-h-[80px] resize-y'}
             />
@@ -243,7 +250,7 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2 pl-12">
         <div className="flex flex-wrap items-center gap-1">
-          {!showTitle && !isPoll && (
+          {!showTitle && !isPoll && !isQuestion && (
             <Button
               variant="ghost"
               size="sm"
@@ -275,6 +282,16 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
               />
             </>
           )}
+          <Button
+            variant={isQuestion ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-7 gap-1 text-xs"
+            aria-pressed={isQuestion}
+            onClick={toggleQuestion}
+          >
+            <IconHelpCircle size={12} />
+            {t('questions.toggle')}
+          </Button>
           {canCreatePoll && (
             <Button
               variant={isPoll ? 'secondary' : 'ghost'}

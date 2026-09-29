@@ -3,9 +3,11 @@ import { useTranslations } from 'next-intl'
 
 interface EmptyFeedProps {
   scope: 'school' | 'course'
+  /** Replaces the default line, e.g. when a filter emptied the feed. */
+  message?: string
 }
 
-export function EmptyFeed({ scope }: EmptyFeedProps) {
+export function EmptyFeed({ scope, message }: EmptyFeedProps) {
   const t = useTranslations('community')
 
   return (
@@ -14,7 +16,7 @@ export function EmptyFeed({ scope }: EmptyFeedProps) {
         <IconMessage size={28} className="text-muted-foreground/50" />
       </div>
       <p className="font-semibold text-sm">
-        {scope === 'course' ? t('emptyCourse') : t('emptySchool')}
+        {message ?? (scope === 'course' ? t('emptyCourse') : t('emptySchool'))}
       </p>
     </div>
   )
