@@ -8,13 +8,18 @@
  * a 409. The proof that it worked is the claim in the REFRESHED token, which
  * is what every RLS read in the app keys on.
  *
+ * Bearer only (#859): a logged-in browser's `sb-*` cookie must not work, or
+ * another school's page (sibling subdomains are same-site) could join a
+ * visitor to a school with a cross-site `text/plain` POST.
+ *
  * Owns QA tenant `…0845` on a hidden plan with `max_students: 1`, so one join
  * fills it. Alice's claim is put back on Code Academy afterwards — other specs
  * sign her in there.
  */
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { BASE } from './utils/constants'
+import { BASE, TENANT_BASE } from './utils/constants'
+import { loginAsTenantStudent } from './utils/auth'
 import {
   SEEDED,
   createQaTenant,
@@ -93,6 +98,26 @@ test.describe('POST /api/tenant/switch (#845)', () => {
   test('401 without a token', async ({ request }) => {
     const res = await request.post(`${BASE}/api/tenant/switch`, { data: { slug: QA.slug } })
     expect(res.status()).toBe(401)
+  })
+
+  test('a browser session cookie is not enough — Bearer only', async ({ page }) => {
+    test.setTimeout(120_000)
+    await loginAsTenantStudent(page)
+    // What a hostile sibling-subdomain page can make the browser send: the
+    // session cookie rides along, a text/plain body needs no preflight.
+    const forged = await page.request.post(`${TENANT_BASE}/api/tenant/switch`, {
+      headers: { 'content-type': 'text/plain' },
+      data: JSON.stringify({ slug: QA.slug, join: true }),
+    })
+    expect(forged.status()).toBe(401)
+    const list = await page.request.get(`${TENANT_BASE}/api/tenant/memberships`)
+    expect(list.status()).toBe(401)
+
+    const { count } = await getAdmin()
+      .from('tenant_users')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', QA.id)
+    expect(count).toBe(0)
   })
 
   test('a member of another school is asked first, then joined on confirm', async ({ request }) => {

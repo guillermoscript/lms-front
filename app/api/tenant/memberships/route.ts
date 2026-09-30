@@ -8,15 +8,19 @@
  * switch back into (join it again instead).
  *
  * `activeTenantId` is `app_metadata.tenant_id` — what the next refreshed JWT
- * will carry, which `POST /api/tenant/switch` sets.
+ * will carry, which `POST /api/tenant/switch` sets. It can name a school that
+ * is NOT in `memberships` (suspended school, removed membership): clients must
+ * treat that as "no active school" and let the user pick one.
+ *
+ * Bearer only (#859), like `/switch`: the web never calls it.
  */
-import { getApiUser } from '@/lib/supabase/api-auth'
+import { getBearerUser } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: Request) {
-  const user = await getApiUser(req)
+  const user = await getBearerUser(req)
   if (!user) return Response.json({ error: 'Unauthorized', code: 'unauthorized' }, { status: 401 })
 
   const { data, error } = await createAdminClient()

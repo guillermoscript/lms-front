@@ -6,7 +6,9 @@
  * non-member is joined only where the web joins without asking or after an
  * explicit `join: true`; the plan's student cap — pre-check or the `LM001`
  * trigger winning a race — comes back as a 409 `student_limit`; and every
- * refusal leaves `app_metadata` alone.
+ * refusal leaves `app_metadata` alone. #859: a DB failure is a 500, never a
+ * 404 or a join; the race fallback never claims "already a member" in a 500;
+ * and a suspended school is neither listed nor switchable.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -26,6 +28,10 @@ const state = vi.hoisted(() => ({
   metaError: null as unknown,
   inserts: [] as { table: string; values: Row }[],
   updates: [] as { table: string; values: Row }[],
+  /** Tables whose reads fail, as a DB outage would. */
+  readErrors: {} as Record<string, { message: string }>,
+  /** A concurrent join landing: `tenant_users` reads after the first see these rows. */
+  racedMemberships: null as Row[] | null,
 }))
 
 function builder(table: string) {
@@ -39,15 +45,24 @@ function builder(table: string) {
     : table === 'tenant_users' ? state.memberships
     : table === 'tenant_invitations' ? state.invitations
     : []
+  // `embed.col` filters apply to the embedded row, as PostgREST's `!inner` does.
+  const matches = (r: Row, c: string, v: unknown) => {
+    if (!c.includes('.')) return r[c] === v
+    const [embed, col] = c.split('.')
+    return (r[embed] as Row | undefined)?.[col] === v
+  }
   const rows = () =>
     source()
-      .filter((r) => eqs.every(([c, v]) => c.includes('.') || r[c] === v))
+      .filter((r) => eqs.every(([c, v]) => matches(r, c, v)))
       .filter((r) => neqs.every(([c, v]) => r[c] !== v))
       .slice(0, limitN)
+  const readError = () => state.readErrors[table] ?? null
   const result = () => {
-    if (op === 'insert') return { data: null, error: state.insertError }
+    if (op === 'insert') {
+      return { data: null, error: state.insertError }
+    }
     if (op !== 'select') return { data: null, error: null }
-    return { data: rows(), error: null }
+    return readError() ? { data: null, error: readError() } : { data: rows(), error: null }
   }
 
   const b: Record<string, unknown> = {
@@ -67,7 +82,14 @@ function builder(table: string) {
       return b
     },
     upsert: () => ((op = 'upsert'), b),
-    maybeSingle: () => Promise.resolve({ data: rows()[0] ?? null, error: null }),
+    maybeSingle: () => {
+      const answer = readError() ? { data: null, error: readError() } : { data: rows()[0] ?? null, error: null }
+      if (table === 'tenant_users' && state.racedMemberships) {
+        state.memberships = state.racedMemberships
+        state.racedMemberships = null
+      }
+      return Promise.resolve(answer)
+    },
     then: (res: (v: unknown) => void, rej?: (e: unknown) => void) => Promise.resolve(result()).then(res, rej),
   }
   return b
@@ -86,7 +108,7 @@ const admin = {
   },
 }
 
-vi.mock('@/lib/supabase/api-auth', () => ({ getApiUser: () => Promise.resolve(state.user) }))
+vi.mock('@/lib/supabase/api-auth', () => ({ getBearerUser: () => Promise.resolve(state.user) }))
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => admin }))
 vi.mock('@/lib/billing/plan-limits', () => ({
   getTenantPlanLimits: () => Promise.resolve({ limits: { max_students: state.maxStudents } }),
@@ -119,6 +141,8 @@ beforeEach(() => {
   state.metaError = null
   state.inserts = []
   state.updates = []
+  state.readErrors = {}
+  state.racedMemberships = null
 })
 
 describe('POST /api/tenant/switch', () => {
@@ -214,6 +238,50 @@ describe('POST /api/tenant/switch', () => {
     expect(state.metaUpdates).toEqual([])
   })
 
+  it('500s, not 404s, when the school lookup fails', async () => {
+    state.readErrors = { tenants: { message: 'connection reset' } }
+    const res = await post({ tenantId: X.id })
+    expect(res.status).toBe(500)
+    expect((await res.json()).code).toBe('switch_failed')
+    expect(state.metaUpdates).toEqual([])
+  })
+
+  it('500s without joining when the membership lookup fails', async () => {
+    state.readErrors = { tenant_users: { message: 'connection reset' } }
+    const res = await post({ tenantId: X.id, join: true })
+    expect(res.status).toBe(500)
+    expect((await res.json()).code).toBe('switch_failed')
+    expect(state.inserts).toEqual([])
+    expect(state.metaUpdates).toEqual([])
+  })
+
+  it('404s a member of a suspended school without touching the claim', async () => {
+    state.tenants = [{ ...X, status: 'suspended' }]
+    state.memberships = [{ user_id: 'user-1', tenant_id: X.id, role: 'admin', status: 'active' }]
+    const res = await post({ tenantId: X.id })
+    expect(res.status).toBe(404)
+    expect((await res.json()).code).toBe('school_not_found')
+    expect(state.metaUpdates).toEqual([])
+  })
+
+  it('switches when a concurrent request joined first', async () => {
+    // The route's read saw no membership; joinSchool's sees the concurrent one.
+    state.racedMemberships = [{ user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'active' }]
+    const res = await post({ tenantId: X.id })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ tenantId: X.id, role: 'student', joined: false })
+  })
+
+  it('answers a failed race fallback with a generic error, not "already a member"', async () => {
+    state.racedMemberships = [{ user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'active' }]
+    state.metaError = { message: 'boom' }
+    const res = await post({ tenantId: X.id })
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.code).toBe('switch_failed')
+    expect(body.error).not.toMatch(/already a member/i)
+  })
+
   it('500s when the claim cannot be set', async () => {
     state.memberships = [{ user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'active' }]
     state.metaError = { message: 'boom' }
@@ -229,11 +297,12 @@ describe('GET /api/tenant/memberships', () => {
     expect((await GET(new Request('http://t/api/tenant/memberships'))).status).toBe(401)
   })
 
-  it('lists active memberships and the active tenant', async () => {
+  it('lists active memberships of active schools and the active tenant', async () => {
     state.memberships = [
-      { user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'active', tenants: { slug: 'x-school', name: 'X School' } },
-      { user_id: 'user-1', tenant_id: OTHER, role: 'student', status: 'removed', tenants: { slug: 'o', name: 'O' } },
-      { user_id: 'user-2', tenant_id: OTHER, role: 'admin', status: 'active', tenants: { slug: 'o', name: 'O' } },
+      { user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'active', tenants: { slug: 'x-school', name: 'X School', status: 'active' } },
+      { user_id: 'user-1', tenant_id: OTHER, role: 'student', status: 'removed', tenants: { slug: 'o', name: 'O', status: 'active' } },
+      { user_id: 'user-1', tenant_id: 'tenant-suspended', role: 'admin', status: 'active', tenants: { slug: 's', name: 'S', status: 'suspended' } },
+      { user_id: 'user-2', tenant_id: OTHER, role: 'admin', status: 'active', tenants: { slug: 'o', name: 'O', status: 'active' } },
     ]
     const res = await GET(new Request('http://t/api/tenant/memberships'))
     expect(await res.json()).toEqual({
