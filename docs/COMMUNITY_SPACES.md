@@ -508,6 +508,7 @@ One `notification_type = 'community'`; `metadata.kind` says which event. `commun
 | `community_reply` | The post author (`reply_to: 'post'`) and the parent comment's author (`reply_to: 'comment'` — wins when they are the same person) | One row per recipient (`target_type 'user'`), batched per post | Yes, at most once per (recipient, post) per 15 min. A teacher/admin reply is `priority 'high'` + `staff_reply` |
 | `community_prompt` | Active students of the school with an **active enrollment** in the course who still have access (`has_course_access`) | One shared row (`target_type 'course'`) + one `user_notifications` row each | Yes, at most once per (student, course) per 15 min |
 | `community_answer_accepted` | The answer's author | One row per answer, idempotent | Yes |
+| `community_prompt_graded` (#873) | The graded student | One row per (prompt, student); a re-grade updates it and makes it unread again. Carries `score`, never the feedback text | Once (a re-grade does not push again) |
 | `community_mention` | — | Reserved for #876 | — |
 
 Prompts use enrollment, not just access: the RLS course feed itself requires an enrollment, and a plan subscriber should not hear about every course in the plan. School-feed prompts notify nobody (the issue asks for course prompts).
@@ -639,7 +640,7 @@ Migration `20260929160000_community_xp_874.sql`. The database awards; no client 
 | `community_comment` — comment or reply | 3 | 10 / UTC day | comment id |
 | `community_helpful_received` — `helpful` on your post/comment, never self | 2 | 20 / UTC day, once per (target, reactor) | `<target id>:<reactor id>` |
 | `community_answer_accepted` — your answer accepted, never your own question | 25 | once per question | question post id |
-| `community_prompt_graded` — registered for #873 | 20 | once per prompt | prompt post id |
+| `community_prompt_graded` — a teacher graded your answer to a graded prompt (#873; not for a "no answer" grade) | 20 | once per prompt | prompt post id |
 
 - `community_xp_rule(action)` is the registry (amount, cap, once); `community_award_xp()` applies it under a per-(user, action) advisory lock and calls `award_xp(..., _tenant_id)` with the host row's school. Both are revoked from clients.
 - Triggers: `trg_community_xp_on_post`, `trg_community_xp_on_comment`, `trg_community_xp_on_helpful` (AFTER INSERT) and the extended `community_on_answer_accepted()`. Each award is wrapped in `EXCEPTION WHEN OTHERS -> RAISE WARNING`, so XP never blocks posting.
@@ -647,3 +648,28 @@ Migration `20260929160000_community_xp_874.sql`. The database awards; no client 
 - Leagues and leaderboards sum every XP row regardless of type, so community XP counts toward weekly leagues with no change. It also extends the daily streak like any other XP.
 - Web: `createPost` / `createComment` read back what the insert earned (`readCommunityXpEarned()`, `lib/community/xp.ts`) and the composer/thread show "+N XP" (`components.gamification.xpAwarded.community*`).
 - **Tests**: `tests/sql/issue-874-community-xp.sql`, `tests/unit/community-xp.test.ts`.
+
+## Graded discussion prompts (#873)
+
+Migration `20260930120000_community_prompt_grades_873.sql`. A teacher ticks **Graded discussion** on a prompt (optionally with a **due date**), students answer it, and the teacher grades each student.
+
+- **Table** `community_prompt_grades`: `tenant_id`, `post_id` (the prompt), `student_id`, `comment_id` (the answer the grade was given for; the student's latest visible top-level answer when left NULL; NULL = graded without an answer), `score` 0–100, `feedback` (≤ 5000), `graded_by`, `graded_at`. **UNIQUE `(post_id, student_id)`** — one grade per student per prompt, whatever the number of answers.
+- **The rule** (`community_guard_prompt_grade()`, BEFORE INSERT/UPDATE, every writer): the grader is an active teacher/admin of the prompt's school on a plan with the community (`auth.uid()` on the RLS path, stamped into `graded_by`; the service role must name one); the prompt is a visible, graded `discussion_prompt` of a course in that school; the student is an active student of it; `comment_id` is that student's top-level answer to that prompt; tenant/post/student never change. `graded_at` is the server's clock. System clears (`ON DELETE SET NULL` of the answer or the grader's account) pass through.
+- **RLS**: a student reads only their own rows; staff of the row's school (`is_staff_of`) read/insert/update/delete; nobody else. `authenticated` may UPDATE only `score`, `feedback`, `comment_id`.
+- **Consequences** (`community_on_prompt_graded()`): 20 XP once per prompt (#874, only for an actual answer) and a `community_prompt_graded` notification (#870, category `replies`). Saving an identical grade is silent. Deleting a grade withdraws its notification; XP stays.
+- **Due date** `community_posts.due_at`: only on a graded prompt (CHECK). Informational — shown as "Due in 3 days" / "Due today" / "Past due"; later answers are still accepted and gradeable.
+- **Certificates (v1 decision)**: a graded prompt does **not** count toward course completion and does **not** gate certificate eligibility (`checkCertificateEligibility` / the certificate RPCs are untouched). Grades appear in the student's progress page only.
+
+### Surfaces
+
+| Where | What |
+|---|---|
+| `/dashboard/teacher/courses/[courseId]/community/prompts/[postId]` | Grading view (course author or admin): every active student enrolled in the course, plus any student who answered or was graded; answered / graded / not answered; all of a student's answers; score + feedback form. Filters **To grade** (default), Graded, Not answered, All |
+| Prompt card in the course feed (staff) | "Grade answers" link on a graded prompt |
+| Teacher dashboard | `PromptsToGradeCard` — answers waiting for a grade per prompt (`getPromptsToGrade()`) |
+| Prompt card in the feed + lesson page (student) | Due badge; the student's own score and feedback once graded ("Answered — not graded yet" on the lesson before that). The feed and lesson loaders read only the viewer's own grade (`getViewerPromptGrades()`) |
+| `/dashboard/student/progress` | "Discussion grades" per course |
+
+- Code: `lib/community/prompt-grades.ts` (pure helpers), `lib/community/prompt-grading.ts` (loaders), `app/actions/teacher/community-grades.ts` (`savePromptGrade`, `removePromptGrade` — the teacher's RLS client; the database is the authority), `components/community/prompt-grading-view.tsx`, `prompt-grade.tsx`, `prompts-to-grade-card.tsx`.
+- AI-suggested grades (issue scope item 8) are deferred.
+- **Tests**: `tests/sql/issue-873-community-prompt-grades.sql`, `tests/unit/community-prompt-grades.test.ts`, `tests/playwright/community-prompt-grading.spec.ts`.

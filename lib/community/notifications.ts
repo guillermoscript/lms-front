@@ -19,6 +19,7 @@ export const COMMUNITY_NOTIFICATION_KINDS = [
   'community_reply',
   'community_prompt',
   'community_answer_accepted',
+  'community_prompt_graded',
 ] as const
 
 export type CommunityNotificationKind = (typeof COMMUNITY_NOTIFICATION_KINDS)[number]
@@ -60,7 +61,18 @@ export interface CommunityAnswerAcceptedMeta extends CommunityNotificationBase {
   snippet: string | null
 }
 
-export type CommunityNotificationMeta = CommunityReplyMeta | CommunityPromptMeta | CommunityAnswerAcceptedMeta
+/** #873: a teacher graded the recipient's answer to a graded prompt. */
+export interface CommunityPromptGradedMeta extends CommunityNotificationBase {
+  kind: 'community_prompt_graded'
+  /** 0–100; null when the row carries none (never shown as a number then). */
+  score: number | null
+}
+
+export type CommunityNotificationMeta =
+  | CommunityReplyMeta
+  | CommunityPromptMeta
+  | CommunityAnswerAcceptedMeta
+  | CommunityPromptGradedMeta
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -86,6 +98,11 @@ function optionalId(value: unknown): number | null | typeof INVALID {
 function coerceCount(value: unknown): number {
   const n = typeof value === 'string' ? Number(value) : value
   return typeof n === 'number' && Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1
+}
+
+function optionalScore(value: unknown): number | null {
+  const n = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 100 ? n : null
 }
 
 function actorRole(value: unknown): ActorRole | null {
@@ -136,6 +153,8 @@ export function parseCommunityNotificationMeta(metadata: unknown): CommunityNoti
       return { ...base, kind: 'community_prompt', courseTitle: optionalString(m.course_title) }
     case 'community_answer_accepted':
       return { ...base, kind: 'community_answer_accepted', commentId, snippet: optionalString(m.snippet) }
+    case 'community_prompt_graded':
+      return { ...base, kind: 'community_prompt_graded', score: optionalScore(m.score) }
   }
 }
 
@@ -162,7 +181,8 @@ export function communityNotificationHref(meta: CommunityNotificationMeta, role:
     path = `/dashboard/${role}/community`
   }
 
-  const commentId = meta.kind === 'community_prompt' ? null : meta.commentId
+  const commentId =
+    meta.kind === 'community_prompt' || meta.kind === 'community_prompt_graded' ? null : meta.commentId
   const hash = commentId && UUID.test(commentId) ? `#comment-${commentId}` : ''
   return `${path}?post=${meta.postId}${hash}`
 }
@@ -174,6 +194,8 @@ export type CommunityMessageKey =
   | 'prompt'
   | 'promptNoCourse'
   | 'answerAccepted'
+  | 'promptGraded'
+  | 'promptGradedNoScore'
 
 export interface CommunityMessage {
   /** Key under `community.notifications`. */
@@ -203,6 +225,10 @@ export function communityNotificationMessage(meta: CommunityNotificationMeta, fa
         : { key: 'promptNoCourse', values: {} }
     case 'community_answer_accepted':
       return { key: 'answerAccepted', values: {} }
+    case 'community_prompt_graded':
+      return meta.score === null
+        ? { key: 'promptGradedNoScore', values: {} }
+        : { key: 'promptGraded', values: { score: meta.score } }
   }
 }
 

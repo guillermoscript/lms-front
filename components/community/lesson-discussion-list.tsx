@@ -24,6 +24,7 @@ import {
 import type { LessonPrompt } from '@/lib/community/lesson-prompts'
 import { CommentThread } from './comment-thread'
 import { CommunityMarkdown } from './community-markdown'
+import { PromptDueBadge, PromptGradeResult } from './prompt-grade'
 
 // Outlives a remount, so browser Back (served from the lesson's cached
 // payload) still shows answers posted here. Written only from an effect,
@@ -142,12 +143,14 @@ function LessonPromptItem({
   }
 
   const hasChips = prompt.is_graded || prompt.is_locked || answered
+  const tGrade = useTranslations('community.promptGrade')
 
   return (
     <article id={`prompt-${prompt.id}`} aria-labelledby={titleId} className="space-y-3 py-6 first:pt-0 last:pb-0">
       {hasChips && (
         <div className="flex flex-wrap items-center gap-2">
           {prompt.is_graded && <Badge variant="secondary">{tCommunity('graded')}</Badge>}
+          {prompt.is_graded && <PromptDueBadge dueAt={prompt.due_at} />}
           {prompt.is_locked && (
             <Badge variant="outline">
               <IconLock aria-hidden="true" />
@@ -174,6 +177,14 @@ function LessonPromptItem({
         className="max-w-prose text-base"
       />
       <p className="text-sm text-muted-foreground">{t('answerCount', { count })}</p>
+
+      {/* #873: the student's own grade, or that it is still to come. */}
+      {prompt.is_graded && prompt.viewer_grade && <PromptGradeResult grade={prompt.viewer_grade} className="max-w-prose" />}
+      {prompt.is_graded && !prompt.viewer_grade && answered && (
+        <p className="text-sm text-muted-foreground" data-testid="prompt-grade-pending">
+          {tGrade('pending')}
+        </p>
+      )}
 
       <Collapsible open={open} onOpenChange={setOpen}>
         <div className="flex flex-wrap gap-2">

@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getBlockedAuthorIds } from '@/lib/community/blocks'
 import { parsePostParam } from '@/lib/community/deep-link'
 import type { QuestionFilter } from '@/lib/community/questions'
+import { getViewerPromptGrades } from '@/lib/community/prompt-grading'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 export const FEED_PAGE_SIZE = 20
@@ -10,7 +11,7 @@ const POST_COLUMNS = `
   id, author_id, post_type, title, content, media_urls,
   is_pinned, is_locked, comment_count, reaction_count,
   created_at, course_id, lesson_id, is_graded,
-  milestone_type, milestone_data, accepted_comment_id
+  milestone_type, milestone_data, accepted_comment_id, due_at
 `
 
 type AdminClient = ReturnType<typeof createAdminClient>
@@ -114,9 +115,16 @@ export async function getFeedPage({
 
   const authorIds = [...new Set(posts.map((p) => p.author_id))]
   const postIds = posts.map((p) => p.id)
+  const gradedPromptIds = posts.filter((p) => p.post_type === 'discussion_prompt' && p.is_graded).map((p) => p.id)
 
-  const [{ data: profiles }, { data: members }, { data: reactions }, { data: pollOptions }, { data: pollVotes }] =
-    await Promise.all([
+  const [
+    { data: profiles },
+    { data: members },
+    { data: reactions },
+    { data: pollOptions },
+    { data: pollVotes },
+    viewerGrades,
+  ] = await Promise.all([
       admin.from('profiles').select('id, full_name, avatar_url').in('id', authorIds),
       admin.from('tenant_users').select('user_id, role').eq('tenant_id', tenantId).in('user_id', authorIds),
       admin
@@ -130,6 +138,8 @@ export async function getFeedPage({
         .in('post_id', postIds)
         .order('sort_order'),
       admin.from('community_poll_votes').select('post_id, option_id').eq('user_id', viewerId).in('post_id', postIds),
+      // #873: the viewer's OWN grades on graded prompts (staff have none).
+      getViewerPromptGrades(admin, { tenantId, viewerId, postIds: gradedPromptIds }),
     ])
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
@@ -164,6 +174,7 @@ export async function getFeedPage({
         user_reactions: reactionsMap.get(post.id) ?? [],
         poll_options: pollOptionsMap.get(post.id),
         user_voted_option: pollVotesMap.get(post.id) ?? null,
+        viewer_grade: viewerGrades.get(post.id) ?? null,
       }
     }),
     hasMore: posts.length >= FEED_PAGE_SIZE,

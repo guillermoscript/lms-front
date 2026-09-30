@@ -2,11 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBlockedAuthorIds } from '@/lib/community/blocks'
 import { visiblePostsQuery } from '@/lib/community/feed'
+import { getViewerPromptGrades } from '@/lib/community/prompt-grading'
+import type { ViewerPromptGrade } from '@/lib/community/prompt-grades'
 
 /** The lesson shows at most this many prompts; the rest are in the course feed. */
 export const LESSON_PROMPT_LIMIT = 10
 
-const PROMPT_COLUMNS = 'id, title, content, is_pinned, is_locked, is_graded, created_at, author_id'
+const PROMPT_COLUMNS = 'id, title, content, is_pinned, is_locked, is_graded, due_at, created_at, author_id'
 
 type PromptRow = {
   id: string
@@ -15,6 +17,7 @@ type PromptRow = {
   is_pinned: boolean
   is_locked: boolean
   is_graded: boolean
+  due_at: string | null
   created_at: string
   author_id: string
 }
@@ -26,6 +29,8 @@ export type LessonPrompt = PromptRow & {
    * and never drops when a comment is removed (it only sets `is_hidden`).
    */
   answer_count: number
+  /** The viewer's own grade when the prompt is graded and they were graded (#873). */
+  viewer_grade: ViewerPromptGrade | null
 }
 
 export type LessonPrompts =
@@ -99,6 +104,9 @@ export async function getLessonPrompts({
 
   // One count per prompt (at most ten, in parallel): a single row fetch would
   // be cut off at PostgREST's max_rows on a large cohort.
+  const gradedIds = rows.filter((p) => p.is_graded).map((p) => p.id)
+  const gradesPromise = getViewerPromptGrades(admin, { tenantId, viewerId, postIds: gradedIds })
+
   const [{ data: answers, error: answersError }, ...counts] = await Promise.all([
     admin
       .from('community_comments')
@@ -117,10 +125,11 @@ export async function getLessonPrompts({
   if (answersError) throw answersError
   const countError = counts.find((c) => c.error)?.error
   if (countError) throw countError
+  const grades = await gradesPromise
 
   return {
     enabled: true,
-    prompts: rows.map((p, i) => ({ ...p, answer_count: counts[i].count ?? 0 })),
+    prompts: rows.map((p, i) => ({ ...p, answer_count: counts[i].count ?? 0, viewer_grade: grades.get(p.id) ?? null })),
     answeredIds: new Set((answers ?? []).map((a) => a.post_id as string)),
     hasMore,
     loadId,

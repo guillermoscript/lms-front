@@ -13,6 +13,7 @@ import { PostSkeleton } from './post-skeleton'
 import type { CommunitySettings } from '@/lib/community/settings'
 import { parseCommentHash, splitFocusedPost } from '@/lib/community/deep-link'
 import { matchesQuestionFilter, QUESTION_FILTER_PARAM, type QuestionFilter } from '@/lib/community/questions'
+import type { ViewerPromptGrade } from '@/lib/community/prompt-grades'
 
 export interface CommunityPost {
   id: string
@@ -33,6 +34,10 @@ export interface CommunityPost {
   milestone_data: unknown
   /** A question's accepted answer (#875); null for everything else. */
   accepted_comment_id: string | null
+  /** A graded prompt's optional due date (#873). */
+  due_at: string | null
+  /** The VIEWER's own grade on a graded prompt (#873); never anyone else's. */
+  viewer_grade?: ViewerPromptGrade | null
   /** `role` is the author's role in THIS school, null when they left it. */
   author: { id: string; full_name: string | null; avatar_url: string | null; role: string | null }
   user_reactions: string[]

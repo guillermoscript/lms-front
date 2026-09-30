@@ -37,6 +37,7 @@ function post(id: string, created_at: string, extra: Partial<CommunityPost> = {}
     milestone_type: null,
     milestone_data: null,
     accepted_comment_id: null,
+    due_at: null,
     author: { id: 'u1', full_name: null, avatar_url: null, role: null },
     user_reactions: [],
     ...extra,

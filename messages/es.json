@@ -607,7 +607,10 @@
         "inProgress": "En Progreso",
         "notStarted": "Sin Iniciar",
         "viewCourse": "Ver Curso",
-        "examScore": "Puntaje: {score}%"
+        "examScore": "Puntaje: {score}%",
+        "discussionGrades": "Calificaciones de discusión",
+        "discussionScore": "{title} — {score}/100",
+        "untitledPrompt": "Tema de discusión"
       },
       "certificates": {
         "title": "Mis Certificados",
@@ -7105,12 +7108,14 @@
         "description": "Elige de qué te avisa la comunidad.",
         "group": "Comunidad",
         "replies": "Respuestas",
-        "repliesDescription": "Respuestas a tus publicaciones y comentarios, y cuando aceptan tu respuesta.",
+        "repliesDescription": "Respuestas a tus publicaciones y comentarios, cuando aceptan tu respuesta y cuando un profesor califica tu respuesta.",
         "prompts": "Nuevos temas de discusión",
         "promptsDescription": "Cuando un docente abre una discusión en uno de tus cursos.",
         "everySchool": "Estos ajustes se aplican en todas las escuelas a las que perteneces.",
         "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo."
-      }
+      },
+      "promptGraded": "Tu respuesta fue calificada: {score}/100",
+      "promptGradedNoScore": "Tu respuesta fue calificada"
     },
     "emptySchool": "No hay publicaciones aún. ¡Sé el primero en compartir algo!",
     "emptyCourse": "No hay discusiones aún. ¡Inicia la conversación!",
@@ -7303,6 +7308,64 @@
         "courseCount": "{count, plural, one {# pregunta} other {# preguntas}}",
         "untitledCourse": "Curso sin título"
       }
+    },
+    "grading": {
+      "gradeAnswers": "Calificar respuestas",
+      "gradeAnswersLabel": "Calificar respuestas: {title}",
+      "title": "Calificar respuestas",
+      "backToCommunity": "Volver a la comunidad del curso",
+      "lesson": "Lección: {lesson}",
+      "filterLabel": "Mostrar",
+      "filters": {
+        "all": "Todos",
+        "ungraded": "Por calificar",
+        "graded": "Calificados",
+        "unanswered": "Sin respuesta"
+      },
+      "filterCount": "{label} · {count}",
+      "status": {
+        "ungraded": "Esperando calificación",
+        "graded": "Calificado",
+        "unanswered": "Sin respuesta"
+      },
+      "answers": "{count, plural, one {# respuesta} other {# respuestas}}",
+      "noAnswer": "Aún no ha respondido.",
+      "score": "Puntaje (0–100)",
+      "feedback": "Comentarios (opcional)",
+      "feedbackPlaceholder": "Qué salió bien y qué mejorar",
+      "save": "Guardar calificación",
+      "update": "Actualizar calificación",
+      "saving": "Guardando…",
+      "saved": "Calificación guardada",
+      "remove": "Quitar calificación",
+      "removed": "Calificación quitada",
+      "invalidScore": "Escribe un número entero del 0 al 100.",
+      "gradedOn": "Calificado el {date}",
+      "gradedScore": "{score}/100",
+      "summary": "{graded} de {total} calificados",
+      "emptyRoster": "Aún no hay estudiantes en este curso.",
+      "emptyFilter": "Ningún estudiante coincide con este filtro.",
+      "certificateNote": "Las calificaciones de discusión aparecen en el progreso de cada estudiante. No cuentan para completar el curso ni para el certificado.",
+      "unknownStudent": "Estudiante sin nombre",
+      "dashboard": {
+        "title": "Respuestas de discusión por calificar",
+        "summary": "{count, plural, one {# respuesta espera calificación} other {# respuestas esperan calificación}}",
+        "allGraded": "Todas las respuestas a tus temas calificados tienen calificación.",
+        "promptCount": "{count} por calificar",
+        "untitled": "Tema sin título"
+      }
+    },
+    "promptGrade": {
+      "yourGrade": "Tu calificación",
+      "score": "{score}/100",
+      "feedback": "Comentarios del profesor",
+      "pending": "Respondido — aún sin calificar",
+      "dueIn": "{count, plural, one {Vence en # día} other {Vence en # días}}",
+      "dueToday": "Vence hoy",
+      "overdue": "Vencido",
+      "dueOn": "Vence el {date}",
+      "dueDate": "Fecha de entrega (opcional)",
+      "dueDateHint": "Los estudiantes la ven. Se siguen aceptando respuestas después."
     }
   },
   "schoolLanding": {

@@ -1066,6 +1066,7 @@ export type Database = {
           content: string
           course_id: number | null
           created_at: string
+          due_at: string | null
           id: string
           is_graded: boolean
           is_hidden: boolean
@@ -1090,6 +1091,7 @@ export type Database = {
           content: string
           course_id?: number | null
           created_at?: string
+          due_at?: string | null
           id?: string
           is_graded?: boolean
           is_hidden?: boolean
@@ -1114,6 +1116,7 @@ export type Database = {
           content?: string
           course_id?: number | null
           created_at?: string
+          due_at?: string | null
           id?: string
           is_graded?: boolean
           is_hidden?: boolean
@@ -1188,6 +1191,98 @@ export type Database = {
           },
           {
             foreignKeyName: "community_posts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_prompt_grades: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          feedback: string | null
+          graded_at: string
+          graded_by: string | null
+          id: string
+          post_id: string
+          score: number
+          student_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string
+          graded_by?: string | null
+          id?: string
+          post_id: string
+          score: number
+          student_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string
+          graded_by?: string | null
+          id?: string
+          post_id?: string
+          score?: number
+          student_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_prompt_grades_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

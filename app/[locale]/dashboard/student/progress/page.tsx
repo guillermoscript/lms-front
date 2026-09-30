@@ -47,7 +47,13 @@ export default async function StudentProgressPage() {
   const courseIds = enrollments?.map((e) => e.course_id) || []
 
   // Parallelize all 4 queries (all independent once we have courseIds and userId)
-  const [{ data: lessons }, { data: completions }, { data: exams }, { data: examSubmissions }] = await Promise.all([
+  const [
+    { data: lessons },
+    { data: completions },
+    { data: exams },
+    { data: examSubmissions },
+    { data: promptGrades },
+  ] = await Promise.all([
     courseIds.length > 0
       ? supabase.from('lessons').select('id, course_id, title').in('course_id', courseIds).eq('status', 'published')
       : Promise.resolve({ data: [] as { id: number; course_id: number; title: string }[] }),
@@ -57,6 +63,15 @@ export default async function StudentProgressPage() {
       : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string }[] }),
     supabase.from('exam_submissions').select('exam_id, score, submission_date')
       .eq('student_id', userId).eq('tenant_id', tenantId),
+    // #873: the student's own grades on graded discussion prompts. Shown, but
+    // not part of the completion percentage (nor of certificate eligibility).
+    supabase
+      .from('community_prompt_grades')
+      .select('post_id, score, graded_at, community_posts!inner(title, content, course_id, is_hidden)')
+      .eq('student_id', userId)
+      .eq('tenant_id', tenantId)
+      .eq('community_posts.is_hidden', false)
+      .order('graded_at', { ascending: true }),
   ])
 
   // Build maps
@@ -69,9 +84,18 @@ export default async function StudentProgressPage() {
     }
   })
 
+  const promptGradesByCourse = new Map<number, { title: string; score: number }[]>()
+  for (const g of promptGrades ?? []) {
+    const post = g.community_posts as unknown as { title: string | null; content: string; course_id: number | null }
+    if (post.course_id === null) continue
+    const flat = post.content.replace(/\s+/g, ' ').trim()
+    const title = post.title?.trim() || (flat.length > 40 ? `${flat.slice(0, 39)}…` : flat) || t('untitledPrompt')
+    promptGradesByCourse.set(post.course_id, [...(promptGradesByCourse.get(post.course_id) ?? []), { title, score: g.score }])
+  }
+
   // Calculate per-course progress
   const courseProgress = (enrollments || []).map((enrollment) => {
-    const course = enrollment.courses as any
+    const course = enrollment.courses as unknown as { title: string | null } | null
     const courseLessons = (lessons || []).filter((l) => l.course_id === enrollment.course_id)
     const courseExams = (exams || []).filter((e) => e.course_id === enrollment.course_id)
     const completedLessons = courseLessons.filter((l) => completionSet.has(l.id))
@@ -96,6 +120,7 @@ export default async function StudentProgressPage() {
         title: e.title,
         score: examScoreMap.get(e.exam_id),
       })),
+      discussionGrades: promptGradesByCourse.get(enrollment.course_id) ?? [],
     }
   })
 
@@ -273,6 +298,20 @@ export default async function StudentProgressPage() {
                             : ''}
                         </Badge>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Discussion grades (#873) */}
+                  {course.discussionGrades.length > 0 && (
+                    <div className="space-y-1.5 pt-1" data-testid="progress-discussion-grades">
+                      <p className="text-xs font-medium text-muted-foreground">{t('discussionGrades')}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {course.discussionGrades.map((grade, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {t('discussionScore', { title: grade.title, score: grade.score })}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
