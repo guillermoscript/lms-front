@@ -19,6 +19,7 @@ import { areToursEnabled } from '@/lib/ui-state-keys'
 import { getMailerStatus } from '@/lib/email/status'
 import { MailerStatusRow } from '@/components/admin/mailer-status-row'
 import { countPreviewLessons } from '@/lib/settings/free-preview'
+import { normalizeCountry } from '@/lib/countries'
 
 export default async function SettingsPage({
   searchParams,
@@ -65,7 +66,7 @@ export default async function SettingsPage({
   const tenantId = await getCurrentTenantId()
   const { data: tenant } = await createAdminClient()
     .from('tenants')
-    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, country')
     .eq('id', tenantId)
     .single()
   const stripeAccountId = tenant?.stripe_account_id ?? null
@@ -139,7 +140,10 @@ export default async function SettingsPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <GeneralSettingsForm settings={settings.general || {}} />
+                  <GeneralSettingsForm
+                    settings={settings.general || {}}
+                    country={normalizeCountry(tenant?.country)}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

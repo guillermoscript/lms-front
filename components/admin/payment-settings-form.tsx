@@ -25,7 +25,8 @@ import type { SettingsGroup } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { IconInfoCircle } from '@tabler/icons-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { SCHOOL_CURRENCIES } from '@/lib/countries'
 import PaymentProviderRow from '@/components/admin/payment-provider-row'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
 import BinancePersonalForm from '@/components/admin/binance-personal-form'
@@ -92,6 +93,10 @@ export default function PaymentSettingsForm({
   // Settings values are JSONB scalars (string | number | null), so each one is
   // coerced to the shape its input actually wants rather than trusted as-is.
   const currency = String(settings.currency?.value?.value ?? 'USD')
+  // Every currency a school country can default to (#865), plus the saved one
+  // if it predates that list, labelled in the admin's own language.
+  const locale = useLocale()
+  const currencyOptions = currencyChoices(currency, locale)
   const taxRate = Number(settings.tax_rate?.value?.value ?? 0)
   const invoicePrefix = String(settings.invoice_prefix?.value?.value ?? 'INV')
   const manualPaymentInstructions = String(
@@ -368,14 +373,11 @@ export default function PaymentSettingsForm({
                 <SelectValue placeholder={t('payment.currencyPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="USD">USD - US Dollar</SelectItem>
-                <SelectItem value="EUR">EUR - Euro</SelectItem>
-                <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
-                <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
-                <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
+                {currencyOptions.map(({ code, name }) => (
+                  <SelectItem key={code} value={code}>
+                    {code} - {name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">{t('payment.currencyHint')}</p>
@@ -495,4 +497,19 @@ function WalletButton({
       {children}
     </button>
   )
+}
+
+/** `{ code, name }` for the currency select, `saved` included even if unlisted. */
+function currencyChoices(saved: string, locale: string): { code: string; name: string }[] {
+  const codes = new Set(SCHOOL_CURRENCIES)
+  if (/^[A-Z]{3}$/.test(saved)) codes.add(saved)
+  let names: Intl.DisplayNames | null = null
+  try {
+    names = new Intl.DisplayNames([locale], { type: 'currency' })
+  } catch {
+    names = null
+  }
+  return Array.from(codes)
+    .sort()
+    .map(code => ({ code, name: names?.of(code) ?? code }))
 }

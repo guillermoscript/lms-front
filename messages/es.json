@@ -3466,7 +3466,13 @@
             "maintenanceMode": "Modo Mantenimiento",
             "maintenanceModeHint": "Activar para mostrar mensaje de mantenimiento a los usuarios",
             "maintenanceMessage": "Mensaje de Mantenimiento",
-            "maintenanceMessagePlaceholder": "Actualmente estamos realizando tareas de mantenimiento. Por favor, vuelve pronto."
+            "maintenanceMessagePlaceholder": "Actualmente estamos realizando tareas de mantenimiento. Por favor, vuelve pronto.",
+            "country": "País",
+            "countryPlaceholder": "Busca tu país",
+            "countryEmpty": "Ningún país coincide con la búsqueda.",
+            "countryHint": "Dónde opera tu escuela. Si aún no hay moneda configurada, se usa la del país.",
+            "countryError": "No se pudo guardar el país. Inténtalo de nuevo.",
+            "countryCurrencyFilled": "Moneda predeterminada: {currency}."
           },
           "email": {
             "notifications": "Notificaciones por Email",
@@ -7398,7 +7404,11 @@
     "errorEmailRegistered": "Este correo ya está registrado. Inicia sesión en su lugar.",
     "errorSlugTaken": "Esta URL de escuela ya está en uso. Elige otra.",
     "errorCreateFailed": "No se pudo crear la escuela: {message}",
-    "errorGeneric": "Algo salió mal"
+    "errorGeneric": "Algo salió mal",
+    "countryLabel": "País",
+    "countryPlaceholder": "Busca tu país",
+    "countryEmpty": "Ningún país coincide con la búsqueda.",
+    "countryHint": "Define tu moneda predeterminada. Puedes cambiarlo después en Configuración."
   },
   "home": {
     "hero": {

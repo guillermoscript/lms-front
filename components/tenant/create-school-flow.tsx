@@ -15,6 +15,8 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group'
 import { Card, CardContent } from '@/components/ui/card'
+import { CountryPicker } from '@/components/shared/country-picker'
+import { defaultCurrencyForCountry, type CountryCode } from '@/lib/countries'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import {
@@ -32,9 +34,11 @@ interface CreateSchoolFlowProps {
   user: { id: string; email: string } | null
   plan?: string
   interval?: 'monthly' | 'yearly'
+  /** Detected on the server from geo headers / Accept-Language; null = unknown. */
+  initialCountry?: CountryCode | null
 }
 
-export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps) {
+export function CreateSchoolFlow({ user, plan, interval, initialCountry = null }: CreateSchoolFlowProps) {
   // Query string carrying the pricing-page plan choice through the flow ('' when no plan / free)
   const planQuery = plan && plan !== 'free'
     ? `?plan=${encodeURIComponent(plan)}${interval ? `&interval=${interval}` : ''}`
@@ -60,6 +64,7 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
   // School state
   const [schoolName, setSchoolName] = useState('')
   const [slug, setSlug] = useState('')
+  const [country, setCountry] = useState<CountryCode | null>(initialCountry)
 
   const generateSlug = (value: string) => {
     return value
@@ -200,9 +205,17 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
     try {
       const supabase = createClient()
 
-      // Use the create_school RPC which runs as the authenticated user
+      // Use the create_school RPC which runs as the authenticated user. The
+      // country is optional; when it maps to a currency, that becomes the
+      // school's default currency (#865).
+      const currency = defaultCurrencyForCountry(country)
       const { data: tenantId, error: createError } = await supabase
-        .rpc('create_school', { _name: schoolName.trim(), _slug: slug.trim() })
+        .rpc('create_school', {
+          _name: schoolName.trim(),
+          _slug: slug.trim(),
+          ...(country ? { _country: country } : {}),
+          ...(currency ? { _currency: currency } : {}),
+        })
 
       if (createError) {
         if (createError.code === '23505') {
@@ -499,6 +512,21 @@ export function CreateSchoolFlow({ user, plan, interval }: CreateSchoolFlowProps
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">{t('slugHint')}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="school-country">{t('countryLabel')}</Label>
+                <CountryPicker
+                  id="school-country"
+                  data-testid="create-school-country"
+                  aria-describedby="school-country-hint"
+                  value={country}
+                  onValueChange={setCountry}
+                  placeholder={t('countryPlaceholder')}
+                  emptyText={t('countryEmpty')}
+                  disabled={loading}
+                />
+                <p id="school-country-hint" className="text-xs text-muted-foreground">{t('countryHint')}</p>
               </div>
 
               {error && <p className="text-sm text-destructive">{error}</p>}
