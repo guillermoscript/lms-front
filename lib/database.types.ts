@@ -6358,6 +6358,7 @@ export type Database = {
           billing_period_end: string | null
           billing_status: string | null
           created_at: string | null
+          country: string | null
           domain: string | null
           id: string
           logo_url: string | null
@@ -6377,6 +6378,7 @@ export type Database = {
           billing_period_end?: string | null
           billing_status?: string | null
           created_at?: string | null
+          country?: string | null
           domain?: string | null
           id?: string
           logo_url?: string | null
@@ -6396,6 +6398,7 @@ export type Database = {
           billing_period_end?: string | null
           billing_status?: string | null
           created_at?: string | null
+          country?: string | null
           domain?: string | null
           id?: string
           logo_url?: string | null
