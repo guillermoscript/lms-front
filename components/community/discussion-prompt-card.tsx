@@ -3,6 +3,7 @@
 import { IconBulb, IconMessageCircle } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { useTranslations } from 'next-intl'
+import { CommunityMarkdown } from './community-markdown'
 
 interface CommunityPost {
   id: string
@@ -55,7 +56,7 @@ export function DiscussionPromptCard({ post }: DiscussionPromptCardProps) {
       {post.title && (
         <h3 className="font-bold text-sm leading-tight">{post.title}</h3>
       )}
-      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{post.content}</p>
+      <CommunityMarkdown content={post.content} className="text-sm" collapsible />
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
         <IconMessageCircle size={14} />
         <span>

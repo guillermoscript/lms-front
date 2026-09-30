@@ -28,6 +28,7 @@ import { FlagDialog } from './flag-dialog'
 import { buttonVariants } from '@/components/ui/button'
 import { blockUser, createComment, deleteComment, getComments } from '@/app/actions/community'
 import { commentAnchorId, scrollBehavior } from '@/lib/community/deep-link'
+import { CommunityMarkdown, CommunityMarkdownField } from './community-markdown'
 
 type CommunityT = ReturnType<typeof useTranslations<'community'>>
 
@@ -253,16 +254,18 @@ export function CommentThread({
             handlePost(newComment)
           }}
         >
-          <Textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder={placeholder ?? t('writeReply')}
-            aria-label={composerLabel ?? t('writeReply')}
-            maxLength={MAX_COMMENT_LENGTH}
-            // Only when the reader opened the thread on purpose ("Answer").
-            autoFocus={autoFocusComposer}
-            className="min-h-24 resize-y text-base leading-relaxed md:text-base md:leading-relaxed"
-          />
+          <CommunityMarkdownField value={newComment} previewClassName="min-h-24 text-base">
+            <Textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder={placeholder ?? t('writeReply')}
+              aria-label={composerLabel ?? t('writeReply')}
+              maxLength={MAX_COMMENT_LENGTH}
+              // Only when the reader opened the thread on purpose ("Answer").
+              autoFocus={autoFocusComposer}
+              className="min-h-24 resize-y text-base leading-relaxed md:text-base md:leading-relaxed"
+            />
+          </CommunityMarkdownField>
           <div className="flex justify-end">
             <Button
               type="submit"
@@ -284,15 +287,17 @@ export function CommentThread({
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 flex gap-2">
-            <Textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder={placeholder ?? t('writeReply')}
-              aria-label={composerLabel ?? t('writeReply')}
-              maxLength={MAX_COMMENT_LENGTH}
-              autoFocus={autoFocusComposer}
-              className="min-h-[60px] resize-none text-xs"
-            />
+            <CommunityMarkdownField value={newComment} previewClassName="min-h-[60px] text-xs">
+              <Textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder={placeholder ?? t('writeReply')}
+                aria-label={composerLabel ?? t('writeReply')}
+                maxLength={MAX_COMMENT_LENGTH}
+                autoFocus={autoFocusComposer}
+                className="min-h-[60px] resize-y text-xs"
+              />
+            </CommunityMarkdownField>
             <Button
               size="icon"
               className="h-8 w-8 shrink-0 self-end"
@@ -393,18 +398,23 @@ function CommentReplyForm({
       }}
       className="flex-1 flex gap-2"
     >
-      <Textarea
+      <CommunityMarkdownField
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder={t('writeReply')}
-        aria-label={t('writeReply')}
-        maxLength={MAX_COMMENT_LENGTH}
-        className={cn(
-          'resize-none',
-          isLearner ? 'min-h-16 text-base md:text-base' : 'min-h-[50px] text-xs'
-        )}
-        autoFocus
-      />
+        previewClassName={isLearner ? 'min-h-16 text-base' : 'min-h-[50px] text-xs'}
+      >
+        <Textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder={t('writeReply')}
+          aria-label={t('writeReply')}
+          maxLength={MAX_COMMENT_LENGTH}
+          className={cn(
+            'resize-y',
+            isLearner ? 'min-h-16 text-base md:text-base' : 'min-h-[50px] text-xs'
+          )}
+          autoFocus
+        />
+      </CommunityMarkdownField>
       <Button
         type="submit"
         size="icon"
@@ -534,14 +544,11 @@ function CommentItem({
           </DropdownMenu>
         </div>
 
-        <p
-          className={cn(
-            'leading-relaxed whitespace-pre-wrap text-foreground/90 break-words',
-            isLearner ? 'text-sm' : 'text-xs'
-          )}
-        >
-          {comment.content}
-        </p>
+        <CommunityMarkdown
+          content={comment.content}
+          className={isLearner ? 'text-sm' : 'text-xs'}
+          collapsible
+        />
 
         {!isLocked && (
           <div className="flex items-center gap-3 pt-0.5">

@@ -7256,7 +7256,15 @@
       "teacher": "Teacher",
       "admin": "Admin"
     },
-    "postActions": "Post actions"
+    "postActions": "Post actions",
+    "markdown": {
+      "hint": "Markdown: **bold**  *italic*  `code`  ```code block```",
+      "preview": "Preview",
+      "edit": "Edit",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "copyCode": "Copy code"
+    }
   },
   "schoolLanding": {
     "tagline": "Learn with us. Enroll in courses and grow your skills.",

@@ -7256,7 +7256,15 @@
       "teacher": "Profesor",
       "admin": "Admin"
     },
-    "postActions": "Acciones de la publicación"
+    "postActions": "Acciones de la publicación",
+    "markdown": {
+      "hint": "Markdown: **negrita**  *cursiva*  `código`  ```bloque de código```",
+      "preview": "Vista previa",
+      "edit": "Editar",
+      "showMore": "Ver más",
+      "showLess": "Ver menos",
+      "copyCode": "Copiar código"
+    }
   },
   "schoolLanding": {
     "tagline": "Aprende con nosotros. Inscríbete en cursos y desarrolla tus habilidades.",

@@ -3,6 +3,7 @@
 import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { CommunityMarkdownField } from './community-markdown'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -107,14 +108,16 @@ export function DiscussionPromptComposer({
 
       <div className="space-y-2">
         <Label htmlFor={`${fieldId}-content`}>{t('promptContent')}</Label>
-        <Textarea
-          id={`${fieldId}-content`}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={t('promptContent')}
-          maxLength={5000}
-          className="min-h-[100px] resize-none"
-        />
+        <CommunityMarkdownField value={content}>
+          <Textarea
+            id={`${fieldId}-content`}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={t('promptContent')}
+            maxLength={5000}
+            className="min-h-[100px] resize-y"
+          />
+        </CommunityMarkdownField>
       </div>
 
       <div className="space-y-2">

@@ -23,6 +23,7 @@ import {
 } from '@/lib/community/lesson-answers'
 import type { LessonPrompt } from '@/lib/community/lesson-prompts'
 import { CommentThread } from './comment-thread'
+import { CommunityMarkdown } from './community-markdown'
 
 // Outlives a remount, so browser Back (served from the lesson's cached
 // payload) still shows answers posted here. Written only from an effect,
@@ -167,12 +168,11 @@ function LessonPromptItem({
           {prompt.title}
         </h4>
       )}
-      <p
+      <CommunityMarkdown
         id={prompt.title ? undefined : titleId}
-        className="max-w-prose text-base leading-relaxed whitespace-pre-wrap break-words"
-      >
-        {prompt.content}
-      </p>
+        content={prompt.content}
+        className="max-w-prose text-base"
+      />
       <p className="text-sm text-muted-foreground">{t('answerCount', { count })}</p>
 
       <Collapsible open={open} onOpenChange={setOpen}>
