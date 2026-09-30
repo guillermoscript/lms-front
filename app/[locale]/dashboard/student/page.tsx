@@ -5,6 +5,7 @@ import { WelcomeHero } from '@/components/student/welcome-hero'
 import { StatsCards } from '@/components/student/stats-cards'
 import { CourseProgressCard } from '@/components/student/course-progress-card'
 import { UpcomingExams } from '@/components/student/upcoming-exams'
+import { DueReviewsBanner } from '@/components/student/due-reviews-banner'
 import { RecentActivity } from '@/components/student/recent-activity'
 import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
@@ -144,6 +145,9 @@ export default async function StudentDashboard() {
           nextCourse={nextCourse}
         />
         </div>
+
+        {/* Flashcards due for review (#849) — hidden when none are */}
+        <DueReviewsBanner userId={user.id} tenantId={tenantId} />
 
         {/* Inline stats — compact, not card-based */}
         {data.courses.length > 0 && (

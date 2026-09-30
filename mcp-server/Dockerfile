@@ -3,6 +3,13 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# @lms/core (#849) is a `file:../packages/core` devDependency: `mcp-use build`
+# inlines its source into .mcp-use/build, so only the builder needs it, at the
+# path the lockfile names. It arrives as the `core` named build context
+# (`--build-context core=packages/core`) so this image's context stays
+# mcp-server/ — the root .dockerignore excludes mcp-server for the web image.
+COPY --from=core . /packages/core
+
 COPY package*.json ./
 RUN npm ci
 

@@ -6,5 +6,8 @@
   "types": "./src/index.ts",
   "peerDependencies": {
     "@supabase/supabase-js": "^2.0.0"
+  },
+  "dependencies": {
+    "ts-fsrs": "^5.4.1"
   }
 }
