@@ -14,11 +14,17 @@
  * the web's join card does. Either way the answer carries the role, and the
  * client must call `supabase.auth.refreshSession()` for the new claims.
  *
- * Errors carry a stable `code`: `invalid_body` 400 · `school_not_found` 404 ·
- * `join_required` 409 · `student_limit` 409 · `switch_failed` 500.
+ * Bearer only (#859): the web never calls this route, and a cookie-authed
+ * one would let another school's page — sibling subdomains are same-site —
+ * join a logged-in visitor to a school with a `text/plain` POST, spending a
+ * seat.
+ *
+ * Errors carry a stable `code`: `unauthorized` 401 · `invalid_body` 400 ·
+ * `school_not_found` 404 · `join_required` 409 · `student_limit` 409 ·
+ * `switch_failed` 500.
  */
 import { z } from 'zod'
-import { getApiUser } from '@/lib/supabase/api-auth'
+import { getBearerUser } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canJoinWithoutAsking, joinSchool, setActiveTenant } from '@/lib/tenant/join-school'
 
@@ -38,8 +44,11 @@ const bodySchema = z
     message: 'Pass exactly one of tenantId or slug',
   })
 
+const switchFailed = () =>
+  Response.json({ error: 'Failed to switch school', code: 'switch_failed' }, { status: 500 })
+
 export async function POST(req: Request) {
-  const user = await getApiUser(req)
+  const user = await getBearerUser(req)
   if (!user) return Response.json({ error: 'Unauthorized', code: 'unauthorized' }, { status: 401 })
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
@@ -56,29 +65,38 @@ export async function POST(req: Request) {
   // query below is filtered by the verified `user.id`.
   const admin = createAdminClient()
 
-  const { data: tenant } = await admin
+  const { data: tenant, error: tenantError } = await admin
     .from('tenants')
     .select('id, slug, name')
     .eq(requestedId ? 'id' : 'slug', (requestedId ?? slug)!)
     .eq('status', 'active')
     .maybeSingle()
+  // A failed lookup is not an unknown school: say so, or the app tells the
+  // user a real school does not exist.
+  if (tenantError) {
+    console.error('Tenant switch: school lookup failed', tenantError)
+    return switchFailed()
+  }
   if (!tenant) {
     return Response.json({ error: 'School not found', code: 'school_not_found' }, { status: 404 })
   }
   const school = { tenantId: tenant.id, slug: tenant.slug, name: tenant.name }
 
-  const { data: membership } = await admin
+  const { data: membership, error: membershipError } = await admin
     .from('tenant_users')
     .select('role')
     .eq('user_id', user.id)
     .eq('tenant_id', tenant.id)
     .eq('status', 'active')
     .maybeSingle()
+  // An unknown membership must not fall through to the join path.
+  if (membershipError) {
+    console.error('Tenant switch: membership lookup failed', membershipError)
+    return switchFailed()
+  }
 
   if (membership) {
-    if (!(await setActiveTenant(admin, user.id, tenant.id))) {
-      return Response.json({ error: 'Failed to switch school', code: 'switch_failed' }, { status: 500 })
-    }
+    if (!(await setActiveTenant(admin, user.id, tenant.id))) return switchFailed()
     return Response.json({ ...school, role: membership.role, joined: false })
   }
 
@@ -92,7 +110,8 @@ export async function POST(req: Request) {
   const outcome = await joinSchool({ admin, user, tenantId: tenant.id })
   if (!outcome.ok) {
     // `already_member` means a concurrent request joined first — the metadata
-    // is what is left to do.
+    // is what is left to do. If that fails, the reason is not "already a
+    // member" (joinSchool's message), so answer with the generic failure.
     if (outcome.code === 'already_member') {
       const switched = await setActiveTenant(admin, user.id, tenant.id)
       const { data: row } = await admin
@@ -100,8 +119,10 @@ export async function POST(req: Request) {
         .select('role')
         .eq('user_id', user.id)
         .eq('tenant_id', tenant.id)
+        .eq('status', 'active')
         .maybeSingle()
       if (switched && row) return Response.json({ ...school, role: row.role, joined: false })
+      return switchFailed()
     }
     if (outcome.code === 'student_limit') {
       return Response.json({ error: outcome.error, code: 'student_limit', school }, { status: 409 })

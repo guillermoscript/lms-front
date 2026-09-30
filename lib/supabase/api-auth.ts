@@ -41,10 +41,10 @@ export async function getApiAuthContext(req: Request): Promise<ApiAuthContext | 
 
 /**
  * Resolve only WHO is calling, over cookie or `Authorization: Bearer` auth —
- * no tenant. For routes whose job is to pick the tenant (`/api/tenant/switch`,
- * #845): `getApiAuthContext` refuses a Bearer token with no `tenant_id` claim
- * and zero or several memberships, which is exactly the caller that needs to
- * choose a school. Returns null when unauthenticated (routes respond 401).
+ * no tenant. For routes the web also calls cookie-authenticated (e.g.
+ * `/api/account/delete`) that must not depend on the caller's school. Routes
+ * only the app calls use `getBearerUser` instead (#859). Returns null when
+ * unauthenticated (routes respond 401).
  */
 export async function getApiUser(req: Request): Promise<User | null> {
     const bearerToken = (req.headers.get('authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1]
@@ -57,13 +57,33 @@ export async function getApiUser(req: Request): Promise<User | null> {
         return user ?? null
     }
 
+    return verifyBearerToken(bearerToken)
+}
+
+/**
+ * Resolve WHO is calling from an `Authorization: Bearer` token ONLY — session
+ * cookies are ignored. For routes only the native app calls and that spend
+ * something on the caller's behalf (`/api/tenant/switch` joins a school, which
+ * costs a seat; #859). A browser attaches the `sb-*` cookie to a cross-site
+ * `text/plain` POST — and sibling tenant subdomains count as same-site, so
+ * `SameSite=Lax` does not stop another school's page — but it cannot attach an
+ * `Authorization` header cross-origin without a CORS preflight this app never
+ * grants. Returns null when there is no valid token (routes respond 401).
+ */
+export async function getBearerUser(req: Request): Promise<User | null> {
+    const bearerToken = (req.headers.get('authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1]
+    if (!bearerToken) return null
+    return verifyBearerToken(bearerToken)
+}
+
+async function verifyBearerToken(token: string): Promise<User | null> {
     const authClient = createBearerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
         { auth: { persistSession: false, autoRefreshToken: false } }
     )
     // Server-side verification of signature and expiry.
-    const { data, error } = await authClient.auth.getUser(bearerToken)
+    const { data, error } = await authClient.auth.getUser(token)
     return error || !data?.user ? null : data.user
 }
 
