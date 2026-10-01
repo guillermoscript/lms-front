@@ -424,6 +424,19 @@ export default async function proxy(request: NextRequest) {
 
     if (!membership) {
       const joinUrl = publicRedirectUrl(request, `/${locale}/join-school`)
+      // A banned user is not a non-member to bounce around (#892): the join page
+      // itself renders the "you were removed" notice and offers no way back in.
+      // Send them there once, with no `next` — they have nowhere to continue to.
+      const { data: banned } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'banned')
+        .maybeSingle()
+      if (banned) {
+        return NextResponse.redirect(joinUrl)
+      }
       // Keep the destination so a purchase or enroll intent survives the join
       // step (#684): a first-time visitor who clicked a paid CTA arrives here
       // as a member of no school, and without `next` the join form could only

@@ -5,14 +5,17 @@ import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
 import { isPlanLimitError, STUDENT_LIMIT_MESSAGE } from '@/lib/billing/plan-limit-error'
+import { isTenantBannedError } from '@/lib/tenant/ban'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
+
+export const BANNED_MESSAGE = 'You were removed from this school and cannot rejoin. Contact the school if you think this is a mistake.'
 
 export type JoinSchoolOutcome =
   | { ok: true; role: 'student' | 'teacher'; emailSent: boolean }
   | {
       ok: false
-      code: 'already_member' | 'student_limit' | 'failed' | 'metadata_failed'
+      code: 'already_member' | 'student_limit' | 'failed' | 'metadata_failed' | 'banned'
       error: string
     }
 
@@ -46,6 +49,14 @@ export async function joinSchool({
     .eq('user_id', user.id)
     .eq('tenant_id', tenantId)
     .maybeSingle()
+
+  // A banned user is refused before anything else (#892): before the seat
+  // pre-check, and above all before a pending invitation is consumed — an
+  // invitation addressed to a banned email must stay inert. The
+  // `guard_tenant_ban` trigger refuses the write anyway; this is the message.
+  if (existingMembership?.status === 'banned') {
+    return { ok: false, code: 'banned', error: BANNED_MESSAGE }
+  }
 
   if (existingMembership?.status === 'active') {
     return { ok: false, code: 'already_member', error: 'You are already a member of this school' }
@@ -127,6 +138,10 @@ export async function joinSchool({
     // authoritative answer and this is the message it stands for.
     if (isPlanLimitError(error)) {
       return { ok: false, code: 'student_limit', error: STUDENT_LIMIT_MESSAGE }
+    }
+    // Lost a race with a ban that landed after the read above.
+    if (isTenantBannedError(error)) {
+      return { ok: false, code: 'banned', error: BANNED_MESSAGE }
     }
     console.error('Failed to join school:', error)
     return { ok: false, code: 'failed', error: 'Failed to join school. Please try again.' }

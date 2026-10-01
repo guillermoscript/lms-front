@@ -47,9 +47,11 @@ interface UsersTableProps {
   profiles: Profile[]
   rolesMap: Map<string, string[]>
   enrollmentCounts: Map<string, number>
+  /** Members whose `tenant_users.status` is `banned` (#892). */
+  bannedIds: Set<string>
 }
 
-export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableProps) {
+export function UsersTable({ profiles, rolesMap, enrollmentCounts, bannedIds }: UsersTableProps) {
   const t = useTranslations('dashboard.admin.users.table')
   const locale = useLocale()
   const [searchQuery, setSearchQuery] = useState('')
@@ -112,6 +114,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                 const userRolesList = rolesMap.get(profile.id) || []
                 const enrollmentCount = enrollmentCounts.get(profile.id) || 0
                 const isDeactivated = !!profile.deactivated_at
+                const isBanned = bannedIds.has(profile.id)
                 const displayName = profile.full_name || t('unknown')
 
                 return (
@@ -156,7 +159,11 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                     </TableCell>
                     <TableCell>{enrollmentCount}</TableCell>
                     <TableCell>
-                      {isDeactivated ? (
+                      {isBanned ? (
+                        <Badge variant="destructive" data-testid="user-status-banned">
+                          {t('status.banned')}
+                        </Badge>
+                      ) : isDeactivated ? (
                         <Badge variant="destructive">{t('status.deactivated')}</Badge>
                       ) : (
                         <Badge className="border-success/30 bg-success/10 text-success">
@@ -187,10 +194,12 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                             }
                           />
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleManageRoles(profile)}>
-                              <IconSettings className="h-4 w-4" />
-                              {t('actions.roles')}
-                            </DropdownMenuItem>
+                            {!isBanned && (
+                              <DropdownMenuItem onClick={() => handleManageRoles(profile)}>
+                                <IconSettings className="h-4 w-4" />
+                                {t('actions.roles')}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

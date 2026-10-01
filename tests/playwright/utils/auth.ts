@@ -132,3 +132,28 @@ export async function loginAsSuperAdmin(page: Page, baseUrl = BASE) {
   await page.goto(`${baseUrl}/${LOCALE}/platform`, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('[data-testid="platform-overview"]', { timeout: 15_000 })
 }
+
+/**
+ * Login for someone who is NOT an active member of the school (banned or
+ * removed, #892): the proxy sends them to /join-school, never to a dashboard,
+ * so `login()`'s wait for `/dashboard/` would burn its whole budget.
+ */
+export async function loginAsNonMember(
+  page: Page,
+  email: string,
+  password: string,
+  baseUrl = BASE
+) {
+  await page.goto(`${baseUrl}/${LOCALE}/auth/login`, { waitUntil: 'domcontentloaded' })
+  await fillCredentials(page, email, password)
+  const button = page.getByTestId('login-submit')
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await button.evaluate((el) => (el as HTMLElement).click()).catch(() => undefined)
+    const left = await page
+      .waitForURL((url) => !url.pathname.includes('/auth/login'), { timeout: 20_000, waitUntil: 'commit' })
+      .then(() => true)
+      .catch(() => false)
+    if (left) return
+  }
+  throw new Error(`Login never left the login page (still at ${page.url()})`)
+}
