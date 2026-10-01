@@ -4,7 +4,8 @@
  *   1. /create-school pre-selects the country from the visitor's edge geo
  *      header, and the school is created with it: `tenants.country` is set and
  *      the country's currency becomes the `currency` setting.
- *   2. Admin → Settings → General changes the country. A currency the school
+ *   2. A new school saves Admin → Settings → General untouched (#890).
+ *   3. Admin → Settings → General changes the country. A currency the school
  *      already has is kept; an empty one is filled from the new country.
  *
  * The run owns a fresh tenant + creator (`country865-<runId>`); `afterAll`
@@ -189,6 +190,32 @@ test('create-school pre-selects the detected country and stores it with its curr
   expect(school.currency).toBe('COP')
 })
 
+test('a new school saves General settings untouched (#890)', async ({ page }) => {
+  test.setTimeout(180_000)
+  const admin = getServiceRoleClient()
+  await login(page, email, PASSWORD, tenantBase(slug))
+  await page.goto(`${tenantBase(slug)}/en/dashboard/admin/settings`, { waitUntil: 'domcontentloaded' })
+
+  const form = page.locator('form', { has: page.getByTestId('settings-country') })
+  await expect(form.locator('#site_name')).toHaveValue(schoolName, { timeout: 30_000 })
+  await expect(form.locator('#contact_email')).toHaveValue('')
+  await expect(form.locator('#support_email')).toHaveValue('')
+
+  const toast = page.getByText('Settings updated successfully').first()
+  await clickUntil(form.getByRole('button', { name: /save changes/i }), () => toast.isVisible(), 20_000)
+
+  const { id } = await readSchool(admin)
+  const { data: rows } = await admin
+    .from('tenant_settings')
+    .select('setting_key, setting_value')
+    .eq('tenant_id', id)
+    .in('setting_key', ['site_name', 'contact_email', 'support_email'])
+  const byKey = Object.fromEntries((rows ?? []).map((r) => [r.setting_key, (r.setting_value as { value?: unknown }).value]))
+  expect(byKey.site_name).toBe(schoolName)
+  expect(byKey.contact_email).toBeNull()
+  expect(byKey.support_email).toBeNull()
+})
+
 test('an admin changes the country; a set currency is kept, an empty one is filled', async ({ page }) => {
   test.setTimeout(300_000)
   const admin = getServiceRoleClient()
@@ -199,13 +226,10 @@ test('an admin changes the country; a set currency is kept, an empty one is fill
 
   const save = async () => {
     const form = page.locator('form', { has: page.getByTestId('settings-country') })
-    // A school made by create_school() has no site name or contact emails
-    // yet, and the form requires all three.
-    await fillAllStable([
-      [form.locator('#site_name'), schoolName],
-      [form.locator('#contact_email'), email],
-      [form.locator('#support_email'), email],
-    ])
+    // Saved untouched (#890): a school made by create_school() has no stored
+    // site name or emails; the form defaults the name to tenants.name and the
+    // emails are optional, so nothing needs filling in.
+    await expect(form.locator('#site_name')).toHaveValue(schoolName, { timeout: 30_000 })
     const toast = page.getByText('Settings updated successfully').first()
     await clickUntil(form.getByRole('button', { name: /save changes/i }), () => toast.isVisible(), 20_000)
   }
