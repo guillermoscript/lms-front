@@ -18,18 +18,36 @@ export function normalizeOptionalEmail(
   return EMAIL_RE.test(trimmed) ? { ok: true, value: trimmed } : { ok: false }
 }
 
+export const MAX_SITE_NAME_LENGTH = 120
+export const MAX_EMAIL_LENGTH = 254
+
 /**
- * Normalises the optional email keys present in `settings`; other keys pass
- * through untouched. Returns the offending key on the first invalid address.
+ * The one gate for the General-settings keys, shared by every `tenant_settings`
+ * server-action writer. Every entry must be a plain object; `site_name` is
+ * trimmed (blank -> null, capped); the emails are trimmed (blank -> null,
+ * validated, capped). Other keys pass through untouched. Returns the offending
+ * key on the first invalid entry.
  */
-export function normalizeEmailSettings<T extends { value?: unknown }>(
+export function normalizeGeneralSettings<T extends { value?: unknown }>(
   settings: Record<string, T>,
 ): { ok: true; settings: Record<string, T> } | { ok: false; key: string } {
   const out: Record<string, T> = { ...settings }
-  for (const key of OPTIONAL_EMAIL_SETTING_KEYS) {
+  for (const key of ['site_name', ...OPTIONAL_EMAIL_SETTING_KEYS]) {
     if (!(key in out)) continue
-    const result = normalizeOptionalEmail(out[key]?.value)
-    if (!result.ok) return { ok: false, key }
+    const entry = out[key] as unknown
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return { ok: false, key }
+    const raw = (entry as { value?: unknown }).value
+    if (key === 'site_name') {
+      if (raw !== null && raw !== undefined && typeof raw !== 'string') return { ok: false, key }
+      const name = typeof raw === 'string' ? raw.trim() : ''
+      if (name.length > MAX_SITE_NAME_LENGTH) return { ok: false, key }
+      out[key] = { ...out[key], value: name === '' ? null : name }
+      continue
+    }
+    const result = normalizeOptionalEmail(raw)
+    if (!result.ok || (result.value !== null && result.value.length > MAX_EMAIL_LENGTH)) {
+      return { ok: false, key }
+    }
     out[key] = { ...out[key], value: result.value }
   }
   return { ok: true, settings: out }

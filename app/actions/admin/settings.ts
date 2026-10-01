@@ -13,7 +13,7 @@ import {
 } from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
 import { SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit'
-import { normalizeEmailSettings } from '@/lib/settings/general-settings'
+import { normalizeGeneralSettings } from '@/lib/settings/general-settings'
 import { normalizeManualPaymentAccounts, type ManualPaymentAccount } from '@/lib/payments/manual-payment-accounts'
 import {
   defaultCurrencyForCountry,
@@ -187,6 +187,11 @@ export async function updateSetting(
 
     if (key === SCHOOL_THEME_SETTING_KEY) return THEME_KEY_REFUSAL
 
+    // Same gate as updateSettings (#890): blank -> null, emails validated.
+    const normalized = normalizeGeneralSettings({ [key]: value })
+    if (!normalized.ok) return { success: false, error: 'invalid_email' }
+    value = normalized.settings[key]
+
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
@@ -226,7 +231,7 @@ export async function updateSettings(
     if (Object.keys(settings).includes(SCHOOL_THEME_SETTING_KEY)) return THEME_KEY_REFUSAL
 
     // Optional contact emails: blank -> null, non-blank must be an address (#890).
-    const normalized = normalizeEmailSettings(settings)
+    const normalized = normalizeGeneralSettings(settings)
     if (!normalized.ok) return { success: false, error: 'invalid_email' }
     settings = normalized.settings
 
@@ -268,8 +273,8 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
     const defaults: Record<string, SettingValue> = {
       site_name: { value: 'My School' },
       site_description: { value: 'An online learning platform' },
-      contact_email: { value: 'contact@example.com' },
-      support_email: { value: 'support@example.com' },
+      contact_email: { value: null },
+      support_email: { value: null },
       timezone: { value: 'America/New_York' },
       maintenance_mode: { enabled: false, message: '' },
       smtp_host: { value: '' },

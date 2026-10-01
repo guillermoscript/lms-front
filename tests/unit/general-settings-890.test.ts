@@ -25,7 +25,7 @@ vi.mock('@/lib/supabase/admin', () => ({
   }),
 }))
 
-import { updateSettings } from '@/app/actions/admin/settings'
+import { updateSettings, updateSetting } from '@/app/actions/admin/settings'
 import { defaultSiteName, normalizeOptionalEmail } from '@/lib/settings/general-settings'
 
 beforeEach(() => {
@@ -71,6 +71,29 @@ describe('updateSettings (General form payload)', () => {
     const r = await updateSettings({ timezone: { value: 'UTC' } })
     expect(r.success).toBe(true)
     expect(state.upserts[0]).toHaveLength(1)
+  })
+})
+
+describe('server-side gate', () => {
+  it('updateSetting normalizes blank email and rejects garbage', async () => {
+    expect((await updateSetting('contact_email', { value: 'garbage' })).success).toBe(false)
+    expect(state.upserts).toHaveLength(0)
+  })
+
+  it('site_name: trims, blank -> null, caps length', async () => {
+    await updateSettings({ site_name: { value: '  Acme  ' } })
+    expect(stored('site_name')).toEqual({ value: 'Acme' })
+    state.upserts = []
+    await updateSettings({ site_name: { value: '   ' } })
+    expect(stored('site_name')).toEqual({ value: null })
+    const long = await updateSettings({ site_name: { value: 'x'.repeat(121) } })
+    expect(long.success).toBe(false)
+  })
+
+  it('rejects a non-object entry', async () => {
+    const r = await updateSettings({ contact_email: 'x@y.co' as never })
+    expect(r.success).toBe(false)
+    expect(state.upserts).toHaveLength(0)
   })
 })
 
