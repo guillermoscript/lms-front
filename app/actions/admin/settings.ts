@@ -13,6 +13,7 @@ import {
 } from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
 import { SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit'
+import { normalizeEmailSettings } from '@/lib/settings/general-settings'
 import { normalizeManualPaymentAccounts, type ManualPaymentAccount } from '@/lib/payments/manual-payment-accounts'
 import {
   defaultCurrencyForCountry,
@@ -223,6 +224,11 @@ export async function updateSettings(
     }
 
     if (Object.keys(settings).includes(SCHOOL_THEME_SETTING_KEY)) return THEME_KEY_REFUSAL
+
+    // Optional contact emails: blank -> null, non-blank must be an address (#890).
+    const normalized = normalizeEmailSettings(settings)
+    if (!normalized.ok) return { success: false, error: 'invalid_email' }
+    settings = normalized.settings
 
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { updateSettings, updateSchoolCountry, type SettingsGroup } from '@/app/actions/admin/settings'
+import { defaultSiteName } from '@/lib/settings/general-settings'
 import { CountryPicker } from '@/components/shared/country-picker'
 import type { CountryCode } from '@/lib/countries'
 import { toast } from 'sonner'
@@ -15,11 +16,13 @@ import { useTranslations } from 'next-intl'
 
 interface GeneralSettingsFormProps {
   settings: SettingsGroup
+  /** `tenants.name` - shown as the site name until the school saves its own (#890). */
+  tenantName?: string | null
   /** `tenants.country` (#865); null until the school picks one. */
   country: CountryCode | null
 }
 
-export default function GeneralSettingsForm({ settings, country: savedCountry }: GeneralSettingsFormProps) {
+export default function GeneralSettingsForm({ settings, tenantName, country: savedCountry }: GeneralSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [country, setCountry] = useState<CountryCode | null>(savedCountry)
@@ -27,7 +30,7 @@ export default function GeneralSettingsForm({ settings, country: savedCountry }:
   const [persistedCountry, setPersistedCountry] = useState<CountryCode | null>(savedCountry)
 
   // Extract current values
-  const siteName = settings.site_name?.value?.value || ''
+  const siteName = defaultSiteName(settings.site_name?.value?.value, tenantName)
   const siteDescription = settings.site_description?.value?.value || ''
   const contactEmail = settings.contact_email?.value?.value || ''
   const supportEmail = settings.support_email?.value?.value || ''
@@ -53,7 +56,7 @@ export default function GeneralSettingsForm({ settings, country: savedCountry }:
 
       const result = await updateSettings(updatedSettings)
       if (!result.success) {
-        throw new Error(result.error)
+        throw new Error(result.error === 'invalid_email' ? t('general.invalidEmail') : result.error)
       }
 
       // The country is a tenants column, saved by its own action. Clearing it
@@ -121,7 +124,6 @@ export default function GeneralSettingsForm({ settings, country: savedCountry }:
           type="email"
           defaultValue={contactEmail}
           placeholder="contact@example.com"
-          required
         />
         <p className="text-sm text-muted-foreground">
           {t('general.contactEmailHint')}
@@ -137,7 +139,6 @@ export default function GeneralSettingsForm({ settings, country: savedCountry }:
           type="email"
           defaultValue={supportEmail}
           placeholder="support@example.com"
-          required
         />
         <p className="text-sm text-muted-foreground">
           {t('general.supportEmailHint')}

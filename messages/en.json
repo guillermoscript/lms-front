@@ -3464,6 +3464,7 @@
             "contactEmailHint": "Main contact email for the platform",
             "supportEmail": "Support Email",
             "supportEmailHint": "Support email for user inquiries",
+            "invalidEmail": "Enter a valid email address, or leave it blank.",
             "timezone": "Timezone",
             "timezoneHint": "Default timezone for the platform (e.g., America/New_York, Europe/London)",
             "maintenanceMode": "Maintenance Mode",
