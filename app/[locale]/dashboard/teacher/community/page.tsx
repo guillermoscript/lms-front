@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server'
 import { CommunityFeed } from '@/components/community/community-feed'
 import { CommunityUnread } from '@/components/notifications/community-unread'
 import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
+import { parseQuestionFilter } from '@/lib/community/questions'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { CommunityTour } from '@/components/tours/community-tour'
@@ -14,7 +15,7 @@ import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   // `?post=<id>` focuses one post (#869).
-  searchParams: Promise<{ post?: string | string[] }>
+  searchParams: Promise<{ post?: string | string[]; questions?: string | string[] }>
 }
 
 export default async function TeacherCommunityPage({ searchParams }: PageProps) {
@@ -53,9 +54,12 @@ export default async function TeacherCommunityPage({ searchParams }: PageProps) 
 
   const adminClient = createAdminClient()
 
-  const focusPromise = getFeedFocus((await searchParams).post, { tenantId, viewerId: userId, scope: 'school' })
+  const query = await searchParams
+  // `?questions=` (#875): questions, unanswered or answered ones.
+  const questionFilter = parseQuestionFilter(query.questions)
+  const focusPromise = getFeedFocus(query.post, { tenantId, viewerId: userId, scope: 'school' })
   const [feed, uiState, settings] = await Promise.all([
-    getFeedPage({ tenantId, viewerId: userId, scope: 'school' }),
+    getFeedPage({ tenantId, viewerId: userId, scope: 'school', questionFilter }),
     getUiState(userId),
     getCommunitySettings(tenantId),
   ])
@@ -78,6 +82,8 @@ export default async function TeacherCommunityPage({ searchParams }: PageProps) 
       <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
         <CommunityUnread role={role} />
         <CommunityFeed
+          key={questionFilter ?? 'all'}
+          questionFilter={questionFilter}
           scope="school"
           initialPosts={feed.posts}
           initialHasMore={feed.hasMore}

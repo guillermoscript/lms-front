@@ -25,6 +25,8 @@ import {
   IconLink,
   IconPencil,
   IconAdjustments,
+  IconCircleCheck,
+  IconHelpCircle,
 } from '@tabler/icons-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
@@ -73,6 +75,13 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
   const [editTitle, setEditTitle] = useState(post.title ?? '')
   const [editContent, setEditContent] = useState(post.content)
   const [saving, setSaving] = useState(false)
+  // A question's accepted answer (#875), kept in step with the thread's Accept.
+  const [acceptedId, setAcceptedId] = useState(post.accepted_comment_id)
+  const [serverAcceptedId, setServerAcceptedId] = useState(post.accepted_comment_id)
+  if (post.accepted_comment_id !== serverAcceptedId) {
+    setServerAcceptedId(post.accepted_comment_id)
+    setAcceptedId(post.accepted_comment_id)
+  }
 
   const router = useRouter()
   const isOwn = userId === post.author_id
@@ -163,6 +172,25 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
         return <Badge variant="secondary">{t('poll.badge')}</Badge>
       case 'milestone':
         return null // MilestoneCard handles its own display
+      case 'question':
+        return (
+          <>
+            <Badge variant="outline" className="gap-0.5 text-[10px]">
+              <IconHelpCircle aria-hidden />
+              {t('questions.badge')}
+            </Badge>
+            {acceptedId ? (
+              <Badge className="gap-0.5 bg-success/10 text-[10px] text-success" data-testid="question-status">
+                <IconCircleCheck aria-hidden />
+                {t('questions.answered')}
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="text-[10px]" data-testid="question-status">
+                {t('questions.unanswered')}
+              </Badge>
+            )}
+          </>
+        )
       default:
         return null
     }
@@ -408,6 +436,7 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
           isLocked={post.is_locked}
           userRole={userRole}
           focusCommentId={focused ? focusCommentId : null}
+          onAcceptedChange={setAcceptedId}
         />
       )}
 

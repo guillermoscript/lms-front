@@ -113,7 +113,15 @@ describe('loadMorePosts', () => {
       scope: 'school',
       courseId: undefined,
       cursor: CURSOR,
+      questionFilter: null,
     })
+  })
+
+  it('passes a known question filter through and drops anything else (#875)', async () => {
+    await loadMorePosts('school', CURSOR, undefined, 'unanswered')
+    expect(getFeedPage).toHaveBeenLastCalledWith(expect.objectContaining({ questionFilter: 'unanswered' }))
+    await loadMorePosts('school', CURSOR, undefined, 'is.null,or(')
+    expect(getFeedPage).toHaveBeenLastCalledWith(expect.objectContaining({ questionFilter: null }))
   })
 
   it('refuses a non-member', async () => {

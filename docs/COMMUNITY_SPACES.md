@@ -585,7 +585,7 @@ Staff can read per-user reply notifications of their school through the existing
 
 ### Accepted answers (#875 hook)
 
-`community_notify_answer_accepted(_comment_id, _actor_id)` ships but is not wired: #875's definer trigger calls it once it has enforced who may accept (the hook trusts its caller on that). Same never-notify rules; idempotent per comment; never raises.
+`community_notify_answer_accepted(_comment_id, _actor_id)` is called by #875's `community_on_answer_accepted()` trigger after `community_guard_accepted_answer()` has enforced who may accept (the hook trusts its caller on that). Same never-notify rules; idempotent per comment; never raises.
 
 ### Tests
 
@@ -613,3 +613,17 @@ Per the implementation plan, these features are planned but not yet implemented:
 
 - **Phase 4** — Gamification wiring (XP for posts/comments/reactions, daily caps, community achievements)
 - **Phase 6** — Course highlights (pin community posts to course detail pages)
+
+## Questions and accepted answers (#875)
+
+Migration `20260929150000_community_questions_875.sql`.
+
+- **Type**: `post_type = 'question'`; students may post one wherever they may post a standard post. The composer has a "Question" toggle.
+- **Columns**: `community_posts.accepted_comment_id` (FK → `community_comments`, `ON DELETE SET NULL`), `accepted_by` (FK → `profiles`, `ON DELETE SET NULL`), `accepted_at`. CHECK: only a question may have one.
+- **The rule** (`community_guard_accepted_answer()`, BEFORE INSERT / UPDATE OF `accepted_comment_id`, every writer): the actor is the question's author or an ACTIVE teacher/admin of the post's school (`tenant_users`), not muted, on a plan with the community (`community_can_accept_answer()`); the answer is a visible TOP-LEVEL comment of the same post in the same school. On the RLS path the actor is `auth.uid()` and the trigger stamps it into `accepted_by`; the service role (web action `setAcceptedAnswer`) must write `accepted_by` and is held to the same rule. `authenticated` has UPDATE on `accepted_comment_id` only. Refusals: SQLSTATE `42501` (who) / `23514` (what) — map with `acceptAnswerErrorKey()`.
+- **Clears**: hiding the accepted comment (`community_clear_hidden_accepted_answer()`) or deleting it (FK) un-accepts it; those run from triggers (`pg_trigger_depth() > 1`) and skip the actor check.
+- **Consequences**: `community_on_answer_accepted()` (AFTER UPDATE, when a new non-null answer is set) notifies the answer's author (#870). It is the one place an accepted answer happens — #874's XP goes there too.
+- **Thread** (`comment-thread.tsx`): the accepted answer is pinned first and highlighted; the other top-level answers are ranked by `helpful` reactions, then oldest (`rankAnswers()`); replies stay chronological. Answers carry a "Helpful" toggle, Accept / Unaccept for the author and staff, and staff authors show their role badge.
+- **Filters**: `?questions=questions|unanswered|answered` on every feed page, applied by the server (`getFeedPage({ questionFilter })`, `loadMorePosts`), so the list is complete. Index `idx_community_posts_questions`.
+- **Teacher dashboard**: `UnansweredQuestionsCard` counts unanswered questions in the teacher's courses and links each course to `/dashboard/teacher/courses/<id>/community?questions=unanswered`.
+- **Tests**: `tests/sql/issue-875-community-questions.sql`, `tests/unit/community-questions.test.ts`, `tests/playwright/community-questions.spec.ts` (ask → answer → accept, filters, dashboard; desktop only).

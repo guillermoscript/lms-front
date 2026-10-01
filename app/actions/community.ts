@@ -13,6 +13,7 @@ import { getBlockedAuthorIds } from '@/lib/community/blocks'
 import { getFeedPage } from '@/lib/community/feed'
 import { canPinInCourse } from '@/lib/community/access'
 import { parsePostMedia } from '@/lib/community/media'
+import { acceptAnswerErrorKey, canAcceptAnswers, parseQuestionFilter } from '@/lib/community/questions'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
@@ -23,6 +24,19 @@ type CommentRow = {
   author_id: string
   parent_comment_id: string | null
   is_hidden: boolean
+}
+
+/** What a comment thread needs to know about its post and answers (#875). */
+type ThreadMeta = {
+  postType: string
+  postAuthorId: string
+  acceptedCommentId: string | null
+  /** Author roles in THIS school, for the Teacher badge. */
+  roles: Record<string, string>
+  /** `helpful` reactions per comment, for ranking a question's answers. */
+  helpfulCounts: Record<string, number>
+  /** Comments the viewer marked helpful. */
+  viewerHelpful: string[]
 }
 
 const MAX_CONTENT_LENGTH = 5000
@@ -106,7 +120,14 @@ async function checkPostTarget(
   return null
 }
 
-type ReachablePost = { id: string; course_id: number | null; post_type: string; is_locked: boolean }
+type ReachablePost = {
+  id: string
+  course_id: number | null
+  post_type: string
+  is_locked: boolean
+  author_id: string
+  accepted_comment_id: string | null
+}
 
 /**
  * The post a comment, reaction, vote or comment read is about — only when the
@@ -127,7 +148,7 @@ async function resolveReachablePost(
   const adminClient = createAdminClient()
   const { data: post } = await adminClient
     .from('community_posts')
-    .select('id, course_id, post_type, is_locked, is_hidden')
+    .select('id, course_id, post_type, is_locked, is_hidden, author_id, accepted_comment_id')
     .eq('id', postId)
     .eq('tenant_id', tenantId)
     .maybeSingle()
@@ -138,7 +159,14 @@ async function resolveReachablePost(
     return 'You must be enrolled in this course'
   }
 
-  return { id: post.id, course_id: post.course_id, post_type: post.post_type, is_locked: post.is_locked }
+  return {
+    id: post.id,
+    course_id: post.course_id,
+    post_type: post.post_type,
+    is_locked: post.is_locked,
+    author_id: post.author_id,
+    accepted_comment_id: post.accepted_comment_id,
+  }
 }
 
 const REACTION_TYPES = ['like', 'helpful', 'insightful', 'fire'] as const
@@ -183,7 +211,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
     if (lessonId === 'invalid') return { success: false, error: 'Invalid lesson ID' }
 
     // Polls go through createPoll (they need options); milestones are system posts.
-    if (postType !== 'standard' && postType !== 'discussion_prompt') {
+    if (postType !== 'standard' && postType !== 'discussion_prompt' && postType !== 'question') {
       return { success: false, error: 'Invalid post type' }
     }
 
@@ -1074,7 +1102,7 @@ export async function getBlockedMembers(): Promise<
  */
 export async function getComments(
   postId: string
-): Promise<ActionResult<{ comments: CommentRow[]; profiles: ProfileSummary[] }>> {
+): Promise<ActionResult<{ comments: CommentRow[]; profiles: ProfileSummary[]; meta: ThreadMeta }>> {
   try {
     const { userId } = await getAuthenticatedUser()
     // Tenant from the request, never the client (#860).
@@ -1100,25 +1128,121 @@ export async function getComments(
     const { data: commentsData, error } = await commentsQuery
 
     if (error) throw error
+
+    const meta: ThreadMeta = {
+      postType: post.post_type,
+      postAuthorId: post.author_id,
+      acceptedCommentId: post.accepted_comment_id,
+      roles: {},
+      helpfulCounts: {},
+      viewerHelpful: [],
+    }
+
     if (!commentsData || commentsData.length === 0) {
-      return { success: true, data: { comments: [], profiles: [] } }
+      return { success: true, data: { comments: [], profiles: [], meta } }
     }
 
     const authorIds = Array.from(new Set(commentsData.map((c) => c.author_id)))
-    const { data: profiles } = await adminClient
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .in('id', authorIds)
+    const commentIds = commentsData.map((c) => c.id)
+    const [{ data: profiles }, { data: members }, { data: helpful }] = await Promise.all([
+      adminClient.from('profiles').select('id, full_name, avatar_url').in('id', authorIds),
+      adminClient.from('tenant_users').select('user_id, role').eq('tenant_id', tenantId).in('user_id', authorIds),
+      adminClient
+        .from('community_reactions')
+        .select('comment_id, user_id')
+        .eq('tenant_id', tenantId)
+        .eq('reaction_type', 'helpful')
+        .in('comment_id', commentIds),
+    ])
+
+    for (const m of members ?? []) meta.roles[m.user_id] = m.role as string
+    for (const r of helpful ?? []) {
+      if (!r.comment_id) continue
+      meta.helpfulCounts[r.comment_id] = (meta.helpfulCounts[r.comment_id] ?? 0) + 1
+      if (r.user_id === userId) meta.viewerHelpful.push(r.comment_id)
+    }
 
     return {
       success: true,
-      data: { comments: commentsData, profiles: profiles || [] },
+      data: { comments: commentsData, profiles: profiles || [], meta },
     }
   } catch (err) {
     console.error('Failed to load comments:', err)
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to load comments',
+    }
+  }
+}
+
+/**
+ * Accept a top-level comment as a question's answer, or clear it with `null`
+ * (#875). The question's author or the school's teachers and admins.
+ *
+ * The database is the authority (community_guard_accepted_answer): this
+ * service-role write names the actor in `accepted_by`, and the trigger holds
+ * that person to the same rule the native app meets through RLS, checks the
+ * comment is a visible top-level comment of THIS question, and notifies its
+ * author. The checks here only give the friendly error first.
+ */
+export async function setAcceptedAnswer(
+  postId: string,
+  commentId: string | null
+): Promise<ActionResult<{ acceptedCommentId: string | null }>> {
+  try {
+    const { userId } = await getAuthenticatedUser()
+    const tenantId = await getCurrentTenantId()
+    const role = await getUserRole()
+
+    const post = await resolveReachablePost(postId, tenantId, userId, role)
+    if (typeof post === 'string') return { success: false, error: post }
+    if (post.post_type !== 'question') return { success: false, error: 'Only questions have an accepted answer' }
+
+    if (!canAcceptAnswers({ viewerId: userId, viewerRole: role, questionAuthorId: post.author_id })) {
+      return { success: false, error: 'Only the person who asked or a teacher can accept an answer' }
+    }
+
+    if (await isUserMuted(tenantId, userId)) {
+      return { success: false, error: 'You are currently muted' }
+    }
+
+    const adminClient = createAdminClient()
+
+    if (commentId) {
+      const { data: comment } = await adminClient
+        .from('community_comments')
+        .select('id')
+        .eq('id', commentId)
+        .eq('post_id', postId)
+        .eq('tenant_id', tenantId)
+        .is('parent_comment_id', null)
+        .eq('is_hidden', false)
+        .maybeSingle()
+      if (!comment) return { success: false, error: 'That answer is no longer available' }
+    }
+
+    const { error } = await adminClient
+      .from('community_posts')
+      .update({ accepted_comment_id: commentId, accepted_by: userId })
+      .eq('id', postId)
+      .eq('tenant_id', tenantId)
+
+    if (error) {
+      const key = acceptAnswerErrorKey(error)
+      if (key === 'acceptNotAllowed') {
+        return { success: false, error: 'Only the person who asked or a teacher can accept an answer' }
+      }
+      if (key === 'acceptInvalid') return { success: false, error: 'That answer is no longer available' }
+      throw error
+    }
+
+    revalidatePath('/dashboard')
+    return { success: true, data: { acceptedCommentId: commentId } }
+  } catch (err) {
+    console.error('Failed to set the accepted answer:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to accept the answer',
     }
   }
 }
@@ -1133,7 +1257,8 @@ export async function getComments(
 export async function loadMorePosts(
   scope: 'school' | 'course',
   cursor: string, // created_at of last post
-  courseId?: number
+  courseId?: number,
+  questionFilter?: string | null
 ): Promise<ActionResult<{ posts: CommunityPost[]; hasMore: boolean }>> {
   try {
     const { userId } = await getAuthenticatedUser()
@@ -1162,7 +1287,14 @@ export async function loadMorePosts(
       }
     }
 
-    const page = await getFeedPage({ tenantId, viewerId: userId, scope, courseId, cursor })
+    const page = await getFeedPage({
+      tenantId,
+      viewerId: userId,
+      scope,
+      courseId,
+      cursor,
+      questionFilter: parseQuestionFilter(questionFilter),
+    })
     return { success: true, data: page }
   } catch (err) {
     console.error('Failed to load more posts:', err)

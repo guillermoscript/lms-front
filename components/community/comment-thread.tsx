@@ -18,6 +18,8 @@ import {
   IconFlag,
   IconBan,
   IconMessageCircle,
+  IconCircleCheck,
+  IconBulb,
 } from '@tabler/icons-react'
 import { useTranslations, useLocale } from 'next-intl'
 import { cn } from '@/lib/utils'
@@ -26,7 +28,16 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { FlagDialog } from './flag-dialog'
 import { buttonVariants } from '@/components/ui/button'
-import { blockUser, createComment, deleteComment, getComments } from '@/app/actions/community'
+import {
+  blockUser,
+  createComment,
+  deleteComment,
+  getComments,
+  setAcceptedAnswer,
+  toggleReaction,
+} from '@/app/actions/community'
+import { Badge } from '@/components/ui/badge'
+import { canAcceptAnswers, rankAnswers } from '@/lib/community/questions'
 import { commentAnchorId, scrollBehavior } from '@/lib/community/deep-link'
 import { CommunityMarkdown, CommunityMarkdownField } from './community-markdown'
 
@@ -45,7 +56,18 @@ interface Comment {
   author_id: string
   parent_comment_id: string | null
   author: CommentUser
+  /** The author's role in this school; null when they left it. */
+  authorRole: string | null
+  helpful_count: number
   replies?: Comment[]
+}
+
+/** A question thread's state (#875); null for every other kind of post. */
+interface QuestionState {
+  acceptedCommentId: string | null
+  /** The viewer may accept / un-accept (the author or staff). */
+  canAccept: boolean
+  viewerHelpful: Set<string>
 }
 
 /** Mirrors MAX_COMMENT_LENGTH in app/actions/community.ts. */
@@ -74,6 +96,8 @@ interface CommentThreadProps {
   onCommentsLoaded?: (roots: { id: string; author_id: string }[]) => void
   /** A deep-linked comment (#869): scrolled to, focused and highlighted once loaded. */
   focusCommentId?: string | null
+  /** A question's accepted answer changed here (#875), so the card's badge can follow. */
+  onAcceptedChange?: (commentId: string | null) => void
 }
 
 export function CommentThread({
@@ -91,8 +115,11 @@ export function CommentThread({
   onCommentCreated,
   onCommentsLoaded,
   focusCommentId = null,
+  onAcceptedChange,
 }: CommentThreadProps) {
   const [comments, setComments] = useState<Comment[]>([])
+  const [question, setQuestion] = useState<QuestionState | null>(null)
+  const [accepting, setAccepting] = useState(false)
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -146,8 +173,22 @@ export function CommentThread({
         return
       }
 
-      const { comments: commentsData, profiles } = result.data
+      const { comments: commentsData, profiles, meta } = result.data
       onCommentsLoaded?.(commentsData.filter((c) => c.parent_comment_id === null))
+      const isQuestion = meta.postType === 'question'
+      setQuestion(
+        isQuestion
+          ? {
+              acceptedCommentId: meta.acceptedCommentId,
+              canAccept: canAcceptAnswers({
+                viewerId: userId,
+                viewerRole: userRole,
+                questionAuthorId: meta.postAuthorId,
+              }),
+              viewerHelpful: new Set(meta.viewerHelpful),
+            }
+          : null
+      )
       if (commentsData.length === 0) {
         setComments([])
         return
@@ -162,6 +203,8 @@ export function CommentThread({
           full_name: null,
           avatar_url: null,
         },
+        authorRole: meta.roles[c.author_id] ?? null,
+        helpful_count: meta.helpfulCounts[c.id] ?? 0,
       }))
 
       // Build tree
@@ -184,7 +227,12 @@ export function CommentThread({
         }
       }
 
-      setComments(rootComments.map(attachReplies))
+      setComments(
+        rankAnswers(rootComments.map(attachReplies), {
+          isQuestion,
+          acceptedCommentId: meta.acceptedCommentId,
+        })
+      )
     } catch (error) {
       console.error('Error loading comments:', error)
       toast.error(t('errorLoading'))
@@ -226,6 +274,38 @@ export function CommentThread({
       toast.error(t('errorPosting'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleAccept(commentId: string | null) {
+    if (accepting) return
+    setAccepting(true)
+    try {
+      const result = await setAcceptedAnswer(postId, commentId)
+      if (!result.success) {
+        toast.error(result.error || t('errorPosting'))
+        return
+      }
+      toast.success(commentId ? t('questions.accepted') : t('questions.unaccepted'))
+      onAcceptedChange?.(commentId)
+      await loadComments({ silent: true })
+    } catch {
+      toast.error(t('errorPosting'))
+    } finally {
+      setAccepting(false)
+    }
+  }
+
+  async function handleHelpful(commentId: string) {
+    try {
+      const result = await toggleReaction('comment', commentId, 'helpful')
+      if (!result.success) {
+        toast.error(result.error || t('errorPosting'))
+        return
+      }
+      await loadComments({ silent: true })
+    } catch {
+      toast.error(t('errorPosting'))
     }
   }
 
@@ -354,6 +434,10 @@ export function CommentThread({
               isLocked={isLocked}
               isLearner={isLearner}
               focusCommentId={focusCommentId}
+              question={question}
+              accepting={accepting}
+              onAccept={handleAccept}
+              onHelpful={handleHelpful}
             />
           ))}
         </div>
@@ -447,6 +531,10 @@ interface CommentItemProps {
   isLocked: boolean
   isLearner: boolean
   focusCommentId: string | null
+  question: QuestionState | null
+  accepting: boolean
+  onAccept: (commentId: string | null) => void
+  onHelpful: (commentId: string) => void
 }
 
 function CommentItem({
@@ -466,11 +554,20 @@ function CommentItem({
   isLocked,
   isLearner,
   focusCommentId,
+  question,
+  accepting,
+  onAccept,
+  onHelpful,
 }: CommentItemProps) {
   const isOwn = userId === comment.author_id
   const isReplying = replyingTo === comment.id
   const canModerate = userRole === 'admin' || userRole === 'teacher'
   const isFocused = focusCommentId === comment.id
+  // Only a top-level comment answers a question; replies are follow-ups.
+  const isAnswer = question !== null && depth === 0
+  const isAccepted = isAnswer && question.acceptedCommentId === comment.id
+  const authorIsStaff = comment.authorRole === 'teacher' || comment.authorRole === 'admin'
+  const markedHelpful = isAnswer && question.viewerHelpful.has(comment.id)
 
   return (
     <div
@@ -478,9 +575,11 @@ function CommentItem({
       // Focusable only as a deep-link target, so it is announced on arrival.
       tabIndex={isFocused ? -1 : undefined}
       data-focused={isFocused ? '' : undefined}
+      data-accepted={isAccepted ? '' : undefined}
       className={cn(
         'flex gap-2.5 group/comment scroll-mt-24 outline-none',
         depth > 0 && 'mt-3',
+        isAccepted && 'rounded-lg border border-success/40 bg-success/5 p-3',
         isFocused && 'rounded-md bg-muted p-2 ring-1 ring-ring/40'
       )}
     >
@@ -492,11 +591,27 @@ function CommentItem({
       </Avatar>
 
       <div className="flex-1 space-y-1 min-w-0">
+        {isAccepted && (
+          <p
+            className={cn(
+              'flex items-center gap-1 font-medium text-success',
+              isLearner ? 'text-sm' : 'text-[11px]'
+            )}
+          >
+            <IconCircleCheck size={isLearner ? 16 : 12} aria-hidden />
+            {t('questions.acceptedAnswer')}
+          </p>
+        )}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={cn('font-semibold', isLearner ? 'text-sm' : 'text-xs')}>
               {comment.author.full_name || t('unknownUser')}
             </span>
+            {authorIsStaff && (
+              <Badge variant="secondary" className="text-[10px]">
+                {t(comment.authorRole === 'admin' ? 'roleBadge.admin' : 'roleBadge.teacher')}
+              </Badge>
+            )}
             <span className={cn('text-muted-foreground', isLearner ? 'text-xs' : 'text-[11px]')}>
               {formatDistanceToNow(new Date(comment.created_at), {
                 addSuffix: true,
@@ -550,20 +665,56 @@ function CommentItem({
           collapsible
         />
 
-        {!isLocked && (
-          <div className="flex items-center gap-3 pt-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'hover:bg-transparent text-muted-foreground hover:text-foreground',
-                isLearner ? 'min-h-10 px-0 text-sm' : 'h-auto px-0 py-0.5 text-[11px]'
-              )}
-              onClick={() => setReplyingTo(isReplying ? null : comment.id)}
-            >
-              <IconMessageCircle size={isLearner ? 16 : 12} className="mr-1" />
-              {t('reply')}
-            </Button>
+        {(!isLocked || isAnswer) && (
+          <div className="flex flex-wrap items-center gap-3 pt-0.5">
+            {!isLocked && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'hover:bg-transparent text-muted-foreground hover:text-foreground',
+                  isLearner ? 'min-h-10 px-0 text-sm' : 'h-auto px-0 py-0.5 text-[11px]'
+                )}
+                onClick={() => setReplyingTo(isReplying ? null : comment.id)}
+              >
+                <IconMessageCircle size={isLearner ? 16 : 12} className="mr-1" />
+                {t('reply')}
+              </Button>
+            )}
+            {isAnswer && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-pressed={markedHelpful}
+                className={cn(
+                  'hover:bg-transparent hover:text-foreground',
+                  markedHelpful ? 'text-foreground' : 'text-muted-foreground',
+                  isLearner ? 'min-h-10 px-0 text-sm' : 'h-auto px-0 py-0.5 text-[11px]'
+                )}
+                onClick={() => onHelpful(comment.id)}
+              >
+                <IconBulb size={isLearner ? 16 : 12} className="mr-1" />
+                {comment.helpful_count > 0
+                  ? t('questions.helpfulCount', { count: comment.helpful_count })
+                  : t('questions.helpful')}
+              </Button>
+            )}
+            {isAnswer && question.canAccept && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={accepting}
+                className={cn(
+                  'hover:bg-transparent',
+                  isAccepted ? 'text-muted-foreground hover:text-foreground' : 'text-success hover:text-success',
+                  isLearner ? 'min-h-10 px-0 text-sm' : 'h-auto px-0 py-0.5 text-[11px]'
+                )}
+                onClick={() => onAccept(isAccepted ? null : comment.id)}
+              >
+                <IconCircleCheck size={isLearner ? 16 : 12} className="mr-1" />
+                {isAccepted ? t('questions.unaccept') : t('questions.accept')}
+              </Button>
+            )}
           </div>
         )}
 
@@ -603,6 +754,10 @@ function CommentItem({
                 isLocked={isLocked}
                 isLearner={isLearner}
                 focusCommentId={focusCommentId}
+                question={question}
+                accepting={accepting}
+                onAccept={onAccept}
+                onHelpful={onHelpful}
               />
             ))}
           </div>

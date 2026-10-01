@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { loadMorePosts } from '@/app/actions/community'
 import { PostComposer } from './post-composer'
@@ -12,11 +12,12 @@ import { MutedBanner } from './muted-banner'
 import { PostSkeleton } from './post-skeleton'
 import type { CommunitySettings } from '@/lib/community/settings'
 import { parseCommentHash, splitFocusedPost } from '@/lib/community/deep-link'
+import { matchesQuestionFilter, QUESTION_FILTER_PARAM, type QuestionFilter } from '@/lib/community/questions'
 
 export interface CommunityPost {
   id: string
   author_id: string
-  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll'
+  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll' | 'question'
   title: string | null
   content: string
   media_urls: { url: string; type: 'image' | 'video' | 'file'; name: string }[]
@@ -30,6 +31,8 @@ export interface CommunityPost {
   is_graded: boolean
   milestone_type: string | null
   milestone_data: unknown
+  /** A question's accepted answer (#875); null for everything else. */
+  accepted_comment_id: string | null
   /** `role` is the author's role in THIS school, null when they left it. */
   author: { id: string; full_name: string | null; avatar_url: string | null; role: string | null }
   user_reactions: string[]
@@ -51,6 +54,11 @@ interface CommunityFeedProps {
   focusPostId?: string | null
   /** That post, when it is in this feed for this viewer; null shows a notice. */
   focusPost?: CommunityPost | null
+  /**
+   * `?questions=` (#875): the server already narrowed `initialPosts` to it.
+   * The page keys the feed on it, so changing it starts a fresh feed.
+   */
+  questionFilter?: QuestionFilter | null
 }
 
 // The URL hash, read on the client only: the server never sees it, so reading
@@ -93,9 +101,12 @@ export function CommunityFeed({
   settings,
   focusPostId = null,
   focusPost = null,
+  questionFilter = null,
 }: CommunityFeedProps) {
   const t = useTranslations('community')
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   const [extraPosts, setExtraPosts] = useState<CommunityPost[]>([])
   const [hasMore, setHasMore] = useState(initialHasMore)
@@ -137,7 +148,7 @@ export function CommunityFeed({
     }
 
     try {
-      const result = await loadMorePosts(scope, cursorPost.created_at, courseId)
+      const result = await loadMorePosts(scope, cursorPost.created_at, courseId, questionFilter)
 
       if (result.success && result.data) {
         setExtraPosts((prev) => [...prev, ...result.data!.posts])
@@ -150,7 +161,7 @@ export function CommunityFeed({
     } finally {
       setIsFetching(false)
     }
-  }, [isFetching, hasMore, cursorPost, scope, courseId])
+  }, [isFetching, hasMore, cursorPost, scope, courseId, questionFilter])
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -174,8 +185,33 @@ export function CommunityFeed({
     }
   }, [hasMore, isFetching, fetchNextPage])
 
+  // The question filters live in the URL (the teacher dashboard links to them)
+  // and are applied by the server; a deep link (`?post=`) is dropped with them.
+  const setQuestionFilter = useCallback(
+    (next: QuestionFilter | null) => {
+      const params = new URLSearchParams(searchParams.toString())
+      params.delete('post')
+      if (next) params.set(QUESTION_FILTER_PARAM, next)
+      else params.delete(QUESTION_FILTER_PARAM)
+      const query = params.toString()
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
+    },
+    [router, pathname, searchParams]
+  )
+
+  const handleTypeChange = (type: string | null) => {
+    setActiveType(type)
+    if (questionFilter) setQuestionFilter(null)
+  }
+
+  const handleQuestionFilterChange = (next: QuestionFilter | null) => {
+    setActiveType(null)
+    setQuestionFilter(next)
+  }
+
   // Apply filters client-side
   const matchesFilters = (p: CommunityPost) => {
+    if (!matchesQuestionFilter(p, questionFilter)) return false
     if (activeType && p.post_type !== activeType) return false
     if (activeRole === 'teacher' && p.author.role !== 'teacher' && p.author.role !== 'admin') return false
     if (activeRole === 'student' && p.author.role !== 'student') return false
@@ -227,14 +263,16 @@ export function CommunityFeed({
         <PostFilters
           activeType={activeType}
           activeRole={activeRole}
-          onTypeChange={setActiveType}
+          questionFilter={questionFilter}
+          onTypeChange={handleTypeChange}
           onRoleChange={setActiveRole}
+          onQuestionFilterChange={handleQuestionFilterChange}
         />
       </div>
 
       {/* Feed */}
       {displayPosts.length === 0 && !isFetching ? (
-        <EmptyFeed scope={scope} />
+        <EmptyFeed scope={scope} message={questionFilter ? t(`questions.empty.${questionFilter}`) : undefined} />
       ) : (
         <div className="space-y-4" data-tour="community-feed">
           {displayPosts.map((post) => (

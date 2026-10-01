@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getBlockedAuthorIds } from '@/lib/community/blocks'
 import { parsePostParam } from '@/lib/community/deep-link'
+import type { QuestionFilter } from '@/lib/community/questions'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 export const FEED_PAGE_SIZE = 20
@@ -9,7 +10,7 @@ const POST_COLUMNS = `
   id, author_id, post_type, title, content, media_urls,
   is_pinned, is_locked, comment_count, reaction_count,
   created_at, course_id, lesson_id, is_graded,
-  milestone_type, milestone_data
+  milestone_type, milestone_data, accepted_comment_id
 `
 
 type AdminClient = ReturnType<typeof createAdminClient>
@@ -66,6 +67,9 @@ export function visiblePostsQuery<Columns extends string>(
  * Without a cursor the page leads with pinned posts; with one it continues the
  * unpinned timeline strictly before `cursor` (a `created_at`). `postId` narrows
  * it to that one post (a deep link, #869) through the same filters.
+ * `questionFilter` (#875) narrows it to questions, unanswered or answered ones —
+ * on the server, so the teacher's "unanswered" list is complete, not just what
+ * the first page happened to hold.
  */
 export async function getFeedPage({
   tenantId,
@@ -74,6 +78,7 @@ export async function getFeedPage({
   courseId,
   cursor,
   postId,
+  questionFilter = null,
 }: {
   tenantId: string
   viewerId: string
@@ -81,6 +86,7 @@ export async function getFeedPage({
   courseId?: number
   cursor?: string
   postId?: string
+  questionFilter?: QuestionFilter | null
 }): Promise<{ posts: CommunityPost[]; hasMore: boolean }> {
   const admin = createAdminClient()
   const blockedIds = await getBlockedAuthorIds(viewerId)
@@ -88,6 +94,12 @@ export async function getFeedPage({
   let query = visiblePostsQuery(admin, { columns: POST_COLUMNS, tenantId, scope, courseId, blockedIds })
 
   if (postId) query = query.eq('id', postId)
+
+  if (questionFilter) {
+    query = query.eq('post_type', 'question')
+    if (questionFilter === 'unanswered') query = query.is('accepted_comment_id', null)
+    if (questionFilter === 'answered') query = query.not('accepted_comment_id', 'is', null)
+  }
 
   query = cursor
     ? query.eq('is_pinned', false).lt('created_at', cursor)
