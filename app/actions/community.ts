@@ -17,6 +17,8 @@ import { acceptAnswerErrorKey, canAcceptAnswers, parseQuestionFilter } from '@/l
 import { readCommunityXpEarned, type CommunityXpEarned } from '@/lib/community/xp'
 import { parseDueAt } from '@/lib/community/prompt-grades'
 import type { CommunityPost } from '@/components/community/community-feed'
+import { MENTION_CANDIDATE_LIMIT, type MentionCandidate } from '@/lib/community/mentions'
+import type { Database } from '@/lib/database.types'
 
 type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
 type CommentRow = {
@@ -1277,11 +1279,44 @@ export async function setAcceptedAnswer(
 }
 
 /**
+ * The access check every feed read shares (#860): a member of THIS school
+ * and, for a course feed, a course of this school the viewer may read.
+ * `getFeedPage` reads with the service role, so this is the only thing
+ * between a caller and another school's or course's feed. Null when allowed.
+ */
+async function checkFeedAccess(
+  scope: 'school' | 'course',
+  courseId: number | undefined,
+  tenantId: string,
+  userId: string,
+  role: string | null
+): Promise<string | null> {
+  if (!role) return 'Access denied'
+  if (scope !== 'school' && scope !== 'course') return 'Invalid feed'
+  if (scope === 'school') return null
+
+  if (!courseId || !Number.isInteger(courseId) || courseId <= 0) {
+    return 'Invalid course ID'
+  }
+  const adminClient = createAdminClient()
+  const { data: course } = await adminClient
+    .from('courses')
+    .select('course_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!course) return 'Course not found'
+  if (role === 'student' && !(await hasCourseAccess(adminClient, userId, courseId))) {
+    return 'Access denied'
+  }
+  return null
+}
+
+/**
  * Next page of a feed for infinite scroll (#860).
  *
  * Tenant and viewer come from the request, never the client, and a course
- * feed re-checks access: `getFeedPage` reads with the service role, so this
- * is the only thing between a caller and another school's or course's feed.
+ * feed re-checks access (`checkFeedAccess`).
  */
 export async function loadMorePosts(
   scope: 'school' | 'course',
@@ -1293,28 +1328,13 @@ export async function loadMorePosts(
     const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
-    if (!role) return { success: false, error: 'Access denied' }
 
     if (Number.isNaN(Date.parse(cursor))) {
       return { success: false, error: 'Invalid cursor' }
     }
 
-    if (scope === 'course') {
-      if (!courseId || !Number.isInteger(courseId) || courseId <= 0) {
-        return { success: false, error: 'Invalid course ID' }
-      }
-      const adminClient = createAdminClient()
-      const { data: course } = await adminClient
-        .from('courses')
-        .select('course_id')
-        .eq('course_id', courseId)
-        .eq('tenant_id', tenantId)
-        .maybeSingle()
-      if (!course) return { success: false, error: 'Course not found' }
-      if (role === 'student' && !(await hasCourseAccess(adminClient, userId, courseId))) {
-        return { success: false, error: 'Access denied' }
-      }
-    }
+    const denied = await checkFeedAccess(scope, courseId, tenantId, userId, role)
+    if (denied) return { success: false, error: denied }
 
     const page = await getFeedPage({
       tenantId,
@@ -1331,5 +1351,106 @@ export async function loadMorePosts(
       success: false,
       error: err instanceof Error ? err.message : 'Failed to load posts',
     }
+  }
+}
+
+/**
+ * The posts published since `since` (a `created_at`) in one feed — what the
+ * live feed (#876) shows behind its "N new posts" pill once a realtime event
+ * says something arrived. Same access check and the same `getFeedPage` path as
+ * every other page, so the pill never counts a hidden post, a blocked author
+ * or another school's row: the realtime payload itself is never shown.
+ */
+export async function loadNewPosts(
+  scope: 'school' | 'course',
+  since: string,
+  courseId?: number,
+  questionFilter?: string | null
+): Promise<ActionResult<{ posts: CommunityPost[] }>> {
+  try {
+    const { userId } = await getAuthenticatedUser()
+    const tenantId = await getCurrentTenantId()
+    const role = await getUserRole()
+
+    if (typeof since !== 'string' || Number.isNaN(Date.parse(since))) {
+      return { success: false, error: 'Invalid cursor' }
+    }
+
+    const denied = await checkFeedAccess(scope, courseId, tenantId, userId, role)
+    if (denied) return { success: false, error: denied }
+
+    const { posts } = await getFeedPage({
+      tenantId,
+      viewerId: userId,
+      scope,
+      courseId,
+      after: since,
+      questionFilter: parseQuestionFilter(questionFilter),
+    })
+    return { success: true, data: { posts } }
+  } catch (err) {
+    console.error('Failed to load new posts:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to load posts',
+    }
+  }
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * @mention autocomplete (#876): members of THIS school who can see what is
+ * being written — a reply on `postId`, else a new post in `courseId` (none =
+ * the school feed) — whose name contains `query`. At most 8.
+ *
+ * The database decides (`community_mention_candidates`, user-scoped so
+ * `auth.uid()` is the caller): the caller must be able to see the post or
+ * feed, blocked members either way are left out, and the tenant is the one
+ * this request is for, never the client's.
+ */
+export async function searchMentionCandidates(input: {
+  query: string
+  courseId?: number | null
+  postId?: string | null
+}): Promise<ActionResult<MentionCandidate[]>> {
+  try {
+    const userId = await getCurrentUserId()
+    if (!userId) return { success: false, error: 'Not authenticated' }
+    const tenantId = await getCurrentTenantId()
+
+    const query = typeof input?.query === 'string' ? input.query.trim().slice(0, 50) : ''
+    const postId = input?.postId ?? null
+    const courseId = input?.courseId ?? null
+    if (postId !== null && (typeof postId !== 'string' || !UUID_RE.test(postId))) {
+      return { success: false, error: 'Invalid post' }
+    }
+    if (courseId !== null && !(Number.isInteger(courseId) && courseId > 0)) {
+      return { success: false, error: 'Invalid course ID' }
+    }
+
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('community_mention_candidates', {
+      _tenant_id: tenantId,
+      _course_id: postId ? undefined : (courseId ?? undefined),
+      _post_id: postId ?? undefined,
+      _query: query,
+      _limit: MENTION_CANDIDATE_LIMIT,
+    })
+    if (error) throw error
+
+    type CandidateRow = Database['public']['Functions']['community_mention_candidates']['Returns'][number]
+    return {
+      success: true,
+      data: ((data ?? []) as CandidateRow[]).map((row) => ({
+        id: row.user_id,
+        name: row.full_name,
+        avatarUrl: row.avatar_url ?? null,
+        role: row.role === 'student' || row.role === 'teacher' || row.role === 'admin' ? row.role : null,
+      })),
+    }
+  } catch (err) {
+    console.error('Failed to search mention candidates:', err)
+    return { success: false, error: 'Failed to search members' }
   }
 }

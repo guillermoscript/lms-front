@@ -509,7 +509,7 @@ One `notification_type = 'community'`; `metadata.kind` says which event. `commun
 | `community_prompt` | Active students of the school with an **active enrollment** in the course who still have access (`has_course_access`) | One shared row (`target_type 'course'`) + one `user_notifications` row each | Yes, at most once per (student, course) per 15 min |
 | `community_answer_accepted` | The answer's author | One row per answer, idempotent | Yes |
 | `community_prompt_graded` (#873) | The graded student | One row per (prompt, student); a re-grade updates it and makes it unread again. Carries `score`, never the feedback text | Once (a re-grade does not push again) |
-| `community_mention` | — | Reserved for #876 | — |
+| `community_mention` (#876) | A member @mentioned in a post or comment who can see it — not when they already get a `community_reply` for that same comment | One row per mention; `target` `post`/`comment`, `mention_id`, `snippet` (tokens shown as "@Name") | Yes, at most once per (recipient, post) per 15 min |
 
 Prompts use enrollment, not just access: the RLS course feed itself requires an enrollment, and a plan subscriber should not hear about every course in the plan. School-feed prompts notify nobody (the issue asks for course prompts).
 
@@ -594,11 +594,11 @@ Staff can read per-user reply notifications of their school through the existing
 
 ### Deferred
 
-Mentions and realtime delivery (#876); follower/reaction notifications (noise); school-feed prompts; per-school preferences (the table is global); a teacher digest (the digest is students-only); per-event email; quiet hours; restoring on un-hide; re-snippeting an edited comment; an "other schools have unread" indicator; native deep-link handling (app repo); wiring the #875 accept event.
+Follower/reaction notifications (noise); school-feed prompts; per-school preferences (the table is global); a teacher digest (the digest is students-only); per-event email; quiet hours; restoring on un-hide; re-snippeting an edited comment; an "other schools have unread" indicator; native deep-link handling (app repo); wiring the #875 accept event.
 
 ## Known Limitations (v1)
 
-- **No real-time updates** — feed refreshes via `router.refresh()`, not WebSocket/Supabase Realtime; notification counts poll (60 s) instead of subscribing
+- **Realtime covers new posts and new comments only** (#876) — edits, hides, reactions and poll votes still need a reload; notification counts poll (60 s) instead of subscribing. A member whose JWT `tenant_id` is another school (multi-school, before the claim syncs) gets no live events there — RLS keys on the claim — and the feed simply behaves as before
 - **Notifications are per school** — the bell and the badge count the current school only; unread activity in another school shows when you visit it
 - **A batched reply notification names only its latest reply** — hiding an earlier reply in the batch does not decrement the count
 - **No rich text rendering** — post content displayed as `whitespace-pre-wrap` plain text (no markdown)
@@ -673,3 +673,22 @@ Migration `20260930120000_community_prompt_grades_873.sql`. A teacher ticks **Gr
 - Code: `lib/community/prompt-grades.ts` (pure helpers), `lib/community/prompt-grading.ts` (loaders), `app/actions/teacher/community-grades.ts` (`savePromptGrade`, `removePromptGrade` — the teacher's RLS client; the database is the authority), `components/community/prompt-grading-view.tsx`, `prompt-grade.tsx`, `prompts-to-grade-card.tsx`.
 - AI-suggested grades (issue scope item 8) are deferred.
 - **Tests**: `tests/sql/issue-873-community-prompt-grades.sql`, `tests/unit/community-prompt-grades.test.ts`, `tests/playwright/community-prompt-grading.spec.ts`.
+
+## Live feed and @mentions (#876)
+
+Migration `20261001150000_community_realtime_mentions_876.sql`.
+
+### Realtime
+
+- `community_posts` and `community_comments` are in the `supabase_realtime` publication. **`community_reactions` is not**: its SELECT policy is tenant-wide, so a tenant-filtered subscription would hand out who reacted to posts in courses the subscriber cannot open. Reaction counts stay optimistic.
+- Postgres Changes runs every event through the subscriber's RLS (JWT `tenant_id`, course enrollment, blocks, `is_hidden`). On top of that each channel is narrowed: the school feed by `tenant_id`, a course feed by `course_id`, an open thread by `post_id` (`lib/community/realtime.ts`). A super admin, whom RLS lets read every school, still only hears the feed on screen.
+- An event is only a signal; the payload is never rendered. The feed re-reads through `loadNewPosts` → `getFeedPage({ after })` (same access check and filters as every page) and shows **"N new posts"** at the top — nothing moves under the reader until they press it. An open thread re-reads through `getComments`. Both catch up when a dropped socket rejoins.
+- `hooks/use-realtime-inserts.ts`: one channel per mounted feed and per open thread, a unique topic per mount (supabase-js reuses channels by topic), removed on unmount or when the filter changes.
+
+### Mentions
+
+- Composer form: `[@Name](mention:<uuid>)`, written by the autocomplete in `components/community/mention-textarea.tsx` (type `@`, ↑/↓, Enter/Tab, Escape). The web renders it as a highlighted name (`CommunityMarkdown`, `urlTransform` keeps only a well-formed `mention:<uuid>`); any other renderer shows "@Name".
+- **The database decides who was mentioned.** AFTER triggers on posts and comments (insert, and a content edit) parse the text (`community_parse_mentions`, max 10 people) and record `community_mentions` rows only for members who can see the content (`community_mention_eligible`: active in the school; for a course, staff or actively enrolled with access; no block with the author either way; has not blocked the post's author). An edit that removes a mention deletes it and its notification. Clients cannot write `community_mentions`; a member can read the mentions they made or received.
+- Notification: kind `community_mention` (see Kinds). Never for the author, a muted author, a school without community, someone who turned **Mentions** off (`notification_preferences.community_mentions`, new toggle in Preferences), or someone who already gets the reply notification for that comment. Hiding the post or comment retracts it through #870's triggers.
+- Autocomplete: `searchMentionCandidates` → `community_mention_candidates(_tenant_id, _course_id, _post_id, _query)` (user-scoped; the caller must be able to see the post/feed; blocked members either way are left out; at most 8; prefix matches first).
+- **Tests**: `tests/sql/issue-876-community-mentions.sql`, `tests/unit/community-mentions.test.ts`, `tests/playwright/community-realtime-mentions.spec.ts` (protocol-level isolation with three sessions, two-browser live feed, autocomplete, channel cleanup).

@@ -3,7 +3,10 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { loadMorePosts } from '@/app/actions/community'
+import { IconArrowUp } from '@tabler/icons-react'
+import { loadMorePosts, loadNewPosts } from '@/app/actions/community'
+import { Button } from '@/components/ui/button'
+import { useRealtimeInserts } from '@/hooks/use-realtime-inserts'
 import { PostComposer } from './post-composer'
 import { PostCard } from './post-card'
 import { PostFilters } from './post-filters'
@@ -11,9 +14,17 @@ import { EmptyFeed } from './empty-feed'
 import { MutedBanner } from './muted-banner'
 import { PostSkeleton } from './post-skeleton'
 import type { CommunitySettings } from '@/lib/community/settings'
-import { parseCommentHash, splitFocusedPost } from '@/lib/community/deep-link'
+import { parseCommentHash, scrollBehavior, splitFocusedPost } from '@/lib/community/deep-link'
 import { matchesQuestionFilter, QUESTION_FILTER_PARAM, type QuestionFilter } from '@/lib/community/questions'
 import type { ViewerPromptGrade } from '@/lib/community/prompt-grades'
+import {
+  feedInsertFilter,
+  isFeedInsertSignal,
+  mergePendingPosts,
+  newestCreatedAt,
+  REALTIME_DEBOUNCE_MS,
+  unseenLivePosts,
+} from '@/lib/community/realtime'
 
 export interface CommunityPost {
   id: string
@@ -48,6 +59,8 @@ export interface CommunityPost {
 interface CommunityFeedProps {
   scope: 'school' | 'course'
   courseId?: number
+  /** This school — the school feed's realtime channel is narrowed to it (#876). */
+  tenantId: string
   initialPosts: CommunityPost[]
   initialHasMore: boolean
   userRole: 'student' | 'teacher' | 'admin'
@@ -98,6 +111,7 @@ function useLocationHash() {
 export function CommunityFeed({
   scope,
   courseId,
+  tenantId,
   initialPosts,
   initialHasMore = false,
   userRole,
@@ -121,6 +135,13 @@ export function CommunityFeed({
 
   const sentinelRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
+  const feedTopRef = useRef<HTMLDivElement>(null)
+
+  // #876: posts others published since this page loaded. `pendingPosts` wait
+  // behind the "N new posts" pill (nothing moves under the reader);
+  // `livePosts` are the ones the reader brought in by pressing it.
+  const [pendingPosts, setPendingPosts] = useState<CommunityPost[]>([])
+  const [livePosts, setLivePosts] = useState<CommunityPost[]>([])
 
   const isMuted = mutedUntil ? new Date(mutedUntil) > new Date() : false
   const isStudent = userRole === 'student'
@@ -130,17 +151,86 @@ export function CommunityFeed({
   // All posts = server-rendered initial + client-loaded extras. A deep-linked
   // post that is not on the first page leads the feed and never repeats.
   const { focused, timeline: allPosts, cursorPost } = useMemo(
-    () => splitFocusedPost({ focusPost, initialPosts, extraPosts }),
-    [focusPost, initialPosts, extraPosts]
+    () =>
+      splitFocusedPost({
+        focusPost,
+        initialPosts: [...unseenLivePosts(livePosts, initialPosts), ...initialPosts],
+        extraPosts,
+      }),
+    [focusPost, initialPosts, extraPosts, livePosts]
   )
   const hash = useLocationHash()
   const focusCommentId = focusPostId ? parseCommentHash(hash) : null
 
   const refreshFeed = useCallback(() => {
     setExtraPosts([])
+    setLivePosts([])
+    setPendingPosts([])
     setHasMore(initialHasMore)
     router.refresh()
   }, [router, initialHasMore])
+
+  // ---- Live feed (#876) ---------------------------------------------------
+  // What is on screen and waiting, read by the (debounced) re-read below
+  // without re-subscribing the channel on every render.
+  const knownRef = useRef({ shown: [] as CommunityPost[], pending: [] as CommunityPost[] })
+  useEffect(() => {
+    knownRef.current = { shown: focused ? [focused, ...allPosts] : allPosts, pending: pendingPosts }
+  })
+  const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const checkForNewPosts = useCallback(async () => {
+    const { shown, pending } = knownRef.current
+    // Nothing on screen yet: anything published since the page rendered.
+    const since = newestCreatedAt([...shown, ...pending]) ?? new Date(0).toISOString()
+    try {
+      const result = await loadNewPosts(scope, since, courseId, questionFilter)
+      if (!result.success || !result.data || result.data.posts.length === 0) return
+      const incoming = result.data.posts
+      const shownIds = new Set(knownRef.current.shown.map((p) => p.id))
+      setPendingPosts((prev) => mergePendingPosts(prev, incoming, { shownIds, viewerId: userId }))
+    } catch {
+      // A missed live update is not an error: the next event or a reload catches up.
+    }
+  }, [scope, courseId, questionFilter, userId])
+
+  const scheduleCheck = useCallback(() => {
+    if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
+    checkTimerRef.current = setTimeout(() => {
+      checkTimerRef.current = null
+      void checkForNewPosts()
+    }, REALTIME_DEBOUNCE_MS)
+  }, [checkForNewPosts])
+
+  useEffect(
+    () => () => {
+      if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
+    },
+    []
+  )
+
+  useRealtimeInserts({
+    table: 'community_posts',
+    filter: feedInsertFilter({ scope, tenantId, courseId }),
+    onInsert: (row) => {
+      if (isFeedInsertSignal(row, { scope, courseId, viewerId: userId })) scheduleCheck()
+    },
+    // On every (re)join: posts published between the server render (or a
+    // dropped connection) and now.
+    onSubscribed: () => scheduleCheck(),
+  })
+
+  const showPendingPosts = useCallback(() => {
+    setLivePosts((prev) => [...pendingPosts, ...prev])
+    setPendingPosts([])
+    // Only when the reader is below the top of the feed; never away from the composer.
+    requestAnimationFrame(() => {
+      const top = feedTopRef.current
+      if (top && top.getBoundingClientRect().top < 0) {
+        top.scrollIntoView({ block: 'start', behavior: scrollBehavior() })
+      }
+    })
+  }, [pendingPosts])
 
   // Fetch next page via server action
   const fetchNextPage = useCallback(async () => {
@@ -264,7 +354,7 @@ export function CommunityFeed({
       )}
 
       {/* Filters */}
-      <div data-tour="community-filters">
+      <div ref={feedTopRef} data-tour="community-filters" className="scroll-mt-24">
         <PostFilters
           activeType={activeType}
           activeRole={activeRole}
@@ -273,6 +363,22 @@ export function CommunityFeed({
           onRoleChange={setActiveRole}
           onQuestionFilterChange={handleQuestionFilterChange}
         />
+      </div>
+
+      {/* New posts from others (#876) — shown on request, so the page never jumps */}
+      <div role="status" aria-live="polite" className="sticky top-2 z-20 flex justify-center empty:hidden">
+        {pendingPosts.length > 0 && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="gap-1.5 rounded-full shadow-md"
+            onClick={showPendingPosts}
+            data-testid="community-new-posts"
+          >
+            <IconArrowUp size={14} aria-hidden />
+            {t('newPosts', { count: pendingPosts.length })}
+          </Button>
+        )}
       </div>
 
       {/* Feed */}

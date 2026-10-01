@@ -297,7 +297,8 @@ test('B replies to A\'s post; A sees the badge and the bell, and the item opens 
   const replyBox = card.getByPlaceholder('Write a reply...').first()
   await expect(replyBox).toBeVisible({ timeout: 20_000 })
   await replyBox.fill('Try a while loop instead')
-  await replyBox.locator('xpath=following-sibling::button[1]').click()
+  // The send button sits after the markdown field (#872) that wraps the box.
+  await replyBox.locator('xpath=ancestor::div[contains(@class,"flex-1")][1]/following-sibling::button[1]').click()
 
   let commentId = ''
   await expect

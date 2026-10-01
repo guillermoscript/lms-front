@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { IconSend, IconPhoto, IconPlus, IconX, IconUser, IconChartBar, IconHelpCircle } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
@@ -10,6 +9,7 @@ import { toast } from 'sonner'
 import { createPoll, createPost, uploadCommunityAsset } from '@/app/actions/community'
 import { MAX_POST_MEDIA } from '@/lib/community/media'
 import { CommunityMarkdownField } from './community-markdown'
+import { MentionTextarea } from './mention-textarea'
 
 interface PostComposerProps {
   scope: 'school' | 'course'
@@ -165,9 +165,10 @@ export function PostComposer({ scope, courseId, userRole, canCreatePoll, onPostC
             />
           )}
           <CommunityMarkdownField value={content}>
-            <Textarea
+            <MentionTextarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onValueChange={setContent}
+              mentionContext={{ courseId: scope === 'course' && courseId ? courseId : null }}
               placeholder={
                 isPoll ? t('poll.detailsPlaceholder') : isQuestion ? t('questions.bodyPlaceholder') : t('writePost')
               }

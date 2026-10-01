@@ -7112,10 +7112,14 @@
         "prompts": "New discussion prompts",
         "promptsDescription": "When a teacher starts a discussion in one of your courses.",
         "everySchool": "These settings apply in every school you belong to.",
-        "error": "Couldn't save your preference. Try again."
+        "error": "Couldn't save your preference. Try again.",
+        "mentions": "Mentions",
+        "mentionsDescription": "When someone @mentions you in a post or a comment."
       },
       "promptGraded": "Your answer was graded: {score}/100",
-      "promptGradedNoScore": "Your answer was graded"
+      "promptGradedNoScore": "Your answer was graded",
+      "mentionInPost": "{name} mentioned you in a post",
+      "mentionInComment": "{name} mentioned you in a comment"
     },
     "emptySchool": "No posts yet. Be the first to share something!",
     "emptyCourse": "No discussions yet. Start the conversation!",
@@ -7275,7 +7279,7 @@
     },
     "postActions": "Post actions",
     "markdown": {
-      "hint": "Markdown: **bold**  *italic*  `code`  ```code block```",
+      "hint": "Markdown: **bold**  *italic*  `code`  ```code block```  @ to mention",
       "preview": "Preview",
       "edit": "Edit",
       "showMore": "Show more",
@@ -7366,6 +7370,11 @@
       "dueOn": "Due {date}",
       "dueDate": "Due date (optional)",
       "dueDateHint": "Shown to students. Answers after it are still accepted."
+    },
+    "newPosts": "{count, plural, one {# new post} other {# new posts}}",
+    "mentions": {
+      "listLabel": "Mention someone",
+      "noMatches": "No one by that name can see this"
     }
   },
   "schoolLanding": {

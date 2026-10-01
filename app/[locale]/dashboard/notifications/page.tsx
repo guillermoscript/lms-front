@@ -38,7 +38,7 @@ export default async function NotificationsPage() {
     // Global per user; no row = the defaults (both on).
     supabase
       .from("notification_preferences")
-      .select("community_replies, community_prompts")
+      .select("community_replies, community_prompts, community_mentions")
       .eq("user_id", userId)
       .maybeSingle(),
   ])
@@ -62,6 +62,7 @@ export default async function NotificationsPage() {
         preferences={{
           replies: prefs.data?.community_replies !== false,
           prompts: prefs.data?.community_prompts !== false,
+          mentions: prefs.data?.community_mentions !== false,
         }}
       />
     </div>

@@ -961,6 +961,86 @@ export type Database = {
           },
         ]
       }
+      community_mentions: {
+        Row: {
+          author_id: string
+          comment_id: string | null
+          created_at: string
+          id: string
+          mentioned_user_id: string
+          post_id: string
+          tenant_id: string
+        }
+        Insert: {
+          author_id: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          mentioned_user_id: string
+          post_id: string
+          tenant_id: string
+        }
+        Update: {
+          author_id?: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          mentioned_user_id?: string
+          post_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_mentions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_poll_options: {
         Row: {
           id: string
@@ -4416,6 +4496,7 @@ export type Database = {
       }
       notification_preferences: {
         Row: {
+          community_mentions: boolean
           community_prompts: boolean
           community_replies: boolean
           course_notifications: boolean | null
@@ -4435,6 +4516,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          community_mentions?: boolean
           community_prompts?: boolean
           community_replies?: boolean
           course_notifications?: boolean | null
@@ -4454,6 +4536,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          community_mentions?: boolean
           community_prompts?: boolean
           community_replies?: boolean
           course_notifications?: boolean | null
@@ -7286,6 +7369,21 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      community_mention_candidates: {
+        Args: {
+          _course_id?: number
+          _limit?: number
+          _post_id?: string
+          _query?: string
+          _tenant_id: string
+        }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
       }
       community_milestone_allowed: {
         Args: { _tenant_id: string; _user_id: string }

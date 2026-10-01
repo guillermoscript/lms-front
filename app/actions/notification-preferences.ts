@@ -9,11 +9,12 @@ import { getCurrentUserId } from '@/lib/supabase/tenant'
 // update only their own row, so the user-scoped client is all this needs: no
 // service role, no tenant check.
 
-export type CommunityPreferenceKey = 'replies' | 'prompts'
+export type CommunityPreferenceKey = 'replies' | 'prompts' | 'mentions'
 
-const COLUMN: Record<CommunityPreferenceKey, 'community_replies' | 'community_prompts'> = {
+const COLUMN: Record<CommunityPreferenceKey, 'community_replies' | 'community_prompts' | 'community_mentions'> = {
   replies: 'community_replies',
   prompts: 'community_prompts',
+  mentions: 'community_mentions', // #876
 }
 
 /**

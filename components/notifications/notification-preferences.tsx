@@ -22,6 +22,7 @@ import {
 export interface CommunityPreferences {
   replies: boolean
   prompts: boolean
+  mentions: boolean
 }
 
 /**
@@ -62,6 +63,13 @@ export function NotificationPreferences({ initial }: { initial: CommunityPrefere
               label={t('replies')}
               description={t('repliesDescription')}
               initial={initial.replies}
+              errorMessage={t('error')}
+            />
+            <PreferenceRow
+              preference="mentions"
+              label={t('mentions')}
+              description={t('mentionsDescription')}
+              initial={initial.mentions}
               errorMessage={t('error')}
             />
             <PreferenceRow

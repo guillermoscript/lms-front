@@ -20,6 +20,7 @@ export const COMMUNITY_NOTIFICATION_KINDS = [
   'community_prompt',
   'community_answer_accepted',
   'community_prompt_graded',
+  'community_mention',
 ] as const
 
 export type CommunityNotificationKind = (typeof COMMUNITY_NOTIFICATION_KINDS)[number]
@@ -68,11 +69,22 @@ export interface CommunityPromptGradedMeta extends CommunityNotificationBase {
   score: number | null
 }
 
+/** #876: someone @mentioned the recipient in a post or a comment. */
+export interface CommunityMentionMeta extends CommunityNotificationBase {
+  kind: 'community_mention'
+  /** Where the mention is: the post itself, or one of its comments. */
+  target: 'post' | 'comment'
+  /** The comment; null for a post mention, and once the comment was taken back. */
+  commentId: string | null
+  snippet: string | null
+}
+
 export type CommunityNotificationMeta =
   | CommunityReplyMeta
   | CommunityPromptMeta
   | CommunityAnswerAcceptedMeta
   | CommunityPromptGradedMeta
+  | CommunityMentionMeta
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -155,6 +167,14 @@ export function parseCommunityNotificationMeta(metadata: unknown): CommunityNoti
       return { ...base, kind: 'community_answer_accepted', commentId, snippet: optionalString(m.snippet) }
     case 'community_prompt_graded':
       return { ...base, kind: 'community_prompt_graded', score: optionalScore(m.score) }
+    case 'community_mention':
+      return {
+        ...base,
+        kind: 'community_mention',
+        target: m.target === 'comment' ? 'comment' : 'post',
+        commentId,
+        snippet: optionalString(m.snippet),
+      }
   }
 }
 
@@ -196,6 +216,8 @@ export type CommunityMessageKey =
   | 'answerAccepted'
   | 'promptGraded'
   | 'promptGradedNoScore'
+  | 'mentionInPost'
+  | 'mentionInComment'
 
 export interface CommunityMessage {
   /** Key under `community.notifications`. */
@@ -229,6 +251,11 @@ export function communityNotificationMessage(meta: CommunityNotificationMeta, fa
       return meta.score === null
         ? { key: 'promptGradedNoScore', values: {} }
         : { key: 'promptGraded', values: { score: meta.score } }
+    case 'community_mention':
+      return {
+        key: meta.target === 'comment' ? 'mentionInComment' : 'mentionInPost',
+        values: { name: meta.actorName ?? fallbackName },
+      }
   }
 }
 
@@ -252,15 +279,17 @@ export function communityNotificationPostLine(
 }
 
 /**
- * The quoted reply under the headline: the latest reply of a batch. None for a
- * prompt or an accepted answer (the headline says it all), and none once the
- * reply was taken back and scrubbed.
+ * The quoted text under the headline: the latest reply of a batch, or the
+ * words a mention was made in (#876). None for a prompt, a grade or an
+ * accepted answer (the headline says it all), and none once the reply or
+ * comment was taken back and scrubbed.
  */
 export function communityNotificationSnippet(
   meta: CommunityNotificationMeta,
   fallbackName: string
 ): { name: string; snippet: string } | null {
-  if (meta.kind !== 'community_reply' || !meta.snippet || !meta.actorId) return null
+  if (meta.kind !== 'community_reply' && meta.kind !== 'community_mention') return null
+  if (!meta.snippet || !meta.actorId) return null
   return { name: meta.actorName ?? fallbackName, snippet: meta.snippet }
 }
 
