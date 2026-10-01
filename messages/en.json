@@ -2757,7 +2757,8 @@
             "completed": "Completed",
             "successful": "Successful",
             "pending": "Pending",
-            "failed": "Failed"
+            "failed": "Failed",
+            "banned": "Banned"
           },
           "actions": {
             "roles": "Roles",
@@ -2787,7 +2788,10 @@
           "completed": "Completed: {title}",
           "noActivity": "No recent activity",
           "recentTransactions": "Recent Transactions",
-          "noTransactions": "No transactions yet"
+          "noTransactions": "No transactions yet",
+          "statusBanned": "Banned",
+          "statusBannedDesc": "This person was banned from the school and cannot rejoin it.",
+          "banReason": "Reason:"
         },
         "actions": {
           "menu": "User actions",
@@ -2802,7 +2806,11 @@
             "rolesSuccess": "Roles updated for {name}",
             "rolesError": "Failed to update roles",
             "removeSuccess": "{name} has been removed from this school",
-            "removeError": "Failed to remove member"
+            "removeError": "Failed to remove member",
+            "banSuccess": "{name} has been banned from this school",
+            "banError": "Failed to ban member",
+            "liftBanSuccess": "The ban on {name} was lifted",
+            "liftBanError": "Failed to lift ban"
           },
           "dialogs": {
             "deactivate": {
@@ -2838,9 +2846,23 @@
               "title": "Remove from School",
               "description": "Are you sure you want to remove {name} from this school? They lose access to its courses and stop counting toward your plan's student limit. They can re-join later using the school's join link.",
               "confirm": "Remove"
+            },
+            "ban": {
+              "title": "Ban from School",
+              "description": "{name} will lose access and will not be able to rejoin this school, even with an invitation or the join link, until you lift the ban.",
+              "reasonLabel": "Reason (optional)",
+              "reasonPlaceholder": "Visible to school admins only",
+              "confirm": "Ban"
+            },
+            "liftBan": {
+              "title": "Lift Ban",
+              "description": "Lift the ban on {name}? They are not reinstated automatically; they can rejoin the school through its join link.",
+              "confirm": "Lift ban"
             }
           },
-          "removeFromSchool": "Remove from School"
+          "removeFromSchool": "Remove from School",
+          "banFromSchool": "Ban from School",
+          "liftBan": "Lift Ban"
         },
         "invite": {
           "button": "Invite User",
@@ -7465,7 +7487,10 @@
     "submitting": "Joining...",
     "terms": "By joining, you agree to {school}'s terms of service and privacy policy",
     "error": "Failed to join school. Please try again.",
-    "unexpectedError": "An unexpected error occurred"
+    "unexpectedError": "An unexpected error occurred",
+    "bannedTitle": "You were removed from this school",
+    "bannedDescription": "{school} has removed your membership.",
+    "bannedBody": "You cannot rejoin this school. If you think this is a mistake, contact the school directly."
   },
   "createSchool": {
     "title": "Create Your School",

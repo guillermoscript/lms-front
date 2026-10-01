@@ -10,10 +10,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { IconDots, IconSettings, IconBan, IconCheck, IconUserMinus } from '@tabler/icons-react'
+import { IconDots, IconSettings, IconBan, IconCheck, IconUserMinus, IconUserOff } from '@tabler/icons-react'
 import { RoleAssignmentDialog } from './role-assignment-dialog'
 import { ConfirmDialog } from './confirm-dialog'
-import { deactivateUser, reactivateUser, removeTenantMember } from '@/app/actions/admin/users'
+import { deactivateUser, reactivateUser, removeTenantMember, banTenantMember, liftTenantBan } from '@/app/actions/admin/users'
+import { BanMemberDialog } from './ban-member-dialog'
 import { useTranslations } from 'next-intl'
 
 interface UserActionsProps {
@@ -21,19 +22,24 @@ interface UserActionsProps {
   userName: string
   currentRoles: string[]
   isDeactivated: boolean
+  /** `tenant_users.status = 'banned'` for this school (#892). */
+  isBanned?: boolean
 }
 
 export function UserActions({
   userId,
   userName,
   currentRoles,
-  isDeactivated
+  isDeactivated,
+  isBanned = false,
 }: UserActionsProps) {
   const t = useTranslations('dashboard.admin.users.actions')
   const [showRoleDialog, setShowRoleDialog] = useState(false)
   const [showDeactivateDialog, setShowDeactivateDialog] = useState(false)
   const [showReactivateDialog, setShowReactivateDialog] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
+  const [showBanDialog, setShowBanDialog] = useState(false)
+  const [showLiftBanDialog, setShowLiftBanDialog] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -56,6 +62,36 @@ export function UserActions({
       router.refresh()
     } else {
       toast.error(result.error || t('toasts.removeError'))
+    }
+
+    setLoading(false)
+  }
+
+  const handleBan = async (reason: string) => {
+    setLoading(true)
+    const result = await banTenantMember(userId, reason)
+
+    if (result.success) {
+      toast.success(t('toasts.banSuccess', { name: userName }))
+      setShowBanDialog(false)
+      router.refresh()
+    } else {
+      toast.error(result.error || t('toasts.banError'))
+    }
+
+    setLoading(false)
+  }
+
+  const handleLiftBan = async () => {
+    setLoading(true)
+    const result = await liftTenantBan(userId)
+
+    if (result.success) {
+      toast.success(t('toasts.liftBanSuccess', { name: userName }))
+      setShowLiftBanDialog(false)
+      router.refresh()
+    } else {
+      toast.error(result.error || t('toasts.liftBanError'))
     }
 
     setLoading(false)
@@ -100,6 +136,16 @@ export function UserActions({
           <IconDots className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {isBanned ? (
+            <DropdownMenuItem
+              onClick={() => setShowLiftBanDialog(true)}
+              data-testid="lift-ban-action"
+            >
+              <IconCheck className="mr-2 h-4 w-4" />
+              {t('liftBan')}
+            </DropdownMenuItem>
+          ) : (
+            <>
           <DropdownMenuItem onClick={() => setShowRoleDialog(true)}>
             <IconSettings className="mr-2 h-4 w-4" />
             {t('manageRoles')}
@@ -125,6 +171,16 @@ export function UserActions({
             <IconUserMinus className="mr-2 h-4 w-4" />
             {t('removeFromSchool')}
           </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setShowBanDialog(true)}
+                className="text-destructive"
+                data-testid="ban-action"
+              >
+                <IconUserOff className="mr-2 h-4 w-4" />
+                {t('banFromSchool')}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -161,6 +217,26 @@ export function UserActions({
         confirmText={t('dialogs.reactivate.confirm')}
         cancelText={t('dialogs.cancel')}
         onConfirm={handleReactivate}
+      />
+
+      {/* Ban (with optional reason) */}
+      <BanMemberDialog
+        open={showBanDialog}
+        onOpenChange={setShowBanDialog}
+        userName={userName}
+        loading={loading}
+        onConfirm={handleBan}
+      />
+
+      {/* Lift ban Confirmation */}
+      <ConfirmDialog
+        open={showLiftBanDialog}
+        onOpenChange={setShowLiftBanDialog}
+        title={t('dialogs.liftBan.title')}
+        description={t('dialogs.liftBan.description', { name: userName })}
+        confirmText={t('dialogs.liftBan.confirm')}
+        cancelText={t('dialogs.cancel')}
+        onConfirm={handleLiftBan}
       />
 
       {/* Remove-from-school Confirmation */}

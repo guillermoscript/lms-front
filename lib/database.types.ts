@@ -6526,6 +6526,9 @@ export type Database = {
       }
       tenant_users: {
         Row: {
+          ban_reason: string | null
+          banned_at: string | null
+          banned_by: string | null
           id: string
           joined_at: string | null
           role: string
@@ -6534,6 +6537,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           id?: string
           joined_at?: string | null
           role?: string
@@ -6542,6 +6548,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           id?: string
           joined_at?: string | null
           role?: string
@@ -7321,6 +7330,19 @@ export type Database = {
       can_read_exam: { Args: { _exam_id: number }; Returns: boolean }
       cancel_subscription: {
         Args: { _plan_id: number; _user_id: string }
+        Returns: undefined
+      }
+      ban_tenant_member: {
+        Args: {
+          _actor_id: string
+          _reason?: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      lift_tenant_ban: {
+        Args: { _tenant_id: string; _user_id: string }
         Returns: undefined
       }
       change_subscription_plan: {

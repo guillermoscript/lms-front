@@ -41,10 +41,11 @@ export default async function UserDetailPage({ params }: PageProps) {
   // Verify user belongs to this tenant
   const { data: membership } = await supabase
     .from('tenant_users')
-    .select('role')
+    .select('role, status, ban_reason')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
-    .eq('status', 'active')
+    // A banned member stays reachable (#892) — this page is where the ban is lifted.
+    .in('status', ['active', 'banned'])
     .single()
 
   if (!membership) {
@@ -95,6 +96,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   ])
 
   const isDeactivated = !!profile.deactivated_at
+  const isBanned = membership.status === 'banned'
 
   return (
     <div className="min-h-screen bg-background">
@@ -127,6 +129,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               userName={profile.full_name || profile.email}
               currentRoles={roles}
               isDeactivated={isDeactivated}
+              isBanned={isBanned}
             />
           </div>
         </div>
@@ -214,7 +217,18 @@ export default async function UserDetailPage({ params }: PageProps) {
                 <CardTitle>{t('status')}</CardTitle>
               </CardHeader>
               <CardContent>
-                {isDeactivated ? (
+                {isBanned ? (
+                  <div data-testid="user-detail-banned">
+                    <Badge variant="destructive" className="mb-2">{t('statusBanned')}</Badge>
+                    <p className="text-sm text-muted-foreground">{t('statusBannedDesc')}</p>
+                    {membership.ban_reason && (
+                      <p className="mt-2 text-sm">
+                        <span className="font-medium">{t('banReason')}</span>{' '}
+                        <span className="text-muted-foreground">{membership.ban_reason}</span>
+                      </p>
+                    )}
+                  </div>
+                ) : isDeactivated ? (
                   <div>
                     <Badge variant="destructive" className="mb-2">{t('statusDeactivated')}</Badge>
                     <p className="text-sm text-muted-foreground">
@@ -248,6 +262,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <CardContent>
                 {enrollments && enrollments.length > 0 ? (
                   <div className="space-y-3">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {enrollments.map((enrollment: any) => (
                       <div
                         key={enrollment.enrollment_id}
@@ -284,6 +299,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <CardContent>
                 {recentActivity && recentActivity.length > 0 ? (
                   <div className="space-y-3">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {recentActivity.map((activity: any, index: number) => (
                       <div key={index} className="flex items-start gap-3 text-sm">
                         <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
@@ -320,6 +336,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <CardContent>
                 {transactions && transactions.length > 0 ? (
                   <div className="space-y-3">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {transactions.map((transaction: any) => (
                       <div
                         key={transaction.transaction_id}

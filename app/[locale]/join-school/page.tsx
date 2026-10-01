@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { JoinSchoolForm } from '@/components/join-school-form'
 import { AutoJoinSchool } from '@/components/join-school-auto'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CheckCircle, School } from 'lucide-react'
+import { Ban, CheckCircle, School } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { Metadata } from 'next'
@@ -60,6 +60,42 @@ export default async function JoinSchoolPage({
             <CardDescription className="text-destructive">{t('notFoundDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
+            <Link href="/">
+              <Button variant="outline">{t('returnHome')}</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // A banned user (#892) gets a dead end with an explanation. This must come
+  // before the join form and the auto-join wrapper: proxy.ts sends a banned
+  // member here, so showing the form would loop them through a join that
+  // `joinSchool` refuses. RLS lets them read their own row.
+  const { data: banRow } = await supabase
+    .from('tenant_users')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'banned')
+    .maybeSingle()
+
+  if (banRow) {
+    return (
+      <div className="container mx-auto py-12 max-w-md">
+        <Card className="bg-destructive/10 ring-destructive/30" data-testid="join-school-banned">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Ban className="h-6 w-6 text-destructive" />
+              <CardTitle className="text-destructive">{t('bannedTitle')}</CardTitle>
+            </div>
+            <CardDescription className="text-destructive">
+              {t('bannedDescription', { school: tenant.name })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-destructive">{t('bannedBody')}</p>
             <Link href="/">
               <Button variant="outline">{t('returnHome')}</Button>
             </Link>

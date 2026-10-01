@@ -291,6 +291,70 @@ describe('POST /api/tenant/switch', () => {
   })
 })
 
+describe('bans (#892)', () => {
+  const banned = () => [{ user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'banned' }]
+
+  it('403s a banned user without being asked to confirm, and changes nothing', async () => {
+    state.memberships = banned()
+    state.invitations = [{ id: 9, tenant_id: X.id, email: 'stu@example.com', status: 'pending', role: 'teacher' }]
+    const res = await post({ tenantId: X.id })
+    expect(res.status).toBe(403)
+    expect(await res.json()).toMatchObject({ code: 'banned', school: { tenantId: X.id } })
+    expect(state.inserts).toEqual([])
+    expect(state.updates).toEqual([])
+    expect(state.metaUpdates).toEqual([])
+  })
+
+  it('still refuses with join: true, even holding a pending invitation', async () => {
+    state.memberships = banned()
+    state.invitations = [{ id: 9, tenant_id: X.id, email: 'stu@example.com', status: 'pending', role: 'teacher' }]
+    const res = await post({ tenantId: X.id, join: true })
+    expect(res.status).toBe(403)
+    expect(state.updates).toEqual([])
+    expect(state.metaUpdates).toEqual([])
+  })
+
+  it('joinSchool refuses a banned row before the seat check or the invitation', async () => {
+    const { joinSchool, BANNED_MESSAGE } = await import('@/lib/tenant/join-school')
+    state.memberships = banned()
+    state.invitations = [{ id: 9, tenant_id: X.id, email: 'stu@example.com', status: 'pending', role: 'teacher' }]
+    const out = await joinSchool({
+      admin: admin as never,
+      user: { id: 'user-1', email: 'Stu@Example.com' },
+      tenantId: X.id,
+    })
+    expect(out).toEqual({ ok: false, code: 'banned', error: BANNED_MESSAGE })
+    expect(state.updates).toEqual([])
+    expect(state.inserts).toEqual([])
+  })
+
+  it('maps the guard trigger (LM002) winning a race to banned', async () => {
+    state.memberships = [{ user_id: 'user-1', tenant_id: X.id, role: 'student', status: 'removed' }]
+    // The reinstating UPDATE is the write that hits the trigger.
+    const real = admin.from
+    admin.from = (t: string) => {
+      const b = real(t) as Record<string, unknown>
+      if (t === 'tenant_users') {
+        const update = b.update as (v: Row) => unknown
+        b.update = (v: Row) => {
+          update(v)
+          b.then = (res: (v: unknown) => void) =>
+            Promise.resolve({ data: null, error: { code: 'LM002', message: 'tenant_banned' } }).then(res)
+          return b
+        }
+      }
+      return b
+    }
+    try {
+      const res = await post({ tenantId: X.id, join: true })
+      expect(res.status).toBe(403)
+      expect((await res.json()).code).toBe('banned')
+    } finally {
+      admin.from = real
+    }
+  })
+})
+
 describe('GET /api/tenant/memberships', () => {
   it('401s without a user', async () => {
     state.user = null

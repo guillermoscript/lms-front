@@ -20,13 +20,13 @@
  * seat.
  *
  * Errors carry a stable `code`: `unauthorized` 401 · `invalid_body` 400 ·
- * `school_not_found` 404 · `join_required` 409 · `student_limit` 409 ·
+ * `school_not_found` 404 · `banned` 403 (#892) · `join_required` 409 · `student_limit` 409 ·
  * `switch_failed` 500.
  */
 import { z } from 'zod'
 import { getBearerUser } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { canJoinWithoutAsking, joinSchool, setActiveTenant } from '@/lib/tenant/join-school'
+import { BANNED_MESSAGE, canJoinWithoutAsking, joinSchool, setActiveTenant } from '@/lib/tenant/join-school'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +100,19 @@ export async function POST(req: Request) {
     return Response.json({ ...school, role: membership.role, joined: false })
   }
 
+  // A banned user is told so up front (#892), not asked to confirm a join that
+  // `joinSchool` would then refuse.
+  const { data: banRow } = await admin
+    .from('tenant_users')
+    .select('status')
+    .eq('user_id', user.id)
+    .eq('tenant_id', tenant.id)
+    .eq('status', 'banned')
+    .maybeSingle()
+  if (banRow) {
+    return Response.json({ error: BANNED_MESSAGE, code: 'banned', school }, { status: 403 })
+  }
+
   if (!join && !(await canJoinWithoutAsking({ admin, user, tenantId: tenant.id }))) {
     return Response.json(
       { error: 'Joining this school needs your confirmation', code: 'join_required', school },
@@ -123,6 +136,9 @@ export async function POST(req: Request) {
         .maybeSingle()
       if (switched && row) return Response.json({ ...school, role: row.role, joined: false })
       return switchFailed()
+    }
+    if (outcome.code === 'banned') {
+      return Response.json({ error: outcome.error, code: 'banned', school }, { status: 403 })
     }
     if (outcome.code === 'student_limit') {
       return Response.json({ error: outcome.error, code: 'student_limit', school }, { status: 409 })

@@ -2756,7 +2756,8 @@
             "completed": "Completado",
             "successful": "Exitoso",
             "pending": "Pendiente",
-            "failed": "Fallido"
+            "failed": "Fallido",
+            "banned": "Vetado"
           },
           "actions": {
             "roles": "Roles",
@@ -2786,7 +2787,10 @@
           "completed": "Completado: {title}",
           "noActivity": "No hay actividad reciente",
           "recentTransactions": "Transacciones Recientes",
-          "noTransactions": "Aún no hay transacciones"
+          "noTransactions": "Aún no hay transacciones",
+          "statusBanned": "Vetado",
+          "statusBannedDesc": "Esta persona fue vetada de la escuela y no puede volver a unirse.",
+          "banReason": "Motivo:"
         },
         "actions": {
           "menu": "Acciones de usuario",
@@ -2801,7 +2805,11 @@
             "rolesSuccess": "Roles actualizados para {name}",
             "rolesError": "Error al actualizar los roles",
             "removeSuccess": "{name} ha sido eliminado de esta escuela",
-            "removeError": "No se pudo eliminar al miembro"
+            "removeError": "No se pudo eliminar al miembro",
+            "banSuccess": "{name} fue vetado de esta escuela",
+            "banError": "No se pudo vetar al miembro",
+            "liftBanSuccess": "Se levantó el veto de {name}",
+            "liftBanError": "No se pudo levantar el veto"
           },
           "dialogs": {
             "deactivate": {
@@ -2837,9 +2845,23 @@
               "title": "Eliminar de la escuela",
               "description": "¿Seguro que quieres eliminar a {name} de esta escuela? Perderá el acceso a sus cursos y dejará de contar para el límite de estudiantes de tu plan. Podrá volver a unirse más adelante con el enlace de la escuela.",
               "confirm": "Eliminar"
+            },
+            "ban": {
+              "title": "Vetar de la escuela",
+              "description": "{name} perderá el acceso y no podrá volver a unirse a esta escuela, ni con una invitación ni con el enlace, hasta que levantes el veto.",
+              "reasonLabel": "Motivo (opcional)",
+              "reasonPlaceholder": "Solo lo ven los administradores de la escuela",
+              "confirm": "Vetar"
+            },
+            "liftBan": {
+              "title": "Levantar veto",
+              "description": "¿Levantar el veto de {name}? No se reincorpora automáticamente; podrá volver a unirse con el enlace de la escuela.",
+              "confirm": "Levantar veto"
             }
           },
-          "removeFromSchool": "Eliminar de la escuela"
+          "removeFromSchool": "Eliminar de la escuela",
+          "banFromSchool": "Vetar de la escuela",
+          "liftBan": "Levantar veto"
         },
         "invite": {
           "button": "Invitar Usuario",
@@ -7465,7 +7487,10 @@
     "submitting": "Uniéndote...",
     "terms": "Al unirte, aceptas los términos de servicio y la política de privacidad de {school}",
     "error": "No se pudo unir a la escuela. Inténtalo de nuevo.",
-    "unexpectedError": "Ocurrió un error inesperado"
+    "unexpectedError": "Ocurrió un error inesperado",
+    "bannedTitle": "Te retiraron de esta escuela",
+    "bannedDescription": "{school} eliminó tu membresía.",
+    "bannedBody": "No puedes volver a unirte a esta escuela. Si crees que es un error, contacta directamente a la escuela."
   },
   "createSchool": {
     "title": "Crea tu escuela",
