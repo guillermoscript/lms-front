@@ -121,7 +121,6 @@ export default function GeneralSettingsForm({ settings, country: savedCountry }:
           type="email"
           defaultValue={contactEmail}
           placeholder="contact@example.com"
-          required
         />
         <p className="text-sm text-muted-foreground">
           {t('general.contactEmailHint')}
@@ -137,7 +136,6 @@ export default function GeneralSettingsForm({ settings, country: savedCountry }:
           type="email"
           defaultValue={supportEmail}
           placeholder="support@example.com"
-          required
         />
         <p className="text-sm text-muted-foreground">
           {t('general.supportEmailHint')}
