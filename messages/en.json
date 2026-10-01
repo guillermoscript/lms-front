@@ -3466,7 +3466,13 @@
             "maintenanceMode": "Maintenance Mode",
             "maintenanceModeHint": "Enable to show maintenance message to users",
             "maintenanceMessage": "Maintenance Message",
-            "maintenanceMessagePlaceholder": "We're currently performing maintenance. Please check back soon."
+            "maintenanceMessagePlaceholder": "We're currently performing maintenance. Please check back soon.",
+            "country": "Country",
+            "countryPlaceholder": "Search for your country",
+            "countryEmpty": "No country matches that search.",
+            "countryHint": "Where your school operates. If no currency is set yet, it becomes the country’s currency.",
+            "countryError": "Could not save the country. Try again.",
+            "countryCurrencyFilled": "Default currency set to {currency}."
           },
           "email": {
             "notifications": "Email Notifications",
@@ -7398,7 +7404,11 @@
     "errorEmailRegistered": "This email is already registered. Please log in instead.",
     "errorSlugTaken": "This school URL is already taken. Please choose a different one.",
     "errorCreateFailed": "Failed to create school: {message}",
-    "errorGeneric": "Something went wrong"
+    "errorGeneric": "Something went wrong",
+    "countryLabel": "Country",
+    "countryPlaceholder": "Search for your country",
+    "countryEmpty": "No country matches that search.",
+    "countryHint": "Sets your default currency. You can change it later in Settings."
   },
   "home": {
     "hero": {

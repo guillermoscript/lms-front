@@ -14,6 +14,12 @@ import {
 import { revalidatePath } from 'next/cache'
 import { SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit'
 import { normalizeManualPaymentAccounts, type ManualPaymentAccount } from '@/lib/payments/manual-payment-accounts'
+import {
+  defaultCurrencyForCountry,
+  isCurrencySettingEmpty,
+  normalizeCountry,
+  type CountryCode,
+} from '@/lib/countries'
 
 /**
  * A `tenant_settings.setting_value` JSONB payload. Every setting is stored as
@@ -300,6 +306,72 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
   } catch (error) {
     console.error('Error resetting setting:', error)
     return { success: false, error: 'Failed to reset setting' }
+  }
+}
+
+/**
+ * Set the school's country (#865) — `tenants.country`, not a tenant_setting.
+ *
+ * When the school has no `currency` setting yet (no row, or a blank value),
+ * the country's default currency from `lib/countries.ts` fills it. A currency
+ * the admin already chose is never overwritten. `currencyFilled` tells the
+ * form which currency was set, or `null` when none was.
+ */
+export async function updateSchoolCountry(country: string): Promise<{
+  success: boolean
+  country?: CountryCode
+  currencyFilled?: string | null
+  error?: string
+}> {
+  try {
+    const role = await getUserRole()
+    if (role !== 'admin') {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const code = normalizeCountry(country)
+    if (!code) {
+      return { success: false, error: 'Choose a country from the list.' }
+    }
+
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+
+    const { error: tenantError } = await supabase
+      .from('tenants')
+      .update({ country: code })
+      .eq('id', tenantId)
+    if (tenantError) throw tenantError
+
+    let currencyFilled: string | null = null
+    const currency = defaultCurrencyForCountry(code)
+    if (currency) {
+      const { data: existing, error: readError } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('setting_key', 'currency')
+        .maybeSingle()
+      if (readError) throw readError
+
+      if (isCurrencySettingEmpty(existing?.setting_value)) {
+        const { error: writeError } = await supabase
+          .from('tenant_settings')
+          .upsert(
+            { tenant_id: tenantId, setting_key: 'currency', setting_value: { value: currency } },
+            { onConflict: 'tenant_id,setting_key' }
+          )
+        if (writeError) throw writeError
+        currencyFilled = currency
+      }
+    }
+
+    revalidatePath('/dashboard/admin/settings')
+
+    return { success: true, country: code, currencyFilled }
+  } catch (error) {
+    console.error('Error updating school country:', error)
+    return { success: false, error: 'Failed to update the school country' }
   }
 }
 

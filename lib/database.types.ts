@@ -7230,7 +7230,15 @@ export type Database = {
             }
             Returns: undefined
           }
-      create_school: { Args: { _name: string; _slug: string }; Returns: string }
+      create_school: {
+        Args: {
+          _country?: string
+          _currency?: string
+          _name: string
+          _slug: string
+        }
+        Returns: string
+      }
       create_student_question_notification: {
         Args: { _context?: string; _course_id: number; _message: string }
         Returns: number
