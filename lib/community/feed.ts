@@ -71,6 +71,10 @@ export function visiblePostsQuery<Columns extends string>(
  * `questionFilter` (#875) narrows it to questions, unanswered or answered ones —
  * on the server, so the teacher's "unanswered" list is complete, not just what
  * the first page happened to hold.
+ *
+ * `after` (#876, the live feed) reads the posts newer than a `created_at`
+ * instead — what a realtime event announced, through the same filters, so a
+ * hidden post or a blocked author never reaches the "N new posts" pill.
  */
 export async function getFeedPage({
   tenantId,
@@ -78,6 +82,7 @@ export async function getFeedPage({
   scope,
   courseId,
   cursor,
+  after,
   postId,
   questionFilter = null,
 }: {
@@ -86,6 +91,7 @@ export async function getFeedPage({
   scope: 'school' | 'course'
   courseId?: number
   cursor?: string
+  after?: string
   postId?: string
   questionFilter?: QuestionFilter | null
 }): Promise<{ posts: CommunityPost[]; hasMore: boolean }> {
@@ -102,9 +108,13 @@ export async function getFeedPage({
     if (questionFilter === 'answered') query = query.not('accepted_comment_id', 'is', null)
   }
 
-  query = cursor
-    ? query.eq('is_pinned', false).lt('created_at', cursor)
-    : query.order('is_pinned', { ascending: false })
+  if (cursor) {
+    query = query.eq('is_pinned', false).lt('created_at', cursor)
+  } else if (after) {
+    query = query.gt('created_at', after)
+  } else {
+    query = query.order('is_pinned', { ascending: false })
+  }
 
   const { data: posts, error } = await query
     .order('created_at', { ascending: false })

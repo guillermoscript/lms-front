@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +39,9 @@ import { Badge } from '@/components/ui/badge'
 import { canAcceptAnswers, rankAnswers } from '@/lib/community/questions'
 import { commentAnchorId, scrollBehavior } from '@/lib/community/deep-link'
 import { CommunityMarkdown, CommunityMarkdownField } from './community-markdown'
+import { MentionTextarea } from './mention-textarea'
+import { useRealtimeInserts } from '@/hooks/use-realtime-inserts'
+import { isThreadInsertSignal, REALTIME_DEBOUNCE_MS, threadInsertFilter } from '@/lib/community/realtime'
 
 type CommunityT = ReturnType<typeof useTranslations<'community'>>
 
@@ -139,6 +141,32 @@ export function CommentThread({
     loadComments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId])
+
+  // #876: someone else's comment on this post arrives live. The event is only
+  // a signal — the thread re-reads through `getComments`, which drops hidden
+  // comments and blocked authors; one channel per open thread, gone on close.
+  const liveReloadRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scheduleLiveReload = () => {
+    if (liveReloadRef.current) clearTimeout(liveReloadRef.current)
+    liveReloadRef.current = setTimeout(() => {
+      liveReloadRef.current = null
+      loadComments({ silent: true })
+    }, REALTIME_DEBOUNCE_MS)
+  }
+  useEffect(() => () => {
+    if (liveReloadRef.current) clearTimeout(liveReloadRef.current)
+  }, [])
+  useRealtimeInserts({
+    table: 'community_comments',
+    filter: threadInsertFilter(postId),
+    onInsert: (row) => {
+      if (isThreadInsertSignal(row, { postId, viewerId: userId })) scheduleLiveReload()
+    },
+    // Back after a dropped connection: catch up on what was missed.
+    onSubscribed: (first) => {
+      if (!first) scheduleLiveReload()
+    },
+  })
 
   useEffect(() => {
     if (loading || !focusCommentId || focusHandledRef.current === focusCommentId) return
@@ -345,9 +373,10 @@ export function CommentThread({
           }}
         >
           <CommunityMarkdownField value={newComment} previewClassName="min-h-24 text-base">
-            <Textarea
+            <MentionTextarea
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onValueChange={setNewComment}
+              mentionContext={{ postId }}
               placeholder={placeholder ?? t('writeReply')}
               aria-label={composerLabel ?? t('writeReply')}
               maxLength={MAX_COMMENT_LENGTH}
@@ -378,9 +407,10 @@ export function CommentThread({
           </Avatar>
           <div className="flex-1 flex gap-2">
             <CommunityMarkdownField value={newComment} previewClassName="min-h-[60px] text-xs">
-              <Textarea
+              <MentionTextarea
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onValueChange={setNewComment}
+                mentionContext={{ postId }}
                 placeholder={placeholder ?? t('writeReply')}
                 aria-label={composerLabel ?? t('writeReply')}
                 maxLength={MAX_COMMENT_LENGTH}
@@ -429,6 +459,7 @@ export function CommentThread({
           {comments.map((comment) => (
             <CommentItem
               key={comment.id}
+              postId={postId}
               comment={comment}
               userId={userId}
               userRole={userRole}
@@ -470,11 +501,13 @@ export function CommentThread({
 // -------------------------------------------------------------------
 
 function CommentReplyForm({
+  postId,
   onSubmit,
   submitting,
   t,
   isLearner,
 }: {
+  postId: string
   onSubmit: (content: string) => void
   submitting: boolean
   t: CommunityT
@@ -496,9 +529,10 @@ function CommentReplyForm({
         value={content}
         previewClassName={isLearner ? 'min-h-16 text-base' : 'min-h-[50px] text-xs'}
       >
-        <Textarea
+        <MentionTextarea
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onValueChange={setContent}
+          mentionContext={{ postId }}
           placeholder={t('writeReply')}
           aria-label={t('writeReply')}
           maxLength={MAX_COMMENT_LENGTH}
@@ -525,6 +559,7 @@ function CommentReplyForm({
 }
 
 interface CommentItemProps {
+  postId: string
   comment: Comment
   depth?: number
   userId: string
@@ -548,6 +583,7 @@ interface CommentItemProps {
 }
 
 function CommentItem({
+  postId,
   comment,
   depth = 0,
   userId,
@@ -734,6 +770,7 @@ function CommentItem({
               <IconCornerDownRight size={12} className="text-muted-foreground/50 mt-2" />
             </div>
             <CommentReplyForm
+              postId={postId}
               t={t}
               submitting={submitting}
               isLearner={isLearner}
@@ -748,6 +785,7 @@ function CommentItem({
             {comment.replies.map((reply) => (
               <CommentItem
                 key={reply.id}
+                postId={postId}
                 comment={reply}
                 depth={depth + 1}
                 userId={userId}

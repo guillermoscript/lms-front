@@ -7112,10 +7112,14 @@
         "prompts": "Nuevos temas de discusión",
         "promptsDescription": "Cuando un docente abre una discusión en uno de tus cursos.",
         "everySchool": "Estos ajustes se aplican en todas las escuelas a las que perteneces.",
-        "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo."
+        "error": "No se pudo guardar tu preferencia. Inténtalo de nuevo.",
+        "mentions": "Menciones",
+        "mentionsDescription": "Cuando alguien te @menciona en una publicación o un comentario."
       },
       "promptGraded": "Tu respuesta fue calificada: {score}/100",
-      "promptGradedNoScore": "Tu respuesta fue calificada"
+      "promptGradedNoScore": "Tu respuesta fue calificada",
+      "mentionInPost": "{name} te mencionó en una publicación",
+      "mentionInComment": "{name} te mencionó en un comentario"
     },
     "emptySchool": "No hay publicaciones aún. ¡Sé el primero en compartir algo!",
     "emptyCourse": "No hay discusiones aún. ¡Inicia la conversación!",
@@ -7275,7 +7279,7 @@
     },
     "postActions": "Acciones de la publicación",
     "markdown": {
-      "hint": "Markdown: **negrita**  *cursiva*  `código`  ```bloque de código```",
+      "hint": "Markdown: **negrita**  *cursiva*  `código`  ```bloque de código```  @ para mencionar",
       "preview": "Vista previa",
       "edit": "Editar",
       "showMore": "Ver más",
@@ -7366,6 +7370,11 @@
       "dueOn": "Vence el {date}",
       "dueDate": "Fecha de entrega (opcional)",
       "dueDateHint": "Los estudiantes la ven. Se siguen aceptando respuestas después."
+    },
+    "newPosts": "{count, plural, one {# publicación nueva} other {# publicaciones nuevas}}",
+    "mentions": {
+      "listLabel": "Mencionar a alguien",
+      "noMatches": "Nadie con ese nombre puede ver esto"
     }
   },
   "schoolLanding": {

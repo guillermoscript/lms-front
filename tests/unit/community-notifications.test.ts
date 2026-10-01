@@ -108,7 +108,7 @@ describe('parseCommunityNotificationMeta', () => {
     expect(parseCommunityNotificationMeta('community_reply')).toBeNull()
     expect(parseCommunityNotificationMeta([replyMetadata()])).toBeNull()
     expect(parseCommunityNotificationMeta({ kind: 'daily_digest', post_id: POST })).toBeNull()
-    expect(parseCommunityNotificationMeta(replyMetadata({ kind: 'community_mention' }))).toBeNull()
+    expect(parseCommunityNotificationMeta(replyMetadata({ kind: 'community_unknown' }))).toBeNull()
   })
 
   it('rejects malformed ids instead of building a broken link', () => {

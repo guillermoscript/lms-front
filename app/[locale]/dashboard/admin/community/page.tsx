@@ -133,6 +133,7 @@ export default async function AdminCommunityPage({ searchParams }: PageProps) {
           key={questionFilter ?? 'all'}
           questionFilter={questionFilter}
           scope="school"
+          tenantId={tenantId}
           initialPosts={feed.posts}
           initialHasMore={feed.hasMore}
           userRole={role}

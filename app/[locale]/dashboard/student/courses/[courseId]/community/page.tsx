@@ -111,6 +111,7 @@ export default async function StudentCourseCommunityPage({ params, searchParams 
           key={questionFilter ?? 'all'}
           questionFilter={questionFilter}
           scope="course"
+          tenantId={tenantId}
           courseId={numericCourseId}
           initialPosts={feed.posts}
           initialHasMore={feed.hasMore}

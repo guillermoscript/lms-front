@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import Markdown, { type Components } from 'react-markdown'
+import Markdown, { defaultUrlTransform, type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { Break, Parent, Root, RootContent, Text } from 'mdast'
 import type { Element as HastElement, ElementContent } from 'hast'
@@ -11,6 +11,7 @@ import { IconEye, IconPencil } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { CodeBlock, CodeBlockCopyButton } from '@/components/ai-elements/code-block'
 import { cn } from '@/lib/utils'
+import { parseMentionHref } from '@/lib/community/mentions'
 
 /**
  * Community text (#872): posts, comments and discussion prompts.
@@ -19,7 +20,9 @@ import { cn } from '@/lib/utils'
  * never `rehype-raw`), images are removed (attachments are the image path),
  * headings are demoted so a post can not out-shout the page, and links open in
  * a new tab without passing the referrer or our PageRank. react-markdown's
- * default `urlTransform` stays on, so `javascript:`/`data:` hrefs are emptied.
+ * default `urlTransform` stays on, so `javascript:`/`data:` hrefs are emptied —
+ * except a well-formed `mention:<uuid>` (#876), which renders as a highlighted
+ * name, never as a link.
  *
  * A single newline is a line break (`remarkSoftBreaks`): everything written
  * before #872 was plain text, and it must read exactly as it did.
@@ -47,6 +50,11 @@ export function remarkSoftBreaks() {
 }
 
 const REMARK_PLUGINS = [remarkGfm, remarkSoftBreaks]
+
+/** Keeps `mention:<uuid>` hrefs (#876); everything else gets the default. */
+export function mentionAwareUrlTransform(url: string): string {
+  return parseMentionHref(url) ? url : defaultUrlTransform(url)
+}
 const DISALLOWED = ['img']
 const LINK_REL = 'nofollow noopener noreferrer'
 
@@ -85,16 +93,23 @@ function FencedCode({ node, copyLabel }: { node?: HastElement; copyLabel: string
 function buildComponents(copyLabel: string): Components {
   return {
     p: ({ children }) => <p className="my-2 first:mt-0 last:mb-0">{children}</p>,
-    a: ({ href, children }) => (
-      <a
-        href={href}
-        target="_blank"
-        rel={LINK_REL}
-        className="font-medium text-primary underline underline-offset-2 break-words hover:text-primary/80"
-      >
-        {children}
-      </a>
-    ),
+    a: ({ href, children }) =>
+      // `[@Name](mention:<uuid>)` (#876): the name, highlighted — not a link,
+      // there is no profile page to open.
+      parseMentionHref(href) ? (
+        <span data-mention="" className="rounded bg-primary/10 px-1 font-medium text-primary">
+          {children}
+        </span>
+      ) : (
+        <a
+          href={href}
+          target="_blank"
+          rel={LINK_REL}
+          className="font-medium text-primary underline underline-offset-2 break-words hover:text-primary/80"
+        >
+          {children}
+        </a>
+      ),
     h1: ({ children }) => <h3 className="mt-3 mb-1 text-base font-semibold text-foreground">{children}</h3>,
     h2: ({ children }) => <h4 className="mt-3 mb-1 font-semibold text-foreground">{children}</h4>,
     h3: ({ children }) => <h4 className="mt-3 mb-1 font-semibold text-foreground">{children}</h4>,
@@ -172,6 +187,7 @@ export function CommunityMarkdown({ content, className, collapsible = false, id 
         <Markdown
           remarkPlugins={REMARK_PLUGINS}
           skipHtml
+          urlTransform={mentionAwareUrlTransform}
           disallowedElements={DISALLOWED}
           components={buildComponents(t('copyCode'))}
         >
