@@ -15,7 +15,7 @@
  * file against `/api/account/delete`.
  */
 import { test, expect, type Locator } from '@playwright/test'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { BASE, TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
 import { login } from './utils/auth'
 import { getServiceRoleClient, DEFAULT_TENANT } from './utils/seed-state'
@@ -151,7 +151,7 @@ test('a student deletes their account from the profile page', async ({ page }) =
   studentId = null
 })
 
-test('the only admin of a school is told why they cannot delete yet', async ({ page }) => {
+test('the only admin of a school is told why they cannot delete yet', async ({ page, request }) => {
   test.setTimeout(120_000)
   await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password, TENANT_BASE)
   await page.goto(`${TENANT_BASE}/${LOCALE}/dashboard/admin/settings`, { waitUntil: 'domcontentloaded' })
@@ -168,7 +168,22 @@ test('the only admin of a school is told why they cannot delete yet', async ({ p
   await expect(dialog.getByText(/You're the only admin of/)).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Delete my account' })).toHaveCount(0)
 
-  const res = await page.request.post(`${TENANT_BASE}/api/account/delete`, {
+  // Cookie alone is refused (#891); with a token it reaches the blocker check.
+  const cookieOnly = await page.request.post(`${TENANT_BASE}/api/account/delete`, {
+    headers: { 'Content-Type': 'text/plain' },
+    data: JSON.stringify({ confirm: ACCOUNTS.admin.email }),
+  })
+  expect(cookieOnly.status()).toBe(401)
+
+  const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!, {
+    auth: { persistSession: false },
+  })
+  const { data: signed } = await anon.auth.signInWithPassword({
+    email: ACCOUNTS.admin.email,
+    password: ACCOUNTS.admin.password,
+  })
+  const res = await request.post(`${TENANT_BASE}/api/account/delete`, {
+    headers: { Authorization: `Bearer ${signed.session!.access_token}` },
     data: { confirm: ACCOUNTS.admin.email },
   })
   expect(res.status()).toBe(409)
