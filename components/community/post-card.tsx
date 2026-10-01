@@ -329,7 +329,7 @@ export function PostCard({ post, userId, userRole, focused = false, focusComment
           </div>
         </div>
       ) : post.post_type === 'discussion_prompt' ? (
-        <DiscussionPromptCard post={post} />
+        <DiscussionPromptCard post={post} canGrade={canModerate} />
       ) : post.post_type === 'milestone' ? (
         <MilestoneCard post={post} />
       ) : (

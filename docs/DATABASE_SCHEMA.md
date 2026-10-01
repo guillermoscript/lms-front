@@ -17,7 +17,7 @@ The LMS database is built on PostgreSQL 15 via Supabase. As of the latest migrat
 - **Certificates**: `certificates`, `certificate_templates`, `certificate_shares`, `certificate_verification_log`, `issuer_keys`
 - **AI Tutoring**: `course_ai_tutors`, `aristotle_sessions`, `aristotle_messages`, `exam_ai_configs`
 - **Landing Pages**: `landing_pages`, `landing_page_templates`
-- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`, `community_user_blocks`
+- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`, `community_user_blocks`, `community_prompt_grades` (#873)
 - **Social / Messaging**: `messages`, `chats`, `chat_conversations`, `chat_messages`, `lesson_comments`, `comments`, `comment_reactions`, `comment_flags`, `reviews`, `item_ratings`
 - **Support**: `tickets`, `ticket_messages`
 - **Notifications**: `notifications`, `user_notifications`, `notification_templates`, `notification_preferences`, `device_push_tokens`

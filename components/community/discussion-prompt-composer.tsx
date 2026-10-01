@@ -17,6 +17,7 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { createPost } from '@/app/actions/community'
 import { cn } from '@/lib/utils'
+import { endOfLocalDayIso } from '@/lib/community/prompt-grades'
 
 /** The select's value for "not linked to a lesson" — base-ui needs a string. */
 const NO_LESSON = 'none'
@@ -49,6 +50,8 @@ export function DiscussionPromptComposer({
     defaultLessonId ? String(defaultLessonId) : null
   )
   const [isGraded, setIsGraded] = useState(false)
+  // `YYYY-MM-DD` from the date input; sent as the end of that local day (#873).
+  const [dueDate, setDueDate] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const fieldId = useId()
 
@@ -67,6 +70,8 @@ export function DiscussionPromptComposer({
       formData.append('course_id', String(courseId))
       if (lessonId) formData.append('lesson_id', String(lessonId))
       formData.append('is_graded', String(isGraded))
+      const dueAt = isGraded && dueDate ? endOfLocalDayIso(dueDate) : null
+      if (dueAt) formData.append('due_at', dueAt)
 
       const result = await createPost(formData)
       if (!result.success) {
@@ -77,6 +82,7 @@ export function DiscussionPromptComposer({
       setContent('')
       setLessonValue(defaultLessonId ? String(defaultLessonId) : null)
       setIsGraded(false)
+      setDueDate('')
       if (onCreated && result.data?.id) {
         onCreated(result.data.id)
       } else {
@@ -155,6 +161,25 @@ export function DiscussionPromptComposer({
         </div>
         <Switch id={`${fieldId}-graded`} checked={isGraded} onCheckedChange={setIsGraded} />
       </div>
+
+      {isGraded && (
+        <div className="space-y-2">
+          <Label htmlFor={`${fieldId}-due`} className="text-xs">
+            {t('promptGrade.dueDate')}
+          </Label>
+          <input
+            id={`${fieldId}-due`}
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            aria-describedby={`${fieldId}-due-hint`}
+            className="flex h-8 w-full max-w-48 rounded-md border border-input bg-input/20 px-3 text-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
+          />
+          <p id={`${fieldId}-due-hint`} className="text-[11px] text-muted-foreground">
+            {t('promptGrade.dueDateHint')}
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button

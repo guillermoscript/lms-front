@@ -15,6 +15,7 @@ import { canPinInCourse } from '@/lib/community/access'
 import { parsePostMedia } from '@/lib/community/media'
 import { acceptAnswerErrorKey, canAcceptAnswers, parseQuestionFilter } from '@/lib/community/questions'
 import { readCommunityXpEarned, type CommunityXpEarned } from '@/lib/community/xp'
+import { parseDueAt } from '@/lib/community/prompt-grades'
 import type { CommunityPost } from '@/components/community/community-feed'
 
 type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
@@ -201,6 +202,7 @@ export async function createPost(
     const lessonId = parsePositiveId(formData.get('lesson_id'))
     const isGraded = formData.get('is_graded') === 'true'
     const pin = formData.get('is_pinned') === 'true'
+    const dueAt = parseDueAt(formData.get('due_at'))
 
     if (!content || content.trim().length === 0) {
       return { success: false, error: 'Content is required' }
@@ -212,6 +214,7 @@ export async function createPost(
 
     if (courseId === 'invalid') return { success: false, error: 'Invalid course ID' }
     if (lessonId === 'invalid') return { success: false, error: 'Invalid lesson ID' }
+    if (dueAt === 'invalid') return { success: false, error: 'Invalid due date' }
 
     // Polls go through createPoll (they need options); milestones are system posts.
     if (postType !== 'standard' && postType !== 'discussion_prompt' && postType !== 'question') {
@@ -221,6 +224,11 @@ export async function createPost(
     // Students cannot create discussion prompts or graded posts
     if (role === 'student' && (postType === 'discussion_prompt' || isGraded)) {
       return { success: false, error: 'Only teachers and admins can create this type of post' }
+    }
+
+    // #873: only a graded discussion prompt has a due date (a CHECK enforces it).
+    if (dueAt && !(isGraded && postType === 'discussion_prompt')) {
+      return { success: false, error: 'Only graded discussion prompts can have a due date' }
     }
 
     const media = parsePostMedia(formData.get('media_urls') as string | null, {
@@ -261,6 +269,7 @@ export async function createPost(
         lesson_id: lessonId,
         is_graded: isGraded,
         is_pinned: pin,
+        due_at: dueAt,
       })
       .select('id, created_at')
       .single()

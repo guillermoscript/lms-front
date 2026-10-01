@@ -607,7 +607,10 @@
         "inProgress": "In Progress",
         "notStarted": "Not Started",
         "viewCourse": "View Course",
-        "examScore": "Score: {score}%"
+        "examScore": "Score: {score}%",
+        "discussionGrades": "Discussion grades",
+        "discussionScore": "{title} — {score}/100",
+        "untitledPrompt": "Discussion prompt"
       },
       "certificates": {
         "title": "My Certificates",
@@ -7105,12 +7108,14 @@
         "description": "Choose what the community lets you know about.",
         "group": "Community",
         "replies": "Replies",
-        "repliesDescription": "Replies to your posts and comments, and when your answer is accepted.",
+        "repliesDescription": "Replies to your posts and comments, when your answer is accepted, and when a teacher grades your answer.",
         "prompts": "New discussion prompts",
         "promptsDescription": "When a teacher starts a discussion in one of your courses.",
         "everySchool": "These settings apply in every school you belong to.",
         "error": "Couldn't save your preference. Try again."
-      }
+      },
+      "promptGraded": "Your answer was graded: {score}/100",
+      "promptGradedNoScore": "Your answer was graded"
     },
     "emptySchool": "No posts yet. Be the first to share something!",
     "emptyCourse": "No discussions yet. Start the conversation!",
@@ -7303,6 +7308,64 @@
         "courseCount": "{count, plural, one {# question} other {# questions}}",
         "untitledCourse": "Untitled course"
       }
+    },
+    "grading": {
+      "gradeAnswers": "Grade answers",
+      "gradeAnswersLabel": "Grade answers: {title}",
+      "title": "Grade answers",
+      "backToCommunity": "Back to the course community",
+      "lesson": "Lesson: {lesson}",
+      "filterLabel": "Show",
+      "filters": {
+        "all": "All",
+        "ungraded": "To grade",
+        "graded": "Graded",
+        "unanswered": "Not answered"
+      },
+      "filterCount": "{label} · {count}",
+      "status": {
+        "ungraded": "Waiting for a grade",
+        "graded": "Graded",
+        "unanswered": "Not answered"
+      },
+      "answers": "{count, plural, one {# answer} other {# answers}}",
+      "noAnswer": "No answer yet.",
+      "score": "Score (0–100)",
+      "feedback": "Feedback (optional)",
+      "feedbackPlaceholder": "What went well, and what to work on next",
+      "save": "Save grade",
+      "update": "Update grade",
+      "saving": "Saving…",
+      "saved": "Grade saved",
+      "remove": "Remove grade",
+      "removed": "Grade removed",
+      "invalidScore": "Enter a whole number from 0 to 100.",
+      "gradedOn": "Graded {date}",
+      "gradedScore": "{score}/100",
+      "summary": "{graded} of {total} graded",
+      "emptyRoster": "No students in this course yet.",
+      "emptyFilter": "No students match this filter.",
+      "certificateNote": "Discussion grades show in each student's progress. They don't count toward course completion or certificates.",
+      "unknownStudent": "Unnamed student",
+      "dashboard": {
+        "title": "Discussion answers to grade",
+        "summary": "{count, plural, one {# answer waiting for a grade} other {# answers waiting for a grade}}",
+        "allGraded": "Every answer to your graded prompts has a grade.",
+        "promptCount": "{count} to grade",
+        "untitled": "Untitled prompt"
+      }
+    },
+    "promptGrade": {
+      "yourGrade": "Your grade",
+      "score": "{score}/100",
+      "feedback": "Teacher feedback",
+      "pending": "Answered — not graded yet",
+      "dueIn": "{count, plural, one {Due in # day} other {Due in # days}}",
+      "dueToday": "Due today",
+      "overdue": "Past due",
+      "dueOn": "Due {date}",
+      "dueDate": "Due date (optional)",
+      "dueDateHint": "Shown to students. Answers after it are still accepted."
     }
   },
   "schoolLanding": {
