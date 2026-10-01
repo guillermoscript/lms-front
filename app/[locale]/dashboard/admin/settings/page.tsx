@@ -66,10 +66,11 @@ export default async function SettingsPage({
   const tenantId = await getCurrentTenantId()
   const { data: tenant } = await createAdminClient()
     .from('tenants')
-    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, country')
+    .select('name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, country')
     .eq('id', tenantId)
     .single()
   const stripeAccountId = tenant?.stripe_account_id ?? null
+  const tenantName = tenant?.name ?? null
   let connectStatus = {
     chargesEnabled: tenant?.stripe_charges_enabled ?? false,
     payoutsEnabled: tenant?.stripe_payouts_enabled ?? false,
@@ -142,6 +143,7 @@ export default async function SettingsPage({
                 <CardContent>
                   <GeneralSettingsForm
                     settings={settings.general || {}}
+                    tenantName={tenantName}
                     country={normalizeCountry(tenant?.country)}
                   />
                 </CardContent>

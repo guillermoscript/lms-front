@@ -336,7 +336,7 @@ export default async function AdminDashboardPage({
             label: t('onboarding.configureSchool'),
             description: t('onboarding.configureSchoolDesc'),
             href: '/dashboard/admin/settings',
-            completed: Boolean(currentSettings?.site_name),
+            completed: Boolean((currentSettings?.site_name as { value?: unknown } | undefined)?.value),
             timeHint: t('onboarding.configureSchoolTime'),
           },
         ]}

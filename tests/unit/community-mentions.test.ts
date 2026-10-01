@@ -100,13 +100,15 @@ describe('mention autocomplete', () => {
 })
 
 function render(content: string): string {
-  return renderToStaticMarkup(
-    createElement(
-      NextIntlClientProvider,
-      { locale: 'en', messages: en, timeZone: 'UTC' },
-      createElement(CommunityMarkdown, { content })
-    )
-  )
+  // children via props: createElement's overload requires it for this provider's type
+  // eslint-disable-next-line react/no-children-prop
+  const provider = createElement(NextIntlClientProvider, {
+    locale: 'en',
+    messages: en,
+    timeZone: 'UTC',
+    children: createElement(CommunityMarkdown, { content }),
+  })
+  return renderToStaticMarkup(provider)
 }
 
 describe('CommunityMarkdown mentions', () => {
