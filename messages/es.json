@@ -4851,7 +4851,9 @@
       "xpAwarded": {
         "lesson_completion": "+100 XP — ¡Lección completada!",
         "exercise_completion": "+50 XP — ¡Ejercicio completado!",
-        "exam_submission": "+200 XP — ¡Examen enviado!"
+        "exam_submission": "+200 XP — ¡Examen enviado!",
+        "community": "+{xp} XP",
+        "community_prompt_answer": "+{xp} XP — ¡Participaste en el tema de discusión!"
       }
     },
     "paymentRequestForm": {
