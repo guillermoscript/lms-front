@@ -60,9 +60,18 @@ export function DeleteAccountCard() {
     async function handleDelete() {
         setDeleting(true);
         try {
+            // Bearer only (#891): the route ignores the session cookie.
+            const { data: { session } } = await createClient().auth.getSession();
+            if (!session) {
+                toast.error(t("error"));
+                return;
+            }
             const res = await fetch("/api/account/delete", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                },
                 body: JSON.stringify({ confirm: typed }),
             });
             const body = await res.json().catch(() => ({}));

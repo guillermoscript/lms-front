@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getApiUser } from '@/lib/supabase/api-auth'
+import { getApiUser, getBearerUser } from '@/lib/supabase/api-auth'
 import {
   deleteAccount,
   deletionConfirmationPhrase,
@@ -30,8 +30,13 @@ export async function GET(req: Request) {
   return Response.json({ blockers, confirmationPhrase: deletionConfirmationPhrase(user) })
 }
 
+/**
+ * Bearer ONLY (#891): a session cookie rides a cross-site `text/plain` POST
+ * (sibling tenant subdomains are same-site); an `Authorization` header cannot.
+ * The web card sends the session's access token.
+ */
 export async function POST(req: Request) {
-  const user = await getApiUser(req)
+  const user = await getBearerUser(req)
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
