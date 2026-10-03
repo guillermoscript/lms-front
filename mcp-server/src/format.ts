@@ -42,6 +42,19 @@ export function ok(
   return mix(text(textContent), object(structured));
 }
 
+/**
+ * Raw MCP envelope for a tool that declares an `outputSchema`: the model reads
+ * the text, clients parse `structuredContent` (typed against the schema at the
+ * callback's return position). Prefer this over `ok()` in new tools — the
+ * response helpers `ok()` wraps are deprecated in mcp-use v2.
+ */
+export function structured<T extends Record<string, unknown>>(
+  data: T,
+  textContent: string
+): { content: { type: "text"; text: string }[]; structuredContent: T } {
+  return { content: [{ type: "text", text: textContent }], structuredContent: data };
+}
+
 /** Plain text success (no structured payload). */
 export function okText(textContent: string): ReturnType<typeof text> {
   return text(textContent);

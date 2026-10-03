@@ -90,3 +90,19 @@ export async function courseLimitHeadroomError(
   if (usage.courses >= usage.max_courses) return formatLimitMessage("courses", usage);
   return null;
 }
+
+/**
+ * Pre-check before a write that would make one more active student (a role
+ * change to `student`, #898). Same contract as `courseLimitHeadroomError`:
+ * the message at the cap, `null` with headroom or when usage is unreadable —
+ * `enforce_student_plan_limit` still decides the race.
+ */
+export async function studentLimitHeadroomError(
+  supabase: SupabaseClient,
+  tenantId: string
+): Promise<string | null> {
+  const usage = await getTenantPlanUsage(supabase, tenantId);
+  if (!usage || usage.max_students < 0) return null;
+  if (usage.students >= usage.max_students) return formatLimitMessage("students", usage);
+  return null;
+}
