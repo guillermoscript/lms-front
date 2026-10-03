@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **91 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **110 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -56,7 +56,26 @@ implementation.
   `lms_set_certificate_template`, and admin-only `lms_revoke_certificate`.
   Issuance is **template-gated**: a course with no active
   `certificate_templates` row issues nothing at all, whatever a student has
-  completed — which is what the eligibility and template tools surface).
+  completed — which is what the eligibility and template tools surface),
+  and the community (#896): every member reads the school/course feeds
+  (`lms_list_community_posts`, `lms_get_community_post`), posts and asks
+  (`lms_create_community_post`, `post_type: 'question'`), comments/answers
+  (`lms_create_community_comment`), accepts an answer to their own question
+  (`lms_accept_community_answer`), lists a course's discussion prompts with
+  their own answered state and grade (`lms_list_discussion_prompts`), reports
+  content and blocks members (`lms_report_community_content`,
+  `lms_block_community_member`, `lms_unblock_community_member`,
+  `lms_list_blocked_members`); teachers/admins post discussion prompts and
+  grade graded ones for their own courses (`lms_get_prompt_grading_roster`,
+  `lms_grade_prompt_answer`, `lms_remove_prompt_grade`); admins see reports,
+  mutes and bans and mute members (`lms_list_community_reports`,
+  `lms_mute_community_member`, `lms_unmute_community_member`,
+  `lms_list_community_mutes`, `lms_list_banned_members`). All writes go
+  through the caller's RLS client, where the community rules live since #846.
+  Pin/lock/hide, reviewing reports, and banning/lifting a ban stay on the web:
+  they are service-role-only writes (no `authenticated` grant;
+  `ban_tenant_member`/`lift_tenant_ban` are EXECUTE-granted to `service_role`
+  only).
 - **21 views** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
