@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **132 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
+- **139 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -83,8 +83,16 @@ implementation.
   `lms_change_member_role` — last-admin and student-limit (`LM001`) guards;
   `lms_invite_member` — records the invitation and returns the join link, no
   email; `lms_get_plan_usage` — `get_plan_features` + `get_tenant_plan_usage`),
-  and school life for every role (`lms_my_notifications`,
-  `lms_mark_notifications_read`, `lms_my_league`).
+  school life for every role (`lms_my_notifications`,
+  `lms_mark_notifications_read`, `lms_my_league`), and admin-only commerce
+  (#897): `lms_list_transactions` (net of refunds), `lms_list_subscriptions`,
+  `lms_get_payouts_owed` (per-currency revenue split + what the platform owes
+  the school for platform-settled sales), `lms_get_billing_status` (the
+  school's own platform plan), and the manual-payment queue
+  `lms_list_payment_requests` / `lms_confirm_payment_received` /
+  `lms_reject_payment_request`. Completing a confirmed request (the
+  `transactions` insert that grants access) stays in the dashboard:
+  `transactions` is server-write-only and the MCP never holds the service role.
 - **21 views** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,

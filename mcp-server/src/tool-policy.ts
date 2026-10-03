@@ -94,6 +94,24 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_my_league",
 ]);
 
+/**
+ * Commerce tools (#897). Admin only, like the dashboard's /admin/products,
+ * /admin/payment-requests, /admin/transactions and /admin/billing pages:
+ * `payment_requests` and `products` (all statuses) are admin-only under RLS,
+ * and while teachers can SELECT a tenant's `transactions`/`subscriptions`,
+ * revenue, payouts and the school's platform bill are not theirs to see.
+ * Exported so tests can pin that none of them leaks to another role.
+ */
+export const ADMIN_ONLY_COMMERCE_TOOLS = [
+  "lms_list_payment_requests",
+  "lms_confirm_payment_received",
+  "lms_reject_payment_request",
+  "lms_list_transactions",
+  "lms_list_subscriptions",
+  "lms_get_payouts_owed",
+  "lms_get_billing_status",
+] as const;
+
 const TEACHER_DENY_TOOLS = new Set<string>([
   // Destructive — admin only. Analytics tools stay allowed for teachers because
   // they are ownership-scoped (a teacher only ever sees their own courses' data).
@@ -155,6 +173,8 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   // The school's subscription plans (what students subscribe to) — admin only,
   // like products.
   "lms_list_plans",
+  // Commerce (#897) — money and the school's own billing are admin only.
+  ...ADMIN_ONLY_COMMERCE_TOOLS,
 ]);
 
 export function isToolAllowedForRole(
