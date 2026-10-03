@@ -5,6 +5,7 @@
  * drift guard).
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { z } from 'zod'
 
 // Every handler builds its client through createUserClient — swap in a fake.
 const fake = vi.hoisted(() => ({
@@ -34,7 +35,13 @@ vi.mock('../src/supabase.js', () => {
     return b
   }
   return {
-    createUserClient: () => ({ from: (t: string) => builder(t), rpc: () => Promise.resolve({ data: null, error: null }) }),
+    createUserClient: () => ({
+      from: (t: string) => builder(t),
+      rpc: (name: string) => {
+        const queue = fake.results.get(`rpc:${name}`) ?? []
+        return Promise.resolve(queue.length ? queue.shift() : { data: null, error: null })
+      },
+    }),
     getServiceClient: () => null,
   }
 })
@@ -80,6 +87,29 @@ function registered() {
   }
   registerCommerceTools(server as never)
   return tools
+}
+
+/**
+ * Run a tool and assert its structuredContent parses against its outputSchema —
+ * mcp-use `validateToolOutput` throws a ProtocolError at runtime on a mismatch
+ * (e.g. a NULL column where the schema says z.string()), which typecheck can't see.
+ */
+async function call(name: string, input: unknown, role = 'admin') {
+  const tool = registered().get(name)!
+  const res = await tool.handler(input, ctxFor(role))
+  if (!res.isError) {
+    const parsed = (tool.def.outputSchema as z.ZodType).safeParse(res.structuredContent)
+    expect(parsed.error?.issues ?? []).toEqual([])
+    expect(parsed.success).toBe(true)
+  }
+  return res
+}
+
+/** The eq filters chained AFTER the first UPDATE on `table` (not the earlier SELECT's). */
+function updateFilters(table: string) {
+  const i = fake.calls.findIndex((c) => c.table === table && c.op === 'update')
+  expect(i).toBeGreaterThanOrEqual(0)
+  return fake.calls.slice(i).filter((c) => c.table === table && c.op === 'eq').map((c) => c.args)
 }
 
 function ctxFor(role: string) {
@@ -172,15 +202,15 @@ describe('confirm / reject handlers', () => {
     fake.results.set('notifications:insert', [{ data: { id: 99 }, error: null }])
     fake.results.set('user_notifications:insert', [{ data: null, error: null }])
 
-    const res = await registered()
-      .get('lms_confirm_payment_received')!
-      .handler(confirmPaymentInput.parse({ request_id: 7, admin_notes: 'ref 123' }), ctxFor('admin'))
+    const res = await call('lms_confirm_payment_received', confirmPaymentInput.parse({ request_id: 7, admin_notes: 'ref 123' }))
 
     expect(res.isError).toBeUndefined()
     expect(res.structuredContent).toMatchObject({ status: 'payment_received', changed: true, student_notified: true })
     const update = fake.calls.find((c) => c.table === 'payment_requests' && c.op === 'update')!
     expect(update.args[0]).toMatchObject({ status: 'payment_received', admin_notes: 'ref 123', processed_by: ADMIN })
-    const filters = fake.calls.filter((c) => c.table === 'payment_requests' && c.op === 'eq').map((c) => c.args)
+    // Only the UPDATE's own filters — the SELECT before it also filters tenant_id.
+    const filters = updateFilters('payment_requests')
+    expect(filters).toContainEqual(['request_id', 7])
     expect(filters).toContainEqual(['tenant_id', TENANT])
     expect(filters).toContainEqual(['status', 'contacted'])
     // Never a sale: the MCP does not write transactions.
@@ -209,11 +239,196 @@ describe('confirm / reject handlers', () => {
   it('rejecting a paid request cancels it and says to refund offline', async () => {
     fake.results.set('payment_requests:select', [request('payment_received')])
     fake.results.set('payment_requests:update', [{ data: [{ request_id: 7 }], error: null }])
-    const res = await registered()
-      .get('lms_reject_payment_request')!
-      .handler({ request_id: 7, reason: 'wrong amount' }, ctxFor('admin'))
+    const res = await call('lms_reject_payment_request', { request_id: 7, reason: 'wrong amount' })
     expect(res.structuredContent).toMatchObject({ status: 'cancelled', changed: true })
     expect(String(res.structuredContent!.next_step)).toMatch(/refund/)
+
+    const update = fake.calls.find((c) => c.table === 'payment_requests' && c.op === 'update')!
+    expect(update.args[0]).toMatchObject({ status: 'cancelled', admin_notes: 'wrong amount', processed_by: ADMIN })
+    const filters = updateFilters('payment_requests')
+    expect(filters).toContainEqual(['request_id', 7])
+    expect(filters).toContainEqual(['tenant_id', TENANT])
+    expect(filters).toContainEqual(['status', 'payment_received'])
+    expect(fake.calls.some((c) => c.table === 'transactions')).toBe(false)
+  })
+
+  it('rejecting an already-cancelled request is a no-op', async () => {
+    fake.results.set('payment_requests:select', [request('cancelled')])
+    const res = await call('lms_reject_payment_request', { request_id: 7 })
+    expect(res.isError).toBeUndefined()
+    expect(res.structuredContent).toMatchObject({ status: 'cancelled', changed: false, student_notified: false })
+    expect(fake.calls.some((c) => c.op === 'update')).toBe(false)
+  })
+})
+
+describe('read handlers return outputSchema-valid payloads', () => {
+  beforeEach(() => {
+    fake.calls.length = 0
+    fake.results.clear()
+  })
+
+  it('lms_list_products: nullable columns, paged course links, tenant-filtered', async () => {
+    fake.results.set('products:select', [{
+      data: [
+        { product_id: 2, name: 'Bundle', price: '49.99', currency: null, status: null, payment_provider: null, created_at: null },
+        { product_id: 1, name: 'Solo', price: null, currency: 'usd', status: 'active', payment_provider: 'stripe', created_at: '2026-09-01T00:00:00Z' },
+      ],
+      error: null,
+      count: 2,
+    }])
+    fake.results.set('product_courses:select', [{
+      data: [{ product_id: 2, course_id: 10 }, { product_id: 2, course_id: 11 }],
+      error: null,
+      count: 2,
+    }])
+    const res = await call('lms_list_products', listProductsInput.parse({}))
+    expect(res.isError).toBeUndefined()
+    expect(res.structuredContent).toMatchObject({
+      total: 2,
+      has_more: false,
+      products: [
+        { product_id: 2, price: 49.99, currency: null, status: null, course_ids: [10, 11] },
+        { product_id: 1, price: null, course_ids: [] },
+      ],
+    })
+    const links = fake.calls.filter((c) => c.table === 'product_courses')
+    expect(links.find((c) => c.op === 'select')!.args[1]).toEqual({ count: 'exact' })
+    expect(links.filter((c) => c.op === 'eq').map((c) => c.args)).toContainEqual(['tenant_id', TENANT])
+    expect(links.some((c) => c.op === 'range')).toBe(true)
+  })
+
+  it('lms_list_products refuses a truncated course-link read', async () => {
+    fake.results.set('products:select', [{
+      data: [{ product_id: 1, name: 'Solo', price: 5, currency: 'usd', status: 'active', payment_provider: 'stripe', created_at: null }],
+      error: null,
+      count: 1,
+    }])
+    fake.results.set('product_courses:select', [{ data: [{ product_id: 1, course_id: 10 }], error: null, count: 1200 }])
+    const res = await call('lms_list_products', listProductsInput.parse({}))
+    expect(res.isError).toBe(true)
+    expect(res.content[0].text).toMatch(/partial/)
+  })
+
+  it('lms_list_plans: paged plan_courses, nullable columns', async () => {
+    fake.results.set('plans:select', [{
+      data: [{ plan_id: 3, plan_name: 'All access', price: '9', currency: null, duration_in_days: null, payment_provider: null, deleted_at: null }],
+      error: null,
+      count: 1,
+    }])
+    fake.results.set('plan_courses:select', [{
+      data: [{ plan_id: 3, course_id: 1 }, { plan_id: 3, course_id: 2 }],
+      error: null,
+      count: 2,
+    }])
+    const res = await call('lms_list_plans', { include_deleted: false, limit: 20, offset: 0 })
+    expect(res.structuredContent).toMatchObject({ plans: [{ plan_id: 3, price: 9, duration_in_days: null, course_ids: [1, 2] }] })
+    const links = fake.calls.filter((c) => c.table === 'plan_courses')
+    expect(links.find((c) => c.op === 'select')!.args[1]).toEqual({ count: 'exact' })
+    expect(links.some((c) => c.op === 'range')).toBe(true)
+  })
+
+  it('lms_list_payment_requests: embeds and nullable fields', async () => {
+    fake.results.set('payment_requests:select', [{
+      data: [{
+        request_id: 7, status: 'pending', user_id: STUDENT, contact_name: null, contact_email: null,
+        product_id: null, plan_id: 3, payment_amount: '20.00', payment_currency: null, payment_method: null,
+        payment_reference: null, reported_amount: null, reported_currency: null, payment_reported_at: null,
+        payment_confirmed_at: null, created_at: null, expires_at: null, admin_notes: null,
+        product: null, plan: [{ plan_name: 'All access' }],
+      }],
+      error: null,
+      count: 1,
+    }])
+    const res = await call('lms_list_payment_requests', listPaymentRequestsInput.parse({}))
+    expect(res.structuredContent).toMatchObject({ requests: [{ request_id: 7, item: 'All access', amount: 20 }] })
+  })
+
+  it('lms_list_transactions: net of refunds, page totals over successful rows only', async () => {
+    fake.results.set('transactions:select', [{
+      data: [
+        { transaction_id: 2, transaction_date: '2026-09-02T00:00:00Z', user_id: STUDENT, product_id: 1, plan_id: null, amount: '100', refunded_amount: '10', currency: 'usd', status: 'successful', payment_provider: 'paypal' },
+        { transaction_id: 1, transaction_date: '2026-09-01T00:00:00Z', user_id: STUDENT, product_id: null, plan_id: 3, amount: '9', refunded_amount: null, currency: null, status: 'pending', payment_provider: null },
+      ],
+      error: null,
+      count: 2,
+    }])
+    fake.results.set('profiles:select', [{ data: [{ id: STUDENT, full_name: null }], error: null }])
+    fake.results.set('products:select', [{ data: [{ product_id: 1, name: 'Solo' }], error: null }])
+    fake.results.set('plans:select', [{ data: [{ plan_id: 3, plan_name: 'All access' }], error: null }])
+    const res = await call('lms_list_transactions', listTransactionsInput.parse({}))
+    expect(res.structuredContent).toMatchObject({
+      transactions: [
+        { transaction_id: 2, item: 'Solo', net_amount: 90, student_name: null },
+        { transaction_id: 1, item: 'All access', refunded_amount: 0, currency: null },
+      ],
+      page_totals: [{ currency: 'usd', successful_net: 90, count: 1 }],
+    })
+  })
+
+  it('lms_list_subscriptions: live flag and nullable periods', async () => {
+    fake.results.set('subscriptions:select', [{
+      data: [{
+        subscription_id: 5, user_id: STUDENT, plan_id: 3, subscription_status: 'past_due', payment_provider: null,
+        current_period_start: null, current_period_end: null, cancel_at_period_end: null, cancel_at: null,
+        canceled_at: null, created: null, profiles: null, plans: { plan_name: 'All access' },
+      }],
+      error: null,
+      count: 1,
+    }])
+    const res = await call('lms_list_subscriptions', listSubscriptionsInput.parse({}))
+    expect(res.structuredContent).toMatchObject({
+      subscriptions: [{ subscription_id: 5, live: true, cancel_at_period_end: false, plan_name: 'All access' }],
+    })
+  })
+
+  it('lms_get_payouts_owed: null currency / paid_at, no split row → default', async () => {
+    fake.results.set('revenue_splits:select', [{ data: null, error: null }])
+    fake.results.set('transactions:select', [{
+      data: [{ amount: '50', refunded_amount: null, currency: 'usd', payment_provider: 'paypal', stripe_payment_intent_id: null, school_percentage_snapshot: '80' }],
+      error: null,
+      count: 1,
+    }])
+    // One payout row shaped for both reads (the paged sum and the recent list).
+    const payout = {
+      data: [{ payout_id: 1, amount: '10', currency: null, status: 'pending', payout_method: null, period_start: null, period_end: null, paid_at: null, created_at: null }],
+      error: null,
+      count: 1,
+    }
+    fake.results.set('payouts:select', [payout, payout])
+    const res = await call('lms_get_payouts_owed', {})
+    expect(res.isError).toBeUndefined()
+    expect(res.structuredContent).toMatchObject({
+      recent_payouts: [{ payout_id: 1, currency: null, paid_at: null }],
+    })
+  })
+
+  it('lms_get_billing_status: no subscription period end, empty RPCs', async () => {
+    fake.results.set('tenants:select', [{
+      data: { name: 'Default School', plan: null, billing_status: null, billing_period_end: null, access_cutoff_at: null },
+      error: null,
+    }])
+    fake.results.set('platform_subscriptions:select', [{
+      data: {
+        status: 'active', payment_provider: 'solana', interval: 'monthly', cancel_at_period_end: null,
+        current_period_start: null, current_period_end: null, grace_period_end: null,
+      },
+      error: null,
+    }])
+    fake.results.set('platform_payment_requests:select', [{
+      data: [{ request_id: 'abc', status: 'pending', amount: null, currency: null, interval: null, payment_provider: null, created_at: null, expires_at: null, platform_plans: null }],
+      error: null,
+    }])
+    // get_plan_features / get_tenant_plan_usage resolve empty (default).
+    const res = await call('lms_get_billing_status', {})
+    expect(res.isError).toBeUndefined()
+    expect(res.structuredContent).toMatchObject({
+      plan: 'free',
+      billing_status: 'free',
+      plan_name: null,
+      transaction_fee_percent: null,
+      usage: null,
+      subscription: { current_period_end: null, cancel_at_period_end: false },
+    })
   })
 })
 

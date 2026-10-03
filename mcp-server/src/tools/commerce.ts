@@ -18,7 +18,7 @@ import {
 } from "../commerce-math.js";
 
 /**
- * Commerce tools (#897) — ADMIN ONLY (see `ADMIN_ONLY_TOOLS` in tool-policy.ts).
+ * Commerce tools (#897) — ADMIN ONLY (see `ADMIN_ONLY_COMMERCE_TOOLS` in tool-policy.ts).
  *
  * Read-first: products, plans, the manual-payment queue, transactions,
  * subscriptions, the school's revenue split + what the platform owes it, and
@@ -162,7 +162,7 @@ export async function fetchAllPages<T>(
   for (let from = 0; ; from += pageSize) {
     const { data, error, count } = await fetchPage(from, from + pageSize - 1);
     if (error) throw new Error(`Loading ${label}: ${error.message}`);
-    if (expected === null) expected = count;
+    if (expected === null) expected = count ?? null;
     const batch = (data ?? []) as T[];
     rows.push(...batch);
     if (batch.length < pageSize) break;
@@ -543,19 +543,24 @@ export function registerCommerceTools(server: LmsServer) {
         if (error) return errorResult(`Listing products: ${error.message}`);
         const rows = data ?? [];
 
-        // A product can map to several courses — never `.single()` here.
+        // A product can map to several courses — never `.single()` here. Paged:
+        // products × courses can pass the PostgREST row cap (#533/#548).
         const courseIds = new Map<number, number[]>();
         if (rows.length > 0) {
-          const { data: links, error: linkError } = await supabase
-            .from("product_courses")
-            .select("product_id, course_id")
-            .eq("tenant_id", tenantId)
-            .in(
-              "product_id",
-              rows.map((r) => r.product_id)
-            );
-          if (linkError) return errorResult(`Loading product courses: ${linkError.message}`);
-          for (const l of links ?? []) {
+          const productIds = rows.map((r) => r.product_id);
+          const links = await fetchAllPages<{ product_id: number; course_id: number }>(
+            "product courses",
+            (from, to) =>
+              supabase
+                .from("product_courses")
+                .select("product_id, course_id", { count: "exact" })
+                .eq("tenant_id", tenantId)
+                .in("product_id", productIds)
+                .order("product_id")
+                .order("course_id")
+                .range(from, to)
+          );
+          for (const l of links) {
             courseIds.set(l.product_id, [...(courseIds.get(l.product_id) ?? []), l.course_id]);
           }
         }
@@ -616,17 +621,23 @@ export function registerCommerceTools(server: LmsServer) {
         const rows = data ?? [];
 
         // `plan_courses` has no tenant_id — scoped by the tenant's own plan ids.
+        // Paged: an all-access plan covers every course, so plans × courses
+        // can pass the PostgREST row cap (#533/#548).
         const courseIds = new Map<number, number[]>();
         if (rows.length > 0) {
-          const { data: links, error: linkError } = await supabase
-            .from("plan_courses")
-            .select("plan_id, course_id")
-            .in(
-              "plan_id",
-              rows.map((r) => r.plan_id)
-            );
-          if (linkError) return errorResult(`Loading plan courses: ${linkError.message}`);
-          for (const l of links ?? []) {
+          const planIds = rows.map((r) => r.plan_id);
+          const links = await fetchAllPages<{ plan_id: number; course_id: number }>(
+            "plan courses",
+            (from, to) =>
+              supabase
+                .from("plan_courses")
+                .select("plan_id, course_id", { count: "exact" })
+                .in("plan_id", planIds)
+                .order("plan_id")
+                .order("course_id")
+                .range(from, to)
+          );
+          for (const l of links) {
             courseIds.set(l.plan_id, [...(courseIds.get(l.plan_id) ?? []), l.course_id]);
           }
         }
