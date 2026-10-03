@@ -8,6 +8,9 @@
  * plan-limit / ban triggers stay the real enforcement; these tests cover the
  * app-side guards and the error mapping on top of them.
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as rootCountries from "../../lib/countries";
 import * as rootGeneral from "../../lib/settings/general-settings";
@@ -196,6 +199,37 @@ describe("settings helpers mirror the app (lib/countries, lib/settings/general-s
       expect(settingsLib.normalizeOptionalEmail(raw)).toEqual(rootGeneral.normalizeOptionalEmail(raw));
     }
     expect(settingsLib.MAX_SITE_NAME_LENGTH).toBe(rootGeneral.MAX_SITE_NAME_LENGTH);
+    expect(settingsLib.MAX_EMAIL_LENGTH).toBe(rootGeneral.MAX_EMAIL_LENGTH);
+  });
+
+  it("buildSettingsRows accepts and normalizes exactly what normalizeGeneralSettings does", () => {
+    const longEmail = `${"a".repeat(250)}@b.co`;
+    const cases: { site_name?: string; contact_email?: string; support_email?: string }[] = [
+      { site_name: "  Acme  " },
+      { site_name: "   " },
+      { site_name: "" },
+      { site_name: "x".repeat(120) },
+      { site_name: "x".repeat(121) },
+      { site_name: ` ${"x".repeat(120)} ` },
+      { contact_email: " hi@school.co " },
+      { contact_email: "" },
+      { contact_email: "  " },
+      { contact_email: "nope" },
+      { contact_email: longEmail },
+      { support_email: "help@school.co" },
+      { support_email: "a@b" },
+      { site_name: "Acme", contact_email: "hi@school.co", support_email: "" },
+      { site_name: "Acme", contact_email: "bad", support_email: "help@school.co" },
+    ];
+    for (const input of cases) {
+      const mine = settingsLib.buildSettingsRows(input);
+      const rootInput = Object.fromEntries(
+        Object.entries(input).map(([k, v]) => [k, { value: v }])
+      );
+      const root = rootGeneral.normalizeGeneralSettings(rootInput);
+      expect(mine.ok, JSON.stringify(input)).toBe(root.ok);
+      if (mine.ok && root.ok) expect(mine.settings, JSON.stringify(input)).toEqual(root.settings);
+    }
   });
 });
 
@@ -382,6 +416,104 @@ describe("lms_set_school_theme", () => {
   });
 });
 
+describe("structured results", () => {
+  it("serialize the payload into content, so a content-only host still sees the data", async () => {
+    fake = makeFake({ tenant_settings: [{ data: null }] });
+    const r = await schoolTools.get("lms_set_school_theme")!({ theme: "luz" }, ctxFor("admin"));
+    const texts = (r.content ?? []).map((c) => c.text);
+    expect(texts).toContain(JSON.stringify(r.structuredContent));
+  });
+});
+
+describe("lms_list_school_members invitations", () => {
+  it("reports the exact pending total even past the 100 listed", async () => {
+    const invites = Array.from({ length: 100 }, (_, i) => ({
+      id: `inv-${i}`,
+      email: `p${i}@x.co`,
+      role: "student",
+      created_at: "2026-10-01T00:00:00Z",
+    }));
+    fake = makeFake({
+      tenant_users: [{ data: [], count: 0 }],
+      tenant_invitations: [{ data: invites, count: 137 }],
+    });
+    const r = await schoolTools.get("lms_list_school_members")!(
+      { include_invitations: true },
+      ctxFor("admin")
+    );
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent?.invitations_total).toBe(137);
+    expect((r.structuredContent?.invitations as unknown[]).length).toBe(100);
+    expect(textOf(r)).toContain("137 pending invitation(s) (showing the newest 100)");
+    const call = fake.calls.find((c) => c.table === "tenant_invitations")!;
+    expect(call.ops).toContainEqual(["select", "id, email, role, created_at", { count: "exact" }]);
+    expect(school.listMembersOutput.safeParse(r.structuredContent).success).toBe(true);
+  });
+});
+
+describe("plan on a retired / hidden plan (is_active = false)", () => {
+  it("get_plan_features resolves the tenant's plan with no is_active filter", () => {
+    // The newest migration that defines the RPC is the live definition.
+    const dir = join(dirname(fileURLToPath(import.meta.url)), "../../supabase/migrations");
+    const defining = readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort()
+      .filter((f) =>
+        /CREATE OR REPLACE FUNCTION (public\.)?get_plan_features\(/i.test(
+          readFileSync(join(dir, f), "utf8")
+        )
+      );
+    const latest = readFileSync(join(dir, defining[defining.length - 1]), "utf8");
+    const body = latest.slice(latest.search(/CREATE OR REPLACE FUNCTION (public\.)?get_plan_features\(/i));
+    expect(body.slice(0, body.indexOf("$$;"))).not.toMatch(/is_active\s*=/i);
+  });
+
+  it("lms_get_plan_usage reports one plan: the RPC's limits match the usage caps", async () => {
+    fake = makeFake(
+      {},
+      {
+        get_plan_features: {
+          data: {
+            plan: "hidden-pro",
+            plan_name: "Hidden Pro",
+            features: { custom_branding: true },
+            limits: { max_courses: 100, max_students: 1000 },
+            transaction_fee_percent: 2,
+          },
+        },
+        get_tenant_plan_usage: {
+          data: { courses: 3, students: 10, max_courses: 100, max_students: 1000 },
+        },
+      }
+    );
+    const r = await schoolTools.get("lms_get_plan_usage")!({}, ctxFor("admin"));
+    const sc = r.structuredContent as {
+      limits: Record<string, number>;
+      usage: Record<string, number>;
+      plan: string;
+    };
+    expect(sc.plan).toBe("hidden-pro");
+    expect(sc.limits.max_courses).toBe(sc.usage.max_courses);
+    expect(sc.limits.max_students).toBe(sc.usage.max_students);
+  });
+
+  it("lms_set_school_theme allows a custom colour when the hidden plan has custom_branding", async () => {
+    fake = makeFake(
+      { tenant_settings: [{ data: null }] },
+      { get_plan_features: { data: { plan: "hidden-pro", features: { custom_branding: true } } } }
+    );
+    const r = await schoolTools.get("lms_set_school_theme")!(
+      { theme: "estructura", brand: "#123456" },
+      ctxFor("admin")
+    );
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent).toEqual({
+      theme: { type: "kit", theme: "estructura", brand: "#123456" },
+      custom: true,
+    });
+  });
+});
+
 describe("lms_update_school_settings", () => {
   const run = (input: unknown) =>
     schoolTools.get("lms_update_school_settings")!(input, ctxFor("admin"));
@@ -475,5 +607,21 @@ describe("lms_mark_notifications_read", () => {
     expect(write.ops).toContainEqual(["eq", "user_id", ME]);
     const update = write.ops.find((o) => o[0] === "update")![1] as Record<string, unknown>;
     expect(Object.keys(update).sort()).toEqual(["in_app_read", "in_app_read_at"]);
+  });
+});
+
+describe("README tool count", () => {
+  it("matches the distinct lms_* tools registered under src/tools", () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const toolsDir = join(root, "src/tools");
+    const names = new Set<string>();
+    for (const f of readdirSync(toolsDir).filter((f) => f.endsWith(".ts"))) {
+      for (const m of readFileSync(join(toolsDir, f), "utf8").matchAll(/name:\s*"(lms_[a-z0-9_]+)"/g)) {
+        names.add(m[1]);
+      }
+    }
+    const readme = readFileSync(join(root, "README.md"), "utf8");
+    const claimed = Number(/\*\*(\d+) tools\*\* \(`lms_\*`\)/.exec(readme)?.[1]);
+    expect(claimed).toBe(names.size);
   });
 });

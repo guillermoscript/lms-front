@@ -208,7 +208,12 @@ export const listMembersOutput = z.object({
         created_at: z.string(),
       })
     )
-    .optional(),
+    .optional()
+    .describe("Newest pending invitations, at most 100"),
+  invitations_total: z
+    .number()
+    .optional()
+    .describe("All pending invitations, which can exceed the listed ones"),
 });
 
 export const changeMemberRoleInput = z.object({
@@ -266,7 +271,12 @@ interface PlanFeaturesPayload {
   transaction_fee_percent?: number | string | null;
 }
 
-/** `get_plan_features` — the single source of truth the web `usePlanFeatures()` reads. */
+/**
+ * `get_plan_features` — the single source of truth the web `usePlanFeatures()`
+ * reads. Resolves `tenants.plan` with no `is_active` filter (20261003120000),
+ * so a tenant on a retired or hidden plan gets that plan's features, the same
+ * plan `getTenantPlan()` and `get_tenant_plan_usage` see.
+ */
 async function getPlanFeatures(session: LmsSession): Promise<PlanFeaturesPayload | null> {
   const { data, error } = await session
     .getClient()
@@ -659,10 +669,15 @@ export function registerSchoolTools(server: LmsServer) {
         let invitations:
           | { id: string; email: string; role: string; created_at: string }[]
           | undefined;
+        let invitationsTotal: number | undefined;
         if (input.include_invitations) {
-          const { data: invites, error: inviteError } = await supabase
+          const {
+            data: invites,
+            error: inviteError,
+            count: inviteCount,
+          } = await supabase
             .from("tenant_invitations")
-            .select("id, email, role, created_at")
+            .select("id, email, role, created_at", { count: "exact" })
             .eq("tenant_id", tenantId)
             .eq("status", "pending")
             .order("created_at", { ascending: false })
@@ -674,6 +689,7 @@ export function registerSchoolTools(server: LmsServer) {
             role: i.role as string,
             created_at: i.created_at as string,
           }));
+          invitationsTotal = inviteCount ?? invitations.length;
         }
 
         const total = count ?? members.length;
@@ -684,12 +700,18 @@ export function registerSchoolTools(server: LmsServer) {
           ),
         ];
         if (invitations) {
-          lines.push(`${invitations.length} pending invitation(s).`);
+          const shown = invitationsTotal !== undefined && invitationsTotal > invitations.length
+            ? ` (showing the newest ${invitations.length})`
+            : "";
+          lines.push(`${invitationsTotal ?? invitations.length} pending invitation(s)${shown}.`);
           for (const i of invitations) lines.push(`- ${i.email} — ${i.role}`);
         }
 
         const data: z.infer<typeof listMembersOutput> = { total, members };
-        if (invitations) data.invitations = invitations;
+        if (invitations) {
+          data.invitations = invitations;
+          data.invitations_total = invitationsTotal ?? invitations.length;
+        }
         return structured(data, lines.join("\n"));
       } catch (err) {
         return errorResult(messageOf(err));

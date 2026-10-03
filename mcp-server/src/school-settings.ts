@@ -4,8 +4,10 @@
  * `mcp-server` is bundled and deployed standalone (Docker context
  * `./mcp-server`), so it cannot import the app's `lib/`. These mirror the
  * pieces of `lib/countries.ts` (#865) and `lib/settings/general-settings.ts`
- * (#890) the settings tools need; `tests/school-settings.test.ts` imports the
- * root modules and fails the moment the two drift.
+ * (#890) the settings tools need; `tests/school-tools.test.ts` imports the
+ * root modules and compares the constants, the normalizers and
+ * `buildSettingsRows` against root `normalizeGeneralSettings` (the #890 gate),
+ * so it fails the moment the two drift.
  */
 
 // ─── Country / currency (lib/countries.ts) ───────────────────────────────────

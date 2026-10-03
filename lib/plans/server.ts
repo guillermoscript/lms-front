@@ -9,8 +9,8 @@
  * Data path: `tenants.plan` → `platform_plans` by slug, read with the
  * service-role client and deliberately WITHOUT the `is_active` filter — the
  * same rule `getTenantPlanLimits()` follows (retiring a plan must not change
- * what its subscribers may do). Note this differs from the `get_plan_features`
- * RPC, which filters on `is_active`; the RPC stays for the client hook.
+ * what its subscribers may do). The `get_plan_features` RPC (client hook, MCP
+ * server) follows the same rule since 20261003120000 (#898).
  *
  * Defaults are closed: a tenant with no plan row, or a plan without the key,
  * does NOT have the feature. `20260901170000_backfill_plan_feature_keys.sql`

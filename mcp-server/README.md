@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **101 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **102 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
