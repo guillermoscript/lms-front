@@ -18,7 +18,7 @@ import {
 } from "../commerce-math.js";
 
 /**
- * Commerce tools (#897) — ADMIN ONLY (see `ADMIN_ONLY_TOOLS` in tool-policy.ts).
+ * Commerce tools (#897) — ADMIN ONLY (see `ADMIN_ONLY_COMMERCE_TOOLS` in tool-policy.ts).
  *
  * Read-first: products, plans, the manual-payment queue, transactions,
  * subscriptions, the school's revenue split + what the platform owes it, and
@@ -162,7 +162,7 @@ export async function fetchAllPages<T>(
   for (let from = 0; ; from += pageSize) {
     const { data, error, count } = await fetchPage(from, from + pageSize - 1);
     if (error) throw new Error(`Loading ${label}: ${error.message}`);
-    if (expected === null) expected = count;
+    if (expected === null) expected = count ?? null;
     const batch = (data ?? []) as T[];
     rows.push(...batch);
     if (batch.length < pageSize) break;
