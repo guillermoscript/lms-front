@@ -8,6 +8,33 @@ import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { normalizeBanReason } from '@/lib/tenant/ban'
 
 /**
+ * Drop this school's `tenant_id` stamp from a user who just left it (removed
+ * or banned). Their JWT carries this school's `tenant_id`/role claim until it
+ * expires and `custom_access_token_hook` re-mints it from `app_metadata` on
+ * every refresh, so without this a removed member kept the claim forever.
+ * RLS on the community also checks `tenant_users` now (#896), but other
+ * claim-trusting policies do not. Best-effort: the removal itself already holds
+ * on every app path via `tenant_users`.
+ */
+async function clearTenantClaim(
+  adminClient: ReturnType<typeof createAdminClient>,
+  userId: string,
+  tenantId: string,
+  label: string
+): Promise<void> {
+  try {
+    const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
+    if (authUser?.user?.app_metadata?.tenant_id === tenantId) {
+      await adminClient.auth.admin.updateUserById(userId, {
+        app_metadata: { tenant_id: null },
+      })
+    }
+  } catch (claimErr) {
+    console.error(`${label}: failed to clear tenant claim:`, claimErr)
+  }
+}
+
+/**
  * Updates user roles. Replaces all existing roles with the provided ones.
  */
 export async function updateUserRoles(
@@ -187,6 +214,8 @@ export async function removeTenantMember(userId: string): Promise<ActionResult> 
 
     if (updateError) throw updateError
 
+    await clearTenantClaim(adminClient, userId, tenantId, 'Remove')
+
     await adminClient.from('notifications').insert({
       user_id: userId,
       notification_type: 'account_update',
@@ -257,21 +286,7 @@ export async function banTenantMember(
       throw error
     }
 
-    // The banned user's JWT still carries this school's `tenant_id`/role claim
-    // until it expires, and RLS trusts the claim. Drop the stamp so the next
-    // refresh mints a token with no claim for this school (`get_tenant_id()`
-    // then fails closed). Best-effort: the ban itself already holds on every
-    // app path via `tenant_users`.
-    try {
-      const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
-      if (authUser?.user?.app_metadata?.tenant_id === tenantId) {
-        await adminClient.auth.admin.updateUserById(userId, {
-          app_metadata: { tenant_id: null },
-        })
-      }
-    } catch (claimErr) {
-      console.error('Ban: failed to clear tenant claim:', claimErr)
-    }
+    await clearTenantClaim(adminClient, userId, tenantId, 'Ban')
 
     await adminClient.from('notifications').insert({
       user_id: userId,
