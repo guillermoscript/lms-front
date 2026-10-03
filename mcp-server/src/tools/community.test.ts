@@ -4,12 +4,19 @@ import {
   AcceptAnswerInput,
   CreateCommentInput,
   CreatePostInput,
+  GetPostOutput,
   GradeInput,
+  ListMutesOutput,
   ListPostsInput,
   MuteInput,
+  NOT_A_MEMBER,
   ReportInput,
   RosterInput,
+  UnmuteInput,
+  muterLabel,
+  requireActiveMember,
 } from "./community.js";
+import type { LmsSession } from "../session.js";
 import {
   canAcceptAnswers,
   communityWriteError,
@@ -257,5 +264,102 @@ describe("display helpers", () => {
     expect(sortRoster(rows).map((r) => r.name)).toEqual(["Ana", "Bea", "Zoe"]);
     expect(rosterCounts(rows)).toEqual({ all: 3, ungraded: 1, graded: 1, unanswered: 1 });
     expect(filterRoster(rows, "unanswered").map((r) => r.name)).toEqual(["Zoe"]);
+  });
+});
+
+describe("community output schemas", () => {
+  it("a mute whose admin deleted their account (muted_by null, #850) still matches ListMutesOutput", () => {
+    const row = {
+      user_id: OTHER,
+      name: "Ana",
+      reason: null,
+      muted_until: null,
+      active: true,
+      muted_by: null,
+      created_at: "2026-10-01T00:00:00Z",
+    };
+    expect(ListMutesOutput.safeParse({ mutes: [row] }).success).toBe(true);
+    expect(ListMutesOutput.safeParse({ mutes: [{ ...row, muted_by: SEEDED }] }).success).toBe(true);
+  });
+
+  it("names a null muter 'a former admin'", () => {
+    const names = new Map([[SEEDED, "Owner"]]);
+    expect(muterLabel(null, names)).toBe("a former admin");
+    expect(muterLabel(SEEDED, names)).toBe("Owner");
+    expect(muterLabel(OTHER, names)).toBe("an admin");
+  });
+
+  it("GetPostOutput carries whether the thread was cut short", () => {
+    const post = {
+      id: SEEDED,
+      course_id: null,
+      lesson_id: null,
+      author_id: OTHER,
+      author_name: null,
+      post_type: "question",
+      title: null,
+      excerpt: "",
+      is_pinned: false,
+      is_locked: false,
+      is_graded: false,
+      due_at: null,
+      answered: false,
+      comment_count: 0,
+      reaction_count: 0,
+      created_at: "2026-10-01T00:00:00Z",
+      content: "",
+      accepted_comment_id: null,
+    };
+    const base = { post, comments: [], poll: null, my_grade: null };
+    expect(GetPostOutput.safeParse({ ...base, total_comments: 2500, truncated: true }).success).toBe(true);
+    expect(GetPostOutput.safeParse(base).success).toBe(false);
+  });
+
+  it("the unmute tool describes its own argument, not block/unblock", () => {
+    expect(UnmuteInput.shape.user_id.description).toBe("The member whose mute to lift");
+    expect(UnmuteInput.safeParse({ user_id: OTHER }).success).toBe(true);
+    expect(UnmuteInput.safeParse({ user_id: "x" }).success).toBe(false);
+  });
+});
+
+describe("requireActiveMember", () => {
+  // A removed member's JWT still names this school; only tenant_users can tell.
+  function sessionWith(row: unknown, error: { message: string } | null = null) {
+    const filters: Record<string, unknown> = {};
+    const query = {
+      select: () => query,
+      eq: (col: string, val: unknown) => {
+        filters[col] = val;
+        return query;
+      },
+      maybeSingle: async () => ({ data: row, error }),
+    };
+    const session = {
+      getClient: () => ({
+        from: (table: string) => {
+          filters.table = table;
+          return query;
+        },
+      }),
+      getTenantId: () => SEEDED,
+      getUserId: () => OTHER,
+    } as unknown as LmsSession;
+    return { session, filters };
+  }
+
+  it("lets an active member through, filtered to their own active row in this school", async () => {
+    const { session, filters } = sessionWith({ role: "student" });
+    expect(await requireActiveMember(session)).toBeNull();
+    expect(filters).toMatchObject({ table: "tenant_users", tenant_id: SEEDED, user_id: OTHER, status: "active" });
+  });
+
+  it("refuses a removed or banned member (no active row)", async () => {
+    const { session } = sessionWith(null);
+    expect(await requireActiveMember(session)).toBe(NOT_A_MEMBER);
+  });
+
+  it("fails closed on a read error", async () => {
+    const { session } = sessionWith(null, { message: "boom" });
+    expect(await requireActiveMember(session)).toMatch(/boom/);
   });
 });

@@ -83,10 +83,38 @@ function messageOf(err: unknown): string {
 
 type ErrorResult = ReturnType<typeof errorResult>;
 
-/** Build the session, run the body, turn anything thrown into `errorResult`. */
+export const NOT_A_MEMBER = "You are not a member of this school";
+
+/**
+ * The caller has an ACTIVE `tenant_users` row in the session's school (readable
+ * through the "Users can view own memberships" policy). The JWT claim alone is
+ * not enough: a removed member's token kept this school's `tenant_id`, and a
+ * banned one keeps it until it expires. The web refuses both through
+ * `getUserRole()`; this is the same answer here (the database agrees since
+ * 20261003120000).
+ */
+export async function requireActiveMember(session: LmsSession): Promise<string | null> {
+  const { data, error } = await session
+    .getClient()
+    .from("tenant_users")
+    .select("role")
+    .eq("tenant_id", session.getTenantId())
+    .eq("user_id", session.getUserId())
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) return `Checking your membership: ${error.message}`;
+  return data ? null : NOT_A_MEMBER;
+}
+
+/**
+ * Build the session, require an active membership of its school, run the body,
+ * turn anything thrown into `errorResult`. `member: false` skips the membership
+ * check — only for the caller's own blocks, which are global, not the school's.
+ */
 async function withSession<T>(
   ctx: unknown,
-  body: (session: LmsSession) => Promise<T | ErrorResult>
+  body: (session: LmsSession) => Promise<T | ErrorResult>,
+  opts: { member?: boolean } = {}
 ): Promise<T | ErrorResult> {
   let session: LmsSession;
   try {
@@ -95,6 +123,10 @@ async function withSession<T>(
     return errorResult(messageOf(err));
   }
   try {
+    if (opts.member !== false) {
+      const refusal = await requireActiveMember(session);
+      if (refusal) return errorResult(refusal);
+    }
     return await body(session);
   } catch (err) {
     return errorResult(messageOf(err));
@@ -114,6 +146,10 @@ async function communityGate(session: LmsSession): Promise<string | null> {
 }
 
 const IN_CHUNK = 200;
+/** PostgREST `max_rows` (supabase/config.toml): one request never returns more. */
+const PAGE = 1000;
+/** Most comments one lms_get_community_post call returns (oldest first). */
+const COMMENT_CAP = 2000;
 
 /** Display names by user id (profiles are global). Missing names stay null. */
 async function profileNames(
@@ -177,15 +213,21 @@ async function loadVisiblePost(session: LmsSession, postId: string): Promise<Pos
   return post;
 }
 
+/** Who muted someone, for the text output. A deleted account leaves null (#850). */
+export function muterLabel(mutedBy: string | null, names: Map<string, string>): string {
+  if (mutedBy === null) return "a former admin";
+  return names.get(mutedBy) ?? "an admin";
+}
+
 function postText(post: Pick<PostRow, "post_type" | "content" | "milestone_type" | "milestone_data">): string {
   return post.post_type === "milestone"
     ? milestoneSentence(post.milestone_type, post.milestone_data)
     : plainMentions(post.content);
 }
 
-// ── output schemas ──────────────────────────────────────────────────────────
+// ── output schemas (exported for the unit tests) ────────────────────────────
 
-const PostSummarySchema = z.object({
+export const PostSummarySchema = z.object({
   id: z.string(),
   course_id: z.number().nullable(),
   lesson_id: z.number().nullable(),
@@ -204,20 +246,20 @@ const PostSummarySchema = z.object({
   created_at: z.string(),
 });
 
-const ListPostsOutput = z.object({
+export const ListPostsOutput = z.object({
   scope: z.enum(["school", "course"]),
   course_id: z.number().nullable(),
   posts: z.array(PostSummarySchema),
   has_more: z.boolean(),
 });
 
-const GradeSchema = z.object({
+export const GradeSchema = z.object({
   score: z.number(),
   feedback: z.string().nullable(),
   graded_at: z.string(),
 });
 
-const GetPostOutput = z.object({
+export const GetPostOutput = z.object({
   post: PostSummarySchema.extend({ content: z.string(), accepted_comment_id: z.string().nullable() }),
   comments: z.array(
     z.object({
@@ -239,28 +281,32 @@ const GetPostOutput = z.object({
     })
     .nullable(),
   my_grade: GradeSchema.nullable(),
+  total_comments: z.number().describe("Visible comments on the post"),
+  truncated: z
+    .boolean()
+    .describe("true when the thread was longer than this call returns: only the oldest comments (plus the accepted answer) are included"),
 });
 
-const CreatePostOutput = z.object({
+export const CreatePostOutput = z.object({
   post_id: z.string(),
   post_type: z.string(),
   course_id: z.number().nullable(),
   lesson_id: z.number().nullable(),
 });
 
-const CreateCommentOutput = z.object({
+export const CreateCommentOutput = z.object({
   comment_id: z.string(),
   post_id: z.string(),
   parent_comment_id: z.string().nullable(),
   is_top_level_answer: z.boolean(),
 });
 
-const AcceptAnswerOutput = z.object({
+export const AcceptAnswerOutput = z.object({
   post_id: z.string(),
   accepted_comment_id: z.string().nullable(),
 });
 
-const ListPromptsOutput = z.object({
+export const ListPromptsOutput = z.object({
   course_id: z.number(),
   prompts: z.array(
     z.object({
@@ -280,19 +326,19 @@ const ListPromptsOutput = z.object({
   ),
 });
 
-const ReportOutput = z.object({
+export const ReportOutput = z.object({
   reported: z.boolean(),
   target_type: z.enum(["post", "comment"]),
   target_id: z.string(),
 });
 
-const BlockOutput = z.object({ user_id: z.string(), blocked: z.boolean() });
+export const BlockOutput = z.object({ user_id: z.string(), blocked: z.boolean() });
 
-const ListBlocksOutput = z.object({
+export const ListBlocksOutput = z.object({
   members: z.array(z.object({ user_id: z.string(), name: z.string().nullable(), blocked_at: z.string() })),
 });
 
-const RosterOutput = z.object({
+export const RosterOutput = z.object({
   prompt: z.object({
     id: z.string(),
     course_id: z.number(),
@@ -315,16 +361,16 @@ const RosterOutput = z.object({
   has_more: z.boolean(),
 });
 
-const SaveGradeOutput = z.object({
+export const SaveGradeOutput = z.object({
   student_id: z.string(),
   score: z.number(),
   feedback: z.string().nullable(),
   graded_at: z.string(),
 });
 
-const RemoveGradeOutput = z.object({ student_id: z.string(), removed: z.boolean() });
+export const RemoveGradeOutput = z.object({ student_id: z.string(), removed: z.boolean() });
 
-const ListReportsOutput = z.object({
+export const ListReportsOutput = z.object({
   status: z.string(),
   reports: z.array(
     z.object({
@@ -345,13 +391,13 @@ const ListReportsOutput = z.object({
   ),
 });
 
-const MuteOutput = z.object({
+export const MuteOutput = z.object({
   user_id: z.string(),
   muted: z.boolean(),
   muted_until: z.string().nullable(),
 });
 
-const ListMutesOutput = z.object({
+export const ListMutesOutput = z.object({
   mutes: z.array(
     z.object({
       user_id: z.string(),
@@ -359,13 +405,13 @@ const ListMutesOutput = z.object({
       reason: z.string().nullable(),
       muted_until: z.string().nullable(),
       active: z.boolean(),
-      muted_by: z.string(),
+      muted_by: z.string().nullable().describe("null once the admin who muted has deleted their account"),
       created_at: z.string(),
     })
   ),
 });
 
-const ListBansOutput = z.object({
+export const ListBansOutput = z.object({
   members: z.array(
     z.object({
       user_id: z.string(),
@@ -435,6 +481,8 @@ export const ReportInput = z.object({
 });
 
 export const BlockInput = z.object({ user_id: uuid("user_id").describe("The member to block / unblock") });
+
+export const UnmuteInput = z.object({ user_id: uuid("user_id").describe("The member whose mute to lift") });
 
 export const RosterInput = z.object({
   course_id: positiveInt.describe("The prompt's course"),
@@ -593,34 +641,68 @@ export function registerCommunityTools(server: LmsServer) {
         const tenantId = session.getTenantId();
         const post = await loadVisiblePost(session, input.post_id);
 
-        const { data: commentRows, error: commentsError } = await supabase
-          .from("community_comments")
-          .select("id, parent_comment_id, author_id, content, created_at")
-          .eq("post_id", post.id)
-          .eq("tenant_id", tenantId)
-          .eq("is_hidden", false)
-          .order("created_at", { ascending: true })
-          .limit(500);
-        if (commentsError) return errorResult(`Loading comments: ${commentsError.message}`);
-        const comments = (commentRows ?? []) as {
+        type CommentRow = {
           id: string;
           parent_comment_id: string | null;
           author_id: string;
           content: string;
           created_at: string;
-        }[];
+        };
+        const COMMENT_COLUMNS = "id, parent_comment_id, author_id, content, created_at";
+        // Oldest first, paged past max_rows (created_at is not unique → id breaks ties).
+        const comments: CommentRow[] = [];
+        let totalComments = 0;
+        for (let from = 0; from < COMMENT_CAP; from += PAGE) {
+          const { data, error, count } = await supabase
+            .from("community_comments")
+            .select(COMMENT_COLUMNS, from === 0 ? { count: "exact" } : undefined)
+            .eq("post_id", post.id)
+            .eq("tenant_id", tenantId)
+            .eq("is_hidden", false)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, Math.min(from + PAGE, COMMENT_CAP) - 1);
+          if (error) return errorResult(`Loading comments: ${error.message}`);
+          if (from === 0) totalComments = count ?? 0;
+          comments.push(...((data as CommentRow[] | null) ?? []));
+          if (!data || data.length < PAGE) break;
+        }
+        totalComments = Math.max(totalComments, comments.length);
+        const truncated = totalComments > comments.length;
+        // The accepted answer leads a question's thread even when it is newer than the cap.
+        if (truncated && post.accepted_comment_id && !comments.some((c) => c.id === post.accepted_comment_id)) {
+          const { data: accepted } = await supabase
+            .from("community_comments")
+            .select(COMMENT_COLUMNS)
+            .eq("id", post.accepted_comment_id)
+            .eq("post_id", post.id)
+            .eq("tenant_id", tenantId)
+            .eq("is_hidden", false)
+            .maybeSingle();
+          if (accepted) comments.push(accepted as CommentRow);
+        }
 
+        // Helpful votes per comment. One chunk of comment ids can hold more
+        // reactions than max_rows, so each chunk is paged too.
         const helpful = new Map<string, number>();
         const commentIds = comments.map((c) => c.id);
         for (let i = 0; i < commentIds.length; i += IN_CHUNK) {
-          const { data } = await supabase
-            .from("community_reactions")
-            .select("comment_id")
-            .eq("tenant_id", tenantId)
-            .eq("reaction_type", "helpful")
-            .in("comment_id", commentIds.slice(i, i + IN_CHUNK));
-          for (const r of (data as { comment_id: string | null }[] | null) ?? []) {
-            if (r.comment_id) helpful.set(r.comment_id, (helpful.get(r.comment_id) ?? 0) + 1);
+          const chunk = commentIds.slice(i, i + IN_CHUNK);
+          for (let from = 0; ; from += PAGE) {
+            const { data, error } = await supabase
+              .from("community_reactions")
+              .select("id, comment_id")
+              .eq("tenant_id", tenantId)
+              .eq("reaction_type", "helpful")
+              .in("comment_id", chunk)
+              .order("id", { ascending: true })
+              .range(from, from + PAGE - 1);
+            if (error) return errorResult(`Loading helpful votes: ${error.message}`);
+            const rows = (data as { comment_id: string | null }[] | null) ?? [];
+            for (const r of rows) {
+              if (r.comment_id) helpful.set(r.comment_id, (helpful.get(r.comment_id) ?? 0) + 1);
+            }
+            if (rows.length < PAGE) break;
           }
         }
 
@@ -693,7 +775,7 @@ export function registerCommunityTools(server: LmsServer) {
         lines.push(
           thread.length === 0
             ? "No comments yet."
-            : `Comments (${thread.length}):\n${thread
+            : `Comments (${truncated ? `showing ${thread.length} of ${totalComments} — the oldest, plus the accepted answer if any` : thread.length}):\n${thread
                 .map(
                   (c) =>
                     `${"  ".repeat(c.depth)}- ${c.is_accepted ? "[accepted answer] " : ""}${c.author_name ?? "a member"}: ${excerpt(c.content, 600)}${c.helpful_count ? ` (${c.helpful_count} helpful)` : ""} · id \`${c.id}\``
@@ -707,6 +789,8 @@ export function registerCommunityTools(server: LmsServer) {
             comments: thread,
             poll,
             my_grade: myGrade,
+            total_comments: totalComments,
+            truncated,
           } as z.infer<typeof GetPostOutput>,
           lines.join("\n\n")
         );
@@ -1092,7 +1176,7 @@ export function registerCommunityTools(server: LmsServer) {
           );
         if (error) return errorResult(`Blocking: ${error.message}`);
         return result({ user_id: input.user_id, blocked: true }, "Blocked. Their posts and comments are hidden from you.");
-      })
+      }, { member: false })
   );
 
   server.tool(
@@ -1113,7 +1197,7 @@ export function registerCommunityTools(server: LmsServer) {
           .eq("blocked_id", input.user_id);
         if (error) return errorResult(`Unblocking: ${error.message}`);
         return result({ user_id: input.user_id, blocked: false }, "Unblocked.");
-      })
+      }, { member: false })
   );
 
   server.tool(
@@ -1146,7 +1230,7 @@ export function registerCommunityTools(server: LmsServer) {
             ? "You have not blocked anyone."
             : members.map((m) => `- ${m.name ?? "a member"} · id \`${m.user_id}\``).join("\n")
         );
-      })
+      }, { member: false })
   );
 
   // ── lms_get_prompt_grading_roster (staff) ─────────────────────────────────
@@ -1201,21 +1285,29 @@ export function registerCommunityTools(server: LmsServer) {
             .is("parent_comment_id", null)
             .eq("is_hidden", false)
             .order("created_at", { ascending: true })
+            .order("id", { ascending: true }) // created_at is not unique: a stable order keeps pages from skipping rows
             .range(from, from + 999);
           if (error) return errorResult(`Loading answers: ${error.message}`);
           answers.push(...((data as typeof answers | null) ?? []));
           if (!data || data.length < 1000) break;
         }
 
-        const { data: gradeRows, error: gradesError } = await supabase
-          .from("community_prompt_grades")
-          .select("student_id, score, feedback, graded_at")
-          .eq("tenant_id", tenantId)
-          .eq("post_id", prompt.id);
-        if (gradesError) return errorResult(`Loading grades: ${gradesError.message}`);
+        // One grade per student per prompt, so student_id is a stable page order.
         const grades = new Map<string, z.infer<typeof GradeSchema>>();
-        for (const g of (gradeRows as ({ student_id: string } & z.infer<typeof GradeSchema>)[] | null) ?? []) {
-          grades.set(g.student_id, { score: g.score, feedback: g.feedback, graded_at: g.graded_at });
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await supabase
+            .from("community_prompt_grades")
+            .select("student_id, score, feedback, graded_at")
+            .eq("tenant_id", tenantId)
+            .eq("post_id", prompt.id)
+            .order("student_id", { ascending: true })
+            .range(from, from + 999);
+          if (error) return errorResult(`Loading grades: ${error.message}`);
+          const rows = (data as ({ student_id: string } & z.infer<typeof GradeSchema>)[] | null) ?? [];
+          for (const g of rows) {
+            grades.set(g.student_id, { score: g.score, feedback: g.feedback, graded_at: g.graded_at });
+          }
+          if (rows.length < 1000) break;
         }
 
         const enrolled: string[] = [];
@@ -1226,6 +1318,7 @@ export function registerCommunityTools(server: LmsServer) {
             .eq("tenant_id", tenantId)
             .eq("course_id", input.course_id)
             .eq("status", "active")
+            .order("user_id", { ascending: true })
             .range(from, from + 999);
           if (error) break; // the roster still covers everyone who answered or was graded
           enrolled.push(...((data as { user_id: string }[] | null) ?? []).map((r) => r.user_id));
@@ -1610,7 +1703,7 @@ export function registerCommunityTools(server: LmsServer) {
     {
       name: "lms_unmute_community_member",
       description: "Admins: lift a member's community mute.",
-      inputSchema: BlockInput,
+      inputSchema: UnmuteInput,
       outputSchema: MuteOutput,
       annotations: IDEMPOTENT_WRITE,
     },
@@ -1646,8 +1739,8 @@ export function registerCommunityTools(server: LmsServer) {
           .eq("tenant_id", session.getTenantId())
           .order("created_at", { ascending: false });
         if (error) return errorResult(`Loading mutes: ${error.message}`);
-        const rows = (data ?? []) as { user_id: string; reason: string | null; muted_until: string | null; muted_by: string; created_at: string }[];
-        const names = await profileNames(supabase, rows.map((r) => r.user_id));
+        const rows = (data ?? []) as { user_id: string; reason: string | null; muted_until: string | null; muted_by: string | null; created_at: string }[];
+        const names = await profileNames(supabase, rows.flatMap((r) => [r.user_id, r.muted_by]));
         const now = Date.now();
         const mutes = rows
           .map((r) => ({
@@ -1663,7 +1756,7 @@ export function registerCommunityTools(server: LmsServer) {
             : mutes
                 .map(
                   (m) =>
-                    `- ${m.name ?? "a member"} (\`${m.user_id}\`): ${m.active ? (m.muted_until ? `muted until ${m.muted_until}` : "muted indefinitely") : "expired"}${m.reason ? ` — ${m.reason}` : ""}`
+                    `- ${m.name ?? "a member"} (\`${m.user_id}\`): ${m.active ? (m.muted_until ? `muted until ${m.muted_until}` : "muted indefinitely") : "expired"} · by ${muterLabel(m.muted_by, names)}${m.reason ? ` — ${m.reason}` : ""}`
                 )
                 .join("\n")
         );
