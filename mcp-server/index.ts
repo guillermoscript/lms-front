@@ -21,6 +21,7 @@ import { registerStudyPlanTools } from "./src/tools/study-plan.js";
 import { registerAskTeacherTools } from "./src/tools/ask-teacher.js";
 import { registerLandingPageTools } from "./src/tools/landing-pages.js";
 import { registerCertificateTools } from "./src/tools/certificates.js";
+import { registerCommerceTools } from "./src/tools/commerce.js";
 import { registerDemoTools } from "./src/tools/demo.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
@@ -46,7 +47,7 @@ const baseConfig = {
   description:
     "Manage courses, lessons, exercises, exams, and analytics for the LMS. Teachers and admins get management tools; students get self-scoped learning tools.",
   instructions:
-    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Admins can also draft school landing pages: lms_get_landing_blocks for the block vocabulary, then lms_create_landing_page (draft) and lms_publish_landing_page. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. Certificates: students use lms_my_certificates and lms_get_certificate_eligibility; teachers/admins use lms_list_course_certificates for a course's roster (it can issue) plus lms_get_certificate_template / lms_set_certificate_template — a course with no active template issues no certificates at all, which is the usual reason none appear. All actions are scoped to the caller's tenant and enforced by row-level security.",
+    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Admins can also draft school landing pages: lms_get_landing_blocks for the block vocabulary, then lms_create_landing_page (draft) and lms_publish_landing_page. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. Certificates: students use lms_my_certificates and lms_get_certificate_eligibility; teachers/admins use lms_list_course_certificates for a course's roster (it can issue) plus lms_get_certificate_template / lms_set_certificate_template — a course with no active template issues no certificates at all, which is the usual reason none appear. Commerce (admins only): lms_list_products, lms_list_plans, lms_list_transactions, lms_list_subscriptions, lms_get_payouts_owed, lms_get_billing_status, and the manual-payment queue lms_list_payment_requests with lms_confirm_payment_received / lms_reject_payment_request — completing a confirmed request (recording the sale and granting access) happens in the dashboard. All actions are scoped to the caller's tenant and enforced by row-level security.",
   // Serve the conventional `skills/` directory over the Skills over MCP
   // extension (skills/list, skills/get). `true` makes the directory a hard
   // requirement rather than best-effort discovery.
@@ -120,6 +121,7 @@ if (demoWidgetsEnabled()) {
   registerAskTeacherTools(server);
   registerLandingPageTools(server);
   registerCertificateTools(server);
+  registerCommerceTools(server);
 }
 
 registerResources(server);

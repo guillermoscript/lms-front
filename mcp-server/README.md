@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **91 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **101 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -56,7 +56,16 @@ implementation.
   `lms_set_certificate_template`, and admin-only `lms_revoke_certificate`.
   Issuance is **template-gated**: a course with no active
   `certificate_templates` row issues nothing at all, whatever a student has
-  completed — which is what the eligibility and template tools surface).
+  completed — which is what the eligibility and template tools surface), and
+  admin-only commerce (#897): `lms_list_products`, `lms_list_plans`,
+  `lms_list_transactions` (net of refunds), `lms_list_subscriptions`,
+  `lms_get_payouts_owed` (per-currency revenue split + what the platform owes
+  the school for platform-settled sales), `lms_get_billing_status` (the
+  school's own platform plan), and the manual-payment queue
+  `lms_list_payment_requests` / `lms_confirm_payment_received` /
+  `lms_reject_payment_request`. Completing a confirmed request (the
+  `transactions` insert that grants access) stays in the dashboard:
+  `transactions` is server-write-only and the MCP never holds the service role.
 - **21 views** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
