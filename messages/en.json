@@ -1950,6 +1950,37 @@
           "fr": "French",
           "de": "German",
           "it": "Italian"
+        },
+        "conversationInstructionsPlaceholder": "Your role: customer. Order a drink, ask the price and confirm your order. Thank the partner and say goodbye before finishing.",
+        "conversationInstructionsHint": "Describe the student role, objective and required actions. Students see these instructions before starting the call.",
+        "conversationPartnerPromptLabel": "AI partner instructions",
+        "conversationPartnerPromptPlaceholder": "Play the server. Ask about size and offer two choices. Do not answer for the student.",
+        "conversationPartnerPromptHint": "Define how the partner behaves. Grading is configured separately.",
+        "conversationCriteriaLabel": "AI evaluation criteria",
+        "conversationCriteriaPlaceholder": "Check whether the student orders, asks the price and confirms. Cite student phrases and adapt expectations to the selected level.",
+        "conversationCriteriaHint": "Private. Define evidence of success and optional weights. Defaults: task 35%, grammar 25%, vocabulary 20%, interaction 20%.",
+        "voiceTemplates": {
+          "roleplay": {
+            "name": "Everyday role-play",
+            "description": "Customizable student task, scenario and grading criteria.",
+            "instructions": "Topic: {{topic}}\nYour role: {{student_role}}. The AI plays: {{partner_role}}.\n\nRequired objectives:\n{{goals}}\n\nComplete the scenario actions and confirm the outcome. Use the specified language and level. Ask for a hint when needed.",
+            "scenario": "Topic: {{topic}}. Student: {{student_role}}. Partner: {{partner_role}}. Objectives: {{goals}}.",
+            "criteria": "Evaluate objectives {{goals}} in the context of {{topic}}. Complete the scenario actions and confirm the outcome.\nTask 35%, grammar 25%, vocabulary 20%, interaction 20%. Adapt to the CEFR level. Use only student evidence, distinguish supported from independent responses and give concrete examples and a next action."
+          },
+          "interview": {
+            "name": "Interview",
+            "description": "Customizable student task, scenario and grading criteria.",
+            "instructions": "Topic: {{topic}}\nYour role: {{student_role}}. The AI plays: {{partner_role}}.\n\nRequired objectives:\n{{goals}}\n\nAnswer questions with your own examples and ask the partner a question. Use the specified language and level. Ask for a hint when needed.",
+            "scenario": "Topic: {{topic}}. Student: {{student_role}}. Partner: {{partner_role}}. Objectives: {{goals}}.",
+            "criteria": "Evaluate objectives {{goals}} in the context of {{topic}}. Answer questions with your own examples and ask the partner a question.\nTask 35%, grammar 25%, vocabulary 20%, interaction 20%. Adapt to the CEFR level. Use only student evidence, distinguish supported from independent responses and give concrete examples and a next action."
+          },
+          "discussion": {
+            "name": "Opinion and discussion",
+            "description": "Customizable student task, scenario and grading criteria.",
+            "instructions": "Topic: {{topic}}\nYour role: {{student_role}}. The AI plays: {{partner_role}}.\n\nRequired objectives:\n{{goals}}\n\nExpress your opinion with reasons, respond to another perspective and summarize your position. Use the specified language and level. Ask for a hint when needed.",
+            "scenario": "Topic: {{topic}}. Student: {{student_role}}. Partner: {{partner_role}}. Objectives: {{goals}}.",
+            "criteria": "Evaluate objectives {{goals}} in the context of {{topic}}. Express your opinion with reasons, respond to another perspective and summarize your position.\nTask 35%, grammar 25%, vocabulary 20%, interaction 20%. Adapt to the CEFR level. Use only student evidence, distinguish supported from independent responses and give concrete examples and a next action."
+          }
         }
       },
       "submissionReview": {
@@ -2148,7 +2179,9 @@
         "fillAllVariables": "Fill in all variables to see the complete preview",
         "cancel": "Cancel",
         "applyTemplate": "Apply Template",
-        "useTemplate": "Use Template"
+        "useTemplate": "Use Template",
+        "loadError": "Saved templates could not be loaded. You can use the available templates.",
+        "evaluationPreviewTitle": "Private evaluation criteria"
       },
       "aiPreview": {
         "buttonText": "Preview AI Behavior",
@@ -2351,6 +2384,26 @@
           "evidenceAvg": "average {avg}%",
           "evidenceExam": "{missers} of {students} student(s) missed it on their latest submission · {rate}% miss rate"
         }
+      },
+      "exercisePreview": {
+        "button": "Test exercise",
+        "title": "Test as a student",
+        "description": "Test the current draft and its evaluation. No student attempts, progress or XP are recorded. AI and voice tests use the school’s normal AI allowance. Restart to load your latest edits.",
+        "restart": "Restart with current draft",
+        "invalidDraft": "Check the title and exercise configuration before testing.",
+        "evaluate": "Evaluate test response",
+        "evaluating": "Evaluating…",
+        "answer": "Your test response",
+        "answerPlaceholder": "Answer as a student would…",
+        "answerHint": "Try a complete answer, an incomplete answer or an incorrect answer to check how the evaluator responds.",
+        "evaluationError": "The test could not be evaluated. Check the configuration and try again.",
+        "limitError": "The AI usage limit has been reached. Try again later.",
+        "mediaLimit": "Use a short recording under 25 MB for this test.",
+        "true": "True",
+        "false": "False",
+        "deterministic": "These questions are graded against the answer key, without AI.",
+        "correct": "Correct",
+        "incorrect": "Incorrect"
       }
     },
     "admin": {

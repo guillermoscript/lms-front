@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useExerciseBuilder } from './exercise-builder-context'
 import { Button } from '@/components/ui/button'
+import { ExercisePreviewModal } from '../exercise-preview-modal'
 import { VersionHistorySheet } from '../version-history-sheet'
 import {
   IconLoader2,
@@ -56,7 +57,8 @@ export function ExerciseBuilderToolbar() {
       </nav>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <ExercisePreviewModal />
         {exerciseId !== null && (
           <VersionHistorySheet
             contentType="exercise"

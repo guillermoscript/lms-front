@@ -69,6 +69,12 @@ interface ConversationExerciseProps {
   maxDailyAttempts: number
   initialResult: ConversationResult | null
   isExerciseCompletedSection?: React.ReactNode
+  /** Staff dry run: separate authorized token/evaluator endpoints, no student records. */
+  preview?: {
+    tokenEndpoint: string
+    sessionConfig: Parameters<typeof useRealtime>[0]['sessionConfig']
+    evaluate: (transcript: ConversationTurn[], notes: ConversationNote[]) => Promise<Response>
+  }
 }
 
 function formatClock(totalSeconds: number) {
@@ -86,6 +92,7 @@ export default function ConversationExercise({
   maxDailyAttempts,
   initialResult,
   isExerciseCompletedSection,
+  preview,
 }: ConversationExerciseProps) {
   const t = useTranslations('exercises.conversation')
   const tWorkspace = useTranslations('exercises.workspace')
@@ -120,7 +127,8 @@ export default function ConversationExercise({
   // embedded in the token by the server, where the student can't edit them.
   const realtime = useRealtime({
     model,
-    api: { token: `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}` },
+    api: { token: preview?.tokenEndpoint ?? `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}` },
+    sessionConfig: preview?.sessionConfig,
     // No tool carries a verdict — grading stays on the server. Returning a
     // value sends a tool output, which makes the tutor speak again: wanted
     // after a hint (it was asked to call that one BEFORE speaking), not after
@@ -247,8 +255,9 @@ export default function ConversationExercise({
     }
 
     try {
-      const grade = () =>
-        fetch('/api/exercises/realtime/evaluate', {
+      const grade = () => preview
+        ? preview.evaluate(finalTurns, notesRef.current)
+        : fetch('/api/exercises/realtime/evaluate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ exerciseId: exercise.id, tab, transcript: finalTurns, notes: notesRef.current }),
@@ -282,7 +291,7 @@ export default function ConversationExercise({
     } finally {
       finishingRef.current = false
     }
-  }, [exercise.id, maxMinutes, realtime, releaseMic, t, tab])
+  }, [exercise.id, maxMinutes, realtime, releaseMic, t, tab, preview])
 
   // Countdown — the hard stop that keeps a session inside the teacher's budget.
   const finishRef = useRef(finish)

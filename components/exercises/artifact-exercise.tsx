@@ -28,8 +28,9 @@ interface ArtifactExerciseProps {
   isExerciseCompleted: boolean
   passingScore: number
   isExerciseCompletedSection?: React.ReactNode
-  /** Last graded attempt from exercise_evaluations. The route has always written
-   * one; it was simply never read back, so reloading the page lost the feedback. */
+  /** Staff preview routes submission through the evaluator without saving progress. */
+  evaluateSubmission?: (content: string, metadata: Record<string, unknown>) => Promise<Response>
+  /** Last graded attempt restored from exercise_evaluations. */
   initialEvaluation?: EvaluationResult | null
 }
 
@@ -50,6 +51,7 @@ export default function ArtifactExercise({
   passingScore,
   isExerciseCompletedSection,
   initialEvaluation = null,
+  evaluateSubmission,
 }: ArtifactExerciseProps) {
   const t = useTranslations('exercises.artifact')
   const tWorkspace = useTranslations('exercises.workspace')
@@ -73,7 +75,7 @@ export default function ArtifactExercise({
     setRateLimited(false)
 
     try {
-      const res = await fetch('/api/exercises/artifact/evaluate', {
+      const res = await (evaluateSubmission ? evaluateSubmission(content, metadata) : fetch('/api/exercises/artifact/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,7 +83,7 @@ export default function ArtifactExercise({
           content,
           metadata,
         }),
-      })
+      }))
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -105,7 +107,7 @@ export default function ArtifactExercise({
         '*'
       )
 
-      if (result.passed) {
+      if (result.passed && !evaluateSubmission) {
         toast.success(tGamification('xpAwarded.exercise_completion'))
       }
     } catch (err) {
@@ -113,7 +115,7 @@ export default function ArtifactExercise({
       setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
       setSubmitState('error')
     }
-  }, [exercise.id])
+  }, [exercise.id, evaluateSubmission, tGamification])
 
   // Listen for postMessage from iframe
   useEffect(() => {

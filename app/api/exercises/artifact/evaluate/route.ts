@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
-import { generateText } from 'ai'
-import { AI_MODELS } from '@/lib/ai/config'
+import { evaluateArtifactExercise } from '@/lib/exercises/evaluate-artifact'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
@@ -82,58 +81,11 @@ export async function POST(req: Request) {
     system_prompt?: string | null
     passing_score?: number
   }
-  const evaluationCriteria = config.evaluation_criteria ?? ''
-  const systemPrompt = config.system_prompt ?? null
   const passingScore = config.passing_score ?? 70
 
   // 8. AI evaluation
   try {
-    const systemMessage = systemPrompt
-      ? `${systemPrompt}\n\nYou are evaluating a student's submission for an interactive exercise.`
-      : 'You are an expert educational evaluator. Evaluate the student submission fairly and constructively.'
-
-    const { text } = await generateText({
-      model: AI_MODELS.grader,
-      system: systemMessage,
-      prompt: `## Exercise: ${exercise.title}
-
-## Instructions Given to Student:
-${exercise.instructions}
-
-## Evaluation Criteria:
-${evaluationCriteria}
-
-## Student Submission:
-${content}
-
-${Object.keys(metadata).length > 0 ? `## Submission Metadata:\n${JSON.stringify(metadata, null, 2)}` : ''}
-
-## Your Task:
-Evaluate the student's submission based on the evaluation criteria above. Respond with a JSON object (and nothing else) in this exact format:
-{
-  "score": <number 0-100>,
-  "feedback": "<overall feedback paragraph>",
-  "strengths": ["<strength 1>", "<strength 2>"],
-  "improvements": ["<improvement 1>", "<improvement 2>"]
-}
-
-End "feedback" with one short reflective question tied to the most important improvement (e.g. "Before revising: what did you expect X to do, and what did it actually do?"). Write everything in the language of the student's submission.`,
-    })
-
-    // 9. Parse AI response
-    let evaluation: { score: number; feedback: string; strengths: string[]; improvements: string[] }
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON found')
-      evaluation = JSON.parse(jsonMatch[0])
-      if (typeof evaluation.score !== 'number') throw new Error('Invalid score')
-      evaluation.score = Math.max(0, Math.min(100, Math.round(evaluation.score)))
-      evaluation.feedback = evaluation.feedback ?? ''
-      evaluation.strengths = Array.isArray(evaluation.strengths) ? evaluation.strengths : []
-      evaluation.improvements = Array.isArray(evaluation.improvements) ? evaluation.improvements : []
-    } catch {
-      return Response.json({ error: 'Failed to parse AI evaluation' }, { status: 500 })
-    }
+    const evaluation = await evaluateArtifactExercise(exercise, content, metadata)
 
     const passed = evaluation.score >= passingScore
 

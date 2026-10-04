@@ -4,8 +4,7 @@ import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/l
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
-import { parseConversationConfig } from '@/lib/speech/conversation'
-import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
+import { buildAudioConfig, buildConversationConfig } from '@/lib/exercises/form-config'
 
 export interface ExerciseFormData {
   title: string
@@ -34,50 +33,12 @@ export interface ExerciseFormData {
   speech_feedback_language: string
   // Live conversation config fields
   conv_scenario: string
+  conv_evaluation_criteria: string
   conv_target_language: string
   conv_native_language: string
   conv_level: string
   conv_voice: string
   conv_max_minutes: number
-}
-
-/** Normalised through the same parser the token route reads it with. */
-function buildConversationConfig(data: ExerciseFormData) {
-  return parseConversationConfig({
-    scenario: data.conv_scenario,
-    target_language: data.conv_target_language,
-    native_language: data.conv_native_language,
-    level: data.conv_level,
-    voice: data.conv_voice,
-    max_minutes: data.conv_max_minutes,
-    passing_score: data.passing_score,
-    max_daily_attempts: data.max_daily_attempts || 0,
-  })
-}
-
-function buildAudioConfig(data: ExerciseFormData) {
-  return {
-    stt_provider: 'assemblyai',
-    ai_coach: 'openai',
-    topic_prompt: data.topic_prompt,
-    min_duration_seconds: data.min_duration_seconds,
-    max_duration_seconds: data.max_duration_seconds,
-    passing_score: data.passing_score,
-    max_daily_attempts: data.max_daily_attempts || 0,
-    rubric: {
-      filler_words: data.rubric_filler_words,
-      pace: data.rubric_pace,
-      structure: data.rubric_structure,
-      confidence: data.rubric_confidence,
-    },
-    // Normalised through the same parser the analyze route reads it with.
-    ...parseSpeechRubricConfig({
-      rubric_mode: data.speech_rubric_mode,
-      target_language: data.speech_target_language,
-      level: data.speech_level,
-      feedback_language: data.speech_feedback_language,
-    }),
-  }
 }
 
 export async function createExercise(courseId: number, data: ExerciseFormData) {

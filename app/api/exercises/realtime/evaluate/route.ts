@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { AI_MODELS } from '@/lib/ai/config'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -48,11 +49,13 @@ export async function POST(req: Request) {
     return Response.json({ error: 'exerciseId, tab and a non-empty transcript are required' }, { status: 400 })
   }
 
-  const { data: exercise, error } = await adminClient
+  const { data: storedExercise, error } = await adminClient
     .from('exercises')
-    .select('id, title, instructions, exercise_type, exercise_config, course_id, tenant_id')
+    .select(`id, title, instructions, exercise_type, exercise_config, course_id, tenant_id, ${GRADING_SECRETS_EMBED}`)
     .eq('id', exerciseId)
     .single()
+
+  const exercise = storedExercise ? withGradingSecrets(storedExercise) : null
 
   if (error || !exercise || exercise.tenant_id !== tenantId) {
     return Response.json({ error: 'Exercise not found' }, { status: 404 })
@@ -128,7 +131,7 @@ export async function POST(req: Request) {
       model: AI_MODELS.grader,
       output: Output.object({ schema: ConversationEvaluationSchema }),
       system: buildConversationGraderPrompt(exercise, config, notes),
-      prompt: transcript.map((t) => `${t.role === 'user' ? 'STUDENT' : 'PARTNER'}: ${t.text}`).join('\n'),
+      prompt: JSON.stringify({ transcript }),
     })
     if (!output) throw new Error('Grader returned no output')
 

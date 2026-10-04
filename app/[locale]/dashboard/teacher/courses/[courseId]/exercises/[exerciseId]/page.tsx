@@ -77,6 +77,11 @@ export default async function EditExercisePage({ params }: PageProps) {
     )
   }
 
+  const { data: files } = exercise.exercise_type === 'coding_challenge'
+    ? await supabase.from('exercise_files').select('file_path, content').eq('exercise_id', exercise.id)
+    : { data: null }
+  const previewFiles = Object.fromEntries((files ?? []).map((file) => [file.file_path, file.content ?? '']))
+
   return (
     <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
       {/* Breadcrumb */}
@@ -95,7 +100,7 @@ export default async function EditExercisePage({ params }: PageProps) {
 
       <ExerciseBuilder
         courseId={parseInt(courseId)}
-        initialData={exercise}
+        initialData={{ ...exercise, preview_files: previewFiles }}
       />
     </div>
   )

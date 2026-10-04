@@ -1950,6 +1950,37 @@
           "fr": "Francés",
           "de": "Alemán",
           "it": "Italiano"
+        },
+        "conversationInstructionsPlaceholder": "Tu rol: cliente. Pide una bebida, consulta el precio y confirma el pedido. Antes de terminar, agradece y despídete.",
+        "conversationInstructionsHint": "Explica el rol del estudiante, el objetivo y las acciones que debe completar. Estas instrucciones aparecen antes de iniciar la llamada.",
+        "conversationPartnerPromptLabel": "Instrucciones para el interlocutor IA",
+        "conversationPartnerPromptPlaceholder": "Interpreta al camarero. Pregunta por el tamaño y ofrece dos opciones. No respondas por el estudiante.",
+        "conversationPartnerPromptHint": "Define el comportamiento del interlocutor. La evaluación se configura por separado.",
+        "conversationCriteriaLabel": "Criterios de evaluación de la IA",
+        "conversationCriteriaPlaceholder": "Evalúa si completa el pedido, pregunta el precio y confirma. Justifica con frases del estudiante. Adapta la exigencia al nivel seleccionado.",
+        "conversationCriteriaHint": "Privados. Especifica qué demuestra el logro y, si quieres, los pesos. Por defecto: tarea 35%, gramática 25%, vocabulario 20% e interacción 20%.",
+        "voiceTemplates": {
+          "roleplay": {
+            "name": "Situación cotidiana",
+            "description": "Consigna, escenario y criterios personalizables.",
+            "instructions": "Tema: {{topic}}\nTu rol: {{student_role}}. La IA interpreta: {{partner_role}}.\n\nObjetivos que debes completar:\n{{goals}}\n\nCompleta las acciones del escenario y confirma el resultado. Usa el idioma y el nivel indicados. Puedes pedir una pista si la necesitas.",
+            "scenario": "Tema: {{topic}}. Estudiante: {{student_role}}. Interlocutor: {{partner_role}}. Objetivos: {{goals}}.",
+            "criteria": "Evalúa los objetivos {{goals}} en el contexto de {{topic}}. Completa las acciones del escenario y confirma el resultado.\nTarea 35%, gramática 25%, vocabulario 20%, interacción 20%. Adapta la exigencia al nivel CEFR. Usa solo evidencia del estudiante, distingue ayuda de respuestas independientes y da ejemplos concretos y una acción para mejorar."
+          },
+          "interview": {
+            "name": "Entrevista",
+            "description": "Consigna, escenario y criterios personalizables.",
+            "instructions": "Tema: {{topic}}\nTu rol: {{student_role}}. La IA interpreta: {{partner_role}}.\n\nObjetivos que debes completar:\n{{goals}}\n\nResponde las preguntas con ejemplos propios y haz una pregunta al interlocutor. Usa el idioma y el nivel indicados. Puedes pedir una pista si la necesitas.",
+            "scenario": "Tema: {{topic}}. Estudiante: {{student_role}}. Interlocutor: {{partner_role}}. Objetivos: {{goals}}.",
+            "criteria": "Evalúa los objetivos {{goals}} en el contexto de {{topic}}. Responde las preguntas con ejemplos propios y haz una pregunta al interlocutor.\nTarea 35%, gramática 25%, vocabulario 20%, interacción 20%. Adapta la exigencia al nivel CEFR. Usa solo evidencia del estudiante, distingue ayuda de respuestas independientes y da ejemplos concretos y una acción para mejorar."
+          },
+          "discussion": {
+            "name": "Opinión y debate",
+            "description": "Consigna, escenario y criterios personalizables.",
+            "instructions": "Tema: {{topic}}\nTu rol: {{student_role}}. La IA interpreta: {{partner_role}}.\n\nObjetivos que debes completar:\n{{goals}}\n\nExpresa tu opinión con razones, responde a otra perspectiva y resume tu postura. Usa el idioma y el nivel indicados. Puedes pedir una pista si la necesitas.",
+            "scenario": "Tema: {{topic}}. Estudiante: {{student_role}}. Interlocutor: {{partner_role}}. Objetivos: {{goals}}.",
+            "criteria": "Evalúa los objetivos {{goals}} en el contexto de {{topic}}. Expresa tu opinión con razones, responde a otra perspectiva y resume tu postura.\nTarea 35%, gramática 25%, vocabulario 20%, interacción 20%. Adapta la exigencia al nivel CEFR. Usa solo evidencia del estudiante, distingue ayuda de respuestas independientes y da ejemplos concretos y una acción para mejorar."
+          }
         }
       },
       "submissionReview": {
@@ -2148,7 +2179,9 @@
         "fillAllVariables": "Llena todas las variables para ver la vista previa completa",
         "cancel": "Cancelar",
         "applyTemplate": "Aplicar Plantilla",
-        "useTemplate": "Usar Plantilla"
+        "useTemplate": "Usar Plantilla",
+        "loadError": "No se pudieron cargar las plantillas guardadas. Puedes usar las plantillas disponibles.",
+        "evaluationPreviewTitle": "Criterios privados de evaluación"
       },
       "aiPreview": {
         "buttonText": "Previsualizar IA",
@@ -2351,6 +2384,26 @@
           "evidenceAvg": "promedio {avg}%",
           "evidenceExam": "{missers} de {students} estudiante(s) la fallaron en su última entrega · {rate}% de fallo"
         }
+      },
+      "exercisePreview": {
+        "button": "Probar ejercicio",
+        "title": "Probar como estudiante",
+        "description": "Prueba el borrador actual y su evaluación. No registra intentos, progreso ni XP de estudiantes. Las pruebas de IA y voz consumen la cuota habitual de la escuela. Reinicia para cargar tus últimos cambios.",
+        "restart": "Reiniciar con el borrador actual",
+        "invalidDraft": "Revisa el título y la configuración del ejercicio antes de probarlo.",
+        "evaluate": "Evaluar respuesta de prueba",
+        "evaluating": "Evaluando…",
+        "answer": "Tu respuesta de prueba",
+        "answerPlaceholder": "Responde como lo haría un estudiante…",
+        "answerHint": "Prueba una respuesta completa, incompleta o incorrecta para revisar cómo responde el evaluador.",
+        "evaluationError": "No se pudo evaluar la prueba. Revisa la configuración e inténtalo de nuevo.",
+        "limitError": "Se alcanzó el límite de uso de IA. Inténtalo más tarde.",
+        "mediaLimit": "Usa una grabación corta de menos de 25 MB para esta prueba.",
+        "true": "Verdadero",
+        "false": "Falso",
+        "deterministic": "Estas preguntas se corrigen con la clave de respuestas, sin IA.",
+        "correct": "Correcto",
+        "incorrect": "Incorrecto"
       }
     },
     "admin": {
