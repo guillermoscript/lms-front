@@ -72,6 +72,21 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_my_certificates",
   "lms_get_certificate_eligibility",
   "lms_issue_certificate",
+  // Community (#896) — every one writes only as the caller (author_id /
+  // reporter_id / blocker_id = auth.uid() in RLS) and the database holds the
+  // community rules (mute, plan, course reach, locked/hidden posts). Students
+  // may ask questions and accept answers on THEIR OWN questions; prompts and
+  // grading are refused for them in the handler and by RLS/triggers.
+  "lms_list_community_posts",
+  "lms_get_community_post",
+  "lms_create_community_post",
+  "lms_create_community_comment",
+  "lms_accept_community_answer",
+  "lms_list_discussion_prompts",
+  "lms_report_community_content",
+  "lms_block_community_member",
+  "lms_unblock_community_member",
+  "lms_list_blocked_members",
   // School life (#898) — the caller's own notifications in this school (read
   // and mark-read on their own rows only) and their weekly league standings.
   "lms_my_notifications",
@@ -102,6 +117,15 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   "lms_update_landing_page",
   "lms_publish_landing_page",
   "lms_unpublish_landing_page",
+  // Community moderation (#896) — admin only, as on the web (verifyAdminAccess)
+  // and in RLS (community_flags / community_user_mutes / tenant_users admin
+  // policies). Teachers keep grading prompts (lms_get_prompt_grading_roster,
+  // lms_grade_prompt_answer, lms_remove_prompt_grade) for their own courses.
+  "lms_list_community_reports",
+  "lms_mute_community_member",
+  "lms_unmute_community_member",
+  "lms_list_community_mutes",
+  "lms_list_banned_members",
   // School administration (#898) — settings, theme, members, invitations and
   // plan usage are what the admin dashboard's Settings/Users/Billing screens
   // do. The RLS policies on tenants/tenant_settings/tenant_users/
