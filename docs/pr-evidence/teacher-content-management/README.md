@@ -1,0 +1,1 @@
+These screenshots show the real list-control components with the app’s compiled Tailwind styles and mocked lesson/exercise/exam/course records. They verify component layout, not authenticated database behavior. Authenticated before/after screenshots and a flow recording still require a seeded local Supabase environment.

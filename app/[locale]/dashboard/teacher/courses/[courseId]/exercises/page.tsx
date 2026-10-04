@@ -63,6 +63,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
 
   const rows: ManagedExercise[] = (exercises ?? []).map((exercise) => ({
     id: exercise.id,
+    createdAt: exercise.created_at,
     title: exercise.title,
     exercise_type: exercise.exercise_type,
     difficulty_level: exercise.difficulty_level,
@@ -121,7 +122,7 @@ export default async function ExercisesPage({ params }: { params: Promise<{ cour
           </CardContent>
         </Card>
       ) : (
-        <ExerciseManageList exercises={rows} courseId={courseId} />
+        <ExerciseManageList exercises={rows} courseId={courseId} tenantId={tenantId} />
       )}
     </div>
   )
