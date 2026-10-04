@@ -4,7 +4,8 @@ import { useState, useCallback, useRef, useEffect, useMemo, useSyncExternalStore
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { IconArrowUp } from '@tabler/icons-react'
-import { loadMorePosts, loadNewPosts } from '@/app/actions/community'
+import { loadMorePosts } from '@/app/actions/community'
+import type { loadNewPosts } from '@/app/actions/community'
 import { Button } from '@/components/ui/button'
 import { useRealtimeInserts } from '@/hooks/use-realtime-inserts'
 import { PostComposer } from './post-composer'
@@ -184,7 +185,11 @@ export function CommunityFeed({
     // Nothing on screen yet: anything published since the page rendered.
     const since = newestCreatedAt([...shown, ...pending]) ?? new Date(0).toISOString()
     try {
-      const result = await loadNewPosts(scope, since, courseId, questionFilter)
+      const params = new URLSearchParams({ scope, since })
+      if (courseId !== undefined) params.set('courseId', String(courseId))
+      if (questionFilter) params.set('questions', questionFilter)
+      const response = await fetch(`/api/community/new-posts?${params}`, { cache: 'no-store' })
+      const result: Awaited<ReturnType<typeof loadNewPosts>> = await response.json()
       if (!result.success || !result.data || result.data.posts.length === 0) return
       const incoming = result.data.posts
       const shownIds = new Set(knownRef.current.shown.map((p) => p.id))

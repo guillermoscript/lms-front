@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import {
     IconBook,
     IconBookmark,
@@ -98,6 +98,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 function NavEntry({ item }: { item: NavItem }) {
+    const locale = useLocale()
+    const href = `/${locale}${item.href}`
     const { isActive } = useActiveNav()
     const active = isActive(item.href)
     const tourProps = item.tourId ? { 'data-tour': item.tourId } : {}
@@ -107,7 +109,7 @@ function NavEntry({ item }: { item: NavItem }) {
         return (
             <SidebarMenuItem {...tourProps}>
                 <SidebarMenuButton
-                    render={<Link href={item.href} />}
+                    render={<Link href={href} />}
                     isActive={active}
                     // Collapsed to icons the chip is hidden: the tooltip and the
                     // dot on the icon carry the count instead.
@@ -146,7 +148,7 @@ function NavEntry({ item }: { item: NavItem }) {
             render={<SidebarMenuItem {...tourProps} />}
         >
             <SidebarMenuButton
-                render={<Link href={item.href} />}
+                render={<Link href={href} />}
                 isActive={active}
                 tooltip={item.title}
             >
