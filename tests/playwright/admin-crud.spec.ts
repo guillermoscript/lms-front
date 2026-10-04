@@ -42,7 +42,7 @@ test.describe('Admin CRUD Operations', () => {
         timeout: 30_000,
       })
 
-      await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+      await expect(page.getByTestId('product-creation-wizard').filter({ visible: true })).toBeVisible({
         timeout: 10_000,
       })
 
@@ -60,7 +60,7 @@ test.describe('Admin CRUD Operations', () => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/products/new`, {
         timeout: 30_000,
       })
-      await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+      await expect(page.getByTestId('product-creation-wizard').filter({ visible: true })).toBeVisible({
         timeout: 10_000,
       })
 
@@ -83,7 +83,7 @@ test.describe('Admin CRUD Operations', () => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/products/new`, {
         timeout: 30_000,
       })
-      await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+      await expect(page.getByTestId('product-creation-wizard').filter({ visible: true })).toBeVisible({
         timeout: 10_000,
       })
 
@@ -132,7 +132,7 @@ test.describe('Admin CRUD Operations', () => {
         expect(page.url()).toMatch(/\/products\/\d+\/edit/)
 
         // Editing reuses the creation wizard, pre-filled with the product.
-        await expect(page.getByTestId('product-creation-wizard')).toBeVisible({
+        await expect(page.getByTestId('product-creation-wizard').filter({ visible: true })).toBeVisible({
           timeout: 10_000,
         })
 
@@ -256,7 +256,7 @@ test.describe('Admin CRUD Operations', () => {
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
-      await expect(page.getByTestId('users-page')).toBeVisible()
+      await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible()
 
       // Stats cards should be visible (total users, teachers, students)
       const statsCards = page.locator('.grid.gap-3 .font-bold')
@@ -280,7 +280,7 @@ test.describe('Admin CRUD Operations', () => {
 
     test('users table supports search filtering', async ({ page }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
-      await expect(page.getByTestId('users-page')).toBeVisible()
+      await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible()
 
       // Wait for table to render
       const table = page.locator('table')
@@ -319,7 +319,7 @@ test.describe('Admin CRUD Operations', () => {
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
-      await expect(page.getByTestId('users-page')).toBeVisible()
+      await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible()
 
       // Find and click the first "View" link to a user detail page
       const viewLink = page.locator('a[href*="/admin/users/"]').first()
@@ -366,7 +366,7 @@ test.describe('Admin CRUD Operations', () => {
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/enrollments`)
-      await expect(page.getByTestId('enrollments-page')).toBeVisible()
+      await expect(page.getByTestId('enrollments-page').filter({ visible: true })).toBeVisible()
 
       // Stats cards should be visible (total, active, completed)
       const statsCards = page.locator('.grid.gap-3 .font-bold')
@@ -386,7 +386,7 @@ test.describe('Admin CRUD Operations', () => {
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/enrollments`)
-      await expect(page.getByTestId('enrollments-page')).toBeVisible()
+      await expect(page.getByTestId('enrollments-page').filter({ visible: true })).toBeVisible()
 
       // Check for enrollment rows
       const rows = page.locator('tbody tr')
@@ -417,7 +417,7 @@ test.describe('Admin CRUD Operations', () => {
       page,
     }) => {
       await page.goto(`${TENANT_BASE}/en/dashboard/admin/enrollments`)
-      await expect(page.getByTestId('enrollments-page')).toBeVisible()
+      await expect(page.getByTestId('enrollments-page').filter({ visible: true })).toBeVisible()
 
       // Each stats card should show a number
       const statNumbers = page.locator('.grid.gap-3 .font-bold.tracking-tight')

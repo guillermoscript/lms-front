@@ -21,7 +21,7 @@ test.describe('Settings → Email mailer status (#676)', () => {
     await loginAsTeacher(page, BASE)
 
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/settings?tab=email`)
-    await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByTestId('settings-page').filter({ visible: true })).toBeVisible({ timeout: 60_000 })
 
     const row = page.getByTestId('mailer-status')
     await expect(row).toBeVisible({ timeout: 30_000 })

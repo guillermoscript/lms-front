@@ -118,7 +118,7 @@ test.describe.serial('Tenant ban (#892)', () => {
 
     // The list keeps the member visible, flagged.
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/users`, { waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('users-page')).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible({ timeout: 60_000 })
     await expect(page.getByRole('row', { name: new RegExp(MEMBER.email, 'i') }).getByTestId('user-status-banned')).toBeVisible()
   })
 

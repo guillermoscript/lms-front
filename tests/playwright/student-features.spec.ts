@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsStudent, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
-import { openSidebarGroup } from './utils/sidebar'
+import { openSidebar, openSidebarGroup } from './utils/sidebar'
 
 /**
  * P1 — Student Feature Tests
@@ -76,7 +76,7 @@ test.describe('Student Features', () => {
 
     test('profile page loads with user settings', async ({ page }) => {
       await page.goto(`${BASE}/en/dashboard/student/profile`)
-      await expect(page.getByTestId('profile-page')).toBeVisible()
+      await expect(page.getByTestId('profile-page').filter({ visible: true })).toBeVisible()
 
       // Profile page should contain form elements or user information
       const body = page.locator('body')
@@ -131,6 +131,7 @@ test.describe('Student Features', () => {
     test('sidebar links navigate to correct pages', async ({ page }) => {
       test.setTimeout(60_000)
 
+      await openSidebar(page)
       // Click courses link and verify navigation
       const coursesLink = page.locator(
         'a[href*="/dashboard/student/courses"]'

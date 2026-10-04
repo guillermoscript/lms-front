@@ -106,7 +106,7 @@ function chatPoster(page: Page) {
  * survives a round trip proves hydration has happened.
  */
 async function waitForChatHydration(page: Page) {
-    const composer = page.getByPlaceholder('Type your response...')
+    const composer = page.getByPlaceholder('Type your answer…').filter({ visible: true })
     await expect(composer).toBeVisible({ timeout: 30_000 })
     await expect
         .poll(
@@ -161,7 +161,7 @@ const attach = (page: Page, paths: string[]) =>
     page.locator('input[type=file]').first().setInputFiles(paths)
 
 async function send(page: Page, text: string) {
-    await page.getByPlaceholder('Type your response...').fill(text)
+    await page.getByPlaceholder('Type your answer…').filter({ visible: true }).fill(text)
     await page.getByRole('button', { name: 'Submit' }).first().click()
 }
 

@@ -63,7 +63,7 @@ test.describe('Student plan-change (switch) UX', () => {
 
     // A manual (self-managed) subscription is switchable via supersession, so
     // the "Change plan" trigger is shown rather than the old cancel-only note.
-    await expect(page.getByTestId('change-plan-button')).toBeVisible()
+    await expect(page.getByTestId('change-plan-button').filter({ visible: true })).toBeVisible()
   })
 })
 
@@ -97,11 +97,11 @@ test.describe('Student billing — past_due subscription', () => {
       await page.goto(`${TENANT_BASE}/en/dashboard/student/billing`)
 
       // Not the empty state: the real card, badged past due.
-      await expect(page.getByText('Past due', { exact: true })).toBeVisible()
+      await expect(page.getByText('Past due', { exact: true }).filter({ visible: true })).toBeVisible()
       await expect(page.getByText(/last payment didn't go through/i)).toBeVisible()
 
       // …and the student can still act on it.
-      await expect(page.getByTestId('change-plan-button')).toBeVisible()
+      await expect(page.getByTestId('change-plan-button').filter({ visible: true })).toBeVisible()
       await expect(page.getByTestId('cancel-subscription-button')).toBeVisible()
     } finally {
       // Restore the seeded state for every spec that depends on it.

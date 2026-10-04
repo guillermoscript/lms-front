@@ -92,6 +92,8 @@ test('a coding challenge opens with the teacher’s starter files (#844)', async
   test.setTimeout(90_000)
   await loginAsStudent(page)
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+  const codeTab = page.getByRole('button', { name: 'Code', exact: true })
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
 
   await expect(page.locator('.cm-content').filter({ hasText: MARKER })).toBeVisible({ timeout: 30_000 })
 })
@@ -100,6 +102,8 @@ test('the student’s edits are saved and come back after a reload (#858)', asyn
   test.setTimeout(120_000)
   await loginAsStudent(page)
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+  const codeTab = page.getByRole('button', { name: 'Code', exact: true })
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
 
   const editor = page.locator('.cm-content').filter({ hasText: MARKER })
   await expect(editor).toBeVisible({ timeout: 30_000 })
@@ -120,6 +124,7 @@ test('the student’s edits are saved and come back after a reload (#858)', asyn
   expect(rows![0].submission_code).toContain(EDIT_MARKER)
 
   await page.reload()
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
   await expect(page.locator('.cm-content').filter({ hasText: EDIT_MARKER })).toBeVisible({ timeout: 30_000 })
 })
 
@@ -135,6 +140,8 @@ test('a row saved by the native app restores into the primary file (#858)', asyn
 
   await loginAsStudent(page)
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+  const codeTab = page.getByRole('button', { name: 'Code', exact: true })
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
   await expect(page.locator('.cm-content').filter({ hasText: NATIVE_MARKER })).toBeVisible({ timeout: 30_000 })
 })
 
@@ -142,6 +149,8 @@ test('an edit made right before a reload is not lost (#858)', async ({ page }) =
   test.setTimeout(120_000)
   await loginAsStudent(page)
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+  const codeTab = page.getByRole('button', { name: 'Code', exact: true })
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
 
   const editor = page.locator('.cm-content').filter({ hasText: MARKER })
   await expect(editor).toBeVisible({ timeout: 30_000 })
@@ -150,6 +159,7 @@ test('an edit made right before a reload is not lost (#858)', async ({ page }) =
   await page.keyboard.type(`\n// ${EDIT_MARKER}Unload`)
   // Well inside the autosave debounce: only the unload flush can save this.
   await page.reload()
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
 
   // The keepalive request can land after the reloaded page has rendered.
   await expect
@@ -160,5 +170,7 @@ test('an edit made right before a reload is not lost (#858)', async ({ page }) =
     .toContain(`${EDIT_MARKER}Unload`)
 
   await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${COURSE_ID}/exercises/${exerciseId}`)
+
+  if ((page.viewportSize()?.width ?? 1280) < 1024) await codeTab.click()
   await expect(page.locator('.cm-content').filter({ hasText: `${EDIT_MARKER}Unload` })).toBeVisible({ timeout: 30_000 })
 })

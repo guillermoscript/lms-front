@@ -274,7 +274,7 @@ test('completing the last lesson posts one milestone in the course feed', async 
   await expect(reply).toBeVisible({ timeout: 20_000 })
   const comment = `${MARK} well done`
   await reply.fill(comment)
-  await domClick(card.locator('textarea + button'))
+  await domClick(card.getByRole('button', { name: 'Reply', exact: true }))
   await expect.poll(async () => (await courseMilestones())[0]?.comment_count, { timeout: 20_000 }).toBe(1)
   // The row lands before createComment returns, and React mirrors a controlled
   // textarea's value into its text, so getByText(comment) matches the box until

@@ -130,7 +130,7 @@ async function removeMarkedPosts() {
 }
 
 async function composerBox(page: Page) {
-  const box = page.locator('[data-tour="community-composer"]')
+  const box = page.locator('[data-tour="community-composer"]').filter({ visible: true })
   await expect(box).toBeVisible({ timeout: 30_000 })
   return box
 }

@@ -42,7 +42,7 @@ test.describe('Authentication Security', () => {
     await page.getByTestId('signup-email').fill(email)
     await page.getByTestId('signup-password').fill('password123')
     await page.getByTestId('signup-submit').click()
-    await page.waitForURL(/\/auth\/sign-up-success|\/join-school|\/dashboard/, { timeout: 30_000 })
+    await page.waitForURL(/\/auth\/sign-up-success|\/join-school|\/create-school|\/dashboard/, { timeout: 30_000 })
 
     const { data: users } = await admin.auth.admin.listUsers({ perPage: 1000 })
     const created = users?.users.find((u) => u.email === email)

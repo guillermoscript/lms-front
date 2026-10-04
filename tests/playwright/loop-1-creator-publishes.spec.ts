@@ -391,7 +391,7 @@ test('a creator signs up, creates a school, publishes a course with a lesson and
     // would stay on the lesson instead).
     const backOnCourse = new RegExp(`/dashboard/teacher/courses/${courseId}$`)
     await clickUntil(
-      page.getByRole('button', { name: /^publish$/i }),
+      page.getByRole('button', { name: /^publish$/i }).filter({ visible: true }).last(),
       async () => backOnCourse.test(page.url()),
       { attempts: 2, settleMs: 30_000 },
     )

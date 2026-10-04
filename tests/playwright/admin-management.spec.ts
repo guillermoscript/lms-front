@@ -14,7 +14,7 @@ test.describe('Admin Management', () => {
 
   test('admin payment requests page loads', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/payment-requests`, { timeout: 30_000 })
-    await expect(page.getByTestId('payment-requests-page')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('payment-requests-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
   })
 
   test('admin subscriptions page loads', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('Admin Management', () => {
 
   test('admin analytics page loads', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/analytics`)
-    await expect(page.getByTestId('analytics-page')).toBeVisible()
+    await expect(page.getByTestId('analytics-page').filter({ visible: true })).toBeVisible()
   })
 
   test('admin can access teacher course creation', async ({ page }) => {

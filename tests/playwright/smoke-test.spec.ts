@@ -1,3 +1,4 @@
+import { openSidebar } from './utils/sidebar'
 import { test, expect, type Page } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
@@ -325,8 +326,10 @@ test.describe('Dashboard not-found keeps the shell (#677)', () => {
       await login(page, c.account.email, c.account.password, c.base)
       await page.goto(`${c.base}/${LOCALE}${c.path}`, { waitUntil: 'domcontentloaded' })
 
+      await openSidebar(page)
       await expect(page.getByTestId('sidebar-role')).toBeVisible({ timeout: 15_000 })
       if (c.expectsNotFoundPanel) {
+        await page.keyboard.press('Escape')
         await expect(page.getByTestId('dashboard-not-found')).toBeVisible({ timeout: 15_000 })
       }
       // The public 404 has no sidebar and a "Go Home" link; neither belongs here.

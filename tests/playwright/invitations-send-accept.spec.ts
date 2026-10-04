@@ -125,7 +125,7 @@ async function clickUntil(target: Locator, done: () => Promise<boolean>, attempt
 /** Open the invite dialog on the users page and set role + email. */
 async function openInviteDialog(page: Page, role: Role, email: string) {
   await page.goto(`${BASE}/${LOCALE}/dashboard/admin/users`, { waitUntil: 'domcontentloaded' })
-  await expect(page.getByTestId('users-page')).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible({ timeout: 60_000 })
   await domClick(page, 'invite-user-trigger')
   await expect(page.getByTestId('invite-user-dialog')).toBeVisible({ timeout: 30_000 })
 
@@ -363,7 +363,7 @@ test.describe('Invitations — admin invites, invitee joins with the invited rol
 
     await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password, BASE)
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/users`, { waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('users-page')).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible({ timeout: 60_000 })
 
     const studentRow = page.getByRole('row', { name: INVITEES.student.email })
     await expect(studentRow).toBeVisible({ timeout: 30_000 })

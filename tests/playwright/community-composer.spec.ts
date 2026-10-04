@@ -58,7 +58,7 @@ async function clearSettings() {
 }
 
 async function composer(page: Page) {
-  const box = page.locator('[data-tour="community-composer"]')
+  const box = page.locator('[data-tour="community-composer"]').filter({ visible: true })
   await expect(box).toBeVisible({ timeout: 20_000 })
   return box
 }

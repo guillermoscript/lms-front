@@ -13,7 +13,7 @@ test.describe('Admin Pages', () => {
   })
 
   test('admin dashboard loads with stats grid', async ({ page }) => {
-    await expect(page.getByTestId('admin-dashboard')).toBeVisible()
+    await expect(page.getByTestId('admin-dashboard').filter({ visible: true })).toBeVisible()
     await expect(page.getByTestId('admin-stats-grid')).toBeVisible()
   })
 
@@ -82,13 +82,13 @@ test.describe('Admin Pages', () => {
 
   test('admin users page loads with user list', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
-    await expect(page.getByTestId('users-page')).toBeVisible()
+    await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible()
   })
 
   test('admin can view individual user detail', async ({ page }) => {
     test.setTimeout(60_000)
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/users`)
-    await expect(page.getByTestId('users-page')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('users-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
     // Look for a user link in the table
     const userLink = page.locator('a[href*="/admin/users/"]').first()
     if (await userLink.isVisible({ timeout: 10_000 })) {
@@ -110,7 +110,7 @@ test.describe('Admin Pages', () => {
 
   test('admin enrollments page loads', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/enrollments`)
-    await expect(page.getByTestId('enrollments-page')).toBeVisible()
+    await expect(page.getByTestId('enrollments-page').filter({ visible: true })).toBeVisible()
   })
 
   test('admin transactions page loads', async ({ page }) => {
@@ -135,6 +135,6 @@ test.describe('Admin Pages', () => {
 
   test('admin settings page loads', async ({ page }) => {
     await page.goto(`${TENANT_BASE}/en/dashboard/admin/settings`)
-    await expect(page.getByTestId('settings-page')).toBeVisible()
+    await expect(page.getByTestId('settings-page').filter({ visible: true })).toBeVisible()
   })
 })
