@@ -29,7 +29,7 @@ export type KitThemeId = (typeof KIT_THEME_IDS)[number];
 
 type KitTypePairingId = "structured" | "classic" | "friendly" | "plain";
 
-interface KitSwatch {
+export interface KitSwatch {
   hex: string;
   name: string;
 }
@@ -99,7 +99,7 @@ const DARK_INK_HEX = "#11161F";
 
 const BRAND_HEX = /^#[0-9a-f]{6}$/i;
 
-function isKitThemeId(v: unknown): v is KitThemeId {
+export function isKitThemeId(v: unknown): v is KitThemeId {
   return typeof v === "string" && (KIT_THEME_IDS as readonly string[]).includes(v);
 }
 
@@ -113,9 +113,17 @@ function normalizeKitBrand(theme: KitThemeId, brand: unknown): string {
 }
 
 /** Whether `brand` is one of `theme`'s six recommended swatches (case-insensitive). */
-function isKitSwatch(theme: KitThemeId, brand: string): boolean {
+export function isKitSwatch(theme: KitThemeId, brand: string): boolean {
   const hex = brand.trim().toUpperCase();
   return KIT_THEME_META[theme].swatches.some((swatch) => swatch.hex === hex);
+}
+
+/**
+ * A theme's six recommended swatches, first = recommended. The school-theme
+ * tools (#898) offer the same choices as the admin Appearance picker.
+ */
+export function kitThemeSwatches(theme: KitThemeId): readonly KitSwatch[] {
+  return KIT_THEME_META[theme].swatches;
 }
 
 /** The `tenant_settings.setting_key` holding a school's theme. */
