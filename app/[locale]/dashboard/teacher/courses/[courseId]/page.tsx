@@ -1,3 +1,5 @@
+import { ContentListExplorer } from '@/components/teacher/content-list-explorer'
+import { BulkContentCheckbox } from '@/components/teacher/bulk-content-manager'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -402,20 +404,17 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               courseId={parseInt(courseId)}
               lessons={promptCounts ? lessons.map((l) => ({ id: l.id, title: l.title ?? '' })) : null}
             >
-              <div className="grid gap-2">
-                {lessons.length > 0 ? (
-                  lessons.map((lesson) => (
-                    // The row is a card with an overlay link rather than a card
-                    // wrapped in one: the free-preview switch (#791) is
-                    // interactive content, which cannot live inside an anchor.
-                    <Card key={lesson.id} className="group relative transition-all duration-200 hover:shadow-md">
+              <ContentListExplorer kind="lessons" courseId={parseInt(courseId)} tenantId={tenantId}
+                items={lessons.map((lesson) => ({ id: lesson.id, title: lesson.title ?? '', status: lesson.status, createdAt: lesson.created_at, sequence: lesson.sequence, content: (
+                  <Card key={lesson.id} className="group relative transition-all duration-200 hover:shadow-md">
                       <CardContent className="flex items-center justify-between p-4">
                         <Link
                           href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`}
                           className="absolute inset-0 rounded-[inherit]"
                           aria-label={t('curriculum.editLesson')}
                         />
-                        <div className="pointer-events-none flex min-w-0 items-center gap-4">
+                        <div className="pointer-events-none relative flex min-w-0 items-center gap-4">
+                          <BulkContentCheckbox id={lesson.id} title={lesson.title ?? ''} />
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
                             {lesson.sequence}
                           </div>
@@ -447,6 +446,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                             <AddDiscussionPromptTrigger lessonId={lesson.id} lessonTitle={lesson.title ?? ''} />
                           )}
                           <LessonPreviewToggle
+                            key={`${lesson.id}-${Boolean(lesson.is_preview)}`}
                             courseId={parseInt(courseId)}
                             lessonId={lesson.id}
                             isPreview={Boolean(lesson.is_preview)}
@@ -456,8 +456,8 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                         </div>
                       </CardContent>
                     </Card>
-                  ))
-                ) : (
+                ) }))}
+                emptyState={(
                   <Card className="border-dashed border-2">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
@@ -481,7 +481,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                     </CardContent>
                   </Card>
                 )}
-              </div>
+              />
             </DiscussionPromptShortcuts>
           </TabsContent>
 
@@ -497,10 +497,11 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               </Link>
             </div>
 
-            <div className="grid gap-2">
-              {exercises.length > 0 ? (
-                exercises.map((exercise) => (
-                  <Link key={exercise.id} href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
+            <ContentListExplorer kind="exercises" courseId={parseInt(courseId)} tenantId={tenantId}
+                items={exercises.map((exercise) => ({ id: exercise.id, title: exercise.title ?? '', status: exercise.status, createdAt: exercise.created_at, content: (
+                  <div className="flex items-center gap-3">
+                    <BulkContentCheckbox id={exercise.id} title={exercise.title ?? ''} />
+                    <Link href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="min-w-0 flex-1">
                     <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
@@ -532,9 +533,10 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                       </CardContent>
                     </Card>
                   </Link>
-                ))
-              ) : (
-                <Card className="border-dashed border-2">
+                  </div>
+                ) }))}
+                emptyState={(
+                  <Card className="border-dashed border-2">
                   <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
                       <IconTarget size={28} className="text-muted-foreground/40" />
@@ -551,8 +553,8 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                     </Link>
                   </CardContent>
                 </Card>
-              )}
-            </div>
+                )}
+              />
           </TabsContent>
 
           {/* Exams Tab */}
@@ -567,10 +569,11 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
               </Link>
             </div>
 
-            <div className="grid gap-2">
-              {exams.length > 0 ? (
-                exams.map((exam) => (
-                  <Link key={exam.exam_id} href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`} className="block">
+            <ContentListExplorer kind="exams" courseId={parseInt(courseId)} tenantId={tenantId}
+                items={exams.map((exam) => ({ id: exam.exam_id, title: exam.title ?? '', status: exam.status, createdAt: exam.created_at, sequence: exam.sequence, content: (
+                  <div className="flex items-center gap-3">
+                    <BulkContentCheckbox id={exam.exam_id} title={exam.title ?? ''} />
+                    <Link href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`} className="min-w-0 flex-1">
                     <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
@@ -599,9 +602,10 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                       </CardContent>
                     </Card>
                   </Link>
-                ))
-              ) : (
-                <Card className="border-dashed border-2">
+                  </div>
+                ) }))}
+                emptyState={(
+                  <Card className="border-dashed border-2">
                   <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
                       <IconFileText size={28} className="text-muted-foreground/40" />
@@ -618,8 +622,8 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
                     </Link>
                   </CardContent>
                 </Card>
-              )}
-            </div>
+                )}
+              />
           </TabsContent>
 
           {/* Students Tab */}

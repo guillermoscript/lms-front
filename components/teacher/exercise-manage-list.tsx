@@ -1,5 +1,7 @@
 'use client'
 
+import { BulkContentCheckbox } from './bulk-content-manager'
+import { ContentListExplorer } from './content-list-explorer'
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
@@ -17,6 +19,7 @@ import {
 
 export interface ManagedExercise {
     id: number
+    createdAt?: string | null
     title: string
     exercise_type: string
     difficulty_level: string | null
@@ -35,9 +38,11 @@ export interface ManagedExercise {
 export default function ExerciseManageList({
     exercises,
     courseId,
+    tenantId,
 }: {
     exercises: ManagedExercise[]
     courseId: string
+    tenantId: string
 }) {
     const t = useTranslations('dashboard.teacher.manageCourse')
     const tTypes = useTranslations('exercises.types')
@@ -51,30 +56,24 @@ export default function ExerciseManageList({
         <div className="space-y-4">
             <ExerciseTypeFilter types={types} total={exercises.length} value={type} onChange={setType} />
 
-            {visible.length === 0 ? (
-                <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                        <IconTarget size={24} className="text-muted-foreground/40" aria-hidden="true" />
-                        <p className="text-sm text-muted-foreground">{tFilter('emptyForType')}</p>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid gap-2">
-                    {visible.map((exercise, idx) => {
-                        const TypeIcon = EXERCISE_TYPE_ICONS[exercise.exercise_type] ?? FALLBACK_EXERCISE_ICON
+            <ContentListExplorer kind="exercises" courseId={Number(courseId)} tenantId={tenantId}
+                items={visible.map((exercise, idx) => {
+                    const TypeIcon = EXERCISE_TYPE_ICONS[exercise.exercise_type] ?? FALLBACK_EXERCISE_ICON
                         const typeLabel = isKnownExerciseType(exercise.exercise_type)
                             ? tTypes(exercise.exercise_type)
                             : exercise.exercise_type
-                        return (
-                            <motion.div
+                    return { id: exercise.id, title: exercise.title, status: exercise.status, createdAt: exercise.createdAt, content: (
+                        <motion.div
                                 key={exercise.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: Math.min(idx, 8) * 0.04, duration: 0.25 }}
                             >
+                                <div className="flex items-center gap-3">
+                                <BulkContentCheckbox id={exercise.id} title={exercise.title} />
                                 <Link
                                     href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`}
-                                    className="block"
+                                    className="min-w-0 flex-1"
                                 >
                                     <Card className="group cursor-pointer transition-all duration-200 hover:shadow-md">
                                         <CardContent className="flex items-center justify-between p-4">
@@ -147,11 +146,17 @@ export default function ExerciseManageList({
                                         </CardContent>
                                     </Card>
                                 </Link>
+                                </div>
                             </motion.div>
-                        )
-                    })}
-                </div>
-            )}
+                    ) }
+                })}
+                emptyState={(<Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+                        <IconTarget size={24} className="text-muted-foreground/40" aria-hidden="true" />
+                        <p className="text-sm text-muted-foreground">{tFilter('emptyForType')}</p>
+                    </CardContent>
+                </Card>)}
+            />
         </div>
     )
 }

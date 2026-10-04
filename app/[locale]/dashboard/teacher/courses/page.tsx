@@ -1,3 +1,4 @@
+import { ContentListExplorer } from '@/components/teacher/content-list-explorer'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -10,13 +11,7 @@ import {
     IconBook,
     IconEdit,
     IconEye,
-    IconSearch,
-    IconFilter,
-    IconLayoutGrid,
-    IconList,
-    IconChevronRight
 } from '@tabler/icons-react'
-import { Input } from '@/components/ui/input'
 import * as motion from 'motion/react-client'
 import Image from 'next/image'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -65,39 +60,9 @@ export default async function TeacherCoursesPage() {
                 </Link>
             </div>
 
-            {/* Filters and Search */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between">
-                <div className="relative flex-1 max-w-sm">
-                    <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                        placeholder={t('searchPlaceholder')}
-                        className="pl-9 h-8 text-sm"
-                    />
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-                        <IconFilter size={14} />
-                        {t('filter')}
-                    </Button>
-                    <div className="h-6 w-px bg-border mx-0.5" />
-                    {/* the ghost Button variant has a built-in hover background/foreground override that would
-                        otherwise clear this active-view tint on hover. important-marked overrides are used
-                        because Tailwind emits same-specificity hover utilities in alphabetical order, which
-                        would put an unmarked override before the variant's own hover rule and lose the tie */}
-                    <Button variant="ghost" size="icon-sm" className="text-brand-text bg-brand-tint hover:!bg-brand-tint hover:!text-brand-text" aria-label={t('grid')}>
-                        <IconLayoutGrid size={16} />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label={t('list')}>
-                        <IconList size={16} />
-                    </Button>
-                </div>
-            </div>
-
-            {/* Courses Grid */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {coursesList.length > 0 ? (
-                    coursesList.map((course, idx) => (
-                        <motion.div
+            <ContentListExplorer kind="courses"
+                items={coursesList.map((course, idx) => ({ id: course.course_id, title: course.title, status: course.status, createdAt: course.created_at, content: (
+                    <motion.div
                             key={course.course_id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -105,7 +70,7 @@ export default async function TeacherCoursesPage() {
                         >
                             <Card className="group flex flex-col h-full overflow-hidden transition-all duration-200 hover:shadow-md hover:ring-1 hover:ring-primary/20">
                                 {/* Thumbnail */}
-                                <div className="relative aspect-video w-full overflow-hidden bg-muted">
+                                <div data-course-thumbnail className="relative aspect-video w-full overflow-hidden bg-muted">
                                     {course.thumbnail_url ? (
                                         <Image
                                             src={course.thumbnail_url}
@@ -187,8 +152,8 @@ export default async function TeacherCoursesPage() {
                                 </CardContent>
                             </Card>
                         </motion.div>
-                    ))
-                ) : (
+                ) }))}
+                emptyState={(
                     <div className="col-span-full">
                         <Card className="border-dashed border-2">
                             <CardContent className="flex flex-col items-center py-16">
@@ -209,7 +174,7 @@ export default async function TeacherCoursesPage() {
                         </Card>
                     </div>
                 )}
-            </div>
+            />
         </div>
     )
 }
