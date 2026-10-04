@@ -71,7 +71,7 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
     showDescription: true,
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, courseIds, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, puck }) => {
+  render: function CourseGridView({ title, subtitle, courseIds, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, puck }) {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     if (maxItems <= 0) return <></>
@@ -139,13 +139,13 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
                   <Card
                     key={course.id}
                     {...(course.href ? { href: course.href } : {})}
-                    className="group block rounded-card overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                    className="group block rounded-card overflow-hidden border border-border bg-card transition-colors motion-reduce:transition-none duration-300  "
                   >
                     <div className="aspect-video overflow-hidden">
                       <img
                         src={course.image}
                         alt={course.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="w-full h-full object-cover transition-transform motion-reduce:transition-none duration-500"
                       />
                     </div>
                     <div className="p-5">

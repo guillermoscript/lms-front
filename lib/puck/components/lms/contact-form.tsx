@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -11,7 +12,7 @@ export type ContactFormProps = {
   showMessage: boolean
 } & SectionSpacingProps
 
-const inputClasses = 'w-full rounded-input border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:shadow-sm text-[0.9375rem] transition-all duration-200'
+const inputClasses = 'w-full rounded-input border border-border bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-[0.9375rem] transition-colors motion-reduce:transition-none duration-200'
 
 export const ContactForm: ComponentConfig<ContactFormProps> = {
   label: 'Contact Form',
@@ -39,7 +40,8 @@ export const ContactForm: ComponentConfig<ContactFormProps> = {
     showPhone: false,
     showMessage: true,
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, showPhone, showMessage }) => {
+  render: function ContactFormView({ paddingY, paddingX, maxWidth, marginY, title, subtitle, showPhone, showMessage }) {
+    const id = useId()
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     return (
@@ -55,25 +57,25 @@ export const ContactForm: ComponentConfig<ContactFormProps> = {
             <form className="flex flex-col gap-4" onSubmit={e => e.preventDefault()}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="contact-name" className="sr-only">{t('name')}</label>
-                  <input id="contact-name" className={inputClasses} placeholder={t('name')} type="text" />
+                  <label htmlFor={`${id}-name`} className="sr-only">{t('name')}</label>
+                  <input id={`${id}-name`} name="name" autoComplete="name" className={inputClasses} placeholder={t('name')} type="text" />
                 </div>
                 <div>
-                  <label htmlFor="contact-email" className="sr-only">{t('email')}</label>
-                  <input id="contact-email" className={inputClasses} placeholder={t('email')} type="email" />
+                  <label htmlFor={`${id}-email`} className="sr-only">{t('email')}</label>
+                  <input id={`${id}-email`} name="email" autoComplete="email" spellCheck={false} className={inputClasses} placeholder={t('email')} type="email" />
                 </div>
               </div>
               {showPhone && (
                 <div>
-                  <label htmlFor="contact-phone" className="sr-only">{t('phone')}</label>
-                  <input id="contact-phone" className={inputClasses} placeholder={t('phone')} type="tel" />
+                  <label htmlFor={`${id}-phone`} className="sr-only">{t('phone')}</label>
+                  <input id={`${id}-phone`} name="phone" autoComplete="tel" className={inputClasses} placeholder={t('phone')} type="tel" />
                 </div>
               )}
               {showMessage && (
                 <div>
-                  <label htmlFor="contact-message" className="sr-only">{t('message')}</label>
+                  <label htmlFor={`${id}-message`} className="sr-only">{t('message')}</label>
                   <textarea
-                    id="contact-message"
+                    id={`${id}-message`} name="message"
                     className={`${inputClasses} min-h-[120px] resize-y`}
                     placeholder={t('message')}
                   />

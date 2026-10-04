@@ -62,10 +62,10 @@ export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
                   key={i}
                   className="group border border-border rounded-card overflow-hidden transition-colors open:border-[color-mix(in_srgb,var(--block-accent)_40%,transparent)]"
                 >
-                  <summary className="flex items-center justify-between gap-4 p-4 px-5 font-semibold text-[0.9375rem] text-foreground cursor-pointer list-none hover:bg-muted/50 transition-colors group-open:text-[var(--block-accent)] [&::-webkit-details-marker]:hidden">
+                  <summary className="flex items-center justify-between gap-4 p-4 px-5 font-semibold text-[0.9375rem] text-foreground cursor-pointer list-none hover:bg-muted/50 transition-colors group-open:text-[var(--block-accent-text)] [&::-webkit-details-marker]:hidden">
                     <span className="break-words">{item.question}</span>
                     <svg
-                      className="size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 group-open:text-[var(--block-accent)]"
+                      className="size-5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none duration-200 group-open:rotate-180 group-open:text-[var(--block-accent-text)]"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"

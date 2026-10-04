@@ -1,7 +1,7 @@
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { Button } from '@/components/ui/button'
 import { readableOn } from '@/lib/color/contrast'
-import { cn } from '@/lib/utils'
 
 export type ButtonBlockProps = {
   label: string
@@ -79,15 +79,11 @@ export const ButtonBlock: ComponentConfig<ButtonBlockProps> = {
     // `text-primary-foreground`. An unparseable color keeps that class instead.
     const solidInk = readableOn(color, '')
 
-    const button = (
-      <Button
-        variant={buttonVariant}
-        size={buttonSize}
-        className={cn(
-          'truncate max-w-full cursor-pointer transition-all hover:opacity-90 active:scale-[0.98]',
-        )}
-        style={
-          color
+    const sharedProps = {
+      variant: buttonVariant,
+      size: buttonSize,
+      className: 'max-w-full whitespace-normal break-words h-auto min-h-10 px-4 py-2 text-sm transition-colors motion-reduce:transition-none',
+      style: color
             ? {
                 ...(variant === 'solid'
                   ? {
@@ -97,21 +93,15 @@ export const ButtonBlock: ComponentConfig<ButtonBlockProps> = {
                     }
                   : { color, borderColor: variant === 'outline' ? color : undefined }),
               }
-            : undefined
-        }
-      >
-        {label}
-      </Button>
-    )
+            : undefined,
+    }
 
     return (
       <div className={alignmentMap[alignment] || 'text-left'}>
         {href && href !== '#' ? (
-          <a href={href} className="inline-block no-underline">
-            {button}
-          </a>
+          <ButtonLink href={href} {...sharedProps}>{label}</ButtonLink>
         ) : (
-          button
+          <Button {...sharedProps}>{label}</Button>
         )}
       </div>
     )

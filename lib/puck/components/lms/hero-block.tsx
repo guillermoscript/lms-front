@@ -1,6 +1,6 @@
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 export type HeroBlockProps = {
@@ -136,15 +136,12 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
           )}
           <div className={cn('flex gap-4 flex-wrap', alignmentJustifyClasses[alignment])}>
             {primaryCtaLabel && (
-              <a href={primaryCtaHref}>
-                <Button
-                  size="lg"
+              <ButtonLink href={primaryCtaHref} size="lg"
                   variant="secondary"
                   className="h-12 px-8 text-base font-semibold"
                 >
                   {primaryCtaLabel}
-                </Button>
-              </a>
+                </ButtonLink>
             )}
             {/*
               #569: this button's own background is a 10% wash, so it reads as
@@ -153,15 +150,12 @@ export const HeroBlock: ComponentConfig<HeroBlockProps> = {
               (which sets no accent var) is unchanged.
             */}
             {secondaryCtaLabel && (
-              <a href={secondaryCtaHref}>
-                <Button
-                  size="lg"
+              <ButtonLink href={secondaryCtaHref} size="lg"
                   variant="outline"
-                  className="h-12 px-8 text-base font-semibold border-[var(--block-accent-foreground,#fff)]/30 bg-[var(--block-accent-foreground,#fff)]/10 text-[var(--block-accent-foreground,#fff)] backdrop-blur-sm hover:bg-[var(--block-accent-foreground,#fff)]/20 hover:text-[var(--block-accent-foreground,#fff)]"
+                  className="h-12 px-8 text-base font-semibold border-[var(--block-accent-foreground,#fff)]/30 bg-[var(--block-accent-foreground,#fff)]/10 text-[var(--block-accent-foreground,#fff)] hover:bg-[var(--block-accent-foreground,#fff)]/20 hover:text-[var(--block-accent-foreground,#fff)]"
                 >
                   {secondaryCtaLabel}
-                </Button>
-              </a>
+                </ButtonLink>
             )}
           </div>
         </div>

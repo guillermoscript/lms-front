@@ -274,6 +274,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "label": "Border Radius",
         "options": [
           {
+            "label": "School theme",
+            "value": "school"
+          },
+          {
             "label": "None",
             "value": "0"
           },
@@ -306,7 +310,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "width": "100%",
       "height": "auto",
       "objectFit": "cover",
-      "borderRadius": "0.5rem"
+      "borderRadius": "school"
     }
   },
   "ButtonBlock": {
@@ -422,6 +426,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "label": "Border Radius",
         "options": [
           {
+            "label": "School theme",
+            "value": "school"
+          },
+          {
             "label": "None",
             "value": "0"
           },
@@ -444,7 +452,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "url": "",
       "title": "Video",
       "aspectRatio": "16/9",
-      "borderRadius": "0.5rem"
+      "borderRadius": "school"
     }
   },
   "Divider": {
@@ -1056,6 +1064,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "label": "Border Radius",
         "options": [
           {
+            "label": "School theme",
+            "value": "school"
+          },
+          {
             "label": "None",
             "value": "0"
           },
@@ -1079,9 +1091,9 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       }
     },
     "defaultProps": {
-      "shadow": "sm",
+      "shadow": "none",
       "padding": "1.5rem",
-      "borderRadius": "0.75rem"
+      "borderRadius": "school"
     }
   },
   "HeroBlock": {

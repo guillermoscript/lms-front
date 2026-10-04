@@ -70,8 +70,8 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
     const spacing = { paddingY, paddingX, maxWidth, marginY }
     const image = imageUrl ? (
       <div className="relative mb-6 sm:mb-0">
-        <div className="aspect-76/59 relative rounded-2xl bg-gradient-to-b from-muted to-transparent p-px">
-          <img src={imageUrl} alt={imageAlt} className="rounded-[15px] shadow" loading="lazy" />
+        <div className="aspect-76/59 relative rounded-card bg-gradient-to-b from-muted to-transparent p-px">
+          <img src={imageUrl} alt={imageAlt} className="rounded-card" loading="lazy" />
         </div>
       </div>
     ) : null
