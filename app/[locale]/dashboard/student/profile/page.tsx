@@ -25,6 +25,8 @@ import { StreakCalendar } from '@/components/gamification/streak-calendar'
 import { ProfileGamificationStats } from '@/components/gamification/profile-stats'
 import { LeagueOptOutToggle } from '@/components/gamification/league-opt-out-toggle'
 import { ToursToggle } from '@/components/shared/tours-toggle'
+import { ShareMilestonesToggle } from '@/components/student/share-milestones-toggle'
+import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import Link from 'next/link'
 import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
@@ -32,6 +34,16 @@ import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
+import { hasPlanFeature } from '@/lib/plans/server'
+import { getCommunitySettings } from '@/lib/community/settings'
+
+type EnrolledCourse = {
+    enrollment_id: number
+    course: { course_id: number; title: string; thumbnail_url: string | null }
+    completedLessons: number
+    totalLessons: number
+    progress: number
+}
 
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
@@ -88,7 +100,7 @@ async function getProfileData(userId: string, tenantId: string) {
     const enrollmentRows = enrollmentsRes.data || []
     const courseIds = enrollmentRows.map(e => e.course_id)
 
-    let enrolledCourses: any[] = []
+    let enrolledCourses: EnrolledCourse[] = []
 
     if (courseIds.length > 0) {
         const [coursesRes, lessonsRes] = await Promise.all([
@@ -132,7 +144,7 @@ async function getProfileData(userId: string, tenantId: string) {
                 const progress = total > 0 ? Math.round((completed / total) * 100) : 0
                 return { ...enrollment, course, completedLessons: completed, totalLessons: total, progress }
             })
-            .filter(Boolean)
+            .filter((course): course is NonNullable<typeof course> => course !== null)
     }
 
     return {
@@ -151,8 +163,8 @@ function SectionHeader({
     subtitle,
     badge,
     action,
-    iconColor = 'text-primary',
-    iconBg = 'bg-primary/10',
+    iconColor = 'text-brand-text',
+    iconBg = 'bg-brand-tint',
 }: {
     icon: React.ReactNode
     title: string
@@ -182,7 +194,7 @@ function SectionHeader({
 }
 
 // ─── Purchased Course Card ────────────────────────────────────────────────────
-function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
+function PurchasedCourseCard({ course: ec, labels }: { course: EnrolledCourse; labels: { noLessons: string; lessons: string; completed: string; notStarted: string } }) {
     const isCompleted = ec.progress === 100
     const hasStarted = ec.completedLessons > 0
 
@@ -204,12 +216,12 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                         />
                     ) : (
                         <div className="flex h-full w-full items-center justify-center bg-primary/5">
-                            <IconBook2 className="h-6 w-6 text-primary/40" />
+                            <IconBook2 className="h-6 w-6 text-brand-text/40" />
                         </div>
                     )}
                     {isCompleted && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-emerald-500/80">
-                            <IconCircleCheck className="h-7 w-7 text-white" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-success/80">
+                            <IconCircleCheck className="h-7 w-7 text-success-foreground" />
                         </div>
                     )}
                 </div>
@@ -217,10 +229,10 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                 {/* Info */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
                     <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+                        <p className="text-sm font-semibold leading-snug line-clamp-2 text-foreground group-hover:text-brand-text transition-colors">
                             {ec.course.title}
                         </p>
-                        <IconArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-0.5" />
+                        <IconArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-brand-text group-hover:translate-x-0.5 transition-all mt-0.5" />
                     </div>
 
                     <div className="space-y-1.5">
@@ -229,7 +241,7 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                             <div
                                 className={cn(
                                     "h-full rounded-full transition-all",
-                                    isCompleted ? "bg-emerald-500" : "bg-primary"
+                                    isCompleted ? "bg-success" : "bg-primary"
                                 )}
                                 style={{ width: `${ec.progress}%` }}
                             />
@@ -243,8 +255,8 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
                             </span>
                             <span className={cn(
                                 "text-[11px] font-bold tabular-nums",
-                                isCompleted ? "text-emerald-600 dark:text-emerald-400"
-                                    : hasStarted ? "text-primary"
+                                isCompleted ? "text-success"
+                                    : hasStarted ? "text-brand-text"
                                         : "text-muted-foreground"
                             )}>
                                 {isCompleted ? labels.completed : hasStarted ? `${ec.progress}%` : labels.notStarted}
@@ -260,14 +272,17 @@ function PurchasedCourseCard({ course: ec, labels }: { course: any; labels: { no
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function ProfilePage() {
     const tenantId = await getCurrentTenantId()
-    const supabase = createAdminClient()
     const user = await getSessionUser()
     if (!user) {
         redirect('/auth/login')
     }
 
     const { profile, subscription, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
-    const uiState = await getUiState(user.id)
+    const [uiState, hasCommunity, communitySettings] = await Promise.all([
+        getUiState(user.id),
+        hasPlanFeature(tenantId, 'community'),
+        getCommunitySettings(tenantId),
+    ])
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
     const t = await getTranslations('dashboard.student.profile')
@@ -308,7 +323,7 @@ export default async function ProfilePage() {
                             <CardContent className="px-6 pb-6 pt-0 -mt-12 text-center relative">
                                 <Avatar className="h-24 w-24 mx-auto border-4 border-background shadow-xl">
                                     <AvatarImage src={profile?.avatar_url} alt={profile?.full_name || 'Profile'} />
-                                    <AvatarFallback className="text-2xl font-black bg-primary/10 text-primary">
+                                    <AvatarFallback className="text-2xl font-black bg-brand-tint text-brand-text">
                                         {userInitial}
                                     </AvatarFallback>
                                 </Avatar>
@@ -317,7 +332,7 @@ export default async function ProfilePage() {
                                     <h2 className="text-xl font-bold tracking-tight truncate">{profile?.full_name || user.email?.split('@')[0]}</h2>
                                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                     <div className="flex justify-center gap-2 pt-1">
-                                        {profile?.user_roles?.map((ur: any) => (
+                                        {profile?.user_roles?.map((ur: { role: string }) => (
                                             <Badge key={ur.role} variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
                                                 {ur.role}
                                             </Badge>
@@ -332,7 +347,7 @@ export default async function ProfilePage() {
                                     </div>
                                     <div className="text-center">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{t('userStatus')}</p>
-                                        <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5 font-bold">
+                                        <Badge variant="outline" className="text-success border-success/20 bg-success/10 font-bold">
                                             {t('active')}
                                         </Badge>
                                     </div>
@@ -361,7 +376,7 @@ export default async function ProfilePage() {
                         <Card className="border border-border bg-card overflow-hidden">
                             <CardHeader className="pb-2">
                                 <CardTitle className="flex items-center gap-2 text-base">
-                                    <IconCrown size={18} className="text-primary" />
+                                    <IconCrown size={18} className="text-brand-text" />
                                     {t('currentPlan')}
                                 </CardTitle>
                             </CardHeader>
@@ -377,12 +392,12 @@ export default async function ProfilePage() {
                                         <div className="space-y-1.5">
                                             {(subscription.plans?.features ?? '').split(',').filter(Boolean).slice(0, 3).map((f: string, i: number) => (
                                                 <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    <IconCheck size={14} className="text-emerald-500 shrink-0" />
+                                                    <IconCheck size={14} className="text-success shrink-0" />
                                                     <span className="line-clamp-1">{f.trim()}</span>
                                                 </div>
                                             ))}
                                         </div>
-                                        <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
+                                        <Button variant="outline" className="w-full h-10 font-semibold">
                                             {t('manageSubscription')}
                                         </Button>
                                     </>
@@ -390,7 +405,7 @@ export default async function ProfilePage() {
                                     <>
                                         <p className="text-sm text-muted-foreground">{t('noActiveSubscription')}</p>
                                         <Link href="/pricing">
-                                            <Button variant="outline" className="w-full rounded-xl h-10 font-semibold">
+                                            <Button variant="outline" className="w-full h-10 font-semibold">
                                                 {t('viewPlans')}
                                             </Button>
                                         </Link>
@@ -415,9 +430,21 @@ export default async function ProfilePage() {
                             <CardContent className="p-6 space-y-6">
                                 <ProfileForm profile={profile} />
                                 <LeagueOptOutToggle />
+                                {/* Global preference (#871): offered wherever the plan has the
+                                    community, even with this school's milestone switch off —
+                                    it still applies in the student's other schools, and a
+                                    milestone post's "Sharing settings" link lands here. */}
+                                {hasCommunity && (
+                                    <ShareMilestonesToggle
+                                        initialEnabled={profile?.share_milestones ?? true}
+                                        schoolSharing={communitySettings.milestonePosts}
+                                    />
+                                )}
                                 <ToursToggle initialEnabled={areToursEnabled(uiState)} />
                             </CardContent>
                         </Card>
+
+                        <DeleteAccountCard />
 
                         {/* ── Purchased Courses ──────────────────────── */}
                         <Card className="border border-border overflow-hidden">
@@ -446,7 +473,7 @@ export default async function ProfilePage() {
                             <CardContent className="p-6">
                                 {enrolledCourses.length > 0 ? (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {enrolledCourses.map((ec: any) => (
+                                        {enrolledCourses.map((ec) => (
                                             <PurchasedCourseCard
                                                 key={ec.enrollment_id}
                                                 course={ec}
@@ -462,7 +489,7 @@ export default async function ProfilePage() {
                                 ) : (
                                     <div className="flex flex-col items-center justify-center py-12 text-center">
                                         <div className="h-14 w-14 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
-                                            <IconBook2 className="h-7 w-7 text-primary/30" />
+                                            <IconBook2 className="h-7 w-7 text-brand-text/30" />
                                         </div>
                                         <p className="font-semibold text-foreground">{t('noCoursesYet')}</p>
                                         <p className="text-sm text-muted-foreground mt-1 max-w-xs">
@@ -505,7 +532,7 @@ export default async function ProfilePage() {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-border">
-                                                {transactions.map((tx: any) => (
+                                                {transactions.map((tx) => (
                                                     <tr key={tx.transaction_id} className="hover:bg-muted/10 transition-colors">
                                                         <td className="px-6 py-4 text-sm font-medium text-muted-foreground tabular-nums">#{tx.transaction_id}</td>
                                                         <td className="px-6 py-4 text-sm font-medium">{dateFormatter.format(new Date(tx.transaction_date))}</td>
@@ -516,9 +543,9 @@ export default async function ProfilePage() {
                                                             <Badge variant="outline" className={cn(
                                                                 "font-bold uppercase text-[10px]",
                                                                 tx.status === 'successful'
-                                                                    ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
+                                                                    ? "text-success border-success/20 bg-success/10"
                                                                     : tx.status === 'pending'
-                                                                        ? "text-amber-600 dark:text-amber-400 border-amber-500/20 bg-amber-500/5"
+                                                                        ? "text-warning border-warning/20 bg-warning/10"
                                                                         : "text-muted-foreground border-border"
                                                             )}>
                                                                 {transactionStatusLabel(tx.status)}
@@ -547,7 +574,7 @@ export default async function ProfilePage() {
 
                             {certificates.length > 0 ? (
                                 <div className="grid gap-4">
-                                    {certificates.map((cert: any) => (
+                                    {certificates.map((cert) => (
                                         <StudentCertificateCard key={cert.id} certificate={cert} />
                                     ))}
                                 </div>
@@ -566,8 +593,8 @@ export default async function ProfilePage() {
                             <SectionHeader
                                 icon={<IconTrophy size={20} />}
                                 title={t('achievementsTitle')}
-                                iconColor="text-amber-600 dark:text-amber-400"
-                                iconBg="bg-amber-500/10"
+                                iconColor="text-brand-text"
+                                iconBg="bg-brand-tint"
                             />
                             <AchievementGrid />
                         </div>

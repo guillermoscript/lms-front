@@ -67,7 +67,7 @@ export function FlagDialog({ targetType, targetId, open, onOpenChange }: FlagDia
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancel
+            {t('cancel')}
           </Button>
           <Button onClick={handleSubmit} disabled={submitting || !reason.trim()}>
             {t('flagSubmit')}

@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 
+import type { ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BarChart,
@@ -68,7 +69,7 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                     borderRadius: '8px',
                   }}
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  formatter={(value: any) => {
+                  formatter={(value: ValueType | undefined) => {
                     if (value === undefined) return 'N/A'
                     return [value, t('enrollmentsTooltip')]
                   }}
@@ -85,15 +86,16 @@ export function CoursePopularityChart({ data }: CoursePopularityChartProps) {
                   <div
                     key={course.courseId}
                     className="flex items-center justify-between rounded-lg border p-3"
+                    data-testid={`course-popularity-${course.courseId}`}
                   >
                     <div>
                       <p className="text-sm font-medium">{course.title}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground" data-testid={`course-popularity-enrollments-${course.courseId}`}>
                         {t('enrollmentsCount', { count: course.enrollments })}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium" data-testid={`course-popularity-completion-${course.courseId}`}>
                         {course.completionRate.toFixed(0)}%
                       </p>
                       <p className="text-xs text-muted-foreground">{t('completionLabel')}</p>

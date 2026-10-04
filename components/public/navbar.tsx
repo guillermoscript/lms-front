@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { getTranslations } from 'next-intl/server';
 import { getCurrentTenant } from "@/lib/supabase/tenant";
+import { APP_NAME } from '@/lib/app-name';
 import { NavbarTenantSwitcher } from "@/components/tenant/navbar-tenant-switcher";
 import type { HeaderSettings } from "@/lib/landing-pages/types";
+import type { TenantOption } from "@/components/tenant/navbar-tenant-switcher";
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
@@ -22,39 +24,42 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
 
     const isMainPlatform = !tenant || tenant.id === DEFAULT_TENANT_ID
 
-    // Load branding overrides from tenant_settings
-    let brandingOverrides: Record<string, any> = {};
+    // Load branding overrides from tenant_settings. `setting_value` is jsonb, so
+    // the stored shape is only a claim until it is read — anything that is not a
+    // string is dropped rather than rendered.
+    let brandingOverrides: Record<string, string | undefined> = {};
     if (tenant) {
         const { data: tsData } = await supabase
             .from('tenant_settings')
             .select('setting_key, setting_value')
             .eq('tenant_id', tenant.id)
-            .in('setting_key', ['site_name', 'logo_url', 'primary_color']);
+            .in('setting_key', ['site_name', 'logo_url']);
         if (tsData) {
-            brandingOverrides = tsData.reduce((acc: Record<string, any>, s) => {
-                acc[s.setting_key] = s.setting_value?.value;
+            brandingOverrides = tsData.reduce<Record<string, string | undefined>>((acc, s) => {
+                const stored = (s.setting_value as { value?: unknown } | null)?.value;
+                if (typeof stored === 'string' && stored.trim()) acc[s.setting_key] = stored;
                 return acc;
             }, {});
         }
     }
 
     // Get user's tenants for the switcher
-    let userTenants: any[] = [];
+    let userTenants: TenantOption[] = [];
     if (userId) {
         const { data } = await supabase
             .from('tenant_users')
             .select('role, tenant:tenants(id, slug, name)')
             .eq('user_id', userId)
             .eq('status', 'active');
-        userTenants = (data || []).map((tu: any) => ({
-            ...tu.tenant,
-            role: tu.role,
-        }));
+        userTenants = (data ?? []).flatMap((tu) => {
+            // PostgREST types an embedded to-one relation as possibly-array.
+            const row = Array.isArray(tu.tenant) ? tu.tenant[0] : tu.tenant;
+            return row ? [{ id: row.id, slug: row.slug, name: row.name, role: tu.role }] : [];
+        });
     }
 
-    const brandName = brandingOverrides.site_name || tenant?.name || t('brand');
+    const brandName = brandingOverrides.site_name || tenant?.name || APP_NAME;
     const logoUrl = brandingOverrides.logo_url || tenant?.logo_url;
-    const logoColor = brandingOverrides.primary_color || tenant?.primary_color || '#3B82F6';
     const platformLogo = '/brand/logo-mark.svg';
 
     return (
@@ -69,11 +74,9 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                         ) : isMainPlatform ? (
                             <img src={platformLogo} alt={brandName} className="w-8 h-8" />
                         ) : (
-                            <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: logoColor }}
-                            >
-                                <span className="font-bold text-white">{brandName[0]?.toUpperCase()}</span>
+                            // The school's theme colour, via the tokens the layout resolved (#763).
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+                                <span className="font-bold text-primary-foreground">{brandName[0]?.toUpperCase()}</span>
                             </div>
                         )}
                         <span className="font-bold text-lg text-foreground tracking-tight">
@@ -125,38 +128,32 @@ export async function Navbar({ headerSettings }: NavbarProps = {}) {
                     {(headerSettings?.showLanguageSwitcher !== false) && <LanguageSwitcher />}
 
                     {userId ? (
-                        <Link href="/dashboard/student">
-                            <Button variant="outline">
-                                {t('dashboard')}
-                            </Button>
-                        </Link>
+                        <Button variant="outline" render={<Link href="/dashboard/student" />}>
+                            {t('dashboard')}
+                        </Button>
                     ) : (
                         <>
                             {(headerSettings?.showLoginButton !== false) && (
-                                <Link href="/auth/login" className="hidden sm:inline-block">
-                                    <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
-                                        {t('login')}
-                                    </Button>
-                                </Link>
+                                <Button
+                                    variant="ghost"
+                                    className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
+                                    render={<Link href="/auth/login" />}
+                                >
+                                    {t('login')}
+                                </Button>
                             )}
                             {headerSettings?.ctaText && headerSettings?.ctaLink ? (
-                                <Link href={headerSettings.ctaLink}>
-                                    <Button className="font-medium">
-                                        {headerSettings.ctaText}
-                                    </Button>
-                                </Link>
+                                <Button className="font-medium" render={<Link href={headerSettings.ctaLink} />}>
+                                    {headerSettings.ctaText}
+                                </Button>
                             ) : isMainPlatform ? (
-                                <Link href="/create-school">
-                                    <Button className="font-medium">
-                                        {t('startFree')} →
-                                    </Button>
-                                </Link>
+                                <Button className="font-medium" render={<Link href="/create-school" />}>
+                                    {t('startFree')} →
+                                </Button>
                             ) : (
-                                <Link href="/auth/sign-up?next=/join-school">
-                                    <Button className="font-medium">
-                                        {t('join')} {tenant?.name}
-                                    </Button>
-                                </Link>
+                                <Button className="font-medium" render={<Link href="/auth/sign-up?next=/join-school" />}>
+                                    {t('join')} {tenant?.name}
+                                </Button>
                             )}
                         </>
                     )}

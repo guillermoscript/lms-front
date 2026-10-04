@@ -1,18 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { SubmissionReview } from '@/components/teacher/submission-review'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { revalidatePath } from 'next/cache'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from '@/lib/exams/grading-secrets'
+
+/** The stored value when it is the teacher's own prose, empty when it is a status code. */
+function teacherOwnFeedback(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) return ''
+  return parseExamFeedback(value) ? '' : value
+}
 
 export default async function SubmissionDetailPage({ params }: { params: Promise<{ courseId: string; examId: string; submissionId: string }> }) {
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.teacher')
+  const tFeedback = await getTranslations('examResult.feedback')
   const userId = await getCurrentUserId()
   if (!userId) return notFound()
 
@@ -42,13 +51,11 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         question_text,
         question_type,
         points,
-        ai_grading_criteria,
-        expected_keywords,
         question_options (
           option_id,
-          option_text,
-          is_correct
-        )
+          option_text
+        ),
+        ${EXAM_GRADING_SECRETS_EMBED}
       `)
       .eq('exam_id', parseInt(examId))
       // exam_questions has no tenant_id column; isolation is enforced by RLS
@@ -69,7 +76,8 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   ])
 
   // Build per-question data combining questions, answers, and AI scores
-  const questionData = (questions || []).map((q: any) => {
+  const questionData = (questions || []).map((raw: any) => {
+    const q = withExamGradingSecrets(raw)
     const answer = answers?.find(a => a.question_id === q.question_id)
     const qScore = questionScores?.find(qs => qs.question_id === q.question_id)
 
@@ -111,7 +119,14 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     submitted_at: rawSubmission.submission_date,
     ai_score: aiScore,
     final_score: finalScore,
-    teacher_feedback: examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as any)?.overall_feedback || '',
+    // Only the teacher's own prose pre-fills their editable note. An AI status
+    // code must NOT be decoded into it: the teacher would save the localized
+    // sentence back into `exam_scores.feedback`, where `parseExamFeedback` no
+    // longer recognises it, and a student reading in the other language would
+    // get that sentence verbatim (#725).
+    teacher_feedback: teacherOwnFeedback(
+      examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as any)?.overall_feedback
+    ),
     ai_data: rawSubmission.ai_data,
     ai_model_used: rawSubmission.ai_model_used,
   }
@@ -127,6 +142,15 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     question_text: q.question_text,
     points_possible: q.points_possible,
     answer_text: q.answer_text,
+    // The AI note was built into questionData but never forwarded, so the
+    // grading screen's "AI feedback" panel has been dead since it shipped —
+    // including the real prose the model writes for free-text answers. It is
+    // forwarded now, and decoded: since #725 the deterministic branches store
+    // codes, so passing the raw value would have shown the teacher the token
+    // `incorrect` / `pending_teacher_review`.
+    ai_feedback: describeExamFeedback(q.ai_feedback, tFeedback, {
+      correctAnswer: (q.options || []).find((o: any) => o.is_correct)?.option_text ?? null,
+    }),
     options: (q.options || []).map((o: any) => ({
       id: o.option_id,
       option_text: o.option_text,
@@ -211,7 +235,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
       .eq('submission_id', parseInt(submissionId))
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`)
-    redirect(`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`)
+    redirect(`/${await getLocale()}/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`)
   }
 
   return (

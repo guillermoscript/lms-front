@@ -33,6 +33,7 @@ const state: {
   failOn: ((w: Write) => { message: string } | null) | null
   writes: Write[]
   emails: { to: string; subject: string }[]
+  businessEffects: Set<string>
 } = {
   existingEvent: null,
   claimStatus: null,
@@ -43,6 +44,7 @@ const state: {
   failOn: null,
   writes: [],
   emails: [],
+  businessEffects: new Set(),
 }
 
 function readRow(table: string, cols: string): unknown {
@@ -69,6 +71,18 @@ function makeAdmin() {
       if (pending) {
         const err = state.failOn?.(pending) ?? null
         if (err) return { data: null, error: err }
+        // The past_due write is transition-guarded (`.neq('status','past_due')
+        // .select()`): it returns the flipped row only when the stored status
+        // was not already past_due, the way Postgres re-evaluates the WHERE
+        // under the row lock.
+        if (
+          pending.table === 'platform_subscriptions' &&
+          pending.op === 'update' &&
+          pending.values.status === 'past_due'
+        ) {
+          const flipped = state.storedSub && state.storedSub.status !== 'past_due'
+          return { data: flipped ? [{ tenant_id: state.storedSub!.tenant_id }] : [], error: null }
+        }
         return { data: null, error: null }
       }
       return { data: readRow(table, cols), error: null }
@@ -95,6 +109,7 @@ function makeAdmin() {
         return b
       },
       eq: () => b,
+      neq: () => b,
       limit: () => b,
       maybeSingle: () => Promise.resolve(settle()),
       single: () => Promise.resolve(settle()),
@@ -147,6 +162,12 @@ function makeAdmin() {
         })
         return Promise.resolve({ data: true, error: null })
       }
+      if (name === 'claim_webhook_business_effect') {
+        const key = `${args._provider}:${args._provider_event_id}:${args._effect_type}:${args._target_id}`
+        const claimed = !state.businessEffects.has(key)
+        state.businessEffects.add(key)
+        return Promise.resolve({ data: claimed, error: null })
+      }
       return Promise.resolve({ data: null, error: null })
     },
     auth: {
@@ -168,7 +189,7 @@ vi.mock('@/lib/email/send', () => ({
 }))
 
 vi.mock('@/lib/billing/downgrade-tenant', () => ({
-  downgradeTenantToFree: vi.fn(() => Promise.resolve(10)),
+  downgradeTenantToFreeIfCurrent: vi.fn(() => Promise.resolve(10)),
 }))
 
 // The reconciler has its own suite (platform-plan-change.test.ts). What matters
@@ -198,7 +219,7 @@ vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
 
 import { POST } from '@/app/api/billing/webhook/[provider]/route'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
-import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const PLAN_ID = 'f9318c3a-815d-448d-802e-cf356c2791a4'
@@ -266,8 +287,9 @@ beforeEach(() => {
   state.failOn = null
   state.writes = []
   state.emails = []
+  state.businessEffects = new Set()
   vi.mocked(applyPortalPlanChange).mockClear()
-  vi.mocked(downgradeTenantToFree).mockClear()
+  vi.mocked(downgradeTenantToFreeIfCurrent).mockClear()
 })
 
 describe('platform billing webhook — route gates', () => {
@@ -600,13 +622,25 @@ describe('platform billing webhook — subscription updates', () => {
 
 describe('platform billing webhook — cancellation', () => {
   it('downgrades the tenant to free on subscription deletion', async () => {
+    state.storedSub = {
+      tenant_id: TENANT,
+      plan_id: PLAN_ID,
+      status: 'active',
+      current_period_end: END_ISO,
+      payment_provider: 'stripe',
+      provider_subscription_id: 'sub_123',
+    }
     const res = await POST(
       makeReq(makeEvent('customer.subscription.deleted', cloverSubscription())),
       params(),
     )
     expect(res.status).toBe(200)
-    expect(downgradeTenantToFree).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(downgradeTenantToFree).mock.calls[0][1]).toBe(TENANT)
+    expect(downgradeTenantToFreeIfCurrent).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(downgradeTenantToFreeIfCurrent).mock.calls[0].slice(1)).toEqual([
+      TENANT,
+      'stripe',
+      'sub_123',
+    ])
     // The whole transition belongs to that helper — duplicating any of it here
     // is how the cron path and the webhook path drift.
     expect(writesTo('platform_subscriptions', 'upsert')).toHaveLength(0)
@@ -636,6 +670,16 @@ describe('platform billing webhook — invoices', () => {
       'admin-a@example.com',
       'admin-b@example.com',
     ])
+  })
+
+  it('does not send dunning twice when the same event is re-dispatched after completion loss', async () => {
+    state.storedSub = { tenant_id: TENANT, plan_id: PLAN_ID, status: 'active', current_period_end: null }
+    state.adminUsers = ['admin-a']
+
+    await POST(makeReq(makeEvent('invoice.payment_failed', cloverInvoice)), params())
+    await POST(makeReq(makeEvent('invoice.payment_failed', cloverInvoice)), params())
+
+    expect(state.emails.map((email) => email.to)).toEqual(['admin-a@example.com'])
   })
 
   it('invoice.payment_failed resolves the id from an expanded subscription object', async () => {

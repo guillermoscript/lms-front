@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { generateInvoiceHTML, getInvoiceConfig } from '@/lib/invoice-generator'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 
 export async function GET(
   request: NextRequest,
@@ -56,8 +57,12 @@ export async function GET(
       return new NextResponse('Forbidden', { status: 403 })
     }
 
-    // Generate invoice HTML
-    const config = getInvoiceConfig()
+    // The issuer is the invoice's own school — resolved from the product's
+    // tenant (already validated above against the request's tenant), never
+    // the platform (#777).
+    const brand = await getSchoolBrand(paymentRequest.product.tenant_id)
+    const issuer = getInvoiceConfig(brand)
+
     const html = generateInvoiceHTML({
       invoiceNumber: paymentRequest.invoice_number,
       invoiceDate: new Date(paymentRequest.invoice_generated_at || paymentRequest.created_at),
@@ -72,10 +77,7 @@ export async function GET(
       price: paymentRequest.payment_amount,
       currency: paymentRequest.payment_currency,
 
-      companyName: config.companyName,
-      companyAddress: config.companyAddress,
-      companyEmail: config.companyEmail,
-      companyPhone: config.companyPhone,
+      issuer,
 
       paymentMethod: paymentRequest.payment_method || undefined,
       paymentInstructions: paymentRequest.payment_instructions || undefined,

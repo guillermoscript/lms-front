@@ -2,6 +2,7 @@
 
 import { createAdminClient, verifyAdminAccess } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
+import { cancelIsFinalAtProvider } from '@/lib/payments/types'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
@@ -148,6 +149,15 @@ export async function reactivateSubscription(subscriptionId: number) {
     // Only reactivate if it was scheduled to cancel
     if (!subscription.cancel_at_period_end) {
       return { success: false, error: 'Subscription is not scheduled to cancel' }
+    }
+
+    // PayPal cancels are final at PayPal (#479): un-flagging the row would show
+    // a renewing subscription that never bills again.
+    if (subscription.provider_subscription_id && cancelIsFinalAtProvider(subscription.payment_provider)) {
+      return {
+        success: false,
+        error: 'This subscription was cancelled at the payment provider and cannot be resumed. The student can subscribe again once it ends.',
+      }
     }
 
     // Reverse the provider-side cancel too. A DB-only reactivate would leave the

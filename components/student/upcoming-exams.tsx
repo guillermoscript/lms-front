@@ -50,8 +50,8 @@ export function UpcomingExams({ exams }: UpcomingExamsProps) {
                 key={exam.exam_id}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/50 active:bg-accent/50 transition-colors"
               >
-                <div className="w-9 h-9 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                  <IconFileText className="w-4 h-4 text-orange-500" />
+                <div className="w-9 h-9 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                  <IconFileText className="w-4 h-4 text-warning" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-sm font-bold truncate">

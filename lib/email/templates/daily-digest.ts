@@ -1,4 +1,6 @@
 import type { DigestLocale } from '@/lib/notifications/daily-digest'
+import type { SchoolBrand } from '@/lib/themes/school-brand'
+import { escapeHtml, schoolButton, schoolHeadingStyle, schoolLogoHeader } from './school-brand-parts'
 
 export interface DailyDigestEmailData {
   schoolName: string
@@ -8,7 +10,12 @@ export interface DailyDigestEmailData {
   goalsPending: number
   /** Streak to warn about; 0 = no streak line. */
   streak: number
+  /** Unread community replies (#870); 0 or absent = no community line. */
+  communityReplies?: number
+  /** Where the community line links: the school's notifications page. */
+  notificationsUrl?: string
   actionUrl: string
+  brand: SchoolBrand
 }
 
 export interface StreakNudgeEmailData {
@@ -16,6 +23,7 @@ export interface StreakNudgeEmailData {
   firstName: string
   streak: number
   actionUrl: string
+  brand: SchoolBrand
 }
 
 const DIGEST_COPY = {
@@ -25,6 +33,7 @@ const DIGEST_COPY = {
     intro: 'Here is what is waiting for you today:',
     cards: (n: number) => `${n} review ${n === 1 ? 'card' : 'cards'} due`,
     goals: (n: number) => `${n} study ${n === 1 ? 'goal' : 'goals'} left this week`,
+    community: (n: number) => `${n} new ${n === 1 ? 'reply' : 'replies'} in the community`,
     streak: (n: number) => `Your ${n}-day streak ends tonight`,
     cta: 'Pick up where you left off',
     footer: 'A few minutes today keeps you on track.',
@@ -35,6 +44,7 @@ const DIGEST_COPY = {
     intro: 'Esto es lo que te espera hoy:',
     cards: (n: number) => `${n} ${n === 1 ? 'tarjeta pendiente' : 'tarjetas pendientes'} de repaso`,
     goals: (n: number) => `${n} ${n === 1 ? 'meta' : 'metas'} de estudio esta semana`,
+    community: (n: number) => `${n} ${n === 1 ? 'respuesta nueva' : 'respuestas nuevas'} en la comunidad`,
     streak: (n: number) => `Tu racha de ${n} días termina esta noche`,
     cta: 'Continúa donde lo dejaste',
     footer: 'Unos minutos hoy te mantienen al día.',
@@ -56,22 +66,21 @@ const NUDGE_COPY = {
   },
 } as const
 
-function layout(schoolName: string, inner: string): string {
+function layout(brand: SchoolBrand, schoolName: string, inner: string): string {
   return `<!DOCTYPE html>
 <html>
 <body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
+  ${schoolLogoHeader(brand)}
 ${inner}
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-  <p style="color:#999;font-size:12px">${schoolName}</p>
+  <p style="color:#999;font-size:12px">${escapeHtml(schoolName)}</p>
 </body>
 </html>`
 }
 
-function ctaButton(url: string, label: string): string {
+function ctaButton(brand: SchoolBrand, url: string, label: string): string {
   return `<p style="text-align:center;margin:32px 0">
-    <a href="${url}" style="background:#2563eb;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">
-      ${label}
-    </a>
+    ${schoolButton(brand, url, label)}
   </p>`
 }
 
@@ -83,18 +92,27 @@ export function dailyDigestEmailTemplate(
   const items: string[] = []
   if (data.dueCards > 0) items.push(copy.cards(data.dueCards))
   if (data.goalsPending > 0) items.push(copy.goals(data.goalsPending))
+  const replies = data.communityReplies ?? 0
+  if (replies > 0) {
+    items.push(
+      data.notificationsUrl
+        ? `<a href="${escapeHtml(data.notificationsUrl)}" style="color:inherit">${copy.community(replies)}</a>`
+        : copy.community(replies)
+    )
+  }
   if (data.streak > 0) items.push(copy.streak(data.streak))
   const list = items.map((item) => `    <li style="margin:8px 0">${item}</li>`).join('\n')
   return {
     subject: copy.subject(data.schoolName),
     html: layout(
+      data.brand,
       data.schoolName,
-      `  <h2>${copy.greeting(data.firstName)}</h2>
+      `  <h2 style="${schoolHeadingStyle(data.brand)}">${copy.greeting(data.firstName)}</h2>
   <p>${copy.intro}</p>
   <ul style="padding-left:20px">
 ${list}
   </ul>
-${ctaButton(data.actionUrl, copy.cta)}
+${ctaButton(data.brand, data.actionUrl, copy.cta)}
   <p style="color:#666;font-size:13px">${copy.footer}</p>`
     ),
   }
@@ -108,10 +126,11 @@ export function streakNudgeEmailTemplate(
   return {
     subject: copy.subject(data.streak),
     html: layout(
+      data.brand,
       data.schoolName,
-      `  <h2>🔥 ${copy.subject(data.streak)}</h2>
+      `  <h2 style="${schoolHeadingStyle(data.brand)}">🔥 ${copy.subject(data.streak)}</h2>
   <p>${copy.body(data.firstName, data.streak)}</p>
-${ctaButton(data.actionUrl, copy.cta)}`
+${ctaButton(data.brand, data.actionUrl, copy.cta)}`
     ),
   }
 }

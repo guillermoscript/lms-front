@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo, createContext, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { toast } from 'sonner'
 import { createExam, updateExam, type ExamFormData as ActionExamFormData } from '@/app/actions/teacher/exams'
 import {
   useSensor,
@@ -217,7 +218,10 @@ export function ExamBuilderProvider({
       : await createExam(courseId, actionData)
 
     if (result.success) {
-      router.push(`/dashboard/teacher/courses/${courseId}`)
+      // The teacher lands on the course page: tell them what happened and
+      // open the tab the exam now lives in, not the default Lessons tab (#729).
+      toast.success(publish ? t('publishSuccess') : t('draftSaved'))
+      router.push(`/dashboard/teacher/courses/${courseId}?tab=exams`)
       router.refresh()
     } else {
       setError(result.error || t('saveError'))

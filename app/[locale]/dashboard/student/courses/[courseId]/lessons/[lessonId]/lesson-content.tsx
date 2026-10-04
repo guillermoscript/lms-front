@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { MDXClient, type SerializeResult } from 'next-mdx-remote-client'
 import { lessonMdxComponents } from '@/components/lesson/mdx-components'
 import { IconPlayerPlay } from '@tabler/icons-react'
@@ -14,11 +14,24 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useCheckpoints } from '@/components/lesson/checkpoints/checkpoints-provider'
 import { CheckpointExerciseRenderer } from '@/components/lesson/checkpoints/checkpoint-exercise-renderer'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import type { VideoProgressMilestone } from '@/components/lesson/checkpoint-video-player'
 
 interface LessonContentProps {
   mdx: SerializeResult | null
   videoUrl: string | null
   embedCode: string | null
+  /**
+   * Identifies the video for `video_progress` and resets its milestone set.
+   *
+   * Optional on purpose. This component is also rendered by the teacher preview
+   * and the public (#426) lesson preview, and neither should contribute to
+   * student video-engagement numbers — a creator scrubbing their own draft is
+   * not a learner watching. Omitted here means no `video_progress` at all.
+   */
+  lessonId?: number
+  courseId?: number
   /**
    * How to render teacher-authored embed_code HTML. 'trusted' injects it into
    * the page (enrolled-student views). 'sandboxed' isolates it in an
@@ -28,12 +41,35 @@ interface LessonContentProps {
   embedMode?: 'trusted' | 'sandboxed'
 }
 
-export function LessonContent({ mdx, videoUrl, embedCode, embedMode = 'trusted' }: LessonContentProps) {
+export function LessonContent({
+  mdx,
+  videoUrl,
+  embedCode,
+  lessonId,
+  courseId,
+  embedMode = 'trusted',
+}: LessonContentProps) {
   const t = useTranslations('components.lessons')
   const tc = useTranslations('components.checkpoints')
   const checkpointsCtx = useCheckpoints()
   const playerRef = useRef<CheckpointVideoPlayerHandle>(null)
   const [activeMarker, setActiveMarker] = useState<CheckpointVideoMarker | null>(null)
+  const analytics = useAnalytics()
+
+  // Four events per video, maximum. The player guarantees each milestone fires
+  // once per lesson and only on genuine playback — see `useProgressMilestones`.
+  const handleProgressMilestone = useCallback(
+    (percent: VideoProgressMilestone) => {
+      if (lessonId === undefined) return
+      analytics.track(ANALYTICS_EVENTS.VIDEO_PROGRESS, {
+        percent,
+        lesson_id: lessonId,
+        course_id: courseId ?? null,
+        provider: videoUrl ? getVideoProvider(videoUrl) : null,
+      })
+    },
+    [analytics, lessonId, courseId, videoUrl]
+  )
 
   const getEmbedUrl = (url: string): string | null => {
     const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/)
@@ -89,6 +125,8 @@ export function LessonContent({ mdx, videoUrl, embedCode, embedMode = 'trusted' 
           url={videoUrl}
           markers={videoMarkers}
           onMarkerReached={handleMarkerReached}
+          onProgressMilestone={handleProgressMilestone}
+          progressResetKey={lessonId}
           playerRef={playerRef}
           className="rounded-xl overflow-hidden shadow-lg ring-1 ring-border"
         />
@@ -126,7 +164,7 @@ export function LessonContent({ mdx, videoUrl, embedCode, embedMode = 'trusted' 
 
       {/* MDX content */}
       {mdx && (
-        <article className="prose prose-neutral dark:prose-invert max-w-none! break-words prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-xl sm:prose-h1:text-2xl prose-h2:text-lg sm:prose-h2:text-xl prose-h3:text-base sm:prose-h3:text-lg prose-p:leading-[1.8] prose-p:text-foreground/80 prose-li:text-foreground/80 prose-pre:bg-[#1e1e2e] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-xl prose-pre:shadow-md prose-pre:overflow-x-auto prose-pre:text-[13px] sm:prose-pre:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-[13px] sm:prose-code:text-sm prose-code:font-medium prose-img:rounded-xl prose-img:shadow-lg prose-img:max-w-full prose-blockquote:border-primary/30 prose-blockquote:bg-primary/5 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-hr:border-border [&_table]:block [&_table]:overflow-x-auto">
+        <article className="prose prose-neutral dark:prose-invert max-w-none! break-words prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-xl sm:prose-h1:text-2xl prose-h2:text-lg sm:prose-h2:text-xl prose-h3:text-base sm:prose-h3:text-lg prose-p:leading-[1.8] prose-p:text-foreground/80 prose-li:text-foreground/80 prose-pre:bg-[#1e1e2e] prose-pre:border prose-pre:border-white/5 prose-pre:rounded-xl prose-pre:shadow-md prose-pre:overflow-x-auto prose-pre:text-[13px] sm:prose-pre:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-[13px] sm:prose-code:text-sm prose-code:font-medium prose-img:rounded-xl prose-img:shadow-lg prose-img:max-w-full prose-blockquote:border-primary/30 prose-blockquote:bg-primary/5 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-a:text-brand-text prose-a:no-underline hover:prose-a:underline prose-hr:border-border [&_table]:block [&_table]:overflow-x-auto">
           {hasError && 'error' in mdx && (
             <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-destructive">
               <p className="font-semibold text-sm">{t('contentError')}</p>

@@ -6,11 +6,18 @@ import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { upsertCertificateTemplate, type CertificateTemplateFormData } from '@/app/actions/teacher/certificates'
 import { uploadCertificateAsset } from '@/app/actions/admin/certificate-assets'
+import { APP_NAME } from '@/lib/app-name'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
+import type { BrandOutputs } from '@/lib/themes/brand-outputs'
 
 export interface CertificateTemplateFormProps {
     courseId: number
+    /** From the tenant plan (lib/plans/server getCertificateTier); defaults to custom. */
+    certificateTier?: 'basic' | 'custom'
     tenantId?: string
-    initialData?: any
+    /** The school's brand (issue #765) — resolved server-side, drives the preview's default design. */
+    brand: BrandOutputs
+    initialData?: Partial<CertificateTemplateFormData> | null
 }
 
 export const COLOR_PRESETS = [
@@ -37,11 +44,15 @@ export interface CertificateTemplateContextValue {
 
     // Props
     courseId: number
+    /** `basic` (Free) locks colours, logo, signature image and QR (#662). */
+    certificateTier: 'basic' | 'custom'
+    /** The school's brand (issue #765) — resolved server-side, drives the preview's default design. */
+    brand: BrandOutputs
 
     // Actions
     setFormData: React.Dispatch<React.SetStateAction<CertificateTemplateFormData>>
     updateField: <K extends keyof CertificateTemplateFormData>(key: K, value: CertificateTemplateFormData[K]) => void
-    updateDesignSetting: (key: string, value: any) => void
+    updateDesignSetting: (key: string, value: string | boolean) => void
     applyPreset: (preset: typeof COLOR_PRESETS[0]) => void
     handleSubmit: (e: React.FormEvent) => Promise<void>
     handleFileChange: (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'signature') => void
@@ -59,6 +70,8 @@ export function useCertificateTemplate() {
 export function CertificateTemplateProvider({
     courseId,
     initialData,
+    certificateTier = 'custom',
+    brand,
     children,
 }: CertificateTemplateFormProps & { children: React.ReactNode }) {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
@@ -71,7 +84,7 @@ export function CertificateTemplateProvider({
     const [uploadingSignature, setUploadingSignature] = useState(false)
     const [formData, setFormData] = useState<CertificateTemplateFormData>({
         template_name: initialData?.template_name || '',
-        issuer_name: initialData?.issuer_name || process.env.NEXT_PUBLIC_APP_NAME || 'LMS Academy',
+        issuer_name: initialData?.issuer_name || APP_NAME,
         issuer_url: initialData?.issuer_url || process.env.NEXT_PUBLIC_APP_URL || '',
         description: initialData?.description || '',
         issuance_criteria: initialData?.issuance_criteria || '',
@@ -84,9 +97,7 @@ export function CertificateTemplateProvider({
         requires_all_exams: initialData?.requires_all_exams ?? true,
         expiration_days: initialData?.expiration_days ?? null,
         design_settings: initialData?.design_settings || {
-            primary_color: '#3B82F6',
-            secondary_color: '#1E40AF',
-            show_qr_code: true,
+            ...DEFAULT_CERTIFICATE_DESIGN,
             logo_url: ''
         }
     })
@@ -98,7 +109,7 @@ export function CertificateTemplateProvider({
         []
     )
 
-    const updateDesignSetting = useCallback((key: string, value: any) => {
+    const updateDesignSetting = useCallback((key: string, value: string | boolean) => {
         setFormData(prev => ({
             ...prev,
             design_settings: {
@@ -133,8 +144,8 @@ export function CertificateTemplateProvider({
 
             toast.success(t('saveSuccess'))
             router.refresh()
-        } catch (error: any) {
-            const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error))
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : (typeof error === 'object' ? JSON.stringify(error) : String(error))
             console.error('Error saving template:', errorMsg)
             toast.error(t('saveError'))
         } finally {
@@ -189,10 +200,10 @@ export function CertificateTemplateProvider({
     const value = useMemo(() => ({
         formData, isLoading, uploadingLogo, uploadingSignature,
         logoInputRef, signatureInputRef,
-        courseId,
+        courseId, certificateTier, brand,
         setFormData, updateField, updateDesignSetting, applyPreset,
         handleSubmit, handleFileChange, goBack,
-    }), [formData, isLoading, uploadingLogo, uploadingSignature, courseId])
+    }), [formData, isLoading, uploadingLogo, uploadingSignature, courseId, certificateTier, brand])
 
     return (
         <CertificateTemplateContext value={value}>

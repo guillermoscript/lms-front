@@ -1,0 +1,41 @@
+# tiktok — meme sound pack. The default, and what claude-sounds shipped with.
+#
+# Format: <slot> <url>
+# The installer downloads each to ~/.claude/hooks/sounds/<slot>.mp3.
+#
+# Sources are third-party uploads on myinstants.com, fetched to each user's own
+# machine at install time and not redistributed by this repo. If a URL 404s the
+# installer falls back to a spoken `say` voice for that slot.
+#
+# All URLs below were verified live (HTTP 200) and md5-distinct. myinstants
+# serves a generic fallback file for dead slugs, so if you add a URL here,
+# md5-check it against the others — a silent duplicate means the slug died.
+
+# --- turn ended: completed, scaled by lines written/edited ---
+done_tiny    https://www.myinstants.com/media/sounds/vine-boom.mp3
+done_small   https://www.myinstants.com/media/sounds/faaah.mp3
+done_medium  https://www.myinstants.com/media/sounds/faaaa.mp3
+done_big     https://www.myinstants.com/media/sounds/boosted-faaah-meme.mp3
+done_epic    https://www.myinstants.com/media/sounds/i-got-this-faaaaahhhhhh.mp3
+
+# --- turn ended: other statuses ---
+failed       https://www.myinstants.com/media/sounds/movie_1.mp3
+failed_big   https://www.myinstants.com/media/sounds/fail-trombone-sound.mp3
+needs_input  https://www.myinstants.com/media/sounds/hm.mp3
+other        https://www.myinstants.com/media/sounds/taco-bell-bong-sfx.mp3
+
+# --- git / gh lifecycle ---
+commit       https://www.myinstants.com/media/sounds/vine-boom.mp3
+push         https://www.myinstants.com/media/sounds/metal-pipe-falling-sound-effect.mp3
+pr_opened    https://www.myinstants.com/media/sounds/rizz-sound-effect.mp3
+pr_merged    https://www.myinstants.com/media/sounds/anime-wow-sound-effect.mp3
+tests_pass   https://www.myinstants.com/media/sounds/taco-bell-bong-sfx.mp3
+tests_fail   https://www.myinstants.com/media/sounds/movie_1.mp3
+
+# --- waiting on you ---
+permission   https://www.myinstants.com/media/sounds/hm.mp3
+
+# --- extras, not wired by default; swap into any slot above ---
+extra_aughhh      https://www.myinstants.com/media/sounds/aughhhhh.mp3
+extra_sad_violin  https://www.myinstants.com/media/sounds/sad-violin.mp3
+extra_rizz        https://www.myinstants.com/media/sounds/rizz-sound-effect.mp3

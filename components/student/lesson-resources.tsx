@@ -80,7 +80,7 @@ export function LessonResources({ resources }: LessonResourcesProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 gap-1.5 text-muted-foreground hover:text-primary shrink-0"
+              className="h-8 gap-1.5 text-muted-foreground hover:text-brand-text shrink-0"
               onClick={() => handleDownload(resource.id)}
               disabled={downloadingId === resource.id}
             >

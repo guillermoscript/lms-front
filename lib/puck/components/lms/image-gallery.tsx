@@ -67,12 +67,12 @@ export const ImageGallery: ComponentConfig<ImageGalleryProps> = {
           )}
           <div className={cn('grid gap-4', columnClasses[columns])}>
             {images.map((img, i) => (
-              <figure key={i} className="m-0 overflow-hidden rounded-lg">
+              <figure key={i} className="m-0 overflow-hidden rounded-card">
                 <img
                   src={img.src}
                   alt={img.alt}
                   loading="lazy"
-                  className="w-full aspect-4/3 object-cover transition-transform duration-500 hover:scale-105"
+                  className="w-full aspect-4/3 object-cover transition-transform motion-reduce:transition-none duration-500"
                 />
                 {img.caption && (
                   <figcaption className="text-[0.8125rem] text-muted-foreground mt-2 text-center">

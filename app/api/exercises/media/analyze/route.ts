@@ -1,9 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { runSpeechPipeline } from '@/lib/speech/pipeline'
+import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
 import { getPipeline } from '@/lib/speech/registry'
 import type { ExerciseContext } from '@/lib/speech/types'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 
 export const maxDuration = 120
 
@@ -23,6 +26,7 @@ type JoinedExercise = {
     stt_provider?: string
     ai_coach?: string
   } | null
+  exercise_grading_secrets?: unknown
 }
 
 export async function POST(req: Request) {
@@ -45,7 +49,7 @@ export async function POST(req: Request) {
   // 3. Fetch submission via admin client + manual ownership checks
   const { data: submission, error: fetchError } = await adminClient
     .from('exercise_media_submissions')
-    .select('*, exercises(id, title, instructions, exercise_config, course_id, tenant_id)')
+    .select(`*, exercises(id, title, instructions, exercise_config, course_id, tenant_id, ${GRADING_SECRETS_EMBED})`)
     .eq('id', submissionId)
     .single()
 
@@ -61,7 +65,9 @@ export async function POST(req: Request) {
     return new Response('Submission not found', { status: 404 })
   }
 
-  const exercise = submission.exercises as unknown as JoinedExercise | null
+  // The rubric lives outside the student-readable row (#833).
+  const joined = submission.exercises as unknown as JoinedExercise | null
+  const exercise = joined ? withGradingSecrets(joined) : null
 
   // 5. Status guard — only pending submissions can be analyzed (prevents re-triggering)
   const passingScore = exercise?.exercise_config?.passing_score ?? 70
@@ -117,6 +123,7 @@ export async function POST(req: Request) {
       instructions: exercise.instructions ?? '',
       topic_prompt: config.topic_prompt,
       rubric: config.rubric,
+      speechRubric: parseSpeechRubricConfig(config),
       exerciseId: submission.exercise_id,
       userId: user.id,
       passingScore,
@@ -127,7 +134,7 @@ export async function POST(req: Request) {
       config.ai_coach ?? 'openai'
     )
 
-    // 9. Run the speech pipeline (AI evaluates + calls markExerciseCompleted if score passes)
+    // 9. Run the speech pipeline (transcribe, then grade)
     const evaluation = await runSpeechPipeline(urlData.signedUrl, exerciseContext, { stt, coach }, { supabase: adminClient })
 
     // 10. Save results
@@ -164,14 +171,12 @@ export async function POST(req: Request) {
 
     // 12. Record exercise completion only if score meets passing threshold
     if (passed) {
-      // exercise_completions has NO tenant_id column — sending it 400s the insert.
-      await adminClient.from('exercise_completions').insert({
-        exercise_id: submission.exercise_id,
-        user_id: user.id,
-        completed_by: user.id,
+      const completion = await recordExerciseCompletion(adminClient, {
+        exerciseId: submission.exercise_id,
+        userId: user.id,
         score: evaluation.score,
-      }).select('id').single()
-      // unique index (exercise_id, user_id) prevents duplicates
+      })
+      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
     }
 
     return Response.json({ evaluation, passed, passingScore })

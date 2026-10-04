@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { IconBuildingBank, IconCoin, IconCreditCard, IconLoader2 } from '@tabler/icons-react'
 import { providerLabel } from '@/lib/billing/plan-prices'
+import { useTranslations } from 'next-intl'
 
 /**
  * Rails that move crypto rather than money from a card or a bank (#610). A card
@@ -64,6 +65,7 @@ export function PaymentMethodDialog({
   onSelectProvider,
   onSelectManual,
 }: PaymentMethodDialogProps) {
+  const t = useTranslations('dashboard.admin.billing.paymentMethod')
   const providers = target?.providers ?? []
   const switchingFrom = activeProvider && activeProvider !== 'manual' ? activeProvider : null
 
@@ -71,14 +73,15 @@ export function PaymentMethodDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>How would you like to pay?</AlertDialogTitle>
+          <AlertDialogTitle>{t('title')}</AlertDialogTitle>
           <AlertDialogDescription>
             {target
-              ? `${target.planName}, billed ${target.interval === 'yearly' ? 'yearly' : 'monthly'}.`
+              ? t('planLine', {
+                  plan: target.planName,
+                  interval: target.interval === 'yearly' ? t('intervalYearly') : t('intervalMonthly'),
+                })
               : ''}
-            {switchingFrom
-              ? ` Your current ${providerLabel(switchingFrom)} subscription is cancelled when the new one starts, so you are never billed twice.`
-              : ''}
+            {switchingFrom ? t('switchingNote', { provider: providerLabel(switchingFrom) }) : ''}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -105,7 +108,7 @@ export function PaymentMethodDialog({
                 <IconCreditCard aria-hidden className="size-5 shrink-0 text-primary" />
               )}
               <span className="min-w-0 flex-1 text-left font-medium">{providerLabel(provider)}</span>
-              {provider === activeProvider && <Badge variant="secondary">Current method</Badge>}
+              {provider === activeProvider && <Badge variant="secondary">{t('currentMethod')}</Badge>}
             </Button>
           ))}
 
@@ -117,24 +120,19 @@ export function PaymentMethodDialog({
           >
             <IconBuildingBank aria-hidden className="size-5 shrink-0 text-primary" />
             <span className="min-w-0 flex-1 text-left">
-              <span className="block font-medium">Bank transfer</span>
-              <span className="block text-xs text-muted-foreground">
-                We send payment instructions and activate the plan once the transfer lands.
-              </span>
+              <span className="block font-medium">{t('bankTransfer')}</span>
+              <span className="block text-xs text-muted-foreground">{t('bankTransferHint')}</span>
             </span>
-            {activeProvider === 'manual' && <Badge variant="secondary">Current method</Badge>}
+            {activeProvider === 'manual' && <Badge variant="secondary">{t('currentMethod')}</Badge>}
           </Button>
 
           {providers.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No automatic payment method is configured for this plan yet — bank transfer is the way
-              to pay for it today.
-            </p>
+            <p className="text-sm text-muted-foreground">{t('noAutomatic')}</p>
           )}
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{t('cancel')}</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

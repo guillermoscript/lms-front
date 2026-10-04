@@ -58,7 +58,7 @@ Default tenant ID (single-tenant fallback): `00000000-0000-0000-0000-00000000000
 
 ```typescript
 import { getUserRole } from '@/lib/supabase/get-user-role'
-const role = await getUserRole()  // tenant_users row is authoritative; falls back to JWT tenant_role/user_role only if no active membership
+const role = await getUserRole()  // tenant_users row is authoritative; falls back to JWT tenant_role/user_role only if no active membership AND the JWT tenant_id is this tenant
 ```
 
 After a tenant switch, **always call `supabase.auth.refreshSession()`** to get updated claims.
@@ -115,7 +115,7 @@ Also supported (`products.payment_provider`): `paypal`, `lemonsqueezy`, `solana`
 - **Access control lives in `entitlements`, not `enrollments`** (since migration `20260516150000`): `entitlements` (`user_id`, `course_id`, `tenant_id`, `source_type`, `source_id`, `status`, `expires_at`) is the polymorphic source of truth for product/subscription access. `enrollments.product_id`/`subscription_id` and their old CHECK constraint were dropped — `enrollments` is now a learning-progress record only (`user_id`, `course_id`, `status`, `tenant_id`, `enrollment_date`)
 - `enroll_user()` RPC loops through ALL courses for a product (a product can map to multiple courses via `product_courses`) and writes to `entitlements`
 - **Subscriptions grant access, not auto-enrollment** — students self-enroll via `/dashboard/student/browse` (`useEnrollment()` hook); `plan_courses` defines which courses a plan covers
-- Transactions have two partial unique indexes (not one): `(user_id, product_id) WHERE plan_id IS NULL AND status IN ('pending','successful')` and `(user_id, plan_id) WHERE product_id IS NULL AND status IN (...)`, plus `transactions_provider_charge_id_unique` for Solana idempotency
+- Transactions have two partial unique indexes (not one): `(user_id, product_id) WHERE plan_id IS NULL AND status IN ('pending','successful')` and `(user_id, plan_id) WHERE product_id IS NULL AND status = 'pending'` (pending only since #754 — a plan is bought again every period, so settled plan rows repeat; never archive old sales to make room), plus `transactions_provider_charge_id_unique` for Solana idempotency
 - **`transactions` is server-write-only.** `authenticated` has no INSERT grant (#538) and an UPDATE grant on only `status`, `provider_subscription_id`, `stripe_payment_intent_id` (#528) — every insert uses `createAdminClient()` or a SECURITY DEFINER function. `amount` and the `settlement_*` columns decide what the buyer owes (`settlement_base` is what the on-chain Solana payment is verified against), so they are derived from `products`/`plans` server-side, never taken from the request. A user-scoped insert fails with `permission denied for table transactions` — by design, not a bug to re-grant around
 
 ### Routing & i18n
@@ -134,7 +134,7 @@ supabase.rpc('enroll_user', { _user_id, _product_id })
 supabase.rpc('handle_new_subscription', { _user_id, _plan_id, _transaction_id, _start_date })  // trigger-invoked; writes to entitlements
 supabase.rpc('has_course_access', { _user_id, _course_id })  // access check; _course_id is integer — cast ::int from SQL
 supabase.rpc('award_xp', { _user_id, _action_type, _xp_amount, _reference_id, _reference_type })  // overload adds _tenant_id
-supabase.rpc('create_exam_submission', { p_student_id, p_exam_id, p_answers })
+supabase.rpc('submit_exam', { p_exam_id, p_answers })  // only client write path for exam_submissions/exam_answers; p_answers = { [question_id]: answer_text }; idempotent
 supabase.rpc('save_exam_feedback', { p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms })
 supabase.rpc('get_plan_features', { _tenant_id })
 ```
@@ -142,6 +142,10 @@ supabase.rpc('get_plan_features', { _tenant_id })
 ### Plan Limits & Feature Gating
 
 Limits live in `platform_plans.limits` (JSONB): `free` (5 courses/50 students/10% fee) · `starter` (15/200/5%, $9/mo) · `pro` (100/1000/2%, $29/mo) · `business` (unlimited courses/5000 students, 0% fee, $79/mo) · `enterprise` (unlimited/0%, $199/mo). `get_plan_features(_tenant_id)` RPC is the single source of truth. Client hook: `usePlanFeatures()`. Component: `<FeatureGate feature="..." />`.
+
+**Limits are enforced by the database (#658).** `enforce_course_plan_limit` / `enforce_student_plan_limit` triggers refuse any write that would make a `courses` row non-archived or a `tenant_users` row an active student beyond `max_courses` / `max_students`, from any client (server action, MCP, SQL). They raise SQLSTATE `LM001` with message `plan_limit_exceeded:<courses|students>` — map it with `isPlanLimitError()` / `courseLimitMessage()` from `lib/billing/plan-limit-error.ts`, never by matching the message. App-layer pre-checks (`checkCourseLimit()`, `joinCurrentSchool`) stay for the nicer message; the trigger is what wins a race. `-1` or a missing limit means unlimited; `SET app.bypass_plan_limits = 'on'` skips the check for operators/seed only. RLS-scoped callers pre-check through the `get_tenant_plan_usage(_tenant_id)` RPC (members / super admins / service role).
+
+**Features are enforced on the server too (#662).** `lib/plans/server.ts`: `getTenantPlan(tenantId)` (React `cache()`, reads `tenants.plan` → `platform_plans` with NO `is_active` filter), `hasPlanFeature`, `requirePlanFeature` (throws `PlanFeatureError`, map with `planFeatureErrorMessage`), `getAnalyticsTier` (`none|basic|advanced`), `getCertificateTier` (`none|basic|custom`). Closed by default: a missing key is "not included", so any new key MUST be backfilled into every plan's JSON (see `20260901170000_backfill_plan_feature_keys.sql`) before a gate reads it. `FEATURE_REQUIRED_PLAN` in `lib/plans/features.ts` is the pricing promise and `tests/unit/plan-feature-gate-contract.test.ts` fails when a key there has no gate site. Tier meanings live in PRODUCT.md "Plan tiers".
 
 ## MCP Server
 
@@ -162,7 +166,9 @@ NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lvh.me for local dev, lmsplatform.com 
 
 E2E tests in `tests/playwright/` — 33 spec files (tenant isolation, auth security, payment flows, enrollment, entitlements, gamification, community, i18n, platform panel, plan change, teacher/admin CRUD). Read the directory rather than a list here; it changes often. Highest-priority: `tenant-isolation.spec.ts`, `auth-security.spec.ts`, `payment-flows.spec.ts`, `evaluations-security.spec.ts`.
 
-The Playwright config has no `webServer` — start `npm run dev` yourself first, use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
+Plan-gate specs (`plan-limit-surfaces`, `access-cutoff-lifecycle`, `plan-feature-tiers`, `platform-billing-stripe-webhook`) each own a dedicated tenant and a hidden `platform_plans` row with tiny limits (`tests/playwright/utils/plan-gate-fixtures.ts`) — every enforcement path reads the plan by slug with no `is_active` filter, so "at the cap" costs one row, not fifty users. Never move the seeded tenants off their plan.
+
+The Playwright config boots its own `webServer` (`next dev` locally on the `BASE_URL` port, reusing a server already listening; `next start` in CI). Use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Every spec lives in `tests/playwright/` — the only `testDir` — and every skip carries a reason (permanent ones link an issue); see `tests/README.md`. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
 
 Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
 - `student@e2etest.com` / `password123` — student (Default School)
@@ -191,14 +197,15 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 - **`createAdminClient()`** lives in `@/lib/supabase/admin`, NOT `@/lib/supabase/server`.
 - **Button component** uses `@base-ui/react` — no `asChild` prop. Wrap `<Link>` around `<Button>` instead.
 - **Stripe API v2025 types** need `any` casts for `Subscription`/`Invoice` objects.
-- **`getUserRole()` checks `tenant_users` first** (authoritative), resolving the user via the `x-user-id` header — no extra `getUser()` call. It only falls back to `getSession()`-derived JWT claims (`tenant_role`/`user_role`) when there's no active membership row.
+- **`getUserRole()` checks `tenant_users` first** (authoritative), resolving the user via the `x-user-id` header — no extra `getUser()` call. It only falls back to `getSession()`-derived JWT claims (`tenant_role`/`user_role`) when there's no active membership row AND the token's `tenant_id` is the current tenant — the hook stamps `tenant_role` for the user's home school, and proxy.ts skips membership checks on public routes, so trusting the claim on another subdomain handed out that school's admin actions (#763).
 - **`isSuperAdmin()`** queries the `super_admins` table directly — does not trust JWT claims.
 - **API routes** get tenant context via `proxy.ts` too — `x-tenant-id` is set for `/api/*` routes.
 - **`enroll_user()` RPC** loops through ALL courses per product via `product_courses` (FOR loop).
 
 ## Security Notes
 
-- **Sentry DSN** is hardcoded in `sentry.server.config.ts` — intentional (public DSN), consider moving to env var for consistency.
+- **Sentry DSN comes from `NEXT_PUBLIC_SENTRY_DSN`, never a literal.** It was hardcoded in the three `Sentry.init` files until a third-party Vercel fork of this repo (deployed without Supabase env vars) filled our issue stream with its own crashes. Unset = `Sentry.init` no-ops.
+- **Build-time env vars do NOT live in Dokploy.** `.github/workflows/deploy.yml` builds the image in GitHub Actions and pushes to `ghcr.io`; Dokploy only pulls it. Every `NEXT_PUBLIC_*` (plus `SENTRY_AUTH_TOKEN`) is a Docker `build-args` entry backed by an Actions variable/secret and a matching `ARG`/`ENV` pair in the Dockerfile's builder stage. Adding one to the Dokploy service environment is a silent no-op.
 - **Test account passwords** (`password123`) are for local development only, seeded by `supabase db reset`. Never use in a deployed environment.
 
 ## Key Documentation
@@ -216,10 +223,10 @@ Pre-commit checklist: `npm run build` · tenant filter on every query · tested 
 Users span independent creators/solo educators and multi-staff schools, across LATAM and English-speaking markets (en/es). Brand personality: **minimal, elegant, focused** — content over chrome, no visual noise.
 
 - **Aesthetic:** clean, spacious, content-first; hierarchy via typography weight/size over color/ornament. References: Duolingo/Khan Academy, Teachable/Thinkific. Anti-references: cluttered enterprise dashboards, generic Bootstrap.
-- **Theme:** light + dark, tenant theming overrides primary/accent via CSS custom properties. Default primary is **teal-cyan** `oklch(0.52 0.105 223.128)` light / `oklch(0.45 0.085 224.283)` dark — hue ~223, not 293. Nothing may depend on that hue holding; tenants override it.
+- **Theme:** light + dark, tenant theming overrides primary/accent via CSS custom properties. The platform palette **is the theme kit's default theme** (#766): Estructura + **Tinta azul** `#3A50B8` (`oklch(0.476 0.166 270)`), same value in both modes, over Estructura's cool surfaces. `app/globals.css` holds `deriveKitVars('estructura', '#3A50B8')` verbatim — change it in `lib/themes/kit.ts` and paste, never by hand. Nothing may depend on that hue holding; tenants override it.
 - **Typography/icons:** Noto Sans (body), Geist Sans/Mono (UI/code); Tabler Icons + Lucide (outline style).
 - **Motion:** subtle, via `motion` lib; respect `prefers-reduced-motion`; convey state changes, not decoration.
 - **Principles:** content over chrome · obvious over clever · consistent structure across tenants (brand via color/logo, not layout) · WCAG AA by default · progressive disclosure (sheets/dialogs for detail).
-- **Stack:** Shadcn UI (base-mira, `@base-ui/react` primitives) · Tailwind v4 with OKLCH tokens · `motion` + `tw-animate-css` · `next-themes` + `TenantCssVars` · `--radius: 0.625rem` base.
+- **Stack:** Shadcn UI (base-mira, `@base-ui/react` primitives) · Tailwind v4 with OKLCH tokens · `motion` + `tw-animate-css` · `next-themes` + `TenantCssVarsServer` · `--radius: 0.625rem` base.
 
 When reporting information to me, be extremely concise and sacrifice grammar for sake of concision.

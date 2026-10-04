@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   AreaChart,
@@ -41,7 +42,7 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">{t('total')}</p>
-            <p className="text-2xl font-bold tracking-tight">
+            <p className="text-2xl font-bold tracking-tight" data-testid="analytics-total-revenue">
               ${totalRevenue.toFixed(2)}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -78,7 +79,7 @@ export function RevenueChart({ data, totalRevenue, period }: RevenueChartProps) 
                   borderRadius: '8px',
                 }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(value: any, name: any) => {
+                formatter={(value: ValueType | undefined, name: NameType | undefined) => {
                   if (value === undefined || name === undefined) return ['N/A', 'Unknown']
                   if (name === 'revenue') return [`$${Number(value).toFixed(2)}`, t('tooltip')]
                   return [value, 'Transactions']

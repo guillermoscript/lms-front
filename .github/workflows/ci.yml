@@ -3,7 +3,18 @@ name: CI
 on:
   pull_request:
   push:
-    branches-ignore: ["master"]
+    # master too: the merge commit is verified by the same jobs before
+    # deploy.yml (which waits on this workflow) builds and ships it.
+    branches: ["master"]
+  schedule:
+    # Nightly: the E2E suite also runs the `mobile` project (see `e2e`).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      e2e_projects:
+        description: "Playwright projects for the e2e job (space-separated)"
+        default: "desktop-chromium"
+        required: false
 
 jobs:
   verify:
@@ -29,3 +40,247 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test:unit
+
+  # The MCP server package (#669). It carries its own vitest.config.ts with
+  # ~90 tests that the root config never includes, and until this job existed
+  # nothing in CI ran them: deploy-mcp.yml shipped the image untested.
+  #
+  # Two installs on purpose: mcp-server/vitest.config.ts resolves the ROOT
+  # Vitest binary through the ancestor node_modules/.bin on PATH (the package
+  # has no Vitest of its own), so the root install is what provides the
+  # runner, and the package install provides what the tools import.
+  # Unconditional (no paths filter) so the check name is stable enough to be
+  # required by branch protection; the job costs well under a minute.
+  mcp-server:
+    name: MCP server unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            mcp-server/package-lock.json
+      - name: Install (root, provides Vitest)
+        run: npm ci
+      - name: Install (mcp-server)
+        run: npm ci
+        working-directory: mcp-server
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: mcp-server
+      - name: Unit tests
+        run: npm test
+        working-directory: mcp-server
+
+  # The Playwright suite (#667). Until this job existed, 374 E2E tests ran only
+  # on whoever remembered to run them locally.
+  #
+  # Each shard is a full environment: Supabase CLI starts the local stack
+  # (migrations + seed.sql, same as `npm run db:reset`), `next build` makes the
+  # production bundle, and Playwright's `webServer` starts `next start` on
+  # lvh.me:3000. Shards split the tests; within a shard they run serially
+  # (`workers: 1`) because the specs mutate one shared seeded database.
+  #
+  # Every env var a spec gates on is provided here, so a `test.skip(!ENV)` is a
+  # CI bug — `scripts/ci/check-e2e-skips.mjs` fails the job on any of them.
+  # Nothing below is a real secret: the Supabase keys are the CLI's well-known
+  # local development keys and the Stripe/cron values are synthetic.
+  e2e:
+    name: E2E (shard ${{ matrix.shard }} of ${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      # App + suite
+      NEXT_PUBLIC_PLATFORM_DOMAIN: lvh.me:3000
+      NEXT_PUBLIC_APP_URL: http://lvh.me:3000
+      NEXT_PUBLIC_APP_NAME: LMS CI
+      BASE_URL: http://lvh.me:3000
+      NEXT_PUBLIC_ANALYTICS_DISABLED: "true"
+      # Gated specs (platform-billing-*, access-cutoff-lifecycle, webhook claims)
+      CRON_SECRET: ci-cron-secret-synthetic
+      # Loop 3 (loop-3-student-pays) charges a real test-mode card through Stripe
+      # Connect, so it needs the repo's sk_test key, its matching pk_test key (a
+      # build-time NEXT_PUBLIC_*, hence set on the job) and a connected account
+      # with charges_enabled. Every other spec only signs synthetic webhooks and
+      # is happy with the fallbacks; without the secrets Loop 3 skips loudly and
+      # check-e2e-skips.mjs fails the job, which is the alarm we want.
+      STRIPE_SECRET_KEY: ${{ secrets.E2E_STRIPE_SECRET_KEY || 'sk_test_ci_synthetic_never_called' }}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.E2E_STRIPE_PUBLISHABLE_KEY || 'pk_test_ci_synthetic' }}
+      E2E_STRIPE_CONNECT_ACCOUNT: ${{ secrets.E2E_STRIPE_CONNECT_ACCOUNT }}
+      STRIPE_WEBHOOK_SECRET: whsec_ci_synthetic_connect
+      STRIPE_PLATFORM_WEBHOOK_SECRET: whsec_ci_synthetic_platform
+      # The upgrade page offers a rail only when its env is present
+      # (lib/billing/platform-checkout-runtime.ts); the payment-method-choice
+      # spec expects Binance Pay and Solana next to Stripe and bank transfer.
+      # A Solana checkout renders a QR for this wallet and never settles.
+      BINANCE_PAY_API_KEY: ci_binance_key_synthetic
+      BINANCE_PAY_API_SECRET: ci_binance_secret_synthetic
+      # binance-personal-settlement.spec.ts hosts a stub of Binance's
+      # GET /sapi/v1/pay/transactions inside the Playwright process and points the
+      # APP at it with this override (lib/payments/binance-personal-provider.ts
+      # reads it per call). Playwright merges this job env into the `next start`
+      # it launches, so setting it HERE is what reaches the server. Drop the line
+      # and the spec skips "not set", which check-e2e-skips.mjs turns into a job
+      # failure — the alarm we want. Server-runtime only (not a NEXT_PUBLIC_*), so
+      # the Build step neither inlines it nor needs a Dockerfile ARG, and it must
+      # never be set on a deployed environment.
+      BINANCE_PAY_API_BASE: http://127.0.0.1:3099
+      # paypal-settlement.spec.ts hosts a stub of PayPal's OAuth,
+      # verify-webhook-signature and Orders v2 endpoints inside the Playwright
+      # process and points the APP at it with this override
+      # (lib/payments/paypal-provider.ts reads it per call). The three PAYPAL_*
+      # credentials above it are never checked by the stub — they exist only
+      # because getPaymentProvider('paypal') refuses to build the adapter
+      # without a client id and secret, and verifyWebhook fails closed without a
+      # webhook id. Drop this line and the spec skips "not set", which
+      # check-e2e-skips.mjs turns into a job failure. Server-runtime only, and it
+      # must never be set on a deployed environment.
+      PAYPAL_CLIENT_ID: ci_paypal_client_synthetic
+      PAYPAL_CLIENT_SECRET: ci_paypal_secret_synthetic
+      PAYPAL_WEBHOOK_ID: ci_paypal_webhook_synthetic
+      PAYPAL_API_BASE: http://127.0.0.1:3098
+      SOLANA_RPC_URL: https://api.devnet.solana.com
+      SOLANA_PLATFORM_WALLET: EqK4KJFiUoV53TrCt2kXHn8Ryg6fcSTuwaa9nNppqc2A
+      SOLANA_USDC_MINT: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+      # Lemon Squeezy verifies a webhook with nothing but an HMAC-SHA256 of
+      # the raw body against LEMONSQUEEZY_WEBHOOK_SECRET
+      # (lib/payments/lemonsqueezy-provider.ts). The API key and store id are
+      # never touched by verification — they exist only because
+      # getPaymentProvider() refuses to construct the adapter without all
+      # three, which is what would turn a signed LS webhook into a 503 on a
+      # runner. The secret is OURS, not Lemon Squeezy’s, so
+      # lemonsqueezy-webhook-settlement.spec.ts signs with this same value.
+      LEMONSQUEEZY_API_KEY: ci_ls_key_synthetic
+      LEMONSQUEEZY_STORE_ID: "1"
+      LEMONSQUEEZY_WEBHOOK_SECRET: ci_ls_whsec_synthetic
+      # Runtime-generated issuer keys / tenant payment credentials are encrypted
+      # with these; any constant works for a throwaway database.
+      CERTIFICATE_ENCRYPTION_KEY: ci-certificate-key-synthetic
+      PAYMENT_CREDENTIALS_ENCRYPTION_KEY: ci-payment-credentials-key-synthetic
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci
+
+      # The tenant proxy resolves the school from the subdomain, so the suite
+      # needs wildcard-ish hostnames. lvh.me resolves to 127.0.0.1 via public
+      # DNS; pin the ones the specs use so a DNS hiccup cannot fail a run.
+      - name: Pin lvh.me hostnames
+        run: echo "127.0.0.1 lvh.me default.lvh.me code-academy.lvh.me qa-binance-personal.lvh.me qa-manual-sale.lvh.me" | sudo tee -a /etc/hosts
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.115.0
+      - name: Start local Supabase (migrations + seed)
+        # Only what the app and specs touch. Studio, log shipping and the
+        # pooler are dead weight on a runner. edge-runtime stays: the client
+        # reads plan features and the gamification summary from
+        # supabase/functions (get-plan-features, get-gamification-summary,
+        # get-leaderboard) — without it every client-side feature gate closes
+        # and the dashboard renders without its gamification header. mailpit
+        # stays too: GoTrue refuses a password-reset request outright when it
+        # cannot hand the mail to an SMTP host, and loop-2-student-learns
+        # asserts that request succeeds and the email lands (#671).
+        run: supabase start -x studio,imgproxy,logflare,vector,supavisor,postgres-meta
+      - name: Export Supabase keys
+        run: |
+          supabase status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY \
+            --override-name auth.service_role_key=SUPABASE_SERVICE_ROLE_KEY \
+            | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY)=' \
+            | tr -d '"' | tee -a "$GITHUB_ENV"
+      - name: Supabase keys present
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo "::error::NEXT_PUBLIC_SUPABASE_URL empty"; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY" || { echo "::error::anon key empty"; exit 1; }
+          test -n "$SUPABASE_SERVICE_ROLE_KEY" || { echo "::error::service role key empty"; exit 1; }
+
+      - name: Playwright browser cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install Playwright browsers
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Playwright system deps
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Build
+        run: npm run build
+        env:
+          # Google sign-in is off by default (lib/auth/social-providers.ts);
+          # E2E builds with it on so create-school-google-fallback.spec.ts
+          # keeps covering the button.
+          NEXT_PUBLIC_AUTH_GOOGLE_ENABLED: 'true'
+
+      - name: Playwright
+        run: |
+          PROJECTS="${{ github.event.inputs.e2e_projects || 'desktop-chromium' }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then PROJECTS="desktop-chromium mobile"; fi
+          ARGS=""; for p in $PROJECTS; do ARGS="$ARGS --project=$p"; done
+          npx playwright test $ARGS --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Summary + env-skip gate
+        if: always()
+        run: node scripts/ci/check-e2e-skips.mjs playwright-report/results.json
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-shard-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+            docs/SMOKE_TEST_LOG.md
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # The production image, built exactly as deploy.yml builds it — but never
+  # pushed. `verify` above cannot catch a broken deploy: it installs from
+  # package-lock.json on the runner, while the image builds from the Dockerfile
+  # in a Linux container. When those two disagreed, master stayed green through
+  # six days of failed deploys (stripe floated to a minor whose types demand a
+  # different apiVersion literal, #638). This job is the check that would have
+  # caught it on the PR.
+  #
+  # Same build-args as deploy.yml so the Next.js build inlines the same
+  # NEXT_PUBLIC_* values and exercises the same code paths. Repo `vars` are
+  # readable from pull_request runs; SENTRY_AUTH_TOKEN is a secret and resolves
+  # empty here, which only skips source-map upload.
+  image:
+    name: Production image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          # Layer cache keyed to this workflow, so an unchanged package-lock.json
+          # reuses the install layer and only the source layers rebuild.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY }}
+            NEXT_PUBLIC_PLATFORM_DOMAIN=${{ vars.NEXT_PUBLIC_PLATFORM_DOMAIN }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}

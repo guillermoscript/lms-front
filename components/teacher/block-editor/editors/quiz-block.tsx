@@ -45,8 +45,8 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-gradient-to-br from-purple-500/5 to-blue-500/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
+    <div className="space-y-3 rounded-lg border bg-brand-tint p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconCircleCheck className="h-4 w-4" />
         {t('blocks.quiz.label')}
       </div>
@@ -59,7 +59,7 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
       />
 
       <div className="space-y-2">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-foreground">
           {t('quiz.optionsHint')}
         </span>
         {block.options.map((option, index) => (
@@ -70,8 +70,8 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
               className={cn(
                 'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
                 block.correctIndex === index
-                  ? 'border-green-500 bg-green-500 text-white'
-                  : 'border-muted-foreground/30 hover:border-green-500/50'
+                  ? 'border-success bg-success text-success-foreground'
+                  : 'border-muted-foreground/30 hover:border-success/50'
               )}
               aria-label={t('quiz.markCorrect', { number: index + 1 })}
             >
@@ -109,7 +109,7 @@ export function QuizBlockEditor({ block, onChange }: QuizBlockEditorProps) {
       </div>
 
       <div>
-        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
+        <span className="text-xs text-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}

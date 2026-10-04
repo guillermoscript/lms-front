@@ -174,8 +174,14 @@ BINANCE_PAY_API_SECRET=
 SOLANA_RPC_URL=
 SOLANA_PLATFORM_WALLET=
 SOLANA_USDC_MINT=                               # Set = settle in USDC (recommended, no price oracle). Unset = settle in native SOL at the Pyth quote locked at checkout.
-# PayPal is coded but its platform-billing checkout is capability-disabled pending #479 —
-# no PAYPAL_* needed here; PayPal is still used for student→school payments (configured elsewhere in this file).
+# PayPal (#744): register a SECOND webhook in the PayPal app pointing at
+#   https://<domain>/api/billing/webhook/paypal
+# (events: BILLING.SUBSCRIPTION.ACTIVATED, .CANCELLED, .EXPIRED, .SUSPENDED,
+# .PAYMENT.FAILED, PAYMENT.SALE.COMPLETED) and set its id below. It shares
+# PAYPAL_CLIENT_ID/SECRET with the student webhook but NOT its webhook id —
+# PayPal signs each delivery over the id of the registration it went to.
+# Price rows: paste each Billing Plan id (P-…) under Platform → Plans.
+PAYPAL_PLATFORM_WEBHOOK_ID=
 
 # OpenAI (AI grading)
 OPENAI_API_KEY=sk-...
@@ -189,10 +195,6 @@ EMAIL_FROM=noreply@lmsplatform.com
 # Certificates
 CERTIFICATE_ENCRYPTION_KEY=your-32-char-key
 CERTIFICATE_ISSUER_NAME=Your Platform Name
-
-# Company
-COMPANY_NAME=Your Company
-COMPANY_EMAIL=hello@lmsplatform.com
 
 # Cron
 CRON_SECRET=your-random-secret-here
@@ -282,9 +284,13 @@ something on this side has to call the routes or they never run at all. Every
 fires twice; the routes are written to tolerate that, but it doubles the load and
 makes logs hard to read.
 
-#### Option A — GitHub Actions (default, and what the repo ships)
+> **Day-to-day operation of these jobs — replay, secret rotation, partial
+> failure, monitoring — lives in [`CRON_RUNBOOK.md`](./CRON_RUNBOOK.md).** This
+> section is the one-time setup; that one is the runbook.
 
-`.github/workflows/cron.yml` runs all seven schedules. It needs two repository
+#### Option A — GitHub Actions (default, what the repo ships, and the scheduler of record for `preciopana.com`)
+
+`.github/workflows/cron.yml` runs all declared schedules. It needs two repository
 settings under **Settings → Secrets and variables → Actions**:
 
 | Kind | Name | Value |
@@ -336,6 +342,10 @@ If you choose this, disable the schedules in `.github/workflows/cron.yml`.
 */10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/solana-reconcile
 # Confirm Binance personal-wallet payments
 */10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/binance-personal-reconcile
+# Replay stalled signed webhook deliveries
+*/10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/redeliver-webhook-events
+# Retry paid Solana platform requests whose entitlement activation stalled
+*/10 * * * * curl -s -H "Authorization: Bearer YOUR_CRON_SECRET" https://lmsplatform.com/api/cron/reconcile-solana-platform-activations
 ```
 
 > `/api/cron/solana-pull` exists but is deliberately not on any schedule here or

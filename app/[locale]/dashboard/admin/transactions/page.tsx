@@ -119,12 +119,12 @@ export default async function AdminTransactionsPage({
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue)}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.totalRevenueDesc')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconCurrencyDollar className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                  <IconCurrencyDollar className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -138,12 +138,12 @@ export default async function AdminTransactionsPage({
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(pendingAmount)}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.pendingDesc')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                  <IconClock className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                  <IconClock className="h-[18px] w-[18px] text-warning" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -155,12 +155,12 @@ export default async function AdminTransactionsPage({
                 <div>
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.failed')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{failedCount}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.failedDesc')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
-                  <IconX className="h-[18px] w-[18px] text-red-600 dark:text-red-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+                  <IconX className="h-[18px] w-[18px] text-destructive" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -220,7 +220,7 @@ export default async function AdminTransactionsPage({
                                       ? 'secondary'
                                       : 'destructive'
                               }
-                              className={`text-[10px] ${transaction.status === 'successful' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                              className={`text-[10px] ${transaction.status === 'successful' ? 'bg-success/10 text-success border-success/30' : transaction.status === 'pending' ? 'bg-warning/10 text-warning border-warning/30' : ''}`}
                             >
                               {transaction.status === 'successful' && (
                                 <IconCheck className="mr-1 h-3 w-3" />

@@ -18,6 +18,7 @@ function makeStripe(retrieveResult: any, updateResult: any) {
     subscriptions: {
       retrieve: vi.fn().mockResolvedValue(retrieveResult),
       update: vi.fn().mockResolvedValue(updateResult),
+      cancel: vi.fn(),
     },
   }
   const provider = new StripePaymentProvider('sk_test_x')
@@ -79,6 +80,20 @@ describe('StripePaymentProvider.updateSubscription', () => {
   })
 })
 
+describe('StripePaymentProvider.cancelSubscription', () => {
+  it('converges only a structured missing-resource error', async () => {
+    const { provider, stripe } = makeStripe({}, {})
+    stripe.subscriptions.cancel.mockRejectedValue({ code: 'resource_missing' })
+    await expect(provider.cancelSubscription('sub-gone', true)).resolves.toEqual({ mode: 'immediate' })
+  })
+
+  it('does not classify message text as already canceled', async () => {
+    const { provider, stripe } = makeStripe({}, {})
+    stripe.subscriptions.cancel.mockRejectedValue(new Error('No such subscription: sub-gone'))
+    await expect(provider.cancelSubscription('sub-gone', true)).rejects.toThrow(/No such subscription/)
+  })
+})
+
 describe('LemonSqueezyProvider.updateSubscription', () => {
   afterEach(() => vi.unstubAllGlobals())
 
@@ -127,6 +142,18 @@ describe('LemonSqueezyProvider.updateSubscription', () => {
     await expect(
       provider.updateSubscription('99', { newProviderPriceId: '424242' }),
     ).rejects.toThrow(/HTTP 422/)
+  })
+
+  it('treats only a 404 cancellation response as already absent', async () => {
+    stubFetch({ ok: false, status: 404, text: 'subscription missing' })
+    const provider = new LemonSqueezyProvider('key', 'store', 'secret')
+    await expect(provider.cancelSubscription('99', true)).resolves.toEqual({ mode: 'immediate' })
+  })
+
+  it('keeps a 422 cancellation response retryable even when its text says not found', async () => {
+    stubFetch({ ok: false, status: 422, text: 'Store not found for this API key' })
+    const provider = new LemonSqueezyProvider('key', 'store', 'secret')
+    await expect(provider.cancelSubscription('99', true)).rejects.toThrow(/HTTP 422/)
   })
 })
 

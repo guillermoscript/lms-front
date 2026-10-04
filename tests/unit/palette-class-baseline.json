@@ -1,0 +1,214 @@
+{
+  "app/[locale]/dashboard/admin/billing/checkout/[requestId]/solana-checkout-client.tsx": [
+    0,
+    1
+  ],
+  "app/[locale]/dashboard/student/courses/[courseId]/exams/[examId]/exam-taker.tsx": [
+    0,
+    2
+  ],
+  "app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/lesson-content.tsx": [
+    0,
+    3
+  ],
+  "components/ai-elements/commit.tsx": [
+    12,
+    0
+  ],
+  "components/ai-elements/file-tree.tsx": [
+    2,
+    0
+  ],
+  "components/ai-elements/package-info.tsx": [
+    20,
+    0
+  ],
+  "components/ai-elements/schema-display.tsx": [
+    34,
+    0
+  ],
+  "components/ai-elements/speech-input.tsx": [
+    1,
+    2
+  ],
+  "components/ai-elements/terminal.tsx": [
+    12,
+    0
+  ],
+  "components/ai-elements/test-results.tsx": [
+    34,
+    0
+  ],
+  "components/ai-elements/tool.tsx": [
+    5,
+    0
+  ],
+  "components/ai-elements/web-preview.tsx": [
+    1,
+    0
+  ],
+  "components/aristotle/aristotle-panel.tsx": [
+    0,
+    1
+  ],
+  "components/aristotle/aristotle-study-section.tsx": [
+    12,
+    0
+  ],
+  "components/aristotle/aristotle-trigger.tsx": [
+    5,
+    1
+  ],
+  "components/dashboard/api-tokens-page.tsx": [
+    3,
+    0
+  ],
+  "components/exercises/artifact-exercise.tsx": [
+    0,
+    1
+  ],
+  "components/exercises/media-exercise-panels.tsx": [
+    0,
+    1
+  ],
+  "components/exercises/video-recorder.tsx": [
+    0,
+    8
+  ],
+  "components/forgot-password-form.tsx": [
+    1,
+    0
+  ],
+  "components/gamification/achievement-grid.tsx": [
+    12,
+    2
+  ],
+  "components/gamification/mini-leaderboard.tsx": [
+    5,
+    0
+  ],
+  "components/gamification/weekly-league.tsx": [
+    5,
+    0
+  ],
+  "components/lesson/code-block.tsx": [
+    9,
+    2
+  ],
+  "components/lesson/compare.tsx": [
+    0,
+    4
+  ],
+  "components/lesson/matching-pairs.tsx": [
+    32,
+    0
+  ],
+  "components/login-form.tsx": [
+    1,
+    0
+  ],
+  "components/platform-sidebar.tsx": [
+    6,
+    0
+  ],
+  "components/public/checkout-form.tsx": [
+    0,
+    2
+  ],
+  "components/public/course-card.tsx": [
+    0,
+    6
+  ],
+  "components/public/school-landing-page.tsx": [
+    0,
+    1
+  ],
+  "components/student/activity-section.tsx": [
+    0,
+    4
+  ],
+  "components/student/course-reviews.tsx": [
+    3,
+    0
+  ],
+  "components/student/enrolled-course-card.tsx": [
+    0,
+    1
+  ],
+  "components/student/lesson-ai-chat.tsx": [
+    0,
+    5
+  ],
+  "components/student/lesson-comments.tsx": [
+    1,
+    0
+  ],
+  "components/student/lesson-resources.tsx": [
+    4,
+    0
+  ],
+  "components/student/social-share-modal.tsx": [
+    7,
+    0
+  ],
+  "components/teacher/block-editor/editors/code-block.tsx": [
+    8,
+    2
+  ],
+  "components/teacher/certificate-template-form/issuer-section.tsx": [
+    0,
+    1
+  ],
+  "components/teacher/certificate-template-form/signature-section.tsx": [
+    0,
+    1
+  ],
+  "components/teacher/lesson-editor/markdown-field.tsx": [
+    0,
+    13
+  ],
+  "components/ui/alert-dialog.tsx": [
+    0,
+    1
+  ],
+  "components/ui/animated-shiny-text.tsx": [
+    2,
+    2
+  ],
+  "components/ui/dialog.tsx": [
+    0,
+    1
+  ],
+  "components/ui/mdx-components.tsx": [
+    0,
+    2
+  ],
+  "components/ui/number-ticker.tsx": [
+    0,
+    2
+  ],
+  "components/ui/sheet.tsx": [
+    0,
+    1
+  ],
+  "components/ui/slider.tsx": [
+    0,
+    1
+  ],
+  "components/update-password-form.tsx": [
+    1,
+    0
+  ],
+  "lib/color/contrast.ts": [
+    0,
+    1
+  ],
+  "lib/puck/components/layout/section.tsx": [
+    0,
+    11
+  ],
+  "lib/puck/components/navigation/header.tsx": [
+    0,
+    3
+  ]
+}

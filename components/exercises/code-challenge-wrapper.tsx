@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     SandpackProvider,
     SandpackLayout,
@@ -10,31 +10,260 @@ import {
     useSandpack
 } from "@codesandbox/sandpack-react";
 import { Button } from "@/components/ui/button";
-import { IconPlayerPlay, IconCheck, IconRotateClockwise } from "@tabler/icons-react";
+import { IconPlayerPlay, IconCheck, IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import ExerciseResultSummary from "@/components/exercises/exercise-result-summary";
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/lib/database.types";
 
 interface CodeChallengeWrapperProps {
-    exercise: any;
+    exercise: { active_file?: string | null; visible_files?: string[] | null };
     files: Record<string, string>;
     exerciseId: number;
     isExerciseCompleted: boolean;
-    userCode?: string;
+    userId: string;
+    /** The student's newest row in exercise_code_student_submissions. */
+    savedSubmission?: SavedSubmission | null;
 }
 
-const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
+interface SavedSubmission {
+    id: number;
+    submission_code: string;
+    files: Json | null;
+}
+
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+/** How long the editor waits after the last keystroke before saving. */
+const AUTOSAVE_DELAY_MS = 1500;
+
+interface CodeEvaluation {
+    score: number;
+    passed: boolean;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+    passingScore: number;
+    attemptNumber: number | null;
+}
+
+/** Every file of the project, path-labelled, as the grader reads it. */
+function serializeFiles(files: Record<string, { code: string }>): string {
+    return Object.entries(files)
+        .map(([path, file]) => `// ── ${path} ──\n${file.code}`)
+        .join("\n\n");
+}
+
+/** The file both clients treat as "the" code: the native app edits only this one. */
+function primaryPath(exercise: CodeChallengeWrapperProps["exercise"], files: Record<string, string>): string | null {
+    return exercise.active_file || Object.keys(files)[0] || null;
+}
+
+function savedFiles(saved: SavedSubmission | null | undefined): Record<string, string> | null {
+    const files = saved?.files;
+    if (!files || typeof files !== "object" || Array.isArray(files)) return null;
+    return Object.fromEntries(
+        Object.entries(files).filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    );
+}
+
+/**
+ * Starter files with the student's saved code laid over them. Files the
+ * teacher added after the student last saved still show up. A row from the
+ * native app carries only `submission_code`, which is the primary file.
+ */
+function restoreFiles(
+    starter: Record<string, string>,
+    saved: SavedSubmission | null | undefined,
+    primary: string | null
+): Record<string, string> {
+    if (!saved) return starter;
+    const files = savedFiles(saved);
+    if (files) return { ...starter, ...files };
+    return primary ? { ...starter, [primary]: saved.submission_code } : starter;
+}
+
+/**
+ * Saves the student's code as they type (#858), into one row per visit. Only
+ * files the student changed or added are stored, so a later edit to an
+ * untouched starter file still reaches them.
+ */
+function useCodeAutosave({
+    exerciseId,
+    userId,
+    starter,
+    primary,
+    saved,
+}: {
+    exerciseId: number;
+    userId: string;
+    starter: Record<string, string>;
+    primary: string | null;
+    saved: SavedSubmission | null | undefined;
+}) {
+    const { sandpack } = useSandpack();
+    const supabase = useMemo(() => createClient(), []);
+    const [status, setStatus] = useState<SaveStatus>("idle");
+    // Files Sandpack's template adds on its own (package.json, index.js…) are not the student's.
+    const [templatePaths] = useState(() => {
+        const known = new Set([...Object.keys(starter), ...Object.keys(savedFiles(saved) ?? {})]);
+        return new Set(Object.keys(sandpack.files).filter((path) => !known.has(path)));
+    });
+    const snapshot = useCallback(
+        (files: Record<string, { code: string }>) => {
+            const changed: Record<string, string> = {};
+            for (const [path, file] of Object.entries(files)) {
+                if (templatePaths.has(path)) continue;
+                if (file.code !== starter[path]) changed[path] = file.code;
+            }
+            const code = primary ? (files[primary]?.code ?? starter[primary] ?? "") : "";
+            return { changed, code, key: JSON.stringify(changed) };
+        },
+        [templatePaths, starter, primary]
+    );
+    const [initialKey] = useState(() => snapshot(sandpack.files).key);
+
+    const rowId = useRef<number | null>(saved?.id ?? null);
+    const lastSavedKey = useRef(initialKey);
+    const latestFiles = useRef(sandpack.files);
+    // One save at a time, so a slow insert never races the next update.
+    const queue = useRef<Promise<void>>(Promise.resolve());
+
+    const save = useCallback(() => {
+        queue.current = queue.current.then(async () => {
+            const { changed, code, key } = snapshot(latestFiles.current);
+            if (key === lastSavedKey.current) return;
+            setStatus("saving");
+            const row = { submission_code: code, files: changed };
+            const { data, error } = rowId.current
+                ? await supabase.from("exercise_code_student_submissions").update(row).eq("id", rowId.current).select("id").maybeSingle()
+                : await supabase
+                    .from("exercise_code_student_submissions")
+                    .insert({ ...row, exercise_id: exerciseId, user_id: userId })
+                    .select("id")
+                    .single();
+            if (error || !data) {
+                setStatus("error");
+                return;
+            }
+            rowId.current = data.id;
+            lastSavedKey.current = key;
+            setStatus("saved");
+        });
+        return queue.current;
+    }, [snapshot, supabase, exerciseId, userId]);
+
+    useEffect(() => {
+        latestFiles.current = sandpack.files;
+        const timer = setTimeout(save, AUTOSAVE_DELAY_MS);
+        return () => clearTimeout(timer);
+    }, [sandpack.files, save]);
+
+    // The unload flush can't await supabase-js reading the session, so it keeps the token at hand.
+    const accessToken = useRef<string | null>(null);
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data }) => {
+            accessToken.current = data.session?.access_token ?? null;
+        });
+        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+            accessToken.current = session?.access_token ?? null;
+        });
+        return () => data.subscription.unsubscribe();
+    }, [supabase]);
+
+    /**
+     * Closing or reloading the tab aborts an ordinary request, and supabase-js
+     * awaits the session before it even sends one. So the last keystrokes go
+     * out synchronously, as a keepalive request the browser finishes on its own.
+     */
+    const flushOnUnload = useCallback(() => {
+        const { changed, code, key } = snapshot(latestFiles.current);
+        if (key === lastSavedKey.current) return;
+        const body = JSON.stringify(
+            rowId.current
+                ? { submission_code: code, files: changed }
+                : { submission_code: code, files: changed, exercise_id: exerciseId, user_id: userId }
+        );
+        // Browsers cap keepalive bodies at 64 KB; past that, try the ordinary save.
+        if (!accessToken.current || body.length > 60_000) {
+            void save();
+            return;
+        }
+        const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/exercise_code_student_submissions`;
+        void fetch(rowId.current ? `${base}?id=eq.${rowId.current}` : base, {
+            method: rowId.current ? "PATCH" : "POST",
+            keepalive: true,
+            headers: {
+                apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+                Authorization: `Bearer ${accessToken.current}`,
+                "Content-Type": "application/json",
+                Prefer: "return=minimal",
+            },
+            body,
+        }).catch(() => {});
+        lastSavedKey.current = key;
+    }, [snapshot, save, exerciseId, userId]);
+
+    // Leaving before the debounce fires would drop the last keystrokes.
+    useEffect(() => {
+        window.addEventListener("pagehide", flushOnUnload);
+        return () => {
+            window.removeEventListener("pagehide", flushOnUnload);
+            // In-app navigation: the page lives on, so the ordinary save completes.
+            void save();
+        };
+    }, [save, flushOnUnload]);
+
+    return { save, status };
+}
+
+const SaveStatusLabel = ({ status }: { status: SaveStatus }) => {
+    const t = useTranslations("exercises.code");
+    if (status === "idle") return null;
+    return (
+        <span
+            className={status === "error" ? "text-xs text-destructive" : "text-xs text-muted-foreground"}
+            role="status"
+            aria-live="polite"
+        >
+            {status === "saving" ? t("saving") : status === "saved" ? t("saved") : t("saveFailed")}
+        </span>
+    );
+};
+
+const SubmitButton = ({
+    exerciseId,
+    onEvaluated,
+    beforeSubmit,
+}: {
+    exerciseId: number;
+    onEvaluated: (evaluation: CodeEvaluation) => void;
+    beforeSubmit: () => Promise<void>;
+}) => {
     const { sandpack } = useSandpack();
     const [loading, setLoading] = useState(false);
+    const t = useTranslations("exercises.code");
 
+    // The platform grades the code (#843). The browser never writes a score.
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            await new Promise(r => setTimeout(r, 2000));
-            onComplete();
-            toast.success("Solution submitted and verified!");
-        } catch (e) {
-            toast.error("Evaluation failed. Check your code.");
+            // What gets graded is what comes back next visit.
+            await beforeSubmit();
+            const res = await fetch("/api/exercises/evaluate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ exerciseId, content: serializeFiles(sandpack.files) }),
+            });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toast.error(res.status === 429 ? t("rateLimited") : t("evaluationFailed"));
+                return;
+            }
+            onEvaluated(body as CodeEvaluation);
+        } catch {
+            toast.error(t("evaluationFailed"));
         } finally {
             setLoading(false);
         }
@@ -44,11 +273,55 @@ const SubmitButton = ({ onComplete }: { onComplete: () => void }) => {
         <Button
             onClick={handleSubmit}
             disabled={loading}
-            className="bg-green-600 hover:bg-green-700 text-white gap-2"
+            className="bg-success hover:bg-success/90 text-success-foreground gap-2"
         >
-            {loading ? <span className="animate-spin text-lg">⌛</span> : <IconPlayerPlay size={18} />}
-            Run & Verify
+            {loading ? <IconLoader2 size={18} className="animate-spin" aria-hidden="true" /> : <IconPlayerPlay size={18} aria-hidden="true" />}
+            {loading ? t("checking") : t("submit")}
         </Button>
+    );
+}
+
+function ChallengeWorkspace({
+    exerciseId,
+    userId,
+    starter,
+    primary,
+    saved,
+    onEvaluated,
+}: {
+    exerciseId: number;
+    userId: string;
+    starter: Record<string, string>;
+    primary: string | null;
+    saved: SavedSubmission | null | undefined;
+    onEvaluated: (evaluation: CodeEvaluation) => void;
+}) {
+    const t = useTranslations("exercises.code");
+    const { save, status } = useCodeAutosave({ exerciseId, userId, starter, primary, saved });
+
+    return (
+        <SandpackLayout className="overflow-hidden rounded-card ring-1 ring-foreground/10 lg:ring-0">
+            <SandpackFileExplorer className="border-r bg-muted/50" />
+            <SandpackCodeEditor
+                showLineNumbers
+                showTabs
+                closableTabs
+            />
+            <div className="sp-output-panel flex flex-col border-l bg-background">
+                <div className="p-3 border-b flex items-center justify-between bg-muted/30 shrink-0">
+                    <span className="text-sm font-semibold">{t("output")}</span>
+                    <div className="flex items-center gap-2">
+                        <SaveStatusLabel status={status} />
+                        <SubmitButton exerciseId={exerciseId} onEvaluated={onEvaluated} beforeSubmit={save} />
+                    </div>
+                </div>
+                <SandpackPreview
+                    className="flex-1 min-h-0"
+                    showNavigator={false}
+                    showRefreshButton={true}
+                />
+            </div>
+        </SandpackLayout>
     );
 }
 
@@ -57,25 +330,21 @@ export default function CodeChallengeWrapper({
     files,
     exerciseId,
     isExerciseCompleted: initialCompleted,
-    userCode,
+    userId,
+    savedSubmission,
 }: CodeChallengeWrapperProps) {
     const [isCompleted, setIsCompleted] = useState(initialCompleted);
+    const [evaluation, setEvaluation] = useState<CodeEvaluation | null>(null);
     const tGamification = useTranslations("components.gamification");
-    const supabase = createClient();
+    const t = useTranslations("exercises.code");
+    const primary = primaryPath(exercise, files);
+    // Restored once: the editor owns the files from here on.
+    const [initialFiles] = useState(() => restoreFiles(files, savedSubmission, primary));
 
-    const handleComplete = async () => {
-        setIsCompleted(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user;
-        if (user) {
-            // exercise_completions has NO tenant_id column — isolation is via
-            // RLS through exercise_id. Sending tenant_id 400s the insert.
-            await supabase.from('exercise_completions').insert({
-                exercise_id: exerciseId,
-                user_id: user.id,
-                completed_by: user.id,
-                score: 100,
-            });
+    const handleEvaluated = (result: CodeEvaluation) => {
+        setEvaluation(result);
+        if (result.passed && !isCompleted) {
+            setIsCompleted(true);
             toast.success(tGamification("xpAwarded.exercise_completion"));
         }
     }
@@ -110,15 +379,48 @@ export default function CodeChallengeWrapper({
                         height: 250px !important;
                         min-height: 0 !important;
                         width: 100% !important;
-                        border-top: 1px solid hsl(var(--border));
+                        border-top: 1px solid var(--border);
                         border-left: none !important;
+                    }
+                }
+                /* Desktop work pane: code over its output, filling the pane. The
+                   file tree gives way to the editor's own tabs. */
+                @media (min-width: 1024px) {
+                    .sp-challenge-wrapper .sp-wrapper {
+                        flex: 1 1 0;
+                        min-height: 0;
+                    }
+                    .sp-challenge-wrapper .sp-layout {
+                        --sp-layout-height: 100%;
+                        flex-direction: column !important;
+                        flex-wrap: nowrap !important;
+                        height: 100% !important;
+                        border: 0 !important;
+                        border-radius: 0 !important;
+                    }
+                    .sp-challenge-wrapper .sp-file-explorer {
+                        display: none !important;
+                    }
+                    .sp-challenge-wrapper .sp-editor {
+                        flex: 3 1 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                    }
+                    .sp-challenge-wrapper .sp-output-panel {
+                        flex: 2 1 0 !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        border-left: none !important;
+                        border-top: 1px solid var(--border);
                     }
                 }
             `}</style>
 
-            <div className="space-y-4 sp-challenge-wrapper">
+            <div className="sp-challenge-wrapper space-y-4 lg:flex lg:h-full lg:flex-col lg:space-y-0">
                 <SandpackProvider
-                    files={files}
+                    files={initialFiles}
                     theme="dark"
                     template="react"
                     options={{
@@ -126,45 +428,36 @@ export default function CodeChallengeWrapper({
                         visibleFiles: exercise.visible_files || undefined,
                     }}
                 >
-                    <SandpackLayout className="rounded-xl overflow-hidden border shadow-soft ring-1 ring-border/50">
-                        <SandpackFileExplorer className="border-r bg-muted/50" />
-                        <SandpackCodeEditor
-                            showLineNumbers
-                            showTabs
-                            closableTabs
-                        />
-                        <div className="sp-output-panel flex flex-col border-l bg-background">
-                            <div className="p-3 border-b flex items-center justify-between bg-muted/30 shrink-0">
-                                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Output</span>
-                                <div className="flex items-center gap-2">
-                                    <SubmitButton onComplete={handleComplete} />
-                                </div>
-                            </div>
-                            <SandpackPreview
-                                className="flex-1 min-h-0"
-                                showNavigator={false}
-                                showRefreshButton={true}
-                            />
-                        </div>
-                    </SandpackLayout>
+                    <ChallengeWorkspace
+                        exerciseId={exerciseId}
+                        userId={userId}
+                        starter={files}
+                        primary={primary}
+                        saved={savedSubmission}
+                        onEvaluated={handleEvaluated}
+                    />
                 </SandpackProvider>
 
-                {isCompleted && (
-                    <div className="p-4 my-2 bg-green-50 border border-green-100 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0">
-                                <IconCheck size={24} />
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-green-900">Challenge Completed!</h4>
-                                <p className="text-sm text-green-700">Excellent work. You've successfully solved this coding challenge.</p>
-                            </div>
-                        </div>
-                        <Button variant="outline" className="text-green-700 border-green-200 hover:bg-green-100 gap-2 shrink-0 ml-4">
-                            <IconRotateClockwise size={18} />
-                            Next Activity
-                        </Button>
-                    </div>
+                {evaluation && (
+                    <ExerciseResultSummary
+                        className="lg:shrink-0 lg:max-h-[40%] lg:overflow-y-auto lg:border-t lg:p-4"
+                        score={evaluation.score}
+                        passed={evaluation.passed}
+                        feedback={evaluation.feedback}
+                        strengths={evaluation.strengths}
+                        improvements={evaluation.improvements}
+                        attemptNumber={evaluation.attemptNumber}
+                        passingScore={evaluation.passingScore}
+                    />
+                )}
+
+                {isCompleted && !evaluation && (
+                    // A status line. It used to be a tinted card with an icon
+                    // medallion and a "Next Activity" button wired to nothing.
+                    <p className="flex items-center gap-2 text-sm font-medium text-success lg:shrink-0 lg:border-t lg:px-4 lg:py-3" role="status">
+                        <IconCheck size={16} aria-hidden="true" />
+                        {t("solved")}
+                    </p>
                 )}
             </div>
         </>

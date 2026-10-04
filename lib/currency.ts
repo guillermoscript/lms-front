@@ -51,14 +51,19 @@ export function fromCents(cents: number, currency: string): number {
  */
 export function formatCurrency(
   amount: number,
-  currency: string = 'usd',
+  currency: string | null | undefined = 'usd',
   locale: string = 'en-US'
 ): string {
+  // `products.currency` and `plans.currency` are nullable with no database
+  // default, and the admin client is untyped, so a row written outside the
+  // wizard can carry NULL. A default parameter only fires on `undefined`, so
+  // without this a single such row threw and took down the whole page (#727).
+  const code = currency || 'usd'
   return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: currency.toUpperCase(),
-    minimumFractionDigits: ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? 0 : 2,
-    maximumFractionDigits: ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? 0 : 2,
+    currency: code.toUpperCase(),
+    minimumFractionDigits: ZERO_DECIMAL_CURRENCIES.has(code.toLowerCase()) ? 0 : 2,
+    maximumFractionDigits: ZERO_DECIMAL_CURRENCIES.has(code.toLowerCase()) ? 0 : 2,
   }).format(amount)
 }
 

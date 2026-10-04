@@ -31,31 +31,31 @@ VALUES
 (
   'free', 'Free', 'Get started with basic features',
   0, 0, 10.00, 0,
-  '{"leaderboard":false,"achievements":false,"store":false,"certificates":"basic","analytics":false,"ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"community":false,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":false,"achievements":false,"store":false,"certificates":"basic","analytics":false,"ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":true,"white_label":false,"priority_support":false,"community":false,"xp":true,"levels":true,"streaks":true,"remove_branding":false,"voice_exercises":false,"landing_pages":true}'::jsonb,
   '{"max_courses":5,"max_students":50}'::jsonb
 ),
 (
   'starter', 'Starter', 'For growing schools that need more capacity',
   9, 90, 5.00, 1,
-  '{"leaderboard":true,"achievements":true,"store":false,"certificates":"custom","analytics":"basic","ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":false,"certificates":"custom","analytics":"basic","ai_grading":false,"custom_branding":false,"custom_domain":false,"api_access":true,"white_label":false,"priority_support":false,"community":true,"xp":true,"levels":true,"streaks":true,"remove_branding":false,"voice_exercises":false,"landing_pages":true}'::jsonb,
   '{"max_courses":15,"max_students":200}'::jsonb
 ),
 (
   'pro', 'Pro', 'Advanced features for professional educators',
   29, 290, 2.00, 2,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":false,"custom_domain":false,"api_access":false,"white_label":false,"priority_support":false,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":false,"custom_domain":false,"api_access":true,"white_label":false,"priority_support":false,"community":true,"xp":true,"levels":true,"streaks":true,"remove_branding":true,"voice_exercises":true,"landing_pages":true}'::jsonb,
   '{"max_courses":100,"max_students":1000}'::jsonb
 ),
 (
   'business', 'Business', 'Full platform with custom branding and priority support',
   79, 790, 0, 3,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":false,"white_label":false,"priority_support":true,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":false,"priority_support":true,"community":true,"xp":true,"levels":true,"streaks":true,"remove_branding":true,"voice_exercises":true,"landing_pages":true}'::jsonb,
   '{"max_courses":-1,"max_students":5000}'::jsonb
 ),
 (
   'enterprise', 'Enterprise', 'Unlimited everything with white-label and API access',
   199, 1990, 0, 4,
-  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":true,"priority_support":true,"community":true,"xp":true,"levels":true,"streaks":true}'::jsonb,
+  '{"leaderboard":true,"achievements":true,"store":true,"certificates":"custom","analytics":"advanced","ai_grading":true,"custom_branding":true,"custom_domain":true,"api_access":true,"white_label":true,"priority_support":true,"community":true,"xp":true,"levels":true,"streaks":true,"remove_branding":true,"voice_exercises":true,"landing_pages":true}'::jsonb,
   '{"max_courses":-1,"max_students":-1}'::jsonb
 )
 ON CONFLICT (slug) DO UPDATE SET
@@ -78,16 +78,16 @@ ON CONFLICT (slug) DO UPDATE SET
 -- Kept on the FREE plan on purpose: it's the baseline tenant for exercising plan-gating in
 -- local dev and E2E (free-plan upgrade nudges, the landing-builder paid gate, etc.). Use a
 -- paid tenant (e.g. Code Academy below, on `pro`) when you need gated features unlocked.
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', '#2563eb', '#7c3aed', 'free', 'active', 'active')
+INSERT INTO tenants (id, slug, name, plan, status, billing_status)
+VALUES ('00000000-0000-0000-0000-000000000001', 'default', 'Default School', 'free', 'active', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- Code Academy — used for subdomain E2E tests (code-academy.lvh.me:3000)
 -- On 'enterprise' (full plan, all features unlocked) so it's the go-to tenant
 -- for testing gated features; Default School stays on 'free' (all gates
 -- active) so upgrade-nudge / locked-feature UX is also covered. See #291.
-INSERT INTO tenants (id, slug, name, primary_color, secondary_color, plan, status, billing_status)
-VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', '#7c3aed', '#2563eb', 'enterprise', 'active', 'active')
+INSERT INTO tenants (id, slug, name, plan, status, billing_status)
+VALUES ('00000000-0000-0000-0000-000000000002', 'code-academy', 'Code Academy Pro', 'enterprise', 'active', 'active')
 ON CONFLICT (id) DO UPDATE SET plan = EXCLUDED.plan, billing_status = EXCLUDED.billing_status;
 
 
@@ -682,8 +682,7 @@ ON CONFLICT (user_id, tenant_id) DO NOTHING;
 -- ---------------------------------------------------------------------------
 INSERT INTO tenant_settings (tenant_id, setting_key, setting_value)
 VALUES
-  ('00000000-0000-0000-0000-000000000002', 'site_name',     '{"value":"Code Academy Pro"}'::jsonb),
-  ('00000000-0000-0000-0000-000000000002', 'primary_color', '{"value":"#7c3aed"}'::jsonb)
+  ('00000000-0000-0000-0000-000000000002', 'site_name',     '{"value":"Code Academy Pro"}'::jsonb)
 ON CONFLICT (tenant_id, setting_key) DO NOTHING;
 
 
@@ -1250,6 +1249,19 @@ pip install -r requirements.txt
   NULL, NULL
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- The first lesson of every published course is a free preview (#791): that is
+-- what a new course gets by default now, and a seed without one shows visitors
+-- a curriculum they cannot open a single line of — which is exactly how the
+-- feature ended up set on 1 lesson in 83 in production.
+UPDATE lessons l
+SET is_preview = true
+WHERE l.sequence = 1
+  AND l.status = 'published'
+  AND EXISTS (
+    SELECT 1 FROM courses c
+    WHERE c.course_id = l.course_id AND c.status = 'published'
+  );
 
 
 -- ---------------------------------------------------------------------------

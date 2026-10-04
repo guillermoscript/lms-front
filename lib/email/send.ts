@@ -1,4 +1,5 @@
 import { getMailgunClient, MAILGUN_DOMAIN, EMAIL_FROM } from './client'
+import { isMailerConfigured } from './status'
 
 export interface SendEmailOptions {
   to: string
@@ -9,10 +10,15 @@ export interface SendEmailOptions {
 
 /**
  * Send a transactional email via Mailgun.
- * Returns true on success, false if Mailgun is not configured (silent fail in dev).
+ *
+ * Returns true only when Mailgun accepted the message. False means nothing
+ * reached the recipient — either the mailer is not configured (see
+ * `isMailerConfigured()` in `./status`) or the API call failed. Call sites that
+ * tell a person "we emailed X" must read this boolean; the invitation dialog,
+ * certificate issuance and course deletion do (#676).
  */
 export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
-  if (!process.env.MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+  if (!isMailerConfigured() || !MAILGUN_DOMAIN) {
     console.warn('[email] Mailgun not configured — skipping email to', options.to)
     return false
   }

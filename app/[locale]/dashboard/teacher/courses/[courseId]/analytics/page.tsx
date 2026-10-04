@@ -16,6 +16,8 @@ import {
 } from '@tabler/icons-react'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getConfusionHotspots, type Hotspot } from '@/lib/analytics/confusion-hotspots'
+import { getAnalyticsTier, getTenantPlan } from '@/lib/plans/server'
+import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { HotspotScopeBadge, SeverityBar, DifficultyDelta } from '@/components/teacher/analytics-cells'
 
 interface PageProps {
@@ -115,6 +117,19 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
             </Link>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
+
+  // Per-course confusion hotspots are Advanced analytics (Pro+, #662).
+  if ((await getAnalyticsTier(tenantId)) !== 'advanced') {
+    return (
+      <div className="p-8" data-testid="teacher-analytics-page">
+        <UpgradeNudge
+          feature="analytics"
+          hint="analyticsBasic"
+          currentPlan={(await getTenantPlan(tenantId)).slug}
+        />
       </div>
     )
   }

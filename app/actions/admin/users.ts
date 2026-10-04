@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
+import { normalizeBanReason } from '@/lib/tenant/ban'
 
 /**
  * Updates user roles. Replaces all existing roles with the provided ones.
@@ -207,6 +208,144 @@ export async function removeTenantMember(userId: string): Promise<ActionResult> 
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to remove member',
+    }
+  }
+}
+
+/**
+ * Ban a user from the current school (#892).
+ *
+ * A removal can be undone by the member themselves (they re-join through the
+ * join link); a ban cannot — every join path refuses a `banned` row and the
+ * `guard_tenant_ban` trigger backs that up at the database. The admin lifts it
+ * with `liftTenantBan`, which puts the person back to "removed", not "active".
+ *
+ * Tenant-scoped by construction (no super-admin bypass, same as
+ * `removeTenantMember`): the RPC is keyed by the current tenant id and the
+ * caller was verified as an admin of it by `verifyAdminAccess()`. The RPC
+ * itself refuses banning yourself or the last active admin.
+ */
+export async function banTenantMember(
+  userId: string,
+  reason?: string
+): Promise<ActionResult> {
+  try {
+    await verifyAdminAccess()
+
+    const tenantId = await getCurrentTenantId()
+    const actorId = await getCurrentUserId()
+
+    if (!userId) throw new Error('User ID is required')
+    if (!actorId) throw new Error('Not authenticated')
+
+    const adminClient = createAdminClient()
+
+    const { error } = await adminClient.rpc('ban_tenant_member', {
+      _tenant_id: tenantId,
+      _user_id: userId,
+      _actor_id: actorId,
+      _reason: normalizeBanReason(reason) ?? undefined,
+    })
+
+    if (error) {
+      const message = error.message ?? ''
+      if (message.includes('cannot_ban_self')) throw new Error('You cannot ban yourself.')
+      if (message.includes('last_admin')) {
+        throw new Error('Cannot ban the last admin. Promote another user to admin first.')
+      }
+      if (message.includes('member_not_found')) throw new Error('User not found or access denied')
+      throw error
+    }
+
+    // The banned user's JWT still carries this school's `tenant_id`/role claim
+    // until it expires, and RLS trusts the claim. Drop the stamp so the next
+    // refresh mints a token with no claim for this school (`get_tenant_id()`
+    // then fails closed). Best-effort: the ban itself already holds on every
+    // app path via `tenant_users`.
+    try {
+      const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
+      if (authUser?.user?.app_metadata?.tenant_id === tenantId) {
+        await adminClient.auth.admin.updateUserById(userId, {
+          app_metadata: { tenant_id: null },
+        })
+      }
+    } catch (claimErr) {
+      console.error('Ban: failed to clear tenant claim:', claimErr)
+    }
+
+    await adminClient.from('notifications').insert({
+      user_id: userId,
+      notification_type: 'account_update',
+      message: 'You have been removed from this school and can no longer rejoin it.',
+      link: '/join-school',
+    })
+
+    // Usage dropped exactly as for a removal — see `removeTenantMember`.
+    await reconcileAccessCutoffSafely(adminClient, tenantId)
+
+    revalidatePath('/dashboard/admin/users')
+    revalidatePath(`/dashboard/admin/users/${userId}`)
+    revalidatePath('/dashboard/admin/billing')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Ban tenant member failed:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to ban member',
+    }
+  }
+}
+
+/**
+ * Lift a ban (#892). The member lands on `removed`: they are not reinstated,
+ * they may re-join through the join link like any removed member — through the
+ * student-limit check, so lifting a ban never spends a seat by itself.
+ */
+export async function liftTenantBan(userId: string): Promise<ActionResult> {
+  try {
+    await verifyAdminAccess()
+
+    const tenantId = await getCurrentTenantId()
+
+    if (!userId) throw new Error('User ID is required')
+
+    const adminClient = createAdminClient()
+
+    // Ownership: the pair (tenant, user) must be a banned row of THIS school.
+    const { data: membership } = await adminClient
+      .from('tenant_users')
+      .select('status')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (!membership) throw new Error('User not found or access denied')
+
+    if (membership.status === 'banned') {
+      const { error } = await adminClient.rpc('lift_tenant_ban', {
+        _tenant_id: tenantId,
+        _user_id: userId,
+      })
+      if (error) throw error
+
+      await adminClient.from('notifications').insert({
+        user_id: userId,
+        notification_type: 'account_update',
+        message: 'The ban on your membership of this school was lifted. You can rejoin it.',
+        link: '/join-school',
+      })
+    }
+
+    revalidatePath('/dashboard/admin/users')
+    revalidatePath(`/dashboard/admin/users/${userId}`)
+
+    return { success: true }
+  } catch (error) {
+    console.error('Lift tenant ban failed:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to lift ban',
     }
   }
 }

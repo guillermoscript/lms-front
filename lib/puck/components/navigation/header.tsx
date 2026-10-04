@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { useState, useEffect, useCallback } from 'react'
@@ -87,7 +89,7 @@ export const Header: ComponentConfig<HeaderProps> = {
     sticky: true,
     transparent: false,
   },
-  render: ({ logo, logoText, navLinks, ctaLabel, ctaHref, showLogin, showLanguageSwitcher = true, sticky, transparent }) => {
+  render: function HeaderView({ logo, logoText, navLinks, ctaLabel, ctaHref, showLogin, showLanguageSwitcher = true, sticky, transparent }) {
     const t = useTranslations('puck.render')
     const [user, setUser] = useState<{ id: string } | null>(null)
     const [loading, setLoading] = useState(true)
@@ -123,8 +125,15 @@ export const Header: ComponentConfig<HeaderProps> = {
         )}
       >
         <div className="mx-auto max-w-screen-xl flex items-center justify-between px-6 py-3">
+          {/* The literal white ink on the logo and the nav links below is content colour,
+              kept on purpose: it applies only when the creator opted into
+              `transparent: true`, i.e. the header floats over their own hero image, where a
+              theme token would be invisible. Known limitation: a transparent header over a
+              LIGHT hero has no dark-ink option — tracked as a follow-up (an explicit
+              "Overlay text" field). Every shipped template sets `transparent: false`, so no
+              seeded page is affected. */}
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2 no-underline">
+          <Link href="/" className="flex items-center gap-2 no-underline">
             {logo ? (
               <img src={logo} alt={logoText || t('home')} className="h-8 object-contain" />
             ) : (
@@ -137,7 +146,7 @@ export const Header: ComponentConfig<HeaderProps> = {
                 {logoText || t('home')}
               </span>
             )}
-          </a>
+          </Link>
 
           {/* Nav */}
           <nav aria-label="Main navigation" className="flex items-center gap-8">
@@ -146,7 +155,7 @@ export const Header: ComponentConfig<HeaderProps> = {
                 key={i}
                 href={link.href}
                 className={cn(
-                  'text-sm font-medium no-underline transition-colors truncate relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-current after:transition-all after:duration-300 hover:after:w-full',
+                  'text-sm font-medium no-underline transition-colors truncate relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-current after:transition-transform motion-reduce:after:transition-none after:duration-300 hover:after:scale-x-100',
                   transparent
                     ? 'text-white/80 hover:text-white'
                     : 'text-muted-foreground hover:text-foreground'
@@ -162,11 +171,9 @@ export const Header: ComponentConfig<HeaderProps> = {
             {showLanguageSwitcher && <LanguageSwitcher />}
             {!loading && isAuthenticated ? (
               <>
-                <a href="/dashboard" className="no-underline">
-                  <Button variant="ghost" size="sm">
+                <ButtonLink href="/dashboard" variant="ghost" size="sm">
                     {t('dashboard')}
-                  </Button>
-                </a>
+                  </ButtonLink>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
                   {t('logOut')}
                 </Button>
@@ -174,18 +181,14 @@ export const Header: ComponentConfig<HeaderProps> = {
             ) : (
               <>
                 {showLogin && (
-                  <a href="/auth/login" className="no-underline">
-                    <Button variant="ghost" size="sm">
+                  <ButtonLink href="/auth/login" variant="ghost" size="sm">
                       {t('logIn')}
-                    </Button>
-                  </a>
+                    </ButtonLink>
                 )}
                 {ctaLabel && ctaHref && (
-                  <a href={ctaHref} className="no-underline">
-                    <Button size="sm">
+                  <ButtonLink href={ctaHref} size="sm">
                       {ctaLabel}
-                    </Button>
-                  </a>
+                    </ButtonLink>
                 )}
               </>
             )}

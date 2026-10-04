@@ -1,20 +1,21 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { generateText } from 'ai'
 import { AI_MODELS } from '@/lib/ai/config'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export const maxDuration = 120
 
 export async function POST(req: Request) {
-  const supabase = await createClient()
+  // 1. Auth — session cookie (web) or Bearer token (native app, #839)
+  const auth = await getApiAuthContext(req)
+  if (!auth) return new Response('Unauthorized', { status: 401 })
+  const { user, tenantId } = auth
   const adminClient = createAdminClient()
-  const tenantId = await getCurrentTenantId()
-
-  // 1. Auth
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Response('Unauthorized', { status: 401 })
 
   // 2. Parse input
   let exerciseId: number
@@ -32,11 +33,13 @@ export async function POST(req: Request) {
   }
 
   // 3. Fetch exercise via admin client
-  const { data: exercise, error: fetchError } = await adminClient
+  const { data: storedExercise, error: fetchError } = await adminClient
     .from('exercises')
-    .select('id, title, instructions, exercise_type, exercise_config, course_id, tenant_id, courses(tenant_id)')
+    .select(`id, title, instructions, exercise_type, exercise_config, course_id, tenant_id, courses(tenant_id), ${GRADING_SECRETS_EMBED}`)
     .eq('id', exerciseId)
     .single()
+  // Criteria and grader prompt live outside the student-readable row (#833).
+  const exercise = storedExercise ? withGradingSecrets(storedExercise) : null
 
   if (fetchError || !exercise) {
     return Response.json({ error: 'Exercise not found' }, { status: 404 })
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
   if (exercise.exercise_type !== 'artifact') {
     return Response.json({ error: 'Not an artifact exercise' }, { status: 400 })
   }
-  const courseTenantId = (exercise.courses as any)?.tenant_id
+  const courseTenantId = (exercise.courses as { tenant_id?: string } | null)?.tenant_id
   if (exercise.tenant_id !== tenantId && courseTenantId !== tenantId) {
     return Response.json({ error: 'Exercise not found' }, { status: 404 })
   }
@@ -74,7 +77,11 @@ export async function POST(req: Request) {
   }
 
   // 7. Extract server-side config
-  const config = (exercise.exercise_config as Record<string, any>) ?? {}
+  const config = (exercise.exercise_config ?? {}) as {
+    evaluation_criteria?: string
+    system_prompt?: string | null
+    passing_score?: number
+  }
   const evaluationCriteria = config.evaluation_criteria ?? ''
   const systemPrompt = config.system_prompt ?? null
   const passingScore = config.passing_score ?? 70
@@ -147,21 +154,29 @@ End "feedback" with one short reflective question tied to the most important imp
 
     // 11. Record completion if passed
     if (passed) {
-      // exercise_completions has NO tenant_id column — sending it 400s the insert.
-      await adminClient
-        .from('exercise_completions')
-        .insert({
-          exercise_id: exerciseId,
-          user_id: user.id,
-          completed_by: user.id,
-          score: evaluation.score,
-        })
-        .select('id')
-        .single()
-      // unique index (exercise_id, user_id) prevents duplicates — error is expected on re-pass
+      const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score: evaluation.score })
+      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
     }
 
-    // 12. Return result (never include evaluation_criteria or system_prompt)
+    // 12. Track the submission. No `attempt_number`: the only count this route
+    // has is the 1-hour rate-limit window, and passing that off as an absolute
+    // attempt ordinal would quietly reset every hour. Ordinality is recoverable
+    // in OpenPanel by counting this event per user+exercise.
+    await track(
+      ANALYTICS_EVENTS.EXERCISE_SUBMITTED,
+      {
+        exercise_id: exerciseId,
+        course_id: exercise.course_id,
+        exercise_type: exercise.exercise_type,
+        score: evaluation.score,
+        passed,
+        passing_score: passingScore,
+        attempts_last_hour: (recentCount ?? 0) + 1,
+      },
+      { userId: user.id, tenantId, role: 'student' }
+    )
+
+    // 13. Return result (never include evaluation_criteria or system_prompt)
     return Response.json({
       score: evaluation.score,
       feedback: evaluation.feedback,
@@ -170,7 +185,7 @@ End "feedback" with one short reflective question tied to the most important imp
       improvements: evaluation.improvements,
       passingScore,
     })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Artifact evaluation error:', err)
     return Response.json({ error: 'Evaluation failed' }, { status: 500 })
   }

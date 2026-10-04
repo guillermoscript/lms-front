@@ -88,7 +88,7 @@ export const LogoMarquee: ComponentConfig<LogoMarqueeProps> = {
               {title}
             </p>
           )}
-          <div className="relative">
+          <div className="relative motion-reduce:[&_.animate-marquee]:animate-none focus-within:[&_.animate-marquee]:[animation-play-state:paused]">
             <Marquee reverse={reverse === 'true'} pauseOnHover={pauseOnHover === 'true'}>
               {items.map((logo, i) => {
                 const img = (
@@ -96,7 +96,7 @@ export const LogoMarquee: ComponentConfig<LogoMarqueeProps> = {
                     src={logo.src}
                     alt={logo.alt}
                     loading="lazy"
-                    className="h-10 w-auto object-contain opacity-60 hover:opacity-100 transition-all duration-300"
+                    className="h-10 w-auto object-contain opacity-60 hover:opacity-100 transition-colors motion-reduce:transition-none duration-300"
                   />
                 )
                 return logo.url ? (

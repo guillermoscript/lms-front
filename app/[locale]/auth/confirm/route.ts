@@ -4,6 +4,9 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { type NextRequest } from 'next/server'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { joinSchoolPath } from '@/lib/auth/route-access'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -35,9 +38,18 @@ export async function GET(request: NextRequest) {
 
       // Smart redirect for new signups based on context
       if (type === 'signup' && user) {
-        if (requestedNext && next !== '/') {
-          redirect(next)
-        }
+        // This — not /auth/sign-up-success — is the email-verification landing
+        // the coverage map means. sign-up-success is the "check your inbox"
+        // screen and is reached before the email is ever opened, so an event
+        // there would count intent, not confirmation.
+        // Must precede every `redirect()` below: those throw NEXT_REDIRECT.
+        await track(
+          ANALYTICS_EVENTS.SIGNUP_CONFIRMED,
+          { method: 'email' },
+          { userId: user.id, tenantId }
+        )
+
+        const intended = requestedNext && next !== '/' ? next : null
 
         // Check if user already has active school memberships
         const { data: memberships } = await supabase
@@ -48,14 +60,21 @@ export async function GET(request: NextRequest) {
           .limit(1)
 
         if ((memberships ?? []).length > 0) {
-          // Already set up → go to dashboard
-          redirect('/dashboard/student')
+          // Already set up → where they were headed, else the dashboard
+          redirect(intended ?? '/dashboard/student')
         } else if (tenantId === DEFAULT_TENANT_ID) {
-          // Main platform → prompt to create a school
-          redirect('/create-school')
+          // Main platform → where they were headed, else prompt to create a
+          // school. A buyer who signs up on the platform tenant from a product
+          // page would otherwise lose that product here — the same bug this
+          // route fixes on a school subdomain.
+          redirect(intended ?? '/create-school')
         } else {
-          // School subdomain → join that school
-          redirect('/join-school')
+          // School subdomain → join that school, carrying the destination.
+          // Sending a non-member straight to `intended` would drop them on a
+          // product page they still cannot buy from, and the join step would
+          // then forget where they were going (#728). The join page and form
+          // both already forward `next`.
+          redirect(joinSchoolPath(intended))
         }
       }
 

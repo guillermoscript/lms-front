@@ -83,12 +83,14 @@ export async function GET(req: NextRequest) {
   }
 
   let captureId: string | undefined
+  let captureStatus: string | undefined
   let reference: string | undefined
   let metadata: Record<string, string> | undefined
 
   try {
     const captured = await provider.captureOrder(orderId)
     captureId = captured.captureId
+    captureStatus = captured.captureStatus
     reference = captured.reference
     metadata = captured.metadata
   } catch (err) {
@@ -99,6 +101,7 @@ export async function GET(req: NextRequest) {
       try {
         const order = await provider.getOrder(orderId)
         captureId = order.captureId
+        captureStatus = order.captureStatus
         reference = order.reference
         metadata = order.metadata
       } catch (readErr) {
@@ -112,7 +115,15 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (captureId && reference) {
+  // Only a COMPLETED capture is money. PayPal can hand back PENDING (payment
+  // review, eCheck, a currency the merchant does not hold) and settle it days
+  // later — or deny it. Enrolling on PENDING gave the course away for a payment
+  // that could still fail (#479); PAYMENT.CAPTURE.COMPLETED or .DENIED decides.
+  if (captureId && reference && captureStatus !== 'COMPLETED') {
+    console.warn(
+      `[paypal/capture] capture ${captureId} is ${captureStatus ?? 'unknown'} — leaving the sale pending for the webhook`,
+    )
+  } else if (captureId && reference) {
     try {
       await dispatchBillingEvent(
         {

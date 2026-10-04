@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
 
@@ -11,7 +11,7 @@ import { ok, errorResult } from "../format.js";
  * of the caller covers the course; the RPC raises otherwise, and its message
  * is surfaced back to the student verbatim.
  */
-export function registerEnrollTools(server: MCPServer) {
+export function registerEnrollTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_enroll_in_course",

@@ -52,19 +52,19 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
     accentColor: accentColorField,
     ...sectionSpacingFields,
   },
+  // The default carries no numbers (#724). With "Use Live Stats" on, the
+  // school's real Students/Courses/Completions counts arrive through
+  // `puck.metadata`; with it off, the school types its own. The old default
+  // published "10,000+ Students" and "4.9/5" for a school with neither, and
+  // `render` already hides the block when there is nothing to show.
   defaultProps: {
-    items: [
-      { value: '10,000', label: 'Students', prefix: '', suffix: '+' },
-      { value: '500', label: 'Courses', prefix: '', suffix: '+' },
-      { value: '50', label: 'Instructors', prefix: '', suffix: '+' },
-      { value: '4.9', label: 'Rating', prefix: '', suffix: '/5' },
-    ],
+    items: [],
     alignment: 'center',
     useLiveStats: true,
     accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ items, alignment, useLiveStats, accentColor, paddingY, paddingX, maxWidth, marginY, puck }) => {
+  render: function StatsCounterView({ items, alignment, useLiveStats, accentColor, paddingY, paddingX, maxWidth, marginY, puck }) {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
 
@@ -93,11 +93,11 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
             )}
           >
             {resolvedItems.map((stat, i) => (
-              <div key={i} className="flex flex-col-reverse transition-transform duration-300 hover:scale-105">
+              <div key={i} className="flex flex-col-reverse transition-transform motion-reduce:transition-none duration-300">
                 <dt className="text-sm text-muted-foreground mt-2 uppercase tracking-wider font-medium truncate">
                   {stat.label}
                 </dt>
-                <dd className="text-4xl font-extrabold leading-none text-[var(--block-accent)]">
+                <dd className="text-4xl font-extrabold leading-none text-[var(--block-accent-text)]">
                   {stat.prefix}{stat.value}{stat.suffix}
                 </dd>
               </div>

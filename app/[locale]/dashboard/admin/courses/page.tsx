@@ -1,12 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getUserRole } from '@/lib/supabase/get-user-role'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import {
-  IconArrowLeft,
   IconBook,
+  IconPlus,
 } from '@tabler/icons-react'
 import { CoursesTable } from '@/components/admin/courses-table'
 import { getTranslations } from 'next-intl/server'
@@ -78,8 +77,19 @@ export default async function AdminCoursesPage() {
               ]}
             />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
+            </div>
+            {/* Admins create courses through the teacher editor. Without this
+                entry point the page reads as a read-only report and admins
+                cannot find how to add a course (Sentry LMS-FRONT-9N). */}
+            <Button size="sm" className="gap-2" render={<Link href="/dashboard/admin/courses/new" />} data-testid="admin-create-course">
+              <IconPlus className="h-3.5 w-3.5" />
+              {t('createCourse')}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -93,8 +103,8 @@ export default async function AdminCoursesPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{courses?.length || 0}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
+                  <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -107,8 +117,8 @@ export default async function AdminCoursesPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.published')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{publishedCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                  <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -121,8 +131,8 @@ export default async function AdminCoursesPage() {
                   <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t('stats.drafts')}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">{draftCount}</p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                  <IconBook className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                  <IconBook className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>

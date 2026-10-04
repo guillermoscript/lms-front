@@ -26,7 +26,7 @@ export function UsageMeter({ label, current, limit, className }: UsageMeterProps
         <span className={cn(
           'shrink-0 font-medium tabular-nums',
           isAtLimit && 'text-destructive',
-          isWarning && !isAtLimit && 'text-yellow-600 dark:text-yellow-500'
+          isWarning && !isAtLimit && 'text-warning'
         )}>
           {current} / {isUnlimited ? '∞' : limit.toLocaleString()}
         </span>
@@ -38,14 +38,14 @@ export function UsageMeter({ label, current, limit, className }: UsageMeterProps
             aria-label={`${label}: ${t('usagePercent', { percent: roundedPercentage })}`}
             className={cn(
               'h-2',
-              isAtLimit && '[&>div]:bg-destructive',
-              isWarning && !isAtLimit && '[&>div]:bg-yellow-500'
+              isAtLimit && '[&_[data-slot=progress-indicator]]:bg-destructive',
+              isWarning && !isAtLimit && '[&_[data-slot=progress-indicator]]:bg-warning'
             )}
           />
           <p className={cn(
             'text-xs text-muted-foreground',
             isAtLimit && 'text-destructive',
-            isWarning && !isAtLimit && 'text-yellow-700 dark:text-yellow-400',
+            isWarning && !isAtLimit && 'text-warning',
           )}>
             {isAtLimit ? t('limitReached') : t('usagePercent', { percent: roundedPercentage })}
           </p>

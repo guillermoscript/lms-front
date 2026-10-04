@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatDate } from '@/lib/format-date'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +11,8 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { CertificatePreview } from '@/components/teacher/certificate-preview'
 import { IssueCertificateButton } from '@/components/teacher/issue-certificate-button'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -19,6 +22,7 @@ export default async function CertificatesPage({ params }: PageProps) {
   const { courseId } = await params
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
+  const locale = await getLocale()
   const tenantId = await getCurrentTenantId()
 
   const userId = await getCurrentUserId()
@@ -76,11 +80,12 @@ export default async function CertificatesPage({ params }: PageProps) {
   const template = templateRes.data
   const certificates = certsRes.data || []
   const enrollments = enrollmentsRes.data || []
+  const brand = await getSchoolBrand(tenantId)
 
   // Students who don't have certificates yet
-  const certifiedUserIds = new Set(certificates.map((c: any) => c.user_id))
+  const certifiedUserIds = new Set(certificates.map((c) => c.user_id))
   const uncertifiedEnrollments = enrollments.filter(
-    (e: any) => !certifiedUserIds.has(e.user_id ?? e.profiles?.id)
+    (e) => !certifiedUserIds.has(e.user_id ?? e.profiles?.id)
   )
 
   return (
@@ -118,8 +123,8 @@ export default async function CertificatesPage({ params }: PageProps) {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                <IconAward className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
+                <IconAward className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{certificates.length}</p>
@@ -131,8 +136,8 @@ export default async function CertificatesPage({ params }: PageProps) {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                <IconUsers className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
+                <IconUsers className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{enrollments.length}</p>
@@ -144,13 +149,13 @@ export default async function CertificatesPage({ params }: PageProps) {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <IconShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="w-10 h-10 rounded-xl bg-brand-tint flex items-center justify-center shrink-0">
+                <IconShieldCheck className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">
                   {template ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">{t('certificates.stats.active')}</span>
+                    <span className="text-success">{t('certificates.stats.active')}</span>
                   ) : (
                     <span className="text-muted-foreground">{t('certificates.stats.none')}</span>
                   )}
@@ -166,7 +171,7 @@ export default async function CertificatesPage({ params }: PageProps) {
       <div className="grid gap-8 lg:grid-cols-5">
         {/* Left: Template preview */}
         <div className="lg:col-span-2 space-y-5">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
             {t('certificates.templatePreview')}
           </h2>
 
@@ -176,11 +181,8 @@ export default async function CertificatesPage({ params }: PageProps) {
                 <CertificatePreview
                   templateName={template.template_name}
                   issuerName={template.issuer_name}
-                  designSettings={template.design_settings || {
-                    primary_color: '#3B82F6',
-                    secondary_color: '#1E40AF',
-                    show_qr_code: true,
-                  }}
+                  designSettings={template.design_settings || DEFAULT_CERTIFICATE_DESIGN}
+                  brand={brand.outputs}
                 />
               </div>
               <div className="space-y-3 px-1">
@@ -198,18 +200,21 @@ export default async function CertificatesPage({ params }: PageProps) {
                     <p className="text-sm text-muted-foreground">{template.description}</p>
                   </div>
                 )}
+                {/* Swatches of the two colours the school chose for its
+                    certificate, shown as themselves — a theme token here would
+                    preview a design nobody picked. */}
                 <div className="flex items-center gap-3 pt-1">
                   <div className="flex items-center gap-2">
                     <div
                       className="h-4 w-4 rounded-full border"
-                      style={{ backgroundColor: template.design_settings?.primary_color || '#3B82F6' }}
+                      style={{ backgroundColor: template.design_settings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color }}
                     />
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{t('certificates.templates.primaryColor')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div
                       className="h-4 w-4 rounded-full border"
-                      style={{ backgroundColor: template.design_settings?.secondary_color || '#1E40AF' }}
+                      style={{ backgroundColor: template.design_settings?.secondary_color || DEFAULT_CERTIFICATE_DESIGN.secondary_color }}
                     />
                     <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{t('certificates.templates.secondaryColor')}</span>
                   </div>
@@ -241,7 +246,7 @@ export default async function CertificatesPage({ params }: PageProps) {
           {/* Issued Certificates */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 {t('certificates.issued.title')}
               </h2>
               {certificates.length > 0 && (
@@ -273,7 +278,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                     </thead>
                     <tbody>
                       {certificates.length > 0 ? (
-                        certificates.map((cert: any) => (
+                        certificates.map((cert) => (
                           <tr
                             key={cert.certificate_id}
                             className="border-b last:border-0 hover:bg-muted/20 transition-colors"
@@ -291,11 +296,7 @@ export default async function CertificatesPage({ params }: PageProps) {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground text-xs tabular-nums">
-                              {new Date(cert.issued_at).toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
+                              {formatDate(cert.issued_at, locale)}
                             </td>
                             <td className="px-4 py-3">
                               <code className="text-[11px] font-mono bg-muted/50 px-2 py-0.5 rounded border">
@@ -337,13 +338,13 @@ export default async function CertificatesPage({ params }: PageProps) {
           {/* Issue to enrolled students */}
           {template && uncertifiedEnrollments.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 {t('certificates.eligibleStudents')}
               </h2>
               <Card>
                 <CardContent className="p-0">
                   <div className="divide-y">
-                    {uncertifiedEnrollments.map((enrollment: any) => {
+                    {uncertifiedEnrollments.map((enrollment) => {
                       const profile = enrollment.profiles
                       return (
                         <div

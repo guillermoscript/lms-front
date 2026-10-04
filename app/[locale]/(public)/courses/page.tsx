@@ -23,10 +23,13 @@ export default async function CoursesPage({
     searchParams,
 }: {
     params: Promise<{ locale: string }>
-    searchParams: Promise<{ search?: string; category?: string }>
+    searchParams: Promise<{ search?: string; category?: string; preview?: string }>
 }) {
     const { locale } = await params;
-    const { search, category } = await searchParams;
+    const { search, category, preview } = await searchParams;
+    // "Show me what I can start right now" (#791): courses with at least one
+    // published lesson a logged-out visitor can open.
+    const previewOnly = preview === '1';
     const t = await getTranslations('coursesCatalog');
     const tSearch = await getTranslations('courseSearch');
     const supabase = await createClient();
@@ -87,15 +90,19 @@ export default async function CoursesPage({
     // Published-lesson counts via admin client: the anon role can only read
     // preview lessons (RLS), so a nested select would undercount for visitors.
     const lessonCountMap: Record<number, number> = {};
+    const previewCountMap: Record<number, number> = {};
     if (courseIds.length > 0) {
         const { data: lessonRows } = await createAdminClient()
             .from('lessons')
-            .select('id, course_id')
+            .select('id, course_id, is_preview')
             .eq('tenant_id', tenantId)
             .eq('status', 'published')
             .in('course_id', courseIds);
         for (const row of lessonRows ?? []) {
             lessonCountMap[row.course_id] = (lessonCountMap[row.course_id] ?? 0) + 1;
+            if (row.is_preview) {
+                previewCountMap[row.course_id] = (previewCountMap[row.course_id] ?? 0) + 1;
+            }
         }
     }
 
@@ -137,12 +144,13 @@ export default async function CoursesPage({
             category: cat ? (Array.isArray(cat) ? cat[0] : cat) as { id: number; name: string } : null,
             author: auth ? (Array.isArray(auth) ? auth[0] : auth) as { id: string; full_name: string; avatar_url: string | null } : null,
             lessonCount: lessonCountMap[course.course_id] ?? 0,
+            previewLessonCount: previewCountMap[course.course_id] ?? 0,
             price: productMap[course.course_id]?.price ?? null,
             currency: productMap[course.course_id]?.currency ?? null,
         };
-    }) || [];
+    }).filter(course => !previewOnly || course.previewLessonCount > 0) || [];
 
-    const hasActiveFilters = sanitizedSearch || category;
+    const hasActiveFilters = Boolean(sanitizedSearch || category || previewOnly);
 
     // ItemList rich-result markup for the unfiltered catalog only — filtered
     // views are ephemeral search results, not the canonical course list.
@@ -155,15 +163,15 @@ export default async function CoursesPage({
         : null;
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-zinc-100">
+        <div className="min-h-screen bg-background text-foreground">
             {catalogStructuredData && <JsonLd data={catalogStructuredData} />}
             <div className="container mx-auto py-16 px-4 md:px-8">
                 {/* Header */}
                 <div className="mb-12 space-y-4 max-w-2xl">
-                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white text-balance">
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">
                         {t('title')}
                     </h1>
-                    <p className="text-zinc-400 text-lg leading-relaxed">
+                    <p className="text-muted-foreground text-lg leading-relaxed">
                         {t('description')}
                     </p>
                 </div>
@@ -173,10 +181,12 @@ export default async function CoursesPage({
                     categories={categories || []}
                     currentSearch={sanitizedSearch}
                     currentCategory={category}
+                    showPreviewFilter
+                    currentPreviewOnly={previewOnly}
                 />
 
                 {/* Results count */}
-                <div className="mb-8 text-sm text-zinc-400">
+                <div className="mb-8 text-sm text-muted-foreground">
                     {t('toolbar.showing', { count: enrichedCourses.length })}
                 </div>
 
@@ -188,15 +198,15 @@ export default async function CoursesPage({
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-32 bg-zinc-900/20 rounded-2xl border border-dashed border-zinc-800 flex flex-col items-center gap-6">
-                        <div className="p-6 bg-zinc-800/30 rounded-full border border-zinc-700/30">
-                            <Search className="w-12 h-12 text-zinc-500" aria-hidden="true" />
+                    <div className="text-center py-32 bg-muted/30 rounded-2xl border border-dashed border-border flex flex-col items-center gap-6">
+                        <div className="p-6 bg-muted rounded-full border border-border">
+                            <Search className="w-12 h-12 text-muted-foreground" aria-hidden="true" />
                         </div>
                         <div className="space-y-2">
-                            <h2 className="text-2xl font-bold text-zinc-200 text-balance">
+                            <h2 className="text-2xl font-bold text-foreground text-balance">
                                 {hasActiveFilters ? tSearch('noResults') : t('emptyState.title')}
                             </h2>
-                            <p className="text-zinc-400 text-base max-w-sm mx-auto">
+                            <p className="text-muted-foreground text-base max-w-sm mx-auto">
                                 {!hasActiveFilters && t('emptyState.description')}
                             </p>
                         </div>

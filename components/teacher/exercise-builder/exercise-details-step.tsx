@@ -22,13 +22,19 @@ import {
 import { cn } from '@/lib/utils'
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-  medium: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-  hard: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+  easy: 'bg-success/10 text-success border-success/20',
+  medium: 'bg-warning/10 text-warning border-warning/20',
+  hard: 'bg-destructive/10 text-destructive border-destructive/20',
 }
 
+const DIFFICULTY_LABEL_KEYS = {
+  easy: 'difficultyEasy',
+  medium: 'difficultyMedium',
+  hard: 'difficultyHard',
+} as const
+
 export function ExerciseDetailsStep() {
-  const { formData, updateField, setActiveStep } = useExerciseBuilder()
+  const { formData, updateField, setActiveStep, steps } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
 
   return (
@@ -110,6 +116,11 @@ export function ExerciseDetailsStep() {
                     <span>🎙️</span> {t('typeAudio')}
                   </span>
                 </SelectItem>
+                <SelectItem value="real_time_conversation">
+                  <span className="flex items-center gap-2">
+                    <span>🗣️</span> {t('typeConversation')}
+                  </span>
+                </SelectItem>
                 <SelectItem value="video_evaluation">
                   <span className="flex items-center gap-2">
                     <span>🎥</span> {t('typeVideo')}
@@ -138,7 +149,7 @@ export function ExerciseDetailsStep() {
                       : 'border-transparent bg-muted/40 text-muted-foreground hover:bg-muted'
                   )}
                 >
-                  {t(`difficulty${level.charAt(0).toUpperCase() + level.slice(1)}` as any)}
+                  {t(DIFFICULTY_LABEL_KEYS[level])}
                 </button>
               ))}
             </div>
@@ -194,7 +205,7 @@ export function ExerciseDetailsStep() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setActiveStep('ai-config')}
+          onClick={() => setActiveStep(steps[1]?.key ?? 'ai-config')}
           disabled={!formData.title}
           className="gap-2"
         >

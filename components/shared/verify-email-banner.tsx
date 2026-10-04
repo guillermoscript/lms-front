@@ -37,7 +37,7 @@ export function VerifyEmailBanner({ email }: VerifyEmailBannerProps) {
   }
 
   return (
-    <div className="flex items-center gap-3 border-b border-yellow-500/50 bg-yellow-50 px-4 py-2.5 text-yellow-800 dark:bg-yellow-950/20 dark:text-yellow-200">
+    <div className="flex items-center gap-3 border-b border-warning/50 bg-warning/10 px-4 py-2.5 text-warning">
       <IconMailExclamation className="h-5 w-5 shrink-0" />
       <p className="flex-1 text-sm">
         {t('message', { email })}{' '}

@@ -9,15 +9,15 @@ import { useCertificateTemplate } from './certificate-template-context'
 
 export function SignatureSection() {
     const t = useTranslations('dashboard.teacher.manageCourse.certificates.templates')
-    const { formData, setFormData, signatureInputRef, uploadingSignature, handleFileChange } = useCertificateTemplate()
+    const { formData, setFormData, signatureInputRef, uploadingSignature, handleFileChange, certificateTier } = useCertificateTemplate()
 
     return (
         <div className="space-y-5">
             <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <IconSignature className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-8 h-8 rounded-lg bg-brand-tint flex items-center justify-center">
+                    <IconSignature className="h-4 w-4 text-brand-text" />
                 </div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/70">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                     {t('signature')}
                 </h2>
             </div>
@@ -50,13 +50,16 @@ export function SignatureSection() {
                     </div>
                 </div>
 
-                {/* Signature image upload */}
+                {/* Signature image upload — custom certificates only (#662) */}
+                {certificateTier === 'custom' && (
                 <div className="space-y-2">
                     <Label className="text-sm font-medium">{t('signatureImageLabel')}</Label>
                     <p className="text-xs text-muted-foreground">{t('signatureImageDescription')}</p>
                     <div className="flex items-center gap-3">
                         {formData.signature_image_url ? (
                             <div className="relative group">
+                                {/* Opaque light plate behind the scanned signature: black ink on transparency,
+                                    printed on the certificate's paper, not on a themed surface. */}
                                 <img
                                     src={formData.signature_image_url}
                                     alt="Signature"
@@ -101,6 +104,7 @@ export function SignatureSection() {
                         </div>
                     </div>
                 </div>
+                )}
             </div>
         </div>
     )

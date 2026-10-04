@@ -6,6 +6,30 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole, isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/lib/payments/subscription-guard'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
+import { manualTransactionPaymentMethod } from '@/lib/payments/manual-payment-method'
+import {
+  OPEN_MANUAL_REQUEST_STATUSES,
+  isManualRequestExpirable,
+  isManualRequestOpen,
+  manualRequestExpiresAt,
+} from '@/lib/payments/manual-request-ttl'
+import {
+  ManualPaymentReportError,
+  normalizeManualPaymentReport,
+  type ManualPaymentReportInput,
+} from '@/lib/payments/manual-payment-report'
+import { sendEmail } from '@/lib/email/send'
+import { bestEffortLocaleOr } from '@/lib/i18n/best-effort-locale'
+import { paymentInstructionsTemplate } from '@/lib/email/templates/payment-instructions'
+import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 
 export interface PaymentRequestFormData {
   productId?: number
@@ -72,6 +96,63 @@ async function notifyPaymentRequestStatus(params: {
   }
 }
 
+/**
+ * Best-effort "here is how to pay" email (issue #727). The student copy used
+ * to promise this message while nothing sent one. `sendEmail()` returns
+ * `false` — and this returns `false` — when Mailgun is not configured (#676);
+ * the in-app notification and the My Payments page carry the instructions
+ * either way, so a missing mailer never fails the admin's action.
+ */
+async function emailPaymentInstructions(params: {
+  adminClient: ReturnType<typeof createAdminClient>
+  tenantId: string
+  requestId: number
+  studentUserId: string
+  itemName: string
+  paymentMethod: string | null
+  instructions: string
+  amount: number | null
+  currency: string | null
+  deadline: string | null
+}): Promise<boolean> {
+  const { adminClient, tenantId, requestId, studentUserId } = params
+  try {
+    if (!params.instructions.trim()) return false
+
+    const [{ data: authUser }, { data: tenant }, brand, timeZone, locale] = await Promise.all([
+      adminClient.auth.admin.getUserById(studentUserId),
+      adminClient.from('tenants').select('name, slug').eq('id', tenantId).single(),
+      getSchoolBrand(tenantId),
+      getTenantTimeZone(tenantId),
+      // The school's own UI language — the closest thing to the reader's that
+      // this flow knows, since nothing stores a per-student locale. Sending a
+      // LATAM buyer an English email would undo the point of translating the
+      // in-app copy (#727).
+      bestEffortLocaleOr('en'),
+    ])
+    const to = authUser?.user?.email
+    if (!to) return false
+
+    const template = paymentInstructionsTemplate({
+      schoolName: brand.name || tenant?.name || 'Your school',
+      itemName: params.itemName,
+      amountLabel: formatCurrency(params.amount ?? 0, params.currency || 'usd'),
+      paymentMethod: params.paymentMethod,
+      instructions: params.instructions,
+      deadlineLabel: params.deadline
+        ? formatDateTime(params.deadline, { locale, timeZone })
+        : null,
+      requestUrl: `${await getTenantSiteUrl(tenant?.slug || 'app')}/dashboard/student/payments/${requestId}`,
+      locale,
+      brand,
+    })
+    return await sendEmail({ to, ...template })
+  } catch (err) {
+    console.error('Failed to email payment instructions:', err)
+    return false
+  }
+}
+
 export interface PaymentInstructionsData {
   paymentMethod: string
   paymentInstructions: string
@@ -81,9 +162,47 @@ export interface PaymentInstructionsData {
 }
 
 /**
- * Student creates a payment request for manual/offline payment
+ * Student creates a payment request for manual/offline payment.
+ *
+ * Refusals come back as `{ error }` instead of a throw: Next.js replaces a
+ * thrown Server Action error's message with a generic digest in production
+ * builds, so "This product is free…" would reach the student as "An error
+ * occurred" everywhere except `next dev`.
  */
-export async function createPaymentRequest(data: PaymentRequestFormData) {
+export async function createPaymentRequest(
+  data: PaymentRequestFormData,
+): Promise<{ request: Awaited<ReturnType<typeof insertPaymentRequest>>; error?: never } | { error: string; request?: never }> {
+  try {
+    return { request: await insertPaymentRequest(data) }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to create payment request' }
+  }
+}
+
+/** Statuses in which a request is still being worked (mirrors the partial unique indexes). */
+const OPEN_PAYMENT_REQUEST_STATUSES = [...OPEN_MANUAL_REQUEST_STATUSES]
+
+async function findOpenPaymentRequest(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  tenantId: string,
+  data: PaymentRequestFormData,
+) {
+  let query = supabase
+    .from('payment_requests')
+    .select()
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .in('status', OPEN_PAYMENT_REQUEST_STATUSES)
+    .limit(1)
+  query = data.productId
+    ? query.eq('product_id', data.productId).is('plan_id', null)
+    : query.eq('plan_id', data.planId!).is('product_id', null)
+  const { data: request } = await query.maybeSingle()
+  return request
+}
+
+async function insertPaymentRequest(data: PaymentRequestFormData) {
   const supabase = await createClient()
   const userId = await getCurrentUserId()
   const tenantId = await getCurrentTenantId()
@@ -129,6 +248,13 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
       throw new Error('This product does not support manual payments')
     }
 
+    // A free offering is stored as price 0 with provider `manual` (the wizard's
+    // NOT NULL default). Nothing is owed, so there is nothing to request — the
+    // product page offers one-click enrollment instead (#727).
+    if (!(parseFloat(product.price) > 0)) {
+      throw new Error('This product is free — enroll directly from the product page')
+    }
+
     paymentAmount = parseFloat(product.price)
     paymentCurrency = product.currency || 'usd'
   } else {
@@ -160,6 +286,32 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
     paymentCurrency = plan.currency || 'usd'
   }
 
+  // One open request per student per item (#754). A double-click or a retry
+  // used to leave the admin with duplicate requests, and confirming the second
+  // one failed. Returning the open request makes the call idempotent; the
+  // partial unique indexes only settle two inserts racing past this read.
+  const existing = await findOpenPaymentRequest(supabase, userId, tenantId, data)
+  if (existing && isManualRequestOpen(existing)) return existing
+
+  // A lapsed row still occupies the partial unique index, so the insert below
+  // would 23505 into returning that same dead request forever (#802). Close it
+  // here rather than waiting for the sweep: the student is standing in front of
+  // the form right now, and a cron outage must not be what decides whether they
+  // can buy the course.
+  if (existing && isManualRequestExpirable(existing)) {
+    await createAdminClient()
+      .from('payment_requests')
+      .update({
+        status: 'cancelled',
+        expired_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('request_id', existing.request_id)
+      .eq('tenant_id', tenantId)
+  } else if (existing) {
+    return existing
+  }
+
   // Create payment request
   const { data: request, error } = await supabase
     .from('payment_requests')
@@ -174,15 +326,37 @@ export async function createPaymentRequest(data: PaymentRequestFormData) {
       status: 'pending',
       payment_amount: paymentAmount,
       payment_currency: paymentCurrency,
+      expires_at: manualRequestExpiresAt(),
       tenant_id: tenantId,
     })
     .select()
     .single()
 
   if (error) {
+    if (error.code === '23505') {
+      const winner = await findOpenPaymentRequest(supabase, userId, tenantId, data)
+      if (winner) return winner
+    }
     console.error('Failed to create payment request:', error)
     throw new Error('Failed to create payment request')
   }
+
+  // Loop C. The student IS the actor here, so no backdating is needed — unlike
+  // every later step in this flow, which runs in an admin's request context
+  // hours or days from now.
+  await track(
+    ANALYTICS_EVENTS.MANUAL_PAYMENT_REQUESTED,
+    {
+      provider: 'manual',
+      amount: paymentAmount,
+      currency: paymentCurrency,
+      is_subscription: !!data.planId,
+      request_id: request.request_id,
+      ...(data.productId ? { product_id: data.productId } : {}),
+      ...(data.planId ? { plan_id: data.planId } : {}),
+    },
+    { userId, tenantId }
+  )
 
   revalidatePath('/dashboard/student/payments')
   return request
@@ -228,6 +402,10 @@ export async function sendPaymentInstructions(
       payment_method: instructions.paymentMethod,
       payment_instructions: instructions.paymentInstructions,
       payment_deadline: instructions.paymentDeadline || null,
+      // "Pay by Friday" is a stronger statement than the default 14-day TTL, so
+      // it becomes the expiry. Without a deadline the original clock stands —
+      // sending instructions must never silently extend a request (#802).
+      ...(instructions.paymentDeadline ? { expires_at: instructions.paymentDeadline } : {}),
       payment_amount: instructions.paymentAmount,
       payment_currency: instructions.paymentCurrency,
       processed_by: userId,
@@ -241,8 +419,9 @@ export async function sendPaymentInstructions(
     throw new Error('Failed to send payment instructions')
   }
 
+  const adminClient = createAdminClient()
   await notifyPaymentRequestStatus({
-    adminClient: createAdminClient(),
+    adminClient,
     tenantId: request.tenant_id,
     studentUserId: request.user_id,
     createdBy: userId,
@@ -250,10 +429,24 @@ export async function sendPaymentInstructions(
     status: 'awaiting payment',
   })
 
+  const emailSent = await emailPaymentInstructions({
+    adminClient,
+    tenantId: request.tenant_id,
+    requestId,
+    studentUserId: request.user_id,
+    itemName: itemNameFromRequest(request),
+    paymentMethod: instructions.paymentMethod || null,
+    instructions: instructions.paymentInstructions,
+    amount: instructions.paymentAmount,
+    currency: instructions.paymentCurrency,
+    deadline: instructions.paymentDeadline || null,
+  })
+
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+  revalidatePath('/dashboard/student/payments')
 
-  return { success: true }
+  return { success: true, emailSent }
 }
 
 /**
@@ -270,10 +463,11 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
     throw new Error('Unauthorized')
   }
 
-  // Verify request belongs to tenant
+  // Verify request belongs to tenant. `created_at` and the amount columns are
+  // selected for the analytics event below — see the attribution note there.
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, status, tenant_id, user_id, product:products(name), plan:plans(plan_name)')
+    .select('request_id, status, tenant_id, user_id, created_at, payment_amount, payment_currency, product_id, plan_id, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
@@ -286,20 +480,25 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
   }
 
   // Update request status
-  const { error } = await supabase
+  const confirmedAt = new Date().toISOString()
+  const { data: confirmed, error } = await supabase
     .from('payment_requests')
     .update({
       status: 'payment_received',
-      payment_confirmed_at: new Date().toISOString(),
+      payment_confirmed_at: confirmedAt,
       admin_notes: adminNotes || null,
       processed_by: userId,
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
-    .eq('tenant_id', tenantId)
+    // The REQUEST's school, not the host the acting admin is on (#745): a super
+    // admin passes the read check from any tenant, and filtering by theirs
+    // matched nothing and "succeeded" silently.
+    .eq('tenant_id', request.tenant_id)
+    .select('request_id')
 
-  if (error) {
-    console.error('Failed to confirm payment:', error)
+  if (error || !confirmed?.length) {
+    console.error('Failed to confirm payment:', error ?? 'no row updated')
     throw new Error('Failed to confirm payment')
   }
 
@@ -312,10 +511,53 @@ export async function confirmPaymentReceived(requestId: number, adminNotes?: str
     status: 'payment received',
   })
 
+  // Loop C, trap 3. This runs in the ADMIN's request context, hours or days
+  // after the student's session ended, so two things are deliberate:
+  //
+  //   - `userId` is the STUDENT's, never `userId` (the admin's). Attributing it
+  //     to the admin would make it look like the admin bought the course, and
+  //     would fold every school's manual sales onto one or two profiles.
+  //   - `timestamp` backdates the event to the original request, so the sale
+  //     lands in the cohort that generated it rather than in whichever day the
+  //     admin happened to do their paperwork. `hours_to_confirm` and the two
+  //     explicit stamps keep the admin-workload reading recoverable, since
+  //     backdating alone would erase it.
+  await track(
+    ANALYTICS_EVENTS.MANUAL_PAYMENT_CONFIRMED,
+    {
+      provider: 'manual',
+      amount: Number(request.payment_amount ?? 0),
+      currency: request.payment_currency ?? 'usd',
+      is_subscription: !!request.plan_id,
+      request_id: requestId,
+      original_requested_at: request.created_at,
+      confirmed_at: confirmedAt,
+      hours_to_confirm: hoursBetween(request.created_at, confirmedAt),
+      ...(request.product_id ? { product_id: request.product_id } : {}),
+      ...(request.plan_id ? { plan_id: request.plan_id } : {}),
+    },
+    {
+      userId: request.user_id,
+      tenantId: request.tenant_id,
+      timestamp: request.created_at,
+    }
+  )
+
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
 
   return { success: true }
+}
+
+/**
+ * Whole hours between two ISO stamps, or `null` when either is missing.
+ * `payment_requests.created_at` is nullable, and a fabricated 0 would read as
+ * "confirmed instantly" — the opposite of the truth this number exists to tell.
+ */
+function hoursBetween(from: string | null | undefined, to: string): number | null {
+  if (!from) return null
+  const ms = new Date(to).getTime() - new Date(from).getTime()
+  return Number.isFinite(ms) ? Math.round((ms / 3_600_000) * 10) / 10 : null
 }
 
 /**
@@ -362,9 +604,16 @@ export async function completeAndEnroll(requestId: number) {
       plan_id: request.plan_id || null,
       amount: request.payment_amount,
       currency: request.payment_currency,
-      payment_method: `manual - ${request.payment_method}`,
+      // `manual`, or `manual - <method>` only when the admin typed one — never
+      // the literal "manual - null" the Transactions table used to print (#727).
+      payment_method: manualTransactionPaymentMethod(request.payment_method),
       status: 'successful',
-      tenant_id: tenantId,
+      // The REQUEST's school, never the acting admin's host (#745) — this row
+      // decides whose revenue, payout and fee snapshot the sale is.
+      tenant_id: request.tenant_id,
+      // Said explicitly rather than left to the column default (#746): a NULL
+      // provider silently drops out of any `.eq('payment_provider', 'manual')`.
+      payment_provider: 'manual',
     })
     .select()
     .single()
@@ -375,7 +624,7 @@ export async function completeAndEnroll(requestId: number) {
   }
 
   // Update payment request status
-  const { error: updateError } = await adminClient
+  const { data: completed, error: updateError } = await adminClient
     .from('payment_requests')
     .update({
       status: 'completed',
@@ -383,10 +632,11 @@ export async function completeAndEnroll(requestId: number) {
       updated_at: new Date().toISOString(),
     })
     .eq('request_id', requestId)
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', request.tenant_id)
+    .select('request_id')
 
-  if (updateError) {
-    console.error('Failed to complete payment request:', updateError)
+  if (updateError || !completed?.length) {
+    console.error('Failed to complete payment request:', updateError ?? 'no row updated')
     throw new Error('Failed to complete payment request')
   }
 
@@ -398,6 +648,78 @@ export async function completeAndEnroll(requestId: number) {
     itemName: itemNameFromRequest(request),
     status: 'completed — you now have access',
   })
+
+  // Loop C. THIS is where a manual sale becomes real — the transaction row and,
+  // through `after_transaction_insert`, the entitlements. `confirmPaymentReceived`
+  // above only records that the admin saw the money arrive; it grants nothing,
+  // so `payment_succeeded` there would count sales that never completed.
+  //
+  // Same trap-3 attribution as that step: the student's id, and backdated to
+  // the original request so the sale lands in its own cohort rather than in the
+  // admin's paperwork day.
+  //
+  // Wrapped: the `entitlements` count is an analytics-only read, and the sale
+  // is already committed by the time we get here. A failed read must not throw
+  // the admin an error for a completion that actually succeeded.
+  await safeAnalytics(async () => {
+    const provider = (transaction.payment_provider as string | null) ?? 'manual'
+    const gross = Number(transaction.amount ?? 0)
+    const net = netOfRefunds(gross, transaction.refunded_amount as number | null)
+    const snapshot = (transaction.school_percentage_snapshot as number | null) ?? null
+    const bearsFee = !!PROVIDER_CAPABILITIES[provider as keyof typeof PROVIDER_CAPABILITIES]?.bearsPlatformFee
+    const ctx = {
+      userId: request.user_id as string,
+      tenantId: request.tenant_id as string,
+      timestamp: request.created_at as string | null,
+    }
+
+    await track(
+      ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+      {
+        provider,
+        amount_major: net,
+        currency: (transaction.currency as string | null) ?? 'usd',
+        is_subscription: !!request.plan_id,
+        ...(bearsFee
+          ? snapshot != null
+            ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
+            : {}
+          : { platform_fee: 0 }),
+        school_percentage_snapshot: snapshot,
+        gross_amount: gross,
+        transaction_id: transaction.transaction_id,
+        request_id: requestId,
+        settlement_path: 'manual',
+        original_requested_at: request.created_at,
+        hours_to_confirm: hoursBetween(request.created_at, new Date().toISOString()),
+        ...(request.product_id ? { product_id: request.product_id } : {}),
+        ...(request.plan_id ? { plan_id: request.plan_id } : {}),
+      },
+      ctx
+    )
+
+    const sourceType = request.plan_id ? 'subscription' : 'product'
+    const sourceId = request.plan_id ?? request.product_id
+    if (sourceId != null) {
+      const { count } = await adminClient
+        .from('entitlements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', request.user_id)
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId)
+        .eq('status', 'active')
+      await track(
+        ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+        {
+          source_type: sourceType,
+          course_count: count ?? 0,
+          provider,
+          transaction_id: transaction.transaction_id,
+        },
+        ctx
+      )
+    }
+  }, 'manual payment settlement analytics')
 
   revalidatePath('/dashboard/admin/payment-requests')
   revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
@@ -427,15 +749,38 @@ export async function updatePaymentRequest(
     return { success: false, error: 'Unauthorized' }
   }
 
-  // Verify request belongs to tenant
+  // Verify request belongs to tenant. The extra columns feed the instructions
+  // email below — one read instead of a second round trip.
   const { data: request } = await supabase
     .from('payment_requests')
-    .select('request_id, tenant_id')
+    .select('request_id, tenant_id, user_id, payment_instructions, payment_method, payment_amount, payment_currency, payment_deadline, product:products(name), plan:plans(plan_name)')
     .eq('request_id', requestId)
     .single()
 
   if (!request || (request.tenant_id !== tenantId && !superAdmin)) {
     return { success: false, error: 'Payment request not found or access denied' }
+  }
+
+  // Emailed only when the instructions text actually changed: re-saving the
+  // dialog with the same text (to add an internal note, say) must not send
+  // the student the same email twice.
+  const nextInstructions = updates.paymentInstructions?.trim() || ''
+  const instructionsChanged =
+    nextInstructions.length > 0 && nextInstructions !== (request.payment_instructions || '').trim()
+  const emailAfterSave = async () => {
+    if (!instructionsChanged) return false
+    return emailPaymentInstructions({
+      adminClient: createAdminClient(),
+      tenantId: request.tenant_id,
+      requestId,
+      studentUserId: request.user_id,
+      itemName: itemNameFromRequest(request),
+      paymentMethod: updates.paymentMethod?.trim() || request.payment_method || null,
+      instructions: nextInstructions,
+      amount: request.payment_amount,
+      currency: request.payment_currency,
+      deadline: request.payment_deadline,
+    })
   }
 
   try {
@@ -497,10 +842,13 @@ export async function updatePaymentRequest(
 
     if (error) throw error
 
+    const emailSent = await emailAfterSave()
+
     revalidatePath('/dashboard/admin/payment-requests')
     revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+    revalidatePath('/dashboard/student/payments')
 
-    return { success: true }
+    return { success: true, emailSent }
   } catch (error) {
     console.error('Failed to update payment request:', error)
     return {
@@ -705,4 +1053,151 @@ export async function cancelPaymentRequest(requestId: number, reason?: string) {
   revalidatePath('/dashboard/student/payments')
 
   return { success: true }
+}
+
+/**
+ * Best-effort in-app notification to the school's admins that a student has
+ * reported a payment (#802).
+ *
+ * The admin queue is a pull surface — someone has to remember to open it. For a
+ * school whose entire revenue arrives as bank transfers, the moment a student
+ * says "I paid, here is the reference" is exactly the moment a human needs to go
+ * look at a statement, so it is worth a push. Never throws: a failed
+ * notification must not lose the report itself.
+ */
+async function notifyAdminsPaymentReported(params: {
+  adminClient: ReturnType<typeof createAdminClient>
+  tenantId: string
+  studentUserId: string
+  itemName: string
+  reference: string
+}) {
+  const { adminClient, tenantId, studentUserId, itemName, reference } = params
+  try {
+    const { data: admins } = await adminClient
+      .from('tenant_users')
+      .select('user_id')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'admin')
+      .eq('status', 'active')
+
+    const adminIds = (admins || []).map((a: { user_id: string }) => a.user_id)
+    if (!adminIds.length) return
+
+    const { data: notification, error } = await adminClient
+      .from('notifications')
+      .insert({
+        title: 'Payment reported',
+        content: `A student reported a payment for ${itemName} (ref. ${reference}). Check it against your account and confirm it.`,
+        notification_type: 'info',
+        priority: 'normal',
+        target_type: 'user',
+        target_user_ids: adminIds,
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        // The student is the actor; `created_by` is who caused it, not who reads it.
+        created_by: studentUserId,
+        tenant_id: tenantId,
+      })
+      .select('id')
+      .single()
+
+    if (error || !notification) return
+
+    await adminClient
+      .from('user_notifications')
+      .insert(adminIds.map((userId) => ({ notification_id: notification.id, user_id: userId })))
+  } catch (err) {
+    console.error('Failed to notify admins of reported payment:', err)
+  }
+}
+
+/**
+ * Student reports the payment they just made against their open request (#802).
+ *
+ * This does NOT advance the status: confirming money is an admin's judgement and
+ * stays one (`confirmPaymentReceived`). What it changes is what the admin has to
+ * work with — a reference number, a date, an amount and which of the school's
+ * accounts it landed in, instead of a free-text message and a screenshot to
+ * squint at.
+ *
+ * It also stops the TTL sweep: a request with money claimed against it is never
+ * cancelled from under the student (see `isManualRequestOpen`).
+ *
+ * Written through the admin client after an explicit ownership check, matching
+ * `uploadStudentPaymentProof` — students hold no UPDATE grant on these columns,
+ * and they must not: `payment_amount` is what the school is owed.
+ */
+export async function reportManualPayment(
+  requestId: number,
+  report: ManualPaymentReportInput,
+): Promise<{ success: true; error?: never } | { error: string; success?: never }> {
+  try {
+    const supabase = await createClient()
+    const userId = await getCurrentUserId()
+    const tenantId = await getCurrentTenantId()
+
+    if (!userId) return { error: 'Not authenticated' }
+
+    const { data: request } = await supabase
+      .from('payment_requests')
+      .select('request_id, user_id, tenant_id, status, payment_currency, product:products(name), plan:plans(plan_name)')
+      .eq('request_id', requestId)
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+      .single()
+
+    if (!request) return { error: 'Payment request not found' }
+
+    // Reporting against a settled request would be a no-op at best and a second
+    // claim on the same transfer at worst.
+    if (request.status !== 'pending' && request.status !== 'contacted') {
+      return { error: 'This request is no longer awaiting payment' }
+    }
+
+    const normalized = normalizeManualPaymentReport({
+      ...report,
+      // Default to what the school priced the item in, so the common case — the
+      // student paid exactly what was asked — needs no currency input at all.
+      currency: report.currency || request.payment_currency || null,
+    })
+
+    const { error } = await createAdminClient()
+      .from('payment_requests')
+      .update({
+        ...normalized,
+        payment_reported_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('request_id', requestId)
+      .eq('tenant_id', tenantId)
+
+    if (error) {
+      // `payment_requests_reference_unique` — one transfer settles one request.
+      if (error.code === '23505') {
+        return { error: 'That reference is already registered for another payment at this school. Check the number and try again.' }
+      }
+      console.error('Failed to report manual payment:', error)
+      return { error: 'Failed to save your payment details' }
+    }
+
+    await notifyAdminsPaymentReported({
+      adminClient: createAdminClient(),
+      tenantId: request.tenant_id,
+      studentUserId: userId,
+      itemName: itemNameFromRequest(request),
+      reference: normalized.payment_reference,
+    })
+
+    revalidatePath('/dashboard/student/payments')
+    revalidatePath(`/dashboard/student/payments/${requestId}`)
+    revalidatePath('/dashboard/admin/payment-requests')
+    revalidatePath(`/dashboard/admin/payment-requests/${requestId}`)
+
+    return { success: true }
+  } catch (err) {
+    if (err instanceof ManualPaymentReportError) return { error: err.message }
+    console.error('Failed to report manual payment:', err)
+    return { error: 'Failed to save your payment details' }
+  }
 }

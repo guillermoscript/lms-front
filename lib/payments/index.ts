@@ -51,10 +51,14 @@ export function getPaymentProvider(
       // PAYPAL_WEBHOOK_ID is optional at construction (only webhook verify
       // needs it — verifyWebhook fails closed without it). Defaults to sandbox;
       // set PAYPAL_ENVIRONMENT=live in production.
+      //
+      // PayPal signs every delivery over the id of the webhook REGISTRATION it
+      // went to, so the platform billing endpoint (its own registration, #744)
+      // passes `PAYPAL_PLATFORM_WEBHOOK_ID` here instead of the student one.
       return new PayPalPaymentProvider(
         paypalClientId,
         paypalSecret,
-        process.env.PAYPAL_WEBHOOK_ID,
+        options.webhookSecret ?? process.env.PAYPAL_WEBHOOK_ID,
         process.env.PAYPAL_ENVIRONMENT === 'live' ? 'live' : 'sandbox',
       )
     }

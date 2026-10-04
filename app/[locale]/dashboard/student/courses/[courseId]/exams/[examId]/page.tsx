@@ -57,8 +57,7 @@ export default async function TakeExamPage({ params }: PageProps) {
         question_options (
           option_id,
           question_id,
-          option_text,
-          is_correct
+          option_text
         )
       )
     `)
@@ -94,7 +93,6 @@ export default async function TakeExamPage({ params }: PageProps) {
       description={exam.description}
       duration={exam.duration}
       questions={formattedQuestions}
-      tenantId={tenantId}
     />
   )
 }

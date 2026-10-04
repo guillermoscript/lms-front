@@ -55,12 +55,7 @@ const homeTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '8,000', label: 'Active Students', prefix: '', suffix: '+' },
-          { value: '6', label: 'Languages', prefix: '', suffix: '' },
-          { value: '120', label: 'Native Teachers', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Average Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -105,9 +100,9 @@ const homeTemplate: PuckTemplate = {
         title: 'Loved by Learners Worldwide',
         subtitle: 'Real stories from students who found their voice in a new language.',
         items: [
-          { name: 'Camila T.', role: 'Learned English', quote: 'After six months I went from silent in meetings to leading them in English. The conversation focus made all the difference.', rating: 5 },
-          { name: 'Hiroshi N.', role: 'Learned Spanish', quote: 'The native teachers and small groups meant I actually spoke every class. I passed my B2 exam on the first try.', rating: 5 },
-          { name: 'Sophie L.', role: 'Learned French', quote: 'Flexible evening classes fit around my job perfectly. I am finally having real conversations on my trips to Paris.', rating: 5 },
+          { name: 'Student name', role: 'Language they learned', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'Language they learned', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'Language they learned', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('FaqAccordion', {
@@ -162,12 +157,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '8,000', label: 'Students Worldwide', prefix: '', suffix: '+' },
-          { value: '6', label: 'Languages Taught', prefix: '', suffix: '' },
-          { value: '50', label: 'Countries', prefix: '', suffix: '+' },
-          { value: '2017', label: 'Founded', prefix: '', suffix: '' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

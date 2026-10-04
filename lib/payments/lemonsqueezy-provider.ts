@@ -27,6 +27,7 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   RefundParams,
+  CancellationResult,
 } from './types'
 
 const LS_BASE_URL = 'https://api.lemonsqueezy.com'
@@ -52,6 +53,7 @@ export class LemonSqueezyProvider implements IPaymentProvider {
     supportsPlanChange: true,
     supportsCustomerPortal: false, // portal is reached from LS's dashboard, not a URL we mint
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: true, // cancelSubscription schedules the end at renews_at
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
     requiresConnectedAccount: false, // Merchant of Record — the platform's own store sells on the school's behalf
@@ -325,6 +327,9 @@ export class LemonSqueezyProvider implements IPaymentProvider {
           providerEventId, // order_refunded:<orderId>:<updatedAt>
           providerPaymentId: subId,
           reference,
+          // LS echoes the checkout's custom_data on every order event; the
+          // dispatcher binds the refund to its userId/tenantId (#743).
+          metadata: customData,
           ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
           ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
@@ -347,18 +352,26 @@ export class LemonSqueezyProvider implements IPaymentProvider {
    * endpoint. The `immediate` flag is accepted for interface compatibility but
    * has no effect; the subscription remains accessible until `renews_at`.
    */
-  async cancelSubscription(providerSubId: string, _immediate: boolean): Promise<void> {
+  async cancelSubscription(providerSubId: string, _immediate: boolean): Promise<CancellationResult> {
     // NOTE: `immediate` is ignored — LS only supports cancel-at-period-end via API.
     const response = await fetch(`${LS_BASE_URL}/v1/subscriptions/${providerSubId}`, {
       method: 'DELETE',
       headers: this.headers,
     })
 
+    if (response.status === 404) return { mode: 'immediate' }
+
     if (!response.ok) {
       const text = await response.text()
       throw new Error(
         `LemonSqueezy cancelSubscription failed: HTTP ${response.status} — ${text}`,
       )
+    }
+    const payload = await response.json().catch(() => null)
+    const endsAt = payload?.data?.attributes?.ends_at ?? payload?.data?.attributes?.renews_at
+    return {
+      mode: 'period_end',
+      ...(endsAt ? { effectiveAt: new Date(endsAt) } : {}),
     }
   }
 

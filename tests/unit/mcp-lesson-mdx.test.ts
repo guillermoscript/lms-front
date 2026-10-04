@@ -8,8 +8,8 @@ import {
   parseLessonMdx,
   resolveExpression,
   type MdNode,
-} from '@/mcp-server/resources/shared/lesson/mdx'
-import { LessonBody } from '@/mcp-server/resources/shared/lesson'
+} from '@/mcp-server/views/shared/lesson/mdx'
+import { LessonBody } from '@/mcp-server/views/shared/lesson'
 import { inlineCodeBlockBodies as inlineCodeBlockBodiesApp } from '@/lib/lesson/mdx-source'
 
 /**

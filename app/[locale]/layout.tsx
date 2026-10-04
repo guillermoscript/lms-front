@@ -1,29 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Noto_Sans } from "next/font/google";
 import "../globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { RouteProgress } from "@/components/shared/route-progress";
+import { AnalyticsUserBinder } from "@/components/analytics-user-binder";
 import { FeedbackButton } from "@/components/shared/feedback-button";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TenantProvider } from "@/components/tenant/tenant-provider"
-import { TenantCssVars } from "@/components/tenant/tenant-css-vars";
 import { TenantCssVarsServer } from "@/components/tenant/tenant-css-vars-server";
-import { getCurrentTenant } from "@/lib/supabase/tenant";
+import { getCurrentTenant, getCurrentUserId } from "@/lib/supabase/tenant";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales } from '@/i18n';
-import type { StoredPreset } from '@/lib/themes/presets';
-import { getSeoContext, ogImageUrl } from '@/lib/seo';
-
-const notoSans = Noto_Sans({ variable: '--font-sans', subsets: ["latin"] });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { fontVariables } from '@/lib/themes/fonts';
+import { defaultThemeFor, resolveSchoolTheme, SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit';
+import { getSeoContext, ogImageUrl, resolveFaviconIcons } from '@/lib/seo';
+import { OpenPanelComponent } from '@openpanel/nextjs';
+import { isAnalyticsEnvironmentEnabled } from '@/lib/analytics/exclusions';
+import { getSessionReplayConfig } from '@/lib/analytics/replay';
+import { hasPlanFeature } from '@/lib/plans/server';
 
 export async function generateMetadata({
   params,
@@ -32,11 +29,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'seo' });
-  const { baseUrl, siteName } = await getSeoContext();
+  const { baseUrl, siteName, tenant } = await getSeoContext();
   const description = t('defaultDescription');
+
+  // Same cached lookup the layout body uses below (unstable_cache keyed by
+  // tenant.id, 60s TTL) — favicon_url rides along with the other branding
+  // settings already fetched per request, no extra query.
+  const faviconSetting = tenant
+    ? (await getTenantSettings(tenant.id)).find((s) => s.setting_key === 'favicon_url')?.setting_value
+    : undefined;
 
   return {
     metadataBase: new URL(baseUrl),
+    icons: resolveFaviconIcons((faviconSetting as { value?: string } | undefined)?.value),
     title: {
       default: siteName,
       template: `%s | ${siteName}`,
@@ -92,7 +97,7 @@ const getTenantSettings = unstable_cache(
       .from('tenant_settings')
       .select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
-      .in('setting_key', ['site_name', 'logo_url', 'primary_color', 'secondary_color', 'favicon_url', 'theme_preset']);
+      .in('setting_key', ['site_name', 'logo_url', 'favicon_url', SCHOOL_THEME_SETTING_KEY]);
     return settings ?? [];
   },
   ['tenant-settings-branding'],
@@ -121,7 +126,7 @@ export default async function RootLayout({
 
   // Load tenant settings for branding overrides (use admin client to bypass RLS
   // since these are public tenant configuration, not user-specific data)
-  // setting_value is jsonb: `{ value: string }` for branding keys, a StoredPreset for theme_preset
+  // setting_value is jsonb: `{ value: string }` for branding keys, a StoredKitTheme for theme_preset
   let tenantSettings: Record<string, { value?: string } | undefined> = {};
   if (tenant) {
     const settings = await getTenantSettings(tenant.id);
@@ -131,40 +136,83 @@ export default async function RootLayout({
     }, {});
   }
 
+  // Every plan renders its theme kit and recommended colours; a custom brand
+  // colour is Business+ (`custom_branding`, #763) and falls back to the theme's
+  // recommended swatch below that. Logo and name apply on every plan — a school
+  // must stay recognisable. TenantCssVarsServer (the only writer of the theme
+  // vars) and the default light/dark mode both read this one resolved value.
+  const customBranding = tenant ? await hasPlanFeature(tenant.id, 'custom_branding') : false;
+
   const tenantInfo = tenant ? {
     id: tenant.id,
     slug: tenant.slug,
     name: tenantSettings.site_name?.value || tenant.name,
     logo_url: tenantSettings.logo_url?.value || tenant.logo_url,
-    primary_color: tenantSettings.primary_color?.value || tenant.primary_color,
-    secondary_color: tenantSettings.secondary_color?.value || tenant.secondary_color,
     plan: tenant.plan,
     settings: tenantSettings,
-    theme_preset: (tenantSettings.theme_preset as unknown as StoredPreset | undefined) ?? null,
+    theme: resolveSchoolTheme(tenantSettings[SCHOOL_THEME_SETTING_KEY], { customBranding }),
   } : null;
 
+  // A dark theme kit (Kódigo) opens dark for a visitor who has not picked a
+  // mode (#762). defaultTheme, never forcedTheme: the mode toggle keeps working
+  // and a stored choice still wins.
+  const defaultTheme = defaultThemeFor(tenantInfo?.theme);
+
+  // Product analytics. Renders nothing at all — no script tag, no network —
+  // unless a client id is configured AND the environment is one we track
+  // (production, or an explicit non-production opt-in). Tenant and locale are
+  // already resolved above; this adds no data fetching.
+  const analyticsClientId = isAnalyticsEnvironmentEnabled()
+    ? process.env.NEXT_PUBLIC_OPENPANEL_CLIENT_ID
+    : undefined;
+  // `x-user-id` is set by proxy.ts — a header read, no auth round trip. Passing
+  // it as `profileId` puts the identify call in the init snippet, so even the
+  // first screen_view of a hard load lands on the user instead of a device id.
+  // <AnalyticsUserBinder> then adds name/email and follows sign-in/sign-out.
+  const analyticsProfileId = analyticsClientId
+    ? (await getCurrentUserId()) ?? undefined
+    : undefined;
+
   return (
-    <html lang={locale} className={notoSans.variable} suppressHydrationWarning>
+    <html lang={locale} className={fontVariables} suppressHydrationWarning>
       <head>
-        <TenantCssVarsServer
-          themePreset={tenantInfo?.theme_preset}
-          primaryColor={tenantInfo?.primary_color}
-          secondaryColor={tenantInfo?.secondary_color}
-        />
+        <TenantCssVarsServer theme={tenantInfo?.theme} />
       </head>
-      <body
-        className={`${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme={defaultTheme}
             enableSystem
             disableTransitionOnChange
           >
             <TenantProvider tenant={tenantInfo}>
-              <TenantCssVars />
+              {analyticsClientId ? (
+                <OpenPanelComponent
+                  clientId={analyticsClientId}
+                  // Both point at our own origin (app/api/op/[...path]) so the
+                  // tracker is first-party and adblockers leave it alone. The
+                  // matching `api/op/` exclusion lives in proxy.ts — without it
+                  // every beacon 307s to /join-school.
+                  apiUrl="/api/op"
+                  scriptUrl="/api/op/op1.js"
+                  profileId={analyticsProfileId}
+                  trackScreenViews
+                  trackOutgoingLinks
+                  // Session replay: the recorder is fetched through the same
+                  // first-party route (`/api/op/op1-replay.js`) and its chunks
+                  // ride `/api/op/track` as `type: "replay"`. Sample rate and
+                  // masking live in lib/analytics/replay.ts.
+                  sessionReplay={getSessionReplayConfig()}
+                  globalProperties={{
+                    tenant_id: tenantInfo?.id ?? null,
+                    tenant_slug: tenantInfo?.slug ?? null,
+                    locale,
+                  }}
+                />
+              ) : null}
               <RouteProgress />
+              <AnalyticsUserBinder />
               {children}
               <FeedbackButton />
               <Toaster />

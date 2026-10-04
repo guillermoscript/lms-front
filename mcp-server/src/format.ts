@@ -1,4 +1,4 @@
-import { text, object, mix, error } from "mcp-use/server";
+import { text, object, mix, error, widget } from "mcp-use";
 import { z } from "zod";
 
 /** Response format shared by every read tool. */
@@ -47,7 +47,42 @@ export function okText(textContent: string): ReturnType<typeof text> {
   return text(textContent);
 }
 
-/** Graceful error response. Never throw from a tool handler. */
-export function errorResult(message: string): ReturnType<typeof error> {
-  return error(`Error: ${message}`);
+/**
+ * Graceful error response. Never throw from a tool handler.
+ *
+ * The return type pins `isError: true` (the helper always sets it, but its
+ * declared type leaves it optional): a tool with an `outputSchema` must return
+ * either schema-matching `structuredContent` or a provable error result, and
+ * the optional flag satisfies neither branch of that compile-time check.
+ */
+export function errorResult(
+  message: string
+): ReturnType<typeof error> & { isError: true } {
+  return error(`Error: ${message}`) as ReturnType<typeof error> & {
+    isError: true;
+  };
+}
+
+/**
+ * View-bound tool result: `props` → `structuredContent`, rendered by the tool's
+ * bound view.
+ *
+ * A thin typing shim over mcp-use's `widget()` helper. That helper's return
+ * type declares `structuredContent` optional, but a tool with an
+ * `outputSchema` must return a result where it is present — v2 enforces this
+ * at compile time — so this narrows the type to what the helper actually
+ * produces. Tool files import it as `widget` to keep call sites unchanged.
+ */
+type ViewToolResult<T extends Record<string, unknown>> = Omit<
+  ReturnType<typeof widget<T>>,
+  "structuredContent" | "content"
+> & {
+  structuredContent: T;
+  content: NonNullable<ReturnType<typeof widget<T>>["content"]>;
+};
+
+export function viewResult<T extends Record<string, unknown>>(
+  config: Parameters<typeof widget<T>>[0]
+): ViewToolResult<T> {
+  return widget<T>(config) as ViewToolResult<T>;
 }

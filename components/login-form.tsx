@@ -1,5 +1,6 @@
 'use client'
 
+import { googleAuthEnabled } from '@/lib/auth/social-providers'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,9 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -38,6 +42,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
   const [isSocialLoading, setIsSocialLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
+  const analytics = useAnalytics()
   const searchParams = useSearchParams()
   const requestedNext = searchParams.get('next') ?? searchParams.get('redirectTo')
   const nextPath = getSafeNextPath(requestedNext, '')
@@ -83,6 +88,18 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         }
       }
 
+      // The session is already in hand here, so this is the cheapest place in
+      // the app to bind the anonymous visitor to a profile. Name/email follow a
+      // moment later from <AnalyticsUserBinder>, which also keeps the binding
+      // alive across hard navigations.
+      if (session?.user?.id) analytics.identify(session.user.id, { role: userRole })
+
+      analytics.track(ANALYTICS_EVENTS.LOGIN_SUCCEEDED, {
+        method: 'password',
+        role: userRole,
+        had_next_path: Boolean(nextPath),
+      })
+
       // Return to where the user came from (e.g. the OAuth consent page) —
       // relative paths only, so the param can't redirect off-site.
       if (nextPath) {
@@ -91,7 +108,15 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         router.push(`/dashboard/${userRole}`)
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      const message = error instanceof Error ? error.message : t('common.error')
+      setError(message)
+      // The CODE, never `message`. GoTrue strings can interpolate the submitted
+      // address, and the no-such-user/wrong-password split is account
+      // enumeration — both collapse to `invalid_credentials`.
+      analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, {
+        method: 'password',
+        failure_reason: toAuthFailureCode(error),
+      })
     } finally {
       setIsLoading(false)
     }
@@ -111,8 +136,16 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
         },
       })
       if (error) throw error
+      // No success event here — OAuth leaves the page and settles at
+      // /api/auth/callback, so the browser never gets to fire one. The
+      // redirect back is a fresh page load.
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      const message = error instanceof Error ? error.message : t('common.error')
+      setError(message)
+      analytics.track(ANALYTICS_EVENTS.LOGIN_FAILED, {
+        method: 'google',
+        failure_reason: toAuthFailureCode(error),
+      })
       setIsSocialLoading(false)
     }
   }
@@ -144,6 +177,7 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
                   <Label htmlFor="password">{t('password')}</Label>
                   <Link
                     href="/auth/forgot-password"
+                    data-testid="login-forgot-password-link"
                     className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                   >
                     {t('forgotPassword')}
@@ -174,6 +208,8 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
                 {isLoading ? t('submitting') : t('submit')}
               </Button>
 
+              {googleAuthEnabled && (
+              <>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
@@ -210,11 +246,14 @@ export function LoginForm({ className, tenantId, ...props }: LoginFormProps) {
                 </svg>
                 {isSocialLoading ? t('submitting') : t('continueWithGoogle')}
               </Button>
+              </>
+              )}
             </div>
             <div className="mt-4 text-center text-sm">
               {t('noAccount')}{' '}
               <Link
                 href={nextPath ? `/auth/sign-up?next=${encodeURIComponent(nextPath)}` : '/auth/sign-up'}
+                data-testid="login-signup-link"
                 className="underline underline-offset-4"
               >
                 {t('signup')}

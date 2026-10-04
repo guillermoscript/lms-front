@@ -15,6 +15,7 @@ import {
   CreateSubscriptionParams,
   ProviderSubscription,
   ProviderCapabilities,
+  CancellationResult,
 } from './types'
 
 export class ManualPaymentProvider implements IPaymentProvider {
@@ -33,6 +34,7 @@ export class ManualPaymentProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // bank transfer — nothing hosted to manage
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: false, // money never reaches a platform account
     settlesToPlatformAccount: false,
     requiresConnectedAccount: false, // bank transfer to the school's own account — no provider onboarding at all
@@ -139,8 +141,9 @@ export class ManualPaymentProvider implements IPaymentProvider {
     }
   }
 
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+  async cancelSubscription(_providerSubId: string, _immediate: boolean): Promise<CancellationResult> {
     // Nothing to cancel externally — the DB row carries the real state.
+    return { mode: 'none' }
   }
 
   async reactivateSubscription(providerSubId: string): Promise<void> {

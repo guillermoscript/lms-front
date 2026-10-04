@@ -12,9 +12,12 @@ import { useTranslations } from 'next-intl'
 
 interface EnrollmentSettingsFormProps {
   settings: Record<string, any>
+  /** Published lessons currently marked as a free preview, across every
+   *  course — so the switch below isn't a decision made in the dark (#799). */
+  previewLessonCount: number
 }
 
-export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsFormProps) {
+export default function EnrollmentSettingsForm({ settings, previewLessonCount }: EnrollmentSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -25,6 +28,7 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
   const allowSelfEnrollment = settings.allow_self_enrollment?.value?.enabled ?? true
   const enrollmentExpirationDays = settings.enrollment_expiration_days?.value?.value || 365
   const courseCapacityEnabled = settings.course_capacity_enabled?.value?.enabled ?? false
+  const freePreviewEnabled = settings.free_preview_enabled?.value?.enabled ?? true
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -37,6 +41,7 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
         allow_self_enrollment: { enabled: formData.get('allow_self_enrollment') === 'on' },
         enrollment_expiration_days: { value: parseInt(formData.get('enrollment_expiration_days') as string) },
         course_capacity_enabled: { enabled: formData.get('course_capacity_enabled') === 'on' },
+        free_preview_enabled: { enabled: formData.get('free_preview_enabled') === 'on' },
       }
 
       const result = await updateSettings(updatedSettings)
@@ -130,6 +135,24 @@ export default function EnrollmentSettingsForm({ settings }: EnrollmentSettingsF
         <p className="text-sm text-muted-foreground">
           {t('enrollment.expirationHint')}
         </p>
+      </div>
+
+      {/* Free Preview Lessons */}
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="free_preview_enabled">{t('enrollment.freePreview')}</Label>
+          <p className="text-sm text-muted-foreground">
+            {t('enrollment.freePreviewHint')}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {t('enrollment.freePreviewCount', { count: previewLessonCount })}
+          </p>
+        </div>
+        <Switch
+          id="free_preview_enabled"
+          name="free_preview_enabled"
+          defaultChecked={freePreviewEnabled}
+        />
       </div>
 
       {/* Course Capacity */}

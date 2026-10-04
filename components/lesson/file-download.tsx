@@ -16,7 +16,7 @@ export function FileDownload({ url, filename, description, className }: FileDown
         className
       )}
     >
-      <IconFileDownload className="size-8 shrink-0 text-primary" aria-hidden="true" />
+      <IconFileDownload className="size-8 shrink-0 text-brand-text" aria-hidden="true" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold truncate">{filename}</p>
         {description && (

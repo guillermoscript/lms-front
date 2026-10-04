@@ -83,7 +83,7 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
           <div className={cn('grid gap-8', gridCols)}>
             {resolvedMembers.map((m, i) => (
               <div key={i} className="group text-center">
-                <div className="size-24 rounded-full bg-[color-mix(in_srgb,var(--block-accent)_10%,transparent)] ring-1 ring-[color-mix(in_srgb,var(--block-accent)_18%,transparent)] mx-auto mb-4 overflow-hidden flex items-center justify-center text-3xl font-semibold text-[var(--block-accent)] transition-transform duration-500 group-hover:scale-105">
+                <div className="size-24 rounded-full bg-[color-mix(in_srgb,var(--block-accent)_10%,transparent)] ring-1 ring-[color-mix(in_srgb,var(--block-accent)_18%,transparent)] mx-auto mb-4 overflow-hidden flex items-center justify-center text-3xl font-semibold text-[var(--block-accent-text)] transition-transform motion-reduce:transition-none duration-500">
                   {m.avatar ? (
                     <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
                   ) : (
@@ -91,9 +91,9 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
                   )}
                 </div>
                 <h3 className="font-semibold text-base text-foreground mb-1 truncate">{m.name}</h3>
-                <p className="text-sm text-[var(--block-accent)] font-medium mb-2 truncate">{m.role}</p>
+                <p className="text-sm text-[var(--block-accent-text)] font-medium mb-2 truncate">{m.role}</p>
                 {m.bio && (
-                  <p className="text-[0.8125rem] text-muted-foreground/70 leading-relaxed line-clamp-3">{m.bio}</p>
+                  <p className="text-[0.8125rem] text-muted-foreground leading-relaxed line-clamp-3">{m.bio}</p>
                 )}
               </div>
             ))}

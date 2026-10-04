@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { widget, text } from "mcp-use/server";
+import { widget, text } from "mcp-use";
 import { brandWidgetResult } from "./register.js";
 import { BRANDING_META_KEY } from "./branding.js";
 
@@ -16,8 +16,10 @@ import { BRANDING_META_KEY } from "./branding.js";
 const BRANDING = {
   name: "Escuela Marea",
   logo_url: null,
-  primary_color: "#0369a1",
-  secondary_color: "#0891b2",
+  button: "#0369A1",
+  buttonInk: "#FCFCFC",
+  brandText: "#0369A1",
+  headingFont: null,
 };
 
 /** No auth in the handler context — the unauthenticated path. */

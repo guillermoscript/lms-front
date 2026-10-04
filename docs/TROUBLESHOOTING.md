@@ -210,9 +210,13 @@ docker build \
 | Student payments (Connect) | `/api/stripe/webhook` | `STRIPE_WEBHOOK_SECRET` |
 | School billing (Platform) | `/api/billing/webhook/stripe` | `STRIPE_PLATFORM_WEBHOOK_SECRET` |
 
-### Enrollment CHECK constraint violation
-**Cause:** Enrollments require either `product_id` OR `subscription_id` — not both, not neither.
-**Fix:** Ensure exactly one of `product_id` or `subscription_id` is set when creating an enrollment.
+### Student paid but has no course access
+**Cause:** Access lives in `entitlements`, not `enrollments` (since migration `20260516150000`).
+An `enrollments` row grants nothing — it is a learning-progress record. `enrollments.product_id`
+and `subscription_id`, and the CHECK constraint that required one of them, were dropped.
+**Fix:** Check for an `entitlements` row (`user_id`, `course_id`, `status='active'`, `expires_at`
+null or future). If it is missing, the `enroll_user()` RPC did not run or the product has no
+`product_courses` mapping — a product can map to several courses, so never `.single()` that table.
 
 ---
 

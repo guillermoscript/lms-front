@@ -134,7 +134,7 @@ npm run dev
 
 ### Automated Test Suite Created
 
-Location: `tests/admin/products-manual-payment.spec.ts`
+Location: `tests/playwright/admin-product-course-creation.spec.ts`
 
 **Test Coverage:**
 - Create product with manual payment
@@ -152,7 +152,7 @@ Location: `tests/admin/products-manual-payment.spec.ts`
 npm install -D @playwright/test
 
 # Run tests
-npx playwright test tests/admin/products-manual-payment.spec.ts
+npx playwright test tests/playwright/admin-product-course-creation.spec.ts
 
 # Run with UI
 npx playwright test --ui

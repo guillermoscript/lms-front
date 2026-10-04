@@ -1,8 +1,9 @@
-import type { MCPServer } from "mcp-use/server";
-import { object, error } from "mcp-use/server";
+import type { LmsServer } from "./server-types.js";
+import { object, error } from "mcp-use";
 import { LmsSession } from "./session.js";
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from "./exam-grading-secrets.js";
 
-export function registerResources(server: MCPServer) {
+export function registerResources(server: LmsServer) {
   // ── course://{courseId} ────────────────────────────────────────────────────
   server.resourceTemplate(
     {
@@ -12,8 +13,8 @@ export function registerResources(server: MCPServer) {
       description: "Full course data including lessons and exams",
       mimeType: "application/json",
     },
-    async (uri: URL, params: Record<string, string>, ctx) => {
-      const courseId = parseInt(params.courseId, 10);
+    async (uri: URL, params, ctx) => {
+      const courseId = parseInt(String(params.courseId), 10);
       if (isNaN(courseId)) {
         return error("Invalid course ID");
       }
@@ -60,8 +61,8 @@ export function registerResources(server: MCPServer) {
       description: "Full lesson data including MDX content",
       mimeType: "application/json",
     },
-    async (uri: URL, params: Record<string, string>, ctx) => {
-      const lessonId = parseInt(params.lessonId, 10);
+    async (uri: URL, params, ctx) => {
+      const lessonId = parseInt(String(params.lessonId), 10);
       if (isNaN(lessonId)) {
         return error("Invalid lesson ID");
       }
@@ -103,8 +104,8 @@ export function registerResources(server: MCPServer) {
       description: "Full exam data with questions and options",
       mimeType: "application/json",
     },
-    async (uri: URL, params: Record<string, string>, ctx) => {
-      const examId = parseInt(params.examId, 10);
+    async (uri: URL, params, ctx) => {
+      const examId = parseInt(String(params.examId), 10);
       if (isNaN(examId)) {
         return error("Invalid exam ID");
       }
@@ -123,8 +124,9 @@ export function registerResources(server: MCPServer) {
         const { data, error: dbError } = await supabase
           .from("exams")
           .select(
-            `*, exam_questions(question_id, question_text, question_type, ai_grading_criteria, expected_keywords,
-              question_options(option_id, option_text, is_correct)
+            `*, exam_questions(question_id, question_text, question_type,
+              question_options(option_id, option_text),
+              ${EXAM_GRADING_SECRETS_EMBED}
             )`
           )
           .eq("exam_id", examId)
@@ -134,7 +136,14 @@ export function registerResources(server: MCPServer) {
           return error(`Exam ${examId} not found`);
         }
 
-        return object(data as Record<string, unknown>);
+        // The key lives in staff-only exam_grading_secrets (#840); put back the
+        // fields this resource always carried.
+        const exam = data as Record<string, unknown> & { exam_questions?: any[] | null };
+        const examQuestions = (exam.exam_questions ?? []).map((q) => {
+          const { correct_answer: _a, grading_rubric: _r, ...merged } = withExamGradingSecrets(q);
+          return merged;
+        });
+        return object({ ...exam, exam_questions: examQuestions } as Record<string, unknown>);
       } catch (err) {
         return error(err instanceof Error ? err.message : String(err));
       }

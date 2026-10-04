@@ -31,6 +31,10 @@ import {
 } from '@/lib/payments/solana-subscriptions'
 import { pullSplitForSubscription } from '@/lib/payments/solana-subscription-pull'
 import { paymentPollLimiter } from '@/lib/rate-limit'
+import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
 
 export const runtime = 'nodejs'
 
@@ -39,6 +43,100 @@ function getSupabaseAdmin() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) throw new Error('Supabase environment variables not set')
   return createAdminSupabase(url, serviceKey)
+}
+
+/**
+ * Shape of the transaction row the settlement events read. Deliberately a
+ * structural type: both branches below already hold the row, and re-reading it
+ * for analytics on a poll endpoint would multiply DB load by the polling rate.
+ */
+type SettledTx = {
+  transaction_id: number | string
+  user_id?: string | null
+  tenant_id?: string | null
+  amount?: number | null
+  currency?: string | null
+  refunded_amount?: number | null
+  school_percentage_snapshot?: number | null
+  plan_id?: number | string | null
+  product_id?: number | string | null
+  settlement_currency?: string | null
+}
+
+/**
+ * Loop C settlement, fired exactly once per confirmed on-chain payment.
+ *
+ * Every caller gates this on the status-guarded flip having landed, which is
+ * what keeps a polling client — this endpoint is hit repeatedly by design —
+ * from emitting one `payment_succeeded` per poll.
+ *
+ * Money is NET of refunds (#547) and denominated in the sale's own currency,
+ * NOT in `settlement_base`: lamports and USDC base units are what the chain is
+ * verified against and are meaningless summed next to a Stripe sale.
+ *
+ * Wrapped whole: the `entitlements` count below is an analytics-only read, and
+ * both callers `await` this on the request path of a confirmed on-chain
+ * payment. An unguarded throw there would 500 a settlement that already landed.
+ */
+async function trackSolanaSettlement(
+  tx: SettledTx,
+  provider: 'solana' | 'solana_subs',
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  return safeAnalytics(async () => {
+    const gross = Number(tx.amount ?? 0)
+    const net = netOfRefunds(gross, tx.refunded_amount)
+    const snapshot = tx.school_percentage_snapshot ?? null
+    const bearsFee = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.bearsPlatformFee
+    const ctx = { userId: tx.user_id, tenantId: tx.tenant_id }
+
+    await track(
+      ANALYTICS_EVENTS.PAYMENT_SUCCEEDED,
+      {
+        provider,
+        amount_major: net,
+        currency: tx.currency ?? 'usd',
+        is_subscription: !!tx.plan_id,
+        // WHETHER a fee is taken is the capability; the RATE is the row's own
+        // snapshot (#547). No snapshot → omit the figure rather than invent one.
+        ...(bearsFee
+          ? snapshot != null
+            ? { platform_fee: Math.round(net * (100 - Number(snapshot))) / 100 }
+            : {}
+          : { platform_fee: 0 }),
+        school_percentage_snapshot: snapshot,
+        gross_amount: gross,
+        transaction_id: tx.transaction_id,
+        settlement_currency: tx.settlement_currency ?? null,
+        ...(tx.plan_id ? { plan_id: tx.plan_id } : {}),
+        ...(tx.product_id ? { product_id: tx.product_id } : {}),
+        ...extra,
+      },
+      ctx,
+    )
+
+    const sourceType = tx.plan_id ? 'subscription' : 'product'
+    const sourceId = tx.plan_id ?? tx.product_id
+    if (tx.user_id && sourceId != null) {
+      const { count } = await getSupabaseAdmin()
+        .from('entitlements')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', tx.user_id)
+        .eq('source_type', sourceType)
+        .eq('source_id', sourceId)
+        .eq('status', 'active')
+      await track(
+        ANALYTICS_EVENTS.ENTITLEMENT_GRANTED,
+        {
+          source_type: sourceType,
+          course_count: count ?? 0,
+          provider,
+          transaction_id: tx.transaction_id,
+        },
+        ctx,
+      )
+    }
+  }, `solana settlement analytics (${provider})`)
 }
 
 /** Derive the puller (= on-chain merchant) base58 pubkey from its secret key. */
@@ -70,7 +168,11 @@ export async function POST(req: NextRequest) {
     // Load the transaction, scoped to the caller + tenant.
     const { data: tx, error: txError } = await supabase
       .from('transactions')
-      .select('transaction_id, status, amount, payment_provider, provider_subscription_id, user_id, tenant_id, plan_id, provider_metadata, settlement_currency, settlement_base, settlement_mint')
+      // `currency`, `refunded_amount`, `product_id` and the split snapshot are
+      // here only so the settlement events below are net-of-refunds and
+      // fee-accurate without a second read (#547). Solana settles with no
+      // browser and no webhook, so THIS is the only place the sale is observable.
+      .select('transaction_id, status, amount, currency, refunded_amount, school_percentage_snapshot, payment_provider, provider_subscription_id, user_id, tenant_id, plan_id, product_id, provider_metadata, settlement_currency, settlement_base, settlement_mint')
       .eq('transaction_id', transactionId)
       .eq('user_id', user.id)
       .eq('tenant_id', tenantId)
@@ -119,6 +221,11 @@ export async function POST(req: NextRequest) {
 
     switch (result.status) {
       case 'confirmed':
+        // `alreadyProcessed` means an earlier poll (or the reconcile cron) owns
+        // the settlement and already emitted it.
+        if (!result.alreadyProcessed) {
+          await trackSolanaSettlement(tx, 'solana', { signature: result.signature ?? null })
+        }
         return NextResponse.json(
           result.alreadyProcessed
             ? { confirmed: true, alreadyProcessed: true }
@@ -150,7 +257,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-interface SolanaSubsTx {
+interface SolanaSubsTx extends SettledTx {
   transaction_id: number | string
   status: string
   amount: number
@@ -245,6 +352,15 @@ async function handleSolanaSubsVerify(
     console.log(`[solana/verify] solana_subs tx ${tx.transaction_id} was already confirmed`)
     return NextResponse.json({ confirmed: true, alreadyProcessed: true })
   }
+
+  // The subscription is real the moment the flip lands — the trigger has
+  // created the row and its entitlements. Emitted here rather than after the
+  // first split pull below, which is explicitly allowed to fail and be retried
+  // by the crank without the subscription being any less sold.
+  await trackSolanaSettlement(tx, 'solana_subs', {
+    is_renewal: false,
+    subscription_pda: subscriptionPda,
+  })
 
   // School wallet (per tenant) + revenue split percent.
   const { data: wallet } = await admin

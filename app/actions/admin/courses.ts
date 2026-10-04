@@ -5,6 +5,8 @@ import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/s
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
+import { checkCourseLimit } from '@/app/actions/teacher/courses'
+import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 
 /**
  * Approves a course (moves from draft to published)
@@ -183,6 +185,13 @@ export async function restoreCourse(courseId: number): Promise<ActionResult> {
       }
     }
 
+    // Restoring consumes a course slot exactly like creating one (#658): the
+    // same pre-check as `createCourse`, backed by the same DB trigger.
+    const limitCheck = await checkCourseLimit()
+    if (!limitCheck.canCreate) {
+      throw new Error(courseLimitMessage(limitCheck))
+    }
+
     // Update course status
     const { data: course, error } = await adminClient
       .from('courses')
@@ -195,7 +204,12 @@ export async function restoreCourse(courseId: number): Promise<ActionResult> {
       .select('title, author_id')
       .single()
 
-    if (error) throw error
+    if (error) {
+      if (isPlanLimitError(error)) {
+        throw new Error(courseLimitMessage(await checkCourseLimit()))
+      }
+      throw error
+    }
 
     // Notify teacher
     if (course) {

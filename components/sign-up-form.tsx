@@ -1,5 +1,6 @@
 'use client'
 
+import { googleAuthEnabled } from '@/lib/auth/social-providers'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -15,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import {
   InputGroup,
@@ -24,6 +25,20 @@ import {
   InputGroupButton,
 } from '@/components/ui/input-group'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { joinSchoolPath } from '@/lib/auth/route-access'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+// Shared with login and /auth/error so the three cannot drift, and closed-set
+// so no raw GoTrue string (which can carry the submitted address) escapes.
+// Deliberately NOT `localizedError()` below: that returns translated copy, so
+// the same failure would split into an English bucket and a Spanish one.
+import { toAuthFailureCode } from '@/lib/analytics/auth-failure-codes'
+import { deriveNameFromEmail } from '@/lib/auth/display-name'
+
+// Mirrors app/[locale]/auth/confirm/route.ts, the same moment in the flow
+// for the confirmation-on deployments — a signup on the main platform means
+// "start a school", one on a tenant subdomain means "join this one".
+const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
 interface SignUpFormProps extends React.ComponentPropsWithoutRef<'div'> {
   tenantId?: string
@@ -41,6 +56,17 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const nextPath = getSafeNextPath(searchParams.get('next'), '')
+  const analytics = useAnalytics()
+  // `signup_started` means "began filling the form", not "loaded the page" —
+  // the page load is already a screen view, and a second event for it would
+  // make the funnel's first step meaningless.
+  const startedRef = useRef(false)
+
+  const markSignupStarted = () => {
+    if (startedRef.current) return
+    startedRef.current = true
+    analytics.track(ANALYTICS_EVENTS.SIGNUP_STARTED, { has_tenant: Boolean(tenantId) })
+  }
 
   // Supabase returns raw English strings; map the ones users actually hit to
   // translated copy and keep the rest as a last resort.
@@ -56,11 +82,16 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     const supabase = createClient()
-    const name = fullName.trim()
-    if (!name) {
-      setError(t('errors.nameRequired'))
-      return
-    }
+    // An empty name no longer stops the signup (#790) — it is a label for
+    // other people's screens, not something the visitor owes us before they
+    // have an account. `deriveNameFromEmail` keeps `profiles.full_name`
+    // populated so nobody renders as "Unknown Student".
+    const name = fullName.trim() || deriveNameFromEmail(email)
+    markSignupStarted()
+    analytics.track(ANALYTICS_EVENTS.SIGNUP_SUBMITTED, {
+      method: 'password',
+      has_tenant: Boolean(tenantId),
+    })
     setIsLoading(true)
     setError(null)
 
@@ -82,15 +113,43 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         },
       })
       if (error) throw error
+
+      // Stitch the anonymous session to the new profile HERE, before the
+      // navigation. Everything the visitor did up to this point — landing,
+      // pricing, product views, the whole top of Loop A — is anonymous, and if
+      // the binding waits for the dashboard to load on the next page those
+      // events may never join to the profile. `data.user` is populated even
+      // when `data.session` is null (email confirmation pending), which is the
+      // common path, so this must not be gated on the session.
+      const newUserId = data.user?.id ?? data.session?.user?.id
+      if (newUserId) analytics.identify(newUserId, { signup_method: 'password' })
+
       if (data.session) {
         // The signup token predates handle_new_user()'s app_metadata write, so
         // it lacks the tenant_id claim — refresh to get one that has it, or
         // tenant-scoped RLS fails closed and the next page 404s.
         await supabase.auth.refreshSession()
       }
-      router.push(data.session && nextPath ? nextPath : '/auth/sign-up-success')
+      // No session means confirmation is genuinely pending (prod has it off,
+      // so this is now the rare case) — sign-up-success is the "check your
+      // inbox" screen and still correct there. A session means the account is
+      // already live, so a brand-new student goes onward instead of being
+      // told to wait for an email that, on prod, mailer #676 never sends.
+      if (!data.session) {
+        router.push('/auth/sign-up-success')
+      } else if (nextPath) {
+        router.push(nextPath)
+      } else if (tenantId === DEFAULT_TENANT_ID) {
+        router.push('/create-school')
+      } else {
+        router.push(joinSchoolPath())
+      }
     } catch (error: unknown) {
       setError(localizedError(error))
+      analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
+        method: 'password',
+        failure_reason: toAuthFailureCode(error),
+      })
     } finally {
       setIsLoading(false)
     }
@@ -98,6 +157,11 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
 
   const handleGoogleSignUp = async () => {
     const supabase = createClient()
+    markSignupStarted()
+    analytics.track(ANALYTICS_EVENTS.SIGNUP_SUBMITTED, {
+      method: 'google',
+      has_tenant: Boolean(tenantId),
+    })
     setIsSocialLoading(true)
     setError(null)
 
@@ -112,6 +176,10 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
       if (error) throw error
     } catch (error: unknown) {
       setError(localizedError(error))
+      analytics.track(ANALYTICS_EVENTS.SIGNUP_FAILED, {
+        method: 'google',
+        failure_reason: toAuthFailureCode(error),
+      })
       setIsSocialLoading(false)
     }
   }
@@ -126,6 +194,8 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
         <CardContent>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
+              {googleAuthEnabled && (
+              <>
               <Button
                 type="button"
                 variant="outline"
@@ -162,18 +232,19 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                   <span className="bg-card px-2 text-muted-foreground">{t('orContinueWith')}</span>
                 </div>
               </div>
+              </>
+              )}
 
               <div className="grid gap-2">
-                <Label htmlFor="full-name">{t('fullName')}</Label>
+                <Label htmlFor="full-name">{t('fullNameOptional')}</Label>
                 <Input
                   id="full-name"
                   data-testid="signup-name"
                   type="text"
                   autoComplete="name"
                   placeholder={t('fullNamePlaceholder')}
-                  required
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => { markSignupStarted(); setFullName(e.target.value) }}
                 />
               </div>
               <div className="grid gap-2">
@@ -186,7 +257,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                   placeholder="m@example.com"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { markSignupStarted(); setEmail(e.target.value) }}
                 />
               </div>
               <div className="grid gap-2">
@@ -203,7 +274,7 @@ export function SignUpForm({ className, tenantId, ...props }: SignUpFormProps) {
                     required
                     minLength={6}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { markSignupStarted(); setPassword(e.target.value) }}
                   />
                   <InputGroupAddon align="inline-end">
                     <InputGroupButton

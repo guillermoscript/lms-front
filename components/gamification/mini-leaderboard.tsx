@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IconTrophy, IconMedal, IconTrendingUp, IconLock } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 export function MiniLeaderboard() {
     const { summary } = useGamificationSummary();
@@ -19,6 +20,7 @@ export function MiniLeaderboard() {
         }
     }, [summary?.features?.leaderboard]);
     const t = useTranslations('components.gamification');
+    const tPlans = useTranslations('billing.plans');
 
     // Show upgrade prompt if leaderboard feature is not available
     if (summary && !summary.features?.leaderboard) {
@@ -26,7 +28,7 @@ export function MiniLeaderboard() {
             <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-border flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-500">
+                        <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                             <IconTrophy size={18} />
                         </div>
                         <h3 className="font-bold text-sm tracking-tight">{t('leaderboardTitle')}</h3>
@@ -38,7 +40,7 @@ export function MiniLeaderboard() {
                         <IconTrophy size={24} className="text-muted-foreground" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold">{t('upgrade.leaderboardLocked')}</p>
+                        <p className="text-sm font-bold">{t('upgrade.leaderboardLocked', { plan: tPlans(FEATURE_REQUIRED_PLAN.leaderboard) })}</p>
                         <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
                     </div>
                 </div>
@@ -67,7 +69,7 @@ export function MiniLeaderboard() {
         <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
             <div className="p-4 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-500">
+                    <div className="p-1.5 rounded-lg bg-brand-tint text-brand-text">
                         <IconTrophy size={18} />
                     </div>
                     <h3 className="font-bold text-sm tracking-tight">{t('leaderboardTitle')}</h3>

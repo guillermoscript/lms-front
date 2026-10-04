@@ -2,6 +2,7 @@
 
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import type { ComponentProps } from 'react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { IconRotateClockwise2, IconHistory } from '@tabler/icons-react'
@@ -23,10 +24,18 @@ import {
     PromptInputFooter,
     PromptInputSubmit,
     PromptInputTextarea,
-    type PromptInputMessage,
     PromptInputProvider,
+    PromptInputTools,
     usePromptInputController,
 } from '@/components/ai-elements/prompt-input'
+import {
+    ChatAttachButton,
+    ChatAttachmentsPreview,
+    MessageImageParts,
+    useChatAttachmentInputProps,
+} from '@/components/ai/chat-attachments'
+import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
+import { classifyAiChatError } from '@/lib/ai/chat-error'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { SessionList } from './session-list'
@@ -41,6 +50,7 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
     const [showSessions, setShowSessions] = useState(false)
     const { textInput } = usePromptInputController()
     const t = useTranslations('aristotle')
+    const tChatLimits = useTranslations('aiChatLimits')
 
     const suggestions = [
         t('suggestions.practiceQuiz'),
@@ -61,16 +71,16 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                 courseId: String(courseId),
             },
         }),
-        onError: () => toast.error(t('toast.error')),
+        onError: (error) => {
+            const kind = classifyAiChatError(error)
+            toast.error(kind === 'generic' ? t('toast.error') : tChatLimits(kind))
+        },
     })
 
     const isLoading = status === 'submitted' || status === 'streaming'
 
-    const onSubmit = (message: PromptInputMessage) => {
-        if (!message.text) return
-        sendMessage({ text: message.text })
-        textInput.clear()
-    }
+    const attachmentInputProps = useChatAttachmentInputProps()
+    const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
 
     const handleSuggestionClick = (suggestion: string) => {
         sendMessage({ text: suggestion })
@@ -154,8 +164,9 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                         )}
 
                         {messages.map((message) => (
-                            <Message key={message.id} from={message.role as any}>
+                            <Message key={message.id} from={message.role as ComponentProps<typeof Message>['from']}>
                                 <MessageContent>
+                                    <MessageImageParts parts={message.parts} />
                                     {message.parts.map((part, index) => {
                                         if (part.type === 'text') {
                                             return <MessageResponse key={index}>{part.text}</MessageResponse>
@@ -192,7 +203,8 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                     )}
 
                     <div className="w-full px-4 pb-4">
-                        <PromptInput onSubmit={onSubmit}>
+                        <PromptInput onSubmit={onSubmit} {...attachmentInputProps}>
+                            <ChatAttachmentsPreview />
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     placeholder={t('placeholder')}
@@ -200,7 +212,10 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                                 />
                             </PromptInputBody>
                             <PromptInputFooter>
-                                <PromptInputSubmit status={status as any} />
+                                <PromptInputTools>
+                                    <ChatAttachButton />
+                                </PromptInputTools>
+                                <PromptInputSubmit status={status as ComponentProps<typeof PromptInputSubmit>['status']} />
                             </PromptInputFooter>
                         </PromptInput>
                     </div>

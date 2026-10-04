@@ -244,6 +244,19 @@ If a user accesses a dashboard route they are not authorized for, `proxy.ts` red
 - Non-members are redirected to `/join-school`
 - After a tenant switch, the client must call `supabase.auth.refreshSession()` to update JWT claims with the new tenant context
 
+### Redirect-Only Destinations
+
+Some pages exist to be redirected *to*. They carry no nav entry and no inbound link on
+purpose — reaching one by typing the URL is harmless, but nothing links there.
+
+| Route | Who sends you there | Why |
+|-------|--------------------|-----|
+| `/dashboard/student/access-suspended` | `requireCourseAccess()` in `lib/services/course-access-guard.ts:38`, when the refusal is the **tenant** cutoff rather than a missing entitlement | Tells the student their school is over its plan limits and that their enrolment is intact. Shipped in #509; covered by `tests/playwright/access-cutoff-lifecycle.spec.ts` |
+| `/join-school` | `proxy.ts`, when an authenticated user has no active `tenant_users` row | See **Tenant Membership** above |
+| `/create-school` | Sign-up on the apex domain | Public route; also linked from the homepage |
+
+Do not "clean up" the first one as an orphan: no nav entry is the point.
+
 ### Cross-Subdomain Session
 
 JWT cookies are set with cross-subdomain support via `updateSession()` in `lib/supabase/proxy.ts`. This allows users to stay authenticated when navigating between:
@@ -519,10 +532,19 @@ supabase.auth.onAuthStateChange((event, session) => {
 1. Go to Authentication -> Settings
 2. Toggle "Enable email confirmations"
 
-### Custom Email Templates
-1. Go to Authentication -> Email Templates
-2. Customize "Confirm signup" template
-3. Use `{{ .ConfirmationURL }}` for confirmation link
+### Branded Auth Emails (Send Email Hook, #776)
+
+Sign-up confirmation, magic link, recovery, invite and email-change no longer
+use GoTrue's default templates or the dashboard's Email Templates page — once
+Authentication → Hooks → Send Email is enabled in the hosted project, GoTrue
+POSTs the OTP payload to `app/api/auth/send-email-hook/route.ts` instead,
+which resolves the school (from the `redirect_to` subdomain, else the user's
+own tenant membership, else the platform palette), renders
+`lib/email/templates/auth-otp.ts` with `school-brand-parts.ts`, and sends
+through the existing Mailgun-backed `sendEmail()`. The link it builds always
+points at `/auth/confirm` (below), never Supabase's hosted `/auth/v1/verify`.
+Disabled locally — see `supabase/config.toml`'s `[auth.hook.send_email]`
+comment for why and how to turn it on.
 
 ### Handling Confirmation Callback
 
@@ -561,5 +583,5 @@ redirect(next) // recovery, magiclink, etc.
 ## Related Documentation
 
 - [Database Schema](./DATABASE_SCHEMA.md) - User tables and role structure
-- [RLS Policies](./RLS_POLICIES.md) - Detailed RLS policy examples
+- [Database Schema § Row Level Security](./DATABASE_SCHEMA.md#row-level-security-rls) - RLS policy patterns and examples
 - [Development Workflow](./DEVELOPMENT_WORKFLOW.md) - Testing auth locally

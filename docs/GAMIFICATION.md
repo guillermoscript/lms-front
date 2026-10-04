@@ -33,6 +33,7 @@ The gamification system motivates students through:
 - **Tenant-scoped**: All gamification data (XP, levels, streaks, achievements, store, leaderboard) is scoped per tenant. A user has separate progression per school.
 - **Plan-gated features**: Advanced features are locked behind plan tiers (see [Plan-Gated Features](#plan-gated-features) below)
 - **Automatic XP**: All XP is awarded via database triggers — no client-side logic needed
+- **Community milestones (#871)**: reaching level 5+ or a 7/30/100-day streak posts once to the school's community feed (a trigger on `gamification_profiles`, see `docs/COMMUNITY_SPACES.md`). Never award XP for milestone posts — post → XP → level-up → post would loop
 - **Lazy profile creation**: Gamification profiles are created on first XP award via UPSERT in `award_xp()`, not on user signup
 - **SECURITY DEFINER**: All write operations go through `SECURITY DEFINER` functions; RLS handles reads
 - **Lazy loading**: The dashboard header only fetches the summary; leaderboard/achievements/store load on demand
@@ -250,7 +251,7 @@ Core function that:
 5. Adds XP to `gamification_profiles.total_xp`
 6. Auto-levels up by checking `gamification_levels`
 
-**Security**: `SECURITY DEFINER` — called by triggers, not directly by users.
+**Security**: `SECURITY DEFINER` — called by triggers, not directly by users. Since #871 both overloads have `EXECUTE` revoked from `anon` and `authenticated` (it trusts the caller's `_user_id`, `_xp_amount` and `_tenant_id`, and a level or streak it sets can publish a community milestone post); the `handle_*_xp` triggers run as the owner and `check-achievements` uses the service role.
 
 ### `refresh_leaderboard_cache()`
 

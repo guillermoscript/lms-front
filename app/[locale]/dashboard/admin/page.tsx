@@ -24,6 +24,7 @@ import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
+import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
 
 export default async function AdminDashboardPage({
   params,
@@ -48,7 +49,10 @@ export default async function AdminDashboardPage({
   const [
     { count: totalUsers },
     { count: totalCourses },
-    { count: publishedCourses, data: publishedCourseRows },
+    { count: publishedCourses },
+    { data: firstCourseRows },
+    { data: readyCourseRows },
+    { count: publishedLessons },
     { count: totalEnrollments },
     { count: totalTransactions },
     { count: pendingPaymentRequests },
@@ -61,11 +65,37 @@ export default async function AdminDashboardPage({
     supabase.from('courses').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase
       .from('courses')
-      .select('course_id, title', { count: 'exact' })
+      .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .eq('status', 'published')
+      .eq('status', 'published'),
+    // The oldest course with its lesson count: where the "first course" step
+    // sends the owner next (quick create, or that course's lesson editor).
+    supabase
+      .from('courses')
+      .select('course_id, title, status, lessons(id)')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true })
       .limit(1),
+    // The first course a student can actually open: published, with at least
+    // one published lesson (#675). This is what completes the step and what
+    // the milestone card links to.
+    supabase
+      .from('courses')
+      .select('course_id, title, lessons!inner(id)')
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .eq('status', 'published')
+      .eq('lessons.status', 'published')
+      .order('created_at', { ascending: true })
+      .limit(1),
+    // Any published lesson at all — the second sub-step. A creator who
+    // publishes the lesson before the course still sees that half ticked.
+    supabase
+      .from('lessons')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'published'),
     supabase.from('enrollments').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
     supabase
@@ -155,24 +185,40 @@ export default async function AdminDashboardPage({
   const hasBranding = settingsByKey.has('theme_preset') || settingsByKey.has('logo_url')
   const isStripeConnected = Boolean(tenant?.stripe_account_id)
   const hasConfiguredPayments = isStripeConnected || settingsByKey.has('manual_payment_instructions')
-  const firstPublishedCourse = publishedCourseRows?.[0]
+  const firstCourse = firstCourseRows?.[0]
+  const firstCourseLessonCount = firstCourse?.lessons?.length ?? 0
+  const firstReadyCourse = readyCourseRows?.[0]
+  const hasPublishedCourse = (publishedCourses || 0) > 0
+  const hasPublishedLesson = (publishedLessons || 0) > 0
+  const hasOpenableCourse = Boolean(firstReadyCourse)
+  // Where "Create your first course" points, by state: nothing yet → quick
+  // create; a course with no lesson → its lesson editor; otherwise the course.
+  const firstCourseHref = !firstCourse
+    ? '/dashboard/admin/courses/new'
+    : firstCourseLessonCount === 0
+      ? `/dashboard/teacher/courses/${firstCourse.course_id}/lessons/new?from=new-course`
+      : `/dashboard/teacher/courses/${firstCourse.course_id}`
+  const joinUrl = await getSchoolJoinUrl()
 
   const stats = [
     {
       title: t('stats.totalUsers'),
       value: totalUsers || 0,
+      testId: 'admin-stat-users',
       icon: IconUsers,
       link: '/dashboard/admin/users',
     },
     {
       title: t('stats.activeSubscriptions'),
       value: activeSubscriptions || 0,
+      testId: 'admin-stat-subscriptions',
       icon: IconCrown,
       link: '/dashboard/admin/subscriptions',
     },
     {
       title: t('stats.totalCourses'),
       value: totalCourses || 0,
+      testId: 'admin-stat-courses',
       subtitle: t('stats.published', { count: publishedCourses || 0 }),
       icon: IconBook,
       link: '/dashboard/admin/courses',
@@ -180,12 +226,14 @@ export default async function AdminDashboardPage({
     {
       title: t('stats.pendingPayments'),
       value: pendingPaymentRequests || 0,
+      testId: 'admin-stat-pending-payments',
       icon: IconReceipt,
       link: '/dashboard/admin/payment-requests',
     },
     {
       title: t('stats.totalRevenue'),
       value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }).format(totalRevenue),
+      testId: 'admin-stat-revenue',
       subtitle: t('stats.transactions', { count: totalTransactions || 0 }),
       icon: IconCurrencyDollar,
       link: '/dashboard/admin/transactions',
@@ -215,13 +263,13 @@ export default async function AdminDashboardPage({
         dismissed={isChecklistDismissed(uiState, 'admin')}
         title={t('onboarding.title')}
         subtitle={t('onboarding.subtitle')}
-        milestone={firstPublishedCourse ? {
+        milestone={firstReadyCourse ? {
           stepId: 'add-course',
           title: t('onboarding.courseSuccessTitle'),
           description: t('onboarding.courseSuccessDescription', {
-            course: firstPublishedCourse.title,
+            course: firstReadyCourse.title,
           }),
-          href: `/courses/${firstPublishedCourse.course_id}`,
+          href: `/courses/${firstReadyCourse.course_id}`,
           copyLabel: t('onboarding.copyCourseLink'),
           copiedLabel: t('onboarding.courseLinkCopied'),
           viewLabel: t('onboarding.viewCourse'),
@@ -231,9 +279,41 @@ export default async function AdminDashboardPage({
             id: 'add-course',
             label: t('onboarding.addCourse'),
             description: t('onboarding.addCourseDesc'),
-            href: '/dashboard/admin/products/new',
-            completed: (publishedCourses || 0) > 0,
+            href: firstCourseHref,
+            // A course counts once a student can open something in it: the
+            // course is published AND has a published lesson (#675).
+            completed: hasOpenableCourse,
             timeHint: t('onboarding.addCourseTime'),
+            substeps: [
+              {
+                id: 'publish-course',
+                label: t('onboarding.addCourseStepPublish'),
+                completed: hasPublishedCourse,
+              },
+              {
+                id: 'publish-lesson',
+                label: t('onboarding.addCourseStepLesson'),
+                completed: hasPublishedLesson,
+              },
+            ],
+          },
+          {
+            // Right after the course: a live course with nobody in it is the
+            // state the prod sandbox got stuck in (#675). Payments and
+            // branding are optional; a first student is the point.
+            id: 'invite-users',
+            label: t('onboarding.inviteUsers'),
+            description: t('onboarding.inviteUsersDesc'),
+            href: '/dashboard/admin/users',
+            completed: (totalUsers || 0) > 1, // More than just the admin
+            timeHint: t('onboarding.inviteUsersTime'),
+            share: {
+              url: joinUrl,
+              copyLabel: t('onboarding.copyJoinLink'),
+              copiedLabel: t('onboarding.joinLinkCopied'),
+              whatsappLabel: t('onboarding.shareWhatsApp'),
+              whatsappText: t('onboarding.inviteWhatsAppMessage', { url: joinUrl }),
+            },
           },
           {
             id: 'connect-payments',
@@ -252,19 +332,11 @@ export default async function AdminDashboardPage({
             timeHint: t('onboarding.brandSchoolTime'),
           },
           {
-            id: 'invite-users',
-            label: t('onboarding.inviteUsers'),
-            description: t('onboarding.inviteUsersDesc'),
-            href: '/dashboard/admin/users',
-            completed: (totalUsers || 0) > 1, // More than just the admin
-            timeHint: t('onboarding.inviteUsersTime'),
-          },
-          {
             id: 'configure-school',
             label: t('onboarding.configureSchool'),
             description: t('onboarding.configureSchoolDesc'),
             href: '/dashboard/admin/settings',
-            completed: Boolean(currentSettings?.site_name),
+            completed: Boolean((currentSettings?.site_name as { value?: unknown } | undefined)?.value),
             timeHint: t('onboarding.configureSchoolTime'),
           },
         ]}
@@ -273,7 +345,7 @@ export default async function AdminDashboardPage({
             {t('onboarding.wizardPrompt')}{' '}
             <Link
               href="/onboarding"
-              className="font-medium text-primary underline-offset-4 hover:underline"
+              className="font-medium text-brand-text underline-offset-4 hover:underline"
             >
               {t('onboarding.wizardLink')}
             </Link>
@@ -324,14 +396,14 @@ export default async function AdminDashboardPage({
                 <div className="flex items-center justify-between">
                   <stat.icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
                 </div>
-                <p className="mt-3 text-2xl font-bold tracking-tight">
+                <p className="mt-3 text-2xl font-bold tracking-tight" data-testid={stat.testId}>
                   {stat.value}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {stat.title}
                 </p>
                 {stat.subtitle && (
-                  <p className="text-[11px] text-muted-foreground/60">
+                  <p className="text-[11px] text-muted-foreground">
                     {stat.subtitle}
                   </p>
                 )}
@@ -368,7 +440,7 @@ export default async function AdminDashboardPage({
                     className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-semibold text-brand-text">
                         {(tu.profiles?.full_name || '?').charAt(0).toUpperCase()}
                       </div>
                       <p className="text-sm font-medium">{tu.profiles?.full_name || t('recentActivity.unknown')}</p>
@@ -437,9 +509,9 @@ export default async function AdminDashboardPage({
                               : 'destructive'
                         }
                         className={`text-[9px] ${transaction.status === 'successful'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                          ? 'bg-success/10 text-success border-success/30'
                           : transaction.status === 'pending'
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400'
+                            ? 'bg-warning/10 text-warning border-warning/30'
                             : ''
                           }`}
                       >

@@ -22,7 +22,7 @@ export function AskTutorChip() {
                         })
                     )
                 }
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 active:scale-[0.98]"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-brand-text transition-colors hover:bg-brand-tint active:scale-[0.98]"
             >
                 <IconSparkles className="h-4 w-4" />
                 {t('chip')}

@@ -5,9 +5,17 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
 import { sendEmail } from '@/lib/email/send'
+import { isMailerConfigured } from '@/lib/email/status'
+import { courseRemovedTemplate } from '@/lib/email/templates/course-removed'
+import { bestEffortLocale } from '@/lib/i18n/best-effort-locale'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { countTenantUsage, getTenantPlanLimits } from '@/lib/billing/plan-limits'
+import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
+import { evaluateSchoolActivation } from '@/lib/analytics/activation'
 
 export interface CourseFormData {
   title: string
@@ -121,11 +129,7 @@ export async function createCourse(courseData: CourseFormData) {
   // Check plan limits
   const limitCheck = await checkCourseLimit()
   if (!limitCheck.canCreate) {
-    throw new Error(
-      `Your ${limitCheck.plan} plan is limited to ${limitCheck.limit} courses. ` +
-      `You currently have ${limitCheck.currentCount} courses. ` +
-      `Please upgrade your plan to create more courses.`
-    )
+    throw new Error(courseLimitMessage(limitCheck))
   }
 
   // Use admin client for insert — auth and role are already validated above.
@@ -160,6 +164,12 @@ export async function createCourse(courseData: CourseFormData) {
     .single()
 
   if (error) {
+    // The `enforce_course_plan_limit` trigger (#658) is the authoritative check;
+    // the pre-check above can lose a race to a concurrent insert or an MCP
+    // write, and this is the message it would have shown.
+    if (isPlanLimitError(error)) {
+      throw new Error(courseLimitMessage(await checkCourseLimit()))
+    }
     console.error('Failed to create course:', error)
     throw new Error(`Failed to create course: ${error.message}`)
   }
@@ -176,6 +186,27 @@ export async function createCourse(courseData: CourseFormData) {
   // that was already created, and `archiveCourse`/`deleteCourse` below reconcile
   // the same way.
   await reconcileAccessCutoffSafely(adminClient, tenantId)
+
+  await track(
+    ANALYTICS_EVENTS.COURSE_CREATED,
+    {
+      course_id: course.course_id,
+      via: 'manual',
+      status: courseData.status || 'draft',
+    },
+    { userId: user.id, tenantId, role }
+  )
+
+  // A course created straight into `published` is the one case where creation
+  // can complete the activation condition on its own.
+  if ((courseData.status || 'draft') === 'published') {
+    await track(
+      ANALYTICS_EVENTS.COURSE_PUBLISHED,
+      { course_id: course.course_id, lesson_count: 0, days_since_course_created: 0 },
+      { userId: user.id, tenantId, role }
+    )
+    await evaluateSchoolActivation({ tenantId, userId: user.id, role })
+  }
 
   revalidatePath('/dashboard/teacher/courses')
   return course
@@ -198,10 +229,12 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
     throw new Error('Unauthorized: Only teachers and admins can update courses')
   }
 
-  // Verify course belongs to user or user is admin
+  // Verify course belongs to user or user is admin. `status` and `created_at`
+  // ride along for the `course_published` transition check below — this select
+  // already happens, so detecting the transition costs no extra round trip.
   const { data: existingCourse } = await supabase
     .from('courses')
-    .select('author_id, tenant_id')
+    .select('author_id, tenant_id, status, created_at')
     .eq('course_id', courseId)
     .eq('tenant_id', tenantId)
     .single()
@@ -233,6 +266,47 @@ export async function updateCourse(courseId: number, courseData: CourseFormData)
   if (error) {
     console.error('Failed to update course:', error)
     throw new Error(`Failed to update course: ${error.message}`)
+  }
+
+  // TRANSITION DETECTION, not "did this save write `status`". `updateCourse` is
+  // a generic save that happens to carry `status`, so firing on every call would
+  // emit `course_published` each time an already-live course is edited —
+  // inflating the one metric Loop B exists to produce. Only not-published →
+  // published counts, and `status: undefined` above means the field was left
+  // alone, which is never a publish.
+  const nextStatus = courseData.status
+  if (nextStatus === 'published' && existingCourse.status !== 'published') {
+    // Wrapped: the `lessons` count exists only to populate `lesson_count`, and
+    // the course is already published by now — an analytics read must not throw
+    // "Failed to update course" at a save that succeeded.
+    await safeAnalytics(async () => {
+      const { count: lessonCount } = await adminClient
+        .from('lessons')
+        .select('id', { count: 'exact', head: true })
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId)
+
+      const createdAt = existingCourse.created_at
+        ? new Date(existingCourse.created_at)
+        : null
+
+      await track(
+        ANALYTICS_EVENTS.COURSE_PUBLISHED,
+        {
+          course_id: courseId,
+          lesson_count: lessonCount ?? 0,
+          days_since_course_created:
+            createdAt && !Number.isNaN(createdAt.getTime())
+              ? Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86_400_000))
+              : null,
+          previous_status: existingCourse.status,
+        },
+        { userId: user.id, tenantId, role }
+      )
+
+      // Publishing is one of the two events that can complete activation.
+      await evaluateSchoolActivation({ tenantId, userId: user.id, role })
+    }, 'course_published')
   }
 
   revalidatePath('/dashboard/teacher/courses')
@@ -301,6 +375,7 @@ export async function archiveCourse(courseId: number) {
   return { success: true }
 }
 
+
 /**
  * Delete a course. Sends email to enrolled students if any.
  * Requires explicit confirmation — use getCourseEnrollmentCount first to warn the UI.
@@ -327,7 +402,10 @@ export async function deleteCourse(courseId: number) {
 
   const adminClient = createAdminClient()
 
-  // Notify enrolled students before deleting
+  // Notify enrolled students before deleting. `sendEmail()` returns false when
+  // the platform mailer is not configured, and the dialog tells the teacher how
+  // many students were NOT reached rather than implying everyone was (#676).
+  const notification = { recipients: 0, emailsSent: 0, mailerConfigured: isMailerConfigured() }
   try {
     const { data: enrollments } = await adminClient
       .from('enrollments')
@@ -336,23 +414,36 @@ export async function deleteCourse(courseId: number) {
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
 
-    const { data: tenantRow } = await adminClient
-      .from('tenants')
-      .select('name')
-      .eq('id', tenantId)
-      .single()
+    notification.recipients = enrollments?.length ?? 0
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+    if (notification.recipients > 0 && notification.mailerConfigured) {
+      const [brand, locale, authUsers] = await Promise.all([
+        getSchoolBrand(tenantId),
+        bestEffortLocale(),
+        // One round-trip per student, but in parallel — `auth.admin` has no
+        // "get users by ids", and `listUsers` pages the whole instance.
+        Promise.all(
+          (enrollments || []).map((enrollment) => adminClient.auth.admin.getUserById(enrollment.user_id))
+        ),
+      ])
 
-    for (const enrollment of enrollments || []) {
-      const { data: authUser } = await adminClient.auth.admin.getUserById(enrollment.user_id)
-      if (authUser?.user?.email) {
-        await sendEmail({
-          to: authUser.user.email,
-          subject: `Course "${course.title}" has been removed — ${tenantRow?.name || 'LMS Platform'}`,
-          html: `<p>Hi,</p><p>The course <strong>${course.title}</strong> that you were enrolled in has been removed from ${tenantRow?.name || 'the platform'}. We're sorry for any inconvenience.</p><p><a href="${appUrl}/dashboard/student/browse">Browse other courses</a></p>`,
-        })
-      }
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+      // One template built once and reused for every recipient below — the
+      // brand is the school's, not the student's, so there is nothing to
+      // resolve per recipient.
+      const template = courseRemovedTemplate({
+        courseTitle: course.title,
+        schoolName: brand.name || 'LMS Platform',
+        browseUrl: `${appUrl}/dashboard/student/browse`,
+        locale,
+        brand,
+      })
+
+      const recipients = authUsers
+        .map(({ data }) => data?.user?.email)
+        .filter((email): email is string => Boolean(email))
+      const results = await Promise.all(recipients.map((to) => sendEmail({ to, ...template })))
+      notification.emailsSent = results.filter(Boolean).length
     }
   } catch (emailErr) {
     console.error('Failed to notify students of course deletion:', emailErr)
@@ -375,5 +466,5 @@ export async function deleteCourse(courseId: number) {
   await reconcileAccessCutoffSafely(adminClient, tenantId)
 
   revalidatePath('/dashboard/teacher/courses')
-  return { success: true }
+  return { success: true, ...notification }
 }

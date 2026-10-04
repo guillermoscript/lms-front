@@ -7,6 +7,8 @@
  * review cards, incomplete study goals this week, streak at risk); at the
  * nudge hour we send an optional second streak-saver to students with a
  * streak >= 7 and still no activity today. Structural cap: max 2 sends/day.
+ * Unread community replies ride along in the digest (#870) — there is no
+ * per-reply email.
  *
  * The service role bypasses RLS — every query and insert here carries
  * tenant_id explicitly; that hygiene is load-bearing.
@@ -17,6 +19,7 @@ import { sendEmail } from '@/lib/email/send'
 import { dailyDigestEmailTemplate, streakNudgeEmailTemplate } from '@/lib/email/templates/daily-digest'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
 
 export type DigestLocale = 'en' | 'es'
 export type DigestKind = 'daily_digest' | 'streak_nudge'
@@ -49,6 +52,11 @@ export interface CandidateRow {
   goals_pending: number
   current_streak: number
   last_activity_date: string | null
+  /**
+   * Unread community replies (and accepted answers) with activity in the last
+   * day, a batched notification counting each of its replies (#870).
+   */
+  community_replies: number
 }
 
 interface PreferencesRow {
@@ -154,26 +162,39 @@ const SUMMARY_COPY = {
   en: {
     cards: (n: number) => `${n} ${n === 1 ? 'card' : 'cards'} due`,
     goals: (n: number) => `${n} ${n === 1 ? 'study goal' : 'study goals'} left this week`,
+    community: (n: number) => `${n} new ${n === 1 ? 'reply' : 'replies'} in the community`,
     streak: (n: number) => `your ${n}-day streak ends tonight`,
   },
   es: {
     cards: (n: number) => `${n} ${n === 1 ? 'tarjeta pendiente' : 'tarjetas pendientes'}`,
     goals: (n: number) => `${n} ${n === 1 ? 'meta de estudio' : 'metas de estudio'} esta semana`,
+    community: (n: number) => `${n} ${n === 1 ? 'respuesta nueva' : 'respuestas nuevas'} en la comunidad`,
     streak: (n: number) => `tu racha de ${n} días termina esta noche`,
   },
 } as const
 
-/** "12 cards due · 1 study goal left this week · your 14-day streak ends tonight" */
+/**
+ * "12 cards due · 1 study goal left this week · 3 new replies in the community ·
+ * your 14-day streak ends tonight"
+ */
 export function buildSummary(
-  parts: { dueCards: number; goalsPending: number; streak: number; streakAtRisk: boolean },
+  parts: { dueCards: number; goalsPending: number; streak: number; streakAtRisk: boolean; communityReplies?: number },
   locale: DigestLocale
 ): string {
   const copy = SUMMARY_COPY[locale]
   const out: string[] = []
   if (parts.dueCards > 0) out.push(copy.cards(parts.dueCards))
   if (parts.goalsPending > 0) out.push(copy.goals(parts.goalsPending))
+  const replies = parts.communityReplies ?? 0
+  if (replies > 0) out.push(copy.community(replies))
   if (parts.streakAtRisk && parts.streak >= DIGEST_STREAK_MIN) out.push(copy.streak(parts.streak))
   return out.join(' · ')
+}
+
+/** A candidate's community reply count; 0 for a missing or malformed value. */
+export function communityReplies(candidate: Pick<CandidateRow, 'community_replies'>): number {
+  const n = Number(candidate.community_replies)
+  return Number.isSafeInteger(n) && n > 0 ? n : 0
 }
 
 /** Same {{var}} interpolation as app/actions/admin/notification-templates.ts. */
@@ -390,6 +411,10 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
     const dateStr = localDateStr(now, settings.timezone)
     const schoolName = tenant.name
     const actionUrl = `${tenantBaseUrl(tenant.slug)}/${settings.locale}/dashboard/student?src=digest`
+    const notificationsUrl = `${tenantBaseUrl(tenant.slug)}/${settings.locale}/dashboard/notifications?src=digest`
+    // Once per tenant, not per recipient — every student in this tenant's
+    // batch gets the same school brand.
+    const brand = await getSchoolBrand(tenantId)
 
     const { data: templateRows } = await admin
       .from('notification_templates')
@@ -433,6 +458,7 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
         kind === 'daily_digest'
           ? c.due_cards > 0 ||
             c.goals_pending > 0 ||
+            communityReplies(c) > 0 ||
             isStreakAtRisk(c.last_activity_date, c.current_streak, now, DIGEST_STREAK_MIN, settings.timezone)
           : isStreakAtRisk(c.last_activity_date, c.current_streak, now, NUDGE_STREAK_MIN, settings.timezone)
       )
@@ -482,12 +508,14 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
             kind === 'daily_digest' ? DIGEST_STREAK_MIN : NUDGE_STREAK_MIN,
             settings.timezone
           )
+          const replies = kind === 'daily_digest' ? communityReplies(candidate) : 0
           const summary = buildSummary(
             {
               dueCards: candidate.due_cards,
               goalsPending: candidate.goals_pending,
               streak: candidate.current_streak,
               streakAtRisk,
+              communityReplies: replies,
             },
             settings.locale
           )
@@ -524,6 +552,7 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
                 due_cards: candidate.due_cards,
                 goals_pending: candidate.goals_pending,
                 streak: candidate.current_streak,
+                community_replies: replies,
               },
             })
             .select('id')
@@ -545,12 +574,15 @@ export async function runDailyDigest(admin: SupabaseClient, now: Date = new Date
                       dueCards: candidate.due_cards,
                       goalsPending: candidate.goals_pending,
                       streak: streakAtRisk ? candidate.current_streak : 0,
+                      communityReplies: replies,
+                      notificationsUrl,
                       actionUrl,
+                      brand,
                     },
                     settings.locale
                   )
                 : streakNudgeEmailTemplate(
-                    { schoolName, firstName: vars.first_name, streak: candidate.current_streak, actionUrl },
+                    { schoolName, firstName: vars.first_name, streak: candidate.current_streak, actionUrl, brand },
                     settings.locale
                   )
             emailSent = await sendEmail({ to: candidate.email, ...emailTemplate })

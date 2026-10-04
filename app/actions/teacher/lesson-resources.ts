@@ -4,7 +4,7 @@ import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { hasCourseAccess } from '@/lib/services/course-access'
+import { signLessonResourceDownload } from '@/lib/lessons/resource-download'
 import { nanoid } from 'nanoid'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -38,7 +38,7 @@ async function verifyLessonOwnership(lessonId: number) {
 
   if (!lesson) throw new Error('Lesson not found')
 
-  const course = lesson.courses as any
+  const course = lesson.courses as unknown as { author_id: string | null } | null
   const isOwner = course?.author_id === userId
   const isAdmin = role === 'admin'
 
@@ -124,7 +124,6 @@ export async function deleteLessonResource(
   resourceId: number
 ): Promise<ActionResult> {
   try {
-    const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
     const role = await getUserRole()
     const userId = await getCurrentUserId()
@@ -143,7 +142,8 @@ export async function deleteLessonResource(
       return { success: false, error: 'Resource not found' }
     }
 
-    const course = (resource.lessons as any)?.courses as any
+    const course = (resource.lessons as unknown as { courses: { author_id: string | null } | null } | null)
+      ?.courses
     const isOwner = course?.author_id === userId
     const isAdmin = role === 'admin'
 
@@ -206,44 +206,26 @@ export async function getResourceDownloadUrl(
   resourceId: number
 ): Promise<ActionResult<{ url: string }>> {
   try {
-    const supabase = await createClient()
     const tenantId = await getCurrentTenantId()
     const userId = await getCurrentUserId()
     if (!userId) throw new Error('Not authenticated')
 
-    const adminClient = createAdminClient()
-
-    const { data: resource } = await adminClient
-      .from('lesson_resources')
-      .select('id, file_path, lesson_id, tenant_id, lessons(course_id, courses(author_id))')
-      .eq('id', resourceId)
-      .single()
-
-    if (!resource || resource.tenant_id !== tenantId) {
-      return { success: false, error: 'Resource not found' }
+    // Same gate as the app's GET /api/lessons/:id/resources/:id/url (#848).
+    const result = await signLessonResourceDownload(createAdminClient(), {
+      tenantId,
+      userId,
+      resourceId,
+    })
+    if (result.ok) return { success: true, data: { url: result.url } }
+    return {
+      success: false,
+      error:
+        result.code === 'not_found'
+          ? 'Resource not found'
+          : result.code === 'access_denied'
+            ? 'Access denied'
+            : 'Failed to get download URL',
     }
-
-    // Check: is user the author, admin, or enrolled?
-    const role = await getUserRole()
-    const course = (resource.lessons as any)?.courses as any
-    const isOwner = course?.author_id === userId
-    const isAdmin = role === 'admin'
-
-    if (!isOwner && !isAdmin) {
-      // Verify course access (entitlements model)
-      const courseId = (resource.lessons as any)?.course_id
-      if (!courseId || !(await hasCourseAccess(adminClient, userId, courseId))) {
-        return { success: false, error: 'Access denied' }
-      }
-    }
-
-    const { data: signedUrl, error } = await adminClient.storage
-      .from('lesson-resources')
-      .createSignedUrl(resource.file_path, 3600) // 1 hour
-
-    if (error) throw error
-
-    return { success: true, data: { url: signedUrl.signedUrl } }
   } catch (err) {
     return {
       success: false,

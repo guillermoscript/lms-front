@@ -10,6 +10,8 @@ import { ExportButton } from '@/components/admin/export-button'
 import Link from 'next/link'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getTranslations } from 'next-intl/server'
+import { getAnalyticsTier, getTenantPlan } from '@/lib/plans/server'
+import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -17,6 +19,25 @@ import { netOfRefunds } from '@/lib/payments/payouts-owed'
 
 interface SearchParams {
   period?: string
+}
+
+/**
+ * The two embedded shapes PostgREST returns below. They are written out rather
+ * than inferred because the admin client is untyped — and because an embed that
+ * names a column the table does not have is how three figures on this page
+ * silently read 0 (#716 §2, #547 §2).
+ */
+interface EnrollmentWithProgress {
+  enrollment_id: number
+  user_id: string
+  course: { course_id: number; lessons: { count: number }[] } | null
+}
+
+interface CourseWithEnrollments {
+  course_id: number
+  title: string
+  enrollments: { count: number }[] | null
+  lessons: { id: number }[] | null
 }
 
 export default async function AnalyticsPage({
@@ -45,6 +66,25 @@ export default async function AnalyticsPage({
 
   const tenantId = await getCurrentTenantId()
 
+  // Analytics tiers (#662, PRODUCT.md "Plan tiers"): none on Free → nudge;
+  // basic on Starter → growth, engagement and course popularity; advanced on
+  // Pro+ adds revenue reporting and CSV export.
+  const analyticsTier = await getAnalyticsTier(tenantId)
+  if (analyticsTier === 'none') {
+    return (
+      <div className="mx-auto max-w-7xl space-y-6 p-6" data-testid="admin-analytics-page">
+        <AdminBreadcrumb
+          items={[
+            { label: tBreadcrumbs('admin'), href: '/dashboard/admin' },
+            { label: tBreadcrumbs('analytics') },
+          ]}
+        />
+        <UpgradeNudge feature="analytics" currentPlan={(await getTenantPlan(tenantId)).slug} />
+      </div>
+    )
+  }
+  const advancedAnalytics = analyticsTier === 'advanced'
+
   // Get period from query params (default: 30 days)
   const period = resolvedSearchParams.period || '30'
   const daysAgo = parseInt(period)
@@ -61,8 +101,8 @@ export default async function AnalyticsPage({
     { data: tenantUserIds },
     { count: totalUsers },
     { count: totalEnrollments },
-    { data: activeStudentIds },
-    { count: totalLessonCompletions },
+    { data: activeStudentIds, error: activeStudentsError },
+    { count: totalLessonCompletions, error: lessonCompletionsError },
     { count: totalExamSubmissions },
     { data: enrollmentsWithProgress },
     { data: coursesWithEnrollments },
@@ -81,25 +121,40 @@ export default async function AnalyticsPage({
       .eq('tenant_id', tenantId).eq('status', 'active'),
     supabase.from('enrollments').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId),
-    supabase.from('lesson_completions').select('user_id')
-      .eq('tenant_id', tenantId).gte('completed_at', thirtyDaysAgo.toISOString()),
-    supabase.from('lesson_completions').select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId),
+    // `lesson_completions` has NO `tenant_id` (docs/DATABASE_SCHEMA.md); the
+    // school it belongs to is the one that owns the LESSON. Filtering the
+    // completion row by a column it does not have made PostgREST reject both
+    // requests with 42703, and — the errors going unread, exactly as in the
+    // revenue case above — every school saw `0` active students and `0` lesson
+    // completions on this page, always (#716 §2). The `!inner` embed is the
+    // tenant scope: it joins `lessons` and drops any completion whose lesson
+    // belongs to another school, without an id list to chunk (#548).
+    supabase.from('lesson_completions').select('user_id, lesson:lessons!inner(tenant_id)')
+      .eq('lesson.tenant_id', tenantId).gte('completed_at', thirtyDaysAgo.toISOString()),
+    supabase.from('lesson_completions').select('lesson:lessons!inner(tenant_id)', { count: 'exact', head: true })
+      .eq('lesson.tenant_id', tenantId),
     supabase.from('exam_submissions').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId),
+    // `user_id` is selected because the completion count below filters on it.
+    // Without it every enrollment asked PostgREST for `user_id=eq.undefined`,
+    // so the average completion rate was 0% for every school (#716 §2).
     supabase.from('enrollments').select(`
       enrollment_id,
+      user_id,
       course:courses (
         course_id,
         lessons:lessons (count)
       )
     `).eq('tenant_id', tenantId),
+    // `lessons` is keyed by `id`, not `lesson_id`. Embedding a column that does
+    // not exist rejected this request outright, so `coursesWithEnrollments` was
+    // null and the course-popularity chart was empty for every school (#716 §2).
     supabase.from('courses').select(`
       course_id,
       title,
       enrollments:enrollments (count),
       lessons:lessons (
-        lesson_id
+        id
       )
     `).eq('tenant_id', tenantId).eq('status', 'published'),
   ])
@@ -110,6 +165,15 @@ export default async function AnalyticsPage({
   // above stayed invisible (#547 §2).
   if (transactionsError) {
     throw new Error(`Analytics revenue query failed: ${transactionsError.message}`)
+  }
+  // Same rule for the engagement figures: a rejected query and a school whose
+  // students have completed nothing both render `0`, and that is how the
+  // tenant-filter bug above survived a "page loads" test (#716 §2).
+  if (activeStudentsError) {
+    throw new Error(`Analytics active-students query failed: ${activeStudentsError.message}`)
+  }
+  if (lessonCompletionsError) {
+    throw new Error(`Analytics lesson-completions query failed: ${lessonCompletionsError.message}`)
   }
 
   // Group revenue by date
@@ -163,8 +227,8 @@ export default async function AnalyticsPage({
   let validEnrollments = 0
 
   if (enrollmentsWithProgress) {
-    for (const enrollment of enrollmentsWithProgress) {
-      const course = enrollment.course as any
+    for (const enrollment of enrollmentsWithProgress as unknown as EnrollmentWithProgress[]) {
+      const course = enrollment.course
       if (!course?.lessons?.[0]?.count) continue
 
       const totalLessons = course.lessons[0].count
@@ -173,15 +237,15 @@ export default async function AnalyticsPage({
       const { count: completedLessons } = await supabase
         .from('lesson_completions')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', (enrollment as any).user_id)
+        .eq('user_id', enrollment.user_id)
         .in(
           'lesson_id',
           (
             await supabase
               .from('lessons')
-              .select('lesson_id')
+              .select('id')
               .eq('course_id', course.course_id)
-          ).data?.map((l) => l.lesson_id) || []
+          ).data?.map((l) => l.id) || []
         )
 
       const completionRate = (completedLessons || 0) / totalLessons
@@ -194,9 +258,9 @@ export default async function AnalyticsPage({
     validEnrollments > 0 ? (totalCompletionRate / validEnrollments) * 100 : 0
 
   const coursePopularityData = await Promise.all(
-    (coursesWithEnrollments || []).map(async (course) => {
-      const enrollmentCount = (course.enrollments as any[])?.[0]?.count || 0
-      const lessonIds = (course.lessons as any[])?.map((l) => l.lesson_id) || []
+    ((coursesWithEnrollments || []) as unknown as CourseWithEnrollments[]).map(async (course) => {
+      const enrollmentCount = course.enrollments?.[0]?.count || 0
+      const lessonIds = course.lessons?.map((l) => l.id) || []
 
       if (lessonIds.length === 0) {
         return {
@@ -269,21 +333,23 @@ export default async function AnalyticsPage({
           <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton
-            data={{
-              revenueData,
-              userGrowthData,
-              coursePopularityData,
-              metrics: {
-                totalRevenue,
-                totalUsers: totalUsers || 0,
-                totalEnrollments: totalEnrollments || 0,
-                activeStudents,
-                averageCompletionRate,
-              },
-            }}
-            period={period}
-          />
+          {advancedAnalytics && (
+            <ExportButton
+              data={{
+                revenueData,
+                userGrowthData,
+                coursePopularityData,
+                metrics: {
+                  totalRevenue,
+                  totalUsers: totalUsers || 0,
+                  totalEnrollments: totalEnrollments || 0,
+                  activeStudents,
+                  averageCompletionRate,
+                },
+              }}
+              period={period}
+            />
+          )}
           <div className="flex gap-1">
             {(['7', '30', '90', '365'] as const).map((p) => (
               <Link key={p} href={`?period=${p}`}>
@@ -296,11 +362,15 @@ export default async function AnalyticsPage({
         </div>
       </div>
 
-      <RevenueChart
-        data={revenueData}
-        totalRevenue={totalRevenue}
-        period={periodLabel}
-      />
+      {advancedAnalytics ? (
+        <RevenueChart
+          data={revenueData}
+          totalRevenue={totalRevenue}
+          period={periodLabel}
+        />
+      ) : (
+        <UpgradeNudge feature="analytics" hint="analyticsBasic" compact data-testid="analytics-basic-nudge" />
+      )}
 
       <UserGrowthChart
         data={userGrowthData}

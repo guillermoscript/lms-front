@@ -17,14 +17,14 @@ export function StarRating({ rating, className, starClassName }: StarRatingProps
                 const fill = Math.max(0, Math.min(1, clamped - i))
                 return (
                     <span key={i} className="relative inline-flex">
-                        <Star className={cn('w-4 h-4 text-zinc-600', starClassName)} aria-hidden="true" />
+                        <Star className={cn('w-4 h-4 text-muted-foreground/30', starClassName)} aria-hidden="true" />
                         {fill > 0 && (
                             <span
                                 className="absolute inset-0 overflow-hidden"
                                 style={{ width: `${fill * 100}%` }}
                             >
                                 <Star
-                                    className={cn('w-4 h-4 text-amber-400 fill-amber-400', starClassName)}
+                                    className={cn('w-4 h-4 text-warning fill-warning', starClassName)}
                                     aria-hidden="true"
                                 />
                             </span>

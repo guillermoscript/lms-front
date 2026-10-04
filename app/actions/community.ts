@@ -7,6 +7,41 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { revalidatePath } from 'next/cache'
 import { nanoid } from 'nanoid'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { getBlockedAuthorIds } from '@/lib/community/blocks'
+import { getFeedPage } from '@/lib/community/feed'
+import { canPinInCourse } from '@/lib/community/access'
+import { parsePostMedia } from '@/lib/community/media'
+import { acceptAnswerErrorKey, canAcceptAnswers, parseQuestionFilter } from '@/lib/community/questions'
+import { readCommunityXpEarned, type CommunityXpEarned } from '@/lib/community/xp'
+import { parseDueAt } from '@/lib/community/prompt-grades'
+import type { CommunityPost } from '@/components/community/community-feed'
+import { MENTION_CANDIDATE_LIMIT, type MentionCandidate } from '@/lib/community/mentions'
+import type { Database } from '@/lib/database.types'
+
+type ProfileSummary = { id: string; full_name: string | null; avatar_url: string | null }
+type CommentRow = {
+  id: string
+  content: string
+  created_at: string
+  author_id: string
+  parent_comment_id: string | null
+  is_hidden: boolean
+}
+
+/** What a comment thread needs to know about its post and answers (#875). */
+type ThreadMeta = {
+  postType: string
+  postAuthorId: string
+  acceptedCommentId: string | null
+  /** Author roles in THIS school, for the Teacher badge. */
+  roles: Record<string, string>
+  /** `helpful` reactions per comment, for ranking a question's answers. */
+  helpfulCounts: Record<string, number>
+  /** Comments the viewer marked helpful. */
+  viewerHelpful: string[]
+}
 
 const MAX_CONTENT_LENGTH = 5000
 const MAX_COMMENT_LENGTH = 2000
@@ -35,9 +70,123 @@ async function getAuthenticatedUser() {
 }
 
 /**
+ * Where a new post or poll may go (#860). Mirrors `community_can_post_to` in
+ * RLS: a course of this tenant the caller can reach (staff always), a lesson
+ * of that course, and — for students — the school feed only while the school
+ * allows it. The service-role insert below bypasses RLS, so this is the gate.
+ */
+async function checkPostTarget(
+  tenantId: string,
+  userId: string,
+  role: string | null,
+  courseId: number | null,
+  lessonId: number | null
+): Promise<string | null> {
+  if (!role) return 'You are not a member of this school'
+  const adminClient = createAdminClient()
+
+  if (courseId === null) {
+    if (lessonId !== null) return 'A lesson needs a course'
+    if (role !== 'student') return null
+    const { data: setting } = await adminClient
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'community_student_posts_school_feed')
+      .maybeSingle()
+    return (setting?.setting_value as { enabled?: boolean } | null)?.enabled === false
+      ? 'Students are not allowed to post in the school feed'
+      : null
+  }
+
+  const { data: course } = await adminClient
+    .from('courses')
+    .select('course_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!course) return 'Course not found'
+
+  if (role !== 'teacher' && role !== 'admin' && !(await hasCourseAccess(adminClient, userId, courseId))) {
+    return 'You must be enrolled in this course to post'
+  }
+
+  if (lessonId !== null) {
+    const { data: lesson } = await adminClient
+      .from('lessons')
+      .select('id')
+      .eq('id', lessonId)
+      .eq('course_id', courseId)
+      .maybeSingle()
+    if (!lesson) return 'Lesson not found in this course'
+  }
+
+  return null
+}
+
+type ReachablePost = {
+  id: string
+  course_id: number | null
+  post_type: string
+  is_locked: boolean
+  author_id: string
+  accepted_comment_id: string | null
+}
+
+/**
+ * The post a comment, reaction, vote or comment read is about — only when the
+ * caller can see it (#860). Mirrors the posts SELECT policy: a member of THIS
+ * school, the post in this school and not hidden, and for a course post
+ * staff or a student with access. Every caller below reads or writes with the
+ * service role, so without this a post id from another school (or a course
+ * the student never bought) was enough. Returns an error message otherwise.
+ */
+async function resolveReachablePost(
+  postId: string,
+  tenantId: string,
+  userId: string,
+  role: string | null
+): Promise<ReachablePost | string> {
+  if (!role) return 'You are not a member of this school'
+
+  const adminClient = createAdminClient()
+  const { data: post } = await adminClient
+    .from('community_posts')
+    .select('id, course_id, post_type, is_locked, is_hidden, author_id, accepted_comment_id')
+    .eq('id', postId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (!post || post.is_hidden) return 'Post not found'
+
+  if (post.course_id && role === 'student' && !(await hasCourseAccess(adminClient, userId, post.course_id))) {
+    return 'You must be enrolled in this course'
+  }
+
+  return {
+    id: post.id,
+    course_id: post.course_id,
+    post_type: post.post_type,
+    is_locked: post.is_locked,
+    author_id: post.author_id,
+    accepted_comment_id: post.accepted_comment_id,
+  }
+}
+
+const REACTION_TYPES = ['like', 'helpful', 'insightful', 'fire'] as const
+
+function parsePositiveId(raw: FormDataEntryValue | null): number | null | 'invalid' {
+  if (raw === null || raw === '') return null
+  const n = Number(raw)
+  return Number.isInteger(n) && n > 0 ? n : 'invalid'
+}
+
+/**
  * Create a post (standard or discussion_prompt)
  */
-export async function createPost(formData: FormData): Promise<ActionResult<{ id: string }>> {
+export async function createPost(
+  formData: FormData
+): Promise<ActionResult<{ id: string; xp: CommunityXpEarned }>> {
   try {
     const { supabase, userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
@@ -51,9 +200,11 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
     const content = formData.get('content') as string
     const title = formData.get('title') as string | null
     const postType = (formData.get('post_type') as string) || 'standard'
-    const courseId = formData.get('course_id') as string | null
-    const lessonId = formData.get('lesson_id') as string | null
+    const courseId = parsePositiveId(formData.get('course_id'))
+    const lessonId = parsePositiveId(formData.get('lesson_id'))
     const isGraded = formData.get('is_graded') === 'true'
+    const pin = formData.get('is_pinned') === 'true'
+    const dueAt = parseDueAt(formData.get('due_at'))
 
     if (!content || content.trim().length === 0) {
       return { success: false, error: 'Content is required' }
@@ -63,66 +214,46 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
       return { success: false, error: `Content must be under ${MAX_CONTENT_LENGTH} characters` }
     }
 
-    // Validate IDs are positive integers
-    if (courseId && (isNaN(parseInt(courseId)) || parseInt(courseId) <= 0)) {
-      return { success: false, error: 'Invalid course ID' }
-    }
-    if (lessonId && (isNaN(parseInt(lessonId)) || parseInt(lessonId) <= 0)) {
-      return { success: false, error: 'Invalid lesson ID' }
+    if (courseId === 'invalid') return { success: false, error: 'Invalid course ID' }
+    if (lessonId === 'invalid') return { success: false, error: 'Invalid lesson ID' }
+    if (dueAt === 'invalid') return { success: false, error: 'Invalid due date' }
+
+    // Polls go through createPoll (they need options); milestones are system posts.
+    if (postType !== 'standard' && postType !== 'discussion_prompt' && postType !== 'question') {
+      return { success: false, error: 'Invalid post type' }
     }
 
-    // Students cannot create discussion_prompt or milestone posts
-    if (role === 'student' && (postType === 'discussion_prompt' || postType === 'milestone')) {
+    // Students cannot create discussion prompts or graded posts
+    if (role === 'student' && (postType === 'discussion_prompt' || isGraded)) {
       return { success: false, error: 'Only teachers and admins can create this type of post' }
     }
 
-    // Validate courseId belongs to tenant before insert
-    if (courseId) {
-      const verifyClient = createAdminClient()
-      const { data: course } = await verifyClient
-        .from('courses')
-        .select('course_id')
-        .eq('course_id', parseInt(courseId))
-        .eq('tenant_id', tenantId)
-        .single()
-      if (!course) {
-        return { success: false, error: 'Course not found' }
-      }
-
-      // Verify access for students posting to a course feed
-      if (role === 'student') {
-        if (!(await hasCourseAccess(verifyClient, userId, parseInt(courseId)))) {
-          return { success: false, error: 'You must be enrolled in this course to post' }
-        }
-      }
-
-      // If lessonId is provided, verify it belongs to the course
-      if (lessonId) {
-        const { data: lesson } = await verifyClient
-          .from('lessons')
-          .select('id')
-          .eq('id', parseInt(lessonId))
-          .eq('course_id', parseInt(courseId))
-          .single()
-        if (!lesson) {
-          return { success: false, error: 'Lesson not found in this course' }
-        }
-      }
+    // #873: only a graded discussion prompt has a due date (a CHECK enforces it).
+    if (dueAt && !(isGraded && postType === 'discussion_prompt')) {
+      return { success: false, error: 'Only graded discussion prompts can have a due date' }
     }
 
-    // For school-level posts (no course_id) by students, check tenant setting
-    if (!courseId && role === 'student') {
-      const adminClient = createAdminClient()
-      const { data: setting } = await adminClient
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('setting_key', 'community_student_posts_school_feed')
-        .single()
+    const media = parsePostMedia(formData.get('media_urls') as string | null, {
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      tenantId,
+      userId,
+    })
+    if (media === null) {
+      return { success: false, error: 'Invalid attachments' }
+    }
 
-      if (setting && setting.setting_value?.enabled === false) {
-        return { success: false, error: 'Students are not allowed to post in the school feed' }
-      }
+    const targetError = await checkPostTarget(tenantId, userId, role, courseId, lessonId)
+    if (targetError) return { success: false, error: targetError }
+
+    // Posting pinned (#868, the course welcome prompt) follows the same rule as
+    // `pinPost`: the course's author or an admin, and only in a course feed.
+    // RLS refuses a pinned insert from members outright, so this service-role
+    // insert is the only way in and this check is its gate.
+    if (pin && courseId === null) {
+      return { success: false, error: 'Only course posts can be pinned when posting' }
+    }
+    if (pin && courseId !== null && !(await canPinInCourse({ tenantId, userId, role, courseId }))) {
+      return { success: false, error: 'Only the course author or an admin can pin posts' }
     }
 
     // Use admin client to bypass RLS for insert (JWT tenant_id may not match header tenant_id)
@@ -135,14 +266,43 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
         content: content.trim(),
         title: title?.trim() || null,
         post_type: postType,
-        course_id: courseId ? parseInt(courseId) : null,
-        lesson_id: lessonId ? parseInt(lessonId) : null,
+        media_urls: media,
+        course_id: courseId,
+        lesson_id: lessonId,
         is_graded: isGraded,
+        is_pinned: pin,
+        due_at: dueAt,
       })
-      .select('id')
+      .select('id, created_at')
       .single()
 
     if (error) throw error
+
+    // #874: the insert's trigger awarded any XP; read it back for the toast.
+    const xp = await readCommunityXpEarned(adminClient, {
+      userId,
+      tenantId,
+      referenceIds: [data.id],
+      since: data.created_at,
+    })
+
+    // The server action, not the composer: this is the accurate chokepoint and
+    // the only one that survives an adblocker. `course_scoped` separates a
+    // course conversation from school-feed chatter — the two behave nothing
+    // alike and a school cares about the first.
+    await track(
+      ANALYTICS_EVENTS.COMMUNITY_POST_CREATED,
+      {
+        post_type: postType,
+        has_poll: false,
+        course_scoped: Boolean(courseId),
+        lesson_scoped: Boolean(lessonId),
+        is_graded: isGraded,
+        media_count: media.length,
+        content_length: content.trim().length,
+      },
+      { userId, tenantId, role }
+    )
 
     revalidatePath('/dashboard')
     if (courseId) {
@@ -150,7 +310,7 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
       revalidatePath(`/dashboard/teacher/courses/${courseId}`)
     }
 
-    return { success: true, data: { id: data.id } }
+    return { success: true, data: { id: data.id, xp } }
   } catch (err) {
     console.error('Failed to create post:', err)
     return {
@@ -161,7 +321,8 @@ export async function createPost(formData: FormData): Promise<ActionResult<{ id:
 }
 
 /**
- * Update a post
+ * Edit your own post's text (#860). Authors only — moderators hide, they do
+ * not rewrite; that matches the author-only UPDATE policy the native app hits.
  */
 export async function updatePost(
   postId: string,
@@ -169,43 +330,53 @@ export async function updatePost(
   title?: string
 ): Promise<ActionResult> {
   try {
-    const { supabase, userId } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
-    const role = await getUserRole()
 
-    if (!content || content.trim().length === 0) {
+    if (content.length > MAX_CONTENT_LENGTH) {
+      return { success: false, error: `Content must be under ${MAX_CONTENT_LENGTH} characters` }
+    }
+
+    if (await isUserMuted(tenantId, userId)) {
+      return { success: false, error: 'You are currently muted and cannot edit posts' }
+    }
+
+    const adminClient = createAdminClient()
+    const { data: post } = await adminClient
+      .from('community_posts')
+      .select('id, author_id, post_type, is_hidden')
+      .eq('id', postId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+
+    if (!post || post.is_hidden) {
+      return { success: false, error: 'Post not found' }
+    }
+    if (post.author_id !== userId) {
+      return { success: false, error: 'You can only edit your own posts' }
+    }
+    // The database writes milestones (#871); RLS refuses edits to them too.
+    if (post.post_type === 'milestone') {
+      return { success: false, error: 'Milestone posts cannot be edited' }
+    }
+
+    const trimmedTitle = title?.trim() || null
+    if (post.post_type === 'poll') {
+      if (!trimmedTitle) return { success: false, error: 'Title is required for polls' }
+    } else if (content.trim().length === 0) {
       return { success: false, error: 'Content is required' }
     }
 
-    // Fetch the post to verify ownership or admin role
-    const adminClient = createAdminClient()
-    const { data: post, error: fetchError } = await adminClient
-      .from('community_posts')
-      .select('id, author_id, tenant_id')
-      .eq('id', postId)
-      .single()
-
-    if (fetchError || !post) {
-      return { success: false, error: 'Post not found' }
-    }
-
-    if (post.tenant_id !== tenantId) {
-      return { success: false, error: 'Access denied' }
-    }
-
-    if (post.author_id !== userId && role !== 'admin' && role !== 'teacher') {
-      return { success: false, error: 'You can only edit your own posts' }
-    }
-
-    const { error } = await supabase
+    const { error } = await adminClient
       .from('community_posts')
       .update({
         content: content.trim(),
-        title: title?.trim() || null,
+        title: trimmedTitle,
         updated_at: new Date().toISOString(),
       })
       .eq('id', postId)
       .eq('tenant_id', tenantId)
+      .eq('author_id', userId)
 
     if (error) throw error
 
@@ -269,15 +440,24 @@ export async function deletePost(postId: string): Promise<ActionResult> {
 }
 
 /**
- * Create a comment on a post
+ * Create a comment on a post.
+ *
+ * `surface` says where it was written (#869). From the lesson page it skips
+ * `revalidatePath`: in Next 16 any revalidation inside an action re-renders the
+ * CURRENT route in the action's response, which for a lesson means the MDX,
+ * the tutor history and the view stamp all over again — for a comment the
+ * thread already shows. The feed keeps revalidating.
  */
 export async function createComment(
   postId: string,
   content: string,
-  parentCommentId?: string
-): Promise<ActionResult<{ id: string }>> {
+  parentCommentId?: string,
+  options?: { surface?: 'feed' | 'lesson' }
+): Promise<ActionResult<{ id: string; xp: CommunityXpEarned }>> {
+  // From the wire: anything but 'lesson' is the feed.
+  const surface = options?.surface === 'lesson' ? 'lesson' : 'feed'
   try {
-    const { supabase, userId } = await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
     if (!content || content.trim().length === 0) {
@@ -293,48 +473,22 @@ export async function createComment(
       return { success: false, error: 'You are currently muted and cannot comment' }
     }
 
-    // Verify post exists, belongs to tenant, and is not locked
-    const adminClient = createAdminClient()
-    const { data: post, error: postError } = await adminClient
-      .from('community_posts')
-      .select('id, tenant_id, course_id, is_locked, is_hidden')
-      .eq('id', postId)
-      .single()
-
-    if (postError || !post) {
-      return { success: false, error: 'Post not found' }
-    }
-
-    if (post.tenant_id !== tenantId) {
-      return { success: false, error: 'Access denied' }
-    }
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
     if (post.is_locked) {
       return { success: false, error: 'This post is locked and does not accept new comments' }
     }
 
-    if (post.is_hidden) {
-      return { success: false, error: 'This post has been removed' }
-    }
-
-    // For course-scoped posts, verify access (students only)
-    if (post.course_id) {
-      const role = await getUserRole()
-      if (role === 'student') {
-        if (!(await hasCourseAccess(adminClient, userId, post.course_id))) {
-          return { success: false, error: 'You must be enrolled in this course to comment' }
-        }
-      }
-    }
-
     // If replying to a parent comment, verify it exists
     if (parentCommentId) {
-      const { data: parentComment } = await adminClient
+      const { data: parentComment } = await createAdminClient()
         .from('community_comments')
         .select('id, post_id')
         .eq('id', parentCommentId)
         .eq('post_id', postId)
-        .single()
+        .eq('is_hidden', false)
+        .maybeSingle()
 
       if (!parentComment) {
         return { success: false, error: 'Parent comment not found' }
@@ -352,13 +506,35 @@ export async function createComment(
         content: content.trim(),
         parent_comment_id: parentCommentId || null,
       })
-      .select('id')
+      .select('id, created_at')
       .single()
 
     if (error) throw error
 
-    revalidatePath('/dashboard')
-    return { success: true, data: { id: data.id } }
+    // #874: a comment earns under its own id, a prompt answer under the
+    // prompt's id (once per prompt).
+    const xp = await readCommunityXpEarned(insertClient, {
+      userId,
+      tenantId,
+      referenceIds: [data.id, postId],
+      since: data.created_at,
+    })
+
+    // `is_reply` is the interesting cut: a top-level comment is a response to
+    // the school, a threaded reply is students talking to each other.
+    await track(
+      ANALYTICS_EVENTS.COMMUNITY_COMMENT_CREATED,
+      {
+        post_id: postId,
+        is_reply: Boolean(parentCommentId),
+        content_length: content.trim().length,
+        surface,
+      },
+      { userId, tenantId }
+    )
+
+    if (surface === 'feed') revalidatePath('/dashboard')
+    return { success: true, data: { id: data.id, xp } }
   } catch (err) {
     console.error('Failed to create comment:', err)
     return {
@@ -428,12 +604,31 @@ export async function toggleReaction(
     const { userId } = await getAuthenticatedUser()
     const tenantId = await getCurrentTenantId()
 
+    if (!REACTION_TYPES.includes(reactionType)) {
+      return { success: false, error: 'Invalid reaction' }
+    }
+
     // Muted users cannot react
     if (await isUserMuted(tenantId, userId)) {
       return { success: false, error: 'You are currently muted' }
     }
 
     const adminClient = createAdminClient()
+
+    // The target must be visible to the caller, in this school.
+    let postId = targetId
+    if (targetType === 'comment') {
+      const { data: comment } = await adminClient
+        .from('community_comments')
+        .select('post_id, is_hidden')
+        .eq('id', targetId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      if (!comment || comment.is_hidden) return { success: false, error: 'Comment not found' }
+      postId = comment.post_id
+    }
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
     // Check if reaction already exists
     let query = adminClient
@@ -483,6 +678,15 @@ export async function toggleReaction(
 
       if (error) throw error
 
+      // Only the ADD branch. The remove branch above is an un-react, and
+      // counting both would make a user toggling a reaction on and off look
+      // like rising engagement.
+      await track(
+        ANALYTICS_EVENTS.REACTION_ADDED,
+        { target_type: targetType, reaction_type: reactionType },
+        { userId, tenantId }
+      )
+
       revalidatePath('/dashboard')
       return { success: true, data: { added: true } }
     }
@@ -512,15 +716,16 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
     const title = formData.get('title') as string
     const content = formData.get('content') as string
     const optionsRaw = formData.get('options') as string
-    const courseId = formData.get('course_id') as string | null
+    const courseId = parsePositiveId(formData.get('course_id'))
+
+    if (courseId === 'invalid') return { success: false, error: 'Invalid course ID' }
 
     if (!title || title.trim().length === 0) {
       return { success: false, error: 'Title is required for polls' }
     }
 
-    if (!content || content.trim().length === 0) {
-      return { success: false, error: 'Content is required' }
-    }
+    // The question is the title; the body is optional context.
+    const body = (content ?? '').trim()
 
     let options: string[]
     try {
@@ -548,6 +753,10 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
       return { success: false, error: 'Each poll option must be under 200 characters' }
     }
 
+    if (title.length > 200 || body.length > MAX_CONTENT_LENGTH) {
+      return { success: false, error: `Content must be under ${MAX_CONTENT_LENGTH} characters` }
+    }
+
     // Check student poll setting if applicable
     if (role === 'student') {
       const adminClient = createAdminClient()
@@ -556,12 +765,15 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
         .select('setting_value')
         .eq('tenant_id', tenantId)
         .eq('setting_key', 'community_student_polls')
-        .single()
+        .maybeSingle()
 
-      if (setting && setting.setting_value?.enabled === false) {
+      if ((setting?.setting_value as { enabled?: boolean } | null)?.enabled === false) {
         return { success: false, error: 'Students are not allowed to create polls' }
       }
     }
+
+    const targetError = await checkPostTarget(tenantId, userId, role, courseId, null)
+    if (targetError) return { success: false, error: targetError }
 
     // Use admin client for transaction-like behavior (insert post + options)
     const adminClient = createAdminClient()
@@ -573,9 +785,9 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
         tenant_id: tenantId,
         author_id: userId,
         title: title.trim(),
-        content: content.trim(),
+        content: body,
         post_type: 'poll',
-        course_id: courseId || null,
+        course_id: courseId,
       })
       .select('id')
       .single()
@@ -603,6 +815,25 @@ export async function createPoll(formData: FormData): Promise<ActionResult<{ id:
         .eq('tenant_id', tenantId)
       throw optionsError
     }
+
+    // Same event as `createPost`, with `has_poll: true` — a poll IS a post
+    // (`post_type: 'poll'`) written by a second action, and splitting it into
+    // its own event name would silently under-count every post total.
+    // Deliberately after the options insert: the branch above deletes the post
+    // when options fail, so tracking earlier would count a post that no longer
+    // exists.
+    await track(
+      ANALYTICS_EVENTS.COMMUNITY_POST_CREATED,
+      {
+        post_type: 'poll',
+        has_poll: true,
+        course_scoped: Boolean(courseId),
+        lesson_scoped: false,
+        option_count: options.length,
+        content_length: body.length,
+      },
+      { userId, tenantId, role }
+    )
 
     revalidatePath('/dashboard')
     if (courseId) {
@@ -635,23 +866,11 @@ export async function castVote(postId: string, optionId: string): Promise<Action
 
     const adminClient = createAdminClient()
 
-    // Verify the post is a poll and belongs to this tenant
-    const { data: post } = await adminClient
-      .from('community_posts')
-      .select('id, tenant_id, post_type, is_hidden')
-      .eq('id', postId)
-      .single()
-
-    if (!post || post.tenant_id !== tenantId) {
-      return { success: false, error: 'Poll not found' }
-    }
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
     if (post.post_type !== 'poll') {
       return { success: false, error: 'This post is not a poll' }
-    }
-
-    if (post.is_hidden) {
-      return { success: false, error: 'This poll has been removed' }
     }
 
     // Verify the option belongs to this post
@@ -691,23 +910,14 @@ export async function castVote(postId: string, optionId: string): Promise<Action
 
     if (voteError) throw voteError
 
-    // Increment vote count on the option.
-    // NOTE: This SELECT+UPDATE has a theoretical race condition if two users vote
-    // simultaneously, but supabase-js does not support SQL expressions (e.g. vote_count + 1)
-    // in .update(). The risk is minimal for polls, and the canonical count can always be
-    // recomputed from community_poll_votes if needed.
-    const { data: currentOption } = await adminClient
-      .from('community_poll_options')
-      .select('vote_count')
-      .eq('id', optionId)
-      .single()
+    // vote_count is maintained by the trg_community_poll_vote_count trigger (#846).
 
-    if (currentOption) {
-      await adminClient
-        .from('community_poll_options')
-        .update({ vote_count: (currentOption.vote_count || 0) + 1 })
-        .eq('id', optionId)
-    }
+    // One vote per user per poll is enforced above, so this cannot double-count.
+    await track(
+      ANALYTICS_EVENTS.POLL_VOTED,
+      { post_id: postId },
+      { userId, tenantId }
+    )
 
     revalidatePath('/dashboard')
     return { success: true }
@@ -836,17 +1046,105 @@ export async function createFlag(
 }
 
 /**
+ * Block a member: their posts and comments stop showing for the caller.
+ * Written through RLS — the row can only ever name the caller as blocker.
+ */
+export async function blockUser(blockedId: string): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await getAuthenticatedUser()
+    if (blockedId === userId) {
+      return { success: false, error: 'You cannot block yourself' }
+    }
+
+    const { error } = await supabase
+      .from('community_user_blocks')
+      .upsert(
+        { blocker_id: userId, blocked_id: blockedId },
+        { onConflict: 'blocker_id,blocked_id', ignoreDuplicates: true }
+      )
+
+    if (error) throw error
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (err) {
+    console.error('Failed to block user:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to block user',
+    }
+  }
+}
+
+export async function unblockUser(blockedId: string): Promise<ActionResult> {
+  try {
+    const { supabase, userId } = await getAuthenticatedUser()
+
+    const { error } = await supabase
+      .from('community_user_blocks')
+      .delete()
+      .eq('blocker_id', userId)
+      .eq('blocked_id', blockedId)
+
+    if (error) throw error
+
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (err) {
+    console.error('Failed to unblock user:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to unblock user',
+    }
+  }
+}
+
+/**
+ * The members the caller has blocked, with their names, for the unblock list.
+ */
+export async function getBlockedMembers(): Promise<
+  ActionResult<{ members: ProfileSummary[] }>
+> {
+  try {
+    const { userId } = await getAuthenticatedUser()
+    const blockedIds = await getBlockedAuthorIds(userId)
+    if (blockedIds.length === 0) {
+      return { success: true, data: { members: [] } }
+    }
+
+    const { data: profiles, error } = await createAdminClient()
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', blockedIds)
+
+    if (error) throw error
+    return { success: true, data: { members: profiles ?? [] } }
+  } catch (err) {
+    console.error('Failed to load blocked members:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to load blocked members',
+    }
+  }
+}
+
+/**
  * Get comments for a post (uses admin client to bypass RLS tenant mismatch)
  */
 export async function getComments(
-  postId: string,
-  tenantId: string
-): Promise<ActionResult<{ comments: any[]; profiles: any[] }>> {
+  postId: string
+): Promise<ActionResult<{ comments: CommentRow[]; profiles: ProfileSummary[]; meta: ThreadMeta }>> {
   try {
-    await getAuthenticatedUser()
-    const adminClient = createAdminClient()
+    const { userId } = await getAuthenticatedUser()
+    // Tenant from the request, never the client (#860).
+    const tenantId = await getCurrentTenantId()
+    const post = await resolveReachablePost(postId, tenantId, userId, await getUserRole())
+    if (typeof post === 'string') return { success: false, error: post }
 
-    const { data: commentsData, error } = await adminClient
+    const adminClient = createAdminClient()
+    const blockedIds = await getBlockedAuthorIds(userId)
+
+    let commentsQuery = adminClient
       .from('community_comments')
       .select('id, content, created_at, author_id, parent_comment_id, is_hidden')
       .eq('post_id', postId)
@@ -854,20 +1152,50 @@ export async function getComments(
       .eq('is_hidden', false)
       .order('created_at', { ascending: true })
 
+    if (blockedIds.length > 0) {
+      commentsQuery = commentsQuery.not('author_id', 'in', `(${blockedIds.join(',')})`)
+    }
+
+    const { data: commentsData, error } = await commentsQuery
+
     if (error) throw error
+
+    const meta: ThreadMeta = {
+      postType: post.post_type,
+      postAuthorId: post.author_id,
+      acceptedCommentId: post.accepted_comment_id,
+      roles: {},
+      helpfulCounts: {},
+      viewerHelpful: [],
+    }
+
     if (!commentsData || commentsData.length === 0) {
-      return { success: true, data: { comments: [], profiles: [] } }
+      return { success: true, data: { comments: [], profiles: [], meta } }
     }
 
     const authorIds = Array.from(new Set(commentsData.map((c) => c.author_id)))
-    const { data: profiles } = await adminClient
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .in('id', authorIds)
+    const commentIds = commentsData.map((c) => c.id)
+    const [{ data: profiles }, { data: members }, { data: helpful }] = await Promise.all([
+      adminClient.from('profiles').select('id, full_name, avatar_url').in('id', authorIds),
+      adminClient.from('tenant_users').select('user_id, role').eq('tenant_id', tenantId).in('user_id', authorIds),
+      adminClient
+        .from('community_reactions')
+        .select('comment_id, user_id')
+        .eq('tenant_id', tenantId)
+        .eq('reaction_type', 'helpful')
+        .in('comment_id', commentIds),
+    ])
+
+    for (const m of members ?? []) meta.roles[m.user_id] = m.role as string
+    for (const r of helpful ?? []) {
+      if (!r.comment_id) continue
+      meta.helpfulCounts[r.comment_id] = (meta.helpfulCounts[r.comment_id] ?? 0) + 1
+      if (r.user_id === userId) meta.viewerHelpful.push(r.comment_id)
+    }
 
     return {
       success: true,
-      data: { comments: commentsData, profiles: profiles || [] },
+      data: { comments: commentsData, profiles: profiles || [], meta },
     }
   } catch (err) {
     console.error('Failed to load comments:', err)
@@ -878,97 +1206,251 @@ export async function getComments(
   }
 }
 
-const POSTS_PAGE_SIZE = 20
-
 /**
- * Load more posts for infinite scroll (uses admin client to bypass RLS tenant mismatch)
+ * Accept a top-level comment as a question's answer, or clear it with `null`
+ * (#875). The question's author or the school's teachers and admins.
+ *
+ * The database is the authority (community_guard_accepted_answer): this
+ * service-role write names the actor in `accepted_by`, and the trigger holds
+ * that person to the same rule the native app meets through RLS, checks the
+ * comment is a visible top-level comment of THIS question, and notifies its
+ * author. The checks here only give the friendly error first.
  */
-export async function loadMorePosts(
-  tenantId: string,
-  userId: string,
-  scope: 'school' | 'course',
-  cursor: string, // created_at of last post
-  courseId?: number
-): Promise<ActionResult<{ posts: any[]; hasMore: boolean }>> {
+export async function setAcceptedAnswer(
+  postId: string,
+  commentId: string | null
+): Promise<ActionResult<{ acceptedCommentId: string | null }>> {
   try {
-    await getAuthenticatedUser()
+    const { userId } = await getAuthenticatedUser()
+    const tenantId = await getCurrentTenantId()
+    const role = await getUserRole()
+
+    const post = await resolveReachablePost(postId, tenantId, userId, role)
+    if (typeof post === 'string') return { success: false, error: post }
+    if (post.post_type !== 'question') return { success: false, error: 'Only questions have an accepted answer' }
+
+    if (!canAcceptAnswers({ viewerId: userId, viewerRole: role, questionAuthorId: post.author_id })) {
+      return { success: false, error: 'Only the person who asked or a teacher can accept an answer' }
+    }
+
+    if (await isUserMuted(tenantId, userId)) {
+      return { success: false, error: 'You are currently muted' }
+    }
+
     const adminClient = createAdminClient()
 
-    let query = adminClient
+    if (commentId) {
+      const { data: comment } = await adminClient
+        .from('community_comments')
+        .select('id')
+        .eq('id', commentId)
+        .eq('post_id', postId)
+        .eq('tenant_id', tenantId)
+        .is('parent_comment_id', null)
+        .eq('is_hidden', false)
+        .maybeSingle()
+      if (!comment) return { success: false, error: 'That answer is no longer available' }
+    }
+
+    const { error } = await adminClient
       .from('community_posts')
-      .select(`
-        id, author_id, post_type, title, content, media_urls,
-        is_pinned, is_locked, comment_count, reaction_count,
-        created_at, course_id, lesson_id, is_graded,
-        milestone_type, milestone_data
-      `)
+      .update({ accepted_comment_id: commentId, accepted_by: userId })
+      .eq('id', postId)
       .eq('tenant_id', tenantId)
-      .eq('is_hidden', false)
-      .eq('is_pinned', false)
-      .lt('created_at', cursor)
-      .order('created_at', { ascending: false })
-      .limit(POSTS_PAGE_SIZE)
 
-    if (scope === 'course' && courseId) {
-      query = query.eq('course_id', courseId)
-    } else if (scope === 'school') {
-      query = query.is('course_id', null)
+    if (error) {
+      const key = acceptAnswerErrorKey(error)
+      if (key === 'acceptNotAllowed') {
+        return { success: false, error: 'Only the person who asked or a teacher can accept an answer' }
+      }
+      if (key === 'acceptInvalid') return { success: false, error: 'That answer is no longer available' }
+      throw error
     }
 
-    const { data: posts, error } = await query
-    if (error) throw error
-    if (!posts || posts.length === 0) {
-      return { success: true, data: { posts: [], hasMore: false } }
-    }
-
-    // Enrich with profiles, reactions, poll data
-    const authorIds = [...new Set(posts.map((p) => p.author_id))]
-    const postIds = posts.map((p) => p.id)
-
-    const [{ data: profiles }, { data: reactions }, { data: pollOptions }, { data: pollVotes }] =
-      await Promise.all([
-        adminClient.from('profiles').select('id, full_name, avatar_url').in('id', authorIds),
-        adminClient.from('community_reactions').select('post_id, reaction_type').eq('user_id', userId).in('post_id', postIds),
-        adminClient.from('community_poll_options').select('id, post_id, option_text, vote_count, sort_order').in('post_id', postIds),
-        adminClient.from('community_poll_votes').select('post_id, option_id').eq('user_id', userId).in('post_id', postIds),
-      ])
-
-    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
-    const reactionsMap = new Map<string, string[]>()
-    for (const r of reactions ?? []) {
-      const existing = reactionsMap.get(r.post_id) ?? []
-      existing.push(r.reaction_type)
-      reactionsMap.set(r.post_id, existing)
-    }
-    const pollOptionsMap = new Map<string, any[]>()
-    for (const o of pollOptions ?? []) {
-      const existing = pollOptionsMap.get(o.post_id) ?? []
-      existing.push(o)
-      pollOptionsMap.set(o.post_id, existing)
-    }
-    const pollVotesMap = new Map<string, string>()
-    for (const v of pollVotes ?? []) {
-      pollVotesMap.set(v.post_id, v.option_id)
-    }
-
-    const enrichedPosts = posts.map((post) => ({
-      ...post,
-      media_urls: post.media_urls || [],
-      author: profileMap.get(post.author_id) ?? { id: post.author_id, full_name: null, avatar_url: null },
-      user_reactions: reactionsMap.get(post.id) ?? [],
-      poll_options: pollOptionsMap.get(post.id) ?? undefined,
-      user_voted_option: pollVotesMap.get(post.id) ?? null,
-    }))
-
+    revalidatePath('/dashboard')
+    return { success: true, data: { acceptedCommentId: commentId } }
+  } catch (err) {
+    console.error('Failed to set the accepted answer:', err)
     return {
-      success: true,
-      data: { posts: enrichedPosts, hasMore: posts.length >= POSTS_PAGE_SIZE },
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to accept the answer',
     }
+  }
+}
+
+/**
+ * The access check every feed read shares (#860): a member of THIS school
+ * and, for a course feed, a course of this school the viewer may read.
+ * `getFeedPage` reads with the service role, so this is the only thing
+ * between a caller and another school's or course's feed. Null when allowed.
+ */
+async function checkFeedAccess(
+  scope: 'school' | 'course',
+  courseId: number | undefined,
+  tenantId: string,
+  userId: string,
+  role: string | null
+): Promise<string | null> {
+  if (!role) return 'Access denied'
+  if (scope !== 'school' && scope !== 'course') return 'Invalid feed'
+  if (scope === 'school') return null
+
+  if (!courseId || !Number.isInteger(courseId) || courseId <= 0) {
+    return 'Invalid course ID'
+  }
+  const adminClient = createAdminClient()
+  const { data: course } = await adminClient
+    .from('courses')
+    .select('course_id')
+    .eq('course_id', courseId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!course) return 'Course not found'
+  if (role === 'student' && !(await hasCourseAccess(adminClient, userId, courseId))) {
+    return 'Access denied'
+  }
+  return null
+}
+
+/**
+ * Next page of a feed for infinite scroll (#860).
+ *
+ * Tenant and viewer come from the request, never the client, and a course
+ * feed re-checks access (`checkFeedAccess`).
+ */
+export async function loadMorePosts(
+  scope: 'school' | 'course',
+  cursor: string, // created_at of last post
+  courseId?: number,
+  questionFilter?: string | null
+): Promise<ActionResult<{ posts: CommunityPost[]; hasMore: boolean }>> {
+  try {
+    const { userId } = await getAuthenticatedUser()
+    const tenantId = await getCurrentTenantId()
+    const role = await getUserRole()
+
+    if (Number.isNaN(Date.parse(cursor))) {
+      return { success: false, error: 'Invalid cursor' }
+    }
+
+    const denied = await checkFeedAccess(scope, courseId, tenantId, userId, role)
+    if (denied) return { success: false, error: denied }
+
+    const page = await getFeedPage({
+      tenantId,
+      viewerId: userId,
+      scope,
+      courseId,
+      cursor,
+      questionFilter: parseQuestionFilter(questionFilter),
+    })
+    return { success: true, data: page }
   } catch (err) {
     console.error('Failed to load more posts:', err)
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to load posts',
     }
+  }
+}
+
+/**
+ * The posts published since `since` (a `created_at`) in one feed — what the
+ * live feed (#876) shows behind its "N new posts" pill once a realtime event
+ * says something arrived. Same access check and the same `getFeedPage` path as
+ * every other page, so the pill never counts a hidden post, a blocked author
+ * or another school's row: the realtime payload itself is never shown.
+ */
+export async function loadNewPosts(
+  scope: 'school' | 'course',
+  since: string,
+  courseId?: number,
+  questionFilter?: string | null
+): Promise<ActionResult<{ posts: CommunityPost[] }>> {
+  try {
+    const { userId } = await getAuthenticatedUser()
+    const tenantId = await getCurrentTenantId()
+    const role = await getUserRole()
+
+    if (typeof since !== 'string' || Number.isNaN(Date.parse(since))) {
+      return { success: false, error: 'Invalid cursor' }
+    }
+
+    const denied = await checkFeedAccess(scope, courseId, tenantId, userId, role)
+    if (denied) return { success: false, error: denied }
+
+    const { posts } = await getFeedPage({
+      tenantId,
+      viewerId: userId,
+      scope,
+      courseId,
+      after: since,
+      questionFilter: parseQuestionFilter(questionFilter),
+    })
+    return { success: true, data: { posts } }
+  } catch (err) {
+    console.error('Failed to load new posts:', err)
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to load posts',
+    }
+  }
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * @mention autocomplete (#876): members of THIS school who can see what is
+ * being written — a reply on `postId`, else a new post in `courseId` (none =
+ * the school feed) — whose name contains `query`. At most 8.
+ *
+ * The database decides (`community_mention_candidates`, user-scoped so
+ * `auth.uid()` is the caller): the caller must be able to see the post or
+ * feed, blocked members either way are left out, and the tenant is the one
+ * this request is for, never the client's.
+ */
+export async function searchMentionCandidates(input: {
+  query: string
+  courseId?: number | null
+  postId?: string | null
+}): Promise<ActionResult<MentionCandidate[]>> {
+  try {
+    const userId = await getCurrentUserId()
+    if (!userId) return { success: false, error: 'Not authenticated' }
+    const tenantId = await getCurrentTenantId()
+
+    const query = typeof input?.query === 'string' ? input.query.trim().slice(0, 50) : ''
+    const postId = input?.postId ?? null
+    const courseId = input?.courseId ?? null
+    if (postId !== null && (typeof postId !== 'string' || !UUID_RE.test(postId))) {
+      return { success: false, error: 'Invalid post' }
+    }
+    if (courseId !== null && !(Number.isInteger(courseId) && courseId > 0)) {
+      return { success: false, error: 'Invalid course ID' }
+    }
+
+    const supabase = await createClient()
+    const { data, error } = await supabase.rpc('community_mention_candidates', {
+      _tenant_id: tenantId,
+      _course_id: postId ? undefined : (courseId ?? undefined),
+      _post_id: postId ?? undefined,
+      _query: query,
+      _limit: MENTION_CANDIDATE_LIMIT,
+    })
+    if (error) throw error
+
+    type CandidateRow = Database['public']['Functions']['community_mention_candidates']['Returns'][number]
+    return {
+      success: true,
+      data: ((data ?? []) as CandidateRow[]).map((row) => ({
+        id: row.user_id,
+        name: row.full_name,
+        avatarUrl: row.avatar_url ?? null,
+        role: row.role === 'student' || row.role === 'teacher' || row.role === 'admin' ? row.role : null,
+      })),
+    }
+  } catch (err) {
+    console.error('Failed to search mention candidates:', err)
+    return { success: false, error: 'Failed to search members' }
   }
 }

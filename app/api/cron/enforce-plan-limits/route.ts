@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
@@ -38,7 +39,7 @@ function getSupabaseAdmin(): SupabaseClient {
   return createClient(url, serviceKey)
 }
 
-export async function GET(req: NextRequest) {
+async function runSweep(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   const provided = req.headers.get('authorization')?.replace('Bearer ', '')
   if (!cronSecret || provided !== cronSecret) {
@@ -95,4 +96,20 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, ...result })
+}
+
+/**
+ * Sentry cron monitor `cron-enforce-plan-limits` (#660). The GitHub workflow
+ * checks in for the runs it makes, but pg_cron is now the primary scheduler and
+ * the database cannot talk to Sentry — so the route reports its own check-in,
+ * whichever scheduler called it. With no DSN configured this is a no-op; a
+ * duplicate check-in from a GitHub-driven run is harmless.
+ */
+export async function GET(req: NextRequest) {
+  return Sentry.withMonitor('cron-enforce-plan-limits', () => runSweep(req), {
+    schedule: { type: 'crontab', value: '0 3 * * *' },
+    checkinMargin: 120,
+    maxRuntime: 20,
+    timezone: 'Etc/UTC',
+  })
 }

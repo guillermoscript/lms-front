@@ -1,7 +1,13 @@
 'use server'
 
 import { actionHandler, requireTeacherOrAdmin, verifyCourseOwnership } from '@/lib/actions/utils'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import { PlanFeatureError, certificateTierOf, getTenantPlan } from '@/lib/plans/server'
+import { hasCustomCertificateDesign } from '@/lib/certificates/default-design'
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
 
 export interface CertificateTemplateFormData {
   template_name: string
@@ -33,6 +39,26 @@ export async function upsertCertificateTemplate(courseId: number, data: Certific
     if (!data.template_name?.trim()) throw new Error('Template name is required')
     if (!data.issuer_name?.trim()) throw new Error('Issuer name is required')
 
+    // Defense in depth: resolveCertificateDesign() also rejects a malformed
+    // colour at render time, but this is what stops a hand-built request
+    // (the <input type="color"> only constrains the editor UI) from ever
+    // reaching the row that the public certificate view later trusts.
+    const { primary_color, secondary_color } = data.design_settings ?? {}
+    if (primary_color && !HEX_COLOR.test(primary_color)) {
+      throw new Error('Primary color must be a hex value like #3B82F6')
+    }
+    if (secondary_color && !HEX_COLOR.test(secondary_color)) {
+      throw new Error('Secondary color must be a hex value like #1E40AF')
+    }
+
+    // Basic certificates (Free) use the platform design; colours, logo,
+    // signature image and the QR toggle are the `custom` tier (#662). The
+    // editor hides those controls below the tier, so reaching this means a
+    // hand-built request — refuse rather than silently strip.
+    if (certificateTierOf(await getTenantPlan(ctx.tenantId)) !== 'custom' && hasCustomCertificateDesign(data)) {
+      throw new PlanFeatureError('certificates', (await getTenantPlan(ctx.tenantId)).slug, 'starter')
+    }
+
     const { error } = await ctx.supabase
       .from('certificate_templates')
       .upsert({
@@ -59,6 +85,21 @@ export async function upsertCertificateTemplate(courseId: number, data: Certific
       }, { onConflict: 'course_id,tenant_id' })
 
     if (error) throw error
+
+    // Auto-issue is template-gated (§9.4): without an active row here a student
+    // hits 100% and gets no certificate. This event is what lets us tell those
+    // schools apart from the ones whose learners simply never finish.
+    await track(
+      ANALYTICS_EVENTS.CERTIFICATE_TEMPLATE_CONFIGURED,
+      {
+        course_id: courseId,
+        min_lesson_completion_pct: data.min_lesson_completion_pct,
+        min_exam_pass_score: data.min_exam_pass_score,
+        requires_all_exams: data.requires_all_exams,
+        has_expiration: data.expiration_days !== null,
+      },
+      { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role }
+    )
 
     revalidatePath(`/dashboard/teacher/courses/${courseId}/certificates`)
 

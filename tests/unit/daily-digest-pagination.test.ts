@@ -9,6 +9,34 @@ vi.mock('@/lib/email/send', () => ({
   }),
 }))
 
+// The digest resolves the school brand once per tenant (issue #765). This
+// suite is about pagination, not branding, so stub it out rather than let
+// the real getSchoolBrand() hit createAdminClient() (no service-role key in
+// this test process) and fall back through its own logged error path.
+vi.mock('@/lib/themes/school-brand', () => ({
+  getSchoolBrand: vi.fn(async (tenantId: string) => ({
+    tenantId,
+    name: '',
+    logoUrl: null,
+    theme: null,
+    outputs: {
+      themeId: null,
+      brand: '#007595',
+      button: '#007595',
+      buttonInk: '#FFFFFF',
+      buttonBorder: '#007595',
+      brandText: '#007595',
+      tint: '#E6F2F5',
+      deep: '#003A49',
+      deepInk: '#FFFFFF',
+      deepMuted: '#B3D9E0',
+      paper: '#FFFFFF',
+      headingFont: null,
+      emailHeadingFontStack: 'Georgia, "Times New Roman", serif',
+    },
+  })),
+}))
+
 import { fetchDigestCandidates, runDailyDigest } from '@/lib/notifications/daily-digest'
 
 /**
@@ -176,6 +204,7 @@ function candidates(n: number, tenant = TENANT): Row[] {
     goals_pending: 0,
     current_streak: 0,
     last_activity_date: null,
+    community_replies: 0,
   }))
 }
 
@@ -300,6 +329,23 @@ describe('runDailyDigest past the row cap', () => {
     expect(result.digestsSent).toBe(0)
     expect(sentEmails).toEqual([])
     expect(result.errors.join(' ')).toMatch(/preferences read failed/)
+  })
+
+  it('#870: a student whose only news is community replies still gets a digest', async () => {
+    const [only] = candidates(1)
+    const { client, db } = makeServer({
+      serverCap: CAP,
+      candidates: [{ ...only, due_cards: 0, community_replies: 3 }],
+    })
+
+    const result = await runDailyDigest(client, NOW)
+
+    expect(result.errors).toEqual([])
+    expect(result.digestsSent).toBe(1)
+    const [notification] = db.notifications as Array<{ content: string; metadata: Record<string, unknown> }>
+    expect(notification.metadata).toMatchObject({ kind: 'daily_digest', community_replies: 3 })
+    expect(notification.content).toContain('3 new replies in the community')
+    expect(sentEmails).toHaveLength(1)
   })
 
   it('spans multiple tenants, each read completely', async () => {

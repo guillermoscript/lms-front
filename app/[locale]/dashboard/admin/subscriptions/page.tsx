@@ -131,29 +131,25 @@ export default async function SubscriptionsPage({
       title: t('stats.active'),
       value: activeCount,
       icon: IconCrown,
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      tile: 'bg-success/10 text-success',
     },
     {
       title: t('stats.cancelled'),
       value: canceledCount,
       icon: IconRefresh,
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      iconColor: 'text-amber-600 dark:text-amber-400',
+      tile: 'bg-warning/10 text-warning',
     },
     {
       title: t('stats.expired'),
       value: expiredCount,
       icon: IconCalendar,
-      bg: 'bg-red-50 dark:bg-red-950/40',
-      iconColor: 'text-red-600 dark:text-red-400',
+      tile: 'bg-destructive/10 text-destructive',
     },
     {
       title: t('stats.revenue'),
       value: `$${(totalRevenue || 0).toFixed(2)}`,
       icon: IconCurrencyDollar,
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      iconColor: 'text-blue-600 dark:text-blue-400',
+      tile: 'bg-brand-tint text-brand-text',
     },
   ]
 
@@ -187,8 +183,8 @@ export default async function SubscriptionsPage({
                     <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{stat.title}</p>
                     <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{stat.value}</p>
                   </div>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-[18px] w-[18px] ${stat.iconColor}`} strokeWidth={1.75} />
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.tile}`}>
+                    <stat.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
                   </div>
                 </div>
               </CardContent>
@@ -277,8 +273,8 @@ export default async function SubscriptionsPage({
                         {/* User & Plan Info */}
                         <div className="flex-1">
                           <div className="flex items-start gap-3">
-                            <div className="rounded-full bg-primary/10 p-2">
-                              <IconUser className="h-5 w-5 text-primary" />
+                            <div className="rounded-full bg-brand-tint p-2">
+                              <IconUser className="h-5 w-5 text-brand-text" />
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -296,7 +292,7 @@ export default async function SubscriptionsPage({
                                         ? 'secondary'
                                         : 'destructive'
                                   }
-                                  className={`text-[10px] ${isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400' : ''}`}
+                                  className={`text-[10px] ${isActive ? 'bg-success/10 text-success border-success/30' : ''}`}
                                 >
                                   {t(`status.${subscription.subscription_status}`)}
                                 </Badge>

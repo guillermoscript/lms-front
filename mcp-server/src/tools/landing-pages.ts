@@ -1,8 +1,13 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult } from "../format.js";
+import { getTenantBranding } from "../branding.js";
+import { propsSchema as landingPagePreviewPropsSchema } from "../../views/landing-page-preview/schema.js";
 import {
   arraySpecToSpec,
   normalizeSpec,
@@ -33,6 +38,19 @@ import {
  */
 
 // ── Shared schema & helpers ──────────────────────────────────────────────────
+
+// mcp-use v2 allows exactly ONE bound tool per view, and `lms_get_landing_page`
+// owns the "landing-page-preview" binding. Create/update render the same view
+// by stamping the result `_meta` the framework stamps on a bound tool's result
+// (`buildToolResultUiMeta`): the nested `ui.resourceUri` plus the legacy flat
+// key hosts still read.
+// Matches `viewResourceUri("landing-page-preview")` — note the `.html` suffix
+// the framework appends (verified against a live tools/call result).
+const LANDING_PREVIEW_URI = "ui://views/landing-page-preview.html";
+const LANDING_PREVIEW_RESULT_META = {
+  ui: { resourceUri: LANDING_PREVIEW_URI },
+  "ui/resourceUri": LANDING_PREVIEW_URI,
+};
 
 const ElementSchema = z.object({
   id: z
@@ -227,19 +245,16 @@ function summarizeSection(type: string, props: Record<string, unknown>): Section
 }
 
 /**
- * The tenant's brand primary color (`tenants.primary_color`). Blocks that don't set an
- * explicit color render with `var(--primary)` in the real app, so the wireframe must use
- * this to match. Null when unset/unreadable — the widget falls back to a neutral accent.
+ * The tenant's brand colour — what `var(--primary)` resolves to in the real
+ * app (the theme kit's `button`, issue #779). Blocks that don't set an
+ * explicit color render with `var(--primary)`, so the wireframe must use this
+ * to match. Null only on a failed lookup — the widget falls back to a neutral
+ * accent; `getTenantBranding` itself always resolves to a colour (the theme
+ * kit's, or the platform teal) once the session is valid.
  */
 async function tenantBrandColor(session: LmsSession): Promise<string | null> {
-  const { data } = await session
-    .getClient()
-    .from("tenants")
-    .select("primary_color")
-    .eq("id", session.getTenantId())
-    .maybeSingle();
-  const color = (data?.primary_color as string | undefined)?.trim();
-  return color ? color : null;
+  const branding = await getTenantBranding(session);
+  return branding?.button ?? null;
 }
 
 /** Props for the landing-page-preview widget, built from a DB row. */
@@ -280,7 +295,7 @@ function adminSession(ctx: unknown): LmsSession {
   return session;
 }
 
-export function registerLandingPageTools(server: MCPServer) {
+export function registerLandingPageTools(server: LmsServer) {
   // ── lms_get_landing_blocks ─────────────────────────────────────────────────
   server.tool(
     {
@@ -364,10 +379,11 @@ export function registerLandingPageTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "landing-page-preview",
-        invoking: "Loading page...",
-        invoked: "Page loaded",
+      outputSchema: landingPagePreviewPropsSchema,
+      view: { name: "landing-page-preview" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading page...",
+        "openai/toolInvocation/invoked": "Page loaded",
       },
     },
     async (input, ctx) => {
@@ -425,10 +441,10 @@ export function registerLandingPageTools(server: MCPServer) {
         idempotentHint: false,
         openWorldHint: false,
       },
-      widget: {
-        name: "landing-page-preview",
-        invoking: "Drafting page...",
-        invoked: "Draft created",
+      outputSchema: landingPagePreviewPropsSchema,
+      _meta: {
+        "openai/toolInvocation/invoking": "Drafting page...",
+        "openai/toolInvocation/invoked": "Draft created",
       },
     },
     async (input, ctx) => {
@@ -467,6 +483,7 @@ export function registerLandingPageTools(server: MCPServer) {
             : "";
         return widget({
           props: previewWidgetProps(data, await tenantBrandColor(session), built.warnings),
+          metadata: LANDING_PREVIEW_RESULT_META,
           output: text(
             `Created draft "${data.title}" (/${data.slug}, page_id ${data.page_id}) with ${built.data.content.length} sections. Preview it at ${previewPath(data.page_id)} or refine it in the visual editor, then publish with lms_publish_landing_page.${warningText}`
           ),
@@ -495,10 +512,10 @@ export function registerLandingPageTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "landing-page-preview",
-        invoking: "Updating page...",
-        invoked: "Page updated",
+      outputSchema: landingPagePreviewPropsSchema,
+      _meta: {
+        "openai/toolInvocation/invoking": "Updating page...",
+        "openai/toolInvocation/invoked": "Page updated",
       },
     },
     async (input, ctx) => {
@@ -559,6 +576,7 @@ export function registerLandingPageTools(server: MCPServer) {
             : "";
         return widget({
           props: previewWidgetProps(data, await tenantBrandColor(session), warnings),
+          metadata: LANDING_PREVIEW_RESULT_META,
           output: text(
             `Updated "${data.title}" (/${data.slug}, page_id ${data.page_id})${input.elements ? ` — now ${(data.puck_data as PuckData).content.length} sections` : ""}.${data.is_published ? " The page is LIVE; changes are visible immediately." : ""} Preview at ${previewPath(data.page_id)}.${warningText}`
           ),

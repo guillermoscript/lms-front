@@ -1,8 +1,9 @@
 import { getCurrentTenant } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
+import { APP_NAME } from '@/lib/app-name'
+import { hasPlanFeature } from '@/lib/plans/server'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
-const FREE_STARTER_PLANS = ['free', 'starter']
 
 export async function PoweredByBanner() {
   const tenant = await getCurrentTenant()
@@ -11,13 +12,16 @@ export async function PoweredByBanner() {
   // Don't show on main platform or if no tenant
   if (!tenant || tenant.id === DEFAULT_TENANT_ID) return null
 
-  // Only show for free/starter plans
-  if (!FREE_STARTER_PLANS.includes(tenant.plan)) return null
+  // `remove_branding` is the plan feature that hides this (#662) — read from
+  // platform_plans like every other gate, not from a hardcoded plan list.
+  if (await hasPlanFeature(tenant.id, 'remove_branding')) return null
 
   const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'lmsplatform.com'
   const platformUrl = platformDomain.includes('localhost') || platformDomain.includes('lvh.me')
     ? `http://${platformDomain}`
     : `https://${platformDomain}`
+  // The real product name (#730), never the hardcoded "LMS V2" version label.
+  const platformName = APP_NAME
 
   return (
     <div className="border-t border-border bg-muted/30 py-2.5">
@@ -30,7 +34,7 @@ export async function PoweredByBanner() {
             rel="noopener noreferrer"
             className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
           >
-            {t('brandName')}
+            {platformName}
           </a>
           {' '}&mdash;{' '}
           <a

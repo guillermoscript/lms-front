@@ -17,7 +17,7 @@ export function Audio({ src, title, className }: AudioProps) {
     >
       {title && (
         <div className="mb-3 flex items-center gap-2">
-          <IconVolume className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <IconVolume className="size-5 shrink-0 text-brand-text" aria-hidden="true" />
           <h4 className="text-sm font-semibold">{title}</h4>
         </div>
       )}

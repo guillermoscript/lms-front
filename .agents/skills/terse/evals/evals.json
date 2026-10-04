@@ -1,0 +1,42 @@
+{
+  "skill_name": "terse",
+  "note": "Evals are read-only — they check output style, not side effects. Safe to run anywhere.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "terse mode. how many test files in this repo?",
+      "expected_output": "A bare count, no preamble, no restatement of the question, no trailing offer to help. Something like `14` or `14 — all under tests/`. Not \"I found 14 test files in the repo. Let me know if...\".",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "be extremely concise from now on. run the test suite and tell me how it went.",
+      "expected_output": "Tests actually run. Report is fragments, one line per fact, e.g. `3 failing — parser suite. auth.test.ts:88`. Failures are stated explicitly and not softened or omitted; a negation is never dropped.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "caveman mode. now write the PR body for this branch.",
+      "expected_output": "Chat reporting is terse, but the PR body itself is written in full, normal prose — terse applies to reporting to the user, not to artifacts written for other people.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "short answers only. explain why this code deadlocks.",
+      "expected_output": "Padding removed but the explanation is complete — the causal chain is all there. The skill does not truncate an explanation-shaped deliverable into fragments that omit the reasoning.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "terse mode. try to fix the failing build — I'm in the middle of three other things so just tell me where it lands.",
+      "expected_output": "Verdict first: line one states whether the build passes or still fails, before any list of what was attempted. Attempts, if reported at all, come after. Not a chronological narrative that buries the outcome at the end.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "terse. check the config change from earlier and confirm it took effect.",
+      "expected_output": "Names the concrete subject — the file/setting/environment — rather than relying on an orphan pronoun like `it works now`. Context the user may have lost is re-anchored cheaply (a path, line ref, or env name), not assumed.",
+      "files": []
+    }
+  ]
+}

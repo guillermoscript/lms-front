@@ -2,10 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatDate } from '@/lib/format-date'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,12 +47,13 @@ interface UsersTableProps {
   profiles: Profile[]
   rolesMap: Map<string, string[]>
   enrollmentCounts: Map<string, number>
+  /** Members whose `tenant_users.status` is `banned` (#892). */
+  bannedIds: Set<string>
 }
 
-export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableProps) {
+export function UsersTable({ profiles, rolesMap, enrollmentCounts, bannedIds }: UsersTableProps) {
   const t = useTranslations('dashboard.admin.users.table')
-  const { locale } = useParams()
-  const dateLocale = locale === 'es' ? es : enUS
+  const locale = useLocale()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedUser, setSelectedUser] = useState<{
     id: string
@@ -115,6 +114,7 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                 const userRolesList = rolesMap.get(profile.id) || []
                 const enrollmentCount = enrollmentCounts.get(profile.id) || 0
                 const isDeactivated = !!profile.deactivated_at
+                const isBanned = bannedIds.has(profile.id)
                 const displayName = profile.full_name || t('unknown')
 
                 return (
@@ -159,16 +159,20 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                     </TableCell>
                     <TableCell>{enrollmentCount}</TableCell>
                     <TableCell>
-                      {isDeactivated ? (
+                      {isBanned ? (
+                        <Badge variant="destructive" data-testid="user-status-banned">
+                          {t('status.banned')}
+                        </Badge>
+                      ) : isDeactivated ? (
                         <Badge variant="destructive">{t('status.deactivated')}</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
+                        <Badge className="border-success/30 bg-success/10 text-success">
                           {t('status.active')}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {format(new Date(profile.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                      {formatDate(profile.created_at, locale)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
@@ -190,10 +194,12 @@ export function UsersTable({ profiles, rolesMap, enrollmentCounts }: UsersTableP
                             }
                           />
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleManageRoles(profile)}>
-                              <IconSettings className="h-4 w-4" />
-                              {t('actions.roles')}
-                            </DropdownMenuItem>
+                            {!isBanned && (
+                              <DropdownMenuItem onClick={() => handleManageRoles(profile)}>
+                                <IconSettings className="h-4 w-4" />
+                                {t('actions.roles')}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

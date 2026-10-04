@@ -1,8 +1,16 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult, PaginationSchema } from "../format.js";
+import { propsSchema as myLearningPropsSchema } from "../../views/my-learning/schema.js";
+import { propsSchema as lessonViewerPropsSchema } from "../../views/lesson-viewer/schema.js";
+import { propsSchema as myExamResultsPropsSchema } from "../../views/my-exam-results/schema.js";
+import { propsSchema as gamificationProfilePropsSchema } from "../../views/gamification-profile/schema.js";
+import { propsSchema as courseCatalogPropsSchema } from "../../views/course-catalog/schema.js";
 
 /**
  * Student-facing tools. Every tool is self-scoped: it reads (or, for
@@ -95,7 +103,7 @@ async function loadLessonForLearner(session: LmsSession, lessonId: number) {
   };
 }
 
-export function registerStudentTools(server: MCPServer) {
+export function registerStudentTools(server: LmsServer) {
   // ── lms_my_learning ─────────────────────────────────────────────────────────
   server.tool(
     {
@@ -109,10 +117,11 @@ export function registerStudentTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "my-learning",
-        invoking: "Loading your courses...",
-        invoked: "Learning dashboard ready",
+      outputSchema: myLearningPropsSchema,
+      view: { name: "my-learning" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading your courses...",
+        "openai/toolInvocation/invoked": "Learning dashboard ready",
       },
     },
     async (_input, ctx) => {
@@ -227,10 +236,11 @@ export function registerStudentTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "lesson-viewer",
-        invoking: "Opening lesson...",
-        invoked: "Lesson ready",
+      outputSchema: lessonViewerPropsSchema,
+      view: { name: "lesson-viewer" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Opening lesson...",
+        "openai/toolInvocation/invoked": "Lesson ready",
       },
     },
     async (input, ctx) => {
@@ -381,10 +391,11 @@ export function registerStudentTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "my-exam-results",
-        invoking: "Loading your exam results...",
-        invoked: "Exam results ready",
+      outputSchema: myExamResultsPropsSchema,
+      view: { name: "my-exam-results" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading your exam results...",
+        "openai/toolInvocation/invoked": "Exam results ready",
       },
     },
     async (input, ctx) => {
@@ -438,7 +449,14 @@ export function registerStudentTools(server: MCPServer) {
             : null;
 
         return widget({
-          props: { total: count ?? results.length, average_score: avg, results },
+          props: {
+            total: count ?? results.length,
+            offset: input.offset,
+            limit: input.limit,
+            has_more: (count ?? results.length) > input.offset + results.length,
+            average_score: avg,
+            results,
+          },
           output: text(
             results.length === 0
               ? "You have no exam submissions yet."
@@ -464,10 +482,11 @@ export function registerStudentTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "gamification-profile",
-        invoking: "Loading your progress...",
-        invoked: "Profile ready",
+      outputSchema: gamificationProfilePropsSchema,
+      view: { name: "gamification-profile" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading your progress...",
+        "openai/toolInvocation/invoked": "Profile ready",
       },
     },
     async (_input, ctx) => {
@@ -626,10 +645,11 @@ export function registerStudentTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "course-catalog",
-        invoking: "Browsing catalog...",
-        invoked: "Catalog ready",
+      outputSchema: courseCatalogPropsSchema,
+      view: { name: "course-catalog" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Browsing catalog...",
+        "openai/toolInvocation/invoked": "Catalog ready",
       },
     },
     async (input, ctx) => {
@@ -817,6 +837,13 @@ export function registerStudentTools(server: MCPServer) {
         return widget({
           props: {
             total: coursesRes.count ?? courses.length,
+            // Echoed so "load more" repeats the same query rather than
+            // silently widening it to the unfiltered catalog.
+            search: input.search ?? null,
+            offset: input.offset,
+            limit: input.limit,
+            has_more:
+              (coursesRes.count ?? courses.length) > input.offset + courses.length,
             has_subscription: planIds.length > 0,
             courses,
           },

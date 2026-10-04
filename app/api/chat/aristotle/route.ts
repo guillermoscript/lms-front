@@ -1,10 +1,15 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
-import { lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { capChatHistory, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
+import { lastUserMessageHasAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { propagateAttributes } from '@langfuse/tracing'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
+import { aiChatRateLimitedResponse, aiChatUsageLimitResponse, checkAiChatUsage } from '@/lib/ai/chat-usage'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -22,9 +27,20 @@ export async function POST(req: Request) {
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
 
+    // Was not covered by #804 — Aristotle gets the same burst brake every
+    // other AI chat surface does (issue #807). The durable budget is checked
+    // below, after enrollment, so a 403 never costs a budget slot.
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return aiChatRateLimitedResponse()
+    }
+
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
-    const { messages, courseId, contextPage } = parsed.data
+    const { messages: rawMessages, courseId, contextPage } = parsed.data
+    // Body is user-controlled: drop non-image / oversized file parts before they reach the model.
+    const messages = sanitizeLastUserAttachments(rawMessages)
 
     const numericCourseId = courseId
 
@@ -32,6 +48,9 @@ export async function POST(req: Request) {
     if (!(await hasCourseAccess(supabase, user.id, numericCourseId))) {
         return new Response('Not enrolled', { status: 403 })
     }
+
+    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
 
     // Fetch tutor config
     const { data: tutorConfig } = await supabase
@@ -136,6 +155,15 @@ export async function POST(req: Request) {
 
         if (error || !newSession) return new Response('Failed to create session', { status: 500 })
         sessionId = newSession.session_id
+
+        // Only on the branch that actually created a row. The branch above
+        // resumes a session that is still inside the idle window, and counting
+        // that as a start would make every long conversation look like N sessions.
+        void track(
+            ANALYTICS_EVENTS.AI_SESSION_STARTED,
+            { session_id: sessionId, course_id: numericCourseId, surface: 'aristotle' },
+            { userId: user.id, tenantId, role: 'student' },
+        )
     }
 
     // Build lesson context if on a specific lesson page
@@ -173,7 +201,6 @@ export async function POST(req: Request) {
 
     // Build exam results with pass/fail
     const examResults = (examSubmissions || []).map(s => {
-        const exam = exams?.find(e => e.exam_id === s.exam_id)
         return {
             exam_id: s.exam_id,
             score: s.score,
@@ -214,7 +241,9 @@ export async function POST(req: Request) {
     })
 
     // Save user message
-    const messageText = lastUserMessageText(messages)
+    // Aristotle history is not re-hydrated in the UI, so images are not stored —
+    // an image-only turn still gets a placeholder so the session summary sees it.
+    const messageText = lastUserMessageText(messages) || (lastUserMessageHasAttachments(messages) ? '[image]' : null)
     if (messageText) {
         await supabase.from('aristotle_messages').insert({
             session_id: sessionId,
@@ -222,10 +251,27 @@ export async function POST(req: Request) {
             content: messageText,
             context_page: contextPage || null,
         })
+
+        // NOT awaited, unlike every other server event in this PR. This route
+        // streams, and awaiting would put the analytics timeout (up to 1.5s if
+        // the collector is unreachable) in front of the first token on every
+        // message. `track()` swallows its own errors, so the floating promise
+        // cannot reject. No message content is sent — length only.
+        void track(
+            ANALYTICS_EVENTS.AI_TUTOR_MESSAGE_SENT,
+            {
+                session_id: sessionId,
+                course_id: numericCourseId,
+                message_index: messages.length,
+                message_length: messageText.length,
+                context_page: contextPage || null,
+            },
+            { userId: user.id, tenantId, role: 'student' },
+        )
     }
 
     // Stream response
-    const modelMessages = await convertToModelMessages(messages)
+    const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
     const result = propagateAttributes(
         { userId: user.id, metadata: { tenantId, contextPage: contextPage || '' } },
         () => streamText({

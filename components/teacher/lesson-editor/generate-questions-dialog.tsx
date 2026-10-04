@@ -157,7 +157,7 @@ export function GenerateQuestionsDialog() {
         <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <IconSparkles className="h-4 w-4 text-primary" />
+              <IconSparkles className="h-4 w-4 text-brand-text" />
               {t('title')}
             </DialogTitle>
             <DialogDescription>
@@ -310,7 +310,7 @@ export function GenerateQuestionsDialog() {
                             <span>{option}</span>
                           </label>
                         ))}
-                        <p className="text-[11px] text-muted-foreground/60">{t('optionsHint')}</p>
+                        <p className="text-[11px] text-muted-foreground">{t('optionsHint')}</p>
                       </div>
                     )}
 
@@ -358,7 +358,7 @@ export function GenerateQuestionsDialog() {
           {phase === 'saved' && (
             <div className="space-y-2 py-4">
               <p className="flex items-center gap-2 text-sm font-medium">
-                <IconCircleCheck className="h-5 w-5 text-green-600" />
+                <IconCircleCheck className="h-5 w-5 text-success" />
                 {t('savedSummary', { count: saved.length })}
               </p>
               <ul className="ml-7 list-disc space-y-1 text-sm text-muted-foreground">

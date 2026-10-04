@@ -22,7 +22,7 @@ export function ActivitySection({ lessons }: ActivitySectionProps) {
                     <div className="h-8 w-1 bg-primary rounded-full" />
                     <h2 className="text-2xl font-black tracking-tight">{t('title')}</h2>
                 </div>
-                <Badge variant="secondary" className="bg-primary/5 text-primary border-primary/10 px-3 py-1 font-bold">
+                <Badge variant="secondary" className="bg-primary/5 text-brand-text border-primary/10 px-3 py-1 font-bold">
                     {t('recentSessions', { count: lessons.length })}
                 </Badge>
             </div>
@@ -57,11 +57,11 @@ export function ActivitySection({ lessons }: ActivitySectionProps) {
 
                             <CardContent className="p-5 space-y-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black uppercase">
+                                    <div className="px-2 py-0.5 rounded bg-brand-tint text-brand-text text-[10px] font-black uppercase">
                                         {t('part', { sequence: lesson.lesson_sequence })}
                                     </div>
                                 </div>
-                                <h3 className="font-bold text-lg line-clamp-1 group-hover:text-primary transition-colors">
+                                <h3 className="font-bold text-lg line-clamp-1 group-hover:text-brand-text transition-colors">
                                     {lesson.lesson_title}
                                 </h3>
                                 <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">
@@ -69,8 +69,8 @@ export function ActivitySection({ lessons }: ActivitySectionProps) {
                                 </p>
 
                                 <div className="pt-2 flex items-center justify-between group-hover:translate-x-1 transition-transform">
-                                    <span className="text-xs font-black text-primary uppercase tracking-widest">{t('resume')}</span>
-                                    <IconChevronRight size={16} className="text-primary" />
+                                    <span className="text-xs font-black text-brand-text uppercase tracking-widest">{t('resume')}</span>
+                                    <IconChevronRight size={16} className="text-brand-text" />
                                 </div>
                             </CardContent>
                         </Card>

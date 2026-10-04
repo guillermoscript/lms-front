@@ -61,6 +61,7 @@ interface BinancePassThrough {
   plan_id?: string
   plan_slug?: string
   interval?: string
+  billing_switch_id?: string
   /** Our own reference, when it did not fit `merchantTradeNo`. See below. */
   ref?: string
 }
@@ -75,6 +76,7 @@ const PASS_THROUGH_KEYS: (keyof BinancePassThrough)[] = [
   'plan_id',
   'plan_slug',
   'interval',
+  'billing_switch_id',
   'ref',
 ]
 
@@ -173,6 +175,7 @@ export class BinancePayProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // Binance Pay has no subscription-management page for us to open
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
     requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
@@ -448,8 +451,13 @@ export class BinancePayProvider implements IPaymentProvider {
       return {
         type: 'refund.succeeded',
         providerEventId,
-        providerPaymentId: bizId,
+        // The ORDER's prepayId, not the refund's own id: checkout stored it on
+        // the transaction (provider_subscription_id), and with no
+        // passThroughInfo on this notification it is the only owner binding
+        // the dispatcher can check (#743).
+        providerPaymentId: String(refundInfo.prepayId ?? data.prepayId ?? bizId),
         reference,
+        ...(Object.keys(metadata).length ? { metadata } : {}),
         ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
         ...(currency ? { currency: String(currency).toLowerCase() } : {}),
         raw: payload,

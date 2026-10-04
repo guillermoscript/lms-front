@@ -1,6 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime as formatInZone } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +32,10 @@ export default async function StudentPaymentsPage() {
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.payments')
+  // Explicit locale + the school's zone: the server runs in UTC, so
+  // `Intl.DateTimeFormat(undefined, …)` showed a different time than the
+  // admin saw, with English month names on /es (#727).
+  const [locale, timeZone] = await Promise.all([getLocale(), getTenantTimeZone(tenantId)])
 
   // Get authenticated user
   const userId = await getCurrentUserId()
@@ -56,6 +63,10 @@ export default async function StudentPaymentsPage() {
       product:products (
         product_id,
         name
+      ),
+      plan:plans (
+        plan_id,
+        plan_name
       )
     `)
     .eq('user_id', userId)
@@ -92,13 +103,20 @@ export default async function StudentPaymentsPage() {
     stepsByProduct.set(row.product_id, list)
   }
 
+  // A manual request buys either a product or a plan (`product_id` NULL), so
+  // name it by whichever it references — same fallback as the detail page.
+  const itemName = (request: { product: unknown; plan: unknown }) =>
+    (request.product as { name?: string } | null)?.name ||
+    (request.plan as { plan_name?: string } | null)?.plan_name ||
+    t('unknownProduct')
+
   const completedWithSteps = (paymentRequests || [])
     .filter((request) => request.status === 'completed')
     .map((request) => {
       const product = request.product as { product_id?: number; name?: string } | null
       return {
         requestId: request.request_id,
-        productName: product?.name || t('unknownProduct'),
+        productName: itemName(request),
         steps: product?.product_id ? stepsByProduct.get(product.product_id) || [] : [],
       }
     })
@@ -146,23 +164,11 @@ export default async function StudentPaymentsPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(new Date(dateString))
-  }
-
-  const formatDateTime = (dateString: string) => {
-    return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(dateString))
-  }
+  const formatDate = (dateString: string) =>
+    formatInZone(dateString, { locale, timeZone, precision: 'date' })
+  const formatDateTime = (dateString: string) => formatInZone(dateString, { locale, timeZone })
+  const formatAmount = (amount: string | number | null, currency: string | null) =>
+    formatCurrency(Number(amount ?? 0), currency || 'usd', locale)
 
   const canCancel = (status: string) => {
     return status === 'pending' || status === 'contacted'
@@ -173,7 +179,7 @@ export default async function StudentPaymentsPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <IconReceipt className="w-6 h-6 text-primary" />
+          <IconReceipt className="w-6 h-6 text-brand-text" />
           <h1 className="text-3xl font-bold tracking-tight" data-testid="payments-title">{t('title')}</h1>
         </div>
         <p className="text-muted-foreground">{t('subtitle')}</p>
@@ -236,13 +242,12 @@ export default async function StudentPaymentsPage() {
                 <TableBody>
                   {paymentRequests.map((request) => {
                     const statusBadge = getStatusBadge(request.status)
-                    const product = request.product as { product_id?: number; name?: string } | null
 
                     return (
                       <TableRow key={request.request_id}>
-                        <TableCell className="font-medium max-w-[200px] truncate">{product?.name || t('unknownProduct')}</TableCell>
+                        <TableCell className="font-medium max-w-[200px] truncate">{itemName(request)}</TableCell>
                         <TableCell>
-                          {new Intl.NumberFormat(undefined, { style: 'currency', currency: request.payment_currency || 'USD' }).format(parseFloat(request.payment_amount || '0'))}
+                          {formatAmount(request.payment_amount, request.payment_currency)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusBadge.variant} className="gap-1">
@@ -288,14 +293,13 @@ export default async function StudentPaymentsPage() {
           <div className="md:hidden space-y-4">
             {paymentRequests.map((request) => {
               const statusBadge = getStatusBadge(request.status)
-              const product = request.product as { product_id?: number; name?: string } | null
 
               return (
                 <Card key={request.request_id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">{product?.name || t('unknownProduct')}</CardTitle>
+                        <CardTitle className="text-base truncate">{itemName(request)}</CardTitle>
                         <CardDescription className="mt-1">
                           {formatDateTime(request.created_at)}
                         </CardDescription>
@@ -310,8 +314,7 @@ export default async function StudentPaymentsPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{t('amount')}:</span>
                       <span className="font-semibold">
-                        {request.payment_currency?.toUpperCase() || 'USD'}{' '}
-                        {parseFloat(request.payment_amount || '0').toFixed(2)}
+                        {formatAmount(request.payment_amount, request.payment_currency)}
                       </span>
                     </div>
 

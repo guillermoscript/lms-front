@@ -57,7 +57,7 @@ export function PostRegistrationSteps({
             const Icon = stepIcons[step.type] ?? IconLink
             return (
               <li key={step.id} className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-tint text-brand-text">
                   <Icon className="size-4" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">

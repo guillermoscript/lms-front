@@ -213,10 +213,9 @@ test.describe('Manual Payment Request Lifecycle', () => {
   test('payment request can be created via DB and appears for admin', async ({ page }) => {
     test.setTimeout(60_000)
 
-    if (!seededProductId) {
-      test.skip()
-      return
-    }
+    // Data-gated, not a permanent skip: beforeAll seeds a manual product on the
+    // default tenant and only fails to when the service-role key is missing.
+    test.skip(!seededProductId, 'no manual product could be seeded on the default tenant (beforeAll)')
 
     const admin = getAdmin()
 
@@ -265,10 +264,8 @@ test.describe('Manual Payment Request Lifecycle', () => {
   })
 
   test('payment request status can be updated via DB', async () => {
-    if (!seededPaymentRequestId) {
-      test.skip()
-      return
-    }
+    // Depends on the previous test having created the payment request.
+    test.skip(!seededPaymentRequestId, 'no payment request was created by the previous test in this file')
 
     const admin = getAdmin()
 

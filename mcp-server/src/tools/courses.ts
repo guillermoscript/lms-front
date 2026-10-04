@@ -1,10 +1,16 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, okText, errorResult, PaginationSchema } from "../format.js";
+import { courseLimitHeadroomError, isPlanLimitError, planLimitMessage } from "../plan-limits.js";
+import { propsSchema as courseDashboardPropsSchema } from "../../views/course-dashboard/schema.js";
+import { propsSchema as courseDetailPropsSchema } from "../../views/course-detail/schema.js";
 
-export function registerCourseTools(server: MCPServer) {
+export function registerCourseTools(server: LmsServer) {
   // ── lms_list_courses ────────────────────────────────────────────────────────
   server.tool(
     {
@@ -25,10 +31,11 @@ export function registerCourseTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "course-dashboard",
-        invoking: "Loading courses...",
-        invoked: "Courses loaded",
+      outputSchema: courseDashboardPropsSchema,
+      view: { name: "course-dashboard" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading courses...",
+        "openai/toolInvocation/invoked": "Courses loaded",
       },
     },
     async (input, ctx) => {
@@ -73,6 +80,9 @@ export function registerCourseTools(server: MCPServer) {
               // rows while courses still exist, and the widget reads total === 0
               // as "this teacher has never created a course".
               total,
+              offset,
+              limit,
+              has_more: false,
               courses: [],
             },
             output: text("No courses found."),
@@ -95,6 +105,9 @@ export function registerCourseTools(server: MCPServer) {
           props: {
             status: status ?? "all",
             total,
+            offset,
+            limit,
+            has_more: total > offset + courses.length,
             courses,
           },
           output: text(`Found ${total} course(s).`),
@@ -120,10 +133,11 @@ export function registerCourseTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "course-detail",
-        invoking: "Loading course...",
-        invoked: "Course loaded",
+      outputSchema: courseDetailPropsSchema,
+      view: { name: "course-detail" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading course...",
+        "openai/toolInvocation/invoked": "Course loaded",
       },
     },
     async (input, ctx) => {
@@ -219,6 +233,13 @@ export function registerCourseTools(server: MCPServer) {
 
       try {
         const supabase = session.getClient();
+
+        // Plan-limit pre-check (#658). The DB trigger behind it is the
+        // authoritative gate; this just gives the agent the upgrade message
+        // before it spends a round-trip on an insert that will be refused.
+        const headroomError = await courseLimitHeadroomError(supabase, session.getTenantId());
+        if (headroomError) return errorResult(headroomError);
+
         const { data, error } = await supabase
           .from("courses")
           .insert({
@@ -233,7 +254,12 @@ export function registerCourseTools(server: MCPServer) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return errorResult(`Creating course: ${error.message}`);
+        if (error)
+          return errorResult(
+            isPlanLimitError(error)
+              ? await planLimitMessage(supabase, session.getTenantId(), "courses")
+              : `Creating course: ${error.message}`
+          );
 
         return ok(
           { id: data.course_id, title: data.title, status: data.status },
@@ -319,6 +345,21 @@ export function registerCourseTools(server: MCPServer) {
           return okText("No fields to update.");
         }
 
+        // Un-archiving consumes a course slot exactly like creating one (#658).
+        // Only a transition OUT of `archived` is checked — changing an already
+        // counted course between draft/published never touches the limit.
+        if (input.status !== undefined && input.status !== "archived") {
+          const { data: current } = await supabase
+            .from("courses")
+            .select("status")
+            .eq("course_id", input.course_id)
+            .maybeSingle();
+          if (current?.status === "archived") {
+            const headroomError = await courseLimitHeadroomError(supabase, session.getTenantId());
+            if (headroomError) return errorResult(headroomError);
+          }
+        }
+
         const { data, error } = await supabase
           .from("courses")
           .update(updateData)
@@ -326,7 +367,12 @@ export function registerCourseTools(server: MCPServer) {
           .select("course_id, title, status")
           .single();
 
-        if (error) return errorResult(`Updating course: ${error.message}`);
+        if (error)
+          return errorResult(
+            isPlanLimitError(error)
+              ? await planLimitMessage(supabase, session.getTenantId(), "courses")
+              : `Updating course: ${error.message}`
+          );
 
         return ok(
           { id: data.course_id, title: data.title, status: data.status },

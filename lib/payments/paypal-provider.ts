@@ -37,7 +37,72 @@ import {
   CreateCheckoutParams,
   CheckoutSession,
   RefundParams,
+  CancellationResult,
 } from './types'
+
+const PAYPAL_HOSTS = {
+  live: 'https://api-m.paypal.com',
+  sandbox: 'https://api-m.sandbox.paypal.com',
+} as const
+
+/** `http(s)://` on 127.0.0.0/8, ::1 or localhost — nothing else can be a test stub. */
+function isLoopbackOrigin(value: string): boolean {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return false
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+  const host = url.hostname.replace(/^\[|\]$/g, '') // an IPv6 literal arrives bracketed
+  return host === 'localhost' || host === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)
+}
+
+let warnedNonLoopback = false
+
+/**
+ * PayPal's API host. Overridable so the settlement E2E can point the server at a
+ * local stub; production never sets it. Read PER CALL, not frozen into the
+ * instance, because the value must follow the server process's env — and
+ * `getPaymentProvider('paypal')` builds a fresh adapter per request anyway.
+ *
+ * LOOPBACK ONLY, and that is a security boundary, not tidiness: the first
+ * request this host receives is `POST /v1/oauth2/token` carrying
+ * `Basic base64(PAYPAL_CLIENT_ID:PAYPAL_CLIENT_SECRET)` — the platform's own
+ * merchant credential, good for charging and refunding every school's students.
+ * A stray non-loopback value (a copy-pasted Dokploy env, a leaked `.env.local`
+ * on a self-hosted install, a bad Actions variable) would hand it over on the
+ * first webhook. So anything that is not loopback is ignored (warned once) and
+ * we fall back to PayPal. A `NODE_ENV !== 'production'` guard would NOT work
+ * here: CI runs the spec against `next start`, i.e. NODE_ENV=production.
+ *
+ * A trailing slash is trimmed — every caller interpolates `${base}/v1/…`.
+ */
+function apiBase(environment: 'sandbox' | 'live'): string {
+  const fallback = PAYPAL_HOSTS[environment]
+  const override = process.env.PAYPAL_API_BASE
+  if (!override) return fallback
+  if (!isLoopbackOrigin(override)) {
+    if (!warnedNonLoopback) {
+      warnedNonLoopback = true
+      console.warn(
+        `[paypal] ignoring non-loopback PAYPAL_API_BASE (${override}) — using ${fallback}. ` +
+          'This override exists only to point the settlement E2E at a local stub; it must never be set on a deployed environment.',
+      )
+    }
+    return fallback
+  }
+  return override.replace(/\/+$/, '')
+}
+
+export class PayPalApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+  }
+}
 
 /**
  * One-time prices have no PayPal catalog object (Orders v2 charges a raw
@@ -47,6 +112,22 @@ import {
  */
 const ONE_TIME_PRICE_PREFIX = 'PAYPAL-ONETIME'
 
+/** PayPal rejects a `custom_id` longer than this rather than truncating it. */
+export const PAYPAL_CUSTOM_ID_MAX_LENGTH = 127
+
+/**
+ * First field of a school → platform `custom_id` (#744). A student reference is
+ * a numeric `transactions.transaction_id`, so the two shapes cannot collide.
+ */
+export const PAYPAL_PLATFORM_CUSTOM_ID_TAG = 'plt'
+
+/**
+ * `SWITCH_METADATA_KEY` from `lib/billing/platform-subscription-switch`, spelled
+ * out because importing it here would close an import cycle through
+ * `lib/payments`. A unit test pins the two together.
+ */
+const PLATFORM_SWITCH_METADATA_KEY = 'billing_switch_id'
+
 /** Pack reference|userId|tenantId into PayPal's single custom_id string (≤127 chars). */
 export function encodePayPalCustomId(
   reference: string,
@@ -55,12 +136,71 @@ export function encodePayPalCustomId(
   return [reference, metadata?.userId ?? '', metadata?.tenantId ?? ''].join('|')
 }
 
-/** Unpack custom_id back into the dispatcher's expected metadata shape. */
+/**
+ * Pack a school → platform subscription's correlation into `custom_id` (#744).
+ *
+ * The platform dispatcher needs `tenant_id`, `plan_id`, `interval` and — when
+ * the checkout replaces a live subscription — `billing_switch_id`. PayPal gives
+ * one 127-character string, which cannot hold them as JSON, so they are packed
+ * positionally behind a tag: `plt|<tenant uuid>|<plan uuid>|<m|y>|<switch uuid>`,
+ * 116 characters at most. `plan_slug` is deliberately left out; the dispatcher
+ * reads it from `platform_plans` by id.
+ *
+ * Throws rather than truncating: a clipped id would activate the wrong plan or
+ * none at all, after the school has already approved the subscription.
+ */
+export function encodePayPalPlatformCustomId(metadata?: Record<string, string>): string {
+  const tenantId = metadata?.tenant_id
+  const planId = metadata?.plan_id
+  if (!tenantId || !planId) {
+    throw new Error('PayPal platform checkout requires tenant_id and plan_id metadata')
+  }
+  const fields = [
+    PAYPAL_PLATFORM_CUSTOM_ID_TAG,
+    tenantId,
+    planId,
+    metadata?.interval === 'yearly' ? 'y' : 'm',
+    metadata?.[PLATFORM_SWITCH_METADATA_KEY] ?? '',
+  ]
+  if (fields.some((field) => field.includes('|'))) {
+    throw new Error('PayPal platform custom_id fields must not contain "|"')
+  }
+  const packed = fields.join('|')
+  if (packed.length > PAYPAL_CUSTOM_ID_MAX_LENGTH) {
+    throw new Error(
+      `PayPal platform custom_id is ${packed.length} characters; PayPal allows ${PAYPAL_CUSTOM_ID_MAX_LENGTH}`,
+    )
+  }
+  return packed
+}
+
+/**
+ * Unpack custom_id back into the dispatcher's expected metadata shape.
+ *
+ * The two loops get disjoint keys, and that is load-bearing: a platform id
+ * never yields `userId`/`tenantId` (so the student dispatcher's owner binding
+ * fails closed on it, and its non-numeric reference skips the transaction flip),
+ * and a student id never yields `tenant_id`/`plan_id` (so the platform
+ * dispatcher's student-loop guard drops it).
+ */
 export function decodePayPalCustomId(customId: string | undefined | null): {
   reference?: string
   metadata?: Record<string, string>
 } {
   if (!customId) return {}
+  if (customId.startsWith(`${PAYPAL_PLATFORM_CUSTOM_ID_TAG}|`)) {
+    const [, tenantId, planId, interval, switchId] = customId.split('|')
+    if (!tenantId || !planId) return {}
+    return {
+      reference: `platform:${tenantId}:${planId}`,
+      metadata: {
+        tenant_id: tenantId,
+        plan_id: planId,
+        interval: interval === 'y' ? 'yearly' : 'monthly',
+        ...(switchId ? { [PLATFORM_SWITCH_METADATA_KEY]: switchId } : {}),
+      },
+    }
+  }
   const [reference, userId, tenantId] = customId.split('|')
   if (!reference) return {}
   const metadata: Record<string, string> = {}
@@ -79,7 +219,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     supportsNativeSubscriptions: true,
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
-    supportsPlatformBillingCheckout: false,
+    supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -87,6 +227,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // no session URL we can mint for a school admin
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: true, // platform holds 100%, school paid out manually
     settlesToPlatformAccount: true,
     requiresConnectedAccount: false, // one global platform merchant account — nothing per-tenant to onboard
@@ -95,7 +236,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   private readonly clientId: string
   private readonly clientSecret: string
   private readonly webhookId: string | undefined
-  private readonly baseUrl: string
+  private readonly environment: 'sandbox' | 'live'
 
   private accessToken: string | null = null
   private tokenExpiresAt = 0
@@ -109,10 +250,12 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     this.clientId = clientId
     this.clientSecret = clientSecret
     this.webhookId = webhookId
-    this.baseUrl =
-      environment === 'live'
-        ? 'https://api-m.paypal.com'
-        : 'https://api-m.sandbox.paypal.com'
+    this.environment = environment
+  }
+
+  /** PayPal's host for this instance — see `apiBase` for the loopback-only test seam. */
+  private get baseUrl(): string {
+    return apiBase(this.environment)
   }
 
   convertAmount(amount: number, fromUnit: 'base' | 'major'): number {
@@ -166,8 +309,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
 
     if (!response.ok) {
       const text = await response.text()
-      throw new Error(
+      throw new PayPalApiError(
         `PayPal ${init?.label ?? path} failed: HTTP ${response.status} — ${text}`,
+        response.status,
       )
     }
 
@@ -378,7 +522,14 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * owner-binding guard can verify the originating buyer/tenant.
    */
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
-    const customId = encodePayPalCustomId(params.reference, params.metadata)
+    // `hosted` marks the school → platform loop (`CreateCheckoutParams.hosted`),
+    // whose correlation needs its own packing (#744).
+    if (params.hosted && params.mode !== 'subscription') {
+      throw new Error('PayPal platform billing checkout must be a subscription')
+    }
+    const customId = params.hosted
+      ? encodePayPalPlatformCustomId(params.metadata)
+      : encodePayPalCustomId(params.reference, params.metadata)
     const cancelUrl = params.cancelUrl ?? params.baseUrl ?? ''
 
     if (params.mode === 'subscription') {
@@ -395,7 +546,10 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           application_context: {
             user_action: 'SUBSCRIBE_NOW',
             shipping_preference: 'NO_SHIPPING',
-            return_url: params.successUrl,
+            // The platform success URL carries Stripe's `{CHECKOUT_SESSION_ID}`
+            // template, and a raw brace is not a valid URI character — encode
+            // it rather than let PayPal reject the whole subscription.
+            return_url: params.successUrl?.replace(/[{}]/g, (c) => (c === '{' ? '%7B' : '%7D')),
             cancel_url: cancelUrl,
           },
         }),
@@ -472,12 +626,17 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   async captureOrder(orderId: string): Promise<{
     captureId: string
     status: string
+    /** The CAPTURE's own status — `COMPLETED` is money, `PENDING` is not yet. */
+    captureStatus: string
     reference?: string
     metadata?: Record<string, string>
   }> {
     const json = await this.api(`/v2/checkout/orders/${orderId}/capture`, {
       method: 'POST',
       label: 'captureOrder',
+      // The default `return=minimal` body may omit purchase_units, and with it
+      // the capture and the custom_id the owner binding reads.
+      headers: { Prefer: 'return=representation' },
       body: JSON.stringify({}),
     })
 
@@ -491,6 +650,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     return {
       captureId: capture.id,
       status: capture.status ?? json.status ?? '',
+      captureStatus: capture.status ?? '',
       ...decoded,
     }
   }
@@ -499,6 +659,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   async getOrder(orderId: string): Promise<{
     status: string
     captureId?: string
+    captureStatus?: string
     reference?: string
     metadata?: Record<string, string>
   }> {
@@ -512,7 +673,32 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     return {
       status: json.status ?? '',
       captureId: capture?.id,
+      captureStatus: capture?.status,
       ...decoded,
+    }
+  }
+
+  /**
+   * A subscription's raw PayPal state plus the correlation PayPal holds for it.
+   * `getSubscription` collapses the status into our vocabulary; the stale-checkout
+   * reconciler needs PayPal's own (APPROVAL_PENDING vs APPROVED vs ACTIVE) and the
+   * custom_id to dispatch an activation whose webhook never arrived.
+   */
+  async getSubscriptionDetails(providerSubId: string): Promise<{
+    status: string
+    nextBillingTime?: Date
+    reference?: string
+    metadata?: Record<string, string>
+  }> {
+    const json = await this.api(`/v1/billing/subscriptions/${providerSubId}`, {
+      method: 'GET',
+      label: 'getSubscriptionDetails',
+    })
+    const nextBilling = json.billing_info?.next_billing_time
+    return {
+      status: json.status ?? '',
+      nextBillingTime: nextBilling ? new Date(nextBilling) : undefined,
+      ...decodePayPalCustomId(json.custom_id),
     }
   }
 
@@ -526,7 +712,10 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * registered in the developer dashboard — returns false when unset.
    */
   async verifyWebhook(rawBody: string, headers: Record<string, string>): Promise<boolean> {
-    const webhookId = this.webhookId || process.env.PAYPAL_WEBHOOK_ID
+    // `??`, not `||`: the platform endpoint passes '' when
+    // PAYPAL_PLATFORM_WEBHOOK_ID is unset, and must fail closed rather than
+    // fall back to the student registration's id (#744).
+    const webhookId = this.webhookId ?? process.env.PAYPAL_WEBHOOK_ID
     if (!webhookId) return false
 
     const h = (name: string) => headers[name] ?? headers[name.toLowerCase()]
@@ -604,8 +793,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
       }
 
       case 'PAYMENT.CAPTURE.REFUNDED': {
-        // Refund resources echo the capture's custom_id.
-        const { reference } = decodePayPalCustomId(resource.custom_id)
+        // Refund resources echo the capture's custom_id — including the
+        // userId/tenantId the dispatcher binds the refund to (#743).
+        const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
         // PayPal states refund money as a decimal STRING in major units
         // ('10.00' = ten dollars), so it needs parsing but no scaling. Carrying
         // it is what lets a partial refund subtract only its own slice instead
@@ -618,12 +808,33 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           providerEventId,
           providerPaymentId: resource.id,
           reference,
+          metadata,
           ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
           ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
         }
       }
 
+      // A capture PayPal refused after it was PENDING (payment review, eCheck).
+      // The capture route no longer settles a PENDING capture, so this is what
+      // releases the buyer's pending row instead of leaving it to the TTL.
+      case 'PAYMENT.CAPTURE.DENIED':
+      case 'PAYMENT.CAPTURE.DECLINED': {
+        const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
+        return {
+          type: 'payment.failed',
+          providerEventId,
+          providerPaymentId: resource.id,
+          reference,
+          metadata,
+          raw: payload,
+        }
+      }
+
+      // RE-ACTIVATED is a suspended subscription the payer (or PayPal's retry)
+      // brought back. Same shape and custom_id as ACTIVATED; both dispatchers
+      // treat an activation of the CURRENT subscription as "active again".
+      case 'BILLING.SUBSCRIPTION.RE-ACTIVATED':
       case 'BILLING.SUBSCRIPTION.ACTIVATED': {
         const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
         const nextBilling = resource.billing_info?.next_billing_time
@@ -680,6 +891,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
         if (!subscriptionId) return null // plain sale outside our subscription flow
 
         let periodEnd: Date | undefined
+        let subscriptionCustomId: string | undefined
         try {
           const sub = await this.api(`/v1/billing/subscriptions/${subscriptionId}`, {
             method: 'GET',
@@ -687,6 +899,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           })
           const nextBilling = sub?.billing_info?.next_billing_time
           periodEnd = nextBilling ? new Date(nextBilling) : undefined
+          subscriptionCustomId = sub?.custom_id
         } catch (err) {
           console.warn(
             `[paypal] could not fetch subscription ${subscriptionId} for renewal period end:`,
@@ -694,7 +907,16 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           )
         }
 
-        const { reference } = decodePayPalCustomId(resource.custom ?? resource.custom_id)
+        // The sale echoes the subscription's custom_id as `custom` (seen live);
+        // the subscription itself is the fallback. Carrying the decoded
+        // metadata lets each loop recognise its own renewal — the platform
+        // dispatcher drops a student's (`userId`) before any lookup — and
+        // resolves the school on a first-cycle sale that beats ACTIVATED.
+        const { reference, metadata } = decodePayPalCustomId(
+          resource.custom ?? resource.custom_id ?? subscriptionCustomId,
+        )
+        const value = Number.parseFloat(resource.amount?.total ?? resource.amount?.value)
+        const currency: string | undefined = resource.amount?.currency ?? resource.amount?.currency_code
         return {
           type: 'subscription.renewed',
           providerEventId,
@@ -702,6 +924,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
           providerPaymentId: resource.id,
           periodEnd,
           reference,
+          metadata,
+          ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+          ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
         }
       }
@@ -722,14 +947,27 @@ export class PayPalPaymentProvider implements IPaymentProvider {
    * (Same access semantics as Lemon Squeezy: the CANCELLED webhook drives the
    * app-side status change.)
    */
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
-    await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
-      method: 'POST',
-      label: 'cancelSubscription',
-      body: JSON.stringify({
-        reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
-      }),
-    })
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<CancellationResult> {
+    try {
+      await this.api(`/v1/billing/subscriptions/${providerSubId}/cancel`, {
+        method: 'POST',
+        label: 'cancelSubscription',
+        body: JSON.stringify({
+          reason: immediate ? 'Canceled immediately by school admin' : 'Canceled by subscriber',
+        }),
+      })
+    } catch (error) {
+      // Already gone is success. A second cancel of a CANCELLED (or EXPIRED)
+      // subscription is a 422 SUBSCRIPTION_STATUS_INVALID, not a 404 (seen
+      // live) — and it is the normal case once the payer has cancelled from
+      // their PayPal account, so treating it as a failure left a plan-switch
+      // cleanup retrying forever and blocking every later switch (#479).
+      const alreadyEnded =
+        error instanceof PayPalApiError &&
+        (error.status === 404 || (error.status === 422 && error.message.includes('SUBSCRIPTION_STATUS_INVALID')))
+      if (!alreadyEnded) throw error
+    }
+    return { mode: 'immediate' }
   }
 
   async getSubscription(providerSubId: string): Promise<ProviderSubscription> {

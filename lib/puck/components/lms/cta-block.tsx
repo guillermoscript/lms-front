@@ -1,6 +1,6 @@
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
@@ -62,7 +62,7 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
         <div className={sectionInnerClass(spacing)}>
           <div
             className={cn(
-              'px-8 py-12 rounded-2xl text-center',
+              'px-8 py-12 rounded-card text-center',
               containerClasses[ctaStyle]
             )}
           >
@@ -74,23 +74,18 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
             )}
             {(primaryCtaLabel || secondaryCtaLabel) && <div className="flex gap-4 justify-center flex-wrap">
               {primaryCtaLabel && (
-                <a href={primaryCtaHref}>
-                  <Button
-                    size="lg"
+                <ButtonLink href={primaryCtaHref} size="lg"
                     variant={isGradient ? 'secondary' : 'default'}
-                    className="h-12 px-8 text-base font-semibold rounded-xl"
+                    className="h-12 px-8 text-base font-semibold"
                   >
                     {primaryCtaLabel}
-                  </Button>
-                </a>
+                  </ButtonLink>
               )}
               {secondaryCtaLabel && (
-                <a href={secondaryCtaHref}>
-                  <Button
-                    size="lg"
+                <ButtonLink href={secondaryCtaHref} size="lg"
                     variant="outline"
                     className={cn(
-                      'h-12 px-8 text-base font-semibold rounded-xl',
+                      'h-12 px-8 text-base font-semibold',
                       // #569: this outline button sits directly on the accent
                       // surface, so its border and hover wash follow the same
                       // derived foreground — a hardcoded white one disappears
@@ -100,8 +95,7 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
                     )}
                   >
                     {secondaryCtaLabel}
-                  </Button>
-                </a>
+                  </ButtonLink>
               )}
             </div>}
           </div>

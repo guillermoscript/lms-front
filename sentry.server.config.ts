@@ -3,9 +3,14 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { isServerActionNotFoundError } from "@/lib/sentry/noise";
 
+// The DSN comes from the environment, never a literal. It used to be hardcoded,
+// which meant every fork of this repo deployed elsewhere reported its crashes into
+// our Sentry project (a Vercel fork with no Supabase env vars produced the top
+// issues LMS-FRONT-9B/9C/87/8X/8W). With no DSN set, `Sentry.init` is a no-op.
 Sentry.init({
-  dsn: "https://e40fdc0a3e5965c1862e6594a8c2631f@o4507789962706944.ingest.us.sentry.io/4507789965721600",
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
   // Define how likely traces are sampled. Full sampling in dev for debugging;
   // 10% in production to avoid tracing every request.
@@ -21,4 +26,40 @@ Sentry.init({
   // Skip Sentry's OTEL setup — we register our own NodeTracerProvider
   // with LangfuseSpanProcessor for AI observability.
   skipOpenTelemetrySetup: true,
+
+  // Sentry ↔ OpenPanel cross-link, server leg. Same contract as the client's
+  // `beforeSend` in `instrumentation-client.ts`: Sentry keeps the error, an
+  // `error_captured` pointer event (just the `sentry_event_id`) goes to
+  // OpenPanel. Fire-and-forget — `track()` can never throw, and delaying or
+  // failing the Sentry event over analytics would invert the priorities.
+  // Loop-safety: `lib/analytics/server.ts` reports its own failures only as
+  // breadcrumbs, never as captured events, so this cannot ping-pong.
+  beforeSend(event) {
+    // Before the OpenPanel pointer, never after: a dropped Sentry event must
+    // not leave an `error_captured` row pointing at an event that was never
+    // stored. See `lib/sentry/noise.ts` for why this one is not ours to fix.
+    if (isServerActionNotFoundError(event)) return null;
+
+    try {
+      if (event.event_id) {
+        // Dynamic import keeps Sentry init free of the analytics module (and
+        // its vendor SDK) on cold start; by the first error it is warm.
+        void import("@/lib/analytics/server").then(({ track }) =>
+          track(
+            "error_captured",
+            {
+              sentry_event_id: event.event_id as string,
+              source: "server",
+              error_name: event.exception?.values?.[0]?.type,
+            },
+            { userId: event.user?.id != null ? String(event.user.id) : null }
+          )
+        ).catch(() => undefined);
+        event.tags = { ...event.tags, "openpanel.pointer": "sent" };
+      }
+    } catch {
+      // Telemetry must never break telemetry.
+    }
+    return event;
+  },
 });

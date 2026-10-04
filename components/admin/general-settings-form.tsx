@@ -6,21 +6,31 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { updateSettings } from '@/app/actions/admin/settings'
+import { updateSettings, updateSchoolCountry, type SettingsGroup } from '@/app/actions/admin/settings'
+import { defaultSiteName } from '@/lib/settings/general-settings'
+import { CountryPicker } from '@/components/shared/country-picker'
+import type { CountryCode } from '@/lib/countries'
 import { toast } from 'sonner'
 import { IconLoader2 } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface GeneralSettingsFormProps {
-  settings: Record<string, any>
+  settings: SettingsGroup
+  /** `tenants.name` - shown as the site name until the school saves its own (#890). */
+  tenantName?: string | null
+  /** `tenants.country` (#865); null until the school picks one. */
+  country: CountryCode | null
 }
 
-export default function GeneralSettingsForm({ settings }: GeneralSettingsFormProps) {
+export default function GeneralSettingsForm({ settings, tenantName, country: savedCountry }: GeneralSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [country, setCountry] = useState<CountryCode | null>(savedCountry)
+  // What the server holds now — so a second save doesn't re-send an unchanged country.
+  const [persistedCountry, setPersistedCountry] = useState<CountryCode | null>(savedCountry)
 
   // Extract current values
-  const siteName = settings.site_name?.value?.value || ''
+  const siteName = defaultSiteName(settings.site_name?.value?.value, tenantName)
   const siteDescription = settings.site_description?.value?.value || ''
   const contactEmail = settings.contact_email?.value?.value || ''
   const supportEmail = settings.support_email?.value?.value || ''
@@ -45,12 +55,27 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
       }
 
       const result = await updateSettings(updatedSettings)
-
-      if (result.success) {
-        toast.success(t('success'))
-      } else {
-        throw new Error(result.error)
+      if (!result.success) {
+        throw new Error(result.error === 'invalid_email' ? t('general.invalidEmail') : result.error)
       }
+
+      // The country is a tenants column, saved by its own action. Clearing it
+      // is not offered: once chosen, a school only ever switches country.
+      if (country && country !== persistedCountry) {
+        const countryResult = await updateSchoolCountry(country)
+        if (!countryResult.success) {
+          throw new Error(t('general.countryError'))
+        }
+        setPersistedCountry(country)
+        if (countryResult.currencyFilled) {
+          toast.success(t('success'), {
+            description: t('general.countryCurrencyFilled', { currency: countryResult.currencyFilled }),
+          })
+          return
+        }
+      }
+
+      toast.success(t('success'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
@@ -99,7 +124,6 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
           type="email"
           defaultValue={contactEmail}
           placeholder="contact@example.com"
-          required
         />
         <p className="text-sm text-muted-foreground">
           {t('general.contactEmailHint')}
@@ -115,10 +139,27 @@ export default function GeneralSettingsForm({ settings }: GeneralSettingsFormPro
           type="email"
           defaultValue={supportEmail}
           placeholder="support@example.com"
-          required
         />
         <p className="text-sm text-muted-foreground">
           {t('general.supportEmailHint')}
+        </p>
+      </div>
+
+      {/* Country (#865) */}
+      <div className="space-y-2">
+        <Label htmlFor="school_country">{t('general.country')}</Label>
+        <CountryPicker
+          id="school_country"
+          data-testid="settings-country"
+          aria-describedby="school_country_hint"
+          value={country}
+          onValueChange={setCountry}
+          placeholder={t('general.countryPlaceholder')}
+          emptyText={t('general.countryEmpty')}
+          disabled={isSubmitting}
+        />
+        <p id="school_country_hint" className="text-sm text-muted-foreground">
+          {t('general.countryHint')}
         </p>
       </div>
 

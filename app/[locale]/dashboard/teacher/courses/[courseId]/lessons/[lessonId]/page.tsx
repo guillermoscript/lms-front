@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import { parseStructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 const LessonEditor = dynamic(
   () => import('@/components/teacher/lesson-editor').then(m => m.LessonEditor),
@@ -19,17 +20,22 @@ const LessonEditor = dynamic(
     ),
   }
 )
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { LessonEditorTour } from '@/components/tours/lesson-editor-tour'
+import { FirstLessonHint } from '@/components/teacher/lesson-editor/first-lesson-hint'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
+  searchParams: Promise<{ from?: string }>
 }
 
-export default async function EditLessonPage({ params }: PageProps) {
-  const { courseId, lessonId } = await params
+export default async function EditLessonPage({ params, searchParams }: PageProps) {
+  const [{ courseId, lessonId }, { from }] = await Promise.all([params, searchParams])
+  // The AI starter course opens its first draft lesson with this hint (#675).
+  const fromNewCourse = from === 'new-course'
   const supabase = await createClient()
   const tenantId = await getCurrentTenantId()
 
@@ -38,16 +44,22 @@ export default async function EditLessonPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify course ownership
-  const { data: course } = await supabase
-    .from('courses')
-    .select('course_id, title')
-    .eq('course_id', parseInt(courseId))
-    .eq('author_id', userId)
-    .eq('tenant_id', tenantId)
-    .single()
+  // The author or a tenant admin may edit lessons (#690); other staff 404
+  // exactly as before.
+  const [{ data: course }, role] = await Promise.all([
+    supabase
+      .from('courses')
+      .select('course_id, title, author_id')
+      .eq('course_id', parseInt(courseId))
+      .eq('tenant_id', tenantId)
+      .single(),
+    getUserRole(),
+  ])
 
   if (!course) {
+    notFound()
+  }
+  if (course.author_id !== userId && role !== 'admin') {
     notFound()
   }
 
@@ -58,7 +70,7 @@ export default async function EditLessonPage({ params }: PageProps) {
       // The AI task lives in lessons_ai_tasks — that is what the student runtime
       // reads and what the editor writes. The lessons.ai_task_* columns are
       // legacy and only ever populated by a version restore.
-      .select('*, lessons_ai_tasks(task_instructions, system_prompt)')
+      .select('*, lessons_ai_tasks(task_instructions, system_prompt, requirements)')
       .eq('id', parseInt(lessonId))
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
@@ -87,6 +99,7 @@ export default async function EditLessonPage({ params }: PageProps) {
         completed={isTourCompleted(uiState, 'lesson-editor')}
         toursEnabled={areToursEnabled(uiState)}
       />
+      {fromNewCourse && <FirstLessonHint courseTitle={course.title} />}
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}
@@ -105,6 +118,7 @@ export default async function EditLessonPage({ params }: PageProps) {
           // showing it would tell the teacher a removed task is still live.
           ai_task_description: aiTask?.task_instructions || null,
           ai_task_instructions: aiTask?.system_prompt || null,
+          ai_task_requirements: parseStructuredRequirements(aiTask?.requirements),
           is_preview: lesson.is_preview ?? null,
           resources: resources || [],
         }}

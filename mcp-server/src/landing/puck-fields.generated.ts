@@ -274,6 +274,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "label": "Border Radius",
         "options": [
           {
+            "label": "School theme",
+            "value": "school"
+          },
+          {
             "label": "None",
             "value": "0"
           },
@@ -306,7 +310,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "width": "100%",
       "height": "auto",
       "objectFit": "cover",
-      "borderRadius": "0.5rem"
+      "borderRadius": "school"
     }
   },
   "ButtonBlock": {
@@ -422,6 +426,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "label": "Border Radius",
         "options": [
           {
+            "label": "School theme",
+            "value": "school"
+          },
+          {
             "label": "None",
             "value": "0"
           },
@@ -444,7 +452,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "url": "",
       "title": "Video",
       "aspectRatio": "16/9",
-      "borderRadius": "0.5rem"
+      "borderRadius": "school"
     }
   },
   "Divider": {
@@ -1056,6 +1064,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "label": "Border Radius",
         "options": [
           {
+            "label": "School theme",
+            "value": "school"
+          },
+          {
             "label": "None",
             "value": "0"
           },
@@ -1079,9 +1091,9 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       }
     },
     "defaultProps": {
-      "shadow": "sm",
+      "shadow": "none",
       "padding": "1.5rem",
-      "borderRadius": "0.75rem"
+      "borderRadius": "school"
     }
   },
   "HeroBlock": {
@@ -1898,21 +1910,21 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "subtitle": "",
       "items": [
         {
-          "name": "Maria S.",
-          "role": "Web Developer",
-          "quote": "The courses are incredibly well-structured. I went from beginner to professional in just 3 months.",
+          "name": "Student name",
+          "role": "Course they took",
+          "quote": "Replace with a real quote from one of your students: what they could not do before, and what they can do now.",
           "rating": 5
         },
         {
-          "name": "Carlos R.",
-          "role": "Data Analyst",
-          "quote": "Best online learning platform I have used. The AI tutor is a game changer.",
+          "name": "Student name",
+          "role": "Course they took",
+          "quote": "A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.",
           "rating": 5
         },
         {
-          "name": "Ana L.",
-          "role": "UX Designer",
-          "quote": "The gamification keeps me motivated every day. Already on a 30-day streak!",
+          "name": "Student name",
+          "role": "Course they took",
+          "quote": "A third quote. Ask for something specific, the result rather than the compliment.",
           "rating": 5
         }
       ],
@@ -2243,32 +2255,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       }
     },
     "defaultProps": {
-      "items": [
-        {
-          "value": "10,000",
-          "label": "Students",
-          "prefix": "",
-          "suffix": "+"
-        },
-        {
-          "value": "500",
-          "label": "Courses",
-          "prefix": "",
-          "suffix": "+"
-        },
-        {
-          "value": "50",
-          "label": "Instructors",
-          "prefix": "",
-          "suffix": "+"
-        },
-        {
-          "value": "4.9",
-          "label": "Rating",
-          "prefix": "",
-          "suffix": "/5"
-        }
-      ],
+      "items": [],
       "alignment": "center",
       "useLiveStats": true,
       "accentColor": "",
@@ -3134,20 +3121,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "heading": "Our platform in numbers",
       "subtitle": "A growing community of learners and educators building courses, tracking progress, and earning certificates every day.",
       "useLiveStats": true,
-      "items": [
-        {
-          "value": "+1200",
-          "label": "Courses published"
-        },
-        {
-          "value": "22,000",
-          "label": "Active students"
-        },
-        {
-          "value": "+500",
-          "label": "Certificates issued"
-        }
-      ]
+      "items": []
     }
   },
   "ShinyEyebrow": {
@@ -4331,10 +4305,6 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
         "type": "text",
         "label": "Text"
       },
-      "rating": {
-        "type": "number",
-        "label": "Rating (1-5)"
-      },
       "reviewCount": {
         "type": "text",
         "label": "Review Count Text"
@@ -4345,9 +4315,8 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       }
     },
     "defaultProps": {
-      "text": "Trusted by 10,000+ students worldwide",
-      "rating": 5,
-      "reviewCount": "Based on 2,000+ reviews",
+      "text": "",
+      "reviewCount": "",
       "avatarCount": 5
     }
   },

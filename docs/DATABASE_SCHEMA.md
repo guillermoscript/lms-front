@@ -17,7 +17,7 @@ The LMS database is built on PostgreSQL 15 via Supabase. As of the latest migrat
 - **Certificates**: `certificates`, `certificate_templates`, `certificate_shares`, `certificate_verification_log`, `issuer_keys`
 - **AI Tutoring**: `course_ai_tutors`, `aristotle_sessions`, `aristotle_messages`, `exam_ai_configs`
 - **Landing Pages**: `landing_pages`, `landing_page_templates`
-- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`
+- **Community**: `community_posts`, `community_comments`, `community_reactions`, `community_poll_options`, `community_poll_votes`, `community_flags`, `community_user_mutes`, `community_user_blocks`, `community_prompt_grades` (#873)
 - **Social / Messaging**: `messages`, `chats`, `chat_conversations`, `chat_messages`, `lesson_comments`, `comments`, `comment_reactions`, `comment_flags`, `reviews`, `item_ratings`
 - **Support**: `tickets`, `ticket_messages`
 - **Notifications**: `notifications`, `user_notifications`, `notification_templates`, `notification_preferences`, `device_push_tokens`
@@ -69,6 +69,7 @@ For the exact current list, don't trust this page — ask the database (see [Ver
 | `data_person` | JSONB | |
 | `onboarding_completed` | BOOLEAN | |
 | `deactivated_at` | TIMESTAMPTZ | |
+| `share_milestones` | BOOLEAN NOT NULL DEFAULT true | #871: false = no new automatic community milestone posts about this person, in any school. Own-row UPDATE policy |
 | `created_at` | TIMESTAMPTZ | |
 
 **No `email` column** and **no `updated_at`**. Emails come from `createAdminClient().auth.admin.getUserById()`.
@@ -99,8 +100,6 @@ School/organization records.
 | `name` | VARCHAR(255) | |
 | `domain` | VARCHAR(255) | Custom domain |
 | `logo_url` | TEXT | |
-| `primary_color` | VARCHAR(7) | |
-| `secondary_color` | VARCHAR(7) | |
 | `plan` | VARCHAR(50) | Legacy — see `platform_subscriptions` |
 | `status` | VARCHAR(50) | `active`, etc. |
 | `stripe_account_id` | VARCHAR(255) | Stripe Connect (for student payments) |
@@ -412,7 +411,7 @@ Student exam submissions. **Order column is `submission_date`** (NOT `submitted_
 | `requires_attention` | BOOLEAN | Flags low-confidence AI grades for a human |
 | `ai_model_used` / `ai_processing_time_ms` / `ai_confidence_score` | | Grading telemetry |
 
-Processed by `create_exam_submission()` and `save_exam_feedback()` RPCs.
+Written only by `submit_exam()` (clients have no INSERT grant on `exam_submissions` / `exam_answers`, #847) and graded by `save_exam_feedback()` (service role).
 
 ---
 
@@ -579,12 +578,16 @@ settlement figures decide what the buyer owes, so they are derived from
 transactions_unique_product  UNIQUE (user_id, product_id)
   WHERE plan_id IS NULL AND status IN ('pending','successful')
 transactions_unique_plan     UNIQUE (user_id, plan_id)
-  WHERE product_id IS NULL AND status IN ('pending','successful')
+  WHERE product_id IS NULL AND status = 'pending'                  -- pending only since #754
 transactions_provider_charge_id_unique  UNIQUE (payment_provider, provider_charge_id)
   WHERE provider_charge_id IS NOT NULL AND status = 'successful'   -- webhook/Solana idempotency
 ```
 
-Failed payments fall outside the predicate, so retries are allowed.
+Failed and canceled payments fall outside the predicates, so retries are allowed. The plan index
+covers only `pending` (#754): a plan is bought again every period (after it ends, a manual
+renewal, a crypto re-payment), so settled plan rows legitimately repeat, while one open checkout
+per student per plan is still enforced. Settled sales are never archived to make room — every
+revenue reader counts `status = 'successful'`.
 
 #### `payment_requests`
 Manual/offline payment requests. Tenant-scoped.
@@ -595,8 +598,14 @@ Manual/offline payment requests. Tenant-scoped.
 | `tenant_id` | UUID FK → tenants | NOT NULL |
 | `user_id` | UUID FK → profiles | Student requesting |
 | `product_id` | INTEGER FK → products | |
-| `status` | VARCHAR(50) | `pending`, `instructions_sent`, `payment_received`, `confirmed` |
+| `plan_id` | INTEGER FK → plans | |
+| `status` | VARCHAR(20) | `pending`, `contacted`, `payment_received`, `completed`, `cancelled` |
 | `created_at` | TIMESTAMPTZ | |
+
+One **open** request per student per item (#754): `payment_requests_open_product_unique` /
+`payment_requests_open_plan_unique` cover `status IN ('pending','contacted','payment_received')`.
+`createPaymentRequest` returns the existing open request instead of inserting, so the indexes only
+settle two inserts that race.
 
 ---
 
@@ -628,35 +637,53 @@ Course reviews (1-5 rating). `UNIQUE(course_id, user_id)`.
 ### Notifications
 
 #### `notifications`
-Admin-created notifications. Tenant-scoped.
+Admin broadcasts, system notices (digest, certificates, payments) and community notifications (#870). Tenant-scoped.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | BIGSERIAL PK | |
 | `tenant_id` | UUID FK → tenants | |
-| `title` | TEXT | |
-| `content` | TEXT | |
-| `notification_type` | TEXT | `announcement`, `alert`, `info`, `success`, `warning`, `error`, `certificate_issued` |
+| `title` | TEXT | Push title. Community rows: the post label (a batch reads `(3) <post>`); a post with no label (a milestone post) falls back to the course title, else the school name — never empty |
+| `content` | TEXT | Push body |
+| `notification_type` | TEXT | `announcement`, `alert`, `info`, `success`, `warning`, `error`, `certificate_issued`, `community` |
 | `priority` | TEXT | `low`, `normal`, `high`, `urgent` |
 | `target_type` | TEXT | `all`, `role`, `course`, `user`, `custom` |
 | `target_roles` | TEXT[] | |
-| `target_course_id` | BIGINT FK → courses | |
+| `target_course_id` | BIGINT FK → courses | ON DELETE CASCADE |
 | `target_user_ids` | UUID[] | |
+| `community_post_id` | UUID FK → community_posts | #870. Only on `community` rows (CHECK `notifications_community_post_is_community`); ON DELETE CASCADE |
 | `status` | TEXT | `draft`, `scheduled`, `sent`, `cancelled` |
-| `created_by` | UUID FK → auth.users | |
+| `created_by` | UUID FK → auth.users | NULL on every `community` row — the actor is `metadata.actor_id` |
+| `metadata` | JSONB | `kind` routes the push and the web copy (`daily_digest`, `community_reply`, `community_prompt`, `community_answer_accepted`, …) |
 | `created_at` | TIMESTAMPTZ | |
 
+**`community` rows are system-written (#870).** They are inserted and updated only by the SECURITY DEFINER triggers in `20260928130000_community_notifications.sql` (and the service role). Two RESTRICTIVE policies — "Community notifications are system-written" (INSERT) and "Community notifications are system-updated" (UPDATE) — stop every client, staff included, from creating or editing one; admins can still delete. See `docs/COMMUNITY_SPACES.md` → Notifications.
+
 #### `user_notifications`
-Per-user notification delivery tracking.
+Per-user notification delivery tracking. One row per recipient; the web, the app and the push sweep all read it.
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | BIGSERIAL PK | |
-| `notification_id` | BIGINT FK → notifications | |
+| `notification_id` | BIGINT FK → notifications | ON DELETE CASCADE |
 | `user_id` | UUID FK → auth.users | |
-| `in_app_read` | BOOLEAN | |
-| `dismissed` | BOOLEAN | |
-| `created_at` | TIMESTAMPTZ | |
+| `in_app_read` / `in_app_read_at` | BOOLEAN / TIMESTAMPTZ | |
+| `push_sent` / `push_sent_at` | BOOLEAN / TIMESTAMPTZ | `false` = queued for `claim_pending_pushes()` (#835) |
+| `dismissed` / `dismissed_at` | BOOLEAN / TIMESTAMPTZ | |
+| `created_at` | TIMESTAMPTZ | Also the push queue's order. A batched community reply moves it to the latest reply — except while its push is still queued |
+
+Recipients may UPDATE only `in_app_read`, `in_app_read_at`, `dismissed`, `dismissed_at`, `action_taken`, `action_taken_at` (column grant, #870): re-pointing `notification_id` used to make any notification in the school readable.
+
+#### `notification_preferences`
+Global per user (`user_id` UNIQUE, no `tenant_id`); own-row SELECT/INSERT/UPDATE. A missing row means the defaults.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `in_app_enabled` | BOOLEAN | `false` also stops community notifications |
+| `email_enabled` / `email_frequency` | BOOLEAN / TEXT | Read by the daily digest |
+| `push_enabled` | BOOLEAN | Default `true` since #870 (a missing row already meant push-on) |
+| `community_replies` | BOOLEAN NOT NULL DEFAULT true | #870 — replies to my posts/comments, accepted answers |
+| `community_prompts` | BOOLEAN NOT NULL DEFAULT true | #870 — new discussion prompts in my courses |
 
 ---
 
@@ -872,7 +899,7 @@ Manual bank transfer requests for plan upgrades (LATAM schools).
 
 | Function | Purpose |
 |----------|---------|
-| `create_exam_submission(p_student_id uuid, p_exam_id integer, p_answers jsonb)` | Creates exam submission, returns `submission_id` |
+| `submit_exam(p_exam_id integer, p_answers jsonb)` | The caller's submission + one `exam_answers` row per question in one transaction; `p_answers` = `{"<question_id>": "<answer_text>"}`. Idempotent per student (returns the existing `submission_id`, fills in one left without answers). Grade it with `POST /api/exams/[examId]/grade`; a `pending` submission can be graded again |
 | `save_exam_feedback(p_submission_id integer, p_exam_id integer, p_student_id uuid, p_answers jsonb, p_overall_feedback text, p_score numeric, p_question_feedback jsonb, p_ai_model varchar, p_processing_time_ms integer)` | Saves AI feedback. **All params are `p_`-prefixed and there are nine of them** |
 
 ### Gamification
@@ -880,7 +907,7 @@ Manual bank transfer requests for plan upgrades (LATAM schools).
 | Function | Purpose |
 |----------|---------|
 | `award_xp(_user_id uuid, _action_type text, _xp_amount integer, _reference_id text, _reference_type text)` | Awards XP, updates streaks, levels up. Creates the gamification profile lazily via UPSERT |
-| `award_xp(…, _tenant_id uuid)` | Overload — same, scoped to an explicit tenant. Trigger functions call this one |
+| `award_xp(…, _tenant_id uuid)` | Overload — same, scoped to an explicit tenant. Trigger functions call this one. **Neither overload is an API** (#871): `EXECUTE` is revoked from `anon`/`authenticated` — it trusts the caller's user, amount and tenant, and level/streak now publish community posts. Triggers and `service_role` only |
 
 ### Certificates
 
@@ -990,7 +1017,7 @@ const supabase = createAdminClient()
 
 Adding `.eq('tenant_id', …)` to any of these **errors the whole query** — a common cause of blank pages. Isolation for the child tables comes from RLS through their parent row.
 
-`aristotle_messages`, `assignments`, `certificate_shares`, `certificate_verification_log`, `chats`, `comment_flags`, `comment_reactions`, `comments`, `community_poll_options`, `content_versions`, `device_push_tokens`, `exam_ai_configs`, `exam_answers`, `exam_question_scores`, `exam_questions`, `exam_scores`, `exam_views`, `exercise_code_student_submissions`, `exercise_completions`, `exercise_files`, `exercise_messages`, `gamification_levels`, `grades`, `issuer_keys`, `landing_page_templates`, `league_tiers`, `lesson_comments`, `lesson_completions`, `lesson_passed`, `lesson_views`, `lessons_ai_task_messages`, `lessons_ai_tasks`, `mcp_api_tokens`, `mcp_audit_log`, `messages`, `notification_preferences`, `permissions`, `plan_courses`, `platform_plans`, `profiles`, `question_options`, `reviews`, `role_permissions`, `roles`, `submissions`, `super_admins`, `system_settings`, `teacher_preview_sessions`, `tenants`, `ticket_messages`, `tickets`, `user_notifications`, `user_roles`, `user_ui_state`, `webhook_events`
+`aristotle_messages`, `assignments`, `certificate_shares`, `certificate_verification_log`, `chats`, `comment_flags`, `comment_reactions`, `comments`, `community_poll_options`, `community_user_blocks`, `content_versions`, `device_push_tokens`, `exam_ai_configs`, `exam_answers`, `exam_question_scores`, `exam_questions`, `exam_scores`, `exam_views`, `exercise_code_student_submissions`, `exercise_completions`, `exercise_files`, `exercise_messages`, `gamification_levels`, `grades`, `issuer_keys`, `landing_page_templates`, `league_tiers`, `lesson_comments`, `lesson_completions`, `lesson_passed`, `lesson_views`, `lessons_ai_task_messages`, `lessons_ai_tasks`, `mcp_api_tokens`, `mcp_audit_log`, `messages`, `notification_preferences`, `permissions`, `plan_courses`, `platform_plans`, `profiles`, `question_options`, `reviews`, `role_permissions`, `roles`, `submissions`, `super_admins`, `system_settings`, `teacher_preview_sessions`, `tenants`, `ticket_messages`, `tickets`, `user_notifications`, `user_roles`, `user_ui_state`, `webhook_events`
 
 Regenerate that list any time:
 

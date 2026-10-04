@@ -1,9 +1,18 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
+import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from "../exam-grading-secrets.js";
 import { ok, okText, errorResult, ResponseFormat, PaginationSchema } from "../format.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { propsSchema as examSubmissionsPropsSchema } from "../../views/exam-submissions/schema.js";
+import { propsSchema as submissionGraderPropsSchema } from "../../views/submission-grader/schema.js";
+import { propsSchema as studentProgressRosterPropsSchema } from "../../views/student-progress-roster/schema.js";
+import { propsSchema as schoolOverviewPropsSchema } from "../../views/school-overview/schema.js";
+import { propsSchema as confusionHotspotsPropsSchema } from "../../views/confusion-hotspots/schema.js";
 
 /**
  * Resolve student display names by user id.
@@ -78,7 +87,7 @@ export function aggregateExamSubmissions(
   return out;
 }
 
-export function registerAnalyticsTools(server: MCPServer) {
+export function registerAnalyticsTools(server: LmsServer) {
   // ── lms_list_enrollments ─────────────────────────────────────────────────
   server.tool(
     {
@@ -189,10 +198,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "exam-submissions",
-        invoking: "Loading submissions...",
-        invoked: "Submissions loaded",
+      outputSchema: examSubmissionsPropsSchema,
+      view: { name: "exam-submissions" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading submissions...",
+        "openai/toolInvocation/invoked": "Submissions loaded",
       },
     },
     async ({ exam_id, limit, offset }, ctx) => {
@@ -220,7 +230,14 @@ export function registerAnalyticsTools(server: MCPServer) {
         if (error) return errorResult(`Listing submissions: ${error.message}`);
         if (!data || data.length === 0) {
           return widget({
-            props: { exam_id, total: 0, submissions: [] },
+            props: {
+              exam_id,
+              total: 0,
+              offset,
+              limit,
+              has_more: false,
+              submissions: [],
+            },
             output: text("No submissions found for this exam."),
           });
         }
@@ -240,7 +257,14 @@ export function registerAnalyticsTools(server: MCPServer) {
         }));
 
         return widget({
-          props: { exam_id, total, submissions },
+          props: {
+            exam_id,
+            total,
+            offset,
+            limit,
+            has_more: total > offset + submissions.length,
+            submissions,
+          },
           output: text(`${total} submission(s).`),
         });
       } catch (err) {
@@ -352,10 +376,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "submission-grader",
-        invoking: "Loading submission…",
-        invoked: "Submission ready to grade",
+      outputSchema: submissionGraderPropsSchema,
+      view: { name: "submission-grader" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading submission…",
+        "openai/toolInvocation/invoked": "Submission ready to grade",
       },
     },
     async ({ submission_id }, ctx) => {
@@ -389,7 +414,7 @@ export function registerAnalyticsTools(server: MCPServer) {
             supabase
               .from("exam_questions")
               .select(
-                "question_id, question_text, question_type, question_options(option_text, is_correct)"
+                `question_id, question_text, question_type, question_options(option_id, option_text), ${EXAM_GRADING_SECRETS_EMBED}`
               )
               .eq("exam_id", sub.exam_id)
               .order("question_id"),
@@ -417,7 +442,8 @@ export function registerAnalyticsTools(server: MCPServer) {
         let possible = 0;
         let graded = 0;
 
-        const questionRows = ((questions as any[]) ?? []).map((q) => {
+        // Option flags come from staff-only exam_grading_secrets (#840).
+        const questionRows = ((questions as any[]) ?? []).map(withExamGradingSecrets).map((q: any) => {
           const s = scoreByQ.get(q.question_id);
           const a = answerByQ.get(q.question_id);
           const aif = aiFeedback[String(q.question_id)] ?? {};
@@ -619,10 +645,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "student-progress-roster",
-        invoking: "Loading roster…",
-        invoked: "Roster loaded",
+      outputSchema: studentProgressRosterPropsSchema,
+      view: { name: "student-progress-roster" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading roster…",
+        "openai/toolInvocation/invoked": "Roster loaded",
       },
     },
     async ({ course_id, status, limit, offset }, ctx) => {
@@ -669,7 +696,11 @@ export function registerAnalyticsTools(server: MCPServer) {
             props: {
               course: { id: course_id, title: course?.title ?? `Course ${course_id}`, published_lessons: publishedLessons },
               students: [],
-              summary: { total: 0, at_risk: 0, avg_progress: 0 },
+              status: status ?? null,
+              offset,
+              limit,
+              has_more: false,
+              summary: { total: count ?? 0, at_risk: 0, avg_progress: 0 },
             },
             output: text("No students enrolled in this course."),
           });
@@ -763,8 +794,15 @@ export function registerAnalyticsTools(server: MCPServer) {
             published_lessons: publishedLessons,
           },
           students,
+          // Echoed so "load more" keeps the same filter.
+          status: status ?? null,
+          offset,
+          limit,
+          has_more: (count ?? students.length) > offset + students.length,
           summary: {
             total: count ?? students.length,
+            // Page-level, and the widget recomputes both from the rows it has
+            // actually loaded — `total` is the only course-wide figure here.
             at_risk: atRiskCount,
             avg_progress: avgProgress,
           },
@@ -906,10 +944,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "school-overview",
-        invoking: "Crunching school stats…",
-        invoked: "School overview ready",
+      outputSchema: schoolOverviewPropsSchema,
+      view: { name: "school-overview" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Crunching school stats…",
+        "openai/toolInvocation/invoked": "School overview ready",
       },
     },
     async (_input, ctx) => {
@@ -1162,10 +1201,11 @@ export function registerAnalyticsTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "confusion-hotspots",
-        invoking: "Analysing student results…",
-        invoked: "Hotspots ready",
+      outputSchema: confusionHotspotsPropsSchema,
+      view: { name: "confusion-hotspots" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Analysing student results…",
+        "openai/toolInvocation/invoked": "Hotspots ready",
       },
     },
     async (input, ctx) => {

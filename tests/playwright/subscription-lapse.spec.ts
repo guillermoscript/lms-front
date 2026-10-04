@@ -16,6 +16,7 @@
  */
 import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { restoreAliceSeedSubscription } from './utils/seed-state'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -31,13 +32,59 @@ const OVERLAP_COURSE_A = 2001
 const PRODUCT_A_ID = 2001
 
 /**
- * Course 2002 is ALSO an overlap — Alice owns it via product 2002 (seed data)
- * AND plan 2001 covers it. Validates the second perpetual-survives-lapse path.
+ * Course 2002 is ALSO an overlap — Alice buys it here as product 2002 (the seed
+ * only gives her product 2001) AND plan 2001 covers it. Validates the second
+ * perpetual-survives-lapse path.
  */
 const OVERLAP_COURSE_B = 2002
+const PRODUCT_B_ID = 2002
 
-/** Course 10005 is plan-only — Alice has no product entitlement for it. */
-const PLAN_ONLY_COURSE = 10005
+/**
+ * The seed has no plan-only course — `plan_courses` for plan 2001 is exactly the
+ * two courses Alice can also buy as products — so this spec creates one in Code
+ * Academy, links it to the plan before the subscription is bought, and removes
+ * it again. Alice never gets a product entitlement for it.
+ */
+const PLAN_ONLY_TITLE = 'E2E plan-only course (subscription-lapse)'
+const CODE_ACADEMY_CREATOR = 'a1000000-0000-0000-0000-000000000003'
+let PLAN_ONLY_COURSE = 0
+
+async function createPlanOnlyCourse() {
+  const admin = getAdmin()
+  await dropPlanOnlyCourse()
+  const { data: course, error } = await admin
+    .from('courses')
+    .insert({
+      title: PLAN_ONLY_TITLE,
+      description: 'Throwaway course covered only by plan 2001.',
+      status: 'published',
+      author_id: CODE_ACADEMY_CREATOR,
+      tenant_id: CODE_ACADEMY_TENANT,
+    })
+    .select('course_id')
+    .single()
+  if (error || !course) throw new Error(`could not create plan-only course: ${error?.message}`)
+  PLAN_ONLY_COURSE = course.course_id
+  const { error: linkErr } = await admin
+    .from('plan_courses')
+    .insert({ plan_id: PLAN_ID, course_id: PLAN_ONLY_COURSE })
+  if (linkErr) throw new Error(`could not link plan-only course: ${linkErr.message}`)
+}
+
+async function dropPlanOnlyCourse() {
+  const admin = getAdmin()
+  const { data: stale } = await admin
+    .from('courses')
+    .select('course_id')
+    .eq('tenant_id', CODE_ACADEMY_TENANT)
+    .eq('title', PLAN_ONLY_TITLE)
+  const ids = (stale ?? []).map((c) => c.course_id)
+  if (ids.length === 0) return
+  await admin.from('plan_courses').delete().in('course_id', ids)
+  await admin.from('entitlements').delete().eq('user_id', ALICE_ID).in('course_id', ids)
+  await admin.from('enrollments').delete().eq('user_id', ALICE_ID).in('course_id', ids)
+  await admin.from('courses').delete().in('course_id', ids)
+}
 
 /* ------------------------------------------------------------------ */
 /*  Supabase admin client                                              */
@@ -94,6 +141,19 @@ async function cleanState() {
     .eq('tenant_id', CODE_ACADEMY_TENANT)
 
   await admin.from('transactions').delete().eq('user_id', ALICE_ID).eq('product_id', PRODUCT_A_ID)
+  await admin
+    .from('entitlements')
+    .delete()
+    .eq('user_id', ALICE_ID)
+    .eq('source_type', 'product')
+    .eq('source_id', PRODUCT_B_ID)
+    .eq('course_id', OVERLAP_COURSE_B)
+  await admin
+    .from('enrollments')
+    .delete()
+    .eq('user_id', ALICE_ID)
+    .eq('course_id', OVERLAP_COURSE_B)
+    .eq('tenant_id', CODE_ACADEMY_TENANT)
 }
 
 async function hasAccess(admin: ReturnType<typeof getAdmin>, courseId: number): Promise<boolean> {
@@ -107,8 +167,19 @@ async function hasAccess(admin: ReturnType<typeof getAdmin>, courseId: number): 
 /* ------------------------------------------------------------------ */
 /*  Tests                                                              */
 /* ------------------------------------------------------------------ */
-test.beforeAll(cleanState)
-test.afterAll(cleanState)
+test.beforeAll(async () => {
+  await cleanState()
+  await createPlanOnlyCourse()
+})
+// cleanState wipes the seeded plan-2001 subscription too; put it back so the
+// specs that run after this one in the same database still find it.
+test.afterAll(async () => {
+  await cleanState()
+  // Drop the plan link BEFORE restoring: the restore re-runs handle_new_subscription,
+  // which would otherwise entitle Alice to a course that is about to be deleted.
+  await dropPlanOnlyCourse()
+  await restoreAliceSeedSubscription(getAdmin())
+})
 
 test('subscription lapse revokes plan entitlements but not perpetual product entitlements', async ({}, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'DB-only regression — single project')
@@ -124,9 +195,15 @@ test('subscription lapse revokes plan entitlements but not perpetual product ent
   })
   expect(productErr).toBeNull()
 
+  // Course 2002 as a second one-time product (the seed has no such row).
+  const { error: productBErr } = await admin.rpc('enroll_user', {
+    _user_id: ALICE_ID,
+    _product_id: PRODUCT_B_ID,
+  })
+  expect(productBErr).toBeNull()
+
   // Confirm product entitlement active for both overlap courses
   expect(await hasAccess(admin, OVERLAP_COURSE_A)).toBe(true)
-  // Course 2002 perpetual product entitlement comes from seed data
   expect(await hasAccess(admin, OVERLAP_COURSE_B)).toBe(true)
 
   // ── Step 2: Alice buys plan 2001 (subscription) ────────────────────────────

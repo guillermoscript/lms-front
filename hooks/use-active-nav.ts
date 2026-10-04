@@ -1,4 +1,4 @@
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 // On hard loads the browser URL carries the locale prefix (/en, /es) while nav
 // hrefs are locale-less; client-side navigations are already locale-less.
@@ -7,10 +7,32 @@ function stripLocale(pathname: string): string {
     return pathname.replace(/^\/(en|es)(?=\/|$)/, '') || '/'
 }
 
-function isNavActive(href: string, pathname: string): boolean {
-    const hrefPath = href.split('?')[0]
+const ROOT_HREFS = ['/dashboard/admin', '/dashboard/teacher', '/dashboard/student']
+
+/**
+ * Whether a nav `href` should highlight for the current URL.
+ *
+ * - A plain href matches its own path and every path nested under it, except
+ *   the three dashboard roots (they would otherwise match everything).
+ * - An href with a query string (`/dashboard/student/courses?status=completed`)
+ *   is a filtered view of its path, not a section: it matches only the exact
+ *   path with every one of its params present. Prefix-matching it lit
+ *   "Completed" on every lesson and exam page (#729).
+ */
+export function isNavActive(href: string, pathname: string, searchParams?: URLSearchParams | null): boolean {
+    const [hrefPath, hrefQuery] = href.split('?')
+
+    if (hrefQuery !== undefined) {
+        if (pathname !== hrefPath) return false
+        const wanted = new URLSearchParams(hrefQuery)
+        for (const [key, value] of wanted) {
+            if (searchParams?.get(key) !== value) return false
+        }
+        return true
+    }
+
     if (pathname === hrefPath) return true
-    if (hrefPath !== '/dashboard/admin' && hrefPath !== '/dashboard/teacher' && hrefPath !== '/dashboard/student') {
+    if (!ROOT_HREFS.includes(hrefPath)) {
         return pathname.startsWith(hrefPath + '/')
     }
     return false
@@ -23,9 +45,10 @@ function isNavActive(href: string, pathname: string): boolean {
  */
 export function useActiveNav() {
     const pathname = stripLocale(usePathname())
+    const searchParams = useSearchParams()
 
     return {
         pathname,
-        isActive: (href: string) => isNavActive(href, pathname),
+        isActive: (href: string) => isNavActive(href, pathname, searchParams),
     }
 }

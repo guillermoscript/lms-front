@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect, notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
@@ -32,16 +32,36 @@ import {
   IconVideo,
   IconChevronRight,
   IconChartBar,
+  IconMessages,
 } from '@tabler/icons-react'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
-import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
+import { LessonPreviewToggle } from '@/components/teacher/lesson-preview-toggle'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { CourseEditorTour } from '@/components/tours/course-editor-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
-import { isTourCompleted, areToursEnabled } from '@/lib/ui-state-keys'
+import { isTourCompleted, areToursEnabled, isChecklistDismissed } from '@/lib/ui-state-keys'
+import { getCourseProgressReport, type CourseItem } from '@/lib/analytics/student-progress'
+import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { hasVisibleCoursePosts, isCommunityEnabled } from '@/lib/community/access'
+import { CourseWelcomePrompt } from '@/components/community/course-welcome-prompt'
+import { getLessonPromptCounts } from '@/lib/community/lesson-prompts'
+import { AddDiscussionPromptTrigger, DiscussionPromptShortcuts } from '@/components/community/discussion-prompt-shortcuts'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
+  searchParams: Promise<{ tab?: string | string[] }>
+}
+
+const COURSE_TABS = ['lessons', 'exercises', 'exams', 'students', 'certificates'] as const
+type CourseTab = (typeof COURSE_TABS)[number]
+
+/** `?tab=exams` opens that tab; anything else falls back to Lessons (#729). */
+function resolveTab(tab: string | string[] | undefined): CourseTab {
+  const value = Array.isArray(tab) ? tab[0] : tab
+  return (COURSE_TABS as readonly string[]).includes(value ?? '') ? (value as CourseTab) : 'lessons'
 }
 
 interface IssuedCertificate {
@@ -62,8 +82,9 @@ function getInitials(name: string | null | undefined) {
     .join('')
 }
 
-export default async function CourseManagementPage({ params }: PageProps) {
+export default async function CourseManagementPage({ params, searchParams }: PageProps) {
   const { courseId } = await params
+  const activeTab = resolveTab((await searchParams).tab)
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.manageCourse')
   const tenantId = await getCurrentTenantId()
@@ -83,7 +104,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
   if (courseError || !course) {
     return (
       <div className="p-8">
-        <Card className="border-destructive">
+        <Card>
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
               <IconArrowLeft /> {t('notFound')}
@@ -102,13 +123,17 @@ export default async function CourseManagementPage({ params }: PageProps) {
     )
   }
 
-  // Ownership check - simplified for debugging but keeping security in mind
+  // Authors manage their own courses; tenant admins manage every course of
+  // the tenant (#690) — the same rule the settings page and the lesson
+  // server actions (`verifyCourseOwnership`) already apply.
+  const role = await getUserRole()
   const isOwner = course.author_id === userId
+  const isAdmin = role === 'admin'
 
-  if (!isOwner) {
+  if (!isOwner && !isAdmin) {
     return (
       <div className="p-8">
-        <Card className="border-warning">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {t('accessDenied')}
@@ -126,6 +151,17 @@ export default async function CourseManagementPage({ params }: PageProps) {
       </div>
     )
   }
+
+  // Course community (#868): started here, awaited after the batch below.
+  // The welcome offer is for the author of a published course, not for an
+  // admin browsing someone else's; the feed count is only read when it could show.
+  const communityEnabledP = isCommunityEnabled(tenantId)
+  const welcomeEligible = course.status === 'published' && isOwner
+  const feedHasPostsP = welcomeEligible
+    ? hasVisibleCoursePosts({ tenantId, courseId: course.course_id })
+    : Promise.resolve(null)
+  // Discussion prompts per lesson (#869); null when the plan has no community.
+  const promptCountsPromise = getLessonPromptCounts(supabase, { tenantId, courseId: parseInt(courseId) })
 
   // Fetch all related data in parallel
   const [lessonsRes, exercisesRes, examsRes, enrollmentsRes, certificateTemplateRes, issuedCertificatesRes, uiState] = await Promise.all([
@@ -167,6 +203,17 @@ export default async function CourseManagementPage({ params }: PageProps) {
       .order('issued_at', { ascending: false }),
     getUiState(userId),
   ])
+  const promptCounts = await promptCountsPromise
+  const tDiscussion = await getTranslations('community.lessonDiscussion')
+
+  const communityOn = await communityEnabledP
+  const welcomeKey = `community-welcome-${course.course_id}`
+  const showWelcome =
+    communityOn &&
+    welcomeEligible &&
+    !isChecklistDismissed(uiState, welcomeKey) &&
+    (await feedHasPostsP) === false
+  const tc = await getTranslations('community')
 
   const lessons = lessonsRes.data || []
   const exercises = exercisesRes.data || []
@@ -206,6 +253,33 @@ export default async function CourseManagementPage({ params }: PageProps) {
     email: emailMap.get(e.user_id) || null,
   }))
 
+  // Per-student progress (#647). Only what the student can actually complete
+  // counts: published lessons/exams, and exercises that are not embedded as a
+  // lesson checkpoint (those are done inside the lesson flow). This keeps the
+  // teacher's percentage identical to the one on the student's course page.
+  const publishedLessons: CourseItem[] = lessons
+    .filter((l) => l.status === 'published')
+    .map((l) => ({ id: l.id, title: l.title ?? '', sequence: l.sequence }))
+  const publishedExams: CourseItem[] = exams
+    .filter((e) => e.status === 'published')
+    .map((e) => ({ id: e.exam_id, title: e.title, sequence: e.sequence }))
+  const publishedExercises = exercises.filter((e) => e.status === 'published')
+  const checkpointExerciseIds = await getCheckpointLinkedExerciseIds(supabase, {
+    tenantId,
+    exerciseIds: publishedExercises.map((e) => e.id),
+  })
+  const standaloneExercises: CourseItem[] = publishedExercises
+    .filter((e) => !checkpointExerciseIds.has(e.id))
+    .map((e) => ({ id: e.id, title: e.title, sequence: null }))
+  const progressReport = await getCourseProgressReport(supabase, {
+    courseId: parseInt(courseId),
+    tenantId,
+    userIds: enrolledUserIds,
+    lessons: publishedLessons,
+    exercises: standaloneExercises,
+    exams: publishedExams,
+  })
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Guided Tour */}
@@ -227,7 +301,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                   </Button>
                 </Link>
                 <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
-                <Badge variant={course.status === 'published' ? 'default' : 'secondary'}>
+                <Badge variant={course.status === 'published' ? 'default' : 'secondary'} className={course.status === 'published' ? 'bg-success/10 text-success border-success/30' : ''}>
                   {t(`status.${course.status}`)}
                 </Badge>
               </div>
@@ -236,7 +310,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link href={`/dashboard/teacher/courses/${courseId}/preview`} data-tour="course-preview">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconEye className="h-3.5 w-3.5" />
@@ -249,6 +323,23 @@ export default async function CourseManagementPage({ params }: PageProps) {
                   {t('analytics')}
                 </Button>
               </Link>
+              {communityOn && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href={`/dashboard/teacher/courses/${courseId}/community`}
+                      data-testid="teacher-course-community-link"
+                    />
+                  }
+                >
+                  <IconMessages className="h-3.5 w-3.5" />
+                  {tc('title')}
+                </Button>
+              )}
               <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconSettings className="h-3.5 w-3.5" />
@@ -261,7 +352,15 @@ export default async function CourseManagementPage({ params }: PageProps) {
       </header>
 
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-        <Tabs defaultValue="lessons" className="space-y-6">
+        {showWelcome && (
+          <CourseWelcomePrompt
+            courseId={course.course_id}
+            dismissKey={welcomeKey}
+            defaultTitle={tc('courseEntry.welcome.defaultTitle')}
+            defaultContent={tc('courseEntry.welcome.defaultContent', { course: course.title })}
+          />
+        )}
+        <Tabs defaultValue={activeTab} className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList data-tour="course-tabs" className="bg-muted/50 p-1 inline-flex w-auto min-w-full sm:w-full">
               <TabsTrigger value="lessons" className="flex items-center gap-2 whitespace-nowrap">
@@ -298,19 +397,31 @@ export default async function CourseManagementPage({ params }: PageProps) {
               </Link>
             </div>
 
-            <div className="grid gap-2">
-              {lessons.length > 0 ? (
-                lessons.map((lesson) => (
-                  <Link key={lesson.id} href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-primary/50 cursor-pointer">
+            {/* Without the community (plan off) it renders the list alone. */}
+            <DiscussionPromptShortcuts
+              courseId={parseInt(courseId)}
+              lessons={promptCounts ? lessons.map((l) => ({ id: l.id, title: l.title ?? '' })) : null}
+            >
+              <div className="grid gap-2">
+                {lessons.length > 0 ? (
+                  lessons.map((lesson) => (
+                    // The row is a card with an overlay link rather than a card
+                    // wrapped in one: the free-preview switch (#791) is
+                    // interactive content, which cannot live inside an anchor.
+                    <Card key={lesson.id} className="group relative transition-all duration-200 hover:shadow-md">
                       <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 font-semibold text-sm">
+                        <Link
+                          href={`/dashboard/teacher/courses/${courseId}/lessons/${lesson.id}`}
+                          className="absolute inset-0 rounded-[inherit]"
+                          aria-label={t('curriculum.editLesson')}
+                        />
+                        <div className="pointer-events-none flex min-w-0 items-center gap-4">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text font-semibold text-sm">
                             {lesson.sequence}
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{lesson.title}</h3>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{lesson.title}</h3>
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                               {lesson.status !== 'published' && (
                                 <Badge variant="secondary" className="text-[10px] h-4">
                                   {t(`status.${lesson.status}`)}
@@ -322,34 +433,56 @@ export default async function CourseManagementPage({ params }: PageProps) {
                                   {t('video')}
                                 </span>
                               )}
+                              {(promptCounts?.get(lesson.id) ?? 0) > 0 && (
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <IconMessages className="h-3 w-3" aria-hidden="true" />
+                                  {tDiscussion('promptCount', { count: promptCounts?.get(lesson.id) ?? 0 })}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        <div className="relative flex items-center gap-3 shrink-0">
+                          {promptCounts && (
+                            <AddDiscussionPromptTrigger lessonId={lesson.id} lessonTitle={lesson.title ?? ''} />
+                          )}
+                          <LessonPreviewToggle
+                            courseId={parseInt(courseId)}
+                            lessonId={lesson.id}
+                            isPreview={Boolean(lesson.is_preview)}
+                            lessonTitle={lesson.title}
+                          />
+                          <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
+                        </div>
                       </CardContent>
                     </Card>
-                  </Link>
-                ))
-              ) : (
-                <Card className="border-dashed border-2">
-                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
-                      <IconBook size={28} className="text-muted-foreground/40" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-1.5">{t('curriculum.noLessons')}</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                      {t('curriculum.description')}
-                    </p>
-                    <Link href={`/dashboard/teacher/courses/${courseId}/lessons/new`}>
-                      <Button className="gap-2">
-                        <IconPlus className="h-4 w-4" />
-                        {t('curriculum.createFirst')}
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                  ))
+                ) : (
+                  <Card className="border-dashed border-2">
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                        <IconBook size={28} className="text-muted-foreground/40" />
+                      </div>
+                      <h3 className="text-xl font-bold mb-1.5">{t('curriculum.noLessons')}</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                        {t('curriculum.description')}
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <Button
+                          className="gap-2"
+                          nativeButton={false}
+                          render={<Link href={`/dashboard/teacher/courses/${courseId}/lessons/new?from=new-course`} />}
+                        >
+                          <IconPlus className="h-4 w-4" />
+                          {t('curriculum.createFirst')}
+                        </Button>
+                        <GenerateLessonsButton courseId={course.course_id} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </DiscussionPromptShortcuts>
           </TabsContent>
 
           {/* Exercises Tab */}
@@ -368,25 +501,25 @@ export default async function CourseManagementPage({ params }: PageProps) {
               {exercises.length > 0 ? (
                 exercises.map((exercise) => (
                   <Link key={exercise.id} href={`/dashboard/teacher/courses/${courseId}/exercises/${exercise.id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-emerald-500/50 cursor-pointer">
+                    <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shrink-0">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-tint text-brand-text shrink-0">
                             <IconTarget size={18} />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{exercise.title}</h3>
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{exercise.title}</h3>
                             <div className="flex flex-wrap items-center gap-2 mt-0.5">
                               <span className="text-xs text-muted-foreground capitalize">
                                 {(exercise.exercise_type || '').replace('_', ' ')}
                               </span>
-                              <span className="text-muted-foreground/30">·</span>
+                              <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                               <span className="text-xs text-muted-foreground capitalize">
                                 {t(`difficulty.${exercise.difficulty_level}`)}
                               </span>
                               {exercise.status !== 'published' && (
                                 <>
-                                  <span className="text-muted-foreground/30">·</span>
+                                  <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                                   <Badge variant="secondary" className="text-[10px] h-4">
                                     {t(`status.${exercise.status}`)}
                                   </Badge>
@@ -395,7 +528,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                             </div>
                           </div>
                         </div>
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -438,14 +571,14 @@ export default async function CourseManagementPage({ params }: PageProps) {
               {exams.length > 0 ? (
                 exams.map((exam) => (
                   <Link key={exam.exam_id} href={`/dashboard/teacher/courses/${courseId}/exams/${exam.exam_id}`} className="block">
-                    <Card className="group transition-all duration-200 hover:shadow-md hover:border-amber-500/50 cursor-pointer">
+                    <Card className="group transition-all duration-200 hover:shadow-md cursor-pointer">
                       <CardContent className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand-text">
                             <IconFileText size={18} />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium group-hover:text-primary transition-colors truncate">{exam.title}</h3>
+                            <h3 className="font-medium group-hover:text-brand-text transition-colors truncate">{exam.title}</h3>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <IconClock className="h-3 w-3" />
@@ -453,7 +586,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                               </span>
                               {exam.status !== 'published' && (
                                 <>
-                                  <span className="text-muted-foreground/30">·</span>
+                                  <span className="text-muted-foreground/30" aria-hidden="true">·</span>
                                   <Badge variant="secondary" className="text-[10px] h-4">
                                     {t(`status.${exam.status}`)}
                                   </Badge>
@@ -462,7 +595,7 @@ export default async function CourseManagementPage({ params }: PageProps) {
                             </div>
                           </div>
                         </div>
-                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                        <IconChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-brand-text transition-colors shrink-0" />
                       </CardContent>
                     </Card>
                   </Link>
@@ -491,14 +624,19 @@ export default async function CourseManagementPage({ params }: PageProps) {
 
           {/* Students Tab */}
           <TabsContent value="students" className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
               <h2 className="text-lg font-semibold">{t('studentList.title')}</h2>
+              <p className="text-sm text-muted-foreground">{t('studentList.description')}</p>
             </div>
 
             <CourseStudentsTable
               enrollments={enrollments}
               issuedCertificates={issuedCertificates}
               courseId={parseInt(courseId)}
+              report={progressReport}
+              lessons={publishedLessons}
+              exercises={standaloneExercises}
+              exams={publishedExams}
             />
           </TabsContent>
 
@@ -537,6 +675,9 @@ export default async function CourseManagementPage({ params }: PageProps) {
                       </div>
                       <div className="pt-2">
                         <div className="flex items-center gap-2">
+                          {/* The colour the school chose for its certificate, shown as
+                              itself — a swatch of a theme token would preview the
+                              wrong design. */}
                           <div
                             className="h-4 w-4 rounded-full border"
                             style={{ backgroundColor: certificateTemplate.design_settings?.primary_color }}

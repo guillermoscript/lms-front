@@ -116,8 +116,8 @@ export function Quiz({
                 'flex w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition-colors',
                 !submitted && 'hover:bg-muted/50',
                 isSelected && !submitted && 'border-primary bg-primary/5',
-                showResult && isCorrectOption && 'border-green-500 bg-green-50 dark:bg-green-950',
-                showResult && isSelected && !isCorrectOption && 'border-red-500 bg-red-50 dark:bg-red-950',
+                showResult && isCorrectOption && 'border-success bg-success/10',
+                showResult && isSelected && !isCorrectOption && 'border-destructive bg-destructive/10',
                 submitted && 'cursor-default'
               )}
               aria-pressed={isSelected}
@@ -127,8 +127,8 @@ export function Quiz({
                   'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border text-xs font-medium',
                   allowMultiple ? 'rounded' : 'rounded-full',
                   isSelected && !submitted && 'border-primary bg-primary text-primary-foreground',
-                  showResult && isCorrectOption && 'border-green-500 bg-green-500 text-white',
-                  showResult && isSelected && !isCorrectOption && 'border-red-500 bg-red-500 text-white'
+                  showResult && isCorrectOption && 'border-success bg-success text-success-foreground',
+                  showResult && isSelected && !isCorrectOption && 'border-destructive bg-destructive text-destructive-foreground'
                 )}
               >
                 {showResult && isCorrectOption ? (
@@ -166,8 +166,8 @@ export function Quiz({
               className={cn(
                 'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium',
                 isCorrect
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                  ? 'bg-success/10 text-success'
+                  : 'bg-destructive/10 text-destructive'
               )}
               role="status"
               aria-live="polite"

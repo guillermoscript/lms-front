@@ -11,6 +11,9 @@ import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { sendEmail } from '@/lib/email/send'
 import { certificateIssuedTemplate } from '@/lib/email/templates/certificate-issued'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,31 +129,43 @@ export async function POST(request: NextRequest) {
       const result = await issueCertificate(studentId, courseId)
 
       if (result.success) {
-        // Send certificate issued email (non-blocking)
+        // Attributed to the STUDENT even on a teacher-initiated issuance —
+        // the credential is theirs, and `issued_by` carries who pressed it.
+        await track(
+          ANALYTICS_EVENTS.CERTIFICATE_ISSUED,
+          {
+            certificate_id: result.certificateId,
+            course_id: Number(courseId),
+            issued_by: isTeacherIssue ? 'teacher' : 'self',
+            issuance_path: 'signed',
+          },
+          { userId: studentId, tenantId }
+        )
+
+        // Send certificate issued email (non-blocking). The response carries
+        // whether it actually went out so the teacher can share the verify
+        // link instead when the platform mailer is not configured (#676).
+        let emailSent = false
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+        const verifyUrl = `${appUrl}/verify/${result.certificateId}`
         try {
           const adminClient = createAdminClient()
-          const { data: authUser } = await adminClient.auth.admin.getUserById(studentId)
-          const { data: courseRow } = await supabase
-            .from('courses')
-            .select('title')
-            .eq('course_id', courseId)
-            .single()
-          const { data: tenantRow } = await adminClient
-            .from('tenants')
-            .select('name')
-            .eq('id', tenantId)
-            .single()
+          const [{ data: authUser }, { data: courseRow }, brand] = await Promise.all([
+            adminClient.auth.admin.getUserById(studentId),
+            supabase.from('courses').select('title').eq('course_id', courseId).single(),
+            getSchoolBrand(tenantId),
+          ])
 
           if (authUser?.user?.email && result.certificateId) {
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
             const template = certificateIssuedTemplate({
               studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
               courseTitle: courseRow?.title || 'the course',
-              schoolName: tenantRow?.name || 'LMS Platform',
-              verifyUrl: `${appUrl}/verify/${result.certificateId}`,
+              schoolName: brand.name || 'LMS Platform',
+              verifyUrl,
               downloadUrl: `${appUrl}/api/certificates/${result.certificateId}?format=pdf`,
+              brand,
             })
-            await sendEmail({ to: authUser.user.email, ...template })
+            emailSent = await sendEmail({ to: authUser.user.email, ...template })
           }
         } catch (emailErr) {
           console.error('Failed to send certificate email:', emailErr)
@@ -159,6 +174,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           certificateId: result.certificateId,
+          emailSent,
+          verifyUrl,
         })
       }
 
@@ -323,26 +340,44 @@ async function simplifiedIssuance(
     return NextResponse.json({ error: 'Failed to issue certificate' }, { status: 500 })
   }
 
-  // Send certificate issued email (non-blocking)
+  // Second of the two issuance paths. `issuance_path` separates them because a
+  // production instance quietly falling back to unsigned certificates (missing
+  // issuer key or template) is a defect this event is the only witness to.
+  await track(
+    ANALYTICS_EVENTS.CERTIFICATE_ISSUED,
+    {
+      certificate_id: certificate.certificate_id,
+      course_id: Number(courseId),
+      issued_by: issuedBy ? 'teacher' : 'self',
+      issuance_path: 'simplified',
+      has_template: Boolean(template?.template_id),
+      total_lessons: completionData.totalLessons ?? null,
+    },
+    { userId, tenantId }
+  )
+
+  // Send certificate issued email (non-blocking); see the signed path above
+  // for why `emailSent` and `verifyUrl` travel back to the caller (#676).
+  let emailSent = false
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+  const verifyUrl = `${appUrl}/verify/${certificate.verification_code}`
   try {
     const adminClient = createAdminClient()
-    const { data: authUser } = await adminClient.auth.admin.getUserById(userId)
-    const { data: tenantRow } = await adminClient
-      .from('tenants')
-      .select('name')
-      .eq('id', tenantId)
-      .single()
+    const [{ data: authUser }, brand] = await Promise.all([
+      adminClient.auth.admin.getUserById(userId),
+      getSchoolBrand(tenantId),
+    ])
 
     if (authUser?.user?.email) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
       const template = certificateIssuedTemplate({
         studentName: authUser.user.user_metadata?.full_name || authUser.user.email,
         courseTitle: course?.title || 'the course',
-        schoolName: tenantRow?.name || 'LMS Platform',
-        verifyUrl: `${appUrl}/verify/${certificate.verification_code}`,
+        schoolName: brand.name || 'LMS Platform',
+        verifyUrl,
         downloadUrl: `${appUrl}/api/certificates/${certificate.certificate_id}?format=pdf`,
+        brand,
       })
-      await sendEmail({ to: authUser.user.email, ...template })
+      emailSent = await sendEmail({ to: authUser.user.email, ...template })
     }
   } catch (emailErr) {
     console.error('Failed to send certificate email:', emailErr)
@@ -351,6 +386,8 @@ async function simplifiedIssuance(
   return NextResponse.json({
     success: true,
     certificateId: certificate.certificate_id,
+    emailSent,
+    verifyUrl,
   })
 }
 

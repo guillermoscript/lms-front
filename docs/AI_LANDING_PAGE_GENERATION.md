@@ -123,7 +123,7 @@ Rules:
 ```
 School name: {{ tenant.name }}
 Niche / description: {{ admin_prompt }}
-Primary color: {{ tenant.primary_color }}
+Primary color: {{ theme_kit.button }}
 Existing products (optional): {{ product_names }}
 
 Generate a complete landing page for this school.
@@ -197,7 +197,7 @@ Generate a complete landing page for this school.
 - **Free-form layout generation** — too complex to make editable, overkill for the user base
 - **Streaming UI generation** (Syntux-style) — generation takes 3-5s total, streaming a landing page section by section adds complexity without clear UX value
 - **Auto-regeneration** — AI is called once on explicit user request, never automatically
-- **Design token generation** — we respect the tenant's existing `primary_color`, we don't override their brand
+- **Design token generation** — we respect the tenant's existing theme kit brand, we don't override it
 - **Inline AI editing** ("make the hero more dramatic") — v2 consideration after validating the basic flow
 
 ---

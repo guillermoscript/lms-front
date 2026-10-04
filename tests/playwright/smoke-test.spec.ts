@@ -91,7 +91,7 @@ type PageResult = {
 }
 
 const results: PageResult[] = []
-let loginFailures: string[] = []
+const loginFailures: string[] = []
 
 function isNoise(text: string): boolean {
   return CONSOLE_NOISE.some((n) => text.includes(n))
@@ -287,3 +287,50 @@ function writeLog() {
   fs.writeFileSync(logPath, header + lines.join('\n') + '\n' + prior)
   console.log(`\n📝 Findings written to docs/SMOKE_TEST_LOG.md`)
 }
+
+/**
+ * #677 — a bad id inside the dashboard must render the dashboard-styled 404
+ * (or the page's own inline "not found"), never the public full-screen one:
+ * the sidebar has to survive so the user can get anywhere from there.
+ */
+test.describe('Dashboard not-found keeps the shell (#677)', () => {
+  const CASES = [
+    {
+      persona: 'student',
+      base: BASE,
+      account: ACCOUNTS.student,
+      path: '/dashboard/student/courses/999999',
+      expectsNotFoundPanel: true,
+    },
+    {
+      // The teacher course page renders its own inline "not found" card
+      // rather than throwing; the assertion that matters is the sidebar.
+      persona: 'teacher',
+      base: BASE,
+      account: ACCOUNTS.teacher,
+      path: '/dashboard/teacher/courses/999999',
+      expectsNotFoundPanel: false,
+    },
+    {
+      persona: 'admin',
+      base: TENANT_BASE,
+      account: ACCOUNTS.admin,
+      path: '/dashboard/admin/users/00000000-0000-0000-0000-000000000000',
+      expectsNotFoundPanel: true,
+    },
+  ] as const
+
+  for (const c of CASES) {
+    test(`${c.persona}: invalid id at ${c.path} keeps the sidebar`, async ({ page }) => {
+      await login(page, c.account.email, c.account.password, c.base)
+      await page.goto(`${c.base}/${LOCALE}${c.path}`, { waitUntil: 'domcontentloaded' })
+
+      await expect(page.getByTestId('sidebar-role')).toBeVisible({ timeout: 15_000 })
+      if (c.expectsNotFoundPanel) {
+        await expect(page.getByTestId('dashboard-not-found')).toBeVisible({ timeout: 15_000 })
+      }
+      // The public 404 has no sidebar and a "Go Home" link; neither belongs here.
+      await expect(page.getByRole('link', { name: /go home/i })).toHaveCount(0)
+    })
+  }
+})

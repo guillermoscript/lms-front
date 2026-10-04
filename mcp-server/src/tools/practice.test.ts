@@ -1,9 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   blockedInterleavingTopics,
   computeInterleavingPool,
   eloExpected,
   eloJitter,
+  engineTypeFor,
+  gradeWithPlatform,
 } from "./practice.js";
 
 /**
@@ -211,5 +213,139 @@ describe("blockedInterleavingTopics", () => {
   it("blocks everything against an empty pool — a novice cannot bootstrap a mixed session", () => {
     const empty = computeInterleavingPool([]);
     expect(blockedInterleavingTopics(["a", "b"], empty)).toEqual(["a", "b"]);
+  });
+});
+
+/**
+ * #843 — lms_complete_exercise no longer takes a score from the host. It
+ * forwards the student's answer to the app's platform grader and relays what
+ * comes back.
+ */
+describe("engineTypeFor", () => {
+  it("maps text types to text and coding_challenge to code", () => {
+    for (const t of ["essay", "discussion", "quiz", "multiple_choice", "true_false", "fill_in_the_blank"])
+      expect(engineTypeFor(t)).toBe("text");
+    expect(engineTypeFor("coding_challenge")).toBe("code");
+  });
+
+  it("leaves app-only types unsupported", () => {
+    for (const t of ["audio_evaluation", "video_evaluation", "artifact", "real_time_conversation"])
+      expect(engineTypeFor(t)).toBeNull();
+  });
+});
+
+describe("gradeWithPlatform", () => {
+  const json = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  it("POSTs the answer with the caller's token and returns the platform's grade", async () => {
+    const fetchMock = vi.fn(async () =>
+      json(200, {
+        score: 82,
+        passed: true,
+        feedback: "Clear thesis.",
+        strengths: ["structure"],
+        improvements: ["cite sources"],
+        passingScore: 70,
+        attemptNumber: 3,
+        completed: true,
+        alreadyCompleted: false,
+      })
+    );
+    const out = await gradeWithPlatform(
+      "https://app.example.com",
+      "tok-123",
+      42,
+      "my essay",
+      fetchMock as unknown as typeof fetch
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://app.example.com/api/exercises/evaluate");
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-123");
+    expect(JSON.parse(init.body as string)).toEqual({ exerciseId: 42, content: "my essay" });
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+
+    expect(out).toEqual({
+      ok: true,
+      grade: {
+        score: 82,
+        passed: true,
+        feedback: "Clear thesis.",
+        strengths: ["structure"],
+        improvements: ["cite sources"],
+        passingScore: 70,
+        attemptNumber: 3,
+        completed: true,
+        alreadyCompleted: false,
+      },
+    });
+  });
+
+  it("maps 409 to a checkpoint outcome carrying the lesson id", async () => {
+    const out = await gradeWithPlatform(
+      "https://a",
+      "t",
+      1,
+      "x",
+      (async () => json(409, { error: "checkpoint", checkpointLessonId: 7 })) as unknown as typeof fetch
+    );
+    expect(out).toMatchObject({ ok: false, kind: "checkpoint", checkpointLessonId: 7 });
+  });
+
+  it("maps 429 to rate_limited", async () => {
+    const out = await gradeWithPlatform(
+      "https://a",
+      "t",
+      1,
+      "x",
+      (async () => json(429, { error: "slow down", rateLimited: true })) as unknown as typeof fetch
+    );
+    expect(out).toMatchObject({ ok: false, kind: "rate_limited" });
+  });
+
+  it("surfaces the route's error text for 400/404/500", async () => {
+    for (const status of [400, 404, 500]) {
+      const out = await gradeWithPlatform(
+        "https://a",
+        "t",
+        1,
+        "x",
+        (async () => json(status, { error: `boom ${status}` })) as unknown as typeof fetch
+      );
+      expect(out.ok).toBe(false);
+      if (!out.ok) expect(out.message).toContain(`boom ${status}`);
+    }
+  });
+
+  it("reports a network failure or timeout without throwing", async () => {
+    const timeout = Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    const out = await gradeWithPlatform(
+      "https://a",
+      "t",
+      1,
+      "x",
+      (async () => {
+        throw timeout;
+      }) as unknown as typeof fetch
+    );
+    expect(out).toMatchObject({ ok: false, kind: "error" });
+    if (!out.ok) expect(out.message).toContain("60 seconds");
+  });
+
+  it("rejects a 200 with no numeric score rather than inventing one", async () => {
+    const out = await gradeWithPlatform(
+      "https://a",
+      "t",
+      1,
+      "x",
+      (async () => json(200, { passed: true })) as unknown as typeof fetch
+    );
+    expect(out).toMatchObject({ ok: false, kind: "error" });
   });
 });

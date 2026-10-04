@@ -18,7 +18,6 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | **Required** | Supabase project API URL. Used everywhere (client, server, proxy, admin). | Supabase Dashboard > Project Settings > API > Project URL | `https://abcdefghij.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY` | **Required** | Supabase anon/publishable key. Safe for client-side. Used by `createClient()` in both client and server. | Supabase Dashboard > Project Settings > API > Project API keys > `anon` `public` | `eyJhbGciOi...` (JWT) |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Required** | Service-role key that **bypasses RLS**. Used by `createAdminClient()`, proxy middleware, webhooks, and scripts. Keep secret. | Supabase Dashboard > Project Settings > API > Project API keys > `service_role` | `eyJhbGciOi...` (JWT) |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Optional | Legacy alias referenced in `lib/supabase/middleware.ts`. If set, used by the Supabase middleware client. Typically same value as `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`. | Same as anon key above | `eyJhbGciOi...` (JWT) |
 
 **Local Supabase:** For local development with `supabase start`, use:
 ```
@@ -96,15 +95,6 @@ NEXT_PUBLIC_APP_URL=http://lvh.me:3000
 | `CERTIFICATE_ENCRYPTION_KEY` | Optional | Secret key used to sign and verify certificate verification codes. Should be a random 32+ character string. | Generate with `openssl rand -hex 32` | `a1b2c3d4e5f6...` (64 hex chars) |
 | `CERTIFICATE_ISSUER_NAME` | Optional | Default issuer name on certificates. Falls back to `LMS Academy`. | Choose your own | `Your Platform Name` |
 
-### Company Info (Invoices / Emails)
-
-| Variable | Required | Description | Where to get it | Example |
-|----------|----------|-------------|-----------------|---------|
-| `COMPANY_NAME` | Optional | Company name shown on invoices. Defaults to `LMS Platform`. | Your business info | `Acme Education Inc.` |
-| `COMPANY_ADDRESS` | Optional | Company address for invoices. | Your business info | `123 Main St, City, Country` |
-| `COMPANY_EMAIL` | Optional | Contact email on invoices. | Your business info | `hello@yourdomain.com` |
-| `COMPANY_PHONE` | Optional | Contact phone on invoices. | Your business info | `+1 555 000 0000` |
-
 ### Cron Jobs
 
 | Variable | Required | Description | Where to get it | Example |
@@ -117,6 +107,8 @@ NEXT_PUBLIC_APP_URL=http://lvh.me:3000
 |----------|----------|-------------|-----------------|---------|
 | `PAYPAL_CLIENT_ID` | Optional | PayPal REST API client ID. Only needed if `PAYMENT_PROVIDER=paypal`. | PayPal Developer Dashboard > My Apps & Credentials | `AaBbCcDd...` |
 | `PAYPAL_CLIENT_SECRET` | Optional | PayPal REST API secret. Only needed if `PAYMENT_PROVIDER=paypal`. | PayPal Developer Dashboard > My Apps & Credentials | `EeFfGgHh...` |
+| `PAYPAL_WEBHOOK_ID` | Optional | Id of the PayPal webhook registered for `/api/payments/webhook/paypal` (student → school). Required for PayPal subscription activation. | PayPal Developer Dashboard > My Apps & Credentials > Webhooks | `8PT597110X687430LKGECATA` |
+| `PAYPAL_PLATFORM_WEBHOOK_ID` | Optional | Id of a second PayPal webhook registered for `/api/billing/webhook/paypal` (school → platform billing, #744). PayPal is not offered for platform plans until it is set. | PayPal Developer Dashboard > My Apps & Credentials > Webhooks | `3VW612345A123456BWEBHOOK` |
 | `PAYMENT_PROVIDER` | Optional | Active payment provider. Defaults to `stripe`. | Set manually | `stripe`, `paypal`, or `manual` |
 
 ### MCP Server (AI Development Tooling)

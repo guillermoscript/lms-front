@@ -17,6 +17,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { buildSplitTransaction } from '@/lib/payments/solana-split'
 import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
+import { APP_NAME } from '@/lib/app-name'
 
 export const runtime = 'nodejs'
 
@@ -29,7 +30,7 @@ function getSupabaseAdmin() {
 
 export async function GET() {
   return NextResponse.json({
-    label: process.env.NEXT_PUBLIC_APP_NAME || 'LMS',
+    label: APP_NAME,
     icon: `${process.env.NEXT_PUBLIC_APP_URL || ''}/favicon.ico`,
   })
 }
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       transaction: base64,
-      message: `${process.env.NEXT_PUBLIC_APP_NAME || 'LMS'} — order ${tx.transaction_id}`,
+      message: `${APP_NAME} — order ${tx.transaction_id}`,
     })
   } catch (error) {
     console.error('[solana/tx] error:', error)

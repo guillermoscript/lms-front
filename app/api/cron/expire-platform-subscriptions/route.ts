@@ -7,11 +7,23 @@ import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
 import { getTenantAdminEmails } from '@/lib/billing/tenant-admins'
 import { paymentRequestExpiredTemplate } from '@/lib/email/templates/payment-request-expired'
 import {
+  EXPIRABLE_REQUEST_STATUSES,
   OPEN_REQUEST_STATUSES,
   REQUEST_TTL_DAYS,
   isRequestOpen,
 } from '@/lib/billing/payment-request-ttl'
-import { PLATFORM_SELF_MANAGED_PROVIDERS } from '@/lib/billing/platform-billing'
+import {
+  getPlatformBillingProvider,
+  PLATFORM_APP_CANCELED_PROVIDERS,
+  PLATFORM_SELF_MANAGED_PROVIDERS,
+} from '@/lib/billing/platform-billing'
+import type { PaymentProvider } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
+import {
+  abandonPlatformSubscriptionSwitch,
+  reconcilePlatformSubscriptionSwitch,
+} from '@/lib/billing/platform-subscription-switch'
 
 export const runtime = 'nodejs'
 
@@ -31,9 +43,11 @@ export const runtime = 'nodejs'
  * subscription active forever: unreminded, ungraced and never downgraded.
  *
  * Rails that renew themselves (Stripe, Lemon Squeezy, PayPal) stay
- * webhook-driven and must NOT appear here — their expiry is decided by
+ * webhook-driven and must NOT appear in phases 1–3 — their expiry is decided by
  * /api/billing/webhook/[provider]. So does `solana_subs`, whose crank cron
- * charges it each period.
+ * charges it each period. The one exception is phase 4 for PayPal: its cancel
+ * is final at the provider, so the paid period left after it is ours to end
+ * (`PLATFORM_APP_CANCELED_PROVIDERS`, #744).
  *
  * Phases (all status-gated, so re-running is idempotent):
  *   0. Request TTL — open payment request past `expires_at` → `expired` + email.
@@ -43,6 +57,7 @@ export const runtime = 'nodejs'
  *   3. Downgrade   — past_due sub, grace window passed → downgrade to free + email,
  *                    UNLESS an OPEN renewal payment request pauses it.
  *   4. Cancel      — cancel_at_period_end sub, period end passed → downgrade to free + email (no renewal pause).
+ *   5. Cleanup     — retry a small bounded batch of superseded-provider cancels.
  *
  * Secured by CRON_SECRET env var (set the same value in the cron scheduler).
  */
@@ -71,11 +86,18 @@ async function safeEmail(emails: string[], template: { subject: string; html: st
 type SubRow = {
   tenant_id: string
   current_period_end: string | null
+  payment_provider: string | null
+  interval: string | null
   tenants: { name: string | null } | null
-  platform_plans: { name: string | null } | null
+  platform_plans: { name: string | null; slug: string | null } | null
 }
 
-const SUB_SELECT = 'tenant_id, current_period_end, tenants(name), platform_plans(name)'
+// `payment_provider`, `interval` and the plan SLUG are for the churn events
+// below: `plan` has to be the stable slug the rest of the funnel keys on, not
+// the display name, or `subscription_expired` cannot be joined to
+// `plan_changed` / `platform_payment_succeeded`.
+const SUB_SELECT =
+  'tenant_id, current_period_end, payment_provider, interval, tenants(name), platform_plans(name, slug)'
 
 type LapsedRequestRow = {
   request_id: string
@@ -84,6 +106,7 @@ type LapsedRequestRow = {
   currency: string | null
   expires_at: string | null
   status: string
+  switch_id: string | null
   tenants: { name: string | null } | null
   platform_plans: { name: string | null } | null
 }
@@ -115,7 +138,28 @@ export async function GET(req: NextRequest) {
     downgraded: 0,
     canceled: 0,
     skippedPendingRenewal: 0,
+    switchesAbandoned: 0,
+    switchCancellationsCompleted: 0,
+    switchCancellationsScheduled: 0,
+    switchCancellationRetries: 0,
   }
+
+  // ---- Switch abandonment (#621) ----
+  // A replacement checkout that never activates expires without touching the
+  // source entitlement. Validated late payments may revive these rows through
+  // the source-snapshot-guarded promotion RPC.
+  const { data: abandonedSwitches } = await supabase
+    .from('platform_subscription_switches')
+    .update({ state: 'abandoned', updated_at: nowIso })
+    .eq('state', 'pending_activation')
+    .lt('expires_at', nowIso)
+    .select('switch_id')
+    // PostgREST refuses a limited UPDATE without an order (PGRST109). The error
+    // was dropped, so no expired switch was ever abandoned and the one-open-
+    // per-tenant index locked the school out of every later switch (#479).
+    .order('switch_id')
+    .limit(100)
+  result.switchesAbandoned = abandonedSwitches?.length ?? 0
 
   // ---- Phase 0: expire lapsed payment requests (#546 §2) ----
   // Nothing else in the codebase ever moved a request out of an open state, so
@@ -124,23 +168,32 @@ export async function GET(req: NextRequest) {
   // Closing them here first means phase 3 below sees the swept state.
   const { data: lapsedRequests } = await supabase
     .from('platform_payment_requests')
-    .select('request_id, tenant_id, amount, currency, expires_at, status, tenants(name), platform_plans(name)')
-    .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+    .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, tenants(name), platform_plans(name)')
+    .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
     .not('expires_at', 'is', null)
     .lt('expires_at', nowIso)
 
   for (const req of (lapsedRequests as LapsedRequestRow[] | null) || []) {
-    const { error } = await supabase
+    const { data: expiredRequest, error } = await supabase
       .from('platform_payment_requests')
       .update({ status: 'expired', updated_at: nowIso })
       .eq('request_id', req.request_id)
       // Status-gated so a super admin confirming in the same instant wins.
-      .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
+      .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
+      .select('request_id')
+      .maybeSingle()
 
     if (error) {
       console.error('expire-platform-subscriptions: failed to expire request', req.request_id, error)
       continue
     }
+    if (!expiredRequest) continue
+
+    await abandonPlatformSubscriptionSwitch(
+      supabase,
+      req.switch_id,
+      'Linked payment request expired',
+    )
 
     const emails = await getTenantAdminEmails(supabase, req.tenant_id)
     await safeEmail(emails, paymentRequestExpiredTemplate({
@@ -228,18 +281,40 @@ export async function GET(req: NextRequest) {
   }
 
   // ---- Phase 3: downgrade after grace (unless a renewal is pending) ----
+  // Also PayPal (#479): its dispatcher opens the grace window on a failed or
+  // suspended charge, because a SUSPENDED subscription never sends another
+  // event and would otherwise keep its plan forever.
   const { data: expiredSubs } = await supabase
     .from('platform_subscriptions')
-    .select(SUB_SELECT)
-    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
+    .select(`${SUB_SELECT}, provider_subscription_id`)
+    .in('payment_provider', [...PLATFORM_SELF_MANAGED_PROVIDERS, ...PLATFORM_APP_CANCELED_PROVIDERS])
     .eq('status', 'past_due')
     .not('grace_period_end', 'is', null)
     .lt('grace_period_end', nowIso)
 
-  for (const sub of (expiredSubs as SubRow[] | null) || []) {
+  for (const sub of (expiredSubs as (SubRow & { provider_subscription_id: string | null })[] | null) || []) {
     // A school that only just entered grace gets the full window, never a
     // same-pass downgrade.
     if (graceStartedNow.has(sub.tenant_id)) continue
+
+    // End it at the provider BEFORE taking the plan away: a suspended PayPal
+    // subscription can still be re-activated from the payer's account, and a
+    // charge after the downgrade would buy nothing. A failed cancel skips the
+    // school this pass — the next run retries — rather than downgrading while
+    // the provider may still bill.
+    if (
+      sub.payment_provider &&
+      PLATFORM_APP_CANCELED_PROVIDERS.includes(sub.payment_provider as PaymentProvider) &&
+      sub.provider_subscription_id
+    ) {
+      try {
+        const provider = getPlatformBillingProvider(sub.payment_provider as PaymentProvider)
+        await provider.cancelSubscription?.(sub.provider_subscription_id, true)
+      } catch (err) {
+        console.error('expire-platform-subscriptions: provider cancel before downgrade failed', sub.tenant_id, err)
+        continue
+      }
+    }
 
     // Pause the downgrade only for a renewal request that is still OPEN — an
     // unpaid one lapses at its TTL (phase 0 above) and stops holding the plan.
@@ -266,14 +341,23 @@ export async function GET(req: NextRequest) {
       planName: sub.platform_plans?.name || 'your plan',
       billingUrl,
     }))
+    // Loop E, terminal school churn. `was_grace: true` — this school stopped
+    // paying and rode out the 7-day window; phase 4 below is the school that
+    // chose to leave on schedule. Charting them together hides the difference
+    // between involuntary and voluntary churn, which are fixed by completely
+    // different work (dunning vs product).
+    await trackPlatformExpiry(sub, true)
     result.downgraded++
   }
 
   // ---- Phase 4: explicit cancel-at-period-end (no renewal pause) ----
+  // Wider than phases 1–3: a PayPal cancel is final at PayPal, so the paid
+  // period the dispatcher kept has nobody else to end it (#744). Phases 1–3
+  // stay self-managed only — PayPal still renews, reminds and dunns itself.
   const { data: cancelSubs } = await supabase
     .from('platform_subscriptions')
     .select(SUB_SELECT)
-    .in('payment_provider', PLATFORM_SELF_MANAGED_PROVIDERS)
+    .in('payment_provider', PLATFORM_APP_CANCELED_PROVIDERS)
     .eq('status', 'active')
     .eq('cancel_at_period_end', true)
     .not('current_period_end', 'is', null)
@@ -287,8 +371,55 @@ export async function GET(req: NextRequest) {
       planName: sub.platform_plans?.name || 'your plan',
       billingUrl,
     }))
+    // Voluntary churn: the school scheduled this itself via
+    // `subscription_cancel_scheduled`, and the period has now run out.
+    await trackPlatformExpiry(sub, false)
     result.canceled++
   }
 
+  // ---- Phase 5: bounded source-provider cleanup (#621) ----
+  // External provider calls run last so a degraded API cannot starve request
+  // expiry, reminders, grace transitions, or tenant downgrades. Ten per daily
+  // run is enough to drain normal volume without consuming the route budget.
+  const { data: cleanupSwitches } = await supabase
+    .from('platform_subscription_switches')
+    .select('switch_id')
+    .in('state', ['cancellation_pending', 'cancellation_retry'])
+    .lte('next_retry_at', nowIso)
+    .order('next_retry_at', { ascending: true })
+    .limit(10)
+
+  for (const row of cleanupSwitches || []) {
+    const outcome = await reconcilePlatformSubscriptionSwitch(supabase, row.switch_id)
+    if (outcome === 'completed') result.switchCancellationsCompleted++
+    else if (outcome === 'scheduled') result.switchCancellationsScheduled++
+    else if (outcome === 'retry') result.switchCancellationRetries++
+  }
+
   return NextResponse.json({ success: true, ...result })
+}
+
+/**
+ * Loop E terminal churn for a school. `scope: 'platform'` distinguishes it from
+ * the learner subscriptions the sibling `expire-subscriptions` cron expires
+ * under the same event name.
+ *
+ * Idempotent by construction: every phase above is status-gated, so a re-run of
+ * the cron finds no matching rows and emits nothing.
+ */
+async function trackPlatformExpiry(sub: SubRow, wasGrace: boolean): Promise<void> {
+  await track(
+    ANALYTICS_EVENTS.SUBSCRIPTION_EXPIRED,
+    {
+      scope: 'platform',
+      plan: sub.platform_plans?.slug ?? 'unknown',
+      was_grace: wasGrace,
+      provider: sub.payment_provider ?? 'unknown',
+      interval: sub.interval,
+      period_end: sub.current_period_end,
+      churn_type: wasGrace ? 'involuntary' : 'voluntary',
+    },
+    // No user: a cron has no actor, and the loss belongs to the school.
+    { tenantId: sub.tenant_id },
+  )
 }

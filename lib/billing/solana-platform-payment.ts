@@ -192,6 +192,9 @@ export interface RecordRequestParams {
   /** The on-chain reference the QR carries, from the provider's session. */
   reference: string
   settlement: PlatformSettlement
+  /** Correlates a cross-provider replacement without touching source entitlement. */
+  switchId?: string | null
+  expiresAt?: string
 }
 
 /**
@@ -205,7 +208,18 @@ export interface RecordRequestParams {
 export async function recordSolanaPlatformRequest(
   params: RecordRequestParams,
 ): Promise<{ requestId: string }> {
-  const { admin, tenantId, userId, planId, amountUsd, interval, reference, settlement } = params
+  const {
+    admin,
+    tenantId,
+    userId,
+    planId,
+    amountUsd,
+    interval,
+    reference,
+    settlement,
+    switchId,
+    expiresAt,
+  } = params
 
   const [{ data: target }, { data: tenant }] = await Promise.all([
     admin.from('platform_plans').select('sort_order').eq('plan_id', planId).maybeSingle(),
@@ -249,7 +263,8 @@ export async function recordSolanaPlatformRequest(
       settlement_base: settlement.base,
       settlement_mint: settlement.mint,
       settlement_sol_usd: settlement.solUsd,
-      expires_at: requestExpiresAt(),
+      expires_at: expiresAt ?? requestExpiresAt(),
+      switch_id: switchId ?? null,
     })
     .select('request_id')
     .single()

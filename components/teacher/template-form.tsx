@@ -30,6 +30,13 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.templateForm')
   const [loading, setLoading] = useState(false)
+  // Base UI's Select needs an items map, or the closed trigger prints the raw
+  // value ("lesson_task") instead of its label (#726).
+  const categoryItems = [
+    { value: 'lesson_task', label: t('categoryLessonTask') },
+    { value: 'exercise', label: t('categoryExercise') },
+    { value: 'exam_grading', label: t('categoryExamGrading') },
+  ]
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -149,6 +156,7 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
             <div className="space-y-2">
               <Label htmlFor="category">{t('categoryLabel')}</Label>
               <Select
+                items={categoryItems}
                 value={formData.category}
                 onValueChange={(val) => setFormData({ ...formData, category: val })}
               >
@@ -156,9 +164,11 @@ export function TemplateForm({ initialData, id }: TemplateFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lesson_task">{t('categoryLessonTask')}</SelectItem>
-                  <SelectItem value="exercise">{t('categoryExercise')}</SelectItem>
-                  <SelectItem value="exam_grading">{t('categoryExamGrading')}</SelectItem>
+                  {categoryItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

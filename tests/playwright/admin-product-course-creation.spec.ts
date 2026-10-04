@@ -2,10 +2,10 @@ import { expect, type Page, test } from '@playwright/test'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
 
-// /products/new renders the one-screen quick create; the multi-step wizard
-// these helpers drive lives behind ?advanced=1.
-const wizardPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new?advanced=1`
-const quickCreatePath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new`
+// /products/new is the multi-step product wizard these helpers drive; the
+// one-screen quick create is the admin "create a course" page (#665).
+const wizardPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products/new`
+const quickCreatePath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/courses/new`
 const productsPath = `${TENANT_BASE}/${LOCALE}/dashboard/admin/products`
 
 function uniqueTitle(prefix: string) {
@@ -241,6 +241,11 @@ test.describe('Admin Product/Course Creation Wizard', () => {
     // 'free' is the default pricing mode — publish straight away.
     await page.getByRole('button', { name: /publish|publicar/i }).first().click()
 
+    // Quick create lands in the course editor (the next step is adding
+    // lessons), not on the products list.
+    await expect(page).toHaveURL(/\/dashboard\/teacher\/courses\/\d+/, { timeout: 20_000 })
+
+    await page.goto(productsPath, { timeout: 30_000 })
     await expect(
       page.getByTestId('products-page').getByText(title).first()
     ).toBeVisible({ timeout: 20_000 })
@@ -270,6 +275,26 @@ test.describe('Admin Product/Course Creation Wizard', () => {
     ).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText(/manual|offline/i).first()).toBeVisible({ timeout: 10_000 })
     await expect(page.getByText('$99.00').first()).toBeVisible({ timeout: 10_000 })
+  })
+
+  // Folded in from the orphaned tests/admin/products-manual-payment.spec.ts (#668):
+  // the one check there the live suite lacked. The pricing step must refuse to
+  // advance a paid offering priced at 0 and say why, instead of letting a free
+  // product masquerade as paid.
+  test('refuses to advance past pricing when a paid offering is priced at 0', async ({ page }) => {
+    await openWizard(page)
+    await chooseNewCourse(page)
+    await clickNext(page)
+    await fillBasics(page, uniqueTitle('E2E Zero Price Course'))
+    await clickNext(page)
+    await choosePricing(page, 'paid')
+    await page.getByTestId('product-creation-price').fill('0')
+    await clickNext(page)
+
+    await expect(page.getByText('Enter a price greater than 0.')).toBeVisible({ timeout: 5_000 })
+    // Still on the pricing step: the price field is only rendered there.
+    await expect(page.getByTestId('product-creation-price')).toBeVisible()
+    await expect(page.getByTestId('product-creation-price')).toHaveAttribute('aria-invalid', 'true')
   })
 
   test('creates a paid offering from an existing tenant course', async ({ page }) => {

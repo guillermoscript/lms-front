@@ -40,20 +40,10 @@ export async function POST(req: Request) {
             return new NextResponse('Failed to restart', { status: 500 })
         }
 
-        // Also delete lesson completion to allow retrying
-        const { error: completionError } = await supabase
-            .from('lesson_completions')
-            .delete()
-            .eq('lesson_id', lessonId)
-            .eq('user_id', user.id)
-
-        if (completionError) {
-            console.error('Error deleting completion:', completionError)
-            // Don't fail if completion deletion fails, just log it
-        }
-
+        // The completion stays. Restarting is practising again: deleting it took
+        // back the student's course progress and certificate eligibility.
         return new NextResponse('Restarted successfully', { status: 200 })
-    } catch (err: any) {
+    } catch (err) {
         console.error('Restart chat failed:', err)
         return new NextResponse('Internal Server Error', { status: 500 })
     }

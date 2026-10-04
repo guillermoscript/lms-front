@@ -37,7 +37,7 @@ export default async function PlatformSolanaCheckoutPage({
   const { data: request } = await supabase
     .from('platform_payment_requests')
     .select(
-      'request_id, status, amount, interval, expires_at, payment_provider, provider_reference, settlement_currency, settlement_base, settlement_mint, platform_plans(name)',
+      'request_id, status, activation_state, amount, interval, expires_at, payment_provider, provider_reference, settlement_currency, settlement_base, settlement_mint, platform_plans(name)',
     )
     .eq('request_id', requestId)
     .maybeSingle()
@@ -47,7 +47,7 @@ export default async function PlatformSolanaCheckoutPage({
   }
 
   // Already paid — there is nothing to show but the billing page it activated.
-  if (request.status === 'confirmed') {
+  if (request.status === 'confirmed' || request.activation_state === 'activated') {
     redirect(`/${locale}/dashboard/admin/billing`)
   }
 

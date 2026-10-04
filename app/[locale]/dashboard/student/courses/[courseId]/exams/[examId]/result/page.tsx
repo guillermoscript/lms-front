@@ -9,6 +9,12 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
+import { getFormatter, getTranslations } from 'next-intl/server'
+import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
+import { withExamAnswerKey } from '@/lib/exams/grading-secrets'
+import { RetryGrading } from './retry-grading'
+
+type ExamQuestionTypeKey = `questionType.${'multiple_choice' | 'true_false' | 'free_text'}`
 
 interface PageProps {
     params: Promise<{ courseId: string; examId: string }>
@@ -17,6 +23,11 @@ interface PageProps {
 export default async function ExamResultPage({ params }: PageProps) {
     const { courseId, examId } = await params
     const supabase = createAdminClient()
+    const [t, tFeedback, format] = await Promise.all([
+        getTranslations('examResult'),
+        getTranslations('examResult.feedback'),
+        getFormatter(),
+    ])
 
     const userId = await getCurrentUserId()
     if (!userId) redirect('/auth/login')
@@ -45,7 +56,6 @@ export default async function ExamResultPage({ params }: PageProps) {
           question_type,
           question_options (
             option_id,
-            is_correct,
             option_text
           )
         ),
@@ -93,6 +103,12 @@ export default async function ExamResultPage({ params }: PageProps) {
     if (!submission) {
         redirect(`/dashboard/student/courses/${courseId}/exams/${examId}`)
     }
+
+    // The key comes from the RPC: nothing before grading, own submission only (#840).
+    const { data: answerKey } = await supabase.rpc('get_exam_answer_key', {
+        p_submission_id: submission.submission_id,
+    })
+    examData.exam_questions = withExamAnswerKey(examData.exam_questions ?? [], answerKey)
 
     // Check if a certificate was issued for this course
     const { data: certificate } = await supabase
@@ -150,50 +166,85 @@ export default async function ExamResultPage({ params }: PageProps) {
 
     const firstExam = examData;
     const courseData = firstExam?.courses;
-    const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || "Course";
+    const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || t('courseFallback');
 
     const breadcrumbLinks = [
-        { href: '/dashboard/student', label: 'Dashboard' },
+        { href: '/dashboard/student', label: t('breadcrumb.dashboard') },
         { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
-        { href: `/dashboard/student/courses/${courseId}/exams`, label: 'Exams' },
-        { href: '#', label: 'Results' },
+        { href: `/dashboard/student/courses/${courseId}/exams`, label: t('breadcrumb.exams') },
+        { href: '#', label: t('breadcrumb.results') },
     ]
+
+    // The deterministic grading branches store a status code, not prose
+    // (#725). A code is already conveyed by the review banner above the
+    // card — and after a teacher review "pending" would be stale — so the AI
+    // card only renders what the model actually wrote.
+    const overallFeedback = aiData?.overall_feedback || aiData?.summary
+    const overallIsStatusCode = parseExamFeedback(overallFeedback) !== null
+    const showAiAnalysis = !!aiData && !overallIsStatusCode
+
+    // Correct option per question, so a stored `incorrect` code can name it.
+    // A true/false question can define its answer either as a flagged option or
+    // in its own `correct_answer` column; the grader accepts both, so naming the
+    // right answer has to as well, or such a question shows a bare "Incorrect."
+    const correctAnswerByQuestionId = (examData.exam_questions || []).reduce(
+        (acc: Record<number, string | undefined>, q: {
+            question_id: number
+            correct_answer?: string | null
+            question_options?: { is_correct?: boolean; option_text?: string }[]
+        }) => {
+            acc[q.question_id] =
+                q.question_options?.find((opt) => opt.is_correct)?.option_text
+                ?? q.correct_answer
+                ?? undefined
+            return acc
+        },
+        {} as Record<number, string | undefined>
+    )
 
     return (
         <div className="container mx-auto py-5 sm:py-8 px-4 space-y-5 sm:space-y-8 animate-in fade-in duration-500">
             <BreadcrumbComponent links={breadcrumbLinks} />
 
             {/* Score Header */}
-            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-700 p-5 sm:p-8 md:p-12 text-white shadow-2xl shadow-indigo-200">
+            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-primary p-5 sm:p-8 md:p-12 text-primary-foreground shadow-2xl">
                 <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-10">
                     <IconTrophy className="h-24 w-24 sm:h-[180px] sm:w-[180px]" stroke={1} />
                 </div>
 
                 <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-5 sm:gap-8">
                     <div className="space-y-3 sm:space-y-4 text-center md:text-left">
-                        <Badge variant="outline" className="text-white border-white/30 bg-white/10 px-3 py-1">
-                            Exam Completed
+                        <Badge variant="outline" className="text-primary-foreground border-primary-foreground/30 bg-primary-foreground/10 px-3 py-1">
+                            {t('completed')}
                         </Badge>
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-black">{examData.title}</h1>
-                        <p className="text-indigo-100 max-w-lg text-sm sm:text-base">{examData.description}</p>
+                        <p className="text-primary-foreground max-w-lg text-sm sm:text-base">{examData.description}</p>
 
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 pt-2 sm:pt-4">
                             <div className="flex items-center gap-2">
-                                <div className="p-1.5 sm:p-2 rounded-lg bg-white/10">
+                                <div className="p-1.5 sm:p-2 rounded-lg bg-primary-foreground/10">
                                     <IconClock size={18} />
                                 </div>
-                                <span className="text-xs sm:text-sm font-medium">Completed on {new Date(submission.submission_date).toLocaleDateString()}</span>
+                                <span className="text-xs sm:text-sm font-medium">{t('completedOn', { date: format.dateTime(new Date(submission.submission_date), { dateStyle: 'long' }) })}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 text-indigo-950 dark:text-white rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
-                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Final Score</span>
-                        <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score || 0)}%</div>
-                        <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-3 sm:mt-4">
+                    <div className="bg-card text-card-foreground rounded-2xl p-5 sm:p-8 flex flex-col items-center justify-center shadow-xl w-full md:w-auto md:min-w-[200px]">
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">{t('finalScore')}</span>
+                        {/* Ungraded shows as ungraded, not as 0% (PRODUCT.md principle 5). */}
+                        {score == null ? (
+                            <>
+                                <div className="text-5xl sm:text-6xl font-black mb-2" aria-label={t('notGradedYet')}>—</div>
+                                <span className="text-xs sm:text-sm font-medium text-muted-foreground">{t('notGradedYet')}</span>
+                            </>
+                        ) : (
+                            <div className="text-5xl sm:text-6xl font-black mb-2">{Math.round(score)}%</div>
+                        )}
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mt-3 sm:mt-4">
                             <div
-                                className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-1000"
-                                style={{ width: `${score || 0}%` }}
+                                className="h-full bg-primary transition-all duration-1000"
+                                style={{ width: `${score ?? 0}%` }}
                             />
                         </div>
                     </div>
@@ -201,16 +252,20 @@ export default async function ExamResultPage({ params }: PageProps) {
             </div>
 
             {/* Review Status Banner */}
+            {(reviewStatus === null || reviewStatus === 'pending') && (
+                <RetryGrading examId={examData.exam_id} submissionId={submission.submission_id} />
+            )}
+
             {reviewStatus === 'pending_teacher_review' && (
-                <Card className="border-2 border-amber-200 dark:border-amber-800 shadow-lg overflow-hidden bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+                <Card className="border-2 border-warning/30 shadow-lg overflow-hidden bg-warning/10">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-amber-100 dark:bg-amber-900/40 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-warning/15 rounded-xl text-warning shrink-0">
                             <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-amber-900 dark:text-amber-200">Pending Teacher Review</h3>
-                            <p className="text-amber-800 dark:text-amber-300 text-sm">
-                                Your multiple choice and true/false answers have been auto-graded. Free-text answers are awaiting teacher evaluation. Your final score may change after review.
+                            <h3 className="font-bold text-lg text-warning">{t('pendingReview.title')}</h3>
+                            <p className="text-warning text-sm">
+                                {t('pendingReview.description')}
                             </p>
                         </div>
                     </CardContent>
@@ -218,15 +273,15 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {reviewStatus === 'ai_reviewed' && (
-                <Card className="border-2 border-green-200 dark:border-green-800 shadow-lg overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+                <Card className="border-2 border-success/30 shadow-lg overflow-hidden bg-success/10">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-green-100 dark:bg-green-900/40 rounded-xl text-green-600 dark:text-green-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-success/15 rounded-xl text-success shrink-0">
                             <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-green-900 dark:text-green-200">AI Evaluated</h3>
-                            <p className="text-green-800 dark:text-green-300 text-sm">
-                                All answers have been evaluated by AI. Your teacher may still review and adjust scores.
+                            <h3 className="font-bold text-lg text-success">{t('aiReviewed.title')}</h3>
+                            <p className="text-success text-sm">
+                                {t('aiReviewed.description')}
                             </p>
                         </div>
                     </CardContent>
@@ -234,15 +289,15 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {reviewStatus === 'teacher_reviewed' && (
-                <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+                <Card className="border-2 border-primary/25 shadow-lg overflow-hidden bg-brand-tint">
                     <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-brand-tint rounded-xl text-brand-text shrink-0">
                             <IconUserCheck className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg text-blue-900 dark:text-blue-200">Teacher Reviewed</h3>
-                            <p className="text-blue-800 dark:text-blue-300 text-sm">
-                                Your exam has been reviewed and finalized by your teacher.
+                            <h3 className="font-bold text-lg text-brand-text">{t('teacherReviewed.title')}</h3>
+                            <p className="text-brand-text text-sm">
+                                {t('teacherReviewed.description')}
                             </p>
                         </div>
                     </CardContent>
@@ -251,21 +306,21 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {/* Certificate Banner */}
             {certificate && (
-                <Card className="border-2 border-emerald-200 dark:border-emerald-800 shadow-lg overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
+                <Card className="border-2 border-success/30 shadow-lg overflow-hidden bg-success/10">
                     <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                        <div className="p-2.5 sm:p-3 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <div className="p-2.5 sm:p-3 bg-success/15 rounded-xl text-success shrink-0">
                             <IconCertificate className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="font-bold text-lg text-emerald-900 dark:text-emerald-200">Certificate Earned!</h3>
-                            <p className="text-emerald-800 dark:text-emerald-300 text-sm">
-                                Congratulations! You have completed all requirements for this course and earned a certificate.
+                            <h3 className="font-bold text-lg text-success">{t('certificate.title')}</h3>
+                            <p className="text-success text-sm">
+                                {t('certificate.description')}
                             </p>
                         </div>
                         <Link href={`/verify/${certificate.verification_code}`}>
-                            <Button variant="outline" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-bold gap-2 whitespace-nowrap">
+                            <Button variant="outline" className="border-success/30 text-success hover:bg-success/10 font-bold gap-2 whitespace-nowrap">
                                 <IconCertificate className="h-4 w-4" />
-                                View Certificate
+                                {t('certificate.view')}
                             </Button>
                         </Link>
                     </CardContent>
@@ -273,20 +328,20 @@ export default async function ExamResultPage({ params }: PageProps) {
             )}
 
             {/* AI Analysis Section */}
-            {aiData && (
-                <Card className="border-2 border-blue-200 dark:border-blue-800 shadow-lg overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-                    <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 p-4 sm:p-6 text-white">
+            {showAiAnalysis && (
+                <Card className="border-2 border-primary/25 shadow-lg overflow-hidden bg-brand-tint">
+                    <CardHeader className="bg-primary p-4 sm:p-6 text-primary-foreground">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white/20 rounded-lg shrink-0">
+                            <div className="p-2 bg-primary-foreground/20 rounded-lg shrink-0">
                                 <IconMessageChatbot className="h-5 w-5 sm:h-7 sm:w-7" />
                             </div>
-                            <CardTitle className="text-base sm:text-xl font-bold">AI Performance Analysis</CardTitle>
+                            <CardTitle className="text-base sm:text-xl font-bold">{t('aiAnalysis.title')}</CardTitle>
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <div className="prose prose-lg dark:prose-invert max-w-none">
-                            <p className="text-gray-900 dark:text-gray-100 leading-relaxed font-medium text-base">
-                                {aiData.overall_feedback || aiData.summary || "Your performance has been evaluated. Review the detailed feedback per question below."}
+                            <p className="text-foreground leading-relaxed font-medium text-base">
+                                {overallFeedback || t('aiAnalysis.fallback')}
                             </p>
                         </div>
                     </CardContent>
@@ -295,7 +350,7 @@ export default async function ExamResultPage({ params }: PageProps) {
 
             {/* Detailed Review */}
             <div className="space-y-4 sm:space-y-6">
-                <h2 className="text-xl sm:text-2xl font-bold px-1 sm:px-2">Detailed Question Review</h2>
+                <h2 className="text-xl sm:text-2xl font-bold px-1 sm:px-2">{t('detailedReview')}</h2>
                 <div className="space-y-4">
                     {examData.exam_questions?.map((question: any, idx: number) => {
                         const answer = answersByQuestionId[question.question_id];
@@ -305,33 +360,39 @@ export default async function ExamResultPage({ params }: PageProps) {
                         const isCorrect = (question.question_type === 'multiple_choice' || question.question_type === 'true_false')
                             ? correctOptionsByQuestion[question.question_id] ?? qScore?.is_correct ?? answer?.is_correct
                             : qScore?.is_correct ?? answer?.is_correct;
-                        const isFreeTextPending = question.question_type === 'free_text' && (!qScore?.ai_feedback || qScore?.ai_confidence === 0);
+                        // A teacher override is a grade: the parked row keeps its
+                        // ai_confidence = 0 / "Pending teacher review." text, so
+                        // is_overridden must win or the student keeps seeing
+                        // "Pending Review" after the teacher graded it (#674).
+                        const isFreeTextPending = question.question_type === 'free_text'
+                            && !qScore?.is_overridden
+                            && (!qScore?.ai_feedback || qScore?.ai_confidence === 0);
 
                         return (
                             <Card key={question.question_id} className={cn(
                                 "border-2 transition-all duration-300",
                                 isFreeTextPending
-                                    ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20"
+                                    ? "border-warning/40 bg-card"
                                     : isCorrect
-                                        ? "border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20"
-                                        : "border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20"
+                                        ? "border-success/40 bg-card"
+                                        : "border-destructive/40 bg-card"
                             )}>
                                 <CardHeader className="pb-3 border-b border-muted/10 px-4 sm:px-6">
                                     <div className="flex items-start justify-between gap-3 sm:gap-4">
                                         <div className="space-y-1 min-w-0">
                                             <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-muted-foreground uppercase tracking-widest">
-                                                Question {idx + 1}
-                                                <Badge variant="secondary" className="lowercase font-medium text-[10px] sm:text-xs">{question.question_type.replace('_', ' ')}</Badge>
+                                                {t('question', { number: idx + 1 })}
+                                                <Badge variant="secondary" className="lowercase font-medium text-[10px] sm:text-xs">{t(`questionType.${question.question_type}` as ExamQuestionTypeKey)}</Badge>
                                             </div>
                                             <h3 className="text-base sm:text-xl font-bold">{question.question_text}</h3>
                                         </div>
                                         <div className={cn(
                                             "p-1.5 sm:p-2 rounded-xl shrink-0",
                                             isFreeTextPending
-                                                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400"
+                                                ? "bg-warning/15 text-warning"
                                                 : isCorrect
-                                                    ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
-                                                    : "bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400"
+                                                    ? "bg-success/15 text-success"
+                                                    : "bg-destructive/15 text-destructive"
                                         )}>
                                             {isFreeTextPending ? <IconHourglass className="h-5 w-5 sm:h-7 sm:w-7" /> : isCorrect ? <IconCheck className="h-5 w-5 sm:h-7 sm:w-7" /> : <IconX className="h-5 w-5 sm:h-7 sm:w-7" />}
                                         </div>
@@ -349,18 +410,18 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 return (
                                                     <div key={opt.option_id} className={cn(
                                                         "p-3.5 sm:p-5 rounded-xl border-2 transition-all",
-                                                        isSelected && isOptionCorrect && "border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40 shadow-md",
-                                                        isSelected && !isOptionCorrect && "border-red-500 dark:border-red-600 bg-red-100 dark:bg-red-900/40 shadow-md",
-                                                        !isSelected && isOptionCorrect && "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
-                                                        !isSelected && !isOptionCorrect && "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"
+                                                        isSelected && isOptionCorrect && "border-success bg-success/15 shadow-md",
+                                                        isSelected && !isOptionCorrect && "border-destructive bg-destructive/15 shadow-md",
+                                                        !isSelected && isOptionCorrect && "border-success/40 bg-success/10",
+                                                        !isSelected && !isOptionCorrect && "border-border bg-muted"
                                                     )}>
                                                         <div className="flex items-start sm:items-center justify-between gap-2">
                                                             <span className={cn(
                                                                 "font-bold text-sm sm:text-base",
-                                                                isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
-                                                                isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
-                                                                !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
-                                                                !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
+                                                                isSelected && isOptionCorrect && "text-success",
+                                                                isSelected && !isOptionCorrect && "text-destructive",
+                                                                !isSelected && isOptionCorrect && "text-success",
+                                                                !isSelected && !isOptionCorrect && "text-muted-foreground"
                                                             )}>{opt.option_text}</span>
                                                             {(isSelected || isOptionCorrect) && (
                                                                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
@@ -369,16 +430,16 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                                             className={cn(
                                                                                 "rounded-md font-bold text-[10px] sm:text-xs",
                                                                                 isOptionCorrect
-                                                                                    ? "bg-blue-600 dark:bg-blue-500 text-white"
-                                                                                    : "bg-red-600 dark:bg-red-500 text-white"
+                                                                                    ? "bg-success text-success-foreground"
+                                                                                    : "bg-destructive text-destructive-foreground"
                                                                             )}
                                                                         >
-                                                                            Your Choice
+                                                                            {t('yourChoice')}
                                                                         </Badge>
                                                                     )}
                                                                     {isOptionCorrect && (
-                                                                        <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
-                                                                            Correct
+                                                                        <Badge className="bg-success text-success-foreground rounded-md font-bold text-[10px] sm:text-xs">
+                                                                            {t('correct')}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
@@ -401,18 +462,18 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 return (
                                                     <div key={opt.option_id} className={cn(
                                                         "p-3.5 sm:p-5 rounded-xl border-2 transition-all",
-                                                        isSelected && isOptionCorrect && "border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40 shadow-md",
-                                                        isSelected && !isOptionCorrect && "border-red-500 dark:border-red-600 bg-red-100 dark:bg-red-900/40 shadow-md",
-                                                        !isSelected && isOptionCorrect && "border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30",
-                                                        !isSelected && !isOptionCorrect && "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"
+                                                        isSelected && isOptionCorrect && "border-success bg-success/15 shadow-md",
+                                                        isSelected && !isOptionCorrect && "border-destructive bg-destructive/15 shadow-md",
+                                                        !isSelected && isOptionCorrect && "border-success/40 bg-success/10",
+                                                        !isSelected && !isOptionCorrect && "border-border bg-muted"
                                                     )}>
                                                         <div className="flex items-center justify-between gap-2">
                                                             <span className={cn(
                                                                 "font-bold text-base sm:text-lg",
-                                                                isSelected && isOptionCorrect && "text-green-900 dark:text-green-100",
-                                                                isSelected && !isOptionCorrect && "text-red-900 dark:text-red-100",
-                                                                !isSelected && isOptionCorrect && "text-green-800 dark:text-green-200",
-                                                                !isSelected && !isOptionCorrect && "text-gray-600 dark:text-gray-400"
+                                                                isSelected && isOptionCorrect && "text-success",
+                                                                isSelected && !isOptionCorrect && "text-destructive",
+                                                                !isSelected && isOptionCorrect && "text-success",
+                                                                !isSelected && !isOptionCorrect && "text-muted-foreground"
                                                             )}>{opt.option_text}</span>
                                                             {(isSelected || isOptionCorrect) && (
                                                                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
@@ -421,16 +482,16 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                                             className={cn(
                                                                                 "rounded-md font-bold text-[10px] sm:text-xs",
                                                                                 isOptionCorrect
-                                                                                    ? "bg-blue-600 dark:bg-blue-500 text-white"
-                                                                                    : "bg-red-600 dark:bg-red-500 text-white"
+                                                                                    ? "bg-success text-success-foreground"
+                                                                                    : "bg-destructive text-destructive-foreground"
                                                                             )}
                                                                         >
-                                                                            Your Choice
+                                                                            {t('yourChoice')}
                                                                         </Badge>
                                                                     )}
                                                                     {isOptionCorrect && (
-                                                                        <Badge className="bg-green-600 dark:bg-green-500 text-white rounded-md font-bold text-[10px] sm:text-xs">
-                                                                            Correct
+                                                                        <Badge className="bg-success text-success-foreground rounded-md font-bold text-[10px] sm:text-xs">
+                                                                            {t('correct')}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
@@ -445,22 +506,23 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     {/* Free Text Questions */}
                                     {question.question_type === 'free_text' && (() => {
                                         const questionScore = questionScoresByQuestionId[question.question_id];
-                                        const isPendingReview = !questionScore?.ai_feedback || questionScore?.ai_confidence === 0;
-                                        const hasTeacherOverride = questionScore?.is_overridden;
+                                        const hasTeacherOverride = !!questionScore?.is_overridden;
+                                        const isPendingReview = !hasTeacherOverride
+                                            && (!questionScore?.ai_feedback || questionScore?.ai_confidence === 0);
 
                                         return (
                                             <div className="space-y-3">
                                                 <div className={cn(
                                                     "p-3.5 sm:p-5 rounded-xl border-2",
                                                     isPendingReview
-                                                        ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800"
+                                                        ? "bg-warning/10 border-warning/30"
                                                         : isCorrect
-                                                            ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800"
-                                                            : "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800"
+                                                            ? "bg-success/10 border-success/30"
+                                                            : "bg-brand-tint border-primary/25"
                                                 )}>
-                                                    <p className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-2">YOUR SUBMISSION</p>
-                                                    <p className="font-medium text-gray-900 dark:text-gray-100 text-base leading-relaxed">
-                                                        {answer?.answer_text || "No answer provided."}
+                                                    <p className="text-xs font-bold uppercase text-muted-foreground mb-2">{t('yourSubmission')}</p>
+                                                    <p className="font-medium text-foreground text-base leading-relaxed">
+                                                        {answer?.answer_text || t('noAnswer')}
                                                     </p>
                                                 </div>
 
@@ -468,25 +530,25 @@ export default async function ExamResultPage({ params }: PageProps) {
                                                 {questionScore && !isPendingReview && (
                                                     <div className="flex items-center gap-3 px-2">
                                                         <Badge variant="secondary" className="font-bold">
-                                                            {questionScore.points_earned}/{questionScore.points_possible} pts
+                                                            {t('points', { earned: questionScore.points_earned, possible: questionScore.points_possible })}
                                                         </Badge>
                                                         {hasTeacherOverride && (
-                                                            <Badge className="bg-blue-600 text-white font-bold gap-1">
+                                                            <Badge className="bg-primary text-primary-foreground font-bold gap-1">
                                                                 <IconUserCheck size={14} />
-                                                                Teacher reviewed
+                                                                {t('teacherReviewedBadge')}
                                                             </Badge>
                                                         )}
                                                     </div>
                                                 )}
 
                                                 {isPendingReview && (
-                                                    <div className="bg-amber-50 dark:bg-amber-950/30 border-l-4 border-amber-500 dark:border-amber-600 p-3.5 sm:p-5 rounded-r-xl">
-                                                        <div className="flex items-center gap-2 font-bold mb-2 text-amber-900 dark:text-amber-300">
+                                                    <div className="bg-warning/10 border-l-4 border-warning p-3.5 sm:p-5 rounded-r-xl">
+                                                        <div className="flex items-center gap-2 font-bold mb-2 text-warning">
                                                             <IconHourglass size={20} />
-                                                            <span>Pending Review</span>
+                                                            <span>{t('questionPending.title')}</span>
                                                         </div>
-                                                        <p className="text-amber-800 dark:text-amber-200 text-sm leading-relaxed">
-                                                            This free-text answer is awaiting evaluation. Your teacher will review it, or it will be evaluated by AI.
+                                                        <p className="text-warning text-sm leading-relaxed">
+                                                            {t('questionPending.description')}
                                                         </p>
                                                     </div>
                                                 )}
@@ -497,20 +559,29 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     {/* Per-question AI/Teacher feedback */}
                                     {(() => {
                                         const questionScore = questionScoresByQuestionId[question.question_id];
-                                        const feedbackText = questionScore?.is_overridden
+                                        const isTeacherFeedback = !!questionScore?.is_overridden;
+                                        // Stored codes (and the legacy English sentences) are
+                                        // translated here; real AI prose passes through.
+                                        const feedbackText = isTeacherFeedback
                                             ? questionScore?.teacher_notes
-                                            : (questionScore?.ai_feedback || answer?.feedback);
-                                        const feedbackSource = questionScore?.is_overridden ? 'Teacher' : 'AI';
+                                            : describeExamFeedback(
+                                                questionScore?.ai_feedback || answer?.feedback,
+                                                tFeedback,
+                                                { correctAnswer: correctAnswerByQuestionId[question.question_id] },
+                                            );
 
-                                        if (!feedbackText || (question.question_type === 'free_text' && questionScore?.ai_confidence === 0)) return null;
+                                        const stillPending = question.question_type === 'free_text'
+                                            && !questionScore?.is_overridden
+                                            && questionScore?.ai_confidence === 0;
+                                        if (!feedbackText || stillPending) return null;
 
                                         return (
-                                            <div className="bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-600 dark:border-blue-500 p-3.5 sm:p-5 rounded-r-xl">
-                                                <div className="flex items-center gap-2 font-bold mb-2 text-blue-900 dark:text-blue-300">
-                                                    {feedbackSource === 'Teacher' ? <IconUserCheck size={20} /> : <IconMessageChatbot size={20} />}
-                                                    <span>{feedbackSource} Feedback</span>
+                                            <div className="bg-brand-tint border-l-4 border-primary p-3.5 sm:p-5 rounded-r-xl">
+                                                <div className="flex items-center gap-2 font-bold mb-2 text-brand-text">
+                                                    {isTeacherFeedback ? <IconUserCheck size={20} /> : <IconMessageChatbot size={20} />}
+                                                    <span>{isTeacherFeedback ? t('teacherFeedback') : t('aiFeedback')}</span>
                                                 </div>
-                                                <p className="text-blue-900 dark:text-blue-200 text-base leading-relaxed">{feedbackText}</p>
+                                                <p className="text-brand-text text-base leading-relaxed">{feedbackText}</p>
                                             </div>
                                         );
                                     })()}
@@ -524,14 +595,14 @@ export default async function ExamResultPage({ params }: PageProps) {
             {/* Footer Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-6 sm:pt-10">
                 <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-                    <Button variant="outline" size="lg" className="w-full sm:w-auto rounded-2xl gap-2 font-bold py-5 sm:py-6 px-6 sm:px-8">
+                    <Button variant="outline" size="lg" className="w-full sm:w-auto gap-2 font-bold py-5 sm:py-6 px-6 sm:px-8">
                         <IconArrowLeft size={18} />
-                        View All Assessments
+                        {t('viewAllAssessments')}
                     </Button>
                 </Link>
                 <Link href={`/dashboard/student/courses/${courseId}`}>
-                    <Button size="lg" className="w-full sm:w-auto rounded-2xl font-bold py-5 sm:py-6 px-6 sm:px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
-                        Continue Learning
+                    <Button size="lg" className="w-full sm:w-auto font-bold py-5 sm:py-6 px-6 sm:px-8 bg-primary hover:shadow-xl hover:shadow-primary/20">
+                        {t('continueLearning')}
                     </Button>
                 </Link>
             </div>

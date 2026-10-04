@@ -29,6 +29,20 @@ export function lastUserMessageText(messages: ChatMessage[] | undefined | null):
     )
 }
 
+/**
+ * Cap the conversation history sent to the model past N turns (issue #807) —
+ * without this a long-running conversation is unbounded token cost. Simple
+ * and deterministic: the most recent `limit` messages, no summarization.
+ *
+ * Only for what goes to the MODEL. Callers must keep using the untrimmed
+ * `messages` array for persistence and for anything that reads the
+ * transcript as evidence — e.g. `verifyLessonCompletion` — so capping
+ * context here never starves that of what it needs.
+ */
+export function capChatHistory<T>(messages: T[], limit: number): T[] {
+    return messages.length > limit ? messages.slice(-limit) : messages
+}
+
 interface TenantOwnedRow {
     course?: { tenant_id?: string } | { tenant_id?: string }[] | null
 }

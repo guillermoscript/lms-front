@@ -28,6 +28,8 @@ import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
+import { loadCourseCommunityEntry } from '@/lib/community/access'
+import { CourseCommunityEntry } from '@/components/community/course-community-entry'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -45,20 +47,24 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     redirect('/auth/login')
   }
 
-  // Verify access (entitlements model) before reading anything about the course
-  await requireCourseAccess(supabase, userId, numericCourseId)
-
+  // #677: existence first, so a bad id gets the dashboard 404 instead of the
+  // silent bounce `requireCourseAccess` gives a missing entitlement. Course
+  // ids are already enumerable through /browse, so this reveals nothing new;
+  // the entitlement gate below still runs for every course that exists.
   const { data: course, error } = await supabase
     .from('courses')
     .select('course_id, title, description, thumbnail_url, author_id')
     .eq('course_id', numericCourseId)
     .eq('tenant_id', tenantId)
-    .single()
+    .maybeSingle()
 
   if (error || !course) {
-    console.error('Error fetching course:', error)
+    if (error) console.error('Error fetching course:', error)
     notFound()
   }
+
+  // Verify access (entitlements model) before reading anything else about the course
+  await requireCourseAccess(supabase, userId, numericCourseId)
 
   // Fetch all remaining data in parallel
   const [
@@ -70,6 +76,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     { data: userReview },
     { data: tutorConfig },
     { data: reviewsData },
+    communityEntry,
   ] = await Promise.all([
     course.author_id
       ? supabase.from('profiles').select('full_name, avatar_url').eq('id', course.author_id).single()
@@ -116,6 +123,9 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       .eq('entity_type', 'courses')
       .eq('entity_id', numericCourseId)
       .order('created_at', { ascending: false }),
+    // #868: after the access gate above, so only a viewer who can open the
+    // course feed ever gets a link to it.
+    loadCourseCommunityEntry({ tenantId, viewerId: userId, courseId: numericCourseId }),
   ])
 
   const authorProfile = authorData
@@ -203,7 +213,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
               <div className="pt-2 space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
-                    <span className="text-2xl font-black text-primary">{progressPercent}%</span>
+                    <span className="text-2xl font-black text-brand-text">{progressPercent}%</span>
                     <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('courseProgress')}</p>
                   </div>
                   <span className="text-xs font-bold bg-muted px-2 py-1 rounded-md text-muted-foreground">
@@ -212,37 +222,47 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-muted border p-[2px]">
                   <div
-                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 pt-3 sm:pt-4">
-                {nextLesson && (
-                  <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
-                    <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl shadow-md hover:shadow-lg active:shadow-lg transition-all">
-                      <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
-                      {completedCount > 0 ? t('continue') : t('startNow')}
-                    </Button>
-                  </Link>
-                )}
-                {exerciseCount > 0 && (
-                  <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl border-2">
-                      <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                      {t('exercises', { count: exerciseCount })}
-                    </Button>
-                  </Link>
-                )}
-                {examCount > 0 && (
-                  <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
-                    <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold rounded-xl border-2">
-                      <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                      {t('exams', { count: examCount })}
-                    </Button>
-                  </Link>
+              <div className="space-y-2.5 sm:space-y-3 pt-3 sm:pt-4">
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                  {nextLesson && (
+                    <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
+                      <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold shadow-md hover:shadow-lg active:shadow-lg transition-all">
+                        <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
+                        {completedCount > 0 ? t('continue') : t('startNow')}
+                      </Button>
+                    </Link>
+                  )}
+                  {exerciseCount > 0 && (
+                    <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
+                      <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
+                        <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
+                        {t('exercises', { count: exerciseCount })}
+                      </Button>
+                    </Link>
+                  )}
+                  {examCount > 0 && (
+                    <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
+                      <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
+                        <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
+                        {t('exams', { count: examCount })}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+
+                {/* Course community (#868) — its own row, so Spanish labels never squeeze the actions */}
+                {communityEntry.enabled && (
+                  <CourseCommunityEntry
+                    href={`/dashboard/student/courses/${courseId}/community`}
+                    activity={communityEntry.activity}
+                  />
                 )}
               </div>
             </div>
@@ -273,8 +293,8 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                   <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 md:p-6">
                     <div
                       className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${isCompleted
-                          ? 'bg-emerald-500/20 text-emerald-600'
-                          : 'bg-background text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary shadow-sm border'
+                          ? 'bg-success/20 text-success'
+                          : 'bg-background text-muted-foreground group-hover:bg-brand-tint group-hover:text-brand-text shadow-sm border'
                         }`}
                     >
                       {isCompleted ? (
@@ -287,7 +307,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base sm:text-lg group-hover:text-primary transition-colors truncate">
+                      <h3 className="font-bold text-base sm:text-lg group-hover:text-brand-text transition-colors truncate">
                         {lesson.title}
                       </h3>
                       {lesson.description ? (
@@ -296,11 +316,11 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                         </p>
                       ) : (
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             <IconClock size={12} />
                             {t('mins', { count: 15 })}
                           </span>
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             <IconBook size={12} />
                             {t('videoText')}
                           </span>
@@ -310,11 +330,11 @@ export default async function CourseOverviewPage({ params }: PageProps) {
 
                     <div className="hidden sm:block">
                       {isCompleted ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 font-bold px-3 py-1">
+                        <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20 font-bold px-3 py-1">
                           {t('completed')}
                         </Badge>
                       ) : (
-                        <Button variant="ghost" size="sm" className="font-bold text-primary group-hover:bg-primary group-hover:text-white rounded-lg">
+                        <Button variant="ghost" size="sm" className="font-bold text-brand-text group-hover:bg-primary group-hover:text-primary-foreground">
                           {t('study')}
                         </Button>
                       )}
@@ -322,7 +342,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
                     <div className="sm:hidden">
                       <IconPlayerPlay className={cn(
                         "h-5 w-5 transition-transform group-hover:scale-110",
-                        isCompleted ? "text-emerald-600" : "text-primary"
+                        isCompleted ? "text-success" : "text-brand-text"
                       )} />
                     </div>
                   </CardContent>

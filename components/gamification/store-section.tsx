@@ -7,11 +7,13 @@ import { PointStoreItem } from "./point-store-item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconShoppingBag, IconCoins, IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 export function StoreSection() {
     const { summary, refresh } = useGamificationSummary();
     const { items: storeItems, loading: storeLoading, fetch: fetchStore } = usePointStore({ onPurchase: refresh });
     const t = useTranslations('components.gamification');
+    const tPlans = useTranslations('billing.plans');
 
     useEffect(() => {
         if (summary?.features?.store) {
@@ -24,7 +26,7 @@ export function StoreSection() {
         return (
             <div className="space-y-6">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
+                    <div className="p-2 rounded-xl bg-brand-tint text-brand-text">
                         <IconShoppingBag size={24} />
                     </div>
                     <div>
@@ -36,7 +38,7 @@ export function StoreSection() {
                     <div className="mx-auto w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
                         <IconLock size={24} className="text-muted-foreground" />
                     </div>
-                    <p className="text-sm font-bold">{t('upgrade.storeLocked')}</p>
+                    <p className="text-sm font-bold">{t('upgrade.storeLocked', { plan: tPlans(FEATURE_REQUIRED_PLAN.store) })}</p>
                     <p className="text-xs text-muted-foreground mt-1">{t('upgrade.upgradeDescription')}</p>
                 </div>
             </div>
@@ -57,7 +59,7 @@ export function StoreSection() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
+                    <div className="p-2 rounded-xl bg-brand-tint text-brand-text">
                         <IconShoppingBag size={24} />
                     </div>
                     <div>
@@ -71,8 +73,8 @@ export function StoreSection() {
                         <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">{t('store.balance')}</span>
                         <span className="text-lg font-black leading-none">{summary?.coins || 0}</span>
                     </div>
-                    <div className="p-1.5 rounded-lg bg-cyan-500 text-white shadow-lg shadow-cyan-500/20">
-                        <IconCoins size={20} className="fill-white/20" />
+                    <div className="p-1.5 rounded-lg bg-primary text-primary-foreground shadow-lg">
+                        <IconCoins size={20} className="fill-primary-foreground/20" />
                     </div>
                 </div>
             </div>

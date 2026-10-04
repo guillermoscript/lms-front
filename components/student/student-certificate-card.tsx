@@ -11,21 +11,36 @@ import {
     IconCalendar,
     IconUser,
 } from '@tabler/icons-react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { formatDate } from '@/lib/format-date'
+import { DEFAULT_CERTIFICATE_DESIGN } from '@/lib/certificates/default-design'
 import { SocialShareModal } from './social-share-modal'
-import { cn } from '@/lib/utils'
+
+/** The slice of the `certificates` row (with its joins) the card reads. */
+interface StudentCertificate {
+    certificate_id: string
+    verification_code: string
+    issued_at: string
+    courses?: { title?: string | null } | null
+    certificate_templates?: {
+        template_name?: string | null
+        issuer_name?: string | null
+        design_settings?: { primary_color?: string | null } | null
+    } | null
+}
 
 interface StudentCertificateCardProps {
-    certificate: any
+    certificate: StudentCertificate
 }
 
 export function StudentCertificateCard({ certificate }: StudentCertificateCardProps) {
     const t = useTranslations('dashboard.student.profile.certificates')
+    const locale = useLocale()
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
     const designSettings = certificate.certificate_templates?.design_settings
-    const primaryColor = designSettings?.primary_color || '#3b82f6'
+    const primaryColor = designSettings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color
     const courseTitle = certificate.courses?.title || 'Course'
     const templateName = certificate.certificate_templates?.template_name
     const issuerName = certificate.certificate_templates?.issuer_name || 'LMS Academy'
@@ -71,8 +86,8 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                     className="w-8 h-[1px] mx-auto mt-1.5 mb-1"
                                     style={{ background: `linear-gradient(90deg, transparent, ${primaryColor}60, transparent)` }}
                                 />
-                                <div className="text-[7px] text-muted-foreground/60 uppercase tracking-wider">
-                                    {issuedDate.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                                <div className="text-[7px] text-muted-foreground uppercase tracking-wider">
+                                    {formatDate(issuedDate, locale, { month: 'short', year: 'numeric' })}
                                 </div>
                             </div>
                         </div>
@@ -87,7 +102,7 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                         </h3>
                                         <Badge
                                             variant="outline"
-                                            className="text-[9px] uppercase tracking-widest font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shrink-0"
+                                            className="text-[9px] uppercase tracking-widest font-bold text-success bg-success/10 border-success/20 shrink-0"
                                         >
                                             <IconShieldCheck size={9} className="mr-0.5" />
                                             {t('verified')}
@@ -107,13 +122,13 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                 </span>
                                 <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
                                     <IconCalendar size={11} className="text-muted-foreground/50" />
-                                    {t('issuedOn', { date: issuedDate.toLocaleDateString() })}
+                                    {t('issuedOn', { date: formatDate(issuedDate, locale) })}
                                 </span>
                             </div>
 
                             {/* Verification code */}
                             <div className="flex items-center gap-2">
-                                <code className="text-[10px] font-mono text-muted-foreground/60 bg-muted/50 px-2 py-0.5 rounded">
+                                <code className="text-[10px] font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                                     {certificate.verification_code}
                                 </code>
                             </div>
@@ -126,13 +141,13 @@ export function StudentCertificateCard({ certificate }: StudentCertificateCardPr
                                         {t('view')}
                                     </Button>
                                 </a>
-                                <a href={`/api/certificates/${certificate.certificate_id}?format=pdf`} download>
+                                <a href={`/api/certificates/${certificate.certificate_id}?format=pdf`} download data-testid="certificate-download-pdf">
                                     <Button variant="outline" size="sm" className="h-8 text-xs font-semibold gap-1.5">
                                         <IconDownload size={13} />
                                         {t('download')}
                                     </Button>
                                 </a>
-                                <Link href={`/verify/${certificate.verification_code}`}>
+                                <Link href={`/verify/${certificate.verification_code}`} data-testid="certificate-verify-link">
                                     <Button variant="outline" size="sm" className="h-8 text-xs font-semibold gap-1.5">
                                         <IconShieldCheck size={13} />
                                         {t('verify')}

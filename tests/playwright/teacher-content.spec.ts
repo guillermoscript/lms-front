@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { loginAsTeacher } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
+import { SEEDED, getAdmin } from './utils/plan-gate-fixtures'
 
 /**
  * P1 — Teacher Content CRUD Tests
@@ -21,6 +22,52 @@ import { BASE, LOCALE } from './utils/constants'
  */
 
 const COURSE_URL = `${BASE}/${LOCALE}/dashboard/teacher/courses/1001`
+
+/** Course 1001's lessons, per the seed. */
+const COURSE_LESSON_IDS = [1001, 1002]
+
+/**
+ * The students-tab test asserts the seeded student reads as `not_started`, and
+ * `classifyEngagement` (lib/analytics/student-progress.ts:232) returns that ONLY
+ * when `lastActivityAt` is null. Six sources feed that timestamp, and one of them
+ * is `lesson_views` — so merely OPENING a lesson page as student@e2etest.com,
+ * which `student-courses.spec.ts` does three times, flips the badge to `active`
+ * and fails a test that has nothing to do with lesson views.
+ *
+ * CI shards, so whether the two specs meet is an accident of how many tests exist;
+ * adding ten in #741 was enough to put them in the same shard and turn a latent
+ * landmine into a red build. Rather than depend on nobody touching the seeded
+ * student first, restore the state this spec documents.
+ *
+ * Scoped to course 1001 and this one user. `exam_submissions` and
+ * `exercise_completions` are deliberately NOT cleared — they are the seeded
+ * fixtures other specs assert on, and they cannot flip this badge without also
+ * breaking the `0 / 2` assertion above it, which would be a real failure worth
+ * seeing.
+ */
+async function clearSeededStudentActivity() {
+  const admin = getAdmin()
+  const wipe = async (what: string, run: PromiseLike<{ error: { message: string } | null }>) => {
+    const { error } = await run
+    if (error) throw new Error(`could not clear ${what}: ${error.message}`)
+  }
+  await wipe(
+    'lesson_views',
+    admin.from('lesson_views').delete().eq('user_id', SEEDED.student.id).in('lesson_id', COURSE_LESSON_IDS),
+  )
+  await wipe(
+    'lesson_completions',
+    admin.from('lesson_completions').delete().eq('user_id', SEEDED.student.id).in('lesson_id', COURSE_LESSON_IDS),
+  )
+  await wipe(
+    'lesson_checkpoint_attempts',
+    admin.from('lesson_checkpoint_attempts').delete().eq('user_id', SEEDED.student.id).in('lesson_id', COURSE_LESSON_IDS),
+  )
+  await wipe(
+    'practice_attempts',
+    admin.from('practice_attempts').delete().eq('user_id', SEEDED.student.id).eq('course_id', 1001),
+  )
+}
 
 test.describe('Teacher Content — Course Detail Page', () => {
   test.beforeEach(async ({ page }) => {
@@ -54,6 +101,51 @@ test.describe('Teacher Content — Course Detail Page', () => {
         page.locator('[role="tab"]').filter({ hasText: tabName })
       ).toBeVisible()
     }
+  })
+
+  test('students tab shows per-student progress and opens the detail sheet (#647)', async ({ page }) => {
+    test.setTimeout(60_000)
+    // Order-independence: see clearSeededStudentActivity's comment.
+    await clearSeededStudentActivity()
+    await page.goto(COURSE_URL)
+
+    // Seeded: student@e2etest.com is enrolled in 1001 with no completions.
+    const studentsTab = page.getByRole('tab', { name: /Students/ })
+    await expect(studentsTab).toBeVisible({ timeout: 15_000 })
+    // base-ui tabs ignore a click that lands before hydration — retry until the panel shows.
+    const filter = page.getByTestId('student-status-filter')
+    await expect
+      .poll(
+        async () => {
+          await studentsTab.evaluate((t) => (t as HTMLElement).click())
+          await page.waitForTimeout(500)
+          return filter.isVisible()
+        },
+        { timeout: 20_000, intervals: [500, 1000] }
+      )
+      .toBe(true)
+    await expect(filter.getByRole('button', { name: /All/ })).toHaveAttribute('aria-pressed', 'true')
+
+    const row = page.locator('[data-testid="student-row"]').first()
+    await expect(row).toBeVisible()
+    // No completions → 0 of 2 lessons and an explicit "not started", never a blank.
+    await expect(row).toContainText('0 / 2')
+    await expect(row.locator('[data-status]')).toHaveAttribute('data-status', 'not_started')
+    await expect(row).toContainText(/No activity yet/)
+
+    // Filtering to a status with no students shows the empty-filter message, not "no students".
+    await filter.locator('[data-status="completed"]').evaluate((b) => (b as HTMLElement).click())
+    await expect(page.getByText(/No students match this filter/)).toBeVisible()
+    await filter.locator('[data-status="all"]').evaluate((b) => (b as HTMLElement).click())
+
+    // Row click opens the lesson-by-lesson sheet with what's next.
+    await row.evaluate((r) => (r as HTMLElement).click())
+    const sheet = page.locator('[data-slot="sheet-content"]')
+    await expect(sheet).toBeVisible({ timeout: 10_000 })
+    await expect(sheet).toContainText(/Next up/)
+    await expect(sheet).toContainText(/Pending/)
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
   })
 
   test('lessons tab shows lesson cards with correct count', async ({ page }) => {
@@ -230,6 +322,51 @@ test.describe('Teacher Content — Lesson Editor', () => {
     // Description is empty
     await expect(page.locator('#description')).toHaveValue('')
   })
+
+  // #687 — the starter template used to go through next-intl, which rejected its
+  // <Callout> tag (INVALID_MESSAGE: INVALID_TAG) and seeded the editor with the
+  // bare translation key. The template is a plain constant now, per locale.
+  for (const locale of ['en', 'es'] as const) {
+    test(`new lesson opens on the starter blocks, not a translation key (${locale})`, async ({ page }) => {
+      test.setTimeout(90_000)
+      const intlErrors: string[] = []
+      page.on('console', (msg) => {
+        if (msg.type() === 'error' && /INVALID_MESSAGE|MISSING_MESSAGE/.test(msg.text())) {
+          intlErrors.push(msg.text())
+        }
+      })
+
+      await page.goto(`${BASE}/${locale}/dashboard/teacher/courses/1001/lessons/new`)
+      await expect(page.locator('[data-tour="lesson-header"]')).toBeVisible({ timeout: 15_000 })
+
+      // Content is the 2nd step. base-ui buttons need a DOM click from Playwright.
+      const stepButtons = page.getByRole('navigation').getByRole('button')
+      await stepButtons.nth(1).evaluate((btn) => (btn as HTMLButtonElement).click())
+
+      const editor = page.locator('[data-tour="lesson-editor-mode"]')
+      await expect(editor).toBeVisible({ timeout: 15_000 })
+
+      // Visual mode: the heading block (an input) carries the starter title, and
+      // nothing on the page is the raw message key.
+      const expectedHeading = locale === 'es' ? 'Nuevo tema' : 'New topic'
+      const fieldValues = () =>
+        page
+          .locator('input, textarea')
+          .evaluateAll((els) => els.map((el) => (el as HTMLInputElement).value))
+      await expect.poll(fieldValues, { timeout: 15_000 }).toContain(expectedHeading)
+      expect((await fieldValues()).join('\n')).not.toMatch(/lessonEditor\.contentDefault/)
+
+      // MDX mode shows the same starter, callout included.
+      const mdxButton = editor.getByRole('button', { name: /mdx/i })
+      await mdxButton.evaluate((btn) => (btn as HTMLButtonElement).click())
+      const source = page.locator('#lesson-content')
+      await expect(source).toBeVisible({ timeout: 15_000 })
+      await expect(source).toHaveValue(new RegExp(`^# ${expectedHeading}\\n`))
+      await expect(source).toHaveValue(/<Callout type="info">/)
+
+      expect(intlErrors, intlErrors.join('\n')).toEqual([])
+    })
+  }
 })
 
 test.describe('Teacher Content — Exercise Builder', () => {

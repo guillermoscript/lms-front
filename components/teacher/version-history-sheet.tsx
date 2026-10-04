@@ -188,8 +188,8 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
           {/* Top bar */}
           <div className="px-6 py-4 border-b shrink-0 flex items-center justify-between bg-background">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <IconHistory aria-hidden="true" className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              <div className="w-9 h-9 rounded-lg bg-brand-tint flex items-center justify-center">
+                <IconHistory aria-hidden="true" className="h-5 w-5 text-brand-text" />
               </div>
               <div>
                 <DialogHeader className="p-0 space-y-0">
@@ -280,7 +280,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                       <div key={group.date} className="mb-1">
                         {/* Date header */}
                         <div className="px-4 py-2 sticky top-0 bg-muted/20 backdrop-blur-sm z-10">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {group.date}
                           </span>
                         </div>
@@ -309,7 +309,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                                     isSelected
                                       ? 'bg-primary-foreground ring-primary-foreground/30'
                                       : isLatest
-                                        ? 'bg-amber-500 ring-amber-500/20'
+                                        ? 'bg-primary ring-primary/20'
                                         : 'bg-muted-foreground/30 ring-muted/50'
                                   )} />
 
@@ -326,7 +326,7 @@ export function VersionHistorySheet({ contentType, contentId, onRestore, current
                                           'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
                                           isSelected
                                             ? 'bg-primary-foreground/20 text-primary-foreground'
-                                            : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                            : 'bg-brand-tint text-brand-text'
                                         )}>
                                           {t('latest')}
                                         </span>

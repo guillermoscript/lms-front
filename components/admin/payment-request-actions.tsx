@@ -44,9 +44,11 @@ interface PaymentRequestActionsProps {
     payment_currency: string
     admin_notes: string | null
   }
+  /** School-wide text from Settings → Payment; seeds an empty instructions field (#727). */
+  defaultInstructions?: string
 }
 
-export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
+export function PaymentRequestActions({ request, defaultInstructions = '' }: PaymentRequestActionsProps) {
   const t = useTranslations('dashboard.admin.paymentRequests.detail')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -60,7 +62,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
   // Form states
   const [paymentMethod, setPaymentMethod] = useState(request.payment_method || 'Bank Transfer')
   const [paymentInstructions, setPaymentInstructions] = useState(
-    request.payment_instructions || ''
+    request.payment_instructions || defaultInstructions
   )
   const [paymentDeadline, setPaymentDeadline] = useState('')
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || '')
@@ -142,6 +144,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
       {/* Pending Status: Send Instructions */}
       {request.status === 'pending' && (
         <Button
+          data-testid="payment-request-send-instructions"
           onClick={() => setInstructionsDialogOpen(true)}
           className="w-full"
           variant="default"
@@ -154,6 +157,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
       {/* Contacted Status: Confirm Payment */}
       {request.status === 'contacted' && (
         <Button
+          data-testid="payment-request-confirm-payment"
           onClick={() => setConfirmPaymentDialogOpen(true)}
           className="w-full"
           variant="default"
@@ -166,8 +170,9 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
       {/* Payment Received Status: Complete & Enroll */}
       {request.status === 'payment_received' && (
         <Button
+          data-testid="payment-request-complete"
           onClick={() => setCompleteDialogOpen(true)}
-          className="w-full bg-green-600 hover:bg-green-700"
+          className="w-full bg-success text-success-foreground hover:bg-success/90"
         >
           <IconCircleCheck className="mr-2 h-4 w-4" />
           {t('actions.completeEnroll')}
@@ -240,7 +245,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
             <Button variant="outline" onClick={() => setInstructionsDialogOpen(false)} disabled={loading}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleSendInstructions} disabled={loading}>
+            <Button data-testid="payment-request-send-instructions-submit" onClick={handleSendInstructions} disabled={loading}>
               {loading ? t('common.sending') : t('common.send')}
             </Button>
           </DialogFooter>
@@ -273,7 +278,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
             <Button variant="outline" onClick={() => setConfirmPaymentDialogOpen(false)} disabled={loading}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleConfirmPayment} disabled={loading}>
+            <Button data-testid="payment-request-confirm-payment-submit" onClick={handleConfirmPayment} disabled={loading}>
               {loading ? t('common.confirming') : t('common.confirm')}
             </Button>
           </DialogFooter>
@@ -289,7 +294,7 @@ export function PaymentRequestActions({ request }: PaymentRequestActionsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={loading}>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleComplete} disabled={loading}>
+            <AlertDialogAction data-testid="payment-request-complete-submit" onClick={handleComplete} disabled={loading}>
               {loading ? t('common.completing') : t('common.complete')}
             </AlertDialogAction>
           </AlertDialogFooter>

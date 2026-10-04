@@ -1,6 +1,9 @@
 import createIntlMiddleware from 'next-intl/middleware'
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/proxy'
+import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { isProtectedPath } from '@/lib/auth/route-access'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -103,10 +106,27 @@ function getTenantSlugFromHost(host: string): string | null {
  * production, `:3005`-style in local dev) and the scheme from
  * `x-forwarded-proto`.
  */
+/**
+ * The host:port the browser actually dialed.
+ *
+ * `Host` is right for every request the browser sends. It is wrong for the one
+ * request Next makes on its own: when a Server Action calls `redirect()`, Next
+ * renders the target page inline through an internal fetch that carries
+ * `Host: localhost:<port>` and keeps the real authority in `x-forwarded-host`.
+ * Resolving the tenant from `Host` there lands every tenant-subdomain action
+ * redirect on the DEFAULT tenant, where the caller is not a member, so the
+ * teacher who just saved a grade was bounced to /join-school (#674). Behind
+ * Cloudflare → Traefik both headers name the public domain, so preferring
+ * `x-forwarded-host` changes nothing in production.
+ */
+function requestAuthority(request: NextRequest): string {
+  return request.headers.get('x-forwarded-host') || request.headers.get('host') || ''
+}
+
 function publicRedirectUrl(request: NextRequest, path: string): URL {
   const url = new URL(path, request.url)
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const hostHeader = request.headers.get('host') || url.host
+  const hostHeader = requestAuthority(request) || url.host
 
   // The Host header is the exact authority the browser dialed, so it is the
   // only host:port a redirect can safely send it back to. Behind
@@ -192,9 +212,12 @@ export default async function proxy(request: NextRequest) {
   }
 
   // --- Tenant Resolution (runs for ALL routes including /api) ---
-  const host = request.headers.get('host') || ''
+  const host = requestAuthority(request)
   const tenantSlug = getTenantSlugFromHost(host)
-    || request.headers.get('x-tenant-slug') // Dev override
+    // Dev override only — a caller-supplied header must never steer tenant
+    // resolution once this is a real deployment (e.g. the platform's own
+    // apex domain in production, where getTenantSlugFromHost returns null).
+    || (process.env.NODE_ENV !== 'production' ? request.headers.get('x-tenant-slug') : null)
   let tenantId = DEFAULT_TENANT_ID
 
   if (tenantSlug) {
@@ -292,33 +315,18 @@ export default async function proxy(request: NextRequest) {
     : pathname
   const normalizedPath = cleanPath === '' ? '/' : cleanPath
 
-  // Public routes
-  const publicRoutes = [
-    '/auth/login',
-    '/auth/sign-up',
-    '/auth/sign-up-success',
-    '/auth/forgot-password',
-    '/auth/update-password',
-    '/auth/confirm',
-    '/auth/error',
-    '/',
-    '/auth/callback',
-    '/create-school',
-    '/creators',
-    '/join-school',
-    '/platform-pricing',
-    '/pricing',
-    '/verify',
-    '/courses',
-    // OAuth 2.1 consent screen (Supabase redirects here with ?authorization_id=…).
-    // Must be public: the page handles its own login redirect and preserves the
-    // authorization_id — the middleware's redirectTo drops query strings.
-    '/oauth/consent',
-  ]
-
-  const isPublicRoute = publicRoutes.some(route =>
-    normalizedPath === route || normalizedPath.startsWith(route + '/')
-  )
+  // Which paths need a session.
+  //
+  // This used to be the other way round: an allow-list of public routes, with
+  // everything else treated as protected. That made a typo'd URL a login wall
+  // for a logged-out visitor and a `/join-school` bounce for a logged-in one,
+  // instead of a 404 — and it meant every new public page had to remember to
+  // add itself here (`/products` did not, #719). The protected set is small,
+  // closed and rarely changes, so listing it instead is both safer to reason
+  // about and the fix for #728: an unknown path is simply not protected, and
+  // falls through to Next's not-found.
+  const isProtectedRoute = isProtectedPath(normalizedPath)
+  const isPublicRoute = !isProtectedRoute
 
   // --- Public routes: skip auth entirely when no cookies ---
   intlResponse.headers.set('x-tenant-id', tenantId)
@@ -341,39 +349,15 @@ export default async function proxy(request: NextRequest) {
     supabaseResponse.headers.set('x-user-id', user.id)
   }
 
-  // Read JWT claims from cookie (no network call) — getSession() is a local read
+  // Read JWT claims from the cookie (no network call). `accessTokenFromCookies`
+  // understands the `base64-` encoding @supabase/ssr writes; a hand-rolled
+  // JSON.parse here used to throw on it and silently default the role.
   let userRole: 'student' | 'teacher' | 'admin' = 'student'
-  if (user) {
-    try {
-      // Parse JWT directly from cookie to avoid creating another Supabase client
-      const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
-      if (authCookie) {
-        const sessionData = JSON.parse(authCookie.value)
-        const accessToken = sessionData?.access_token || sessionData?.[0]?.access_token
-        if (accessToken) {
-          const payload = JSON.parse(atob(accessToken.split('.')[1]))
-          userRole = payload.tenant_role || payload.user_role || 'student'
-        }
-      }
-    } catch {
-      // Fallback: try chunked cookies (sb-*-auth-token.0, .1, etc.)
-      try {
-        const chunks = request.cookies.getAll()
-          .filter(c => c.name.match(/^sb-.*-auth-token\.\d+$/))
-          .sort((a, b) => a.name.localeCompare(b.name))
-        if (chunks.length > 0) {
-          const combined = chunks.map(c => c.value).join('')
-          const sessionData = JSON.parse(combined)
-          const accessToken = sessionData?.access_token
-          if (accessToken) {
-            const payload = JSON.parse(atob(accessToken.split('.')[1]))
-            userRole = payload.tenant_role || payload.user_role || 'student'
-          }
-        }
-      } catch {
-        // ignore — default to 'student'
-      }
-    }
+  const cookieAccessToken = user ? accessTokenFromCookies(request.cookies.getAll()) : null
+  const cookieClaims = cookieAccessToken ? jwtClaims(cookieAccessToken) : null
+  if (cookieClaims) {
+    const claimed = (cookieClaims.tenant_role ?? cookieClaims.user_role) as string | undefined
+    if (claimed === 'student' || claimed === 'teacher' || claimed === 'admin') userRole = claimed
   }
 
   // Auth Guards — public routes
@@ -440,6 +424,28 @@ export default async function proxy(request: NextRequest) {
 
     if (!membership) {
       const joinUrl = publicRedirectUrl(request, `/${locale}/join-school`)
+      // A banned user is not a non-member to bounce around (#892): the join page
+      // itself renders the "you were removed" notice and offers no way back in.
+      // Send them there once, with no `next` — they have nowhere to continue to.
+      const { data: banned } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'banned')
+        .maybeSingle()
+      if (banned) {
+        return NextResponse.redirect(joinUrl)
+      }
+      // Keep the destination so a purchase or enroll intent survives the join
+      // step (#684): a first-time visitor who clicked a paid CTA arrives here
+      // as a member of no school, and without `next` the join form could only
+      // send them to an empty dashboard. Sanitised again by the join page and
+      // form; skipped for `/` so the plain case keeps a clean URL.
+      const intended = getSafeNextPath(normalizedPath + request.nextUrl.search, '/')
+      if (intended !== '/') {
+        joinUrl.searchParams.set('next', intended)
+      }
       return NextResponse.redirect(joinUrl)
     }
 
@@ -453,22 +459,14 @@ export default async function proxy(request: NextRequest) {
     //   1. Update app_metadata via admin API (so custom_access_token_hook picks it up)
     //   2. Refresh the session so the CURRENT response gets a new JWT with the right tenant_id
     // This costs 2 auth API calls but only runs when there's an actual mismatch.
+    //
+    // The claim comes from `cookieClaims` above. Until #672 this block re-parsed
+    // the cookie as plain JSON, which throws on the `base64-` value
+    // @supabase/ssr writes, so the catch below swallowed it and the sync NEVER
+    // ran: a member of two schools carried the first school's tenant_id into
+    // every RLS read on the second school's subdomain and saw nothing.
     try {
-      const authCookie = request.cookies.getAll().find(c => c.name.startsWith('sb-') && c.name.endsWith('-auth-token'))
-      const chunks = request.cookies.getAll()
-        .filter(c => c.name.match(/^sb-.*-auth-token\.\d+$/))
-        .sort((a, b) => a.name.localeCompare(b.name))
-      let accessToken: string | null = null
-      if (authCookie) {
-        const sd = JSON.parse(authCookie.value)
-        accessToken = sd?.access_token || sd?.[0]?.access_token
-      } else if (chunks.length > 0) {
-        const sd = JSON.parse(chunks.map(c => c.value).join(''))
-        accessToken = sd?.access_token
-      }
-      const jwtTenantId = accessToken
-        ? JSON.parse(atob(accessToken.split('.')[1])).tenant_id
-        : null
+      const jwtTenantId = (cookieClaims?.tenant_id as string | undefined) ?? null
 
       if (jwtTenantId !== tenantId) {
         // Step 1: Update app_metadata so the hook includes the right tenant_id
@@ -488,7 +486,7 @@ export default async function proxy(request: NextRequest) {
         await supabase.auth.refreshSession()
       }
     } catch {
-      // JWT parsing failed or refresh failed — page will work on next reload
+      // Admin update or refresh failed — page will work on next reload
     }
   }
 
@@ -534,7 +532,23 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // `api/op/` is the OpenPanel first-party proxy (app/api/op/[...path]).
+    // Two things about the spelling, both load-bearing:
+    //   - The alternatives are anchored right after the leading slash, so the
+    //     exclusion must be the full prefix `api/op/`; a bare `op` would only
+    //     exclude paths literally starting with `/op`.
+    //   - The trailing slash is the word boundary. Without it the prefix also
+    //     swallows `/api/openai*`, silently exempting unrelated routes from
+    //     tenant and auth checks.
+    // Omitting the entry entirely means every analytics beacon gets
+    // tenant/auth-checked and 307s to /join-school — which presents as
+    // "no data", not as an error.
+    // Font extensions are excluded too: /fonts/kit/*.ttf (the brand-kit
+    // heading font, issue #765) is a plain public/ asset with no [locale]
+    // route, so without this it gets swept into next-intl's locale redirect
+    // and 404s — silently dropping to the CSS fallback typeface everywhere
+    // it's linked via @font-face (lib/certificate-generator.ts).
+    '/((?!_next/static|_next/image|favicon.ico|monitoring|api/op/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ttf|woff|woff2)$).*)',
     '/.well-known/:path*',
   ],
 }

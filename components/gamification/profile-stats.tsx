@@ -20,7 +20,7 @@ export function ProfileGamificationStats() {
     return (
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-muted/30">
             <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-amber-500">
+                <div className="flex items-center gap-1.5 text-brand-text">
                     <IconCoins size={14} className="stroke-[3]" />
                     <span className="text-[10px] font-black uppercase tracking-wider">{t('coins')}</span>
                 </div>
@@ -29,7 +29,7 @@ export function ProfileGamificationStats() {
                 </p>
             </div>
             <div className="space-y-1 text-right">
-                <div className="flex items-center justify-end gap-1.5 text-orange-500">
+                <div className="flex items-center justify-end gap-1.5 text-brand-text">
                     <IconFlame size={14} className="stroke-[3]" />
                     <span className="text-[10px] font-black uppercase tracking-wider">{t('streak')}</span>
                 </div>

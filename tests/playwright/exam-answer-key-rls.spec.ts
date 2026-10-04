@@ -13,10 +13,11 @@
  * browser holds — rather than through a page, because the hole was the REST
  * surface itself, not any screen.
  *
- * The positive cases matter as much as the negative ones: the exam editor,
- * teacher grading and the AI grading path in `app/actions/exam-grading.ts` all
- * read these tables through user-scoped clients, so a missing staff or
- * entitlement branch breaks grading rather than failing safe.
+ * The positive cases matter as much as the negative ones: the exam editor and
+ * teacher grading read these tables through user-scoped clients, so a missing
+ * staff or entitlement branch breaks them rather than failing safe. Since #840
+ * the key itself is in the staff-only `exam_grading_secrets`; see
+ * exam-grading-secrets.spec.ts.
  */
 import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
@@ -313,45 +314,63 @@ test.describe('exam answer key is not world-readable (#542)', () => {
   })
 
   test('staff of the owning tenant still read questions, options and rubrics', async () => {
+    // The key lives in exam_grading_secrets since #840; staff embed it.
     const { data: questions, error: questionsError } = await tenantStaff
       .from('exam_questions')
-      .select('question_id, correct_answer, grading_rubric, ai_grading_criteria')
+      .select(
+        'question_id, question_options(option_id, option_text), exam_grading_secrets(correct_answer, grading_rubric, ai_grading_criteria, correct_option_ids)'
+      )
       .eq('exam_id', gatedExamId)
     expect(questionsError).toBeNull()
     expect(questions).toHaveLength(1)
-    expect(questions![0].correct_answer).toBe(SECRET_ANSWER)
-    expect(questions![0].grading_rubric).toBe(SECRET_RUBRIC)
-
-    const { data: options, error: optionsError } = await tenantStaff
-      .from('question_options')
-      .select('option_id, option_text, is_correct')
-      .eq('question_id', gatedQuestionId)
-    expect(optionsError).toBeNull()
+    const secrets = questions![0].exam_grading_secrets as unknown as {
+      correct_answer: string | null
+      grading_rubric: string | null
+      correct_option_ids: number[]
+    }
+    expect(secrets.correct_answer).toBe(SECRET_ANSWER)
+    expect(secrets.grading_rubric).toBe(SECRET_RUBRIC)
+    const options = questions![0].question_options as { option_id: number; option_text: string }[]
     expect(options).toHaveLength(2)
-    expect(options!.some((o) => o.is_correct)).toBe(true)
+    const right = options.find((o) => o.option_text === 'Right')!
+    expect(secrets.correct_option_ids).toEqual([right.option_id])
   })
 
-  test('an entitled student still reads the exam they are sitting', async () => {
-    // The AI grading path reads correct_answer/rubric through the student's own
-    // client, so this is the branch that breaks grading if it regresses.
+  test('an entitled student reads the exam they are sitting, but not its key (#840)', async () => {
     const { data, error } = await tenantStudent
       .from('exams')
       .select(
-        'exam_id, exam_questions(question_id, correct_answer, question_options(option_id, is_correct))'
+        'exam_id, exam_questions(question_id, correct_answer, grading_rubric, ai_grading_criteria, expected_keywords, question_options(option_id, is_correct), exam_grading_secrets(correct_answer))'
       )
       .eq('exam_id', entitledExamId)
       .single()
     expect(error).toBeNull()
 
-    const questions = data!.exam_questions as {
+    const questions = data!.exam_questions as unknown as {
       question_id: number
       correct_answer: string | null
-      question_options: unknown[]
+      grading_rubric: string | null
+      ai_grading_criteria: string | null
+      expected_keywords: string[] | null
+      question_options: { option_id: number; is_correct: boolean | null }[]
+      exam_grading_secrets: unknown
     }[]
     expect(questions).toHaveLength(1)
     expect(questions[0].question_id).toBe(entitledQuestionId)
-    expect(questions[0].correct_answer).toBe(SECRET_ANSWER)
+    expect(questions[0].correct_answer).toBeNull()
+    expect(questions[0].grading_rubric).toBeNull()
+    expect(questions[0].ai_grading_criteria).toBeNull()
+    expect(questions[0].expected_keywords).toBeNull()
     expect(questions[0].question_options).toHaveLength(2)
+    expect(questions[0].question_options.every((o) => o.is_correct === null)).toBe(true)
+    expect(questions[0].exam_grading_secrets).toBeNull()
+
+    const { data: secrets, error: secretsError } = await tenantStudent
+      .from('exam_grading_secrets')
+      .select('question_id, correct_answer')
+      .eq('question_id', entitledQuestionId)
+    expect(secretsError).toBeNull()
+    expect(secrets).toEqual([])
   })
 })
 

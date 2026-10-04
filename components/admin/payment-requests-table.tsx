@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format } from 'date-fns'
-import { es, enUS } from 'date-fns/locale'
+import { formatDateTime } from '@/lib/format-date-time'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
@@ -15,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PAYMENT_REQUEST_STATUS_STYLES } from '@/lib/payments/payment-request-status'
 import { PaymentRequestDialog } from './payment-request-dialog'
 
 interface PaymentRequest {
@@ -31,6 +31,9 @@ interface PaymentRequest {
   invoice_number: string | null
   admin_notes: string | null
   created_at: string
+  payment_reference?: string | null
+  payment_reported_at?: string | null
+  expired_at?: string | null
   user: {
     id: string
     full_name: string
@@ -53,21 +56,16 @@ interface PaymentRequest {
 // or that it's defined elsewhere. If not, this type will be undefined.
 type PaymentRequestWithUser = PaymentRequest;
 
-const statusColors = {
-  pending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  contacted: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  payment_received: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-  completed: 'bg-green-500/10 text-green-500 border-green-500/20',
-  cancelled: 'bg-red-500/10 text-red-500 border-red-500/20',
-}
-
 export function PaymentRequestsTable({
   requests,
+  timeZone,
 }: {
   requests: PaymentRequestWithUser[]
+  /** Tenant IANA zone — the same one the student's My Payments page uses (#727). */
+  timeZone?: string | null
 }) {
   const { locale } = useParams()
-  const dateLocale = locale === 'es' ? es : enUS
+  const dateOptions = { locale: (locale as string) || 'en', timeZone }
   const t = useTranslations('dashboard.admin.paymentRequests')
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null)
 
@@ -125,12 +123,30 @@ export function PaymentRequestsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={statusColors[request.status as keyof typeof statusColors]}
-                  >
-                    {t(`status.${request.status}`)}
-                  </Badge>
+                  <div className="space-y-1">
+                    <Badge
+                      variant="outline"
+                      className={PAYMENT_REQUEST_STATUS_STYLES[request.status]}
+                    >
+                      {t(`status.${request.status}`)}
+                    </Badge>
+                    {/* The queue's whole job is "who is waiting on me". A
+                        reported reference is the row to work next; a lapsed one
+                        is the row to stop looking at (#802). */}
+                    {request.payment_reported_at && (
+                      <div className="text-xs font-medium text-brand-text">
+                        {t('table.reported')}
+                        {request.payment_reference && (
+                          <span className="ml-1 font-mono text-muted-foreground">
+                            {request.payment_reference}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {request.expired_at && (
+                      <div className="text-xs text-muted-foreground">{t('table.expired')}</div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {request.invoice_number ? (
@@ -142,11 +158,11 @@ export function PaymentRequestsTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">
-                    {format(new Date(request.created_at), 'MMM d, yyyy', { locale: dateLocale })}
+                  <div className="text-sm" suppressHydrationWarning>
+                    {formatDateTime(request.created_at, { ...dateOptions, precision: 'date' })}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {format(new Date(request.created_at), 'h:mm a', { locale: dateLocale })}
+                  <div className="text-xs text-muted-foreground" suppressHydrationWarning>
+                    {formatDateTime(request.created_at, { ...dateOptions, precision: 'time' })}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -169,6 +185,7 @@ export function PaymentRequestsTable({
           request={selectedRequest}
           open={!!selectedRequest}
           onOpenChange={(open) => !open && setSelectedRequest(null)}
+          timeZone={timeZone}
         />
       )}
     </>

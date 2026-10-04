@@ -34,6 +34,10 @@ const languages = [
 
 export function CodeBlockEditor({ block, onChange }: CodeBlockEditorProps) {
   const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
+  // The code surface is content, not chrome: this editor mirrors the fixed Shiki
+  // syntax panel the learner renderer paints, so a snippet a teacher types looks
+  // the way it will ship. Its panel fills and toolbar ink are pinned to that dark
+  // surface and must not follow the school's theme kit.
   return (
     <div className="rounded-lg border bg-[#0d1117] overflow-hidden">
       <div className="flex items-center gap-2 border-b border-gray-700 bg-[#161b22] px-3 py-2">

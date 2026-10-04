@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAnalytics } from "@/lib/analytics/client";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
 
 interface PointStoreItemProps {
     item: StoreItem;
@@ -19,6 +21,7 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
     const { purchase } = usePointStore({ onPurchase: () => { refreshSummary(); onPurchaseComplete?.(); } });
     const [isPurchasing, setIsPurchasing] = useState(false);
     const t = useTranslations('components.gamification');
+    const analytics = useAnalytics();
 
     const canAfford = summary ? summary.coins >= item.price_coins : false;
 
@@ -30,11 +33,29 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
         setIsPurchasing(false);
 
         if (result.success) {
+            // The coin SINK. XP accrual is already visible everywhere; if this
+            // event never fires the economy is one-directional and the whole
+            // gamification loop is decorative.
+            analytics.track(ANALYTICS_EVENTS.STORE_ITEM_PURCHASED, {
+                item_slug: item.slug,
+                item_category: item.category,
+                coin_cost: item.price_coins,
+                balance_before: summary?.coins ?? null,
+            });
             toast.success(t('store.success'), {
                 description: item.name,
-                icon: <IconCheck className="text-green-500" />
+                icon: <IconCheck className="text-success" />
             });
         } else {
+            // Reachable despite the disabled button: `canAfford` is computed
+            // from a cached summary, so the edge-function can still reject a
+            // purchase whose balance moved underneath it.
+            analytics.track(ANALYTICS_EVENTS.STORE_PURCHASE_BLOCKED, {
+                item_slug: item.slug,
+                coin_cost: item.price_coins,
+                shortfall: summary ? Math.max(0, item.price_coins - summary.coins) : null,
+                failure_reason: result.error || 'unknown',
+            });
             toast.error(t('store.error'), {
                 description: result.error || ""
             });
@@ -42,9 +63,9 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
     };
 
     const categoryColors: Record<string, string> = {
-        power_ups: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-        cosmetic: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-        badge: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
+        power_ups: "bg-brand-tint text-brand-text border-primary/25",
+        cosmetic: "bg-brand-tint text-brand-text border-primary/25",
+        badge: "bg-brand-tint text-brand-text border-primary/25"
     };
 
     return (
@@ -57,7 +78,7 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
                     {item.category === 'power_ups' ? <IconBolt size={24} /> : <span className="text-2xl">{item.icon}</span>}
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/50 rounded-full border border-border/50">
-                    <IconCoin size={14} className="text-cyan-500 fill-cyan-500/20" />
+                    <IconCoin size={14} className="text-brand-text fill-brand/20" />
                     <span className="text-xs font-black">{item.price_coins}</span>
                 </div>
             </div>
@@ -79,8 +100,8 @@ export function PointStoreItem({ item, onPurchaseComplete }: PointStoreItemProps
                 disabled={!canAfford || isPurchasing}
                 variant={canAfford ? "default" : "secondary"}
                 className={cn(
-                    "w-full rounded-xl font-bold h-9 text-xs transition-all duration-300",
-                    canAfford && "bg-cyan-500 hover:bg-cyan-600 text-white shadow-lg shadow-cyan-500/20"
+                    "w-full font-bold h-9 text-xs transition-all duration-300",
+                    canAfford && "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
                 )}
             >
                 {isPurchasing ? t('store.purchasing') : canAfford ? t('store.purchase') : t('store.notEnough')}

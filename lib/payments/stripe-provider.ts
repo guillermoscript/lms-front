@@ -25,6 +25,7 @@ import {
   PreviewSubscriptionChangeParams,
   ProrationPreview,
   CustomerPortalSessionParams,
+  CancellationResult,
 } from './types'
 import { SUBSCRIPTION_LIFECYCLE_STATUSES } from './types'
 
@@ -45,6 +46,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     supportsPlanChange: true,
     supportsCustomerPortal: true, // billingPortal.sessions.create
     supportsProrationPreview: true, // invoices.createPreview
+    supportsScheduledCancellation: true, // cancel_at_period_end on the subscription
     bearsPlatformFee: true, // application_fee_amount on the Connect charge
     settlesToPlatformAccount: false,
     requiresConnectedAccount: true, // Connect Express — per-tenant account with progressive KYC the school can abandon
@@ -61,7 +63,13 @@ export class StripePaymentProvider implements IPaymentProvider {
 
   constructor(apiKey: string, webhookSecret?: string) {
     this.stripe = new Stripe(apiKey, {
-      apiVersion: '2026-07-29.dahlia',
+      // Must equal the SDK's own pinned ApiVersion exactly — stripe-node types
+      // this field as a single string literal, so any other value is a type
+      // error. It moves on a MINOR bump (22.5.0 → 22.6.0 shifted it from
+      // 2026-07-29 to 2026-08-26), and the production image installs without a
+      // lockfile (Dockerfile:18), so `stripe` is pinned exactly in package.json
+      // to stop a floating minor from breaking the build. Bump both together.
+      apiVersion: '2026-08-26.dahlia',
     })
     this.webhookSecret = webhookSecret
   }
@@ -287,16 +295,34 @@ export class StripePaymentProvider implements IPaymentProvider {
   /**
    * Cancel a Stripe subscription — immediately or at the end of the period.
    */
-  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<void> {
+  async cancelSubscription(providerSubId: string, immediate: boolean): Promise<CancellationResult> {
     try {
       if (immediate) {
         await this.stripe.subscriptions.cancel(providerSubId)
+        return { mode: 'immediate' }
       } else {
-        await this.stripe.subscriptions.update(providerSubId, {
+        const subscription = await this.stripe.subscriptions.update(providerSubId, {
           cancel_at_period_end: true,
         })
+        const periodEnd = subscription.items.data[0]?.current_period_end
+        return {
+          mode: 'period_end',
+          ...(periodEnd ? { effectiveAt: new Date(periodEnd * 1000) } : {}),
+        }
       }
     } catch (error) {
+      const stripeError = error as {
+        code?: string
+        statusCode?: number
+        raw?: { code?: string }
+      }
+      if (
+        stripeError.code === 'resource_missing' ||
+        stripeError.raw?.code === 'resource_missing' ||
+        stripeError.statusCode === 404
+      ) {
+        return { mode: 'immediate' }
+      }
       throw new Error(`Stripe cancelSubscription failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }

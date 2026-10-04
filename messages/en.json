@@ -11,7 +11,8 @@
     },
     "products": {
       "title": "Plans & Products",
-      "description": "Explore available plans and course bundles."
+      "description": "Explore available plans and course bundles.",
+      "badge": "Product"
     },
     "about": {
       "title": "About",
@@ -39,6 +40,9 @@
     },
     "checkout": {
       "title": "Checkout"
+    },
+    "checkoutSuccess": {
+      "title": "Order Confirmed"
     },
     "auth": {
       "login": "Log In",
@@ -76,6 +80,8 @@
     "completed": "Completed",
     "lessonsCompleted": "lessons completed",
     "lessons": "lessons",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in",
     "tour": {
       "replay": "Replay tour"
     },
@@ -85,7 +91,10 @@
       "doThisNext": "Do this next → {step}",
       "completedSteps": "Completed steps",
       "remainingSteps": "{count, plural, one {# more step} other {# more steps}}",
-      "allDone": "All done! You can dismiss this checklist."
+      "allDone": "All done! You can dismiss this checklist.",
+      "substeps": "Sub-steps",
+      "substepDone": "done",
+      "substepPending": "pending"
     },
     "courseSelector": {
       "label": "Courses Included",
@@ -184,6 +193,7 @@
       "orContinueWith": "Or continue with email",
       "continueWithGoogle": "Sign up with Google",
       "fullName": "Full name",
+      "fullNameOptional": "Full name (optional)",
       "fullNamePlaceholder": "Ada Lovelace",
       "passwordHint": "At least 6 characters",
       "showPassword": "Show password",
@@ -284,6 +294,8 @@
             "reactivateWorking": "Resuming…",
             "reactivateSuccess": "Your subscription will keep renewing.",
             "reactivateError": "Could not resume your subscription. Please try again.",
+            "canceledFinalHint": "Your subscription won't renew. You keep access until the current period ends, then you can subscribe again.",
+            "confirmNoteFinal": "No further charges will be made. This can't be undone — to continue after the period ends, subscribe again.",
             "providerWarning": "We saved your request, but couldn't confirm it with your payment provider. Please contact your school to make sure it went through."
           },
           "revoke": {
@@ -396,7 +408,10 @@
           "caughtUp": "You're all caught up!"
         },
         "actions": {
-          "markAllAsRead": "Mark all as read"
+          "markAllAsRead": "Mark all as read",
+          "preferences": "Preferences",
+          "markAsRead": "Mark as read",
+          "dismiss": "Dismiss"
         },
         "toasts": {
           "markAsReadSuccess": "Notification marked as read",
@@ -424,8 +439,22 @@
           "comment_reply": "Reply",
           "exam_review": "Exam review",
           "order_renewal": "Order renewal",
-          "subscription_renewal": "Subscription renewal"
-        }
+          "subscription_renewal": "Subscription renewal",
+          "community": "Community"
+        },
+        "bell": {
+          "label": "{count, plural, =0 {Notifications} one {Notifications, # unread} other {Notifications, # unread}}",
+          "title": "Notifications",
+          "viewAll": "View all",
+          "markAllRead": "Mark all read",
+          "loading": "Loading notifications…",
+          "error": "Couldn't load notifications.",
+          "retry": "Try again",
+          "empty": "No notifications yet"
+        },
+        "errorLoading": "We couldn't load your notifications.",
+        "retry": "Try again",
+        "unread": "Unread"
       },
       "title": "My Learning",
       "welcome": "Welcome back! Continue where you left off.",
@@ -578,7 +607,10 @@
         "inProgress": "In Progress",
         "notStarted": "Not Started",
         "viewCourse": "View Course",
-        "examScore": "Score: {score}%"
+        "examScore": "Score: {score}%",
+        "discussionGrades": "Discussion grades",
+        "discussionScore": "{title} — {score}/100",
+        "untitledPrompt": "Discussion prompt"
       },
       "certificates": {
         "title": "My Certificates",
@@ -595,7 +627,7 @@
       "payments": {
         "title": "Payment Requests",
         "subtitle": "Track your manual payment requests and instructions",
-        "infoMessage": "Our team will review your request and send payment instructions to your email.",
+        "infoMessage": "The school will review your request and post payment instructions here. You'll get a notification when they're ready.",
         "tableTitle": "Your Payment Requests",
         "tableDescription": "{count, plural, one {# request} other {# requests}}",
         "amount": "Amount",
@@ -645,12 +677,72 @@
           "paymentMethod": "Payment Method",
           "paymentInstructions": "Payment Instructions",
           "paymentDeadline": "Payment Deadline",
-          "noInstructionsYet": "Payment instructions haven't been sent yet. We'll email you once your request is reviewed.",
+          "noInstructionsYet": "Payment instructions haven't been sent yet. You'll get a notification when the school adds them here.",
           "proofSection": "Payment Proof",
           "proofUploaded": "Proof uploaded",
           "uploadHint": "Upload your transfer receipt so we can verify your payment.",
-          "viewProof": "View uploaded proof"
+          "viewProof": "View uploaded proof",
+          "expiresOn": "Expires on",
+          "expiredOn": "This request expired on {date} because no payment was received. You can request it again from the course page.",
+          "reportedTitle": "Payment details sent",
+          "reportedHint": "The school will confirm it against their account. You can correct these details until they do."
+        },
+        "report": {
+          "title": "Tell the school about your payment",
+          "updateTitle": "Correct your payment details",
+          "description": "Add the reference number so the school can find your payment and confirm it faster.",
+          "submit": "Send payment details",
+          "update": "Update details",
+          "submitting": "Sending…",
+          "success": "Payment details sent to the school",
+          "error": "Could not save your payment details",
+          "payerSection": "Someone else paid for me",
+          "payerHint": "Fill this in only if the transfer came from an account that is not yours.",
+          "fields": {
+            "reference": "Reference number",
+            "paidAt": "Date you paid",
+            "paidToAccount": "Account you paid into",
+            "amount": "Amount you sent",
+            "currency": "Currency",
+            "payerName": "Name on the account",
+            "payerDocument": "ID number",
+            "payerBank": "Bank",
+            "payerPhone": "Phone"
+          },
+          "placeholders": {
+            "reference": "e.g. 0123456789",
+            "paidToAccount": "Which account you sent it to",
+            "amount": "0.00",
+            "payerName": "Who the transfer came from",
+            "payerDocument": "ID or tax number",
+            "payerBank": "Bank it was sent from",
+            "payerPhone": "Phone used to pay"
+          }
         }
+      },
+      "reviews": {
+        "title": "Flashcard review",
+        "subtitle": "Recall each answer before you reveal it, then rate how well you knew it. Cards you find easy come back less often.",
+        "dueCount": "{count, plural, one {# card due for review} other {# cards due for review}}",
+        "dueHint": "A few minutes of recall keeps what you learned.",
+        "start": "Review",
+        "showAnswer": "Show answer",
+        "keyboardHint": "Space to reveal · 1–4 to rate",
+        "howWell": "How well did you know it?",
+        "rating": {
+          "again": "Again",
+          "hard": "Hard",
+          "good": "Good",
+          "easy": "Easy"
+        },
+        "progress": "{done} of {total}",
+        "gradeError": "Couldn't save that rating. Try again.",
+        "emptyTitle": "Nothing to review right now",
+        "emptyDescription": "Flashcards your AI tutor makes from your lessons show up here when they're due. Come back later.",
+        "doneTitle": "Session complete",
+        "doneDescription": "{count, plural, one {You reviewed # card.} other {You reviewed # cards.}}",
+        "reviewMore": "Review {count} more",
+        "backToDashboard": "Back to dashboard"
       }
     },
     "teacher": {
@@ -805,7 +897,15 @@
           "addLesson": "Add Lesson",
           "noLessons": "No lessons yet",
           "createFirst": "Add your first lesson",
-          "editLesson": "Edit Lesson"
+          "editLesson": "Edit Lesson",
+          "generateWithAi": "Generate with AI",
+          "generating": "Drafting lessons…",
+          "generateSuccess": "{count, plural, one {# draft lesson} other {# draft lessons}} added. Review and publish.",
+          "generateError": "Could not generate lessons. Try again.",
+          "previewLabel": "Free",
+          "previewSwitchLabel": "Free preview for {lesson}",
+          "previewOn": "{lesson} is now readable by anyone.",
+          "previewOff": "{lesson} is no longer a free preview."
         },
         "practice": {
           "title": "Practice Exercises",
@@ -835,16 +935,85 @@
         },
         "studentList": {
           "title": "Enrolled Students",
-          "description": "View and manage students enrolled in this course.",
+          "description": "How far each student is, what they still have left, and whether they are still moving. Click a row for the lesson-by-lesson view.",
           "table": {
             "student": "Student",
             "date": "Enrollment Date",
             "status": "Status",
-            "actions": "Actions"
+            "actions": "Actions",
+            "progress": "Progress",
+            "lessons": "Lessons",
+            "exercises": "Exercises",
+            "exams": "Exams",
+            "lastActivity": "Last activity",
+            "details": "Details",
+            "detailsFor": "Open progress for {name}"
           },
           "noStudents": "No students enrolled in this course yet.",
+          "noMatch": "No students match this filter.",
+          "noLessons": "No published lessons yet — progress can't be measured until there is something to complete.",
+          "noActivity": "No activity yet",
           "viewProgress": "View Progress",
-          "unknownStudent": "Unknown Student"
+          "unknownStudent": "Unknown Student",
+          "summary": {
+            "avgProgress": "Average progress {value}%"
+          },
+          "filter": {
+            "label": "Filter students by status",
+            "all": "All"
+          },
+          "status": {
+            "active": "Active",
+            "stalled": "Stalled",
+            "not_started": "Not started",
+            "completed": "Completed"
+          },
+          "statusHint": {
+            "active": "Activity in the last {days} days",
+            "stalled": "No activity for {days} days or more",
+            "not_started": "No activity in this course yet",
+            "completed": "Every published lesson done and every exam passed"
+          },
+          "pagination": {
+            "prev": "Previous page",
+            "next": "Next page"
+          },
+          "funnel": {
+            "title": "Where students stop",
+            "description": "How many enrolled students completed each lesson, in order. A sharp drop after a lesson is where the group loses momentum — the number on the right is students lost from the previous step.",
+            "completedBy": "{count} of {total}",
+            "meter": "Students who completed {title}"
+          },
+          "sheet": {
+            "enrolled": "Enrolled {date}",
+            "nextUp": "Next up",
+            "nextExam": "Exam: {title}",
+            "allDone": "Nothing left — course complete",
+            "lessons": "Lessons",
+            "exercises": "Exercises",
+            "exams": "Exams",
+            "completed": "Completed",
+            "completedOn": "Completed {date}",
+            "pending": "Pending",
+            "notAttempted": "Not attempted",
+            "ungraded": "Awaiting grading",
+            "passed": "Passed · {score}%",
+            "failed": "{score}% · below {threshold}%",
+            "attempts": "{count, plural, one {# attempt} other {# attempts}}"
+          },
+          "warnings": {
+            "title": "Some progress data could not be loaded",
+            "desc": "These sources failed to read, so activity and progress below may be under-counted:"
+          },
+          "aiAudit": {
+            "viewButton": "AI tutor conversation for {title}",
+            "loading": "Loading the AI tutor's record…",
+            "error": "Could not load the AI tutor's record.",
+            "completedOn": "Completed {date}",
+            "feedback": "Tutor's feedback",
+            "requirementsCheck": "Verifier's check",
+            "notFound": "No AI tutor completion on record for this lesson."
+          }
         },
         "certificates": {
           "title": "Certificates",
@@ -973,7 +1142,8 @@
       },
       "newCourse": {
         "title": "Create New Course",
-        "description": "Fill in the basic information about your course"
+        "description": "Fill in the basic information about your course",
+        "back": "Back"
       },
       "courseForm": {
         "details": "Course Details",
@@ -1000,6 +1170,11 @@
         "categoryPlaceholder": "Select a category",
         "statusLabel": "Status",
         "statusPlaceholder": "Select status",
+        "statusOptions": {
+          "draft": "Draft",
+          "published": "Published",
+          "archived": "Archived"
+        },
         "statusHints": {
           "draft": "Only you can see this course.",
           "published": "Course is visible to students and ready for enrollment.",
@@ -1032,7 +1207,8 @@
         "archiveSuccess": "Course archived successfully",
         "archiveError": "Failed to archive course",
         "deleteSuccess": "Course deleted",
-        "deleteError": "Failed to delete course"
+        "deleteError": "Failed to delete course",
+        "deleteSuccessNotEmailed": "Course deleted — {count, plural, one {# enrolled student was} other {# enrolled students were}} not emailed because the email service is not configured"
       },
       "examBuilder": {
         "editTitle": "Edit Exam",
@@ -1081,7 +1257,9 @@
         "saveError": "Couldn't save the exam. Check your connection and try again.",
         "removeQuestion": "Remove question",
         "removeOption": "Remove option",
-        "dragQuestion": "Drag to reorder question"
+        "dragQuestion": "Drag to reorder question",
+        "publishSuccess": "Exam published",
+        "draftSaved": "Draft saved"
       },
       "versionHistory": {
         "trigger": "History",
@@ -1265,6 +1443,7 @@
         "sequenceHint": "Position of this lesson in the course curriculum.",
         "freePreviewLabel": "Free preview",
         "freePreviewHint": "Anyone can view this lesson from the public course page — including visitors who aren't enrolled or logged in.",
+        "freePreviewFirstLessonHint": "On by default for the first lesson — it's what a visitor reads before they sign up.",
         "aiTaskTitle": "AI Task",
         "aiTaskDescription": "Add an interactive AI challenge students complete after the lesson.",
         "aiTaskPromptLabel": "Student Challenge",
@@ -1294,7 +1473,6 @@
         "charCount": "{count, plural, one {# character} other {# characters}}",
         "contentLabel": "Content",
         "contentPlaceholder": "# Lesson Content...",
-        "contentDefault": "# New topic\n\nWrite the lesson content here...\n\n<Callout type=\"info\">Add learning objectives here</Callout>",
         "contentHint": "Write in MDX — Markdown with components like Callout, Steps, and Quiz.",
         "editorMode": "Editor",
         "lines": "lines",
@@ -1306,6 +1484,7 @@
         "enterTitleFirst": "Add a title to continue.",
         "writeContent": "Write Content",
         "saveError": "Couldn't save the lesson. Check your connection and try again.",
+        "emptyContentError": "Add some content before publishing this lesson.",
         "modeVisual": "Visual",
         "modeMDX": "MDX",
         "closePreview": "Close preview",
@@ -1588,7 +1767,32 @@
             "removeItem": "Remove item",
             "addItem": "Add item"
           }
-        }
+        },
+        "firstLessonHint": {
+          "title": "{course} is created.",
+          "body": "Students can open it once this lesson is published — write it and hit Publish."
+        },
+        "aiTaskModeFreeText": "Free text",
+        "aiTaskModeStructured": "Structured",
+        "aiTaskStructuredHint": "The platform assembles the tutor's prompt from these fields — no prompt to write by hand.",
+        "aiTaskLevelLabel": "Student level",
+        "aiTaskLevelPlaceholder": "e.g. Beginner, B1 Spanish",
+        "aiTaskTutorRoleLabel": "Tutor role",
+        "aiTaskTutorRolePlaceholder": "e.g. Friendly barista taking an order",
+        "aiTaskScenarioLabel": "Scenario",
+        "aiTaskScenarioPlaceholder": "Describe the situation the student practices",
+        "aiTaskRequirementsLabel": "Requirements",
+        "aiTaskRequirementsHint": "The student must meet every one, in order, before the lesson can be marked complete.",
+        "aiTaskRequirementPlaceholder": "e.g. Order a drink and a size",
+        "aiTaskAddRequirement": "Add requirement",
+        "aiTaskRemoveRequirement": "Remove requirement",
+        "aiTaskMoveUp": "Move up",
+        "aiTaskMoveDown": "Move down",
+        "aiTaskClosingPhaseLabel": "Closing phase",
+        "aiTaskClosingPhasePlaceholder": "e.g. Ask the student to recap the order before paying",
+        "aiTaskClosingPhaseHint": "Only needed if there is a final step after every requirement is met — a recap, a full rewrite, a summary.",
+        "aiTaskMinTurnsLabel": "Minimum student messages",
+        "aiTaskMinTurnsHint": "The lesson can't be marked complete before the student has sent this many messages. Set to 0 to allow a complete answer on the first try."
       },
       "exerciseBuilder": {
         "details": "Details",
@@ -1635,6 +1839,20 @@
         "minDurationLabel": "Minimum (seconds)",
         "maxDurationLabel": "Maximum (seconds)",
         "evaluationRubric": "Scoring Criteria",
+        "speechRubricMode": "What is graded",
+        "speechRubricModes": {
+          "public_speaking": {
+            "label": "Public speaking",
+            "desc": "Pace, filler words, structure and delivery."
+          },
+          "language_learner": {
+            "label": "Language learning",
+            "desc": "Grammar, vocabulary and fluency for the student's level, with corrections."
+          }
+        },
+        "speechFeedbackLanguage": "Feedback language",
+        "speechFeedbackSameAsSpoken": "Same as the student speaks",
+        "speechFeedbackLanguageHint": "Beginners understand feedback best in their own language.",
         "rubricFillerWords": "Filler Words",
         "rubricFillerWordsDesc": "Flag excessive um, uh, like, etc.",
         "rubricPace": "Speaking Pace",
@@ -1653,7 +1871,30 @@
         "statusArchived": "Archived",
         "timeLimitUnit": "min",
         "saveError": "Couldn't save the exercise. Check your connection and try again.",
-        "dismissError": "Dismiss error"
+        "dismissError": "Dismiss error",
+        "typeConversation": "Live voice conversation",
+        "conversationSetupTitle": "Conversation setup",
+        "conversationSetupDesc": "The student talks out loud with an AI partner, then gets graded feedback.",
+        "conversationScenarioLabel": "Scenario",
+        "conversationScenarioPlaceholder": "You are a barista in a London café. The student orders a drink, asks about prices and pays.",
+        "conversationScenarioHint": "Describe who the AI plays and what the student has to get done. Students see this.",
+        "conversationLanguageSection": "Language",
+        "conversationTargetLanguage": "Language practised",
+        "conversationNativeLanguage": "Student's language",
+        "conversationLevel": "Level (CEFR)",
+        "conversationNativeHint": "The partner speaks the practised language and gives hints and feedback in the student's language.",
+        "conversationVoice": "Voice",
+        "conversationMaxMinutes": "Max minutes",
+        "conversationDailySessions": "Conversations per day",
+        "conversationCostHint": "Live voice is billed by the minute. Keep conversations short and cap them per day; 0 means unlimited.",
+        "conversationLanguages": {
+          "en": "English",
+          "es": "Spanish",
+          "pt": "Portuguese",
+          "fr": "French",
+          "de": "German",
+          "it": "Italian"
+        }
       },
       "submissionReview": {
         "status": {
@@ -1706,7 +1947,9 @@
           "teacherFeedbackLabel": "Teacher Feedback",
           "teacherFeedbackPlaceholder": "Provide overall feedback on the student's performance...",
           "finalNotice": "Saving will mark this submission as teacher-reviewed.",
-          "saveReviewButton": "Save & Finalize Review"
+          "saveReviewButton": "Save & Finalize Review",
+          "saveSuccess": "Review saved",
+          "saveError": "Failed to save the review"
         }
       },
       "examSubmissionsReview": {
@@ -1778,7 +2021,32 @@
         "searchPlaceholder": "Search templates...",
         "loading": "Loading templates...",
         "noTemplates": "No templates found.",
-        "system": "System",
+        "system": {
+          "conversationPractice": {
+            "name": "Conversation Practice",
+            "description": "Interactive conversation practice for language learning"
+          },
+          "comprehensionCheck": {
+            "name": "Comprehension Check",
+            "description": "Verify understanding of lesson concepts"
+          },
+          "writingPractice": {
+            "name": "Writing Practice",
+            "description": "Writing evaluation with structured feedback"
+          },
+          "codeReviewAssistant": {
+            "name": "Code Review Assistant",
+            "description": "AI helps students debug and improve their code"
+          },
+          "essayEvaluation": {
+            "name": "Essay Evaluation",
+            "description": "Comprehensive essay grading with rubric"
+          },
+          "criticalThinkingGrader": {
+            "name": "Critical Thinking Grader",
+            "description": "Grade free-text answers requiring analysis"
+          }
+        },
         "editAction": "Edit",
         "duplicateAction": "Duplicate",
         "deleteAction": "Delete",
@@ -1796,6 +2064,11 @@
           "variables": "Variables",
           "created": "Created",
           "actions": "Actions"
+        },
+        "categories": {
+          "lessonTask": "Lesson task",
+          "exercise": "Exercise",
+          "examGrading": "Exam grading"
         }
       },
       "templateSelector": {
@@ -1824,17 +2097,26 @@
       "aiPreview": {
         "buttonText": "Preview AI Behavior",
         "modalTitle": "AI Preview Mode",
-        "modalSubtitle": "Testing your configuration in real-time",
+        "modalSubtitle": "You are the student. This is the conversation they will have.",
         "readyTitle": "Ready to Preview",
-        "readyDesc": "This simulates a student session with your current prompts. Start by asking a question.",
-        "placeholder": "Type your test message here...",
+        "readyDesc": "Write as a student would. The tutor uses your current, unsaved prompts, and completes the lesson on its own when the task is done.",
+        "placeholder": "Answer as your student would...",
+        "placeholderCompleted": "Task completed. Restart to try again.",
         "previewSession": "Preview Session",
+        "restart": "Restart",
+        "restartAria": "Restart the conversation",
+        "generating": "Thinking...",
+        "error": "The tutor could not answer. Try again.",
+        "retry": "Retry",
+        "completedTitle": "Target Achieved!",
+        "completedNote": "Preview: this is where it is marked complete for the student. Nothing was saved.",
         "suggestions": {
-          "affect": "How does this configuration affect responses?",
-          "sample": "Give me a sample student question",
-          "tone": "Is the tone appropriate?",
-          "trigger": "Test a completion trigger"
-        }
+          "start": "Hi! I'm ready to start",
+          "confused": "I don't understand what I have to do",
+          "giveAnswer": "Just give me the answer",
+          "claimDone": "I'm done, mark it as completed"
+        },
+        "scoreLabel": "Score: {score}/100"
       },
       "activity": {
         "title": "Recent Activity",
@@ -1928,7 +2210,9 @@
         "notEligible": "Student is not yet eligible for a certificate",
         "issueGenericError": "An error occurred while issuing the certificate",
         "issued": "Issued",
-        "issueCertificate": "Issue Certificate"
+        "issueCertificate": "Issue Certificate",
+        "issuedNotEmailed": "Certificate issued to {name} — email not sent",
+        "issuedNotEmailedDescription": "The school's email service is not configured, so nothing was sent. Share this verify link with them instead: {url}"
       },
       "templateForm": {
         "basicInfo": "Basic Information",
@@ -2101,6 +2385,7 @@
         "upgrade": "Upgrade",
         "products": "Products",
         "newProduct": "New Product",
+        "newCourse": "New Course",
         "editProduct": "Edit Product",
         "plans": "Plans",
         "newPlan": "New Plan",
@@ -2117,71 +2402,7 @@
       },
       "appearance": {
         "title": "Appearance",
-        "description": "Customize how your school looks. Changes apply to all students and teachers immediately.",
-        "theme": {
-          "title": "Theme",
-          "description": "Pick a color theme, font, and border radius. Or enter a preset code from shadcn/ui.",
-          "shuffle": "Shuffle",
-          "shuffleHint": "Randomly combine a color theme, font, and border radius",
-          "shuffleSuccess": "Shuffled: {theme} + {font} + {radius} radius — reload to see",
-          "shuffleFailed": "Some changes failed — try again",
-          "colorTheme": "Color Theme",
-          "borderRadius": "Border Radius",
-          "borderRadiusHint": "Controls the roundness of buttons, cards, inputs, and other elements.",
-          "fontFamily": "Font Family",
-          "fontFamilyHint": "Choose a font for your school. All fonts are loaded from Google Fonts.",
-          "customCode": "Custom Preset Code",
-          "customCodeHint": "Enter a preset code from <link>shadcn/ui create</link>. The full theme (colors, radius, font) will be applied from the preset.",
-          "customCodePlaceholder": "e.g. a1D4cMfA",
-          "customCodeActive": "Active: {code}",
-          "apply": "Apply",
-          "reset": "Reset",
-          "resetTitle": "Reset to Default",
-          "resetDescription": "Revert to the platform's default purple theme",
-          "applySuccess": "Theme applied — reload to see the full effect",
-          "applyFailed": "Failed to apply preset",
-          "customApplySuccess": "Custom preset applied — reload to see the full effect",
-          "customApplyFailed": "Failed to apply custom preset",
-          "radiusSuccess": "Border radius updated — reload to see the full effect",
-          "radiusFailed": "Failed to update radius",
-          "fontSuccess": "Font updated — reload to see the full effect",
-          "fontFailed": "Failed to update font",
-          "resetSuccess": "Theme reset to default",
-          "resetFailed": "Failed to reset theme"
-        },
-        "preview": {
-          "title": "Live Preview",
-          "courseTitle": "Introduction to Design",
-          "courseDescription": "Learn the fundamentals of UI/UX design",
-          "published": "Published",
-          "lessons": "12 lessons",
-          "complete": "{value}% complete",
-          "components": "Components",
-          "componentsDescription": "Buttons, inputs, and badges",
-          "primary": "Primary",
-          "secondary": "Secondary",
-          "outline": "Outline",
-          "delete": "Delete",
-          "emailLabel": "Email address",
-          "emailPlaceholder": "student@example.com",
-          "notifications": "Notifications",
-          "assignmentGraded": "Assignment graded",
-          "achievementUnlocked": "Achievement unlocked",
-          "newStudentEnrolled": "New student enrolled",
-          "timeAgo2m": "2m ago",
-          "timeAgo1h": "1h ago",
-          "timeAgo3h": "3h ago",
-          "dashboardStats": "Dashboard Stats",
-          "dashboardStatsDescription": "Your school at a glance",
-          "students": "Students",
-          "courses": "Courses",
-          "revenue": "Revenue",
-          "completion": "Completion"
-        },
-        "settingsLink": {
-          "title": "Open Appearance Editor",
-          "description": "Color themes, fonts, border radius, and live preview"
-        }
+        "description": "Customize how your school looks. Changes apply to all students and teachers immediately."
       },
       "error": {
         "title": "Admin panel error",
@@ -2247,24 +2468,30 @@
           "configureSchoolDesc": "Set your school name and basic details.",
           "configureSchoolTime": "~1 min",
           "brandSchool": "Brand your school",
-          "brandSchoolDesc": "Pick a theme, colors, and fonts. Optional — the defaults look great.",
+          "brandSchoolDesc": "Pick a theme and a colour for your school. Optional: the platform look works too.",
           "brandSchoolTime": "~2 min",
           "connectPayments": "Set up how you get paid",
           "connectPaymentsDesc": "Choose manual payments, Stripe, or another available provider.",
           "connectPaymentsTime": "~2 min",
           "wizardPrompt": "Prefer a guided setup?",
           "wizardLink": "Open the setup wizard",
-          "addCourse": "Create your first course — set a price and publish",
-          "addCourseDesc": "Use quick create to publish in minutes, or generate a draft with AI.",
+          "addCourse": "Create your first course",
+          "addCourseDesc": "A course is live once it is published and has at least one published lesson a student can open.",
           "addCourseTime": "~3 min",
-          "inviteUsers": "Invite your first students",
-          "inviteUsersDesc": "Invite students to join your school.",
+          "inviteUsers": "Invite your first student",
+          "inviteUsersDesc": "Share your school link. Anyone who signs up through it joins as a student.",
           "inviteUsersTime": "~1 min",
           "courseSuccessTitle": "Your first course is live!",
           "courseSuccessDescription": "{course} is ready to share. Send the link to your first students.",
           "copyCourseLink": "Copy course link",
           "courseLinkCopied": "Link copied",
-          "viewCourse": "View course"
+          "viewCourse": "View course",
+          "addCourseStepPublish": "Publish the course",
+          "addCourseStepLesson": "Publish your first lesson",
+          "copyJoinLink": "Copy join link",
+          "joinLinkCopied": "Link copied",
+          "shareWhatsApp": "Share on WhatsApp",
+          "inviteWhatsAppMessage": "Join my school! Sign up here: {url}"
         },
         "tour": {
           "checklist": {
@@ -2330,6 +2557,7 @@
           "cancelSuccess": "Your subscription will cancel at the end of your billing period",
           "cancelError": "Failed to cancel subscription",
           "reactivatePlan": "Reactivate plan",
+          "cancelFinalHint": "This payment method cannot undo a cancellation. To keep a paid plan after this period, choose a plan again.",
           "reactivateSuccess": "Your subscription will continue — the scheduled cancellation was removed",
           "reactivateError": "Failed to reactivate subscription",
           "recheck": "Re-check limits",
@@ -2343,7 +2571,9 @@
         },
         "upgrade": {
           "checkoutError": "Failed to create checkout session",
-          "checkoutFailed": "Failed to start checkout. Please try again."
+          "checkoutFailed": "Failed to start checkout. Please try again.",
+          "title": "Upgrade Your Plan",
+          "subtitle": "Choose the plan that best fits your school's needs"
         },
         "changePlan": {
           "upgradeTitle": "Upgrade to {plan}",
@@ -2385,11 +2615,115 @@
           "expired": "This payment request has expired. Start the upgrade again to get a fresh one.",
           "backToBilling": "Back to billing",
           "usdEquivalent": "≈ ${amount} USD"
+        },
+        "planComparison": {
+          "intervalGroupLabel": "Billing interval",
+          "monthly": "Monthly",
+          "yearly": "Yearly",
+          "yearlySaving": "Save ~17%",
+          "billedYearlyNote": "Billed once per year. Cancel at the end of your billing period.",
+          "billedMonthlyNote": "Billed monthly. Change plans when your school needs more room.",
+          "yourSelection": "Your selection",
+          "mostPopular": "Most popular",
+          "currentPlan": "Current plan",
+          "forever": "forever",
+          "perMonth": "/ month",
+          "billedYearly": "${price} billed yearly",
+          "billedMonthly": "Billed monthly",
+          "courses": "Courses",
+          "students": "Students",
+          "platformFee": "Platform fee",
+          "unlimited": "Unlimited",
+          "highlights": "Highlights",
+          "moreInComparison": "+ {count} more in full comparison",
+          "switchToYearly": "Switch to yearly billing",
+          "switchToMonthly": "Switch to monthly billing",
+          "changePaymentMethod": "Change payment method",
+          "cancelToDowngrade": "Cancel to downgrade",
+          "upgradeToPlan": "Upgrade to this plan",
+          "downgradeToPlan": "Downgrade to this plan",
+          "freePlan": "Free plan",
+          "openingCheckout": "Opening checkout...",
+          "choosePlan": "Choose plan",
+          "compareTitle": "Compare every feature",
+          "compareSubtitle": "See exactly what your school gets at each level.",
+          "featureColumn": "Feature",
+          "included": "Included",
+          "notIncluded": "Not included",
+          "features": {
+            "xp": "XP & Levels",
+            "levels": "Level System",
+            "streaks": "Streaks",
+            "leaderboard": "Leaderboard",
+            "achievements": "Achievements",
+            "store": "Point Store",
+            "community": "Community",
+            "certificates": "Certificates",
+            "analytics": "Analytics",
+            "ai_grading": "AI Auto-Grading",
+            "voice_exercises": "Voice Exercises",
+            "remove_branding": "Remove \"Powered by\" branding",
+            "custom_branding": "Custom Branding",
+            "custom_domain": "Custom Domain",
+            "white_label": "White-Label",
+            "priority_support": "Priority Support"
+          }
+        },
+        "paymentMethod": {
+          "title": "How would you like to pay?",
+          "planLine": "{plan}, billed {interval}.",
+          "intervalYearly": "yearly",
+          "intervalMonthly": "monthly",
+          "switchingNote": " Your current {provider} subscription is cancelled when the new one starts, so you are never billed twice.",
+          "currentMethod": "Current method",
+          "bankTransfer": "Bank transfer",
+          "bankTransferHint": "We send payment instructions and activate the plan once the transfer lands.",
+          "noAutomatic": "No automatic payment method is configured for this plan yet — bank transfer is the way to pay for it today.",
+          "cancel": "Cancel"
+        },
+        "manualTransfer": {
+          "submittedTitle": "Request submitted",
+          "submittedDescription": "Your upgrade request has been submitted. We'll send you bank transfer instructions shortly.",
+          "backToBilling": "Back to billing",
+          "title": "Bank transfer request",
+          "description": "Upgrade to {plan} ({interval}) for {amount} via bank transfer",
+          "stepsIntro": "After submitting this request:",
+          "step1": "We'll send bank transfer instructions to your billing email",
+          "step2": "Make the transfer and provide the reference number",
+          "step3": "Your plan will be activated once payment is confirmed",
+          "bankRefLabel": "Bank reference (optional)",
+          "bankRefPlaceholder": "e.g. Transfer confirmation number",
+          "bankRefHint": "If you've already made the transfer, enter the reference number here",
+          "proofLabel": "Payment proof (optional)",
+          "notesLabel": "Additional notes (optional)",
+          "notesPlaceholder": "Any additional information...",
+          "submitting": "Submitting...",
+          "submit": "Submit request",
+          "cancel": "Cancel",
+          "intervalYearly": "yearly",
+          "intervalMonthly": "monthly"
+        },
+        "pendingRequests": {
+          "title": "Pending payment requests",
+          "descriptionOne": "Your bank transfer request is in the queue — our team will review it and activate your plan once payment is confirmed.",
+          "descriptionMany": "Your bank transfer requests are in the queue — our team will review them and activate your plan once payment is confirmed.",
+          "unknownPlan": "Unknown plan",
+          "submittedOn": "{amount}/{interval} · Submitted {date}",
+          "intervalYear": "year",
+          "intervalMonth": "month",
+          "viewProof": "View proof",
+          "statusPending": "Awaiting review",
+          "statusInstructionsSent": "Instructions sent",
+          "statusPaymentReceived": "Payment received",
+          "hintPending": "We'll send bank transfer instructions to your billing email shortly.",
+          "hintInstructionsSent": "Check your email for bank transfer instructions. Once you've transferred, upload proof below.",
+          "hintPaymentReceived": "We've received your payment and are confirming it. Your plan will be activated soon.",
+          "uploadProof": "Upload payment proof (optional — speeds up activation)"
         }
       },
       "users": {
         "title": "User Management",
-        "description": "View and manage all platform users",
+        "description": "View and manage the people in your school",
         "backToDashboard": "Back to Dashboard",
         "searchPlaceholder": "Search by name, email, or ID...",
         "stats": {
@@ -2423,7 +2757,8 @@
             "completed": "Completed",
             "successful": "Successful",
             "pending": "Pending",
-            "failed": "Failed"
+            "failed": "Failed",
+            "banned": "Banned"
           },
           "actions": {
             "roles": "Roles",
@@ -2453,7 +2788,10 @@
           "completed": "Completed: {title}",
           "noActivity": "No recent activity",
           "recentTransactions": "Recent Transactions",
-          "noTransactions": "No transactions yet"
+          "noTransactions": "No transactions yet",
+          "statusBanned": "Banned",
+          "statusBannedDesc": "This person was banned from the school and cannot rejoin it.",
+          "banReason": "Reason:"
         },
         "actions": {
           "menu": "User actions",
@@ -2468,7 +2806,11 @@
             "rolesSuccess": "Roles updated for {name}",
             "rolesError": "Failed to update roles",
             "removeSuccess": "{name} has been removed from this school",
-            "removeError": "Failed to remove member"
+            "removeError": "Failed to remove member",
+            "banSuccess": "{name} has been banned from this school",
+            "banError": "Failed to ban member",
+            "liftBanSuccess": "The ban on {name} was lifted",
+            "liftBanError": "Failed to lift ban"
           },
           "dialogs": {
             "deactivate": {
@@ -2504,9 +2846,23 @@
               "title": "Remove from School",
               "description": "Are you sure you want to remove {name} from this school? They lose access to its courses and stop counting toward your plan's student limit. They can re-join later using the school's join link.",
               "confirm": "Remove"
+            },
+            "ban": {
+              "title": "Ban from School",
+              "description": "{name} will lose access and will not be able to rejoin this school, even with an invitation or the join link, until you lift the ban.",
+              "reasonLabel": "Reason (optional)",
+              "reasonPlaceholder": "Visible to school admins only",
+              "confirm": "Ban"
+            },
+            "liftBan": {
+              "title": "Lift Ban",
+              "description": "Lift the ban on {name}? They are not reinstated automatically; they can rejoin the school through its join link.",
+              "confirm": "Lift ban"
             }
           },
-          "removeFromSchool": "Remove from School"
+          "removeFromSchool": "Remove from School",
+          "banFromSchool": "Ban from School",
+          "liftBan": "Lift Ban"
         },
         "invite": {
           "button": "Invite User",
@@ -2527,6 +2883,9 @@
           "copied": "Copied!",
           "sent": "Invitation sent!",
           "sentDescription": "An email has been sent to {email} with instructions to join.",
+          "createdNotSent": "Invitation created — email not sent",
+          "createdNotSentDescription": "The school's email service is not configured, so nothing was sent to {email}. Share this link with them instead — they will join with the role you chose.",
+          "joinLinkLabel": "Join link",
           "inviteAnother": "Invite another person",
           "linkNote": "WhatsApp and link sharing will share your school's join page.",
           "whatsappMessage": "You're invited to join our school! Sign up here: {url} (You'll join as a {role})"
@@ -2567,7 +2926,9 @@
           "review": "Review",
           "manage": "Manage",
           "id": "Request ID",
-          "invoice": "Invoice"
+          "invoice": "Invoice",
+          "reported": "Payment reported",
+          "expired": "Expired unpaid"
         },
         "status": {
           "pending": "Pending",
@@ -2605,7 +2966,7 @@
               "method": "Payment Method",
               "instructions": "Instructions",
               "placeholder": "Enter bank details, wire instructions, or other payment information...",
-              "hint": "These instructions will be sent to the student's email.",
+              "hint": "The student sees these in My Payments and gets a notification. They are also emailed when the school's mailer is configured.",
               "deadline": "Payment Deadline",
               "deadlineOptional": "Optional"
             },
@@ -2650,7 +3011,21 @@
             "paymentConfirmed": "Payment has been confirmed.",
             "completed": "Student has been enrolled successfully!",
             "cancelled": "Payment request has been cancelled."
-          }
+          },
+          "reported": {
+            "title": "Payment reported by the student",
+            "reference": "Reference",
+            "paidAt": "Paid on",
+            "amount": "Amount sent",
+            "paidTo": "Paid into",
+            "payerName": "Paid by",
+            "payerDocument": "ID number",
+            "payerBank": "Bank",
+            "payerPhone": "Phone",
+            "currencyDiffers": "Sent in a different currency than the price — check the amount against your account.",
+            "amountDiffers": "Does not match the {expected} you asked for."
+          },
+          "expiredOn": "Expired on {date} — no payment was ever reported."
         },
         "dialog": {
           "title": "Payment Request #{id}",
@@ -2828,6 +3203,12 @@
         "title": "Course Management",
         "description": "View and manage all platform courses",
         "backToDashboard": "Back to Dashboard",
+        "createCourse": "Create Course",
+        "new": {
+          "title": "Create a course",
+          "description": "Name it, pick a price, publish. You will land in the lesson editor to write your first lesson.",
+          "or": "or"
+        },
         "stats": {
           "total": "Total Courses",
           "published": "Published",
@@ -2854,6 +3235,8 @@
           },
           "unknownAuthor": "No author assigned",
           "empty": "No courses found",
+          "emptyDesc": "No one has created a course in this school yet. Create the first one to get started.",
+          "createFirst": "Create your first course",
           "actions": {
             "manage": "Manage"
           }
@@ -3027,8 +3410,8 @@
         }
       },
       "settings": {
-        "title": "Platform Settings",
-        "description": "Configure your platform settings, email, payments, and enrollment policies.",
+        "title": "School settings",
+        "description": "Configure your school settings: email, payments and enrollment policies.",
         "errorTitle": "Error Loading Settings",
         "errorDesc": "Failed to load platform settings",
         "tabs": {
@@ -3071,8 +3454,8 @@
             "description": "Configure course enrollment rules and student access policies"
           },
           "branding": {
-            "title": "Branding Settings",
-            "description": "Customize your platform's visual identity — logo, colors, and favicon"
+            "title": "Logo and favicon",
+            "description": "Your school's logo and browser tab icon. They apply on every plan."
           },
           "solanaWallet": {
             "title": "Solana Wallet",
@@ -3103,12 +3486,19 @@
             "contactEmailHint": "Main contact email for the platform",
             "supportEmail": "Support Email",
             "supportEmailHint": "Support email for user inquiries",
+            "invalidEmail": "Enter a valid email address, or leave it blank.",
             "timezone": "Timezone",
             "timezoneHint": "Default timezone for the platform (e.g., America/New_York, Europe/London)",
             "maintenanceMode": "Maintenance Mode",
             "maintenanceModeHint": "Enable to show maintenance message to users",
             "maintenanceMessage": "Maintenance Message",
-            "maintenanceMessagePlaceholder": "We're currently performing maintenance. Please check back soon."
+            "maintenanceMessagePlaceholder": "We're currently performing maintenance. Please check back soon.",
+            "country": "Country",
+            "countryPlaceholder": "Search for your country",
+            "countryEmpty": "No country matches that search.",
+            "countryHint": "Where your school operates. If no currency is set yet, it becomes the country’s currency.",
+            "countryError": "Could not save the country. Try again.",
+            "countryCurrencyFilled": "Default currency set to {currency}."
           },
           "email": {
             "notifications": "Email Notifications",
@@ -3131,15 +3521,15 @@
           "payment": {
             "processors": "Payment Processors",
             "stripe": "Stripe",
-            "stripeHint": "Enable Stripe payment processing",
+            "stripeHint": "Credit and debit cards, plus Apple Pay and Google Pay — the checkout most students already recognize.",
             "paypal": "PayPal",
-            "paypalHint": "Enable PayPal payment processing",
+            "paypalHint": "A PayPal balance or a card, through PayPal's own hosted checkout.",
             "lemonsqueezy": "Lemon Squeezy",
-            "lemonsqueezyHint": "Accept payments via Lemon Squeezy (merchant of record). Paste a variant ID on each plan or product.",
+            "lemonsqueezyHint": "Cards through Lemon Squeezy's hosted checkout. Every plan and product needs a variant ID pasted on it, or its checkout won't open.",
             "binance": "Binance Pay",
-            "binanceHint": "Enable Binance Pay crypto payments (USDT)",
+            "binanceHint": "Crypto through Binance Pay's hosted checkout, priced in USDT.",
             "solana": "Solana (crypto)",
-            "solanaHint": "Accept Solana crypto payments. Set your receiving wallet below. Covers one-time and subscription.",
+            "solanaHint": "Crypto on Solana. Students scan a QR code and pay in USDC — a 1:1 US-dollar stablecoin — and the payment is proven on-chain. Covers both one-time purchases and subscriptions.",
             "solanaAcceptSol": "Also accept native SOL",
             "solanaAcceptSolHint": "By default you receive USDC (a 1:1 US-dollar stablecoin). Turn this on to also let students pay in SOL — the USD price is converted to SOL at the live rate at checkout. You then hold SOL, whose value can move after payment.",
             "currency": "Default Currency",
@@ -3156,7 +3546,75 @@
             "manualInstructionsPlaceholder": "e.g. Bank transfer to account 1234-5678 (Bank XYZ). Include your email as the reference and upload the receipt.",
             "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide.",
             "binancePersonal": "Binance Pay (personal account)",
-            "binancePersonalHint": "Accept Binance Pay on your own personal account using your Pay ID and a read-only API key."
+            "binancePersonalHint": "Crypto sent straight to your own Binance Pay ID. Students transfer manually and we confirm it using your read-only API key.",
+            "manual": "Bank transfer & offline payment",
+            "manualHint": "Bank transfer, cash, or any offline arrangement. The student uploads proof of payment and you confirm it by hand.",
+            "alwaysAvailable": "Always available",
+            "alwaysAvailableHint": "Offline payment can't be switched off — it's the fallback when no other method works.",
+            "howStudentsPay": "How students pay",
+            "howStudentsPayDesc": "Switch on the methods your school accepts. Each one shows where the money lands and what it supports.",
+            "payoutNote": "Methods marked \"Paid out by the platform\" settle into a platform account first — you're paid on the payouts schedule, not at the moment of sale.",
+            "facts": {
+              "settlesDirect": "Paid straight to you",
+              "settlesPlatform": "Paid out by the platform",
+              "subscriptions": "One-time & subscriptions",
+              "oneTimeOnly": "One-time payments only",
+              "refundsInApp": "Refunds from your dashboard",
+              "refundsManual": "Refunds are manual",
+              "merchantOfRecord": "Handles VAT for you",
+              "noPlatformFee": "No platform fee"
+            },
+            "status": {
+              "ready": "Ready",
+              "blocked": "Action needed",
+              "off": "Off",
+              "notConfigured": "Not set up"
+            },
+            "setup": {
+              "connect": "Finish Stripe onboarding before students can pay by card.",
+              "wallet": "Add your receiving details below — students can't pay on this rail until you do.",
+              "catalog": "Paste a Lemon Squeezy variant ID on each plan and product before you publish them."
+            },
+            "groups": {
+              "cards": "Cards & wallets",
+              "cardsDesc": "Familiar checkouts most students can use straight away.",
+              "crypto": "Crypto",
+              "cryptoDesc": "Settles in stablecoins. Useful where cards are hard to come by.",
+              "offline": "Offline",
+              "offlineDesc": "Bank transfer, cash, or any arrangement you settle by hand."
+            },
+            "wallet": {
+              "add": "Add details",
+              "edit": "Edit details",
+              "solanaTitle": "Solana receiving wallet",
+              "solanaDesc": "The address students pay into. One address covers both one-time purchases and subscriptions.",
+              "binanceTitle": "Binance Pay credentials",
+              "binanceDesc": "Your Pay ID and a read-only API key. We use the key only to confirm incoming transfers — it can't move funds."
+            },
+            "accounts": {
+              "title": "Accounts you accept payments into",
+              "hint": "Students see these at checkout and pick the one they paid into, so you know which statement to open.",
+              "empty": "No accounts yet. Add the bank account, wallet or phone number students should send money to.",
+              "accountNumber": "Account {number}",
+              "add": "Add account",
+              "remove": "Remove",
+              "fields": {
+                "method": "Method",
+                "bank": "Bank",
+                "identifier": "Number, phone or email",
+                "holder": "Account holder",
+                "document": "ID / tax number",
+                "note": "Note"
+              },
+              "placeholders": {
+                "method": "Bank transfer, Pago Móvil, Zelle…",
+                "bank": "Bank name",
+                "identifier": "Account number, phone or email",
+                "holder": "Name on the account",
+                "document": "ID or tax number",
+                "note": "Anything else the student should know"
+              }
+            }
           },
           "branding": {
             "logoUrl": "Logo URL",
@@ -3164,13 +3622,7 @@
             "logoUrlHint": "URL of your platform logo (recommended: 200x50px PNG or SVG)",
             "faviconUrl": "Favicon URL",
             "faviconUrlPlaceholder": "https://example.com/favicon.ico",
-            "faviconUrlHint": "URL of your browser tab icon (recommended: 32x32px ICO or PNG)",
-            "primaryColor": "Primary Color",
-            "primaryColorHint": "Main brand color used for buttons, links, and accents",
-            "secondaryColor": "Secondary Color",
-            "secondaryColorHint": "Secondary brand color used for highlights and gradients",
-            "preview": "Preview",
-            "previewHint": "See how your branding looks"
+            "faviconUrlHint": "URL of your browser tab icon (recommended: 32x32px ICO or PNG)"
           },
           "enrollment": {
             "auto": "Auto Enrollment",
@@ -3184,7 +3636,10 @@
             "expiration": "Enrollment Expiration (Days)",
             "expirationHint": "Number of days until enrollment expires (0 = never expires)",
             "capacity": "Enable Course Capacity",
-            "capacityHint": "Allow setting maximum student limits for courses"
+            "capacityHint": "Allow setting maximum student limits for courses",
+            "freePreview": "Public Lesson Previews",
+            "freePreviewHint": "Let anyone see one free lesson per course, even without an account, so prospective students can try before they buy.",
+            "freePreviewCount": "{count} lessons are currently public."
           },
           "solanaWallet": {
             "label": "Receiving wallet address",
@@ -3211,6 +3666,12 @@
             "saving": "Saving...",
             "save": "Save"
           }
+        },
+        "mailer": {
+          "label": "Platform mailer",
+          "configured": "Configured — emails are sent from {from} via {domain}.",
+          "notConfigured": "Not configured — no emails are sent. Invitations show a shareable link instead; certificates and course notices are not delivered.",
+          "hint": "Set by the platform operator (MAILGUN_API_KEY, MAILGUN_DOMAIN, EMAIL_FROM). The SMTP fields below are stored but not used for sending yet."
         }
       },
       "revenue": {
@@ -3576,7 +4037,7 @@
         },
         "new": {
           "title": "Create Product",
-          "description": "Set up a new product students can purchase",
+          "description": "Create a product and choose how you charge for it",
           "back": "Back to Products",
           "details": {
             "title": "Product Details",
@@ -3620,7 +4081,8 @@
             "thumbnailIdea": "Thumbnail idea",
             "openCourse": "Edit your course",
             "startOver": "Generate another",
-            "error": "Could not generate the course draft. Try again."
+            "error": "Could not generate the course draft. Try again.",
+            "openFirstLesson": "Review the first lesson"
           }
         },
         "edit": {
@@ -3695,6 +4157,99 @@
           "restore": "Restore",
           "restoreSuccess": "\"{name}\" has been restored",
           "restoreError": "Couldn't restore product. Try again."
+        },
+        "wizard": {
+          "badgeEdit": "Edit mode",
+          "badgeNew": "New offering",
+          "stepProgress": "Step {current} of {total}",
+          "stepsNavLabel": "Product creation steps",
+          "steps": {
+            "source": {
+              "title": "Course",
+              "description": "Choose whether this offering starts from a new or existing course."
+            },
+            "basics": {
+              "title": "Basics",
+              "description": "Set the course details students and admins will recognize."
+            },
+            "pricing": {
+              "title": "Pricing",
+              "description": "Create a free course or configure a paid product."
+            },
+            "postRegistration": {
+              "title": "After purchase",
+              "description": "Add paid-only instructions students see after checkout."
+            },
+            "review": {
+              "title": "Review",
+              "description": "Check readiness and choose draft or publish."
+            }
+          },
+          "source": {
+            "legend": "Course source",
+            "newTitle": "Create new course",
+            "newDescription": "Create a course shell and optionally attach paid pricing.",
+            "existingTitle": "Use existing course",
+            "existingDescription": "Reuse a tenant course, including drafts being prepared for launch.",
+            "courseLabel": "Course",
+            "coursePlaceholder": "Select a course",
+            "selectedStatus": "Selected course status: {status}"
+          },
+          "basics": {
+            "titleLabel": "Title",
+            "titlePlaceholder": "e.g., Product Strategy Intensive",
+            "categoryLabel": "Category",
+            "categoryPlaceholder": "Select category",
+            "noCategories": "No categories are available yet."
+          },
+          "pricing": {
+            "legend": "Pricing mode",
+            "freeTitle": "Free",
+            "freeDescription": "Create a $0 product students enroll in with one click.",
+            "paidTitle": "Paid",
+            "paidDescription": "Create a product and link it to this course."
+          },
+          "postRegistration": {
+            "freeNotice": "Post-registration instructions are product-scoped, so they are available for paid offerings only in this version."
+          },
+          "review": {
+            "courseLabel": "Course",
+            "untitled": "Untitled course",
+            "newCourse": "New course",
+            "existingCourse": "Existing course",
+            "pricingLabel": "Pricing",
+            "noProvider": "No provider",
+            "noPaymentRequired": "No payment required",
+            "afterPurchaseLabel": "After purchase",
+            "notApplicable": "Not applicable",
+            "freeCourse": "Free course",
+            "optionalInstructions": "Optional instructions",
+            "steps": "{count, plural, one {# step} other {# steps}}",
+            "draftReady": "Draft can be saved",
+            "publishReady": "Ready to publish"
+          },
+          "backButton": "Back",
+          "nextButton": "Next",
+          "saveDraftButton": "Save draft",
+          "publishButton": "Publish",
+          "toasts": {
+            "published": "Offering published.",
+            "draftSaved": "Draft saved."
+          },
+          "errors": {
+            "generic": "Could not save this offering.",
+            "draftBlocked": "Add a title before saving.",
+            "publishBlocked": "Complete required setup first.",
+            "fields": {
+              "courseExistingCourseId": "Select a course.",
+              "courseTitle": "Enter a course title.",
+              "pricingPrice": "Enter a price greater than 0.",
+              "pricingCurrency": "Select a currency.",
+              "pricingPaymentProvider": "Select a payment method.",
+              "postRegistrationStepTitle": "Enter a step title.",
+              "postRegistrationStepUrl": "Enter a valid URL."
+            }
+          }
         }
       },
       "apiTokens": {
@@ -3758,157 +4313,6 @@
       }
     }
   },
-  "course": {
-    "title": "Course",
-    "description": "Description",
-    "lessons": "Lessons",
-    "lesson": "Lesson",
-    "exams": "Exams",
-    "exam": "Exam",
-    "students": "Students",
-    "progress": "Progress",
-    "complete": "Complete",
-    "completed": "Completed",
-    "inProgress": "In Progress",
-    "notStarted": "Not Started",
-    "viewCourse": "View Course",
-    "viewExams": "View Exams",
-    "backToCourse": "Back to Course",
-    "courseContent": "Course Content",
-    "noLessons": "No lessons available yet.",
-    "published": "Published",
-    "draft": "Draft",
-    "archived": "Archived"
-  },
-  "lesson": {
-    "markAsComplete": "Mark as Complete",
-    "completed": "Completed",
-    "duration": "Duration",
-    "minutes": "minutes",
-    "video": "Video",
-    "content": "Content",
-    "comments": "Comments",
-    "noComments": "No comments yet. Be the first to comment!",
-    "postComment": "Post Comment",
-    "commentPlaceholder": "Share your thoughts or ask a question...",
-    "posting": "Posting..."
-  },
-  "exam": {
-    "title": "Exam",
-    "startExam": "Start Exam",
-    "submitExam": "Submit Exam",
-    "timeRemaining": "Time Remaining",
-    "questions": "Questions",
-    "question": "Question",
-    "multipleChoice": "Multiple Choice",
-    "trueFalse": "True/False",
-    "freeText": "Free Text",
-    "yourAnswer": "Your Answer",
-    "correctAnswer": "Correct Answer",
-    "score": "Score",
-    "passed": "Passed",
-    "failed": "Failed",
-    "results": "Results",
-    "viewResults": "View Results",
-    "noExams": "No exams available yet."
-  },
-  "review": {
-    "title": "Reviews",
-    "yourRating": "Your Rating",
-    "yourReview": "Your Review",
-    "submitReview": "Submit Review",
-    "submitting": "Submitting...",
-    "reviewPlaceholder": "Share your experience with this course...",
-    "noReviews": "No reviews yet. Be the first to review this course!",
-    "alreadyReviewed": "You have already reviewed this course. Thank you for your feedback!",
-    "averageRating": "Average Rating",
-    "reviews": "reviews"
-  },
-  "enrollment": {
-    "enroll": "Enroll",
-    "enrolled": "Enrolled",
-    "enrollmentDate": "Enrollment Date",
-    "status": "Status",
-    "active": "Active",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
-  },
-  "user": {
-    "profile": "Profile",
-    "settings": "Settings",
-    "account": "Account",
-    "name": "Name",
-    "email": "Email",
-    "role": "Role",
-    "student": "Student",
-    "teacher": "Teacher",
-    "admin": "Admin",
-    "joined": "Joined",
-    "lastActive": "Last Active"
-  },
-  "transaction": {
-    "transactions": "Transactions",
-    "amount": "Amount",
-    "status": "Status",
-    "paymentMethod": "Payment Method",
-    "date": "Date",
-    "successful": "Successful",
-    "pending": "Pending",
-    "failed": "Failed",
-    "noTransactions": "No transactions found"
-  },
-  "stats": {
-    "total": "Total",
-    "active": "Active",
-    "published": "Published",
-    "draft": "Draft"
-  },
-  "validation": {
-    "required": "This field is required",
-    "emailInvalid": "Please enter a valid email address",
-    "passwordTooShort": "Password must be at least 8 characters",
-    "passwordsMustMatch": "Passwords must match"
-  },
-  "messages": {
-    "success": "Success!",
-    "saveSuccess": "Saved successfully",
-    "deleteSuccess": "Deleted successfully",
-    "createSuccess": "Created successfully",
-    "updateSuccess": "Updated successfully",
-    "errorOccurred": "An error occurred. Please try again.",
-    "confirmDelete": "Are you sure you want to delete this?",
-    "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?"
-  },
-  "landing": {
-    "poweredBy": "Powered by Next.js 16",
-    "heroTitle": "Master your <br /> Future with <br /> <span class='text-zinc-500'>LMS V2</span>",
-    "heroSubtitle": "The ultimate learning platform for developers",
-    "heroDescription": "Master the latest technologies with our AI-powered platform. Interactive, fast, and designed for modern learning.",
-    "getStarted": "Get Started for Free",
-    "exploreCourses": "Explore Courses",
-    "viewGithub": "View on Github",
-    "trustedBy": "Trusted by developers from",
-    "featuresTitle": "Features that Power your Learning",
-    "featuresDescription": "We've designed LMS V2 to provide you with the best possible educational experience using cutting-edge technology.",
-    "feature1Title": "Smart AI Assistant",
-    "feature1Description": "Get instant help and deep code reviews powered by state-of-the-art AI models.",
-    "feature2Title": "Interactive MDX Content",
-    "feature2Description": "Lessons that come to life. Interact with code directly on the platform securely.",
-    "feature3Title": "Progress and Gamification",
-    "feature3Description": "Earn points, unlock achievements, and maintain your learning streak with our incentive system.",
-    "feature4Title": "Verifiable Certificates",
-    "feature4Description": "Validate your skills with digital certificates you can share on your professional profiles.",
-    "stats": {
-      "students": "10k+ Students",
-      "courses": "500+ Courses",
-      "rating": "4.9/5 Rating"
-    },
-    "cta": {
-      "title": "Ready to start your journey?",
-      "description": "Join thousands of developers who are already improving their skills with LMS V2.",
-      "button": "Create your Free Account"
-    }
-  },
   "creators": {
     "badge": "For Course Creators",
     "heroTitle": "Create, Sell & Scale Your Online Courses with AI",
@@ -3916,12 +4320,12 @@
     "ctaHero": "Start Creating for Free",
     "ctaSecondary": "See How It Works",
     "socialProof": {
-      "creators": "500+ Course Creators",
-      "students": "50,000+ Students Enrolled",
-      "revenue": "$2M+ Creator Revenue"
+      "creators": "Open source under the MIT license",
+      "students": "Free plan, no credit card required",
+      "revenue": "Bank transfer, PayPal and crypto payments for LATAM"
     },
     "differentiators": {
-      "title": "Why Creators Choose LMS V2",
+      "title": "Why Creators Choose {appName}",
       "subtitle": "Three things that set us apart from every other course platform.",
       "ai": {
         "title": "AI Auto-Grading",
@@ -3953,8 +4357,8 @@
         "description": "Interactive coding challenges with an AI assistant that guides students through problem-solving."
       },
       "payments": {
-        "title": "Stripe Payments",
-        "description": "Sell courses individually or via subscription plans. Accept credit cards with zero platform transaction fees."
+        "title": "Stripe payments and more",
+        "description": "Sell courses individually or via subscription plans. Accept cards, bank transfers, PayPal and crypto."
       },
       "dashboard": {
         "title": "Student Dashboard",
@@ -3967,7 +4371,7 @@
     },
     "comparison": {
       "title": "See How We Compare",
-      "subtitle": "We built LMS V2 to give creators more features at a fraction of the cost.",
+      "subtitle": "We built {appName} to give creators more features at a fraction of the cost.",
       "feature": "Feature",
       "rows": {
         "aiGrading": "AI Grading",
@@ -3975,7 +4379,8 @@
         "openSource": "Open Source",
         "transactionFee": "Transaction Fee",
         "startingPrice": "Starting Price",
-        "free": "Free"
+        "free": "Free",
+        "feeRange": "0–10% by plan"
       },
       "footnote": "* Udemy is free to publish but takes up to 63% revenue share on organic sales."
     },
@@ -3989,46 +4394,45 @@
       "popular": "Most Popular",
       "free": {
         "name": "Free",
-        "f1": "1 published course",
+        "f1": "Up to 5 courses",
         "f2": "Up to 50 students",
-        "f3": "Basic exam builder",
-        "f4": "Community support"
+        "f3": "Exam builder and certificates",
+        "f4": "Manual payments (10% platform fee)"
       },
       "creator": {
-        "name": "Creator",
-        "f1": "5 published courses",
-        "f2": "Up to 500 students",
-        "f3": "AI auto-grading",
-        "f4": "Gamification system",
-        "f5": "Stripe payments (0% fee)"
+        "name": "Starter",
+        "f1": "Up to 15 courses",
+        "f2": "Up to 200 students",
+        "f3": "Card payments",
+        "f4": "Leaderboard and achievements",
+        "f5": "Community (5% platform fee)"
       },
       "pro": {
         "name": "Pro",
-        "f1": "Unlimited courses",
-        "f2": "Unlimited students",
+        "f1": "Up to 100 courses",
+        "f2": "Up to 1,000 students",
         "f3": "AI auto-grading",
-        "f4": "Full gamification suite",
+        "f4": "Coin store and voice exercises",
         "f5": "Advanced analytics",
-        "f6": "Priority support"
+        "f6": "2% platform fee"
       },
       "business": {
         "name": "Business",
-        "f1": "Everything in Pro",
-        "f2": "Custom branding",
-        "f3": "API access",
-        "f4": "Dedicated account manager",
-        "f5": "SSO / SAML",
-        "f6": "SLA & uptime guarantee"
+        "f1": "Unlimited courses",
+        "f2": "Up to 5,000 students",
+        "f3": "Custom branding and domain",
+        "f4": "Priority support",
+        "f5": "Everything in Pro",
+        "f6": "0% platform fee"
       }
     },
     "cta": {
       "title": "Start Building Your Course Today",
-      "subtitle": "Join hundreds of creators who are already earning revenue on LMS V2. Your first course is free.",
+      "subtitle": "Your first course is free. Publish it today and get paid the way your students actually pay.",
       "button": "Create Your Free Account"
     }
   },
   "navbar": {
-    "brand": "LMS V2",
     "courses": "Courses",
     "plans": "Plans",
     "about": "About",
@@ -4046,6 +4450,7 @@
     "users": "Users",
     "allCourses": "All Courses",
     "enrollments": "Enrollments",
+    "categories": "Categories",
     "transactions": "Transactions",
     "myCourses": "My Courses",
     "createCourse": "Create Course",
@@ -4087,7 +4492,9 @@
     "invoices": "Invoices",
     "myPayments": "My Payments",
     "myBilling": "Billing & Receipts",
-    "community": "Community"
+    "community": "Community",
+    "profile": "Profile",
+    "flashcardReviews": "Flashcard Review"
   },
   "userNav": {
     "profile": "Profile",
@@ -4185,7 +4592,29 @@
       "completed": "Completed",
       "inProgress": "In Progress",
       "notStarted": "Not Started",
-      "expired": "Your subscription has expired. Renew to continue learning."
+      "expired": "Your subscription has expired. Renew to continue learning.",
+      "accessBadge": {
+        "lifetime": "Lifetime Access",
+        "subscription": "Subscription",
+        "expired": "Subscription Expired",
+        "none": "No Access"
+      }
+    },
+    "examTaker": {
+      "progress": "Progress: {answered}/{total}",
+      "timeLeft": "Time Left",
+      "question": "Question {number}",
+      "aiEvaluates": "AI will evaluate your reasoning",
+      "answerPlaceholder": "Share your knowledge here...",
+      "previous": "Previous",
+      "finishSubmit": "Finish & Submit",
+      "nextQuestion": "Next Question",
+      "true": "True",
+      "false": "False",
+      "noQuestionsTitle": "No Questions Found",
+      "noQuestionsDescription": "This exam doesn't have any questions yet. Please check back later.",
+      "returnToAssessments": "Return to Assessments",
+      "submitFailed": "We couldn't submit your exam. Your answers are still here — try again."
     },
     "courseFilters": {
       "searchPlaceholder": "Search your courses...",
@@ -4221,6 +4650,12 @@
         "username": "unique_username",
         "website": "https://example.com",
         "bio": "A short bio visible to others..."
+      },
+      "errors": {
+        "unauthorized": "Your session expired. Sign in again to save your profile.",
+        "username_too_short": "Usernames need at least 3 characters.",
+        "username_taken": "That username is already taken. Try another one.",
+        "unknown": "Could not save your changes. Please try again."
       }
     },
     "lessons": {
@@ -4252,9 +4687,10 @@
         "completedDetail": "Great job! You have successfully completed the task.",
         "restartSuccess": "Chat restarted successfully",
         "restartFailed": "Failed to restart chat",
-        "restartError": "Error restarting chat"
+        "restartError": "Error restarting chat",
+        "genericError": "Something went wrong. Please try again."
       },
-      "confirmRestart": "Are you sure you want to restart the conversation? This will clear your chat history and reset completion status.",
+      "confirmRestart": "Restart the conversation? This clears your chat history. A lesson you already completed stays completed.",
       "successHeader": "Lesson Completed!",
       "successDescription": "Great job! You've successfully completed this task.",
       "stats": {
@@ -4294,6 +4730,9 @@
         "title": "Restart conversation?",
         "cancel": "Cancel",
         "confirm": "Restart"
+      },
+      "progress": {
+        "label": "{met}/{total} requirements met"
       }
     },
     "lessonSidebar": {
@@ -4319,7 +4758,13 @@
       "certificateEarnedDescription": "You have completed all requirements and earned a certificate for this course.",
       "certificateBanner": "Certificate earned for this course!",
       "view": "View",
-      "checkpointsRequired": "Complete {count, plural, one {the required checkpoint} other {# required checkpoints}} in this lesson first"
+      "checkpointsRequired": "Complete {count, plural, one {the required checkpoint} other {# required checkpoints}} in this lesson first",
+      "uncompleted": "Lesson marked as incomplete",
+      "uncompleteConfirmTitle": "Mark this lesson as incomplete?",
+      "uncompleteConfirmDescription": "This removes your completion for this lesson and may affect your course progress and certificate eligibility.",
+      "uncompleteCancel": "Cancel",
+      "uncompleteConfirm": "Mark as incomplete",
+      "uncompleteConfirming": "Updating…"
     },
     "checkpoints": {
       "checkpoint": "Checkpoint",
@@ -4384,7 +4829,7 @@
     },
     "manualPayment": {
       "title": "Request Payment Information",
-      "description": "Fill out this form to receive payment instructions for <strong>{productName}</strong> ({symbol}{price})",
+      "description": "Fill out this form to receive payment instructions for <strong>{productName}</strong> ({amount})",
       "fullName": "Full Name",
       "fullNamePlaceholder": "John Doe",
       "email": "Email",
@@ -4394,7 +4839,7 @@
       "message": "Additional Message (optional)",
       "messagePlaceholder": "Any questions or special requests...",
       "whatHappensNext": "What happens next?",
-      "step1": "We'll send you payment instructions via email",
+      "step1": "The school posts payment instructions in My Payments and notifies you",
       "step2": "Choose your preferred payment method (bank transfer, invoice, etc.)",
       "step3": "Once payment is confirmed, you'll get instant access",
       "sending": "Sending...",
@@ -4402,7 +4847,26 @@
       "cancel": "Cancel",
       "success": "Payment request sent! We will contact you shortly with payment instructions.",
       "error": "Failed to send request. Please try again.",
-      "proofLabel": "Payment Proof (optional)"
+      "proofLabel": "Payment Proof (optional)",
+      "requestButton": "Request Payment Information"
+    },
+    "proofUpload": {
+      "defaultLabel": "Payment Proof",
+      "hint": "Upload receipt or screenshot (image or PDF, max 10MB)",
+      "uploading": "Uploading...",
+      "fileTooLarge": "File must be less than 10MB",
+      "invalidFileType": "Only images and PDFs are accepted",
+      "uploadFailed": "Upload failed. Please try again.",
+      "uploaded": "Proof uploaded",
+      "viewProof": "View proof",
+      "previewAlt": "Payment proof preview",
+      "remove": "Remove file"
+    },
+    "modeToggle": {
+      "toggle": "Toggle theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
     },
     "notifications": {
       "title": "Notifications",
@@ -4524,15 +4988,17 @@
       },
       "upgrade": {
         "upgradeDescription": "Ask your school admin to upgrade the plan to unlock this feature.",
-        "leaderboardLocked": "Leaderboard — Upgrade to Basic",
-        "achievementsLocked": "Achievements — Upgrade to Basic",
-        "storeLocked": "Point Store — Upgrade to Professional",
-        "leagueLocked": "Weekly League — Upgrade to Basic"
+        "leaderboardLocked": "Leaderboard — Upgrade to {plan}",
+        "achievementsLocked": "Achievements — Upgrade to {plan}",
+        "storeLocked": "Point Store — Upgrade to {plan}",
+        "leagueLocked": "Weekly League — Upgrade to {plan}"
       },
       "xpAwarded": {
         "lesson_completion": "+100 XP — Lesson completed!",
         "exercise_completion": "+50 XP — Exercise completed!",
-        "exam_submission": "+200 XP — Exam submitted!"
+        "exam_submission": "+200 XP — Exam submitted!",
+        "community": "+{xp} XP",
+        "community_prompt_answer": "+{xp} XP — Discussion prompt answered!"
       }
     },
     "paymentRequestForm": {
@@ -4543,7 +5009,7 @@
       "contactNamePlaceholder": "John Doe",
       "contactEmail": "Email Address",
       "contactEmailPlaceholder": "john@example.com",
-      "contactEmailHint": "We'll send payment instructions to this email",
+      "contactEmailHint": "The school may also email the instructions to this address",
       "contactPhone": "Phone Number (Optional)",
       "contactPhonePlaceholder": "+1 234 567 8900",
       "contactPhoneHint": "Optional - for payment confirmation",
@@ -4557,7 +5023,7 @@
       "success": "Payment request submitted successfully!",
       "error": "Failed to submit payment request",
       "successTitle": "Request Submitted!",
-      "successDescription": "We've received your payment request and will send instructions to your email shortly.",
+      "successDescription": "We've received your request. The school's payment instructions will appear in My Payments, and you'll get a notification when they're ready.",
       "viewRequests": "View My Requests",
       "howToPayTitle": "How to pay",
       "proofLabel": "Payment proof (optional)",
@@ -4565,7 +5031,8 @@
         "nameRequired": "Name is required",
         "emailRequired": "Email is required",
         "emailInvalid": "Please enter a valid email address"
-      }
+      },
+      "close": "Close"
     },
     "cancelPaymentButton": {
       "cancel": "Cancel",
@@ -4580,6 +5047,54 @@
     "feedbackButton": {
       "label": "Report a problem",
       "dragHint": "drag to move"
+    },
+    "aiAttachments": {
+      "attach": "Attach image",
+      "imageAlt": "Attached image",
+      "thisImage": "that image",
+      "errors": {
+        "imagesOnly": "Only images can be attached.",
+        "pickTooLarge": "Each image must be under {mb} MB.",
+        "tooMany": "You can attach up to {count} images per message.",
+        "unsupported": "{name} could not be read as an image, so it was not sent.",
+        "tooLarge": "{name} is still too large to send after resizing."
+      }
+    },
+    "limitBanner": {
+      "atLimit": "You've reached your {resource} limit ({limit}). Upgrade your plan to add more.",
+      "approaching": "You're using {current} of {limit} {resource}. Consider upgrading for more capacity.",
+      "cutoffWarning": "If this is not resolved by {date}, all students will lose access to all courses.",
+      "upgrade": "Upgrade",
+      "dismiss": "Dismiss",
+      "resources": {
+        "courses": "courses",
+        "students": "students"
+      }
+    },
+    "deleteAccount": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and your data from every school on this platform.",
+      "button": "Delete account…",
+      "dialogTitle": "Delete your account?",
+      "dialogDescription": "This deletes your account everywhere on the platform, not just in this school.",
+      "loading": "Checking your account",
+      "loadError": "We couldn't check your account. Close this and try again.",
+      "blockedTitle": "You can't delete your account yet:",
+      "blockers": {
+        "soleAdmin": "You're the only admin of {school}. Make someone else an admin first, so the school isn't left without one.",
+        "liveSubscription": "Your subscription {plan} is still renewing. Cancel it from Billing first, so you aren't charged again.",
+        "superAdmin": "You're a platform operator. Another operator has to remove that role first."
+      },
+      "consequences": {
+        "removed": "Your profile, progress, submissions, certificates, community posts and chats are deleted.",
+        "kept": "Payment records stay with the school for accounting, without your name.",
+        "final": "This can't be undone."
+      },
+      "confirmLabel": "Type {phrase} to confirm",
+      "cancel": "Cancel",
+      "confirm": "Delete my account",
+      "mismatch": "That doesn't match. Type it exactly as shown.",
+      "error": "We couldn't delete your account. Try again in a moment."
     }
   },
   "courseDetails": {
@@ -4638,7 +5153,7 @@
   },
   "about": {
     "title": "Built for learning, by educators",
-    "description": "LMS V2 is a modern learning platform that helps teachers create courses and students learn with clarity. We focus on speed, accessibility, and delightful UX.",
+    "description": "{appName} is a modern learning platform that helps teachers create courses and students learn with clarity. We focus on speed, accessibility, and delightful UX.",
     "visitHome": "Back to Home",
     "contact": "Contact",
     "missionTitle": "Our mission",
@@ -4670,6 +5185,11 @@
     "cta": {
       "title": "Ready to transform your learning?",
       "button": "Start Now"
+    },
+    "facts": {
+      "freePlan": "Free plan, no card required",
+      "ownSubdomain": "Your school on its own subdomain",
+      "openSource": "Open source, MIT licensed"
     }
   },
   "coursesCatalog": {
@@ -4696,7 +5216,8 @@
       "free": "Free",
       "lessons": "{count} lessons",
       "viewCourse": "View Course",
-      "noCategory": "General"
+      "noCategory": "General",
+      "startFree": "Free lesson"
     },
     "filterSidebar": {
       "categories": "Categories",
@@ -4717,13 +5238,21 @@
         "intermediate": "Intermediate",
         "advanced": "Advanced"
       }
+    },
+    "categories": {
+      "programming": "Programming",
+      "design": "Design",
+      "business": "Business",
+      "dataScience": "Data Science"
     }
   },
   "courseSearch": {
     "placeholder": "Search courses...",
     "allCategories": "All",
     "noResults": "No courses found matching your search.",
-    "clearFilters": "Clear filters"
+    "clearFilters": "Clear filters",
+    "categoriesLabel": "Course categories",
+    "previewOnly": "Free to start"
   },
   "coursePublicDetails": {
     "socialProof": {
@@ -4787,7 +5316,12 @@
       "notice": "You're viewing a free preview of this course.",
       "backToCourse": "Back to course",
       "enrollTitle": "Ready for the full course?",
-      "enrollCta": "View course & enroll"
+      "enrollCta": "View course & enroll",
+      "nextLessonLabel": "Next free lesson",
+      "enrollBody": "The rest of this course is one step away.",
+      "signUpBody": "Create an account to keep going — it takes a moment.",
+      "signUpCta": "Create your account",
+      "haveAccount": "Already have an account? Log in"
     }
   },
   "pricing": {
@@ -4943,6 +5477,7 @@
     "stripe": {
       "preparing": "Preparing secure payment…",
       "initError": "Couldn't start the card payment. Please try again.",
+      "inFlight": "A payment for this item is already in progress. Try again in a few minutes.",
       "unavailableTitle": "Card payments unavailable",
       "tryManual": "Pay another way",
       "payButton": "Pay {price}",
@@ -4987,7 +5522,7 @@
       "title": "Welcome, {name}!",
       "description": "Let's set up your online school in just a few steps. You'll be ready to create courses in under 5 minutes.",
       "step1": "Name your school and tell students what you teach",
-      "step2": "Choose a color theme, font, and style for your school",
+      "step2": "Pick a theme and a brand color for your school",
       "step3": "Create your first course and start teaching",
       "getStarted": "Let's Get Started"
     },
@@ -5002,15 +5537,8 @@
       "descriptionHint": "A short description for your school's landing page"
     },
     "branding": {
-      "title": "Brand Your School",
-      "description": "Pick a color theme, font, and border radius for your school",
-      "shuffle": "Shuffle",
-      "shuffleHint": "Random theme + font + radius",
-      "colorTheme": "Color Theme",
-      "borderRadius": "Border Radius",
-      "font": "Font",
-      "back": "Back",
-      "next": "Next"
+      "title": "Choose Your School's Look",
+      "description": "Pick a theme and a brand color. You can change both anytime in Appearance."
     },
     "payment": {
       "title": "Payment Setup",
@@ -5033,7 +5561,9 @@
       "title": "You're All Set!",
       "description": "Your school is configured and ready to go. What would you like to do next?",
       "createCourse": "Create Your First Course",
-      "goToDashboard": "Go to Dashboard"
+      "goToDashboard": "Go to Dashboard",
+      "theme": "Theme",
+      "themeDefault": "Platform default"
     },
     "complete": {
       "success": "School setup complete! Welcome aboard.",
@@ -5134,6 +5664,25 @@
           "failed": "Failed to record payout"
         }
       }
+    },
+    "sidebar": {
+      "brand": "Platform",
+      "brandSubtitle": "Super admin",
+      "groups": {
+        "operate": "Operate",
+        "money": "Money",
+        "configure": "Configure"
+      },
+      "overview": "Overview",
+      "schools": "Schools",
+      "paymentRequests": "Payment requests",
+      "billingHealth": "Billing health",
+      "revenue": "Revenue",
+      "payouts": "Payouts",
+      "plans": "Plans",
+      "badgeTooltip": "{title} ({count})",
+      "backToSchool": "Back to my school",
+      "logout": "Log out"
     }
   },
   "platformPricing": {
@@ -5144,12 +5693,91 @@
       "description": "Create your school for free and upgrade whenever you need more.",
       "createSchool": "Create Your School",
       "signIn": "Sign In"
+    },
+    "hero": {
+      "badge": "Transparent pricing for every stage",
+      "titleLead": "Launch your school.",
+      "titleHighlight": "Scale without limits.",
+      "subtitle": "Start free, upgrade when you're ready. No hidden fees, no surprises. Every plan includes the core LMS — just unlock more as you grow."
+    },
+    "toggle": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "save": "Save 17%"
+    },
+    "card": {
+      "mostPopular": "Most popular",
+      "perMonth": "/mo",
+      "billedAnnually": "{price} billed annually",
+      "freeForever": "Free forever",
+      "startFree": "Start free",
+      "getStarted": "Get started",
+      "contactSales": "Contact sales",
+      "courses": "Courses",
+      "students": "Students",
+      "txFee": "Tx fee",
+      "unlimited": "Unlimited"
+    },
+    "compare": {
+      "title": "Compare all features",
+      "subtitle": "See exactly what you get with each plan.",
+      "feature": "Feature",
+      "courses": "Courses",
+      "students": "Students",
+      "transactionFee": "Transaction fee",
+      "pricePerMonth": "{price}/mo"
+    },
+    "bottomCta": {
+      "title": "Ready to build your school?",
+      "subtitle": "Create your school in minutes and start teaching today. Free to start, upgrade whenever you need more."
+    },
+    "plans": {
+      "free": {
+        "name": "Free",
+        "description": "Get started with basic features"
+      },
+      "starter": {
+        "name": "Starter",
+        "description": "For growing schools that need more capacity"
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "AI grading, a coin store and advanced analytics for serious creators"
+      },
+      "business": {
+        "name": "Business",
+        "description": "Full platform with custom branding and priority support"
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "description": "White-label, dedicated support and custom terms"
+      }
     }
   },
   "featureGate": {
     "locked": "This feature requires the {plan} plan or higher",
     "upgrade": "Upgrade to {plan}",
-    "upgradeToUnlock": "Upgrade to {plan} to unlock {feature}"
+    "upgradeToUnlock": "Upgrade to {plan} to unlock {feature}",
+    "youAreOn": "you're on {plan}",
+    "startingAt": "Starting at ${price}/month",
+    "analyticsBasic": "Revenue reporting, CSV export and per-course confusion hotspots are part of Advanced analytics.",
+    "certificatesBasic": "Custom colours, logo, signature image and QR code are part of Custom certificates. Basic certificates use the platform design.",
+    "features": {
+      "leaderboard": "Leaderboard",
+      "achievements": "Achievements",
+      "store": "Point Store",
+      "community": "Community",
+      "certificates": "Custom Certificates",
+      "analytics": "Analytics",
+      "ai_grading": "AI Auto-Grading",
+      "voice_exercises": "Voice Exercises",
+      "remove_branding": "Remove \"Powered by\" branding",
+      "custom_branding": "Custom Branding",
+      "custom_domain": "Custom Domain",
+      "white_label": "White-Label",
+      "priority_support": "Priority Support"
+    },
+    "customColorLocked": "Use any brand color, not only the six recommended for your theme."
   },
   "limits": {
     "approaching": "You're using {current} of {limit} {resource}. Consider upgrading for more.",
@@ -5172,7 +5800,8 @@
       "title": "Page not found",
       "description": "Sorry, we couldn't find the page you're looking for.",
       "backToDashboard": "Back to Dashboard",
-      "goHome": "Go Home"
+      "goHome": "Go Home",
+      "backToOverview": "Back to overview"
     },
     "generic": {
       "title": "Something went wrong",
@@ -5180,6 +5809,18 @@
       "retry": "Try Again",
       "backToDashboard": "Back to Dashboard",
       "reference": "Error reference"
+    },
+    "panel": {
+      "title": "This page didn't load",
+      "description": "Something went wrong while loading this section. Retrying usually fixes it; if not, the reference below points at the server log.",
+      "reference": "Reference: {code}",
+      "retry": "Try again",
+      "back": {
+        "dashboard": "Back to dashboard",
+        "platform": "Back to overview",
+        "home": "Go home",
+        "login": "Back to sign in"
+      }
     }
   },
   "landingPageBuilder": {
@@ -5571,7 +6212,6 @@
     },
     "poweredBy": {
       "text": "Powered by",
-      "brandName": "LMS V2",
       "createSchool": "Create your own school"
     },
     "footer": {
@@ -5580,23 +6220,163 @@
       "platform": "Platform",
       "courses": "Courses",
       "pricing": "Pricing",
-      "instructors": "Instructors",
       "company": "Company",
-      "aboutUs": "About Us",
-      "careers": "Careers",
+      "aboutUs": "About Us"
+    },
+    "templates": {
+      "blank": {
+        "name": "Blank",
+        "description": "Start from scratch with an empty canvas."
+      },
+      "modernAcademy": {
+        "name": "Modern Academy",
+        "description": "A polished landing page with features, courses, testimonials, and CTA."
+      },
+      "minimal": {
+        "name": "Minimal",
+        "description": "A clean, simple landing page focused on courses."
+      },
+      "boldCreator": {
+        "name": "Bold Creator",
+        "description": "A high-energy page for solo creators and small teams."
+      },
+      "courseCatalog": {
+        "name": "Course Catalog",
+        "description": "Showcase your full course catalog with pricing."
+      },
+      "aboutUs": {
+        "name": "About Us",
+        "description": "Tell your story with team profiles and stats."
+      },
+      "contact": {
+        "name": "Contact",
+        "description": "Contact form with FAQ section."
+      },
+      "faq": {
+        "name": "FAQ",
+        "description": "Comprehensive FAQ page with multiple categories."
+      },
+      "freeCourseSchool": {
+        "name": "Free Course School",
+        "description": "Lead with a free course. Live stats, courses, reviews, instructors and pricing — all auto-filled from your data."
+      },
+      "businessCoachingHome": {
+        "name": "Business Coaching — Home",
+        "description": "High-conversion landing page for business, marketing, and entrepreneurship coaches."
+      },
+      "businessCoachingAbout": {
+        "name": "Business Coaching — About",
+        "description": "About page for a business coach: story, philosophy, and credentials."
+      },
+      "businessCoachingFaq": {
+        "name": "Business Coaching — FAQ",
+        "description": "FAQ page for a business coach covering programs, format, results, and pricing."
+      },
+      "businessCoachingContact": {
+        "name": "Business Coaching — Contact",
+        "description": "Contact and book-a-call page for a business coach, with form and quick answers."
+      },
+      "designSchoolHome": {
+        "name": "Design School — Home",
+        "description": "Landing page for design schools and creative course creators (UX/UI, graphic, illustration)."
+      },
+      "designSchoolAbout": {
+        "name": "Design School — About",
+        "description": "About page for a design school: mission, teaching approach, and mentors."
+      },
+      "designSchoolFaq": {
+        "name": "Design School — FAQ",
+        "description": "FAQ page for a design school covering courses, tools, portfolio, and pricing."
+      },
+      "designSchoolContact": {
+        "name": "Design School — Contact",
+        "description": "Contact page for a design school, with form and quick answers."
+      },
+      "fitnessStudioHome": {
+        "name": "Fitness Studio — Home",
+        "description": "Landing page for fitness coaches, yoga studios, and online workout programs."
+      },
+      "fitnessStudioAbout": {
+        "name": "Fitness Studio — About",
+        "description": "About page for a fitness studio: mission, philosophy, and coaches."
+      },
+      "fitnessStudioFaq": {
+        "name": "Fitness Studio — FAQ",
+        "description": "FAQ page for a fitness studio covering programs, equipment, pricing, and membership."
+      },
+      "fitnessStudioContact": {
+        "name": "Fitness Studio — Contact",
+        "description": "Contact page for a fitness studio, with form and quick answers."
+      },
+      "codeSchoolHome": {
+        "name": "Code School — Home",
+        "description": "Full landing page for coding bootcamps and programming schools."
+      },
+      "codeSchoolAbout": {
+        "name": "Code School — About",
+        "description": "About page for a coding school, with team, mission, and stats."
+      },
+      "codeSchoolFaq": {
+        "name": "Code School — FAQ",
+        "description": "FAQ page for a coding school covering courses, pricing, and career support."
+      },
+      "codeSchoolContact": {
+        "name": "Code School — Contact",
+        "description": "Contact page for a coding school, with form and common questions."
+      },
+      "codeSchoolCourses": {
+        "name": "Code School — Courses",
+        "description": "Course catalog page for a coding school, with learning paths and pricing."
+      },
+      "languageSchoolHome": {
+        "name": "Language School — Home",
+        "description": "Landing page for language academies: levels, native teachers, conversation practice, and pricing."
+      },
+      "languageSchoolAbout": {
+        "name": "Language School — About",
+        "description": "About page for a language academy: mission, teaching method, and teachers."
+      },
+      "languageSchoolFaq": {
+        "name": "Language School — FAQ",
+        "description": "FAQ page for a language academy covering levels, classes, pricing, and certificates."
+      },
+      "languageSchoolContact": {
+        "name": "Language School — Contact",
+        "description": "Contact page for a language academy, with form and quick answers."
+      },
+      "musicAcademyHome": {
+        "name": "Music Academy — Home",
+        "description": "Landing page for music schools and online instrument or vocal teachers."
+      },
+      "musicAcademyAbout": {
+        "name": "Music Academy — About",
+        "description": "About page for a music academy: mission, approach, and teachers."
+      },
+      "musicAcademyFaq": {
+        "name": "Music Academy — FAQ",
+        "description": "FAQ page for a music academy covering instruments, lessons, pricing, and equipment."
+      },
+      "musicAcademyContact": {
+        "name": "Music Academy — Contact",
+        "description": "Contact page for a music academy, with form and quick answers."
+      }
+    },
+    "pageTypes": {
+      "home": "Home",
+      "about": "About",
       "contact": "Contact",
-      "legal": "Legal",
-      "privacyPolicy": "Privacy Policy",
-      "termsOfService": "Terms of Service"
+      "faq": "FAQ",
+      "terms": "Terms",
+      "events": "Events"
     }
   },
   "exercises": {
     "artifact": {
-      "typeLabel": "Interactive Exercise",
+      "typeLabel": "Interactive exercise",
       "evaluating": "Evaluating your submission...",
       "score": "Score",
       "passed": "Passed",
-      "failed": "Not Yet",
+      "failed": "Not yet",
       "feedback": "Feedback",
       "strengths": "Strengths",
       "improvements": "Areas to Improve",
@@ -5609,11 +6389,11 @@
       "passMark": "Pass mark {score}"
     },
     "audio": {
-      "title": "Audio Exercise",
+      "title": "Audio exercise",
       "instructions": "Instructions",
-      "topicPrompt": "Topic Prompt",
+      "topicPrompt": "Topic",
       "completed": "Completed",
-      "recordYourResponse": "Record Your Response",
+      "recordYourResponse": "Record your response",
       "record": "Record",
       "upload": "Upload",
       "stop": "Stop Recording",
@@ -5625,8 +6405,7 @@
       "analyzing": "Analyzing your recording...",
       "analyzingDescription": "Transcribing audio and generating AI feedback. This may take up to 30 seconds.",
       "aiFeedback": "AI Feedback",
-      "tryAgain": "Try Again",
-      "score": "score",
+      "tryAgain": "Try again",
       "wpm": "WPM",
       "fillers": "Fillers",
       "pauses": "Pauses",
@@ -5634,25 +6413,20 @@
       "durationRange": "Duration: {min}–{max}",
       "uploadLimit": "Upload: max 25 MB (MP3, M4A, WAV, OGG, WebM)",
       "strengths": "Strengths",
-      "improvements": "Areas to Improve",
-      "focusNext": "Focus for Next Attempt",
-      "annotatedTranscript": "Annotated Transcript",
+      "improvements": "Areas to improve",
+      "focusNext": "Focus for the next attempt",
+      "corrections": "Say it better",
+      "annotatedTranscript": "Transcript",
       "fillerWord": "Filler word",
       "longPause": "Long pause",
-      "passed": "Exercise Completed!",
-      "passedMessage": "Great job! You reached the passing score. Your exercise has been marked as complete.",
-      "notPassed": "Keep Practicing!",
-      "notPassedMessage": "Review the feedback below and try again to reach the passing score of {score}.",
-      "submissionHistory": "Submission History",
-      "play": "Play",
+      "submissionHistory": "Attempts",
       "download": "Download",
-      "details": "Show Details",
-      "hideDetails": "Hide Details",
+      "details": "Details",
+      "hideDetails": "Hide details",
       "attempt": "Attempt {number}",
       "dailyLimitReached": "Daily attempt limit reached",
-      "dailyLimitMessage": "You've used all {limit} attempts for today. Come back tomorrow to try again!",
-      "attemptsRemaining": "{count} attempts remaining today",
-      "moreExercises": "More Exercises",
+      "dailyLimitMessage": "You've used all {limit} attempts for today. You can record again tomorrow.",
+      "moreExercises": "More exercises",
       "beginner": "Beginner",
       "intermediate": "Intermediate",
       "advanced": "Advanced",
@@ -5664,19 +6438,29 @@
       "maxDuration": "max {time}",
       "attemptsUsedOf": "{used} of {max} attempts used today",
       "pointsAway": "{points} points away from passing",
-      "recordAgain": "Record Again",
-      "improvementFocus": "What to Focus On",
-      "passingThreshold": "Pass: {score}",
-      "completedScore": "Your Best Score",
+      "recordAgain": "Record again",
+      "improvementFocus": "What to focus on",
       "completedOn": "Completed on {date}",
-      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
+      "playRecording": "Listen back",
+      "micInsecure": "Your browser only allows microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again.",
+      "wpmHint": "aim for 100–180",
+      "fillersHint": "aim for 3 or fewer",
+      "bestScore": "Best score {score}",
+      "lastAttempt": "Last attempt: {score} / 100",
+      "passedRecordAgain": "You passed this exercise. You can record again to practise; your best score is kept.",
+      "noFeedbackForAttempt": "No written feedback was recorded for this attempt.",
+      "playbackError": "The recording couldn't be loaded. Try again in a moment.",
+      "yourRecording": "Your recording",
+      "orUpload": "or upload a file",
+      "tapToRecord": "Record",
+      "recordingPreview": "Recording preview"
     },
     "video": {
-      "title": "Video Exercise",
+      "title": "Video exercise",
       "instructions": "Instructions",
-      "topicPrompt": "Speaking Topic",
+      "topicPrompt": "Speaking topic",
       "completed": "Completed",
-      "recordYourResponse": "Record Your Response",
+      "recordYourResponse": "Record your response",
       "record": "Record Video",
       "upload": "Upload",
       "stop": "Stop Recording",
@@ -5688,24 +6472,19 @@
       "analyzing": "Analyzing your video...",
       "analyzingDescription": "Processing video and generating AI feedback. This may take up to 60 seconds.",
       "aiFeedback": "AI Feedback",
-      "tryAgain": "Try Again",
-      "score": "score",
+      "tryAgain": "Try again",
       "duration": "Duration",
       "durationRange": "Duration: {min}–{max}",
       "uploadLimit": "Upload: max 100 MB (MP4, WebM, MOV)",
       "strengths": "Strengths",
-      "improvements": "Areas to Improve",
-      "focusNext": "Focus for Next Attempt",
-      "passed": "Exercise Completed!",
-      "passedMessage": "Great job! You reached the passing score. Your exercise has been marked as complete.",
-      "notPassed": "Keep Practicing!",
-      "notPassedMessage": "Review the feedback below and try again to reach the passing score of {score}.",
-      "submissionHistory": "Submission History",
-      "details": "Show Details",
-      "hideDetails": "Hide Details",
+      "improvements": "Areas to improve",
+      "focusNext": "Focus for the next attempt",
+      "submissionHistory": "Attempts",
+      "details": "Details",
+      "hideDetails": "Hide details",
       "attempt": "Attempt {number}",
       "dailyLimitReached": "Daily attempt limit reached",
-      "dailyLimitMessage": "You've used all {limit} attempts for today. Come back tomorrow to try again!",
+      "dailyLimitMessage": "You've used all {limit} attempts for today. You can record again tomorrow.",
       "moreExercises": "More Exercises",
       "beginner": "Beginner",
       "intermediate": "Intermediate",
@@ -5718,12 +6497,23 @@
       "maxDuration": "max {time}",
       "attemptsUsedOf": "{used} of {max} attempts used today",
       "pointsAway": "{points} points away from passing",
-      "recordAgain": "Record Again",
-      "improvementFocus": "What to Focus On",
-      "passingThreshold": "Pass: {score}",
-      "completedScore": "Your Best Score",
+      "recordAgain": "Record again",
+      "improvementFocus": "What to focus on",
       "completedOn": "Completed on {date}",
-      "exerciseMarkedComplete": "This exercise has been marked as complete. Great work!"
+      "micInsecure": "Your browser only allows camera and microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again.",
+      "wpmHint": "aim for 100–180",
+      "fillersHint": "aim for 3 or fewer",
+      "bestScore": "Best score {score}",
+      "lastAttempt": "Last attempt: {score} / 100",
+      "passedRecordAgain": "You passed this exercise. You can record again to practise; your best score is kept.",
+      "annotatedTranscript": "Transcript",
+      "playRecording": "Watch back",
+      "download": "Download",
+      "noFeedbackForAttempt": "No written feedback was recorded for this attempt.",
+      "playbackError": "The recording couldn't be loaded. Try again in a moment.",
+      "yourRecording": "Your recording",
+      "orUpload": "or upload a file",
+      "tapToRecord": "Record"
     },
     "list": {
       "title": "Practice Arena",
@@ -5735,7 +6525,10 @@
       "empty": {
         "title": "No exercises found",
         "description": "There are no active exercises for this course at the moment."
-      }
+      },
+      "cardFallbackDescription": "Interactive practice to reinforce this course.",
+      "minutes": "{minutes} min",
+      "completed": "Completed"
     },
     "workspace": {
       "brief": "Instructions",
@@ -5743,7 +6536,96 @@
       "sections": "Exercise sections",
       "task": "Exercise",
       "coach": "AI Coach",
-      "record": "Record"
+      "record": "Record",
+      "speak": "Speak",
+      "code": "Code",
+      "resize": "Resize panes"
+    },
+    "conversation": {
+      "title": "Live conversation",
+      "scenario": "Scenario",
+      "start": "Start conversation",
+      "startAgain": "Start a new conversation",
+      "finish": "Finish and get feedback",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "connecting": "Connecting…",
+      "listening": "Listening — go ahead",
+      "tutorSpeaking": "Your partner is speaking",
+      "muted": "Microphone muted",
+      "ready": "Ready when you are",
+      "grading": "Grading your conversation…",
+      "timeLeft": "Time left",
+      "maxLength": "Up to {minutes} min per conversation",
+      "attemptsToday": "{used} of {max} conversations today",
+      "dailyLimitReached": "You've used today's conversations. Come back tomorrow.",
+      "notAvailable": "Live conversations aren't available for this exercise right now.",
+      "connectionError": "We couldn't connect to the voice partner. Check your connection and try again.",
+      "micDenied": "We need your microphone for this exercise. Allow access in your browser and try again.",
+      "nothingSaid": "We didn't hear you say anything, so there is nothing to grade. Try again and speak after your partner greets you.",
+      "gradingError": "We couldn't grade this conversation. Please try again.",
+      "sessionTooLong": "This conversation ran past its {minutes}-minute limit, so it can't be graded. Start a new one.",
+      "hint": "Hint",
+      "liveTranscript": "Live transcript",
+      "transcriptEmptyTitle": "Nothing yet",
+      "transcriptEmpty": "What you and your partner say will appear here.",
+      "corrections": "Say it better",
+      "fullTranscript": "Full transcript",
+      "micInsecure": "Your browser only allows microphone access on a secure (https) page, so it can't ask for permission here. Open this page over https and try again.",
+      "wrappingUp": "Wrapping up…"
+    },
+    "types": {
+      "coding_challenge": "Code",
+      "essay": "Essay",
+      "discussion": "Discussion",
+      "quiz": "Quiz",
+      "multiple_choice": "Multiple choice",
+      "fill_in_the_blank": "Fill in the blank",
+      "audio_evaluation": "Audio",
+      "video_evaluation": "Video",
+      "real_time_conversation": "Conversation",
+      "artifact": "Interactive"
+    },
+    "coach": {
+      "title": "AI coach",
+      "thinking": "Thinking…",
+      "ready": "Write your answer or ask for help",
+      "completed": "Completed",
+      "restart": "Restart conversation",
+      "emptyTitle": "Write your answer here.",
+      "emptyBody": "The coach can explain the task or give a hint, and grades your work when you ask it to check your answer.",
+      "markedComplete": "Exercise completed",
+      "placeholder": "Type your answer…",
+      "suggestions": {
+        "start": "Help me get started",
+        "explain": "Explain the instructions",
+        "check": "Check my answer",
+        "hint": "Give me a hint"
+      },
+      "error": "Something went wrong. Please try again."
+    },
+    "code": {
+      "typeLabel": "Coding challenge",
+      "task": "Task",
+      "output": "Output",
+      "solved": "Challenge completed.",
+      "submit": "Check my solution",
+      "checking": "Checking…",
+      "evaluationFailed": "Your solution couldn't be checked. Try again.",
+      "rateLimited": "Too many checks for now. Try again in an hour.",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "saveFailed": "Couldn't save your code"
+    },
+    "filter": {
+      "label": "Filter by exercise type",
+      "all": "All",
+      "emptyForType": "No exercises of this type yet."
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
     }
   },
   "exams": {
@@ -5761,6 +6643,74 @@
       }
     }
   },
+  "examResult": {
+    "breadcrumb": {
+      "dashboard": "Dashboard",
+      "exams": "Exams",
+      "results": "Results"
+    },
+    "courseFallback": "Course",
+    "completed": "Exam Completed",
+    "completedOn": "Completed on {date}",
+    "finalScore": "Final Score",
+    "notGradedYet": "Not graded yet",
+    "pendingReview": {
+      "title": "Pending Teacher Review",
+      "description": "Your multiple choice and true/false answers have been auto-graded. Free-text answers are awaiting teacher evaluation. Your final score may change after review."
+    },
+    "aiReviewed": {
+      "title": "AI Evaluated",
+      "description": "All answers have been evaluated by AI. Your teacher may still review and adjust scores."
+    },
+    "teacherReviewed": {
+      "title": "Teacher Reviewed",
+      "description": "Your exam has been reviewed and finalized by your teacher."
+    },
+    "certificate": {
+      "title": "Certificate Earned!",
+      "description": "Congratulations! You have completed all requirements for this course and earned a certificate.",
+      "view": "View Certificate"
+    },
+    "aiAnalysis": {
+      "title": "AI Performance Analysis",
+      "fallback": "Your performance has been evaluated. Review the detailed feedback per question below."
+    },
+    "detailedReview": "Detailed Question Review",
+    "question": "Question {number}",
+    "questionType": {
+      "multiple_choice": "multiple choice",
+      "true_false": "true false",
+      "free_text": "free text"
+    },
+    "yourChoice": "Your Choice",
+    "correct": "Correct",
+    "yourSubmission": "Your submission",
+    "noAnswer": "No answer provided.",
+    "points": "{earned}/{possible} pts",
+    "teacherReviewedBadge": "Teacher reviewed",
+    "questionPending": {
+      "title": "Pending Review",
+      "description": "This free-text answer is awaiting evaluation. Your teacher will review it, or it will be evaluated by AI."
+    },
+    "teacherFeedback": "Teacher Feedback",
+    "aiFeedback": "AI Feedback",
+    "viewAllAssessments": "View All Assessments",
+    "continueLearning": "Continue Learning",
+    "feedback": {
+      "graded": "Your exam has been graded.",
+      "pendingTeacherReview": "Pending teacher review.",
+      "correct": "Correct answer!",
+      "incorrect": "Incorrect.",
+      "incorrectWithAnswer": "Incorrect. The correct answer is: {answer}"
+    },
+    "gradingFailed": {
+      "title": "Your exam hasn't been graded yet",
+      "description": "Your answers were saved, but grading didn't finish. Try again — your answers won't change.",
+      "retry": "Retry grading",
+      "retrying": "Grading…",
+      "retryFailed": "Grading failed again. Try again in a moment."
+    }
+  },
   "puck": {
     "editor": {
       "back": "Back",
@@ -5772,7 +6722,7 @@
       "failedSave": "Failed to save",
       "failedPublish": "Failed to publish",
       "branding": "Branding",
-      "brandingDescription": "Logo, favicon, and brand colors. Changes apply across every page on your site.",
+      "brandingDescription": "Logo and favicon. Your theme and brand color are set on the Appearance page.",
       "status": {
         "draft": "draft",
         "published": "published"
@@ -5888,6 +6838,7 @@
       "Cover": "Cover",
       "Contain": "Contain",
       "Fill": "Fill",
+      "School theme": "School theme",
       "Border Radius": "Border Radius",
       "Variant": "Variant",
       "Solid": "Solid",
@@ -6036,7 +6987,9 @@
       "noCoursesFound": "No courses found.",
       "statStudents": "Students",
       "statCourses": "Courses",
-      "statCompletions": "Completions"
+      "statCompletions": "Completions",
+      "socialProofReviews": "Based on {count, plural, one {# review} other {# reviews}}",
+      "socialProofRating": "{rating} out of 5 stars"
     }
   },
   "verification": {
@@ -6067,6 +7020,32 @@
     "title": "Community",
     "schoolFeedDescription": "Connect with your school community",
     "courseFeedDescription": "Discuss and collaborate with your classmates",
+    "courseEntry": {
+      "title": "Course community",
+      "recentPosts": "{count, plural, one {# post} other {# posts}} in the last 7 days",
+      "latest": "Latest: “{title}”",
+      "empty": "No posts yet",
+      "emptyCta": "Be the first to introduce yourself",
+      "fallback": "Ask questions and learn alongside your classmates",
+      "schoolLinksLabel": "Your course communities",
+      "moreCourses": "{count, plural, one {# more course} other {# more courses}}",
+      "backToCourse": "Back to course",
+      "welcome": {
+        "title": "Welcome your students",
+        "description": "Your course is live. Pin an “Introduce yourself” prompt so its community doesn’t start empty.",
+        "edit": "Edit",
+        "dismiss": "Not now",
+        "titleLabel": "Title",
+        "contentLabel": "Message",
+        "defaultTitle": "Introduce yourself",
+        "defaultContent": "Welcome to {course}. Tell us who you are, where you’re joining from and what you hope to learn in this course.",
+        "submit": "Post and pin",
+        "submitting": "Posting…",
+        "success": "Welcome post pinned",
+        "error": "Couldn’t post the welcome prompt. Try again.",
+        "cancel": "Cancel"
+      }
+    },
     "newPost": "New Post",
     "writePost": "What's on your mind?",
     "addTitle": "Add title",
@@ -6098,7 +7077,11 @@
       "polls": "Polls",
       "milestones": "Milestones",
       "byTeachers": "By Teachers",
-      "byStudents": "By Students"
+      "byStudents": "By Students",
+      "questions": "Questions",
+      "allQuestions": "All questions",
+      "unanswered": "Unanswered",
+      "answered": "Answered"
     },
     "pinned": "Pinned",
     "locked": "Locked",
@@ -6115,10 +7098,53 @@
     "flagReason": "Reason",
     "flagSubmit": "Submit Report",
     "flagSubmitted": "Report submitted",
+    "cancel": "Cancel",
+    "commentActions": "Comment actions",
+    "block": "Block",
+    "blockConfirm": "Block {name}? You won't see their posts or comments any more. They won't be told.",
+    "blocked": "Blocked. You won't see their posts or comments.",
+    "blockedMembers": "Blocked members",
+    "blockedMembersDescription": "You don't see posts or comments from these members.",
+    "unblock": "Unblock",
+    "unblocked": "Unblocked",
     "muted": "You are currently muted",
     "mutedUntil": "You are muted until {date}",
     "mutedIndefinite": "You are muted from posting. Contact an admin for more information.",
     "unknownUser": "Unknown user",
+    "notifications": {
+      "replyToPost": "{name} replied to your post",
+      "replyToComment": "{name} replied to your comment",
+      "replies": "{count, plural, one {# new reply} other {# new replies}}",
+      "prompt": "New discussion prompt in {course}",
+      "promptNoCourse": "New discussion prompt",
+      "answerAccepted": "Your answer was accepted",
+      "onPost": "On “{post}”",
+      "onYourPost": "On your post",
+      "onAPost": "On a post",
+      "snippet": "{name}: {snippet}",
+      "unknownActor": "Someone",
+      "sidebarUnread": "{count, plural, one {# unread community notification} other {# unread community notifications}}",
+      "unreadHeading": "New for you",
+      "viewAll": "View all notifications",
+      "unreadFallback": "{count, plural, one {You have # unread community notification.} other {You have # unread community notifications.}}",
+      "preferences": {
+        "title": "Notification preferences",
+        "description": "Choose what the community lets you know about.",
+        "group": "Community",
+        "replies": "Replies",
+        "repliesDescription": "Replies to your posts and comments, when your answer is accepted, and when a teacher grades your answer.",
+        "prompts": "New discussion prompts",
+        "promptsDescription": "When a teacher starts a discussion in one of your courses.",
+        "everySchool": "These settings apply in every school you belong to.",
+        "error": "Couldn't save your preference. Try again.",
+        "mentions": "Mentions",
+        "mentionsDescription": "When someone @mentions you in a post or a comment."
+      },
+      "promptGraded": "Your answer was graded: {score}/100",
+      "promptGradedNoScore": "Your answer was graded",
+      "mentionInPost": "{name} mentioned you in a post",
+      "mentionInComment": "{name} mentioned you in a comment"
+    },
     "emptySchool": "No posts yet. Be the first to share something!",
     "emptyCourse": "No discussions yet. Start the conversation!",
     "loadMore": "Load more",
@@ -6131,6 +7157,35 @@
     "graded": "Graded",
     "linkedLesson": "Linked to: {lesson}",
     "linkedToLesson": "Linked to lesson",
+    "lessonDiscussion": {
+      "title": "Discussion",
+      "description": "Questions about this lesson. Your answers are shared with everyone in the course.",
+      "answerCount": "{count, plural, =0 {No answers yet} one {# answer} other {# answers}}",
+      "beFirstAnswer": "Be the first to answer.",
+      "answer": "Answer",
+      "readAnswers": "Read answers",
+      "hideAnswers": "Hide answers",
+      "answerLabel": "Your answer",
+      "answerPlaceholder": "Write your answer…",
+      "postAnswer": "Post answer",
+      "answerPosted": "Answer posted",
+      "answered": "You answered",
+      "closed": "Answers are closed",
+      "viewInCommunity": "View in community",
+      "viewInCommunityLabel": "View in community: {title}",
+      "more": "More prompts in the course community",
+      "loadError": "This lesson's discussion couldn't be loaded.",
+      "openCommunity": "Open the course community",
+      "focusUnavailable": "This post isn't available. It may have been removed.",
+      "promptCount": "{count, plural, one {# discussion prompt} other {# discussion prompts}}",
+      "addPrompt": "Add discussion prompt",
+      "addPromptFor": "Add discussion prompt to “{lesson}”",
+      "sheetTitle": "New discussion prompt",
+      "sheetDescription": "Students see it at the end of the lesson and in the course community.",
+      "promptPosted": "Discussion prompt posted",
+      "view": "View",
+      "gradedHint": "Students see a Graded badge on this prompt."
+    },
     "createPrompt": "Create Discussion Prompt",
     "promptTitle": "Prompt Title",
     "promptContent": "Prompt Content",
@@ -6148,13 +7203,29 @@
       "vote": "Vote",
       "voted": "You voted",
       "totalVotes": "{count, plural, one {# vote} other {# votes}}",
-      "results": "Results"
+      "results": "Results",
+      "badge": "Poll",
+      "optionPlaceholder": "Option {n}",
+      "detailsPlaceholder": "Add context (optional)"
     },
-    "milestone": {
-      "courseCompleted": "{name} completed the course {course}!",
-      "certificateEarned": "{name} earned a certificate!",
-      "levelUp": "{name} reached level {level}!",
-      "streak": "{name} is on a {days}-day streak!"
+    "milestones": {
+      "courseCompleted": "Completed <strong>{course}</strong>",
+      "courseCompletedWithCertificate": "Completed <strong>{course}</strong> and earned the certificate",
+      "courseCompletedFallback": "Completed a course",
+      "certificateEarned": "Earned the certificate for <strong>{course}</strong>",
+      "certificateEarnedFallback": "Earned a certificate",
+      "levelUp": "Reached level <strong>{level}</strong>",
+      "streak": "Reached a <strong>{days}-day streak</strong>",
+      "fallback": "Reached a milestone",
+      "share": {
+        "label": "Share my milestones in the community",
+        "description": "Finishing a course, earning a certificate, reaching level 5 and up, and 7, 30 and 100-day streaks are posted automatically. Applies in every school you belong to. Turning it off stops new posts; you can delete earlier ones from the feed.",
+        "enabledToast": "Your milestones will be shared",
+        "disabledToast": "Your milestones will no longer be shared",
+        "error": "Could not save your preference. Please try again.",
+        "settingsLink": "Sharing settings",
+        "schoolOff": "This school isn't posting milestones right now. Your choice applies wherever milestones are on."
+      }
     },
     "moderation": {
       "title": "Community Moderation",
@@ -6182,8 +7253,10 @@
       "studentPostsSchoolFeedDesc": "Students can create posts in the school-wide community feed",
       "studentPolls": "Allow student polls",
       "studentPollsDesc": "Students can create polls in the community",
-      "milestonePosts": "Auto-generate milestone posts",
-      "milestonePostsDesc": "Automatically create celebration posts for achievements like course completions"
+      "milestonePosts": "Share student milestones",
+      "milestonePostsDesc": "Course completions and certificates are posted in the course feed; level 5 and up and 7, 30 and 100-day streaks in the school feed. Students can opt out.",
+      "open": "Settings",
+      "saved": "Setting saved"
     },
     "uploadImage": "Upload image",
     "uploading": "Uploading...",
@@ -6218,6 +7291,114 @@
     "upgrade": {
       "title": "Community is a premium feature",
       "description": "Upgrade to the Starter plan or higher to access the community feed."
+    },
+    "save": "Save",
+    "saving": "Saving…",
+    "postUpdated": "Post updated",
+    "removeAttachment": "Remove attachment",
+    "schoolFeedStaffOnly": "Only teachers and admins can post in the school feed. You can still react and comment.",
+    "roleBadge": {
+      "teacher": "Teacher",
+      "admin": "Admin"
+    },
+    "postActions": "Post actions",
+    "markdown": {
+      "hint": "Markdown: **bold**  *italic*  `code`  ```code block```  @ to mention",
+      "preview": "Preview",
+      "edit": "Edit",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "copyCode": "Copy code"
+    },
+    "questions": {
+      "toggle": "Question",
+      "badge": "Question",
+      "answered": "Answered",
+      "unanswered": "Unanswered",
+      "titlePlaceholder": "Your question in one line",
+      "bodyPlaceholder": "What did you try, and where are you stuck?",
+      "accept": "Accept answer",
+      "unaccept": "Unaccept",
+      "accepted": "Answer accepted",
+      "unaccepted": "Answer unaccepted",
+      "acceptedAnswer": "Accepted answer",
+      "helpful": "Helpful",
+      "helpfulCount": "Helpful · {count}",
+      "empty": {
+        "questions": "No questions yet.",
+        "unanswered": "No unanswered questions. Nice work.",
+        "answered": "No answered questions yet."
+      },
+      "dashboard": {
+        "title": "Unanswered questions",
+        "summary": "{count, plural, one {# unanswered question in your courses} other {# unanswered questions in your courses}}",
+        "allAnswered": "Every question in your courses has an accepted answer.",
+        "courseCount": "{count, plural, one {# question} other {# questions}}",
+        "untitledCourse": "Untitled course"
+      }
+    },
+    "grading": {
+      "gradeAnswers": "Grade answers",
+      "gradeAnswersLabel": "Grade answers: {title}",
+      "title": "Grade answers",
+      "backToCommunity": "Back to the course community",
+      "lesson": "Lesson: {lesson}",
+      "filterLabel": "Show",
+      "filters": {
+        "all": "All",
+        "ungraded": "To grade",
+        "graded": "Graded",
+        "unanswered": "Not answered"
+      },
+      "filterCount": "{label} · {count}",
+      "status": {
+        "ungraded": "Waiting for a grade",
+        "graded": "Graded",
+        "unanswered": "Not answered"
+      },
+      "answers": "{count, plural, one {# answer} other {# answers}}",
+      "noAnswer": "No answer yet.",
+      "score": "Score (0–100)",
+      "feedback": "Feedback (optional)",
+      "feedbackPlaceholder": "What went well, and what to work on next",
+      "save": "Save grade",
+      "update": "Update grade",
+      "saving": "Saving…",
+      "saved": "Grade saved",
+      "remove": "Remove grade",
+      "removed": "Grade removed",
+      "invalidScore": "Enter a whole number from 0 to 100.",
+      "gradedOn": "Graded {date}",
+      "gradedScore": "{score}/100",
+      "summary": "{graded} of {total} graded",
+      "emptyRoster": "No students in this course yet.",
+      "emptyFilter": "No students match this filter.",
+      "certificateNote": "Discussion grades show in each student's progress. They don't count toward course completion or certificates.",
+      "unknownStudent": "Unnamed student",
+      "dashboard": {
+        "title": "Discussion answers to grade",
+        "summary": "{count, plural, one {# answer waiting for a grade} other {# answers waiting for a grade}}",
+        "allGraded": "Every answer to your graded prompts has a grade.",
+        "promptCount": "{count} to grade",
+        "untitled": "Untitled prompt"
+      }
+    },
+    "promptGrade": {
+      "yourGrade": "Your grade",
+      "score": "{score}/100",
+      "feedback": "Teacher feedback",
+      "pending": "Answered — not graded yet",
+      "dueIn": "{count, plural, one {Due in # day} other {Due in # days}}",
+      "dueToday": "Due today",
+      "overdue": "Past due",
+      "dueOn": "Due {date}",
+      "dueDate": "Due date (optional)",
+      "dueDateHint": "Shown to students. Answers after it are still accepted."
+    },
+    "newPosts": "{count, plural, one {# new post} other {# new posts}}",
+    "mentions": {
+      "listLabel": "Mention someone",
+      "noMatches": "No one by that name can see this"
     }
   },
   "schoolLanding": {
@@ -6231,5 +7412,524 @@
     "view": "View",
     "ctaTitle": "Ready to start learning at {name}?",
     "ctaButton": "Join {name} Now"
+  },
+  "oauthConsent": {
+    "invalidTitle": "Invalid Request",
+    "invalidDescription": "Missing authorization_id parameter.",
+    "errorTitle": "Authorization Error",
+    "errorFallback": "Could not retrieve authorization details.",
+    "title": "Authorize Access",
+    "subtitle": "An application is requesting access to your LMS account.",
+    "application": "Application",
+    "unknownApplication": "Unknown Application",
+    "unknownSchool": "Unknown school",
+    "redirectUri": "Redirect URI",
+    "permissions": "Permissions",
+    "signedInAs": "Signed in as",
+    "connectingTo": "— connecting to",
+    "explain": "This will let the application access your LMS data — teachers and admins get course management, students get their own learning tools.",
+    "schoolLabel": "Connect to school",
+    "schoolPlaceholder": "Choose a school",
+    "schoolHint": "The application will only see this school's data.",
+    "deny": "Deny",
+    "denying": "Denying...",
+    "approve": "Approve",
+    "approving": "Approving...",
+    "genericError": "Something went wrong. Please try again.",
+    "unexpectedError": "An error occurred. Please try again."
+  },
+  "products": {
+    "title": "Available Products",
+    "subtitle": "Browse our available courses and products. Select one to get started.",
+    "paymentMethod": "Payment Method: {provider}",
+    "manual": "Manual/Offline",
+    "requestPaymentInfo": "Request Payment Info",
+    "buyNow": "Buy Now",
+    "detail": {
+      "manualTitle": "How Manual Payment Works:",
+      "manualSteps": {
+        "request": "Click the button below to request payment information",
+        "instructions": "The school posts payment instructions in My Payments and notifies you",
+        "pay": "Complete the payment using your preferred method (bank transfer, etc.)",
+        "access": "Once verified, you’ll get instant access to your course"
+      },
+      "freeTitle": "This product is free",
+      "freeDescription": "No payment needed. Enroll in one click.",
+      "noCourses": "No courses are linked to this product yet."
+    },
+    "empty": "No products available at the moment.",
+    "free": "Free",
+    "enrollFree": "Enroll for free"
+  },
+  "joinSchool": {
+    "notFoundTitle": "School Not Found",
+    "notFoundDescription": "The school you're trying to join doesn't exist or is no longer available.",
+    "returnHome": "Return to Home",
+    "memberTitle": "You're Already a Member!",
+    "memberDescription": "You're already enrolled in {school}",
+    "memberBody": "You have access to all courses and resources at {school}.",
+    "continue": "Continue",
+    "goToDashboard": "Go to Dashboard",
+    "browseCourses": "Browse Courses",
+    "title": "Join {school}",
+    "subtitle": "Start learning with {school} today",
+    "otherSchoolsTitle": "You're already a member of:",
+    "unknownSchool": "Unknown School",
+    "otherSchoolsHint": "You can switch between schools anytime from your dashboard.",
+    "formTitle": "Ready to Start Learning?",
+    "formDescription": "Join {school} and get access to their courses and resources",
+    "benefitsTitle": "What you'll get:",
+    "benefitCourses": "Access to all available courses",
+    "benefitProgress": "Track your progress and earn certificates",
+    "benefitExams": "Participate in exams and exercises",
+    "benefitCommunity": "Join the learning community",
+    "submit": "Join {school}",
+    "autoJoining": "Joining {school}…",
+    "submitting": "Joining...",
+    "terms": "By joining, you agree to {school}'s terms of service and privacy policy",
+    "error": "Failed to join school. Please try again.",
+    "unexpectedError": "An unexpected error occurred",
+    "bannedTitle": "You were removed from this school",
+    "bannedDescription": "{school} has removed your membership.",
+    "bannedBody": "You cannot rejoin this school. If you think this is a mistake, contact the school directly."
+  },
+  "createSchool": {
+    "title": "Create Your School",
+    "subtitleAccount": "First, create your account",
+    "subtitleSchool": "Choose a name and URL for your school",
+    "stepAccount": "Account",
+    "stepSignedUp": "Signed up",
+    "stepSchool": "School",
+    "google": "Continue with Google",
+    "googleRedirecting": "Redirecting to Google…",
+    "googleUnreachable": "Google isn't responding. Check your connection, or create your account with email below.",
+    "orEmail": "Or continue with email",
+    "nameLabel": "Your name",
+    "namePlaceholder": "Ada Lovelace",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "createAccount": "Create Account & Continue",
+    "creatingAccount": "Creating account...",
+    "haveAccount": "Already have an account?",
+    "logIn": "Log in",
+    "confirmTitle": "Check your email",
+    "confirmBody": "We sent a confirmation link to {email}.",
+    "confirmHint": "Please verify your email, then log in to continue.",
+    "goToLogin": "Go to Log in",
+    "backToSignUp": "Back to sign up",
+    "signedInAs": "Signed in as {email}",
+    "schoolNameLabel": "School Name",
+    "schoolNamePlaceholder": "My Awesome Academy",
+    "schoolUrlLabel": "School URL",
+    "schoolUrlPlaceholder": "my-academy",
+    "slugHint": "Only lowercase letters, numbers, and hyphens",
+    "createSchool": "Create School",
+    "creatingSchool": "Creating your school...",
+    "back": "Back",
+    "created": "School created! Setting up your dashboard...",
+    "errorNameRequired": "Please enter your name",
+    "errorPasswordTooShort": "Password must be at least 6 characters",
+    "errorEmailRegistered": "This email is already registered. Please log in instead.",
+    "errorSlugTaken": "This school URL is already taken. Please choose a different one.",
+    "errorCreateFailed": "Failed to create school: {message}",
+    "errorGeneric": "Something went wrong",
+    "countryLabel": "Country",
+    "countryPlaceholder": "Search for your country",
+    "countryEmpty": "No country matches that search.",
+    "countryHint": "Sets your default currency. You can change it later in Settings."
+  },
+  "home": {
+    "hero": {
+      "badge": "White-label LMS platform",
+      "titleLead": "Launch your online academy in",
+      "titleHighlight": "minutes",
+      "subtitle": "The complete platform to create, sell, and scale your online courses. AI grading, gamification, payments that work in Latin America, and one isolated school per subdomain — all out of the box.",
+      "ctaPrimary": "Start your school free",
+      "ctaSecondary": "Browse courses",
+      "trust": {
+        "noCard": "No credit card required",
+        "freePlan": "Free plan available",
+        "subdomain": "Your own subdomain",
+        "openSource": "Open source (MIT)"
+      }
+    },
+    "audience": {
+      "badge": "One platform, two experiences",
+      "title": "Built for schools and students",
+      "schools": {
+        "title": "Course creators & schools",
+        "description": "Launch your branded online academy in minutes. Create courses, set pricing, accept payments, and follow your students' progress — all from one dashboard.",
+        "items": {
+          "subdomain": "Your own subdomain (yourschool.platform.com)",
+          "branding": "Custom branding, logo & colors",
+          "payments": "Stripe Connect, PayPal, bank transfer or crypto — payments go to you",
+          "ai": "AI-powered exam grading & exercises",
+          "analytics": "Student analytics & progress tracking"
+        },
+        "cta": "Create your school"
+      },
+      "learners": {
+        "title": "Learners",
+        "description": "Learn at your pace with structured courses, video lessons, and AI-guided exercises. Earn XP, climb the leaderboard, and prove your skills with verifiable certificates.",
+        "items": {
+          "progress": "Progress tracking across all enrolled courses",
+          "tutor": "AI tutor helps you through exercises in real time",
+          "gamification": "Gamification: XP, levels, streaks & achievements",
+          "certificates": "Downloadable certificates verified via QR code",
+          "mdx": "Rich lessons with code blocks & interactive demos"
+        },
+        "cta": "Browse courses"
+      }
+    },
+    "ai": {
+      "badge": "AI-powered teaching",
+      "title": "Let AI do the heavy lifting",
+      "subtitle": "Stop spending hours grading. The AI grades exams, gives personalized feedback, and tutors students in real time.",
+      "grading": {
+        "title": "AI exam grading",
+        "description": "Open-ended answers graded automatically with per-question feedback and an overall score. Teachers review, not grade.",
+        "note": "Every grade can be overridden by the teacher"
+      },
+      "tutor": {
+        "title": "Interactive AI tutor",
+        "description": "Students get a personalized AI guide during exercises — hints, explanations, and encouragement without giving away answers.",
+        "note": "Hints, never the solution"
+      },
+      "templates": {
+        "title": "Prompt templates",
+        "description": "Teachers define exactly how the AI should grade — rubrics, tone, strictness. Full control over feedback quality.",
+        "note": "Reusable across all courses"
+      }
+    },
+    "gamification": {
+      "badge": "Duolingo-style engagement",
+      "title": "Students who play, students who stay",
+      "subtitle": "A full gamification engine built in from day one. No plugins, no integrations — just engaged students who keep coming back.",
+      "perks": {
+        "xp": {
+          "title": "XP system",
+          "description": "Earn XP for lessons, exams, exercises, comments & reviews"
+        },
+        "levels": {
+          "title": "Levels",
+          "description": "Progressive level-up milestones that reward consistent learners"
+        },
+        "streaks": {
+          "title": "Daily streaks",
+          "description": "Streak bonuses encourage daily habits"
+        },
+        "achievements": {
+          "title": "Achievements",
+          "description": "Unlock badges for learning milestones, social engagement & streaks"
+        },
+        "coins": {
+          "title": "Coin store",
+          "description": "Spend earned coins on profile customizations and bonus content"
+        },
+        "leaderboard": {
+          "title": "Leaderboard",
+          "description": "Weekly rankings motivate healthy competition between students"
+        }
+      },
+      "preview": {
+        "title": "Your progress",
+        "level": "Level {level}",
+        "xpProgress": "XP progress",
+        "xpValue": "{current} / {total} XP",
+        "streak": "Streak",
+        "streakValue": "{count} days",
+        "coins": "Coins",
+        "rank": "Rank",
+        "recent": "Recent achievements",
+        "badges": {
+          "firstExam": "First exam",
+          "streak7": "7-day streak",
+          "lessons10": "10 lessons",
+          "firstComment": "First comment"
+        },
+        "leaders": "This week's leaders",
+        "you": "You",
+        "xp": "{count} XP"
+      }
+    },
+    "features": {
+      "badge": "Everything included",
+      "title": "Every feature you need, nothing you don't",
+      "subtitle": "No plugins. No paid add-ons. No nickel-and-diming. Everything ships in the box.",
+      "items": {
+        "mdx": {
+          "title": "Rich MDX editor",
+          "description": "Block-based content editor with video, code highlights, images, embeds, and interactive components."
+        },
+        "exams": {
+          "title": "Exam builder",
+          "description": "Multiple choice, open-ended, and true/false questions. Build timed or untimed exams with configurable scoring."
+        },
+        "video": {
+          "title": "Video lessons",
+          "description": "Embed YouTube or any video URL inside lessons. Students watch and read in the same view."
+        },
+        "exercises": {
+          "title": "AI exercises",
+          "description": "Interactive coding and concept exercises guided by an AI tutor. Configurable prompts per exercise."
+        },
+        "payments": {
+          "title": "Payments that work in LATAM",
+          "description": "Sell courses individually or via subscription plans. Stripe, PayPal, bank transfer, Binance Pay or Solana — you choose the rails."
+        },
+        "plans": {
+          "title": "Subscription plans",
+          "description": "Create free, paid, and tiered plans. Bundle courses per plan with automatic access control."
+        },
+        "certificates": {
+          "title": "Certificates",
+          "description": "Auto-issue signed PDF certificates on course completion. QR-code verification on a public URL."
+        },
+        "multiTenant": {
+          "title": "Multi-tenant",
+          "description": "Every school gets its own subdomain, branding, students, and data — fully isolated at the database level."
+        },
+        "rls": {
+          "title": "Row-level security",
+          "description": "All data scoped by tenant via Postgres RLS. No cross-tenant data leakage possible by design."
+        },
+        "notifications": {
+          "title": "Notifications",
+          "description": "Platform notifications with read/unread states, templated emails, and real-time updates."
+        },
+        "analytics": {
+          "title": "Admin analytics",
+          "description": "Revenue, enrollment, and engagement dashboards for school admins. Platform-wide metrics for super admins."
+        },
+        "i18n": {
+          "title": "English & Spanish",
+          "description": "Full internationalization. Every UI string translated. Locale switching in the navbar."
+        }
+      }
+    },
+    "howItWorks": {
+      "badge": "How it works",
+      "title": "From idea to live school in 3 steps",
+      "steps": {
+        "create": {
+          "title": "Create your school",
+          "description": "Sign up, pick a name, get your own subdomain. Takes 30 seconds."
+        },
+        "build": {
+          "title": "Build your courses",
+          "description": "Use the block editor to add lessons, exams, and exercises. Publish when ready."
+        },
+        "enroll": {
+          "title": "Students enroll & learn",
+          "description": "Share your link, accept payments, and watch your students progress."
+        }
+      }
+    },
+    "multiTenant": {
+      "badge": "True multi-tenancy",
+      "title": "Every school is a completely separate world",
+      "description": "Database-level isolation means School A can never see School B's students, courses, or transactions — even if they share the same platform. RLS policies enforce this at the query level, not the application layer.",
+      "items": {
+        "subdomain": "Dedicated subdomain: yourschool.platform.com",
+        "branding": "Independent branding — logo, colors, site name",
+        "students": "Isolated student base — no cross-school visibility",
+        "payments": "Separate payment accounts per school",
+        "roles": "Role-based access: admin, teacher, student per school"
+      },
+      "cards": {
+        "a": {
+          "name": "Code Academy",
+          "plan": "Pro"
+        },
+        "b": {
+          "name": "Design School",
+          "plan": "Starter"
+        },
+        "c": {
+          "name": "Data Labs",
+          "plan": "Business"
+        },
+        "d": {
+          "name": "DevBoot",
+          "plan": "Free"
+        },
+        "students": "{count} students",
+        "courses": "{count} courses"
+      }
+    },
+    "pricing": {
+      "title": "Start free. Grow without limits.",
+      "subtitle": "The free plan has no monthly fee. Upgrade when you're ready to scale.",
+      "plans": {
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "f1": "5 courses",
+          "f2": "50 students",
+          "f3": "Manual payments"
+        },
+        "starter": {
+          "name": "Starter",
+          "price": "$9/mo",
+          "f1": "15 courses",
+          "f2": "200 students",
+          "f3": "Card payments"
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "$29/mo",
+          "f1": "100 courses",
+          "f2": "1,000 students",
+          "f3": "2% transaction fee",
+          "f4": "All AI features"
+        },
+        "business": {
+          "name": "Business",
+          "price": "$79/mo",
+          "f1": "Unlimited courses",
+          "f2": "5,000 students",
+          "f3": "0% transaction fee",
+          "f4": "Priority support"
+        }
+      },
+      "seeAll": "See full pricing details"
+    },
+    "cta": {
+      "title": "Your academy is one click away",
+      "subtitle": "Create your own branded school today. Free to start, no credit card required.",
+      "primary": "Create your free school",
+      "secondary": "Learn more"
+    }
+  },
+  "themeKit": {
+    "title": "Choose your school's look",
+    "description": "Pick a theme, then one of its colors. Every combination is checked for readability.",
+    "platformDefault": "Your school uses the platform default look until you save a theme.",
+    "themeLabel": "Theme",
+    "colorLabel": "Color",
+    "colorFor": "for {theme}",
+    "recommended": "Recommended",
+    "spec": "{surface} · {corners} · {fonts}",
+    "fontPair": "{heading} + {body}",
+    "surfaces": {
+      "cool": "Cool",
+      "warm": "Warm",
+      "neutral": "Neutral",
+      "dark": "Dark"
+    },
+    "corners": {
+      "sharp": "sharp",
+      "soft": "soft",
+      "round": "round"
+    },
+    "readability": {
+      "lightInk": "White text on buttons. Readable at AA.",
+      "darkInk": "This color is light, so buttons use dark text. Readable at AA.",
+      "shiftedDeeper": "Buttons use a deeper shade of this color so white text stays readable.",
+      "shiftedLighter": "Buttons use a lighter shade of this color so dark text stays readable."
+    },
+    "custom": {
+      "open": "Use a custom color instead",
+      "close": "Use a recommended color instead",
+      "label": "Custom color",
+      "pickerLabel": "Pick a custom color",
+      "invalid": "Enter the color as #RRGGBB, for example #3A50B8."
+    },
+    "save": "Save look",
+    "saving": "Saving…",
+    "saved": "Your school's look is saved.",
+    "saveFailed": "Couldn't save the look",
+    "reset": "Reset to platform default",
+    "resetting": "Resetting…",
+    "resetDone": "Your school is back on the platform default look.",
+    "resetFailed": "Couldn't reset the look",
+    "back": "Back",
+    "next": "Next",
+    "preview": {
+      "lessonCaption": "Lesson · phone",
+      "schoolCaption": "School page · desktop",
+      "schoolFallback": "Your school",
+      "lesson": {
+        "module": "Module 2 · Cash flow",
+        "progress": "{done} / {total}",
+        "title": "Selling isn't getting paid",
+        "body": "A sale on credit is income the day you invoice, but the cash arrives weeks later. That gap is what leaves businesses that sell well without cash.",
+        "keyIdeaLabel": "Key idea",
+        "keyIdea": "Cash flow records money when it comes in or goes out, not when you invoice.",
+        "checkpoint": "Checkpoint {current} of {total}",
+        "question": "You sell $500 on 30-day credit. When does that money enter your cash flow?",
+        "optionA": "Today, when you issue the invoice",
+        "optionB": "In 30 days, when the customer pays",
+        "optionC": "Never, because it's credit",
+        "check": "Check answer"
+      },
+      "school": {
+        "navCourses": "Courses",
+        "navAbout": "About us",
+        "navSignIn": "Sign in",
+        "navCta": "Browse courses",
+        "kicker": "Finance for freelancers",
+        "tagline": "Clear finances for your business",
+        "subtitle": "Short courses with real exercises, checkpoints in every lesson and a certificate when you finish.",
+        "start": "Start for free",
+        "syllabus": "See the syllabus",
+        "featuredMeta": "Featured course · 8 lessons",
+        "featuredTitle": "Accounting for entrepreneurs",
+        "outline1Title": "Your first balance sheet",
+        "outline1Kind": "Lesson",
+        "outline2Title": "Build your cash flow",
+        "outline2Kind": "Exercise",
+        "outline3Title": "Taxes without fear",
+        "outline3Kind": "Exam",
+        "syllabusPreview": "Syllabus preview",
+        "coursesHeading": "Courses",
+        "seeAll": "See all",
+        "course1Title": "Accounting for entrepreneurs",
+        "course1Meta": "8 lessons · Certificate",
+        "course2Title": "Cash flow without fear",
+        "course2Meta": "5 lessons · Certificate",
+        "course3Title": "Taxes for freelancers",
+        "course3Meta": "6 lessons · Certificate",
+        "footerPayments": "Pay by card, PayPal or bank transfer",
+        "footerCertificate": "Verifiable certificate when you finish"
+      }
+    }
+  },
+  "aiChatLimits": {
+    "burst": "You're sending messages a bit fast. Wait a moment and try again.",
+    "daily": "You've reached today's practice limit. Try again tomorrow.",
+    "monthly": "Your school's monthly AI budget is spent for this month. Ask an admin to upgrade the plan."
+  },
+  "deleteAccountPage": {
+    "metaTitle": "Delete your account",
+    "metaDescription": "How to delete your account and what happens to your data.",
+    "deletedNotice": "Your account has been deleted. Thanks for learning with us.",
+    "title": "Delete your account",
+    "intro": "You can delete your {appName} account at any time, from the website or the app. Deleting it removes your account from every school you belong to.",
+    "stepsTitle": "How to delete it",
+    "steps": {
+      "signIn": "Sign in to your school.",
+      "open": "Open your profile (students) or Settings (teachers and admins).",
+      "confirm": "Choose “Delete account”, type your email to confirm, and delete."
+    },
+    "app": "In the mobile app: Profile → Delete account.",
+    "cta": "Go to my settings",
+    "removedTitle": "What is deleted",
+    "removed": "Your sign-in, profile, course progress, exam and exercise submissions, certificates, XP and achievements, community posts, comments and reactions, AI chats, notifications and uploaded files. Deletion is immediate.",
+    "keptTitle": "What is kept",
+    "kept": {
+      "payments": "Records of payments you made stay with the school, without your name or account, because schools must keep them for accounting and tax purposes.",
+      "content": "Courses, lessons and exams you created as a teacher stay with the school, no longer attributed to you."
+    },
+    "beforeTitle": "Before you delete",
+    "before": {
+      "subscription": "Cancel any subscription that is still renewing, so you aren't charged again.",
+      "admin": "If you are the only admin of a school, make someone else an admin first."
+    },
+    "final": "Deleting your account can't be undone. To learn again later, create a new account."
   }
 }

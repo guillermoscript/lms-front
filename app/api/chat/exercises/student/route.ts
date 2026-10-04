@@ -2,10 +2,15 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createExerciseTools } from '@/lib/ai/tools'
-import { fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchGradingSecrets } from '@/lib/exercises/grading-secrets'
+import { capChatHistory, fetchTenantExercise, lastUserMessageText } from '@/lib/ai/chat-helpers'
+import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
+import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
+import { checkAiChatUsage, aiChatRateLimitedResponse, aiChatUsageLimitResponse } from '@/lib/ai/chat-usage'
 
 export const maxDuration = 120
 
@@ -18,7 +23,6 @@ interface ExerciseRow {
     title: string
     description?: string
     instructions: string
-    system_prompt?: string
     course_id: number
     exercise_type?: string
     course: { tenant_id: string } | { tenant_id: string }[] | null
@@ -29,39 +33,60 @@ export async function POST(req: Request) {
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
 
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return aiChatRateLimitedResponse()
+    }
+
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
-    const { messages, exerciseId } = parsed.data
+    const { messages: rawMessages, exerciseId } = parsed.data
+    // Body is user-controlled: drop non-image / oversized file parts before they reach the model.
+    const messages = sanitizeLastUserAttachments(rawMessages)
 
     // 1. Fetch exercise details and validate tenant
     const exercise = await fetchTenantExercise<ExerciseRow>(
         supabase,
         exerciseId,
         tenantId,
-        'title, description, instructions, system_prompt, course_id, exercise_type, course:courses!inner(tenant_id)'
+        'title, description, instructions, course_id, exercise_type, course:courses!inner(tenant_id)'
     )
 
     if (!exercise) return new Response('Exercise not found', { status: 404 })
 
+    // The teacher's prompt is staff-only (#833); the student's own read above
+    // established access, so the admin client fetches it for the coach.
+    const secrets = await fetchGradingSecrets(createAdminClient(), exerciseId)
+    const systemPrompt = secrets?.system_prompt ?? undefined
+
+    // A 404 above never costs a budget slot.
+    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
+
     // 2. Save user message
     const messageText = lastUserMessageText(messages)
-    if (messageText) {
+    const attachments = await persistLastUserAttachments(messages, {
+        tenantId, userId: user.id, kind: 'exercise', referenceId: exerciseId,
+    })
+    if (messageText || attachments.length > 0) {
         // exercise_messages has NO tenant_id column — sending it silently fails the insert.
         await supabase.from('exercise_messages').insert({
             exercise_id: exerciseId,
             user_id: user.id,
             role: 'user',
-            message: messageText,
+            message: messageText ?? '',
+            attachments: attachments.length > 0 ? attachments : null,
         })
     }
 
     // 3. Stream Response
-    const modelMessages = await convertToModelMessages(messages)
+    const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
     const result = propagateAttributes(
         { userId: user.id, metadata: { exerciseId: String(exerciseId), tenantId } },
         () => streamText({
         model: AI_MODELS.coach,
-        system: PROMPTS.exerciseCoach(exercise),
+        system: PROMPTS.exerciseCoach({ ...exercise, system_prompt: systemPrompt }),
         messages: modelMessages,
         tools: createExerciseTools(supabase, { exerciseId: String(exerciseId), userId: user.id, tenantId, exerciseType: exercise.exercise_type }),
         experimental_telemetry: { functionId: 'exercise-coach' },

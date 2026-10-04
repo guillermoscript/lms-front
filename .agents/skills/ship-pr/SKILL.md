@@ -152,6 +152,10 @@ If no Slack MCP is connected or no channel is configured, skip the post and
 hand the user the ready-to-paste message instead, noting that connecting a
 Slack MCP (`claude mcp add`) and configuring a channel would automate this.
 
+Once announced, the **`pr-review-loop`** skill can watch the PR from here —
+polling for reviewer feedback, addressing it, and merging on approval
+(which lands back at this skill's close-out step below).
+
 ## 5. Close-out — after approval and merge
 
 Approval and merge usually happen after the shipping session ends, so this
@@ -182,6 +186,11 @@ gh pr comment <PR> --body-file <closeout-pr.md>
 gh issue comment <N> --body-file <closeout-issue.md>
 ```
 
-No board action is needed — merge automation flips the items to Done. If
-follow-up work surfaced during review, link the follow-up issues in both
-comments rather than reopening anything.
+Board: the built-in "Item closed → Done" automation normally flips both
+items, so don't race it — but do **check** rather than assume, since an
+unconfigured board leaves the PR stranded in In Review and the issue in In
+Progress. Read the items' status after posting the comments and set them
+yourself if automation didn't, noting to the user that the board's
+automation looks disabled (`pr-review-loop` does the same after a merge it
+performs). If follow-up work surfaced during review, link the follow-up
+issues in both comments rather than reopening anything.

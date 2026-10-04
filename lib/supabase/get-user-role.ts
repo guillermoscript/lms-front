@@ -5,8 +5,13 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 /**
  * Get the user's role for the current tenant.
- * First checks tenant_users table (authoritative for multi-tenant),
- * then falls back to JWT claims.
+ * First checks tenant_users table (authoritative for multi-tenant), then
+ * falls back to JWT claims — but only when the token's `tenant_id` is the
+ * current tenant. `custom_access_token_hook` stamps `tenant_role` for the
+ * user's HOME school (`app_metadata.tenant_id`), and proxy.ts skips its
+ * membership check on public routes, so trusting the claim on another
+ * school's subdomain let an admin of school A run school B's admin server
+ * actions (#763 review).
  *
  * Uses x-user-id header (set by middleware) to avoid redundant getUser() calls.
  * Wrapped in React.cache() so multiple call sites within one request tree
@@ -31,7 +36,7 @@ export const getUserRole = cache(async (): Promise<'student' | 'teacher' | 'admi
     return membership.role as 'student' | 'teacher' | 'admin'
   }
 
-  // Fall back to JWT claims
+  // Fall back to JWT claims — they describe the token's own tenant only.
   try {
     const {
       data: { session },
@@ -40,6 +45,7 @@ export const getUserRole = cache(async (): Promise<'student' | 'teacher' | 'admi
     if (!session) return 'student'
 
     const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+    if (payload.tenant_id !== tenantId) return 'student'
     const role = (payload.tenant_role || payload.user_role) as 'student' | 'teacher' | 'admin' | undefined
     return role || 'student'
   } catch {

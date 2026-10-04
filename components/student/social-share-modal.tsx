@@ -81,7 +81,7 @@ export function SocialShareModal({ isOpen, onOpenChange, certificate }: SocialSh
                                 className="h-10 bg-muted/50 font-mono text-xs"
                             />
                             <Button size="icon" variant="outline" onClick={handleCopy} className="shrink-0 h-10 w-10">
-                                {copied ? <IconCheck className="text-emerald-500" /> : <IconCopy />}
+                                {copied ? <IconCheck className="text-success" /> : <IconCopy />}
                             </Button>
                         </div>
                     </div>
@@ -113,7 +113,7 @@ export function SocialShareModal({ isOpen, onOpenChange, certificate }: SocialSh
                 </div>
 
                 <div className="bg-muted/30 p-4 rounded-xl flex items-center gap-4">
-                    <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <div className="h-12 w-12 rounded bg-brand-tint flex items-center justify-center text-brand-text shrink-0">
                         <IconExternalLink />
                     </div>
                     <div className="space-y-1">

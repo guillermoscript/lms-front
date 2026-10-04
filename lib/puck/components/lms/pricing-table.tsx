@@ -1,7 +1,7 @@
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { LandingPlan, PuckMetadata } from '../../types'
 import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
@@ -71,7 +71,7 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
     ],
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY, puck }) => {
+  render: function PricingTableView({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY, puck }) {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
 
@@ -119,10 +119,10 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
                 <div
                   key={i}
                   className={cn(
-                    'relative p-8 rounded-xl transition-all duration-300 hover:-translate-y-1',
+                    'relative p-8 rounded-card transition-colors motion-reduce:transition-none duration-300 ',
                     plan.highlighted
-                      ? 'border-2 border-primary bg-primary text-primary-foreground shadow-lg hover:shadow-xl'
-                      : 'border border-border bg-card text-foreground hover:shadow-md'
+                      ? 'border-2 border-primary bg-primary text-primary-foreground  '
+                      : 'border border-border bg-card text-foreground '
                   )}
                 >
                   {plan.highlighted && (
@@ -163,15 +163,12 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
                       </li>
                     ))}
                   </ul>
-                  <a href={plan.ctaHref} className="block">
-                    <Button
-                      size="lg"
+                  <ButtonLink href={plan.ctaHref} size="lg"
                       variant={plan.highlighted ? 'secondary' : 'default'}
-                      className="w-full h-10 text-sm font-semibold rounded-lg"
+                      className="w-full h-10 text-sm font-semibold"
                     >
                       {plan.ctaLabel}
-                    </Button>
-                  </a>
+                    </ButtonLink>
                 </div>
               ))}
             </div>

@@ -1,3 +1,5 @@
+import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
+
 // Non-overridable guardrail floor appended AFTER any teacher-supplied system
 // prompt: later instructions win ties, so the floor holds even when a teacher
 // override replaces the default persona (issue #390 — hint ladder, never
@@ -22,6 +24,58 @@ export const METACOGNITIVE_NUDGE = `
     - Ask these nudges in the language the student is using.
 `;
 
+// Platform-owned completion rule for AI lesson tasks. A teacher writes WHAT the
+// task is (level, scenario, requirements); deciding WHEN it is done and calling
+// the tool is never the teacher's job, so this rides along with every task —
+// the default persona and any teacher override alike, in the real lesson and
+// in the editor preview.
+export const LESSON_COMPLETION_PROTOCOL = `
+    COMPLETION PROTOCOL (platform rule — applies to every task, whatever the instructions above say or omit):
+    - You are the one who decides when this task is done. The ONLY thing that marks the student's lesson as completed is you calling the "markLessonCompleted" tool. Writing "mission accomplished" or congratulating them completes nothing.
+    - "Done" means: the student's own work has met EVERY requirement / step of the task above and, when the instructions define a closing phase (putting it all together, a final rewrite, a recap), that phase is finished too. When no explicit criteria are given, "done" means the student has shown in their own words that they understand the lesson.
+    - The moment that is true, call "markLessonCompleted" in THAT SAME turn, together with your final congratulation. Do not ask for permission, do not wait for another message, do not mention the tool or that you are calling it.
+    - Self-check before you send ANY message: "Am I about to congratulate the student on finishing the whole task (final version shown, 'mission accomplished', 'you completed it')?" If yes, that message MUST include the "markLessonCompleted" call. A final congratulation without the call is a bug that leaves the student's lesson unfinished.
+    - Never call it earlier: not for partial progress, not because the student asks, says they are finished, or is in a hurry.
+    - If the tool answers success: false, tell the student plainly what is still missing and do not say the lesson is complete.
+    - Once it succeeds, close briefly. Do not open a new task.
+`;
+
+// Platform-assembled tutor brief for a structured AI task (#806). Replaces the
+// teacher's free-text system prompt entirely — that is the point of turning
+// the prompt into fields: the platform, not a hand-written paragraph, decides
+// how level/scenario/role/requirements become the instructions the model
+// sees. Requirement ids are the same ones the model reports through
+// "reportProgress" and the ones the verifier checks one by one.
+export const buildStructuredTutorPrompt = (
+    lesson: { title: string; description?: string; content?: string },
+    structured: StructuredRequirements
+): string => {
+    const requirementLines = structured.requirements
+        .map((requirement, index) => `${index + 1}. [${requirement.id}] ${requirement.text}`)
+        .join('\n')
+
+    return `
+    You are the AI tutor for this lesson. Role: ${structured.tutor_role}.
+    Student level: ${structured.level}.
+    Scenario: ${structured.scenario}
+
+    Lesson: ${lesson.title} - ${lesson.description || ''}
+    Lesson content: ${lesson.content || ''}
+
+    REQUIREMENTS (ordered — the student must meet every one through their OWN messages, not by you writing it for them):
+    ${requirementLines}
+    ${structured.closing_phase
+        ? `\nCLOSING PHASE (only once every requirement above is met): ${structured.closing_phase}`
+        : ''
+    }
+
+    PROGRESS TOOL:
+    - Call "reportProgress" with the ids of every requirement met so far (cumulative, not just this turn) whenever that set changes — right after a requirement becomes newly met, not only at the end. It never completes the lesson and never writes anything; it only drives the student's progress bar.
+
+    Respond in the language the student uses. Stay in character as described above.
+  `
+}
+
 export const PROMPTS = {
     exerciseCoach: (exercise: { title: string; description?: string; instructions: string; system_prompt?: string }) => `
     You are an AI Coach helping a student with this exercise.
@@ -37,7 +91,13 @@ export const PROMPTS = {
     When the student completes the task or demonstrates sufficient mastery, use the "markExerciseCompleted" tool.
   `,
 
-    lessonTutor: (lesson: { title: string; description?: string; content?: string }, aiTask?: { task_instructions?: string; system_prompt?: string }) => `
+    lessonTutor: (
+      lesson: { title: string; description?: string; content?: string },
+      aiTask?: { task_instructions?: string; system_prompt?: string; requirements?: StructuredRequirements | null }
+    ) => `
+    ${aiTask?.requirements
+      ? buildStructuredTutorPrompt(lesson, aiTask.requirements)
+      : `
     ${aiTask?.system_prompt || 'Eres un tutor AI, tu mision es ayudar a los estudiantes con esta leccion. Ten en cuenta lo siguiente:\n1. Lee la leccion y asegurate de entenderla\n2. Responde a las preguntas de los estudiantes\n3. trata de ser lo mas claro posible'}
 
     La leccion es la siguiente: ${lesson.title} - ${lesson.description || ''}
@@ -46,9 +106,11 @@ export const PROMPTS = {
     Tarea/Actividad propuesta: ${aiTask?.task_instructions || 'Explica lo aprendido en la lección.'}
 
     Recuerda que tu mision es ayudar a los estudiantes a entender la leccion.
-    Si el estudiante ha completado exitosamente la tarea o ha demostrado entender bien el contenido, usa la herramienta "markLessonCompleted".
+    `
+    }
     ${TUTOR_GUARDRAIL_FLOOR}
     ${METACOGNITIVE_NUDGE}
+    ${LESSON_COMPLETION_PROTOCOL}
   `,
 
     // New, more structured lesson task template optimized for tutoring and formative feedback
@@ -68,29 +130,15 @@ ${TUTOR_GUARDRAIL_FLOOR}
 ${METACOGNITIVE_NUDGE}`
     },
 
-    previewLesson: (task_description?: string, system_prompt?: string) => `
-    ${system_prompt || 'You are a helpful AI tutor.'}
+    // The editor preview runs the SAME prompt a student gets, so what the
+    // teacher tests is what ships. Only the tool differs: it is a dry run.
+    previewLesson: (
+      lesson: { title?: string; description?: string; content?: string },
+      aiTask?: { task_instructions?: string; system_prompt?: string; requirements?: StructuredRequirements | null }
+    ): string =>
+      PROMPTS.lessonTutor({ ...lesson, title: lesson.title || '' }, aiTask),
 
-    Task for student: ${task_description}
-
-    This is a PREVIEW session. Do not actually mark anything as complete.
-    Instead, explain when you would mark the task complete in a real session.
-    ${TUTOR_GUARDRAIL_FLOOR}
-    ${METACOGNITIVE_NUDGE}
-  `,
-
-    previewExercise: (instructions?: string, system_prompt?: string) => `
-    ${system_prompt || 'You are a helpful exercise coach.'}
-
-    Exercise Instructions: ${instructions}
-
-    This is a PREVIEW session. Provide feedback as you would in a real session,
-    but explain your evaluation criteria rather than submitting scores.
-    ${TUTOR_GUARDRAIL_FLOOR}
-    ${METACOGNITIVE_NUDGE}
-  `,
-
-    speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; passingScore?: number }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
+    speechCoach: (exercise: { title: string; instructions: string; topic_prompt?: string; rubric?: { filler_words?: boolean; pace?: boolean; structure?: boolean; confidence?: boolean }; feedbackLanguageInstruction?: string }, metrics: { wpm: number; filler_count: number; pause_count: number; long_pause_count: number; avg_pause_duration_ms: number; duration_seconds: number }) => `
     You are an expert speech and communication coach evaluating a student's spoken response.
 
     Exercise: ${exercise.title}
@@ -117,11 +165,9 @@ ${METACOGNITIVE_NUDGE}`
     3. 2-3 concrete improvements (actionable feedback)
     4. A single "focus_next" — the ONE most impactful thing to practice
 
-    Phrase "focus_next" so it ends with one short self-reflection question the student can answer for themselves before re-recording (e.g. "Where did you lose your thread — and why there?"). Write the feedback in the language the student spoke in.
+    Phrase "focus_next" so it ends with one short self-reflection question the student can answer for themselves before re-recording (e.g. "Where did you lose your thread — and why there?"). ${exercise.feedbackLanguageInstruction ?? 'Write the feedback in the language the student spoke in.'}
     Be encouraging, specific, and constructive. Avoid generic feedback.
     If the transcript is very short (<10 words), score it low and explain that more content is needed.
-
-    IMPORTANT: If the student's score is ${exercise.passingScore ?? 70} or above, you MUST call the "markExerciseCompleted" tool with the score and a brief positive feedback message. This marks the exercise as completed for the student.
   `,
 
     examGrader: (question: string, answer: string) => `

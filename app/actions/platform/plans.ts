@@ -13,6 +13,7 @@ import {
   type PlanPriceProvider,
 } from '@/lib/billing/plan-prices'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { failPlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -129,6 +130,13 @@ export async function upsertPlatformPlanPrice(input: {
   const needsCatalogId = PROVIDER_CAPABILITIES[provider as PaymentProvider]?.createsCatalog !== false
   if (!providerPriceId && needsCatalogId) {
     throw new Error('Provider price ID is required')
+  }
+  // A PayPal subscription is created against a Billing Plan (`P-…`). The
+  // catalog product it belongs to (`PROD-…`) sits one field away in the PayPal
+  // dashboard and looks just as plausible, but checkout would fail on it only
+  // after a school had picked the plan (#744).
+  if (provider === 'paypal' && providerPriceId && !/^P-[A-Z0-9]+$/.test(providerPriceId)) {
+    throw new Error('A PayPal price must be a Billing Plan id (P-…), not a product id')
   }
 
   // `amount` is nullable on purpose (the migration's own note): on a non-USD
@@ -258,7 +266,7 @@ export async function rejectManualPayment(requestId: string, reason: string) {
 
   const { data: request } = await adminClient
     .from('platform_payment_requests')
-    .select('request_id, status')
+    .select('request_id, status, switch_id')
     .eq('request_id', requestId)
     .maybeSingle()
 
@@ -291,6 +299,12 @@ export async function rejectManualPayment(requestId: string, reason: string) {
   if (!updated || updated.length === 0) {
     throw new Error('This request was decided by someone else just now — reload the page.')
   }
+
+  await failPlatformSubscriptionSwitch(
+    adminClient,
+    request.switch_id,
+    `Manual payment request rejected: ${reason}`,
+  )
 
   revalidatePath('/platform/billing')
   return { success: true }

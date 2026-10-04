@@ -19,21 +19,31 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { resolveRequestLocale } from '@/lib/i18n/request-locale'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
-import type { PaymentProvider } from '@/lib/payments/types'
+import { getTenantPlatformProviderStatuses } from '@/lib/billing/platform-checkout-runtime'
 import {
   describeResolutionError,
   getActivePlanPrices,
   getPlatformBillingProvider,
   resolveCheckoutProvider,
+  supersedesOnSameRail,
 } from '@/lib/billing/platform-billing'
 import { checkPlanLimits, formatPlanLimitError } from '@/lib/billing/plan-limits'
-import { hasOpenPaymentRequest } from '@/lib/billing/payment-request-ttl'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
+import { hasOpenPaymentRequest, requestExpiresAt } from '@/lib/billing/payment-request-ttl'
 import {
   getPlatformSolanaConfig,
   quotePlatformSettlement,
   recordSolanaPlatformRequest,
   type PlatformSettlement,
 } from '@/lib/billing/solana-platform-payment'
+import {
+  SWITCH_METADATA_KEY,
+  SwitchAlreadyPendingError,
+  attachSwitchCheckoutReference,
+  beginPlatformSubscriptionSwitch,
+  failPlatformSubscriptionSwitch,
+} from '@/lib/billing/platform-subscription-switch'
 
 export const runtime = 'nodejs'
 
@@ -86,15 +96,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cannot subscribe to free plan via checkout' }, { status: 400 })
     }
 
+    const providerStatuses = await getTenantPlatformProviderStatuses(adminClient, tenantId)
+    const fallbackAmount = Number(interval === 'yearly' ? plan.price_yearly : plan.price_monthly) || 0
+
     const { data: existingSub } = await adminClient
       .from('platform_subscriptions')
-      .select('subscription_id, provider_subscription_id, status, payment_provider')
+      .select('subscription_id, provider_subscription_id, status, payment_provider, plan_id, interval, cancel_at_period_end')
       .eq('tenant_id', tenantId)
       .maybeSingle()
 
+    // `past_due` still holds a provider subscription (a suspended PayPal one, a
+    // Stripe one in dunning), so paying again replaces it rather than starting
+    // from nothing — see `beginPlatformSubscriptionSwitch` (#479).
     const liveSub =
       existingSub?.provider_subscription_id &&
-      existingSub.status === 'active' &&
+      (existingSub.status === 'active' || existingSub.status === 'past_due') &&
       existingSub.payment_provider !== 'manual'
         ? existingSub
         : null
@@ -105,6 +121,9 @@ export async function POST(req: NextRequest) {
     const resolved = resolveCheckoutProvider(prices, interval, {
       requested: typeof requestedProvider === 'string' ? requestedProvider : undefined,
       tenantProvider: existingSub?.payment_provider ?? null,
+      providerStatuses,
+      expectedCurrency: 'usd',
+      fallbackAmount,
     })
 
     if (!resolved.ok) {
@@ -133,11 +152,33 @@ export async function POST(req: NextRequest) {
     // subscription — it is how the school renews or moves plan at all, and
     // refusing it would leave a Binance/Solana subscriber with no way to pay
     // for their next month.
+    //
+    // Nor where the provider cannot swap the plan in place (#744). PayPal has
+    // no in-app plan change to send the school to, so a new PayPal subscription
+    // on the target plan IS the plan change: the switch recorded below promotes
+    // it on activation and cancels the old one. Buying the plan the school is
+    // already on is still a double charge, unless it has cancelled — then this
+    // is how it subscribes again.
     if (liveSub && liveSub.payment_provider === provider && capabilities.supportsNativeSubscriptions) {
-      return NextResponse.json(
-        { error: 'You already have an active subscription on this payment method. Change your plan from the billing page instead.' },
-        { status: 400 },
-      )
+      if (!supersedesOnSameRail(provider)) {
+        return NextResponse.json(
+          { error: 'You already have an active subscription on this payment method. Change your plan from the billing page instead.' },
+          { status: 400 },
+        )
+      }
+      // A past-due school buying its own plan again is paying off the suspended
+      // subscription, not double-subscribing — let it through as a switch.
+      if (
+        liveSub.status === 'active' &&
+        liveSub.plan_id === plan.plan_id &&
+        liveSub.interval === interval &&
+        !liveSub.cancel_at_period_end
+      ) {
+        return NextResponse.json(
+          { error: 'You are already subscribed to this plan on this payment method.' },
+          { status: 400 },
+        )
+      }
     }
 
     // Pre-flight the target plan's limits on rails we cannot refund in-app.
@@ -200,46 +241,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Provider switch: supersede the live subscription before starting the new
-    // one, so the school is never billed on two rails at once. Cancelling
-    // immediately (rather than at period end) is the safe direction — the new
-    // checkout starts a fresh paid period, and a lingering old subscription
-    // would auto-renew into a double charge. Mirrors the student supersession
-    // model from #463.
-    //
-    // Only when the rail actually changes: a renewal on the SAME self-managed
-    // rail reaches this far (see the guard above), and cancelling the row the
-    // school is in the middle of paying to extend would take away the period it
-    // has already bought.
-    if (liveSub && liveSub.payment_provider !== provider) {
-      const oldCaps = PROVIDER_CAPABILITIES[liveSub.payment_provider as PaymentProvider]
-      if (oldCaps?.supportsNativeSubscriptions) {
-        try {
-          const oldProvider = getPlatformBillingProvider(liveSub.payment_provider as PaymentProvider)
-          if (oldProvider.cancelSubscription) {
-            await oldProvider.cancelSubscription(liveSub.provider_subscription_id!, true)
-          }
-        } catch (err) {
-          // Fail the request rather than the school: if we cannot stop the old
-          // subscription, starting a second one is how double-billing happens.
-          console.error('[billing/checkout] failed to cancel superseded subscription:', err)
-          return NextResponse.json(
-            { error: 'Could not cancel your current subscription. Contact support before switching payment methods.' },
-            { status: 502 },
-          )
-        }
-      }
-
-      await adminClient
-        .from('platform_subscriptions')
-        .update({
-          status: 'canceled',
-          canceled_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('tenant_id', tenantId)
-    }
-
     // Get or create the tenant's customer with this provider. Since #601 the id
     // lives per (tenant, provider) in tenant_billing_customers.
     const { data: tenant } = await adminClient
@@ -294,32 +295,91 @@ export async function POST(req: NextRequest) {
     const successUrl = `${origin}/${locale}/dashboard/admin/billing?session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${origin}/${locale}/dashboard/admin/billing/upgrade`
 
-    const session = await paymentProvider.createCheckoutSession({
-      mode: 'subscription',
-      hosted: true,
-      providerPriceId: price.providerPriceId ?? '',
-      // The provider charges what its own price row says; this is carried for
-      // adapters that need an explicit amount (hosted pages that do not read it
-      // off the price object, and every catalog-less rail).
-      amount: amountUsd,
-      currency: price.currency,
-      reference: `platform:${tenantId}:${plan.plan_id}`,
-      providerCustomerId,
-      successUrl,
-      cancelUrl,
-      baseUrl: origin || undefined,
-      metadata: {
-        tenant_id: tenantId,
-        plan_id: plan.plan_id,
-        plan_slug: plan.slug,
-        interval,
-      },
-    })
+    const replacementExpiresAt = provider === 'solana' ? requestExpiresAt() : undefined
+    let switchId: string | null
+    try {
+      switchId = await beginPlatformSubscriptionSwitch({
+        admin: adminClient,
+        tenantId,
+        targetPlanId: plan.plan_id,
+        targetProvider: provider,
+        targetInterval: interval,
+        initiatedBy: user.id,
+        expiresAt: replacementExpiresAt,
+      })
+    } catch (switchError) {
+      if (switchError instanceof SwitchAlreadyPendingError) {
+        return NextResponse.json({ error: switchError.message }, { status: 409 })
+      }
+      throw switchError
+    }
+
+    let session
+    try {
+      session = await paymentProvider.createCheckoutSession({
+        mode: 'subscription',
+        hosted: true,
+        providerPriceId: price.providerPriceId ?? '',
+        // The provider charges what its own price row says; this is carried for
+        // adapters that need an explicit amount (hosted pages that do not read it
+        // off the price object, and every catalog-less rail).
+        amount: amountUsd,
+        currency: price.currency,
+        reference: `platform:${tenantId}:${plan.plan_id}`,
+        providerCustomerId,
+        successUrl,
+        cancelUrl,
+        baseUrl: origin || undefined,
+        metadata: {
+          tenant_id: tenantId,
+          plan_id: plan.plan_id,
+          plan_slug: plan.slug,
+          interval,
+          ...(switchId ? { [SWITCH_METADATA_KEY]: switchId } : {}),
+        },
+      })
+    } catch (checkoutError) {
+      await failPlatformSubscriptionSwitch(adminClient, switchId, checkoutError)
+      throw checkoutError
+    }
 
     if (!session.url) {
       console.error(`[billing/checkout] ${provider} returned a ${session.kind} session with no URL`)
+      await failPlatformSubscriptionSwitch(adminClient, switchId, 'Provider returned no checkout URL')
       return NextResponse.json({ error: 'Could not start checkout' }, { status: 502 })
     }
+
+    await attachSwitchCheckoutReference(
+      adminClient,
+      switchId,
+      session.providerRef ?? session.reference,
+      session.expiresAt,
+    )
+
+    // Loop E, the school → platform side of the funnel. `scope` separates it
+    // from the student `checkout_started` in Loop C: the two are different
+    // businesses and summing them is meaningless.
+    //
+    // `is_existing_subscriber` is the pre-image of `is_renewal` on the eventual
+    // `platform_payment_succeeded` — on a `selfManagedPeriod` rail this same
+    // route is how a school RENEWS (see the guard above), so a checkout here is
+    // not evidence of a new customer.
+    await track(
+      ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      {
+        scope: 'platform',
+        provider,
+        amount: amountUsd,
+        currency: price.currency,
+        plan_id: plan.plan_id,
+        plan: plan.slug,
+        interval,
+        is_existing_subscriber: !!liveSub,
+        is_provider_switch: !!liveSub && liveSub.payment_provider !== provider,
+        self_managed_period: !!capabilities.selfManagedPeriod,
+      },
+      { userId: user.id, tenantId, role: 'admin', locale },
+    )
 
     // The QR's on-chain reference is minted by the provider, so the row is
     // written now that we have it. A failure here must fail the request: a
@@ -327,18 +387,28 @@ export async function POST(req: NextRequest) {
     if (solanaSettlement) {
       if (!session.providerRef) {
         console.error('[billing/checkout] solana session carried no on-chain reference')
+        await failPlatformSubscriptionSwitch(adminClient, switchId, 'Solana session carried no reference')
         return NextResponse.json({ error: 'Could not start checkout' }, { status: 502 })
       }
-      const { requestId } = await recordSolanaPlatformRequest({
-        admin: adminClient,
-        tenantId,
-        userId: user.id,
-        planId: plan.plan_id,
-        amountUsd,
-        interval,
-        reference: session.providerRef,
-        settlement: solanaSettlement,
-      })
+      let requestId: string
+      try {
+        const recorded = await recordSolanaPlatformRequest({
+          admin: adminClient,
+          tenantId,
+          userId: user.id,
+          planId: plan.plan_id,
+          amountUsd,
+          interval,
+          reference: session.providerRef,
+          settlement: solanaSettlement,
+          switchId,
+          expiresAt: replacementExpiresAt,
+        })
+        requestId = recorded.requestId
+      } catch (recordError) {
+        await failPlatformSubscriptionSwitch(adminClient, switchId, recordError)
+        throw recordError
+      }
       return NextResponse.json({ kind: session.kind, url: session.url, provider, requestId })
     }
 

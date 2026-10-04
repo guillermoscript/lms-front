@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -15,12 +15,18 @@ interface JoinSchoolFormProps {
     slug: string
     description?: string
   }
+  /**
+   * Same-origin path to land on after a successful join. The page resolves it
+   * (a sanitised `next` such as `/checkout?courseId=42`, or the student
+   * dashboard) so a purchase or enroll intent survives the join step (#684).
+   */
+  destination: string
 }
 
-export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
+export function JoinSchoolForm({ tenant, destination }: JoinSchoolFormProps) {
+  const t = useTranslations('joinSchool')
   const [isJoining, setIsJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
   const handleJoin = async () => {
     setIsJoining(true)
@@ -30,17 +36,20 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
       const result = await joinCurrentSchool()
 
       if (!result.success) {
-        setError(result.error || 'Failed to join school. Please try again.')
+        setError(result.error || t('error'))
+        setIsJoining(false)
         return
       }
 
-      // Redirect to student dashboard
-      router.push('/dashboard/student')
-      router.refresh()
+      // Hard navigation, not router.push + router.refresh: the pair interleaves
+      // two Router transitions and crashes Next's app-router with React #310
+      // (LMS-FRONT-9K/8F, upstream vercel/next.js#78396) — and the membership
+      // just changed, so a full request through proxy.ts with fresh claims is
+      // what we want anyway. The button stays disabled until the page unloads.
+      window.location.assign(destination)
     } catch (err) {
       console.error('Join error:', err)
-      setError('An unexpected error occurred')
-    } finally {
+      setError(t('unexpectedError'))
       setIsJoining(false)
     }
   }
@@ -48,10 +57,8 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Ready to Start Learning?</CardTitle>
-        <CardDescription>
-          Join {tenant.name} and get access to their courses and resources
-        </CardDescription>
+        <CardTitle>{t('formTitle')}</CardTitle>
+        <CardDescription>{t('formDescription', { school: tenant.name })}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {tenant.description && (
@@ -61,23 +68,23 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
         )}
 
         <div className="space-y-2">
-          <h4 className="font-medium text-sm">What you'll get:</h4>
+          <h4 className="font-medium text-sm">{t('benefitsTitle')}</h4>
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              Access to all available courses
+              <Check className="h-4 w-4 text-success" />
+              {t('benefitCourses')}
             </li>
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              Track your progress and earn certificates
+              <Check className="h-4 w-4 text-success" />
+              {t('benefitProgress')}
             </li>
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              Participate in exams and exercises
+              <Check className="h-4 w-4 text-success" />
+              {t('benefitExams')}
             </li>
             <li className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              Join the learning community
+              <Check className="h-4 w-4 text-success" />
+              {t('benefitCommunity')}
             </li>
           </ul>
         </div>
@@ -93,19 +100,20 @@ export function JoinSchoolForm({ tenant }: JoinSchoolFormProps) {
           disabled={isJoining}
           className="w-full"
           size="lg"
+          data-testid="join-school-submit"
         >
           {isJoining ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Joining...
+              {t('submitting')}
             </>
           ) : (
-            <>Join {tenant.name}</>
+            <>{t('submit', { school: tenant.name })}</>
           )}
         </Button>
 
         <p className="text-xs text-muted-foreground text-center">
-          By joining, you agree to {tenant.name}&apos;s terms of service and privacy policy
+          {t('terms', { school: tenant.name })}
         </p>
       </CardContent>
     </Card>

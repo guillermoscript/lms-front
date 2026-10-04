@@ -40,7 +40,7 @@ export function PlanEnrollButton({ courseId }: PlanEnrollButtonProps) {
   return (
     <Button
       type="button"
-      className="h-11 w-full bg-cyan-500 text-sm font-bold text-black shadow-lg shadow-cyan-500/20 hover:bg-cyan-400"
+      className="h-11 w-full text-sm font-bold shadow-lg shadow-primary/20"
       onClick={enroll}
       disabled={isPending}
     >

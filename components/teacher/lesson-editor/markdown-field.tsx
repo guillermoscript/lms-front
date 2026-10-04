@@ -44,15 +44,25 @@ const MDXPreview = dynamic(
 type ToolAction = 'bold' | 'italic' | 'heading' | 'list' | 'link' | 'code'
 
 /**
- * The code-editor skin is deliberately theme-independent: it reads as a file
- * you are editing, not as a page surface, and it is the one place in the editor
- * where that is the point. Kept in one place so the palette can't drift.
+ * The code-editor skin for the MDX editor is deliberately theme-independent: what
+ * is being edited is code, and the panel reads as a file you are editing rather
+ * than as a page surface. The fixed dark surface and the hairlines and labels that
+ * sit on it are one skin — the theme tokens flip with the app theme, so a muted
+ * token on this panel would be dark grey on near-black in light mode. Content, not
+ * chrome; kept in one place so the skin cannot drift.
  */
 const TERMINAL = {
   surface: 'bg-[#1e1e2e]',
   text: 'text-[#cdd6f4]',
   caret: 'caret-[#89b4fa]',
+  placeholder: 'placeholder:text-white/20',
   hairline: 'border-white/10',
+  chrome: 'bg-white/5',
+  label: 'text-white/40',
+  dim: 'text-white/30',
+  tabActive: 'bg-white/15 text-white/90',
+  tabIdleHover: 'hover:text-white/70',
+  toolHover: 'hover:bg-white/10 hover:text-white/80',
 }
 
 interface MarkdownFieldProps {
@@ -219,7 +229,7 @@ export function MarkdownField({
     <div
       className={cn(
         'inline-flex items-center rounded-lg p-0.5',
-        isTerminal ? 'bg-white/5' : 'border bg-muted/40'
+        isTerminal ? TERMINAL.chrome : 'border bg-muted/40'
       )}
     >
       {(['write', 'preview'] as const).map((tab) => {
@@ -236,8 +246,8 @@ export function MarkdownField({
               'outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
               isTerminal
                 ? active
-                  ? 'bg-white/15 text-white/90'
-                  : 'text-white/40 hover:text-white/70'
+                  ? TERMINAL.tabActive
+                  : cn(TERMINAL.label, TERMINAL.tabIdleHover)
                 : active
                   ? 'bg-background text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
@@ -268,7 +278,7 @@ export function MarkdownField({
           className={cn(
             'rounded-sm p-1.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/30',
             isTerminal
-              ? 'text-white/40 hover:bg-white/10 hover:text-white/80'
+              ? cn(TERMINAL.label, TERMINAL.toolHover)
               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           )}
         >
@@ -294,7 +304,7 @@ export function MarkdownField({
               'min-h-[26rem] max-h-[70vh] overflow-y-auto px-4 py-3 font-mono text-[13px] leading-6',
               TERMINAL.text,
               TERMINAL.caret,
-              'placeholder:text-white/20'
+              TERMINAL.placeholder
             )
           : 'min-h-36 max-h-96 overflow-y-auto px-3 py-2.5 text-sm leading-relaxed placeholder:text-muted-foreground/60'
       )}
@@ -327,24 +337,20 @@ export function MarkdownField({
       <div className={cn('overflow-hidden rounded-xl border', TERMINAL.surface)}>
         <div
           className={cn(
-            'flex items-center justify-between gap-3 border-b bg-white/5 px-4 py-2',
+            'flex items-center justify-between gap-3 border-b px-4 py-2',
+            TERMINAL.chrome,
             TERMINAL.hairline
           )}
         >
           <div className="flex min-w-0 items-center gap-2">
-            <div aria-hidden="true" className="flex gap-1.5">
-              <div className="h-3 w-3 rounded-full bg-red-500/70" />
-              <div className="h-3 w-3 rounded-full bg-yellow-500/70" />
-              <div className="h-3 w-3 rounded-full bg-green-500/70" />
-            </div>
             {filename && (
-              <span className="ml-2 truncate text-[11px] font-medium text-white/40">
+              <span className={cn('truncate text-[11px] font-medium', TERMINAL.label)}>
                 {filename}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] tabular-nums text-white/30">
+            <span className={cn('text-[10px] tabular-nums', TERMINAL.dim)}>
               {lineCount} {t('lines')}
             </span>
             {actions}

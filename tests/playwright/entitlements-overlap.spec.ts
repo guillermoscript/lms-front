@@ -12,6 +12,7 @@
  */
 import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { restoreAliceSeedSubscription } from './utils/seed-state'
 
 const ALICE_ID = 'a1000000-0000-0000-0000-000000000004'
 const CODE_ACADEMY_TENANT = '00000000-0000-0000-0000-000000000002'
@@ -50,7 +51,12 @@ async function cleanPlanState() {
 }
 
 test.beforeAll(cleanPlanState)
-test.afterAll(cleanPlanState)
+// cleanPlanState wipes the seeded plan-2001 subscription too; put it back so
+// the specs that run after this one in the same database still find it.
+test.afterAll(async () => {
+  await cleanPlanState()
+  await restoreAliceSeedSubscription(getAdmin())
+})
 
 test('plan purchase over a product-owned course does not 500 and entitlements coexist', async ({}, testInfo) => {
   // DB-only test — run once, not once per browser project (shared DB state).

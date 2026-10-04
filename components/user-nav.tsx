@@ -74,6 +74,7 @@ export function UserNav({ user }: UserNavProps) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
+            data-testid="user-nav-logout"
             className="rounded-lg mx-1 cursor-pointer gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive font-medium transition-colors"
             onClick={logout}
           >

@@ -1,5 +1,8 @@
 'use server'
 
+import { requireAdmin } from '@/lib/actions/utils';
+import { requirePlanFeature } from '@/lib/plans/server';
+
 /**
  * Creates a dedicated proxied A record for a school subdomain.
  *
@@ -10,6 +13,15 @@
  * is genuinely required. The school-creation form no longer calls it.
  */
 export async function createCloudflareSubdomain(slug: string) {
+  // Custom / vanity domains are a Business+ feature (#662), and creating DNS
+  // records is an admin act. Nothing calls this today; the gate is here so
+  // the future flow cannot forget it.
+  const ctx = await requireAdmin();
+  await requirePlanFeature(ctx.tenantId, 'custom_domain');
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug)) {
+    return { success: false, reason: 'Invalid subdomain' };
+  }
+
   const zoneId = process.env.CLOUDFLARE_ZONE_ID;
   const apiToken = process.env.CF_DNS_API_TOKEN;
   const serverIp = process.env.SERVER_IP;

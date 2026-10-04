@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { generateCertificateHTML } from '@/lib/certificate-generator'
 import { generateCertificatePDF } from '@/lib/certificates/pdf-generator'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getSchoolBrand } from '@/lib/themes/school-brand'
+import { resolveCertificateDesign } from '@/lib/certificates/default-design'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient()
-    const tenantId = await getCurrentTenantId()
+    // Serves the browser (session cookies + the subdomain's x-tenant-id) and
+    // the native app (Authorization: Bearer + the tenant from the verified JWT
+    // claim) from one path — the app cannot send a cookie, and without this it
+    // saved the 401 body as the student's certificate PDF.
+    const auth = await getApiAuthContext(request)
+    if (!auth) return new NextResponse('Unauthorized', { status: 401 })
+    const { supabase, user, tenantId } = auth
+
     const { id } = await params
     const format = request.nextUrl.searchParams.get('format')
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return new NextResponse('Unauthorized', { status: 401 })
-    }
 
     // Get certificate with course info and validate tenant
     const { data: certificate, error: certError } = await supabase
@@ -70,6 +72,8 @@ export async function GET(
     // PDF download
     if (format === 'pdf') {
       const tmpl = certificate.certificate_templates
+      const brand = await getSchoolBrand(tenantId)
+      const design = resolveCertificateDesign(tmpl?.design_settings, brand.outputs)
       const pdfBuffer = await generateCertificatePDF({
         studentName,
         courseTitle,
@@ -83,7 +87,8 @@ export async function GET(
         signatureTitle: tmpl?.signature_title,
         signatureImage: tmpl?.signature_image_url,
         score,
-        designConfig: tmpl?.design_settings,
+        design,
+        showQrCode: tmpl?.design_settings?.show_qr_code,
       })
 
       const safeName = courseTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase()
@@ -97,6 +102,7 @@ export async function GET(
 
     // HTML view (default)
     const template = certificate.certificate_templates
+    const brand = await getSchoolBrand(tenantId)
     const html = generateCertificateHTML({
       certificateNumber: certificate.verification_code,
       studentName,
@@ -104,11 +110,11 @@ export async function GET(
       completionDate: new Date(certificate.issued_at),
       score,
       issuerName,
-      designSettings: template?.design_settings,
+      design: resolveCertificateDesign(template?.design_settings, brand.outputs),
       signatureName: template?.signature_name,
       signatureTitle: template?.signature_title,
       signatureImageUrl: template?.signature_image_url,
-      logoUrl: template?.logo_url,
+      logoUrl: template?.logo_url || template?.design_settings?.logo_url,
     })
 
     // Increment view count

@@ -1,10 +1,11 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { isFreePreviewEnabled } from '@/lib/settings/free-preview'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getTranslations } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LessonContent } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/lesson-content'
 import { serializeLessonMdx } from '@/app/[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]/serialize-lesson'
@@ -25,9 +26,13 @@ interface PageProps {
 // cache() dedupes the generateMetadata + page calls within a request.
 const getPreviewLesson = cache(async (courseId: number, lessonId: number, tenantId: string) => {
     if (!Number.isInteger(courseId) || !Number.isInteger(lessonId)) return null
+    // A school can switch public previews off for the whole tenant (#799).
+    // The anon RLS policy enforces the same rule, but this page reads through
+    // the admin client and so would sail straight past it.
+    if (!(await isFreePreviewEnabled(tenantId))) return null
     const admin = createAdminClient()
 
-    const [{ data: course }, { data: lesson }] = await Promise.all([
+    const [{ data: course }, { data: lesson }, { data: siblings }, { data: linkedProducts }] = await Promise.all([
         admin
             .from('courses')
             .select('course_id, title')
@@ -44,35 +49,80 @@ const getPreviewLesson = cache(async (courseId: number, lessonId: number, tenant
             .eq('status', 'published')
             .eq('is_preview', true)
             .single(),
+        // The rest of the free preview, so this page is not a dead end (#791).
+        // Same three guards as the lesson above — anything else is not public.
+        admin
+            .from('lessons')
+            .select('id, title, sequence')
+            .eq('course_id', courseId)
+            .eq('tenant_id', tenantId)
+            .eq('status', 'published')
+            .eq('is_preview', true)
+            .order('sequence', { ascending: true }),
+        // `product_courses` is never `.single()`: a course can belong to
+        // several products. Free means none of them costs anything, which is
+        // the same rule `enrollFree` enforces server-side.
+        admin
+            .from('product_courses')
+            .select('product:products(price)')
+            .eq('course_id', courseId)
+            .eq('tenant_id', tenantId),
     ])
     if (!course || !lesson) return null
 
-    return { course, lesson }
+    const previews = siblings ?? []
+    const position = previews.findIndex((row) => row.id === lesson.id)
+    const nextPreview = position >= 0 ? previews[position + 1] ?? null : null
+
+    const isFree = !(linkedProducts ?? []).some(({ product }) => {
+        const linked = product as unknown as { price: number | string } | null
+        return linked !== null && Number(linked.price) !== 0
+    })
+
+    return { course, lesson, nextPreview, isFree }
 })
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
     const { id, lessonId, locale } = await props.params
     const tenantId = await getCurrentTenantId()
-    const data = await getPreviewLesson(Number(id), Number(lessonId), tenantId)
+    const [data, t] = await Promise.all([
+        getPreviewLesson(Number(id), Number(lessonId), tenantId),
+        getTranslations('coursePublicDetails'),
+    ])
     if (!data) notFound()
+    // Same branded course card as /courses/[id] (issue #765/#799): `courseId`
+    // is what lets the OG route reach for the course's thumbnail and the
+    // school's logo. The card still names THIS lesson — the route prefers the
+    // title the caller passes over the course's own.
     return buildPageMetadata({
         title: `${data.lesson.title} — ${data.course.title}`,
         description: data.lesson.description?.replace(/\s+/g, ' ').trim().slice(0, 160) || data.course.title,
         path: `/courses/${id}/lessons/${lessonId}`,
         locale,
+        ogParams: { type: 'course', courseId: id },
+        ogBadge: t('preview.badge'),
     })
 }
 
 export default async function PublicLessonPreviewPage(props: PageProps) {
     const { id, lessonId } = await props.params
-    const [t, tenantId] = await Promise.all([
+    const [t, tenantId, userId] = await Promise.all([
         getTranslations('coursePublicDetails'),
         getCurrentTenantId(),
+        getCurrentUserId(),
     ])
 
     const data = await getPreviewLesson(Number(id), Number(lessonId), tenantId)
     if (!data) notFound()
-    const { course, lesson } = data
+    const { course, lesson, nextPreview, isFree } = data
+
+    // Where the CTA sends someone who just finished reading. A visitor with no
+    // account goes to sign-up carrying the course as `next` — and `enroll=1`
+    // when the course is free, which is the hop that turns signing up into
+    // being enrolled without a second decision (#684). Someone already logged
+    // in has no sign-up step to take, so they go to the course page itself.
+    const courseNext = isFree ? `/courses/${id}?enroll=1` : `/courses/${id}`
+    const ctaHref = userId ? courseNext : `/auth/sign-up?next=${encodeURIComponent(courseNext)}`
 
     return (
         // pt-16 clears the public layout's fixed navbar
@@ -97,7 +147,7 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
             <div className="mx-auto max-w-4xl px-4 py-8 md:px-6 md:py-10 space-y-10">
                 {/* Lesson header */}
                 <header>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
                         {course.title}
                     </p>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-balance">
@@ -115,14 +165,45 @@ export default async function PublicLessonPreviewPage(props: PageProps) {
                     embedMode="sandboxed"
                 />
 
+                {/* Next free lesson — a preview that ends in a single CTA is a
+                    dead end; if there is more to read for free, that is the
+                    cheapest next step there is (#791). */}
+                {nextPreview && (
+                    <Link
+                        href={`/courses/${id}/lessons/${nextPreview.id}`}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-muted/40"
+                    >
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                                {t('preview.nextLessonLabel')}
+                            </p>
+                            <p className="truncate font-medium">{nextPreview.title}</p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 flex-shrink-0 text-brand-text" aria-hidden="true" />
+                    </Link>
+                )}
+
                 {/* Enroll CTA */}
                 <section className="rounded-2xl border-2 border-primary/10 bg-gradient-to-b from-primary/[0.06] to-transparent p-6 md:p-8 text-center space-y-4">
                     <h2 className="text-xl font-bold">{t('preview.enrollTitle')}</h2>
-                    <Link href={`/courses/${id}`} className="inline-block">
-                        <Button size="lg" className="gap-2">
-                            {t('preview.enrollCta')}
+                    <p className="text-sm text-muted-foreground">
+                        {userId ? t('preview.enrollBody') : t('preview.signUpBody')}
+                    </p>
+                    <Link href={ctaHref} className="inline-block">
+                        <Button size="lg" className="gap-2" data-testid="preview-enroll-cta">
+                            {userId ? t('preview.enrollCta') : t('preview.signUpCta')}
                         </Button>
                     </Link>
+                    {!userId && (
+                        <p className="text-xs text-muted-foreground">
+                            <Link
+                                href={`/auth/login?next=${encodeURIComponent(courseNext)}`}
+                                className="underline underline-offset-4 hover:text-foreground"
+                            >
+                                {t('preview.haveAccount')}
+                            </Link>
+                        </p>
+                    )}
                 </section>
             </div>
         </div>

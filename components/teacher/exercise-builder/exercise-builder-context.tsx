@@ -1,23 +1,38 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, createContext, use } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, createContext, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createExercise, updateExercise } from '@/app/actions/teacher/exercises'
+import { createExerciseSaveTarget } from './save-target'
+import { CONVERSATION_DEFAULTS } from '@/lib/speech/conversation'
+import { SPEECH_RUBRIC_DEFAULTS } from '@/lib/speech/learner-rubric'
 import {
   IconSettings2,
   IconRobot,
   IconMicrophone,
-  IconCheck,
+  IconMessageCircle,
 } from '@tabler/icons-react'
 
 export interface ExerciseBuilderProps {
   courseId: number
   lessonId?: number
-  initialData?: any
+  initialData?: {
+    id: number
+    title?: string | null
+    description?: string | null
+    instructions?: string | null
+    exercise_type?: string | null
+    difficulty_level?: string | null
+    time_limit?: number | null
+    system_prompt?: string | null
+    status?: string | null
+    // jsonb whose shape depends on exercise_type — read field by field below.
+    exercise_config?: Record<string, any> | null // eslint-disable-line @typescript-eslint/no-explicit-any
+  }
 }
 
-export type ExerciseStep = 'details' | 'ai-config' | 'audio-config'
+export type ExerciseStep = 'details' | 'ai-config' | 'audio-config' | 'conversation-config'
 
 export interface ExerciseFormData {
   title: string
@@ -38,6 +53,17 @@ export interface ExerciseFormData {
   rubric_pace: boolean
   rubric_structure: boolean
   rubric_confidence: boolean
+  speech_rubric_mode: string
+  speech_target_language: string
+  speech_level: string
+  speech_feedback_language: string
+  // live conversation config
+  conv_scenario: string
+  conv_target_language: string
+  conv_native_language: string
+  conv_level: string
+  conv_voice: string
+  conv_max_minutes: number
 }
 
 export interface StepDefinition {
@@ -58,9 +84,12 @@ export interface ExerciseBuilderContextValue {
   // Props pass-through
   initialData: ExerciseBuilderProps['initialData']
   courseId: number
+  /** The saved row's id — set from the first Save Draft on `/new` too. */
+  exerciseId: number | null
 
   // Derived
   isAudioType: boolean
+  isConversationType: boolean
   isDetailsComplete: boolean
   hasAIConfig: boolean
   steps: StepDefinition[]
@@ -94,6 +123,8 @@ export function ExerciseBuilderProvider({
   const [error, setError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [activeStep, setActiveStep] = useState<ExerciseStep>('details')
+  const saveTarget = useRef(createExerciseSaveTarget(initialData?.id)).current
+  const [exerciseId, setExerciseId] = useState<number | null>(initialData?.id ?? null)
 
   const [formData, setFormData] = useState<ExerciseFormData>({
     title: initialData?.title || '',
@@ -114,9 +145,22 @@ export function ExerciseBuilderProvider({
     rubric_pace: initialData?.exercise_config?.rubric?.pace !== false,
     rubric_structure: initialData?.exercise_config?.rubric?.structure !== false,
     rubric_confidence: initialData?.exercise_config?.rubric?.confidence !== false,
+    // Shares `target_language`/`level` keys with the conversation config on
+    // purpose: an exercise is one type or the other, never both.
+    speech_rubric_mode: initialData?.exercise_config?.rubric_mode || SPEECH_RUBRIC_DEFAULTS.rubric_mode,
+    speech_target_language: initialData?.exercise_config?.target_language || SPEECH_RUBRIC_DEFAULTS.target_language,
+    speech_level: initialData?.exercise_config?.level || SPEECH_RUBRIC_DEFAULTS.level,
+    speech_feedback_language: initialData?.exercise_config?.feedback_language || '',
+    conv_scenario: initialData?.exercise_config?.scenario || CONVERSATION_DEFAULTS.scenario,
+    conv_target_language: initialData?.exercise_config?.target_language || CONVERSATION_DEFAULTS.target_language,
+    conv_native_language: initialData?.exercise_config?.native_language || CONVERSATION_DEFAULTS.native_language,
+    conv_level: initialData?.exercise_config?.level || CONVERSATION_DEFAULTS.level,
+    conv_voice: initialData?.exercise_config?.voice || CONVERSATION_DEFAULTS.voice,
+    conv_max_minutes: initialData?.exercise_config?.max_minutes || CONVERSATION_DEFAULTS.max_minutes,
   })
 
   const isAudioType = formData.exercise_type === 'audio_evaluation' || formData.exercise_type === 'video_evaluation'
+  const isConversationType = formData.exercise_type === 'real_time_conversation'
 
   const updateField = useCallback(
     <K extends keyof ExerciseFormData>(key: K, value: ExerciseFormData[K]) => {
@@ -133,9 +177,6 @@ export function ExerciseBuilderProvider({
   }, [saveSuccess])
 
   const handleSave = async (publish: boolean) => {
-    setLoading(true)
-    setError(null)
-
     try {
       const data = {
         title: formData.title,
@@ -158,11 +199,27 @@ export function ExerciseBuilderProvider({
         rubric_pace: formData.rubric_pace,
         rubric_structure: formData.rubric_structure,
         rubric_confidence: formData.rubric_confidence,
+        speech_rubric_mode: formData.speech_rubric_mode,
+        speech_target_language: formData.speech_target_language,
+        speech_level: formData.speech_level,
+        speech_feedback_language: formData.speech_feedback_language,
+        conv_scenario: formData.conv_scenario,
+        conv_target_language: formData.conv_target_language,
+        conv_native_language: formData.conv_native_language,
+        conv_level: formData.conv_level,
+        conv_voice: formData.conv_voice,
+        conv_max_minutes: formData.conv_max_minutes,
       }
 
-      const result = initialData
-        ? await updateExercise(courseId, initialData.id, data)
-        : await createExercise(courseId, data)
+      const pending = saveTarget.save(
+        () => createExercise(courseId, data),
+        (id) => updateExercise(courseId, id, data)
+      )
+      setLoading(true)
+      setError(null)
+      const result = await pending
+      // Another save was already running; that one owns the loading state.
+      if (!result) return
 
       if (!result.success) {
         setError(result.error)
@@ -174,12 +231,23 @@ export function ExerciseBuilderProvider({
         router.push(`/dashboard/teacher/courses/${courseId}/exercises`)
         router.refresh()
       } else {
+        if (exerciseId === null) {
+          setExerciseId(result.data.exerciseId)
+          // Put the edit URL in the address bar without remounting the
+          // builder, so a reload opens the saved exercise instead of a blank
+          // `/new` form.
+          window.history.replaceState(
+            null,
+            '',
+            window.location.pathname.replace(/\/new\/?$/, `/${result.data.exerciseId}`)
+          )
+        }
         setSaveSuccess(true)
         setLoading(false)
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err)
-      setError(err.message || t('saveError'))
+      setError(err instanceof Error && err.message ? err.message : t('saveError'))
       setLoading(false)
     }
   }
@@ -202,6 +270,11 @@ export function ExerciseBuilderProvider({
       label: t('audioSetupTitle'),
       icon: <IconMicrophone className="h-4 w-4" />,
       complete: formData.topic_prompt.trim().length > 0,
+    }] : isConversationType ? [{
+      key: 'conversation-config' as ExerciseStep,
+      label: t('conversationSetupTitle'),
+      icon: <IconMessageCircle className="h-4 w-4" />,
+      complete: formData.conv_scenario.trim().length > 0,
     }] : [{
       key: 'ai-config' as ExerciseStep,
       label: t('aiConfigTitle'),
@@ -212,11 +285,11 @@ export function ExerciseBuilderProvider({
 
   const value = useMemo(() => ({
     formData, loading, error, saveSuccess, activeStep,
-    initialData, courseId,
-    isAudioType, isDetailsComplete, hasAIConfig, steps,
+    initialData, courseId, exerciseId,
+    isAudioType, isConversationType, isDetailsComplete, hasAIConfig, steps,
     updateField, setFormData, handleSave, setActiveStep, setError,
   }), [formData, loading, error, saveSuccess, activeStep,
-    initialData, courseId, isAudioType, isDetailsComplete, hasAIConfig])
+    initialData, courseId, exerciseId, isAudioType, isConversationType, isDetailsComplete, hasAIConfig])
 
   return (
     <ExerciseBuilderContext value={value}>

@@ -23,16 +23,16 @@ export default function ExamCard({ exam, courseId }: ExamCardProps) {
     const isSubmitted = hasSubmission && !hasScore;
 
     const statusBarColor = isCompleted
-        ? "bg-green-500"
+        ? "bg-success"
         : isSubmitted
-            ? "bg-amber-500"
+            ? "bg-warning"
             : "bg-primary";
 
     const iconBg = isCompleted
-        ? "bg-green-100 text-green-600"
+        ? "bg-success/15 text-success"
         : isSubmitted
-            ? "bg-amber-100 text-amber-600"
-            : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white";
+            ? "bg-warning/15 text-warning"
+            : "bg-brand-tint text-brand-text group-hover:bg-primary group-hover:text-primary-foreground";
 
     const linkHref = (isCompleted || isSubmitted)
         ? `/dashboard/student/courses/${courseId}/exams/${exam.exam_id}/result`
@@ -66,12 +66,12 @@ export default function ExamCard({ exam, courseId }: ExamCardProps) {
                                 <div className="flex flex-wrap items-center gap-2">
                                     <h3 className="font-bold text-base sm:text-xl">{exam.title}</h3>
                                     {isCompleted && (
-                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] sm:text-xs">
+                                        <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-[10px] sm:text-xs">
                                             Completed
                                         </Badge>
                                     )}
                                     {isSubmitted && (
-                                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] sm:text-xs">
+                                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[10px] sm:text-xs">
                                             {reviewStatus === 'pending_teacher_review' ? 'Pending Review' : 'Submitted'}
                                         </Badge>
                                     )}
@@ -94,14 +94,14 @@ export default function ExamCard({ exam, courseId }: ExamCardProps) {
                         <div className="flex flex-col items-stretch sm:items-end gap-2.5 sm:gap-3 w-full sm:w-auto sm:min-w-[140px]">
                             {isCompleted ? (
                                 <div className="text-center sm:text-right">
-                                    <div className="text-2xl sm:text-3xl font-black text-green-600">
+                                    <div className="text-2xl sm:text-3xl font-black text-success">
                                         {Math.round(score)}%
                                     </div>
                                     <p className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">Final Score</p>
                                 </div>
                             ) : isSubmitted ? (
                                 <div className="text-center sm:text-right">
-                                    <div className="text-base sm:text-lg font-bold text-amber-600">
+                                    <div className="text-base sm:text-lg font-bold text-warning">
                                         Awaiting Grade
                                     </div>
                                     <p className="text-[10px] sm:text-xs text-muted-foreground">
@@ -123,8 +123,8 @@ export default function ExamCard({ exam, courseId }: ExamCardProps) {
                                     isCompleted
                                         ? "bg-muted hover:bg-muted/80 text-foreground"
                                         : isSubmitted
-                                            ? "bg-amber-500 text-white hover:bg-amber-600 hover:shadow-lg hover:shadow-amber-500/20"
-                                            : "bg-primary text-white hover:shadow-lg hover:shadow-primary/20"
+                                            ? "bg-warning text-warning-foreground hover:bg-warning/90 hover:shadow-lg"
+                                            : "bg-primary text-primary-foreground hover:shadow-lg"
                                 )}>
                                     {isCompleted ? "View Results" : isSubmitted ? "View Results" : "Start Exam"}
                                     <IconChevronRight size={18} />

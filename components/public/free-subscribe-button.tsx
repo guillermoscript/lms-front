@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useTransition, type ComponentProps } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { IconLoader2 } from '@tabler/icons-react'
@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { subscribeFree } from '@/app/[locale]/(public)/checkout/actions'
 import { Button } from '@/components/ui/button'
+import { AlreadyHaveAccountLink } from '@/components/public/already-have-account-link'
 
 interface FreeSubscribeProps {
     planId: number
@@ -16,6 +17,8 @@ interface FreeSubscribeProps {
     /** Auto-fire once when the URL carries ?subscribe=<planId> and the user is signed in. */
     autoFire?: boolean
     className?: string
+    /** Button variant, threaded from the pricing CTA so both CTAs match (#764). */
+    variant?: ComponentProps<typeof Button>['variant']
 }
 
 function useFreeSubscription(planId: number) {
@@ -43,31 +46,47 @@ export function FreeSubscribeButton({
     isAuthenticated,
     autoFire = false,
     className,
+    variant,
 }: FreeSubscribeProps) {
     const t = useTranslations('pricing')
 
     if (!isAuthenticated) {
+        // The free plan is the entry point for someone who has never signed up,
+        // so the button goes to sign-up rather than a login form they cannot
+        // fill (#719). Both links carry the same `next`, which brings them back
+        // here with `?subscribe=` so `autoFire` finishes the subscription.
+        const anonymousNext = `/pricing?subscribe=${planId}`
         return (
-            <Link
-                href={`/auth/login?next=${encodeURIComponent(`/pricing?subscribe=${planId}`)}`}
-                className="block"
-            >
-                <Button className={className}>{t('subscribeFree')}</Button>
-            </Link>
+            <div className="space-y-2">
+                <Link
+                    data-testid={`subscribe-free-${planId}`}
+                    href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}
+                    className="block"
+                >
+                    <Button variant={variant} className={className}>{t('subscribeFree')}</Button>
+                </Link>
+                <AlreadyHaveAccountLink
+                    next={anonymousNext}
+                    testId={`subscribe-free-login-${planId}`}
+                    linkClassName="text-brand-text"
+                />
+            </div>
         )
     }
 
-    return <FreeSubscribeTrigger planId={planId} autoFire={autoFire} className={className} />
+    return <FreeSubscribeTrigger planId={planId} autoFire={autoFire} className={className} variant={variant} />
 }
 
 function FreeSubscribeTrigger({
     planId,
     autoFire,
     className,
+    variant,
 }: {
     planId: number
     autoFire: boolean
     className?: string
+    variant?: ComponentProps<typeof Button>['variant']
 }) {
     const t = useTranslations('pricing')
     const { subscribe, isPending } = useFreeSubscription(planId)
@@ -82,6 +101,7 @@ function FreeSubscribeTrigger({
     return (
         <Button
             type="button"
+            variant={variant}
             className={className}
             onClick={subscribe}
             disabled={isPending}

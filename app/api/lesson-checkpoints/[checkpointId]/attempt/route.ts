@@ -6,6 +6,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
 import { AI_MODELS } from '@/lib/ai/config'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import {
   CLOSED_EXERCISE_TYPES,
   EXTERNAL_EXERCISE_TYPES,
@@ -73,7 +76,7 @@ export async function POST(
   const { data: checkpoint } = await adminClient
     .from('lesson_checkpoints')
     .select(
-      'id, tenant_id, lesson_id, exercise_id, placement_type, allow_skip, max_ai_attempts, is_required, is_enabled, exercises(id, title, instructions, description, exercise_type, system_prompt, exercise_config, course_id, tenant_id)'
+      `id, tenant_id, lesson_id, exercise_id, placement_type, allow_skip, max_ai_attempts, is_required, is_enabled, exercises(id, title, instructions, description, exercise_type, system_prompt, exercise_config, course_id, tenant_id, ${GRADING_SECRETS_EMBED})`
     )
     .eq('id', checkpointId)
     .single()
@@ -81,7 +84,7 @@ export async function POST(
   if (!checkpoint || checkpoint.tenant_id !== tenantId || !checkpoint.is_enabled) {
     return Response.json({ error: 'Checkpoint not found' }, { status: 404 })
   }
-  const exercise = checkpoint.exercises as unknown as {
+  const storedExercise = checkpoint.exercises as unknown as {
     id: number
     title: string
     instructions: string
@@ -91,10 +94,14 @@ export async function POST(
     exercise_config: Record<string, unknown> | null
     course_id: number
     tenant_id: string
+    exercise_grading_secrets: unknown
   } | null
-  if (!exercise || exercise.tenant_id !== tenantId) {
+  if (!storedExercise || storedExercise.tenant_id !== tenantId) {
     return Response.json({ error: 'Checkpoint not found' }, { status: 404 })
   }
+  // Answer keys, the grader prompt and criteria live outside the row (#829,
+  // #833); merged back here, on the server, to grade.
+  const exercise = withGradingSecrets(storedExercise)
 
   // Course access required (issue #532). This route reads through the admin
   // client, so #509's RLS backstop on content never applies here — the gate
@@ -306,6 +313,26 @@ export async function POST(
     console.error('Checkpoint attempt insert failed:', insertError)
     return Response.json({ error: 'Failed to record attempt' }, { status: 500 })
   }
+
+  // After the attempt row lands. `evaluator_type` is the interesting cut here:
+  // a 'fallback' attempt means the student hit an AI quota and got no grading,
+  // which looks like engagement in every other metric.
+  await track(
+    ANALYTICS_EVENTS.CHECKPOINT_ATTEMPTED,
+    {
+      checkpoint_id: checkpointId,
+      exercise_id: exercise.id,
+      lesson_id: checkpoint.lesson_id,
+      course_id: exercise.course_id,
+      exercise_type: exerciseType,
+      attempt_number: attempt.attempt_number,
+      is_correct: passed,
+      score,
+      evaluator_type: evaluatorType,
+      ai_unavailable: aiUnavailable,
+    },
+    { userId: user.id, tenantId, role: 'student' }
+  )
 
   const result: CheckpointAttemptResult = {
     attemptId: attempt.id,

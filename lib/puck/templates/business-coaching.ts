@@ -54,19 +54,13 @@ const homeTemplate: PuckTemplate = {
         backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
       }),
       c('SocialProof', {
-        text: 'Trusted by 3,500+ founders and creators worldwide',
-        rating: 5,
-        reviewCount: 'Based on 900+ reviews',
+        text: '',
+        reviewCount: '',
         avatarCount: 5,
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '3,500', label: 'Clients Coached', prefix: '', suffix: '+' },
-          { value: '40', label: 'Avg. Revenue Growth', prefix: '', suffix: '%' },
-          { value: '12', label: 'Years Experience', prefix: '', suffix: '+' },
-          { value: '4.9', label: 'Client Rating', prefix: '', suffix: '/5' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {
@@ -101,9 +95,9 @@ const homeTemplate: PuckTemplate = {
         title: 'Results That Speak',
         subtitle: 'What clients achieved after working together.',
         items: [
-          { name: 'Sara D.', role: 'Freelance Designer', quote: 'I doubled my rates and filled my calendar in 90 days. The positioning work alone was worth every penny.', rating: 5 },
-          { name: 'Marcus L.', role: 'Agency Founder', quote: 'We went from feast-or-famine to predictable revenue. The client-attraction system completely changed our business.', rating: 5 },
-          { name: 'Aisha K.', role: 'Online Coach', quote: 'I finally have systems instead of chaos. I work fewer hours and earn more than ever. Game changer.', rating: 5 },
+          { name: 'Student name', role: 'What they run', quote: 'Replace with a real quote from one of your students: what they could not do before, and what they can do now.', rating: 5 },
+          { name: 'Student name', role: 'What they run', quote: 'A second quote. One or two sentences from the student, in their own words, beat a polished paragraph.', rating: 5 },
+          { name: 'Student name', role: 'What they run', quote: 'A third quote. Ask for something specific, the result rather than the compliment.', rating: 5 },
         ],
       }),
       c('FaqAccordion', {
@@ -158,12 +152,7 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('StatsCounter', {
         useLiveStats: true,
-        items: [
-          { value: '3,500', label: 'Clients Coached', prefix: '', suffix: '+' },
-          { value: '$50M', label: 'Client Revenue Added', prefix: '', suffix: '' },
-          { value: '12', label: 'Years Experience', prefix: '', suffix: '+' },
-          { value: '30', label: 'Countries', prefix: '', suffix: '+' },
-        ],
+        items: [],
         alignment: 'center',
       }),
       c('FeaturesGrid', {

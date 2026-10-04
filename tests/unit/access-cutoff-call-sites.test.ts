@@ -238,7 +238,7 @@ describe('joinCurrentSchool — reconcileAccessCutoff wiring (#513)', () => {
   it('calls reconcileAccessCutoff once with the tenant id after a successful join', async () => {
     const result = await joinCurrentSchool()
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, emailSent: true })
     expect(reconcileMock).toHaveBeenCalledTimes(1)
     expect(reconcileMock).toHaveBeenCalledWith(expect.anything(), 't1')
   })
@@ -249,7 +249,7 @@ describe('joinCurrentSchool — reconcileAccessCutoff wiring (#513)', () => {
 
     const result = await joinCurrentSchool()
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, emailSent: true })
     expect(reconcileMock).toHaveBeenCalledTimes(1)
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       'reconcileAccessCutoffSafely: reconcile failed for tenant',

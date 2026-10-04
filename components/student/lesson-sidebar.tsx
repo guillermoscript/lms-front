@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { IconCheck, IconPlayerPlay, IconArrowLeft, IconLock } from '@tabler/icons-react'
+import { IconCheck, IconPlayerPlay, IconArrowLeft, IconLock, IconMessages } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
 interface Lesson {
@@ -18,6 +18,8 @@ interface LessonSidebarProps {
   lessons: Lesson[]
   currentLessonId?: number
   requireSequentialCompletion?: boolean
+  /** The course feed (#868); omitted when the school has no community. */
+  communityHref?: string
 }
 
 export function LessonSidebar({
@@ -26,8 +28,10 @@ export function LessonSidebar({
   lessons,
   currentLessonId,
   requireSequentialCompletion = false,
+  communityHref,
 }: LessonSidebarProps) {
   const t = useTranslations('components.lessonSidebar')
+  const tc = useTranslations('community')
   const completedCount = lessons.filter(l => l.isCompleted).length
   const progress = lessons.length > 0 ? Math.round((completedCount / lessons.length) * 100) : 0
 
@@ -52,11 +56,23 @@ export function LessonSidebar({
           </div>
           <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
+              className="h-full bg-success rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
+
+        {/* Quiet on purpose: the lesson is the content, the community is a side door */}
+        {communityHref && (
+          <Link
+            href={communityHref}
+            data-testid="lesson-sidebar-community-link"
+            className="mt-3 -mx-1 inline-flex min-h-6 items-center gap-1.5 rounded px-1 text-xs text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            <IconMessages aria-hidden="true" className="h-3.5 w-3.5" />
+            {tc('courseEntry.title')}
+          </Link>
+        )}
       </div>
 
       {/* Lesson list */}
@@ -77,7 +93,7 @@ export function LessonSidebar({
                   isLocked
                     ? 'bg-muted text-muted-foreground/50'
                     : lesson.isCompleted
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-success text-success-foreground'
                       : isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground'
@@ -110,7 +126,7 @@ export function LessonSidebar({
               <li key={lesson.id}>
                 {isLocked ? (
                   <div
-                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground/50 cursor-not-allowed"
+                    className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground cursor-not-allowed"
                     title={t('locked')}
                   >
                     {content}
@@ -122,7 +138,7 @@ export function LessonSidebar({
                     className={cn(
                       'flex items-start gap-3 rounded-lg px-3 py-2.5 text-sm transition-all group',
                       isActive
-                        ? 'bg-primary/10 text-primary'
+                        ? 'bg-brand-tint text-brand-text'
                         : 'hover:bg-muted text-muted-foreground hover:text-foreground'
                     )}
                   >

@@ -20,16 +20,15 @@ import {
   claimWebhookEvent,
   completeWebhookEvent,
   failWebhookEvent,
+  UNIFIED_STUDENT_WEBHOOK_PROVIDERS,
 } from '@/lib/payments/webhook-event-claim'
 
 export const runtime = 'nodejs'
 
-// Providers exposed on this endpoint. getPaymentProvider() still gates on
-// configured credentials; providers without verify/normalize return 501.
-// `manual` and `solana` are intentionally excluded: neither has a signed
-// webhook (Solana confirms on-chain via /api/payments/solana/verify), so
-// exposing a route for them would be an unauthenticated mutation surface.
-const SUPPORTED: PaymentProvider[] = ['stripe', 'paypal', 'lemonsqueezy', 'binance']
+// Providers exposed on this endpoint (shared with the redelivery cron; see the
+// definition for why manual/solana are excluded). getPaymentProvider() still
+// gates on configured credentials; providers without verify/normalize get 501.
+const SUPPORTED: PaymentProvider[] = UNIFIED_STUDENT_WEBHOOK_PROVIDERS
 
 /**
  * Provider-specific ACK body. Binance Pay treats anything other than
@@ -132,7 +131,14 @@ export async function POST(
   }
   if (claim.status === 'processing') {
     return NextResponse.json(
-      ackBody(provider, { processing: true, eventStatus: 'already_processing' }),
+      provider === 'binance'
+        ? {
+            returnCode: 'FAIL',
+            returnMessage: 'Event is already processing',
+            processing: true,
+            eventStatus: 'already_processing',
+          }
+        : ackBody(provider, { processing: true, eventStatus: 'already_processing' }),
       { status: 409, headers: { 'Retry-After': '30' } },
     )
   }
@@ -155,6 +161,11 @@ export async function POST(
     await completeWebhookEvent(admin, claim)
   } catch (err) {
     console.error(`[webhook/${provider}] failed to complete event ${providerEventId}:`, err)
+    try {
+      await failWebhookEvent(admin, claim, err)
+    } catch (releaseErr) {
+      console.error(`[webhook/${provider}] failed to release claim after completion error:`, releaseErr)
+    }
     return NextResponse.json({ error: 'Event completion failed' }, { status: 500 })
   }
 

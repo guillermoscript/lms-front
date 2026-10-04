@@ -145,7 +145,8 @@ Student                        Stripe                         Database
 |-------|---------|
 | `payment_requests` | Student manual payment requests (per tenant) |
 | `transactions` | Payment records (Stripe + manual) |
-| `enrollments` | Course access (product_id OR subscription_id) |
+| `entitlements` | Course access — the source of truth (`source_type` / `source_id`, `status`, `expires_at`) |
+| `enrollments` | Learning-progress record only (`user_id`, `course_id`, `status`, `tenant_id`) |
 | `subscriptions` | Time-limited plan access |
 | `product_courses` | Product → Course mappings (has tenant_id) |
 | `plan_courses` | Plan → Course mappings (no tenant_id, scoped via plan) |
@@ -154,7 +155,7 @@ Student                        Stripe                         Database
 
 | RPC | What It Does |
 |-----|-------------|
-| `enroll_user(_user_id, _product_id)` | Loops ALL product_courses, creates enrollments with `status='active'`, `tenant_id` |
+| `enroll_user(_user_id, _product_id)` | Loops ALL `product_courses`, writes `entitlements` rows with `status='active'`, `tenant_id` |
 | `handle_new_subscription(_user_id, _plan_id, _transaction_id)` | Creates subscription only (no auto-enrollment; students self-enroll via browse) |
 | `handle_student_subscription_expiry()` | Cron: expires active subscriptions past `end_date` |
 

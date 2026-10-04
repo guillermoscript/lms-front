@@ -64,7 +64,9 @@ export default async function ManualCheckoutPage(props: {
       redirect('/dashboard/student/browse')
     }
 
-    if (plan.payment_provider !== 'manual') {
+    // A $0 plan owes nothing, so there is nothing to request (#749) — the main
+    // checkout subscribes it in one click instead.
+    if (plan.payment_provider !== 'manual' || !(parseFloat(plan.price) > 0)) {
       redirect(`/checkout?planId=${planId}`)
     }
 
@@ -119,6 +121,13 @@ export default async function ManualCheckoutPage(props: {
 
     if (product.payment_provider !== 'manual') {
       redirect(`/checkout?courseId=${productId}`)
+    }
+
+    // A free offering is a `manual` product at price 0 (#727). Rendering the
+    // request form here only let the student fill it in to be refused on submit
+    // (#749); its product page offers the one-click enrollment instead.
+    if (!(parseFloat(product.price) > 0)) {
+      redirect(`/products/${product.product_id}`)
     }
 
     itemName = product.name

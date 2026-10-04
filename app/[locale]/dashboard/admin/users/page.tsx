@@ -27,9 +27,10 @@ export default async function AdminUsersPage() {
   // Get tenant members first (needed for profile lookup)
   const { data: tenantMembers } = await supabase
     .from('tenant_users')
-    .select('user_id, role')
+    .select('user_id, role, status')
     .eq('tenant_id', tenantId)
-    .eq('status', 'active')
+    // Banned members stay on the list (#892) so an admin can find and lift the ban.
+    .in('status', ['active', 'banned'])
 
   const memberUserIds = [...new Set((tenantMembers ?? []).map((m) => m.user_id).filter(Boolean))]
 
@@ -59,9 +60,14 @@ export default async function AdminUsersPage() {
   // Build roles map from tenant_users (authoritative for this tenant)
   const rolesMap = new Map<string, string[]>()
   tenantMembers?.forEach((m) => {
+    if (m.status === 'banned') return
     const existing = rolesMap.get(m.user_id) || []
     rolesMap.set(m.user_id, [...existing, m.role])
   })
+
+  const bannedIds = new Set<string>(
+    (tenantMembers ?? []).filter((m) => m.status === 'banned').map((m) => m.user_id)
+  )
 
   const enrollmentCounts = new Map<string, number>()
   enrollments?.forEach((e) => {
@@ -130,6 +136,7 @@ export default async function AdminUsersPage() {
             profiles={profiles || []}
             rolesMap={rolesMap}
             enrollmentCounts={enrollmentCounts}
+            bannedIds={bannedIds}
           />
         </CardContent>
       </Card>

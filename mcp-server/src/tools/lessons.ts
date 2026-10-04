@@ -1,6 +1,9 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { nanoid } from "nanoid";
 import { LmsSession } from "../session.js";
 import {
@@ -10,8 +13,9 @@ import {
   ResponseFormat,
   PaginationSchema,
 } from "../format.js";
+import { propsSchema as lessonPreviewPropsSchema } from "../../views/lesson-preview/schema.js";
 
-export function registerLessonTools(server: MCPServer) {
+export function registerLessonTools(server: LmsServer) {
   server.tool(
     {
       name: "lms_list_lessons",
@@ -110,10 +114,11 @@ export function registerLessonTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: true,
       },
-      widget: {
-        name: "lesson-preview",
-        invoking: "Loading lesson...",
-        invoked: "Lesson loaded",
+      outputSchema: lessonPreviewPropsSchema,
+      view: { name: "lesson-preview" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading lesson...",
+        "openai/toolInvocation/invoked": "Lesson loaded",
       },
     },
     async ({ lesson_id }, ctx) => {

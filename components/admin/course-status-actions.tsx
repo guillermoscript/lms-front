@@ -99,7 +99,7 @@ export function CourseStatusActions({
               disabled={loading}
               onClick={() => setShowApproveDialog(true)}
             >
-              <IconCheck className="text-emerald-600 dark:text-emerald-400" />
+              <IconCheck className="text-success" />
               {t('approve')}
             </DropdownMenuItem>
           )}

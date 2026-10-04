@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useEventListener } from 'usehooks-ts'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -23,6 +25,8 @@ import {
 } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 interface Question {
   id: number
@@ -38,7 +42,6 @@ interface ExamTakerProps {
   description: string | null
   duration: number | null
   questions: Question[]
-  tenantId: string
 }
 
 export function ExamTaker({
@@ -48,14 +51,15 @@ export function ExamTaker({
   description,
   duration,
   questions,
-  tenantId,
 }: ExamTakerProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(duration ? duration * 60 : null) // in seconds
+  const t = useTranslations('components.examTaker')
   const router = useRouter()
   const supabase = createClient()
+  const analytics = useAnalytics()
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -92,47 +96,38 @@ export function ExamTaker({
         return
       }
 
-      // Create exam submission
-      const { data: submission, error: submissionError } = await supabase
-        .from('exam_submissions')
-        .insert({
-          exam_id: examId,
-          student_id: user.id,
-          tenant_id: tenantId,
-        })
-        .select('submission_id')
-        .single()
+      // One transaction for the submission and its answers (#847). Idempotent:
+      // pressing submit again after a failure returns the same submission.
+      const { data: submissionId, error: submitError } = await supabase.rpc('submit_exam', {
+        p_exam_id: examId,
+        p_answers: answers,
+      })
 
-      if (submissionError || !submission) {
-        console.error('Failed to create submission:', submissionError)
+      if (submitError || !submissionId) {
+        console.error('Failed to submit exam:', submitError)
+        toast.error(t('submitFailed'))
         setSubmitting(false)
         return
       }
 
-      // Insert answers
-      const answerRecords = questions.map((q) => ({
-        submission_id: submission.submission_id,
-        question_id: q.id,
-        answer_text: answers[q.id] || '',
-      }))
-
-      const { error: answersError } = await supabase
-        .from('exam_answers')
-        .insert(answerRecords)
-
-      if (answersError) {
-        console.error('Failed to save answers:', answersError)
-        setSubmitting(false)
-        return
-      }
+      // After the submission lands. `was_auto_submitted` matters: the timer calls
+      // this same handler at zero, and an exam the student never chose to hand
+      // in is a different event from one they did.
+      analytics.track(ANALYTICS_EVENTS.EXAM_SUBMITTED, {
+        exam_id: examId,
+        course_id: courseId,
+        submission_id: submissionId,
+        question_count: questions.length,
+        answered_count: Object.keys(answers).length,
+        was_auto_submitted: timeLeft !== null && timeLeft <= 0,
+      })
 
       // Trigger AI grading
       try {
         const { gradeExamWithAI } = await import('@/app/actions/exam-grading')
         const gradingResult = await gradeExamWithAI({
           examId,
-          submissionId: submission.submission_id,
-          answers,
+          submissionId,
         })
         if (!gradingResult.success) {
           console.error('AI grading returned error:', gradingResult.error)
@@ -146,6 +141,7 @@ export function ExamTaker({
       router.push(`/dashboard/student/courses/${courseId}/exams/${examId}/result`)
     } catch (error) {
       console.error('Submission error:', error)
+      toast.error(t('submitFailed'))
       setSubmitting(false)
     }
   }
@@ -173,12 +169,12 @@ export function ExamTaker({
       <div className="container mx-auto max-w-2xl py-20 px-4 text-center">
         <div className="bg-card border rounded-3xl p-12 shadow-soft">
           <IconFileText className="mx-auto mb-6 h-16 w-16 text-muted-foreground/30" />
-          <h2 className="text-2xl font-bold mb-2">No Questions Found</h2>
-          <p className="text-muted-foreground mb-8 text-lg">This exam doesn&apos;t have any questions yet. Please check back later.</p>
+          <h2 className="text-2xl font-bold mb-2">{t('noQuestionsTitle')}</h2>
+          <p className="text-muted-foreground mb-8 text-lg">{t('noQuestionsDescription')}</p>
           <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-            <Button variant="outline" className="rounded-2xl h-12 px-8 font-bold">
+            <Button variant="outline" className="h-12 px-8 font-bold">
               <IconChevronLeft className="mr-2 h-5 w-5" />
-              Return to Assessments
+              {t('returnToAssessments')}
             </Button>
           </Link>
         </div>
@@ -192,14 +188,14 @@ export function ExamTaker({
         {/* Top bar with stats and timer */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-4 z-20">
           <div className="bg-background/80 backdrop-blur-md border border-muted-foreground/10 rounded-2xl p-4 flex flex-1 items-center gap-6 shadow-xl">
-            <div className="p-3 rounded-xl bg-primary/10 text-primary">
+            <div className="p-3 rounded-xl bg-brand-tint text-brand-text">
               <IconFileText size={20} />
             </div>
             <div className="flex-1 space-y-1">
               <h1 className="font-bold tracking-tight line-clamp-1">{title}</h1>
               <div className="flex items-center gap-4">
                 <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
-                  Progress: {answeredCount}/{questions.length}
+                  {t('progress', { answered: answeredCount, total: questions.length })}
                 </span>
                 <Progress value={progressPercent} className="h-1.5 w-24" />
               </div>
@@ -209,11 +205,11 @@ export function ExamTaker({
           {timeLeft !== null && (
             <div className={cn(
               "p-4 rounded-2xl flex items-center gap-3 shadow-xl border animate-pulse-subtle",
-              timeLeft < 300 ? "bg-red-500 text-white border-red-400" : "bg-card text-foreground border-muted-foreground/10"
+              timeLeft < 300 ? "bg-destructive text-destructive-foreground border-destructive/70" : "bg-card text-foreground border-muted-foreground/10"
             )}>
               <IconClock className={cn("h-5 w-5", timeLeft < 300 ? "text-white" : "text-muted-foreground")} />
               <div className="flex flex-col -space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Time Left</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">{t('timeLeft')}</span>
                 <span className="font-mono text-xl font-black">{formatTime(timeLeft)}</span>
               </div>
             </div>
@@ -237,9 +233,9 @@ export function ExamTaker({
 
             <div className="flex-1 p-8 md:p-12 flex flex-col items-center justify-center max-w-3xl mx-auto w-full">
               <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center gap-3 text-primary font-black uppercase tracking-[0.2em] text-sm">
+                <div className="flex items-center gap-3 text-brand-text font-black uppercase tracking-[0.2em] text-sm">
                   <span className="h-[1px] w-8 bg-current opacity-20" />
-                  Question {currentQuestionIndex + 1}
+                  {t('question', { number: currentQuestionIndex + 1 })}
                 </div>
 
                 <h2 className="text-2xl md:text-3xl font-black leading-tight text-center md:text-left">
@@ -281,7 +277,7 @@ export function ExamTaker({
                       onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
                       className="grid grid-cols-2 gap-4"
                     >
-                      {['true', 'false'].map((val) => (
+                      {(['true', 'false'] as const).map((val) => (
                         <Label
                           key={val}
                           htmlFor={val}
@@ -293,7 +289,7 @@ export function ExamTaker({
                           )}
                         >
                           <RadioGroupItem value={val} id={val} className="sr-only" />
-                          <span className="text-2xl font-black capitalize">{val}</span>
+                          <span className="text-2xl font-black">{t(val)}</span>
                           <div className={cn(
                             "h-8 w-8 rounded-full border-2 flex items-center justify-center",
                             answers[currentQuestion.id] === val ? "bg-primary border-primary text-white" : "border-muted-foreground/20"
@@ -310,12 +306,12 @@ export function ExamTaker({
                       <Textarea
                         value={answers[currentQuestion.id] || ''}
                         onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
-                        placeholder="Share your knowledge here..."
+                        placeholder={t('answerPlaceholder')}
                         className="min-h-[250px] p-6 text-lg rounded-3xl border-2 border-muted-foreground/10 focus-visible:ring-primary focus-visible:border-primary shadow-inner"
                       />
                       <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 justify-end px-2">
                         <IconMessageChatbot size={14} />
-                        AI will evaluate your reasoning
+                        {t('aiEvaluates')}
                       </p>
                     </div>
                   )}
@@ -330,12 +326,12 @@ export function ExamTaker({
           <Button
             variant="ghost"
             size="lg"
-            className="rounded-2xl h-14 px-8 font-bold gap-2 text-muted-foreground hover:text-foreground"
+            className="h-14 px-8 font-bold gap-2 text-muted-foreground hover:text-foreground"
             onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
             disabled={currentQuestionIndex === 0}
           >
             <IconChevronLeft size={20} stroke={3} />
-            Previous
+            {t('previous')}
           </Button>
 
           <div className="flex gap-4">
@@ -343,7 +339,7 @@ export function ExamTaker({
               <Button
                 size="lg"
                 data-testid="exam-finish-submit"
-                className="rounded-2xl h-14 px-10 font-bold bg-green-600 hover:bg-green-700 hover:shadow-xl hover:shadow-green-500/20 gap-2 transition-all"
+                className="h-14 px-10 font-bold bg-success text-success-foreground hover:bg-success/90 hover:shadow-xl hover:shadow-success/20 gap-2 transition-all"
                 onClick={handleSubmit}
                 disabled={submitting}
               >
@@ -352,15 +348,15 @@ export function ExamTaker({
                 ) : (
                   <IconSend size={20} stroke={3} />
                 )}
-                Finish & Submit
+                {t('finishSubmit')}
               </Button>
             ) : (
               <Button
                 size="lg"
-                className="rounded-2xl h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
+                className="h-14 px-10 font-bold bg-primary hover:shadow-xl hover:shadow-primary/20 gap-2 transition-all"
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
               >
-                Next Question
+                {t('nextQuestion')}
                 <IconChevronRight size={20} stroke={3} />
               </Button>
             )}

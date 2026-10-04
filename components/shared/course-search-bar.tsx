@@ -4,19 +4,25 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useTransition, useState, useEffect, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
-import { IconSearch, IconX } from '@tabler/icons-react'
+import { IconPlayerPlay, IconSearch, IconX } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
+import { categoryMessageKey } from '@/lib/course-categories'
 
 interface CourseSearchBarProps {
   categories: { id: number; name: string }[]
   currentSearch?: string
   currentCategory?: string
+  /** Public catalog only (#791): "courses I can start reading right now". */
+  showPreviewFilter?: boolean
+  currentPreviewOnly?: boolean
 }
 
 export function CourseSearchBar({
   categories,
   currentSearch = '',
   currentCategory = '',
+  showPreviewFilter = false,
+  currentPreviewOnly = false,
 }: CourseSearchBarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -24,6 +30,13 @@ export function CourseSearchBar({
   const [isPending, startTransition] = useTransition()
   const [searchValue, setSearchValue] = useState(currentSearch)
   const t = useTranslations('courseSearch')
+  // Seeded category rows are stored in English; a school's own categories are
+  // shown as typed (#724).
+  const tCategories = useTranslations('coursesCatalog.categories')
+  const categoryLabel = (name: string) => {
+    const key = categoryMessageKey(name)
+    return key ? tCategories(key) : name
+  }
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -66,10 +79,10 @@ export function CourseSearchBar({
 
   const handleClearAll = () => {
     setSearchValue('')
-    updateParams({ search: '', category: '' })
+    updateParams({ search: '', category: '', preview: '' })
   }
 
-  const hasActiveFilters = searchValue || currentCategory
+  const hasActiveFilters = searchValue || currentCategory || currentPreviewOnly
 
   return (
     <div
@@ -101,12 +114,30 @@ export function CourseSearchBar({
         )}
       </div>
 
+      {/* Free-preview filter (#791) */}
+      {showPreviewFilter && (
+        <button
+          type="button"
+          onClick={() => updateParams({ preview: currentPreviewOnly ? '' : '1' })}
+          aria-pressed={currentPreviewOnly}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+            currentPreviewOnly
+              ? 'border-primary bg-brand-tint font-semibold text-brand-text'
+              : 'border-border bg-muted/50 text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+          )}
+        >
+          <IconPlayerPlay className="h-3.5 w-3.5" aria-hidden="true" />
+          {t('previewOnly')}
+        </button>
+      )}
+
       {/* Category pills */}
       {categories.length > 0 && (
         <div
           className="flex flex-wrap gap-2"
           role="list"
-          aria-label="Course categories"
+          aria-label={t('categoriesLabel')}
         >
           <button
             type="button"
@@ -132,7 +163,7 @@ export function CourseSearchBar({
                   : 'border-border bg-muted/50 text-muted-foreground hover:border-foreground/30 hover:text-foreground'
               )}
             >
-              {cat.name}
+              {categoryLabel(cat.name)}
             </button>
           ))}
         </div>

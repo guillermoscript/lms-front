@@ -1,8 +1,12 @@
 import { z } from "zod";
-import type { MCPServer } from "mcp-use/server";
-import { widget, text } from "mcp-use/server";
+import type { LmsServer } from "../server-types.js";
+import { text } from "mcp-use";
+// `viewResult` narrows the deprecated widget() helper's return type so it
+// satisfies v2's compile-time outputSchema enforcement (see format.ts).
+import { viewResult as widget } from "../format.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import { propsSchema as studyPlanPropsSchema } from "../../views/study-plan/schema.js";
 
 /**
  * Weekly study plan + goals (Epic #348 Phase 4, issue #359). A Duolingo-style
@@ -26,7 +30,9 @@ function mondayOf(dateStr?: string): string {
 type GoalRow = {
   id: number;
   title: string;
-  kind: string;
+  // The DB CHECK constrains kind to GOAL_KINDS; the view's props schema
+  // (outputSchema) requires the narrowed union.
+  kind: (typeof GOAL_KINDS)[number];
   course_id: number | null;
   target_ref: Record<string, unknown> | null;
   required: boolean;
@@ -114,7 +120,7 @@ async function loadPlanContext(session: LmsSession) {
   return { next_lessons: nextLessons, due_reviews: dueRes.count ?? 0 };
 }
 
-export function registerStudyPlanTools(server: MCPServer) {
+export function registerStudyPlanTools(server: LmsServer) {
   // ── lms_set_study_plan ──────────────────────────────────────────────────────
   server.tool(
     {
@@ -228,10 +234,11 @@ export function registerStudyPlanTools(server: MCPServer) {
         idempotentHint: true,
         openWorldHint: false,
       },
-      widget: {
-        name: "study-plan",
-        invoking: "Loading your study plan...",
-        invoked: "Study plan ready",
+      outputSchema: studyPlanPropsSchema,
+      view: { name: "study-plan" },
+      _meta: {
+        "openai/toolInvocation/invoking": "Loading your study plan...",
+        "openai/toolInvocation/invoked": "Study plan ready",
       },
     },
     async (input, ctx) => {

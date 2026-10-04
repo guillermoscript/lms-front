@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
-import ExerciseCard from '@/components/exercises/exercise-card'
+import ExerciseBrowseList from '@/components/exercises/exercise-browse-list'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -81,7 +81,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
             <div className="space-y-3 sm:space-y-4">
                 <BreadcrumbComponent links={breadcrumbLinks} />
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-brand-tint text-brand-text flex items-center justify-center shrink-0">
                         <IconBarbell className="h-6 w-6 sm:h-7 sm:w-7" />
                     </div>
                     <div className="min-w-0">
@@ -100,15 +100,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {standaloneExercises.map((exercise) => (
-                        <ExerciseCard
-                            key={exercise.id}
-                            exercise={exercise}
-                            courseId={courseId}
-                        />
-                    ))}
-                </div>
+                <ExerciseBrowseList exercises={standaloneExercises} courseId={courseId} />
             )}
         </div>
     )

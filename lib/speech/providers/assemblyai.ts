@@ -7,6 +7,13 @@ const FILLER_WORDS = new Set([
   'este', 'esteee', 'o sea', 'pues', 'bueno', 'verdad', 'entonces',
 ])
 
+/** The slice of AssemblyAI's transcript response this provider reads. */
+interface AssemblyTranscript {
+  text?: string | null
+  audio_duration?: number | null
+  words?: { text: string; start: number; end: number; confidence?: number }[] | null
+}
+
 // Pause thresholds (ms)
 const PAUSE_HESITATION_MIN = 300
 const PAUSE_GOOD_MIN = 800
@@ -15,7 +22,7 @@ const PAUSE_MAX = 5000 // above this is probably a stop
 export class AssemblyAIProvider implements STTProvider {
   name = 'assemblyai'
 
-  async transcribe(audioUrl: string, _config?: STTConfig): Promise<TranscriptionResult> {
+  async transcribe(audioUrl: string, config?: STTConfig): Promise<TranscriptionResult> {
     const apiKey = process.env.ASSEMBLYAI_API_KEY
     if (!apiKey) throw new Error('ASSEMBLYAI_API_KEY is not set')
 
@@ -35,8 +42,11 @@ export class AssemblyAIProvider implements STTProvider {
         audio_url: assemblyAiUrl,
         speech_models: ['universal-2'],
         punctuate: true,
-        format_text: true,
+        // Formatting tidies the text the grader reads; a language learner is
+        // graded on exactly what they said.
+        format_text: !config?.verbatim,
         disfluencies: true,
+        ...(config?.language ? { language_code: config.language } : {}),
       }),
     })
 
@@ -84,7 +94,7 @@ export class AssemblyAIProvider implements STTProvider {
     return upload_url
   }
 
-  private async pollTranscript(apiKey: string, id: string): Promise<any> {
+  private async pollTranscript(apiKey: string, id: string): Promise<AssemblyTranscript> {
     const url = `https://api.assemblyai.com/v2/transcript/${id}`
 
     for (let attempt = 0; attempt < 60; attempt++) {
@@ -105,8 +115,8 @@ export class AssemblyAIProvider implements STTProvider {
     throw new Error('AssemblyAI transcription timed out after 3 minutes')
   }
 
-  private parseTranscript(data: any): TranscriptionResult {
-    const rawWords: any[] = data.words ?? []
+  private parseTranscript(data: AssemblyTranscript): TranscriptionResult {
+    const rawWords = data.words ?? []
     const duration_ms = data.audio_duration ? data.audio_duration * 1000 : (rawWords.at(-1)?.end ?? 0)
     const duration_seconds = duration_ms / 1000
 

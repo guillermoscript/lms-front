@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { FEATURE_REQUIRED_PLAN } from "@/lib/plans/features";
 
 const TIER_ACCENTS: Record<string, string> = {
     bronze: "text-amber-600",
@@ -46,6 +47,7 @@ export function WeeklyLeague() {
     const { summary } = useGamificationSummary();
     const { data, isLoading, error } = useLeague();
     const t = useTranslations("components.gamification");
+    const tPlans = useTranslations("billing.plans");
     const timeLeft = useCountdown(data?.in_league ? data.week_end : undefined);
 
     // Feature locked — same upgrade-card pattern as MiniLeaderboard
@@ -66,7 +68,7 @@ export function WeeklyLeague() {
                         <IconShield size={24} className="text-muted-foreground" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold">{t("upgrade.leagueLocked")}</p>
+                        <p className="text-sm font-bold">{t("upgrade.leagueLocked", { plan: tPlans(FEATURE_REQUIRED_PLAN.leaderboard) })}</p>
                         <p className="text-xs text-muted-foreground mt-1">{t("upgrade.upgradeDescription")}</p>
                     </div>
                 </div>
@@ -133,10 +135,6 @@ export function WeeklyLeague() {
     const tier = data.tier;
     const accent = (tier && TIER_ACCENTS[tier.slug]) || "text-muted-foreground";
     const standings = data.standings ?? [];
-    const promoteCount = data.promote_count ?? 0;
-    const demoteCount = data.demote_count ?? 0;
-    const cohortSize = data.cohort_size ?? standings.length;
-    const showDemote = cohortSize > promoteCount + demoteCount;
 
     return (
         <div className="bg-card/50 backdrop-blur-sm border border-border rounded-2xl overflow-hidden shadow-sm">
@@ -167,15 +165,18 @@ export function WeeklyLeague() {
             <div className="p-2 space-y-1">
                 {standings.length > 0 ? (
                     standings.map((row) => {
-                        const inPromoteZone = row.rank <= promoteCount;
-                        const inDemoteZone = showDemote && row.rank > cohortSize - demoteCount;
+                        // The RPC marks each row with the rollover's own rule (active
+                        // members only, scaled bands, tier floor/ceiling). Re-deriving
+                        // it here from rank promised moves that never happened.
+                        const inPromoteZone = row.zone === "promote";
+                        const inDemoteZone = row.zone === "demote";
 
                         return (
                             <div
                                 key={row.user_id}
                                 className={cn(
                                     "flex items-center gap-3 p-2 rounded-xl",
-                                    row.is_me && "bg-accent ring-1 ring-primary/20"
+                                    row.is_me && "bg-brand-tint ring-1 ring-primary/20"
                                 )}
                             >
                                 <div className="flex items-center justify-center w-6 text-xs font-bold text-muted-foreground">
@@ -198,14 +199,14 @@ export function WeeklyLeague() {
                                 {inPromoteZone && (
                                     <IconArrowUp
                                         size={14}
-                                        className="text-emerald-500 shrink-0"
+                                        className="text-success shrink-0"
                                         aria-label={t("league.promoteZone")}
                                     />
                                 )}
                                 {inDemoteZone && (
                                     <IconArrowDown
                                         size={14}
-                                        className="text-red-500 shrink-0"
+                                        className="text-destructive shrink-0"
                                         aria-label={t("league.demoteZone")}
                                     />
                                 )}

@@ -4,7 +4,7 @@ import {
   isNamedStudent,
   studentDisplayName,
   studentInitials,
-} from "../resources/shared/student-display.js";
+} from "../views/shared/student-display.js";
 import { aggregateExamSubmissions } from "../src/tools/analytics.js";
 
 /**

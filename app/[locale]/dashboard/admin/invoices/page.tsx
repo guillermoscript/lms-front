@@ -91,13 +91,13 @@ export default async function AdminInvoicesPage({
       case 'approved':
       case 'completed':
         return (
-          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 text-[10px]">
+          <Badge className="bg-success/10 text-success border-success/30 text-[10px]">
             {t('status.paid')}
           </Badge>
         )
       case 'pending':
         return (
-          <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 text-[10px]">
+          <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px]">
             {t('status.pending')}
           </Badge>
         )
@@ -231,7 +231,7 @@ export default async function AdminInvoicesPage({
                             href={`/api/invoices/${req.invoice_number}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="inline-flex items-center gap-1 rounded-sm text-xs font-medium text-brand-text underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             <span className="hidden sm:inline">{t('table.viewInvoice')}</span>
                             <span className="sr-only sm:hidden">{t('table.viewInvoice')}</span>

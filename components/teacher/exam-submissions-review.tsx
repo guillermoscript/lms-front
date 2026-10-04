@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
+import { formatDate } from '@/lib/format-date'
 import {
   Card,
   CardContent,
@@ -45,6 +46,7 @@ export function ExamSubmissionsReview({
   examTitle,
 }: ExamSubmissionsReviewProps) {
   const t = useTranslations('dashboard.teacher.examSubmissionsReview')
+  const locale = useLocale()
   const [activeTab, setActiveTab] = useState('all')
 
   const stats = {
@@ -77,7 +79,7 @@ export function ExamSubmissionsReview({
         return (
           <Badge
             variant="secondary"
-            className="flex w-fit items-center gap-1 bg-blue-100 text-blue-700 hover:bg-blue-100/80 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950/40"
+            className="flex w-fit items-center gap-1 bg-brand-tint text-brand-text border-primary/20"
           >
             <IconRobot className="h-3 w-3" />
             {t('status.aiReviewed')}
@@ -87,7 +89,7 @@ export function ExamSubmissionsReview({
         return (
           <Badge
             variant="secondary"
-            className="flex w-fit items-center gap-1 bg-green-100 text-green-700 hover:bg-green-100/80 dark:bg-green-950/50 dark:text-green-300 dark:hover:bg-green-950/40"
+            className="flex w-fit items-center gap-1 bg-success/10 text-success border-success/30"
           >
             <IconCheck className="h-3 w-3" />
             {t('status.graded')}
@@ -124,7 +126,7 @@ export function ExamSubmissionsReview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('stats.pending')}</CardTitle>
-            <IconClock className="h-4 w-4 text-amber-500" />
+            <IconClock className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pending}</div>
@@ -133,7 +135,7 @@ export function ExamSubmissionsReview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('stats.aiReviewed')}</CardTitle>
-            <IconRobot className="h-4 w-4 text-blue-500" />
+            <IconRobot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.aiReviewed}</div>
@@ -142,7 +144,7 @@ export function ExamSubmissionsReview({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('stats.graded')}</CardTitle>
-            <IconCheck className="h-4 w-4 text-green-500" />
+            <IconCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.graded}</div>
@@ -209,7 +211,7 @@ export function ExamSubmissionsReview({
                             : '—'}
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
-                          {new Date(submission.submitted_at).toLocaleDateString()}
+                          {formatDate(submission.submitted_at, locale)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Link href={`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions/${submission.id}`}>

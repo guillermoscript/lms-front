@@ -1,14 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
-import {getCurrentTenantId, getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {getCurrentTenantId, getCurrentTenant, getCurrentUserId, getSessionUser } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { JoinSchoolForm } from '@/components/join-school-form'
+import { AutoJoinSchool } from '@/components/join-school-auto'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CheckCircle, School } from 'lucide-react'
+import { Ban, CheckCircle, School } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { buildPageMetadata } from '@/lib/seo'
+import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
@@ -16,12 +19,33 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return buildPageMetadata({ title: t('joinSchool.title'), description: t('joinSchool.description'), path: '/join-school', locale })
 }
 
-export default async function JoinSchoolPage() {
-  const supabase = await createClient()
-  const userId = await getCurrentUserId()
-  // Redirect to login if not authenticated
+export default async function JoinSchoolPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>
+}) {
+  // The three inputs are independent — resolve them together, not as a
+  // waterfall of awaits.
+  const [{ next: requestedNext }, supabase, userId, t] = await Promise.all([
+    searchParams,
+    createClient(),
+    getCurrentUserId(),
+    getTranslations('joinSchool'),
+  ])
+  // Where to go once the visitor is a member (#684). proxy.ts sets `next` when
+  // it bounces a non-member off a protected page such as /checkout; a missing
+  // or unsafe value falls back to the dashboard, never off-origin. Resolved
+  // once here so the form and the member card share a single destination.
+  const nextPath = getSafeNextPath(
+    Array.isArray(requestedNext) ? requestedNext[0] : requestedNext,
+    ''
+  )
+  const destination = nextPath || '/dashboard/student'
+
+  // Redirect to login if not authenticated, keeping the intent through login
   if (!userId) {
-    redirect('/auth/login?next=/join-school')
+    const returnTo = nextPath ? `/join-school?next=${encodeURIComponent(nextPath)}` : '/join-school'
+    redirect(`/auth/login?next=${encodeURIComponent(returnTo)}`)
   }
 
   const tenantId = await getCurrentTenantId()
@@ -30,16 +54,50 @@ export default async function JoinSchoolPage() {
   if (!tenant) {
     return (
       <div className="container mx-auto py-12 max-w-md">
-        <Card className="border-red-200 bg-red-50">
+        <Card className="bg-destructive/10 ring-destructive/30">
           <CardHeader>
-            <CardTitle className="text-red-900">School Not Found</CardTitle>
-            <CardDescription className="text-red-700">
-              The school you&apos;re trying to join doesn&apos;t exist or is no longer available.
-            </CardDescription>
+            <CardTitle className="text-destructive">{t('notFoundTitle')}</CardTitle>
+            <CardDescription className="text-destructive">{t('notFoundDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/">
-              <Button variant="outline">Return to Home</Button>
+              <Button variant="outline">{t('returnHome')}</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // A banned user (#892) gets a dead end with an explanation. This must come
+  // before the join form and the auto-join wrapper: proxy.ts sends a banned
+  // member here, so showing the form would loop them through a join that
+  // `joinSchool` refuses. RLS lets them read their own row.
+  const { data: banRow } = await supabase
+    .from('tenant_users')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'banned')
+    .maybeSingle()
+
+  if (banRow) {
+    return (
+      <div className="container mx-auto py-12 max-w-md">
+        <Card className="bg-destructive/10 ring-destructive/30" data-testid="join-school-banned">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Ban className="h-6 w-6 text-destructive" />
+              <CardTitle className="text-destructive">{t('bannedTitle')}</CardTitle>
+            </div>
+            <CardDescription className="text-destructive">
+              {t('bannedDescription', { school: tenant.name })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-destructive">{t('bannedBody')}</p>
+            <Link href="/">
+              <Button variant="outline">{t('returnHome')}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -64,26 +122,28 @@ export default async function JoinSchoolPage() {
   if (membership) {
     return (
       <div className="container mx-auto py-12 max-w-md">
-        <Card className="border-green-200 bg-green-50">
+        <Card className="bg-success/10 ring-success/30">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <CardTitle className="text-green-900">You&apos;re Already a Member!</CardTitle>
+              <CheckCircle className="h-6 w-6 text-success" />
+              <CardTitle className="text-success">{t('memberTitle')}</CardTitle>
             </div>
-            <CardDescription className="text-green-700">
-              You&apos;re already enrolled in {tenant.name}
+            <CardDescription className="text-success">
+              {t('memberDescription', { school: tenant.name })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-green-800">
-              You have access to all courses and resources at {tenant.name}.
+            <p className="text-sm text-success">
+              {t('memberBody', { school: tenant.name })}
             </p>
             <div className="flex gap-2">
-              <Link href="/dashboard/student" className="flex-1">
-                <Button className="w-full">Go to Dashboard</Button>
+              <Link href={destination} className="flex-1" data-testid="join-school-continue">
+                <Button className="w-full">
+                  {nextPath ? t('continue') : t('goToDashboard')}
+                </Button>
               </Link>
               <Link href="/dashboard/student/browse" className="flex-1">
-                <Button variant="outline" className="w-full">Browse Courses</Button>
+                <Button variant="outline" className="w-full">{t('browseCourses')}</Button>
               </Link>
             </div>
           </CardContent>
@@ -102,26 +162,60 @@ export default async function JoinSchoolPage() {
     .eq('status', 'active')
     .neq('tenant_id', tenantId)
 
-  return (
+  // Who gets joined on arrival rather than asked (#790).
+  //
+  // Not everyone: a membership spends a seat against the school's plan, so a
+  // logged-in person who merely opens a link into a school they have nothing
+  // to do with must still choose. What the three cases below have in common is
+  // that the choice is already made somewhere else —
+  //
+  //   · no other school at all — this is the signup funnel's last step, and
+  //     the account exists for exactly this;
+  //   · an invitation addressed to them — the school asked them to come;
+  //   · a checkout as the destination — they arrived to pay this school.
+  //
+  // Anything else falls through to the card, which is the same page it always
+  // was and is also where a failed join explains itself.
+  const memberOfNothing = (otherMemberships ?? []).length === 0
+  const wantsToPay = destination.startsWith('/checkout')
+
+  let hasInvitation = false
+  if (!memberOfNothing && !wantsToPay) {
+    // Admin client: `tenant_invitations` is not readable by someone who is not
+    // yet a member, which is precisely who is looking at this page.
+    const email = (await getSessionUser())?.email?.toLowerCase()
+    if (email) {
+      const { data: invitation } = await createAdminClient()
+        .from('tenant_invitations')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('email', email)
+        .eq('status', 'pending')
+        .maybeSingle()
+      hasInvitation = Boolean(invitation)
+    }
+  }
+
+  const autoJoin = memberOfNothing || wantsToPay || hasInvitation
+
+  const body = (
     <div className="container mx-auto py-12 max-w-2xl">
       <div className="text-center mb-8">
         <div className="flex justify-center mb-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <School className="h-8 w-8 text-primary" />
+          <div className="h-16 w-16 rounded-full bg-brand-tint flex items-center justify-center">
+            <School className="h-8 w-8 text-brand-text" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">Join {tenant.name}</h1>
-        <p className="text-muted-foreground">
-          Start learning with {tenant.name} today
-        </p>
+        <h1 className="text-3xl font-bold mb-2" data-testid="join-school-title">
+          {t('title', { school: tenant.name })}
+        </h1>
+        <p className="text-muted-foreground">{t('subtitle', { school: tenant.name })}</p>
       </div>
 
       {otherMemberships && otherMemberships.length > 0 && (
-        <Card className="mb-6 border-blue-200 bg-blue-50">
+        <Card className="mb-6 bg-brand-tint ring-primary/25">
           <CardHeader>
-            <CardTitle className="text-sm text-blue-900">
-              You&apos;re already a member of:
-            </CardTitle>
+            <CardTitle className="text-sm text-brand-text">{t('otherSchoolsTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -134,20 +228,26 @@ export default async function JoinSchoolPage() {
                   ? membership.tenants[0]
                   : membership.tenants
                 return (
-                  <li key={membership.tenant_id} className="text-sm text-blue-800">
-                    • {school?.name || 'Unknown School'}
+                  <li key={membership.tenant_id} className="text-sm text-brand-text">
+                    • {school?.name || t('unknownSchool')}
                   </li>
                 )
               })}
             </ul>
-            <p className="text-xs text-blue-700 mt-3">
-              You can switch between schools anytime from your dashboard.
-            </p>
+            <p className="text-xs text-brand-text mt-3">{t('otherSchoolsHint')}</p>
           </CardContent>
         </Card>
       )}
 
-      <JoinSchoolForm tenant={tenant} />
+      <JoinSchoolForm tenant={tenant} destination={destination} />
     </div>
+  )
+
+  if (!autoJoin) return body
+
+  return (
+    <AutoJoinSchool schoolName={tenant.name} destination={destination}>
+      {body}
+    </AutoJoinSchool>
   )
 }

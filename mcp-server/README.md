@@ -3,8 +3,8 @@
 Course-management tools, resources, prompts, and interactive widgets for the
 multi-tenant LMS, exposed to AI agents over the Model Context Protocol.
 
-Built with **[mcp-use](https://docs.mcp-use.com/typescript/server)** + **MCP Apps**
-(OpenAI Apps SDK widgets). Replaces the previous `@modelcontextprotocol/sdk`
+Built with **[mcp-use v2](https://docs.mcp-use.com/v2/typescript/server)** + **MCP Apps**
+(interactive React views). Replaces the previous `@modelcontextprotocol/sdk`
 implementation.
 
 ## Architecture
@@ -27,8 +27,9 @@ implementation.
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
-  with attempt history, `lms_complete_exercise` for host-graded text +
-  real_time_conversation exercises, `lms_practice_quiz`,
+  with attempt history, `lms_check_exercise_answers` to grade closed
+  questions server-side, `lms_complete_exercise` to submit a text or
+  coding_challenge answer to the platform grader (`/api/exercises/evaluate`), `lms_practice_quiz`,
   `lms_record_practice_attempt`, `lms_get_my_weak_spots`,
   `lms_get_tutor_config`), course ingest (`lms_get_course_content` paginated
   bulk pull, `lms_search_content` snippet search over entitled courses),
@@ -56,7 +57,7 @@ implementation.
   Issuance is **template-gated**: a course with no active
   `certificate_templates` row issues nothing at all, whatever a student has
   completed — which is what the eligibility and template tools surface).
-- **21 widgets** (MCP Apps), teacher/admin: `course-dashboard`
+- **21 views** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,
   drill into a submission), `lesson-preview` (← `lms_get_lesson`),
@@ -82,6 +83,10 @@ implementation.
   Issue button per awaiting student calling `lms_issue_certificate` — disabled
   while the course has no active template, since nothing could be issued).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
+- **1 Agent Skill** over the Skills over MCP extension (`skills/list`,
+  `skills/get`): `teach` — a stateful teaching-workspace workflow
+  (from [mattpocock/skills](https://github.com/mattpocock/skills)), served from
+  `skills/teach/`.
 - **12 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course, generate-remediation-exercises,
   socratic-tutor, drill-coach, explain-my-mistake, exam-prep-session,
@@ -95,7 +100,7 @@ npm install
 npm run dev            # server + inspector at http://localhost:3000/inspector
 ```
 
-Verify a widget without the UI:
+Verify a view without the UI:
 
 ```bash
 npx mcp-use client connect dev http://localhost:3000/mcp
@@ -105,7 +110,7 @@ npx mcp-use client dev tools call lms_list_courses --screenshot
 ## Build & run
 
 ```bash
-npm run build          # mcp-use build (compiles widgets + server to dist/)
+npm run build          # mcp-use build (server + views to .mcp-use/build)
 npm start              # mcp-use start
 # or: npm run deploy
 docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-mcp-server
@@ -116,7 +121,7 @@ docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-
 1. **Authentication → OAuth Server** — enable the OAuth 2.1 server and
    **Allow Dynamic OAuth Apps** (so MCP clients like Claude can self-register).
 2. Set the **consent screen URL**:
-   - Standalone/local: `<MCP_SERVER_URL>/auth/consent` (this server hosts that
+   - Standalone/local: `<MCP_URL>/auth/consent` (this server hosts that
      route — see `src/auth-routes.ts`).
    - Production behind the Next.js proxy: `https://<platform-domain>/oauth/consent`
      (the Next.js app's consent page — real login UI + existing session reuse).
@@ -154,5 +159,7 @@ src/auth-routes.ts    # Supabase OAuth consent UI route
 src/tools/*.ts        # courses, lessons, exercises, exams, analytics
 src/resources.ts      # course/lesson/exam resource templates
 src/prompts.ts        # prompt templates
-resources/<widget>/   # React widgets (MCP Apps)
+views/<name>/         # React views (MCP Apps): view.tsx + schema.ts
+views/shared/         # branding, i18n, error boundary, paging, lesson renderer
+skills/<name>/        # Agent Skills served over Skills over MCP
 ```

@@ -1,11 +1,12 @@
 "use client";
 
 import {
-    Attachment,
-    AttachmentPreview,
-    AttachmentRemove,
-    Attachments,
-} from "@/components/ai-elements/attachments";
+    ChatAttachButton,
+    ChatAttachmentsPreview,
+    MessageImageParts,
+    useChatAttachmentInputProps,
+} from "@/components/ai/chat-attachments";
+import { useAiChatSubmit } from "@/hooks/use-ai-chat-submit";
 import {
     Conversation,
     ConversationContent,
@@ -20,11 +21,9 @@ import {
     PromptInput,
     PromptInputBody,
     PromptInputFooter,
-    type PromptInputMessage,
     PromptInputSubmit,
     PromptInputTextarea,
     PromptInputTools,
-    usePromptInputAttachments,
     PromptInputProvider,
     usePromptInputController,
 } from "@/components/ai-elements/prompt-input";
@@ -66,29 +65,10 @@ import {
 } from "@/components/ai-elements/tool";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-
-const PromptInputAttachmentsDisplay = () => {
-    const attachments = usePromptInputAttachments();
-
-    if (attachments.files.length === 0) {
-        return null;
-    }
-
-    return (
-        <Attachments variant="inline">
-            {attachments.files.map((attachment) => (
-                <Attachment
-                    data={attachment}
-                    key={attachment.id}
-                    onRemove={() => attachments.remove(attachment.id)}
-                >
-                    <AttachmentPreview />
-                    <AttachmentRemove />
-                </Attachment>
-            ))}
-        </Attachments>
-    );
-};
+import { LessonCompletionCard } from "@/components/ai/lesson-completion-card";
+import { findLessonCompletion, lessonCompletionOutput } from "@/lib/ai/lesson-completion";
+import { latestReportedProgress, type Requirement } from "@/lib/ai/lesson-requirements";
+import { classifyAiChatError } from "@/lib/ai/chat-error";
 
 /**
  * Tracks the visual viewport height while the mobile chat overlay is open so
@@ -119,8 +99,44 @@ function useVisualViewportHeight(enabled: boolean) {
 interface LessonAIChatProps {
     lessonId: number;
     taskDescription: string;
-    isCompleted?: boolean;
     initialMessages?: UIMessage[];
+    /** Structured task's ordered requirements (#806) — undefined/empty for a free-text task. */
+    requirements?: Requirement[];
+}
+
+/** "2/4" progress bar for a structured task, driven by the tutor's `reportProgress` calls. */
+function RequirementsProgress({
+    requirements,
+    metIds,
+}: {
+    requirements: Requirement[];
+    metIds: string[];
+}) {
+    const t = useTranslations("components.lessonAIChat");
+    const met = new Set(metIds);
+    const metCount = requirements.filter((requirement) => met.has(requirement.id)).length;
+
+    return (
+        <div className="border-b bg-muted/20 px-3 py-2 sm:px-4 sm:py-2.5 shrink-0">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-foreground">
+                    {t("progress.label", { met: metCount, total: requirements.length })}
+                </span>
+            </div>
+            <div className="flex gap-1">
+                {requirements.map((requirement) => (
+                    <div
+                        key={requirement.id}
+                        title={requirement.text}
+                        className={cn(
+                            "h-1.5 flex-1 rounded-full transition-colors",
+                            met.has(requirement.id) ? "bg-success" : "bg-muted-foreground/20"
+                        )}
+                    />
+                ))}
+            </div>
+        </div>
+    );
 }
 
 // Legacy tool-invocation part shape persisted in lessons_ai_task_messages.
@@ -137,12 +153,12 @@ interface ToolInvocationPart {
 function InnerLessonAIChat({
     lessonId,
     taskDescription,
-    isCompleted: initialIsCompleted,
     initialMessages = [],
+    requirements,
 }: LessonAIChatProps) {
     const router = useRouter();
     const t = useTranslations('components.lessonAIChat');
-    const [isCompleted, setIsCompleted] = useState(initialIsCompleted);
+    const tChatLimits = useTranslations('aiChatLimits');
     const [isRestarting, setIsRestarting] = useState(false);
     const [restartDialogOpen, setRestartDialogOpen] = useState(false);
     // Mobile-only: the chat lives behind a launcher and opens as a
@@ -181,26 +197,43 @@ function InnerLessonAIChat({
             },
         }),
         messages: initialMessages,
-        onToolCall: async ({ toolCall }) => {
-            if (toolCall.toolName === "markLessonCompleted") {
-                setIsCompleted(true);
-                const args = (toolCall as { args?: { feedback?: string } }).args ?? {};
-
-                // Trigger confetti
-                confetti({
-                    particleCount: 150,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    colors: ['#3b82f6', '#10b981', '#f59e0b']
-                });
-
-                toast.success(t('toast.completed'), {
-                    description: args.feedback || t('toast.completedDetail'),
-                });
-                router.refresh();
-            }
+        onError: (error) => {
+            const kind = classifyAiChatError(error);
+            toast.error(kind === 'generic' ? t('toast.genericError') : tChatLimits(kind));
         },
     });
+
+    // Completion is the tool's ANSWER, not its call: the server refuses while
+    // required checkpoints are open, and `onToolCall` fires before it has run.
+    const completion = findLessonCompletion(messages);
+    // The chat locks on a finished CONVERSATION, not a flag: `initialMessages`
+    // rebuilds a past grant from `lessons_ai_task_messages.tool_invocations`
+    // (#805), and restart deletes those rows — so an empty or restarted chat
+    // has no completion part and is open for practice, with no separate
+    // client-side "practising" state to lose on reload.
+    const isCompleted = Boolean(completion);
+    // Seeded from the history the page loaded with, so a reload of an
+    // already-completed lesson shows the card without replaying the
+    // celebration — only a completion NEW to this session should confetti.
+    const celebratedCallId = useRef<string | null>(findLessonCompletion(initialMessages)?.toolCallId ?? null);
+    const reportedProgress = requirements && requirements.length > 0 ? latestReportedProgress(messages) : [];
+    useEffect(() => {
+        if (!completion || celebratedCallId.current === completion.toolCallId) return;
+        celebratedCallId.current = completion.toolCallId;
+
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#10b981', '#f59e0b'],
+            disableForReducedMotion: true,
+        });
+
+        toast.success(t('toast.completed'), {
+            description: completion.feedback || t('toast.completedDetail'),
+        });
+        router.refresh();
+    }, [completion, router, t]);
 
     const isLoading = status === 'submitted' || status === 'streaming';
 
@@ -219,14 +252,8 @@ function InnerLessonAIChat({
         return () => window.removeEventListener("lesson-tutor:ask", onAsk);
     }, [isCompleted, sendMessage]);
 
-    const onSubmit = (message: PromptInputMessage) => {
-        if (!message.text && (!message.files || message.files.length === 0)) return;
-
-        sendMessage({
-            text: message.text,
-        });
-        textInput.clear();
-    }
+    const attachmentInputProps = useChatAttachmentInputProps();
+    const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear, disabled: isCompleted });
 
     const handleSuggestionClick = (suggestion: string) => {
         sendMessage({ text: suggestion });
@@ -245,8 +272,9 @@ function InnerLessonAIChat({
             });
 
             if (res.ok) {
+                // No completion part left in an empty conversation — the chat
+                // unlocks on its own, nothing else to flip.
                 setMessages([]);
-                setIsCompleted(false);
                 toast.success(t('toast.restartSuccess'));
                 router.refresh();
             } else {
@@ -264,18 +292,18 @@ function InnerLessonAIChat({
             {/* Mobile launcher — replaces the embedded chat below the sm breakpoint */}
             <div className={cn("sm:hidden px-3 pb-4", mobileOpen && "hidden")}>
                 {isCompleted ? (
-                    <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 space-y-2.5">
+                    <div className="rounded-xl border border-success/20 bg-success/5 p-3 space-y-2.5">
                         <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 bg-green-500 rounded-lg shrink-0">
-                                <IconCheck className="h-4 w-4 text-white stroke-[3]" />
+                            <div className="p-1.5 bg-success rounded-lg shrink-0">
+                                <IconCheck className="h-4 w-4 text-success-foreground stroke-[3]" />
                             </div>
-                            <p className="text-sm font-bold text-green-700 dark:text-green-400">
+                            <p className="text-sm font-bold text-success">
                                 {t('successHeader')}
                             </p>
                         </div>
                         <Button
                             variant="outline"
-                            className="w-full h-11 rounded-xl gap-2 font-semibold"
+                            className="w-full h-11 gap-2 font-semibold"
                             onClick={() => setMobileOpen(true)}
                         >
                             <IconMessageCircle className="h-4 w-4" />
@@ -285,7 +313,7 @@ function InnerLessonAIChat({
                 ) : (
                     <div className="space-y-2">
                         <Button
-                            className="w-full h-12 rounded-xl gap-2 text-base font-semibold shadow-sm"
+                            className="w-full h-12 gap-2 text-base font-semibold shadow-sm"
                             onClick={() => setMobileOpen(true)}
                         >
                             <IconSparkles className="h-5 w-5" />
@@ -323,8 +351,8 @@ function InnerLessonAIChat({
                 {/* Mobile overlay header */}
                 {mobileOpen && (
                     <div className="sm:hidden flex items-center gap-3 px-3 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] bg-primary/[0.03] shrink-0">
-                        <div className="p-1.5 bg-primary/10 rounded-lg shrink-0">
-                            <IconSparkles className="h-4 w-4 text-primary" />
+                        <div className="p-1.5 bg-brand-tint rounded-lg shrink-0">
+                            <IconSparkles className="h-4 w-4 text-brand-text" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-sm font-bold leading-tight">{t('mobile.title')}</p>
@@ -345,20 +373,24 @@ function InnerLessonAIChat({
                     </div>
                 )}
 
+                {requirements && requirements.length > 0 && !isCompleted && (
+                    <RequirementsProgress requirements={requirements} metIds={reportedProgress} />
+                )}
+
                 {/* Completion Banner - Positioned at bottom, doesn't block messages */}
                 {isCompleted && (
                     <div className="absolute bottom-0 left-0 right-0 z-50 p-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-background via-background to-transparent pointer-events-none">
-                        <div className="pointer-events-auto bg-emerald-600 dark:bg-emerald-700 rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 space-y-3 sm:space-y-4 animate-in slide-in-from-bottom duration-500 motion-reduce:animate-none">
+                        <div className="pointer-events-auto bg-success rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 space-y-3 sm:space-y-4 animate-in slide-in-from-bottom duration-500 motion-reduce:animate-none">
                             {/* Success Header */}
                             <div className="flex items-center gap-3 sm:gap-4">
                                 <div className="shrink-0 p-2 sm:p-3 bg-white/15 rounded-full">
-                                    <IconCheck className="h-6 w-6 sm:h-8 sm:w-8 text-white stroke-[3]" />
+                                    <IconCheck className="h-6 w-6 sm:h-8 sm:w-8 text-success-foreground stroke-[3]" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-base sm:text-xl font-bold text-white">
+                                    <h3 className="text-base sm:text-xl font-bold text-success-foreground">
                                         {t('successHeader')} 🎉
                                     </h3>
-                                    <p className="text-white/90 text-xs sm:text-sm">
+                                    <p className="text-success-foreground/90 text-xs sm:text-sm">
                                         {t('successDescription')}
                                     </p>
                                 </div>
@@ -367,18 +399,18 @@ function InnerLessonAIChat({
                             {/* Stats + Action in a row on mobile */}
                             <div className="flex items-center gap-2 sm:gap-3">
                                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20 text-center">
-                                    <div className="text-lg sm:text-2xl font-bold text-white">
+                                    <div className="text-lg sm:text-2xl font-bold text-success-foreground">
                                         {messages.length}
                                     </div>
-                                    <div className="text-[10px] sm:text-xs text-white/80">
+                                    <div className="text-[10px] sm:text-xs text-success-foreground/80">
                                         {t('stats.messages')}
                                     </div>
                                 </div>
                                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3 border border-white/20 text-center">
-                                    <div className="text-lg sm:text-2xl font-bold text-white flex items-center justify-center">
+                                    <div className="text-lg sm:text-2xl font-bold text-success-foreground flex items-center justify-center">
                                         <IconTrophy className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
-                                    <div className="text-[10px] sm:text-xs text-white/80">
+                                    <div className="text-[10px] sm:text-xs text-success-foreground/80">
                                         {t('stats.taskCompleted')}
                                     </div>
                                 </div>
@@ -386,7 +418,7 @@ function InnerLessonAIChat({
                                     onClick={handleRestart}
                                     disabled={isRestarting}
                                     variant="secondary"
-                                    className="flex-1 h-full min-h-[52px] sm:min-h-[60px] bg-white text-green-600 hover:bg-white/90 font-semibold text-xs sm:text-sm rounded-lg"
+                                    className="flex-1 h-full min-h-[52px] sm:min-h-[60px] bg-success-foreground text-success hover:bg-success-foreground/90 font-semibold text-xs sm:text-sm rounded-lg"
                                 >
                                     {isRestarting ? (
                                         <IconRotateClockwise2 className="h-4 w-4 animate-spin" />
@@ -415,9 +447,22 @@ function InnerLessonAIChat({
                         {messages.map((message) => (
                             <Message key={message.id} from={message.role}>
                                 <MessageContent>
+                                    <MessageImageParts parts={message.parts} />
                                     {message.parts.map((part, index) => {
                                         if (part.type === 'text') {
                                             return <MessageResponse key={index}>{part.text}</MessageResponse>;
+                                        }
+                                        const completionOutput = lessonCompletionOutput(part);
+                                        if (completionOutput) {
+                                            // A refusal is explained by the tutor's own next words.
+                                            if (!completionOutput.success) return null;
+                                            return (
+                                                <LessonCompletionCard
+                                                    key={index}
+                                                    title={t('targetAchieved')}
+                                                    feedback={completionOutput.feedback}
+                                                />
+                                            );
                                         }
                                         if (part.type === 'tool-invocation') {
                                             const toolInvocation = (part as unknown as ToolInvocationPart).toolInvocation;
@@ -427,17 +472,11 @@ function InnerLessonAIChat({
                                             if (toolInvocation.toolName === 'markLessonCompleted') {
                                                 if (toolInvocation.state === 'result') {
                                                     return (
-                                                        <div key={toolInvocation.toolCallId} className="mt-3 sm:mt-4 p-3 sm:p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl sm:rounded-2xl text-green-700 dark:text-green-400 text-sm shadow-sm ring-1 ring-inset ring-green-500/10">
-                                                            <div className="flex items-start gap-3 sm:gap-4">
-                                                                <div className="p-2 bg-green-500 rounded-lg shadow-lg shadow-green-500/20">
-                                                                    <IconCheck className="h-5 w-5 text-white" />
-                                                                </div>
-                                                                <div className="space-y-1">
-                                                                    <p className="font-bold text-base text-green-900 dark:text-green-300">{t('targetAchieved')}</p>
-                                                                    <p className="opacity-90 leading-relaxed text-sm">{(toolInvocation.result as { feedback?: string })?.feedback}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        <LessonCompletionCard
+                                                            key={toolInvocation.toolCallId}
+                                                            title={t('targetAchieved')}
+                                                            feedback={(toolInvocation.result as { feedback?: string })?.feedback}
+                                                        />
                                                     )
                                                 }
                                                 return null;
@@ -500,10 +539,9 @@ function InnerLessonAIChat({
                         <PromptInput
                             onSubmit={onSubmit}
                             className="w-full"
+                            {...attachmentInputProps}
                         >
-                            <div className="px-3 pt-2 sm:pt-3">
-                                <PromptInputAttachmentsDisplay />
-                            </div>
+                            <ChatAttachmentsPreview />
                             <PromptInputBody>
                                 <PromptInputTextarea
                                     className="text-base sm:text-sm"
@@ -519,7 +557,7 @@ function InnerLessonAIChat({
                                                 type="button"
                                                 variant="outline"
                                                 size="icon"
-                                                className="h-8 w-8 rounded-full shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-primary hover:border-primary/30"
+                                                className="h-8 w-8 shadow-sm hover:shadow active:scale-95 transition-all text-muted-foreground hover:text-brand-text hover:border-primary/30"
                                                 onClick={handleRestart}
                                                 disabled={isRestarting || isLoading}
                                                 title={t('tooltips.restart')}
@@ -528,9 +566,12 @@ function InnerLessonAIChat({
                                                 <IconRotateClockwise2 className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
                                             </Button>
                                         )}
+                                        {!isCompleted && (
+                                            <ChatAttachButton disabled={isLoading} />
+                                        )}
 
                                         {isCompleted && (
-                                            <div className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-sm animate-in fade-in zoom-in duration-300">
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-success bg-success/10 px-3 py-1.5 rounded-full border border-success/20 shadow-sm animate-in fade-in zoom-in duration-300">
                                                 <IconCheck size={14} className="stroke-[3]" />
                                                 <span>{t('successHeader')}</span>
                                             </div>

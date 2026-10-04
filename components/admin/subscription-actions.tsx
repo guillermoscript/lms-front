@@ -106,10 +106,13 @@ export function SubscriptionActions({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger>
-          <Button variant="ghost" size="icon" aria-label={t('actions.menu')}>
-            <IconDots className="h-4 w-4" />
-          </Button>
+        {/* `render`, never a nested <Button>: a <button> inside the trigger's
+            own <button> is invalid HTML and React refuses to hydrate the page
+            (error #418) — the admin Subscriptions smoke page failed on it. */}
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="icon" aria-label={t('actions.menu')} />}
+        >
+          <IconDots className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => router.push(`/dashboard/admin/users/${userId}`)}>
@@ -122,7 +125,7 @@ export function SubscriptionActions({
           {isActive && !cancelAtPeriodEnd && (
             <DropdownMenuItem
               onClick={() => setCancelDialogOpen(true)}
-              className="text-orange-600"
+              className="text-warning"
             >
               <IconX className="mr-2 h-4 w-4" />
               {t('actions.cancel')}
@@ -132,7 +135,7 @@ export function SubscriptionActions({
           {cancelAtPeriodEnd && (
             <DropdownMenuItem
               onClick={() => setReactivateDialogOpen(true)}
-              className="text-green-600"
+              className="text-success"
             >
               <IconRefresh className="mr-2 h-4 w-4" />
               {t('actions.reactivate')}

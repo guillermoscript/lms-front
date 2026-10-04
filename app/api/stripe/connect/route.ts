@@ -3,6 +3,9 @@ import { getStripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { EMAIL_NOT_VERIFIED_ERROR } from '@/lib/auth/require-verified-email'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
+import { isFirstConnectedProvider } from '@/lib/analytics/activation'
 
 type ConnectLinkResult =
   | { url: string }
@@ -73,6 +76,30 @@ async function createConnectLink(req: NextRequest): Promise<ConnectLinkResult> {
       .from('tenants')
       .update({ stripe_account_id: accountId })
       .eq('id', tenantId)
+
+    // Minting the Express account is the once-per-tenant moment on this route —
+    // it happens exactly when `stripe_account_id` goes from null to set, so
+    // re-opening the onboarding link later cannot re-fire it.
+    //
+    // `connect_ready: false` is not a placeholder: this runs BEFORE the admin is
+    // handed the hosted onboarding link, so the account provably cannot charge
+    // yet. That gap is the whole subject of PR #617 — pairing this event with
+    // the later `charges_enabled` flip is how we count the owners who stall at
+    // the gate. The flip itself is mirrored by the `account.updated` webhook and
+    // `syncConnectAccountStatus()`, neither of which is instrumented here;
+    // `evaluateSchoolActivation()` therefore must also be called from whichever
+    // of those lands, or a Stripe-only school activates late (at its next
+    // publish) rather than at the moment it became payable.
+    await track(
+      ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+      {
+        provider: 'stripe',
+        is_first_provider: await isFirstConnectedProvider(tenantId, 'stripe'),
+        connect_ready: false,
+        account_type: 'express',
+      },
+      { userId: user.id, tenantId, role: 'admin' }
+    )
   }
 
   // Create account link for onboarding. Build the origin from forwarded

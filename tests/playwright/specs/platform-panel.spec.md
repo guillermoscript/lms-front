@@ -35,7 +35,7 @@ Precondition: logged in as super admin via `loginAsSuperAdmin`.
 | 5 | overview page loads with metric cards | Overview and metrics container visible; at least one metric card rendered | `[data-testid="platform-overview"]`, `[data-testid="platform-metrics"]`; child `[data-testid]` elements visible |
 | 6 | MRR metric card shows a currency value | MRR card visible; value contains "$" | `[data-testid="metric-monthly-recurring-revenue"]`; child `[data-testid="metric-value"]` contains "$" |
 | 7 | plan distribution card renders | Plan distribution card visible | `[data-testid="plan-distribution"]` |
-| 8 | sidebar navigation links are present | Links to /platform, /platform/tenants, /platform/billing, /platform/plans, /platform/referrals, /dashboard/admin all attached | `a[href*="/platform"]`, `a[href*="/platform/tenants"]`, etc. — each `.first().toBeAttached()` (10s timeout) |
+| 8 | sidebar navigation links are present | Links to /platform, /platform/tenants, /platform/billing, /platform/plans, /dashboard/admin all attached | `a[href*="/platform"]`, `a[href*="/platform/tenants"]`, etc. — each `.first().toBeAttached()` (10s timeout) |
 | 9 | "Back to School" navigates to admin dashboard | Navigate to /dashboard/admin; URL matches /dashboard/admin | Direct navigation check |
 
 ### Platform Tenants (P1)
@@ -85,16 +85,17 @@ Precondition: logged in as super admin; navigated to PLATFORM_BASE/plans.
 
 ### Platform Referrals (P1)
 
-**Currently skipped:** `/platform/referrals` redirects to `/platform` until the referral schema lands (see `app/[locale]/platform/referrals/page.tsx`). One active guard test asserts the redirect. Unskip the block when the page is restored.
+**Not built.** `referral_codes` / `referral_redemptions` never existed. #680 deleted the
+page, its server actions, the tenant-side referral card and the four skipped tests; the
+feature request is #317 and the last implementation is in git history. What remains are
+two guards that the route stays gone.
 
-Precondition: logged in as super admin; navigated to PLATFORM_BASE/referrals.
+Precondition: logged in as super admin.
 
 | # | Test | Assertions | Selectors |
 |---|------|------------|-----------|
-| 27 | referrals page loads with summary cards and tables | Page, form, and table visible | `[data-testid="platform-referrals-page"]`, `[data-testid="generate-code-form"]`, `[data-testid="referral-codes-table"]` |
-| 28 | generate code form has code input and submit button | Input and button visible | `[data-testid="referral-code-input"]`, `[data-testid="generate-code-submit"]` |
-| 29 | generates a referral code with custom name | Fill unique code, submit, reload, verify row appears (or table is functional) | `[data-testid="referral-code-input"]` fill; `[data-testid="generate-code-submit"]` click; `[data-testid="referral-code-row"]` filtered by code text |
-| 30 | all referral codes table shows existing codes | Table visible; rows exist or empty state shown | `[data-testid="referral-codes-table"]`; `[data-testid="referral-code-row"]` count; fallback `text=/No referral codes yet/i` |
+| 27 | referrals route no longer serves a page | Response status >= 400; the old referrals page is absent | `page.goto()` status; `[data-testid="platform-referrals-page"]` count 0 |
+| 28 | no sidebar entry points at referrals | Zero matching links on the overview | `a[href*="/platform/referrals"]` count 0 |
 
 ### Impersonation Dialog (P2)
 

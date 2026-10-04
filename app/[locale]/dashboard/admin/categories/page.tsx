@@ -66,7 +66,7 @@ export default async function AdminCategoriesPage() {
                   <p className="text-sm text-muted-foreground">{t('stats.total')}</p>
                   <p className="mt-2 text-3xl font-bold">{categories?.length || 0}</p>
                 </div>
-                <IconFolderOpen className="h-10 w-10 text-blue-500" />
+                <IconFolderOpen className="h-10 w-10 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>

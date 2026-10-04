@@ -34,7 +34,8 @@ Implemented the full business monetization stack for the LMS platform:
 | Analytics | — | Basic | Advanced | Advanced | Advanced |
 | AI Auto-Grading | — | — | Yes | Yes | Yes |
 | Voice Exercises | — | — | Yes | Yes | Yes |
-| Custom Branding | — | — | — | Yes | Yes |
+| Theme kit (4 themes × 6 colours) | Yes | Yes | Yes | Yes | Yes |
+| Custom brand colour | — | — | — | Yes | Yes |
 | Custom Domain | — | — | — | Yes | Yes |
 | API Access | — | — | — | — | Yes |
 | White-Label | — | — | — | — | Yes |

@@ -42,7 +42,7 @@ export function UserGrowthChart({ data, totalUsers, period }: UserGrowthChartPro
           </div>
           <div className="text-right">
             <p className="text-sm text-muted-foreground">{t('total')}</p>
-            <p className="text-2xl font-bold tracking-tight">{totalUsers}</p>
+            <p className="text-2xl font-bold tracking-tight" data-testid="analytics-total-users">{totalUsers}</p>
             <p className="text-xs text-muted-foreground">
               {t('newInPeriod', { count: newUsersInPeriod })}
             </p>

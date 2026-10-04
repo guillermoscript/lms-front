@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { signStoredAttachments } from '@/lib/ai/attachments'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { LessonSidebar } from '@/components/student/lesson-sidebar'
@@ -8,9 +9,11 @@ import { LessonResources } from '@/components/student/lesson-resources'
 import { IconMenu2, IconSparkles, IconLock } from '@tabler/icons-react'
 import { LessonNavigation } from './lesson-navigation'
 import { LessonComments } from '@/components/student/lesson-comments'
+import { LessonDiscussion } from '@/components/community/lesson-discussion'
 import dynamic from 'next/dynamic'
 import type { UIMessage } from 'ai'
 import { Skeleton } from '@/components/ui/skeleton'
+import { rebuildLessonTaskToolParts } from '@/lib/ai/lesson-task-history'
 
 const LessonAIChat = dynamic(
   () => import('@/components/student/lesson-ai-chat').then(m => m.LessonAIChat),
@@ -36,6 +39,8 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess, requireRowInCourse } from '@/lib/services/course-access-guard'
 import { loadLessonCheckpoints } from '@/lib/checkpoints/load'
 import { CheckpointsProvider } from '@/components/lesson/checkpoints/checkpoints-provider'
+import { parseStructuredRequirements, structuredRequirementsSummary } from '@/lib/ai/lesson-requirements'
+import { isCommunityEnabled } from '@/lib/community/access'
 
 interface PageProps {
   params: Promise<{ courseId: string; lessonId: string }>
@@ -57,6 +62,24 @@ export default async function LessonPage({ params }: PageProps) {
   const numericCourseId = parseInt(courseId)
   await requireCourseAccess(supabase, userId, numericCourseId)
 
+  // #868: the sidebar links to the course feed when the plan includes it.
+  // Started now, awaited below; it never rejects.
+  const communityEnabled = isCommunityEnabled(tenantId)
+
+  // Last-seen tracking (#650): one lesson_views row per (user, lesson), stamped
+  // on every open. The teacher Students tab reads it as "last activity", so a
+  // student who re-reads without completing anything no longer looks stalled.
+  // Values are server-derived; a failure must never block the lesson itself.
+  const viewTracked = supabase
+    .from('lesson_views')
+    .upsert(
+      { lesson_id: parseInt(lessonId), user_id: userId, viewed_at: new Date().toISOString() },
+      { onConflict: 'user_id,lesson_id' }
+    )
+    .then(({ error }: { error: { message: string } | null }) => {
+      if (error) console.error('lesson_views upsert failed:', error.message)
+    })
+
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
     .select(`
@@ -66,8 +89,8 @@ export default async function LessonPage({ params }: PageProps) {
         profiles(*),
         comment_reactions(*)
       ),
-      lessons_ai_tasks(task_instructions),
-      lessons_ai_task_messages(id, message, sender, created_at),
+      lessons_ai_tasks(task_instructions, requirements),
+      lessons_ai_task_messages(id, message, sender, created_at, attachments, tool_invocations),
       lesson_completions(lesson_id, user_id)
     `)
     .eq('id', parseInt(lessonId))
@@ -86,6 +109,7 @@ export default async function LessonPage({ params }: PageProps) {
   if (lessonError || !lessonData) {
     notFound()
   }
+  await viewTracked
 
   // The lesson is looked up by id alone, so the gate above is only as good as
   // the URL's courseId actually owning it (#509).
@@ -96,16 +120,22 @@ export default async function LessonPage({ params }: PageProps) {
   const aiTask = Array.isArray(lessonData.lessons_ai_tasks)
     ? lessonData.lessons_ai_tasks?.[0]
     : lessonData.lessons_ai_tasks;
+  // NULL/invalid `requirements` (or no task at all) falls back to the free-text
+  // `task_instructions` shown today (#806 compatibility contract).
+  const structuredRequirements = parseStructuredRequirements(aiTask?.requirements);
+  const taskDescription = aiTask?.task_instructions
+    || (structuredRequirements ? structuredRequirementsSummary(structuredRequirements) : '');
 
   const dbMessages = lessonData.lessons_ai_task_messages || [];
-  const initialMessages = dbMessages.map((msg: {
+  const initialMessages = (await Promise.all(dbMessages.map(async (msg: {
     id: number
     message: string | null
     sender: string
     created_at: string
+    attachments?: unknown
     tool_invocations?: unknown
   }) => {
-    const parts = [];
+    const parts: unknown[] = [...(await signStoredAttachments(msg.attachments))];
 
     if (msg.message) {
       parts.push({
@@ -114,18 +144,10 @@ export default async function LessonPage({ params }: PageProps) {
       });
     }
 
-    if (msg.tool_invocations) {
-      const invocations = Array.isArray(msg.tool_invocations)
-        ? msg.tool_invocations
-        : [msg.tool_invocations];
-
-      invocations.forEach((invocation: unknown) => {
-        parts.push({
-          type: 'tool-invocation',
-          toolInvocation: invocation
-        });
-      });
-    }
+    // Rebuilds a completed markLessonCompleted call into a v7
+    // tool-markLessonCompleted part so the "Target achieved" card and the
+    // chat's lock survive a reload (#805); tolerates rows with no tool call.
+    parts.push(...rebuildLessonTaskToolParts(msg.tool_invocations));
 
     return {
       id: msg.id.toString(),
@@ -133,8 +155,7 @@ export default async function LessonPage({ params }: PageProps) {
       parts: parts,
       createdAt: msg.created_at
     };
-    // DB rows use a legacy part shape; the chat renders them via ToolInvocationPart
-  }) as unknown as UIMessage[];
+  }))) as unknown as UIMessage[];
 
   const isCurrentLessonCompleted = lessonData.lesson_completions?.length > 0;
 
@@ -224,6 +245,9 @@ export default async function LessonPage({ params }: PageProps) {
       .order('display_order', { ascending: true }),
     loadLessonCheckpoints(supabase, { tenantId, lessonId: lesson.id, userId }),
   ])
+  const communityHref = (await communityEnabled)
+    ? `/dashboard/student/courses/${courseId}/community`
+    : undefined
 
   const completedLessonIds = new Set(completions?.map((c) => c.lesson_id) || [])
 
@@ -280,7 +304,7 @@ export default async function LessonPage({ params }: PageProps) {
             <div className="flex items-center justify-between max-w-3xl mx-auto">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     {t('lessonIndex', { count: lesson.sequence })}
                   </span>
                 </div>
@@ -310,6 +334,7 @@ export default async function LessonPage({ params }: PageProps) {
             lessons={sidebarLessons}
             currentLessonId={lesson.id}
             requireSequentialCompletion={requireSequential}
+            communityHref={communityHref}
           />
         </div>
       </div>
@@ -334,7 +359,7 @@ export default async function LessonPage({ params }: PageProps) {
           <div className="flex items-center justify-between max-w-3xl mx-auto">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   {t('lessonIndex', { count: lesson.sequence })}
                 </span>
                 {isCurrentLessonCompleted && <LessonCompletionBadge />}
@@ -347,7 +372,7 @@ export default async function LessonPage({ params }: PageProps) {
               <Sheet>
                 <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={t('sidebarTitle')}>
                       <IconMenu2 className="h-5 w-5" />
                     </Button>
                   }
@@ -363,6 +388,7 @@ export default async function LessonPage({ params }: PageProps) {
                     lessons={sidebarLessons}
                     currentLessonId={lesson.id}
                     requireSequentialCompletion={requireSequential}
+                    communityHref={communityHref}
                   />
                 </SheetContent>
               </Sheet>
@@ -377,6 +403,8 @@ export default async function LessonPage({ params }: PageProps) {
               mdx={lessonMdx}
               videoUrl={lesson.video_url}
               embedCode={lesson.embed_code}
+              lessonId={Number(lessonId)}
+              courseId={numericCourseId}
             />
 
             {/* Contextual tutor entry point (opens the AI chat pre-seeded) */}
@@ -397,8 +425,8 @@ export default async function LessonPage({ params }: PageProps) {
                   {/* Task header */}
                   <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-primary/10 bg-primary/[0.03]">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-xl shrink-0">
-                        <IconSparkles className="h-5 w-5 text-primary" />
+                      <div className="p-2 bg-brand-tint rounded-xl shrink-0">
+                        <IconSparkles className="h-5 w-5 text-brand-text" />
                       </div>
                       <div>
                         <h3 className="font-bold text-sm sm:text-base text-foreground">{t('aiTutorTitle')}</h3>
@@ -409,25 +437,27 @@ export default async function LessonPage({ params }: PageProps) {
 
                   {/* Task description — plain block, the chat below is the interactive card */}
                   <div className="px-4 py-3 sm:px-5 sm:py-4">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 mb-1.5 sm:mb-2">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5 sm:mb-2">
                       {t('currentTask')}
                     </h4>
-                    <TaskInstructions text={aiTask.task_instructions} />
+                    <TaskInstructions text={taskDescription} />
                   </div>
 
                   {/* Chat */}
                   <div className="sm:px-5 sm:pb-5">
                     <LessonAIChat
                       lessonId={lesson.id}
-                      taskDescription={aiTask.task_instructions}
-                      isCompleted={isCurrentLessonCompleted}
+                      taskDescription={taskDescription}
                       initialMessages={initialMessages}
+                      requirements={structuredRequirements?.requirements}
                     />
                   </div>
                 </div>
               </section>
               </AnimatedSection>
             )}
+
+            <LessonDiscussion tenantId={tenantId} userId={userId} courseId={numericCourseId} lessonId={lesson.id} />
 
             {/* Comments Section */}
             <section className="border-t pt-10">
@@ -459,6 +489,7 @@ export default async function LessonPage({ params }: PageProps) {
           lessons={sidebarLessons}
           currentLessonId={lesson.id}
           requireSequentialCompletion={requireSequential}
+          communityHref={communityHref}
         />
       </div>
     </div>

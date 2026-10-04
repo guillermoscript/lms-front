@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildSummary,
+  communityReplies,
   DEFAULT_DIGEST_SETTINGS,
   firstName,
   isStreakAtRisk,
@@ -13,6 +14,8 @@ import {
   resolveDigestSettings,
   tenantBaseUrl,
 } from '@/lib/notifications/daily-digest'
+import { dailyDigestEmailTemplate } from '@/lib/email/templates/daily-digest'
+import { platformSchoolBrand } from '@/lib/themes/school-brand'
 
 /**
  * Pure helpers for the daily review-due digest + streak-at-risk nudge
@@ -221,6 +224,72 @@ describe('buildSummary', () => {
 
   it('returns an empty string when everything is zero / not at risk', () => {
     expect(buildSummary({ dueCards: 0, goalsPending: 0, streak: 0, streakAtRisk: false }, 'en')).toBe('')
+  })
+
+  it('en: community replies, singular and plural, before the streak line (#870)', () => {
+    expect(buildSummary({ dueCards: 0, goalsPending: 0, streak: 0, streakAtRisk: false, communityReplies: 1 }, 'en')).toBe(
+      '1 new reply in the community'
+    )
+    expect(buildSummary({ dueCards: 2, goalsPending: 0, streak: 4, streakAtRisk: true, communityReplies: 3 }, 'en')).toBe(
+      '2 cards due · 3 new replies in the community · your 4-day streak ends tonight'
+    )
+  })
+
+  it('es: community replies, singular and plural (#870)', () => {
+    expect(buildSummary({ dueCards: 0, goalsPending: 0, streak: 0, streakAtRisk: false, communityReplies: 1 }, 'es')).toBe(
+      '1 respuesta nueva en la comunidad'
+    )
+    expect(buildSummary({ dueCards: 0, goalsPending: 1, streak: 0, streakAtRisk: false, communityReplies: 5 }, 'es')).toBe(
+      '1 meta de estudio esta semana · 5 respuestas nuevas en la comunidad'
+    )
+  })
+
+  it('omits the community line for zero replies', () => {
+    expect(buildSummary({ dueCards: 1, goalsPending: 0, streak: 0, streakAtRisk: false, communityReplies: 0 }, 'en')).toBe(
+      '1 card due'
+    )
+  })
+})
+
+describe('communityReplies (#870)', () => {
+  it('reads the count, tolerating a missing or malformed value', () => {
+    expect(communityReplies({ community_replies: 4 })).toBe(4)
+    expect(communityReplies({ community_replies: '2' as unknown as number })).toBe(2)
+    expect(communityReplies({ community_replies: undefined as unknown as number })).toBe(0)
+    expect(communityReplies({ community_replies: -1 })).toBe(0)
+  })
+})
+
+describe('dailyDigestEmailTemplate community line (#870)', () => {
+  const brand = platformSchoolBrand('tenant-1', 'Test School')
+  const base = {
+    schoolName: 'Test School',
+    firstName: 'Ada',
+    summary: 'x',
+    dueCards: 0,
+    goalsPending: 0,
+    streak: 0,
+    actionUrl: 'https://school.example.com/en/dashboard/student?src=digest',
+    brand,
+  }
+
+  it('lists unread replies, linked to the notifications page', () => {
+    const { html } = dailyDigestEmailTemplate(
+      { ...base, communityReplies: 2, notificationsUrl: 'https://school.example.com/en/dashboard/notifications?src=digest' },
+      'en'
+    )
+    expect(html).toContain('2 new replies in the community')
+    expect(html).toContain('href="https://school.example.com/en/dashboard/notifications?src=digest"')
+  })
+
+  it('speaks Spanish', () => {
+    const { html } = dailyDigestEmailTemplate({ ...base, communityReplies: 1 }, 'es')
+    expect(html).toContain('1 respuesta nueva en la comunidad')
+  })
+
+  it('has no community line without replies', () => {
+    const { html } = dailyDigestEmailTemplate({ ...base, dueCards: 1 }, 'en')
+    expect(html).not.toContain('in the community')
   })
 })
 

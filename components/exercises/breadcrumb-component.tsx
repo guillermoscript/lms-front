@@ -30,7 +30,7 @@ export default function BreadcrumbComponent({ links }: BreadcrumbComponentProps)
                     return (
                         <Fragment key={link.href}>
                             {/* The current crumb is `text-foreground`, not
-                                `text-primary`: it is the one crumb that is NOT
+                                `text-brand-text`: it is the one crumb that is NOT
                                 a link, and at 12px the tenant accent measured
                                 3.49:1 in dark. */}
                             <BreadcrumbItem>

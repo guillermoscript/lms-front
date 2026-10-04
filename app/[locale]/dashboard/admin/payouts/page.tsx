@@ -92,19 +92,19 @@ export default async function AdminPayoutsPage({
     switch (status) {
       case 'paid':
         return (
-          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 text-[10px]">
+          <Badge className="bg-success/10 text-success border-success/30 text-[10px]">
             {t('status.paid')}
           </Badge>
         )
       case 'processing':
         return (
-          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 text-[10px]">
+          <Badge className="bg-brand-tint text-brand-text border-primary/30 text-[10px]">
             {t('status.processing')}
           </Badge>
         )
       case 'pending':
         return (
-          <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 text-[10px]">
+          <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px]">
             {t('status.pending')}
           </Badge>
         )
@@ -158,12 +158,12 @@ export default async function AdminPayoutsPage({
                   >
                     {formatByCurrency(totalPaidByCurrency, locale)}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.totalPaidDesc')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/40">
-                  <IconCurrencyDollar className="h-[18px] w-[18px] text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                  <IconCurrencyDollar className="h-[18px] w-[18px] text-brand-text" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -179,12 +179,12 @@ export default async function AdminPayoutsPage({
                   <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">
                     {pendingCount}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground/70">
+                  <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.pendingCountDesc')}
                   </p>
                 </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40">
-                  <IconClock className="h-[18px] w-[18px] text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                  <IconClock className="h-[18px] w-[18px] text-warning" strokeWidth={1.75} />
                 </div>
               </div>
             </CardContent>
@@ -249,7 +249,7 @@ export default async function AdminPayoutsPage({
                         <TableCell className="text-xs text-muted-foreground">
                           {payout.payout_method === 'manual' ? t('method.manual') : t('method.stripeConnect')}
                           {payout.note && (
-                            <p className="mt-0.5 max-w-[16rem] text-[10px] text-muted-foreground/70">{payout.note}</p>
+                            <p className="mt-0.5 max-w-[16rem] text-[10px] text-muted-foreground">{payout.note}</p>
                           )}
                         </TableCell>
                         <TableCell className="text-xs tabular-nums text-muted-foreground">
@@ -265,7 +265,7 @@ export default async function AdminPayoutsPage({
                                 : payout.stripe_payout_id}
                             </code>
                           ) : (
-                            <span className="text-xs text-muted-foreground/60">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
                       </TableRow>

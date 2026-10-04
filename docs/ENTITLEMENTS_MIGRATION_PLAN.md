@@ -1,6 +1,10 @@
 # Entitlements Migration Plan
 
-**Status:** Proposed — not yet implemented
+**Status:** ✅ **Shipped.** All three phases applied; Phase 3 on 2026-05-16 (`20260516150000_phase3_drop_legacy_enrollment_columns.sql`) — see the Phase 3 status note
+further down. This page is kept as the record of *how* access moved to `entitlements`; the
+`enrollments.product_id` / `subscription_id` references throughout describe the **old** schema,
+which no longer exists. Current schema: [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md).
+
 **Author:** Claude Code session, 2026-05-16
 **Decision input:** Confirmed by product owner — *the same course will be sold both as a one-time product AND included in a subscription plan* (overlap is intended).
 

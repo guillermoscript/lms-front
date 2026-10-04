@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { IconLock, IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 /**
  * Where a student lands when their school's access cutoff (issue #494) has
@@ -37,6 +39,16 @@ export default async function AccessSuspendedPage() {
   if (!cutoffAt || new Date(cutoffAt) > new Date()) {
     redirect('/dashboard/student')
   }
+
+  // One event, high value: a student who reaches this screen is mid-churn
+  // through no fault of their own — their school lapsed. Placed after the
+  // redirect guard so a cleared cutoff does not count, and before the render
+  // because the page has no client component to hang it on.
+  await track(
+    ANALYTICS_EVENTS.ACCESS_SUSPENDED_SHOWN,
+    { reason: 'tenant_access_cutoff', cutoff_at: cutoffAt },
+    { userId, tenantId, locale, role: 'student' }
+  )
 
   return (
     <div className="container mx-auto flex max-w-2xl flex-col items-center gap-8 px-4 py-16 text-center">

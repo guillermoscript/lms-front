@@ -1,0 +1,808 @@
+{
+  "summary": "Read-only survey of emails, certificates, OG images and the kit color engine for #765",
+  "agentCount": 6,
+  "logs": [
+    "5/5 surveys returned"
+  ],
+  "result": {
+    "surveys": [
+      {
+        "area": "lib/email — transactional email branding for issue #765",
+        "summary": "13 template files in lib/email/templates/*.ts split cleanly into two groups by recipient+copy, verified at every call site. SCHOOL-branded (7): enrollment-confirmed, invitation, joined-school, certificate-issued, course-removed, payment-instructions, daily-digest/streak-nudge — recipient is always a student/member, copy speaks as the school, footer prints only schoolName. PLATFORM-branded (6): access-cutoff-warning, downgrade-blocked, payment-failed, payment-request-expired, plan-downgraded, renewal-reminder — recipient is always tenant admin emails (via getTenantAdminEmails or an explicit role='admin' query), footer is the literal string 'LMS Platform Billing' in every one, and colors encode urgency (#dc2626 red / #d97706 amber / #7c3aed violet) which must NOT be swapped for school branding — the platform is speaking to the school here, not the school to its members. Every school-branded call site already has tenantId in scope (some via getCurrentTenantId() in a request context, some as an explicit param in a webhook/cron with no headers) and already fetches tenants.name for schoolName, but NONE of them use tenant_settings.site_name (the override app/[locale]/layout.tsx applies for the UI) nor logo_url nor the theme kit — every school email renders with the platform's hardcoded #2563eb blue regardless of the school's theme. All inline hex found; see files[]. The theme-kit engine (lib/themes/kit.ts) already produces email-safe hex for --brand/--primary/--brand-text (deriveMode always returns these as #RRGGBB via mixOklch/toHex or the brand's own hex), but --primary-foreground (button ink) is ALWAYS one of the two oklch() literals KIT_LIGHT_INK ('oklch(0.99 0 0)' ≈ #fcfcfc) / KIT_DARK_INK ('oklch(0.2 0.02 262)' ≈ #11161f) — never hex — so a brand helper must run it through lib/color/contrast.ts's parseColor()+toHex() before it can go in an email. No web fonts can load in email; KIT_TYPE_PAIRINGS' font names (Lora, Outfit, Instrument Sans, etc.) need a hand-written generic-fallback stack. Recommend deriving the button from deriveKitVars(theme.theme, theme.brand).light unconditionally (even for the Kódigo dark theme, whose `.light` KIT_SURFACES set is exactly the light-mode surface defined for this purpose) so every email body stays on a white/near-white background regardless of the school's default UI mode. No unit tests cover template rendering/branding (only course-removed's locale+escaping is tested). No local email preview path exists for Mailgun sends — sendEmail() silently no-ops (returns false) when MAILGUN_API_KEY/MAILGUN_DOMAIN are unset, which is the default local state; supabase/config.toml's [inbucket] block is Supabase Auth's own mailer (magic links/OTP), a completely separate pipeline lib/email never touches.",
+        "files": [
+          {
+            "path": "lib/email/templates/enrollment-confirmed.ts",
+            "current": "Recipient: student/buyer. SCHOOL-branded ('Welcome to {course}!', footer = schoolName only). Inline hex: line13 body color #1a1a1a; line14 h2 color #2563eb (heading); line18 button background #2563eb / color #fff (button bg+ink); line22 p color #666 (muted note); line23 hr border-top 1px solid #eee (border); line24 footer p color #999.",
+            "change": "Replace #2563eb (heading + button bg) and #fff (button ink) with brand.brandText / brand.buttonBg / brand.buttonInk from the new helper; add optional <img src={logoUrl}> above the h2; keep #1a1a1a/#666/#999/#eee (neutral text/border, not brand)."
+          },
+          {
+            "path": "lib/email/templates/invitation.ts",
+            "current": "Recipient: invitee (student or teacher). SCHOOL-branded. Same palette as enrollment-confirmed at lines 15(#1a1a1a),16(h2 #2563eb),20(button #2563eb/#fff),24(#666),25(#eee),26(#999).",
+            "change": "Same substitution as enrollment-confirmed."
+          },
+          {
+            "path": "lib/email/templates/joined-school.ts",
+            "current": "Recipient: new student. SCHOOL-branded. Lines 12(#1a1a1a),13(h2 #2563eb),17(button #2563eb/#fff),21(#eee),22(#999).",
+            "change": "Same substitution."
+          },
+          {
+            "path": "lib/email/templates/certificate-issued.ts",
+            "current": "Recipient: student. SCHOOL-branded. Lines 14(#1a1a1a),15(h2 #2563eb),18(primary button bg #2563eb/color #fff — 'Download Certificate'),21(secondary button bg #f3f4f6/color #1a1a1a — 'Verify Online', already neutral),25(#666),27(#eee),28(#999).",
+            "change": "Primary button → brand.buttonBg/buttonInk; heading → brand.brandText; leave the secondary 'Verify Online' pill neutral — deliberate visual hierarchy, not a good brand-color surface."
+          },
+          {
+            "path": "lib/email/templates/course-removed.ts",
+            "current": "Recipient: every enrolled student (bulk send). SCHOOL-branded, i18n en/es via COPY map + escapeHtml(). Lines 55(#1a1a1a),59(button #2563eb/#fff),63(#eee),64(#999 footer=school).",
+            "change": "Button → brand.buttonBg/buttonInk. Locale resolved via bestEffortLocale() in the caller (app/actions/teacher/courses.ts), a request context, so tenantId is already in scope there too."
+          },
+          {
+            "path": "lib/email/templates/payment-instructions.ts",
+            "current": "Recipient: student who filed a manual payment request. SCHOOL-branded, i18n en/es. Lines 77(#1a1a1a),78(h2 #2563eb),81(table label color #666),85(instructions box background #f5f5f5),88(button #2563eb/#fff),92(#eee),93(#999).",
+            "change": "Heading + button → brand.brandText/buttonBg/buttonInk; leave table/box neutrals."
+          },
+          {
+            "path": "lib/email/templates/daily-digest.ts",
+            "current": "Two templates (dailyDigestEmailTemplate, streakNudgeEmailTemplate) sharing layout()/ctaButton() helpers. Recipient: student. SCHOOL-branded, i18n. NOTE: unlike every other school template, the <h2> here has NO explicit color (lines 92 and 112 render browser-default black, not #2563eb) — only ctaButton() at line 72 uses #2563eb/#fff. layout() footer #999 at line65, #666 footer note at line98.",
+            "change": "ctaButton() → brand.buttonBg/buttonInk (single change point fixes both templates). Optionally color the h2 with brand.brandText for consistency with the other 6 — flagged as judgment call j2 since it changes current (already black) visual behavior."
+          },
+          {
+            "path": "lib/email/templates/access-cutoff-warning.ts",
+            "current": "PLATFORM-branded. Recipient: tenant admins (lib/billing/access-cutoff.ts deliverCutoffStage → getTenantAdminEmails). h2 color #dc2626 (red, urgency); button bg #dc2626/color #fff; footer literal 'LMS Platform Billing' (line104).",
+            "change": "No school-brand substitution — this is the platform warning the school, must keep its own urgency palette."
+          },
+          {
+            "path": "lib/email/templates/downgrade-blocked.ts",
+            "current": "PLATFORM-branded. Recipient: tenant admins (lib/payments/platform-plan-change.ts, adminIds from tenant_users role=admin). h2 color #d97706 (amber); button #d97706/#fff; footer 'LMS Platform Billing'.",
+            "change": "No substitution."
+          },
+          {
+            "path": "lib/email/templates/payment-failed.ts",
+            "current": "PLATFORM-branded. Recipient: tenant admins (role='admin', status='active' query in lib/billing/platform-webhook-dispatch.ts). h2 #dc2626; button #dc2626/#fff; footer 'LMS Platform Billing'.",
+            "change": "No substitution."
+          },
+          {
+            "path": "lib/email/templates/payment-request-expired.ts",
+            "current": "PLATFORM-branded. Recipient: tenant admins (getTenantAdminEmails, cron). h2 #d97706; button #7c3aed (violet)/#fff; footer 'LMS Platform Billing'.",
+            "change": "No substitution."
+          },
+          {
+            "path": "lib/email/templates/plan-downgraded.ts",
+            "current": "PLATFORM-branded. Recipient: tenant admins (getTenantAdminEmails, cron). h2 #dc2626; button #7c3aed/#fff; footer 'LMS Platform Billing'.",
+            "change": "No substitution."
+          },
+          {
+            "path": "lib/email/templates/renewal-reminder.ts",
+            "current": "PLATFORM-branded. Recipient: tenant admins (getTenantAdminEmails, cron). Colors conditional on data.overdue: heading/button #dc2626 red if overdue else #7c3aed violet; footer 'LMS Platform Billing'.",
+            "change": "No substitution."
+          },
+          {
+            "path": "lib/email/branding.ts",
+            "current": "Does not exist yet.",
+            "change": "New shared helper. Proposed shape:\n\nexport interface EmailBrand { schoolName: string; logoUrl: string|null; brand: string; buttonBg: string; buttonInk: string; brandText: string; headingFontStack: string }\n\nexport async function getEmailBrand(tenantId: string): Promise<EmailBrand> {\n  const admin = createAdminClient()\n  const [{data: tenant}, {data: settings}, customBranding] = await Promise.all([\n    admin.from('tenants').select('name, logo_url').eq('id', tenantId).maybeSingle(),\n    admin.from('tenant_settings').select('setting_key, setting_value').eq('tenant_id', tenantId).in('setting_key', ['site_name','logo_url', SCHOOL_THEME_SETTING_KEY]),\n    hasPlanFeature(tenantId, 'custom_branding'),\n  ])\n  const map = Object.fromEntries((settings??[]).map(s=>[s.setting_key, s.setting_value]))\n  const schoolName = map.site_name?.value || tenant?.name || 'LMS Platform'\n  const logoUrl = map.logo_url?.value || tenant?.logo_url || null\n  const theme = resolveSchoolTheme(map[SCHOOL_THEME_SETTING_KEY], { customBranding })\n  const PLATFORM_BRAND = '#2563eb', PLATFORM_INK = '#ffffff'\n  if (!theme) return { schoolName, logoUrl, brand: PLATFORM_BRAND, buttonBg: PLATFORM_BRAND, buttonInk: PLATFORM_INK, brandText: PLATFORM_BRAND, headingFontStack: EMAIL_FONT_STACKS.structured }\n  const { light } = deriveKitVars(theme.theme, theme.brand)\n  const toHex_ = (css: string, fb: string) => { const rgb = parseColor(css); return rgb ? toHex(rgb) : fb }\n  return {\n    schoolName, logoUrl, brand: theme.brand,\n    buttonBg: toHex_(light['--primary'], theme.brand),\n    buttonInk: toHex_(light['--primary-foreground'], PLATFORM_INK), // ALWAYS oklch() at source — this conversion is load-bearing\n    brandText: toHex_(light['--brand-text'], theme.brand),\n    headingFontStack: EMAIL_FONT_STACKS[KIT_THEMES[theme.theme].typePairing],\n  }\n}\n\nconst EMAIL_FONT_STACKS: Record<KitTypePairingId,string> = {\n  structured: \"'Helvetica Neue', Helvetica, Arial, sans-serif\",\n  classic: \"Georgia, 'Times New Roman', serif\",\n  friendly: \"'Helvetica Neue', Helvetica, Arial, sans-serif\",\n  plain: \"'Helvetica Neue', Helvetica, Arial, sans-serif\",\n}\n// 3 of 4 pairings collapse to the same generic sans stack — Instrument Sans/Outfit/Public Sans/Figtree/Noto Sans have no close email-safe match; only Lora→serif reads distinct.\n\nUses createAdminClient() only (no headers()/getCurrentTenantId()), so it works unmodified from request context, webhooks and cron alike — call with whatever tenantId each site already has in scope."
+          }
+        ],
+        "facts": [
+          "lib/themes/kit.ts:404-420 deriveMode(): --primary is always #RRGGBB (btn.background is either the input brand hex unchanged, or mixOklch()'s toHex() result). --primary-foreground is ALWAYS one of KIT_LIGHT_INK='oklch(0.99 0 0)' or KIT_DARK_INK='oklch(0.2 0.02 262)' (lib/themes/kit.ts:75-77) — never hex at source; computed exact hex equivalents: #fcfcfc and #11161f respectively.",
+          "lib/color/contrast.ts:185-269 parseColor() accepts hex/rgb/hsl/oklch/oklab/lab/lch and lib/color/contrast.ts:487 toHex() emits #rrggbb — this pair is the correct/only conversion path, already used by kit.ts itself, safe to reuse in an email helper (pure math, no DOM).",
+          "lib/color/contrast.ts:455-478 accentTextOn() (source of --brand-text) always returns hex: either the brand color unchanged (already hex) or a toHex()'d mix or a readableOn() fallback (#ffffff/#18181b/#000000) — no oklch leak here.",
+          "app/[locale]/layout.tsx:84-93 getTenantSettings() reads tenant_settings keys ['site_name','logo_url','favicon_url',SCHOOL_THEME_SETTING_KEY] via createAdminClient(), cached 60s with unstable_cache; layout.tsx:135-141 resolves name = tenantSettings.site_name?.value || tenant.name and logo_url = tenantSettings.logo_url?.value || tenant.logo_url — none of the 7 school-branded email call sites replicate this override, they all read only tenants.name via a raw admin/service client.",
+          "lib/plans/server.ts:46 getTenantPlan() and :79 hasPlanFeature() use createAdminClient() exclusively, no headers()/cookies() dependency — confirmed safe to call from webhooks (app/api/stripe/webhook/route.ts) and cron (app/api/cron/expire-platform-subscriptions/route.ts, lib/notifications/daily-digest.ts) despite being wrapped in React cache().",
+          "Every school-branded call site already resolves tenantId before building the template: app/api/stripe/webhook/route.ts uses tenantId from Stripe metadata (webhook, no headers); app/actions/admin/invitations.ts and app/actions/join-school.ts use getCurrentTenantId() (request context); app/api/certificates/issue/route.ts uses getCurrentTenantId() (request/API route); app/actions/teacher/courses.ts and app/actions/payment-requests.ts use getCurrentTenantId() (server actions); lib/notifications/daily-digest.ts loops tenantId per-tenant inside a cron with no headers.",
+          "supabase/config.toml:95-100 [inbucket] is Supabase Auth's own local mail catcher (magic links, OTP, password reset) — structurally unrelated to lib/email/* (Mailgun). Nothing in the repo routes Mailgun sends to a local catcher; MAILGUN_API_KEY unset locally means sendEmail() always returns false silently (lib/email/send.ts:21-24), so today there is no way to visually inspect a rendered school/platform email without a real Mailgun account.",
+          "tests/unit/email-mailer-status.test.ts is the only unit test touching lib/email/templates — it covers courseRemovedTemplate's locale switch + escapeHtml(), nothing about color/branding/logo, and no other template file has any test."
+        ],
+        "risks": [
+          "buttonInk MUST go through parseColor()+toHex() — if a future edit inlines light['--primary-foreground'] directly into an email's style attribute, every branded button silently renders 'oklch(0.99 0 0)' as a literal (invalid) CSS value in every mail client that doesn't fall back gracefully, which is most of them; this is the single easiest correctness bug to introduce here.",
+          "tenant_settings row can be missing even when a theme is set (parseStoredKitTheme/resolveSchoolTheme both tolerate malformed/missing jsonb and fall through to null → platform palette) — the helper must not throw on absent rows, only on genuine DB errors; mirror the existing .maybeSingle()/?? patterns used throughout the codebase.",
+          "logo_url stored on tenant_settings or tenants can be a relative path or require a signed URL in some flows — verify the URL is publicly fetchable (no auth) before using it in an <img> tag, since Mailgun/recipient mail clients cannot attach auth headers.",
+          "course-removed.ts is a bulk send (all enrolled students in Promise.all) — adding a per-recipient brand lookup is fine since brand is per-tenant not per-student, but the helper must be called ONCE per course-deletion event and reused across all sendEmail() calls, not once per student (avoid N redundant DB round trips).",
+          "daily-digest.ts's cron already loops many tenants sequentially; getEmailBrand() adds 2 extra queries (tenant_settings, custom_branding check) per tenant per run — cheap, but should be called once per tenant per sweep and reused for both dailyDigestEmailTemplate and streakNudgeEmailTemplate calls in that tenant's batch, not re-fetched per user."
+        ],
+        "judgment_calls": [
+          {
+            "id": "j1",
+            "question": "Should the brand helper require a 'custom_branding' plan check (mirroring layout.tsx), or should every plan's recommended swatch just flow through automatically since resolveSchoolTheme() already gates the brand hex server-side?",
+            "options": [
+              "A) Call hasPlanFeature(tenantId,'custom_branding') inside getEmailBrand() and pass it into resolveSchoolTheme() exactly like layout.tsx does — one extra query per call but zero risk of drift if the gating rule ever changes.",
+              "B) Skip the plan check in the email helper — resolveSchoolTheme() already downgrades a non-swatch brand to the theme's recommended swatch when customBranding is false, so a caller passing the STORED (unchecked) value would leak a custom hex to a school without the plan; unsafe."
+            ],
+            "recommendation": "A — always compute customBranding via hasPlanFeature inside the helper. Same call layout.tsx already makes and is cheap; skipping it (B) is a plan-enforcement bypass."
+          },
+          {
+            "id": "j2",
+            "question": "daily-digest.ts's <h2> currently renders in default black (no explicit color), unlike the other 6 school templates' #2563eb heading. Should brand-coloring daily-digest also color its heading, or only its CTA button (matching current visual behavior)?",
+            "options": [
+              "A) Color only the CTA button (ctaButton() at lines 70-76) with brand.buttonBg/buttonInk, leave the <h2> uncolored as today — minimal diff, matches existing (already-inconsistent) behavior.",
+              "B) Also color the <h2> with brand.brandText for consistency with every other school template — changes today's visual output for an existing, already-shipped email."
+            ],
+            "recommendation": "A for a #765-scoped fix (smallest, lowest-risk diff); flag B as a natural follow-up cleanup once the shared helper exists, since the inconsistency predates #765 and isn't its stated goal."
+          },
+          {
+            "id": "j3",
+            "question": "certificate-issued.ts has two buttons: primary 'Download Certificate' (#2563eb/#fff) and secondary 'Verify Online' (#f3f4f6/#1a1a1a, already neutral). Should the secondary button also pick up any brand color, or stay neutral?",
+            "options": [
+              "A) Leave the secondary button neutral (#f3f4f6/#1a1a1a) — a deliberate visual hierarchy choice (primary vs. secondary action); a school's brand color at low lightness could fail AA on a light background without going through the same derivation kit.ts uses for a filled button.",
+              "B) Use brand.brand at low opacity or brand.brandText on a tint background for the secondary button too, for full brand immersion."
+            ],
+            "recommendation": "A — only re-color the primary CTA. Reusing kit.ts's own hierarchy (primary=brand-filled, secondary=neutral) keeps AA guarantees without inventing a new derived tint for email-only use."
+          },
+          {
+            "id": "j4",
+            "question": "What email-safe font stack should headingFontStack use per KIT_TYPE_PAIRINGS, since none of Lora/Outfit/Instrument Sans/Public Sans/Figtree/Noto Sans are installed on end-user devices and email clients strip @font-face/<link> almost universally?",
+            "options": [
+              "A) Map every pairing except 'classic' (Lora/serif) to the same generic sans stack ('Helvetica Neue', Helvetica, Arial, sans-serif) — 3 of 4 pairings collapse to identical output, only the serif pairing looks visually distinct in email.",
+              "B) Try to preserve more nuance by mapping 'friendly' (Outfit/Figtree, rounded/geometric) to a different generic (e.g. 'Trebuchet MS', sans-serif) which vaguely echoes a geometric sans in a few more mail clients.",
+              "C) Skip heading-font branding entirely for v1 — only ship color+logo, leave font-family:sans-serif as-is everywhere."
+            ],
+            "recommendation": "A for v1 (simple, predictable, matches what the fonts actually degrade to on the large majority of mail clients); C is also reasonable if the team wants to ship colors+logo first and defer font branding to a follow-up, since font differentiation in email is inherently low-fidelity."
+          },
+          {
+            "id": "j5",
+            "question": "Should the platform-fallback brand hex (#2563eb) used when a tenant has no theme row match the CURRENT hardcoded email blue (#2563eb, preserves existing appearance) or the actual platform default theme color (teal-cyan oklch(0.52 0.105 223.128) per CLAUDE.md)?",
+            "options": [
+              "A) Keep #2563eb as the no-theme fallback — zero visual change for the large majority of tenants that haven't picked a kit theme yet; purely an email-implementation detail unrelated to #765's actual scope (schools WITH a theme).",
+              "B) Derive the fallback from app/globals.css's actual default CSS vars so platform-default and email-default match exactly."
+            ],
+            "recommendation": "A — out of scope for #765 and lower risk; B is a separate, pre-existing inconsistency (platform UI is teal, transactional emails are blue) that predates this issue and would be its own small follow-up if the team wants pixel-parity."
+          },
+          {
+            "id": "j6",
+            "question": "How should a QA person locally SEE a rendered email, given Mailgun requires real credentials and there's no local catcher for lib/email (only Supabase Auth's Inbucket, which is unrelated)?",
+            "options": [
+              "A) Write a small script (e.g. scripts/render-email-templates.ts) that imports every templates/*.ts function with representative fixture data, writes each {subject, html} to a local .html file, and optionally screenshots each with Playwright (already a project dependency) for a visual gallery/diff.",
+              "B) Point MAILGUN_API_URL at a local SMTP-catcher-compatible shim (e.g. Mailhog/Mailpit plus a Mailgun-compatible proxy) — heavier setup, and Mailgun's HTTP API (not SMTP) has no official local emulator.",
+              "C) Add a dev-only API route (e.g. /api/dev/email-preview?template=enrollment-confirmed) that renders a template's HTML directly in the browser for quick iteration, gated to non-production."
+            ],
+            "recommendation": "A (a standalone render-to-HTML-files script, optionally piped through Playwright for screenshots) is the lowest-effort, most reliable option — needs no live Mailgun account, no SMTP emulation, and produces artifacts (HTML + PNGs) easy to diff or attach to a PR. C is a reasonable complement for fast iteration during development but shouldn't replace A as the CI/QA artifact."
+          }
+        ],
+        "test_plan": [
+          "Add tests/unit/email-branding.test.ts covering getEmailBrand(): (1) no tenant_settings.theme_preset row → platform fallback {brand:'#2563eb', buttonInk:'#ffffff', ...}; (2) a stored kit theme with customBranding=false → resolves to the theme's first swatch (exercising resolveSchoolTheme's downgrade path even if the stored value differs); (3) a stored theme + custom hex + customBranding=true → buttonBg/buttonInk/brandText are all valid #RRGGBB strings (regex-assert, since the whole point is no oklch() leaks); (4) missing tenant_settings row entirely → still returns a valid EmailBrand, no throw.",
+          "Assert specifically that buttonInk resolves to '#fcfcfc' or '#11161f' (the two known KIT_LIGHT_INK/KIT_DARK_INK conversions) for at least one theme, to lock in the parseColor()+toHex() conversion path and catch any future regression that inlines the raw oklch() string instead.",
+          "Extend tests/unit/email-mailer-status.test.ts (or a new file) to assert that platform-branded templates (access-cutoff-warning, downgrade-blocked, payment-failed, payment-request-expired, plan-downgraded, renewal-reminder) still contain the literal 'LMS Platform Billing' footer string and their built-in hex (#dc2626/#d97706/#7c3aed) after the school-branding change ships — a regression test guarding against someone accidentally wiring getEmailBrand() into the wrong template group.",
+          "Manual/QA: build the render-to-HTML script from j6 recommendation A, run it for fixture tenants — one with no theme row (expect current #2563eb look unchanged) and one per KIT_THEMES id (estructura/andina/kodigo/luz) — and visually confirm logo, heading color, and button all read the tenant's brand while staying on a light/white email body even for Kódigo (whose in-app default mode is dark)."
+        ]
+      },
+      {
+        "area": "Certificates (PDF, HTML view, verify page, badge, preview, template editor) — issue #765",
+        "summary": "Every certificate surface hardcodes colors and generic serif fonts; none reads the tenant's theme kit. There are THREE different 'default' color pairs live in the codebase today (blue #3B82F6/#1E40AF as the stored design_settings default, dark-green #1a5632/#0f2b1a as the PDF/HTML fallback when no template exists at all, and #1a73e8/#0d47a1 as the badge fallback), plus a fourth (#2563eb) in the certificate-issued email, and a fifth (purple #a78bfa/#7c3aed) hardcoded into the OG share card for /verify. None derive from lib/themes/kit.ts. The PDF (@react-pdf/renderer 4.9.0) only ever uses the built-in Helvetica family — there is no Font.register call anywhere in pdf-generator.tsx despite a `fontFamily` field existing on DesignConfig that is silently unused. lib/certificates/badge-generator.ts imports `registerFont` from `canvas` but never calls it, so the PNG badge renders in whatever the container's default 'Arial' resolves to. The HTML certificate view (lib/certificate-generator.ts) pulls 'Cormorant Garamond' + 'DM Sans' from Google Fonts CDN links — also hardcoded, not the kit pairing. Good news: lib/color/contrast.ts already converts every OKLCH kit token to real hex via toHex()/mixOklch()/readableButton(), so `deriveKitVars(theme, brand).light['--brand']` and `['--primary']` are already plain `#RRGGBB` strings — no new OKLCH→hex conversion work is needed to get a school's brand color into an email, PDF, canvas or ImageResponse. The distinguishing 'is this template still on the default design' signal already exists and is authoritative: `hasCustomCertificateDesign()` in lib/certificates/default-design.ts, currently used only by the save action to gate the `custom` plan tier — it is not consulted anywhere at render time. Feasibility for kit heading fonts in the PDF is good: @react-pdf/renderer 4.9.0 ships @react-pdf/font backed by fontkit ^2.0.2, which DOES support WOFF2 (confirmed by grepping fontkit's source for WOFF2Font.js/WOFF2Directory.js), contradicting the older 'react-pdf only does TTF' assumption — so a kit heading font (Instrument Sans, Lora, Outfit, Noto Sans) can likely be Font.register'd straight from a Google Fonts CSS2 WOFF2 URL server-side. No @fontsource packages are installed and next/font's downloaded files live inside .next build output as WOFF2 with hashed names, not a stable path to read from — so the practical registration source is a Google Fonts URL fetched at render time (needs a documented fallback to Helvetica/Times on fetch failure), not a bundled local file. The PDF is generated in TWO places that can disagree: once at issue time (issue-certificate.ts step 11, stored to Storage bucket 'certificates' at pdfs/{id}.pdf, URL cached in certificates.pdf_url) and again on-demand, regenerated fresh from current template design_settings, every time someone hits GET /api/certificates/[id]?format=pdf — so a template's design change is reflected immediately in the on-demand PDF but NOT in the already-uploaded pdf_url the verify page links to preferentially. Not every certificate even goes through the PDF/badge pipeline: app/api/certificates/generate/route.ts is a second, lighter issuance path (issueCertificate() local function) that inserts a `certificates` row with no PDF/badge generation at all and no template lookup gate — pdf_url stays null, and the verify/view routes fall back to generateCertificateHTML on the fly, which is where the dark-green #1a5632 fallback actually fires (it only fires when `certificate_templates` is null, which is common on this path).",
+        "files": [
+          {
+            "path": "lib/certificates/default-design.ts",
+            "current": "Lines 8-12: DEFAULT_CERTIFICATE_DESIGN = { primary_color: '#3B82F6', secondary_color: '#1E40AF', show_qr_code: true }. Lines 29-41: hasCustomCertificateDesign(data) returns true iff logo_url, signature_image_url, primary_color !== default, secondary_color !== default, or show_qr_code === false — this is the exact, already-correct 'is this the platform default design' predicate.",
+            "change": "Reuse hasCustomCertificateDesign() at every render site (pdf-generator, certificate-generator.ts HTML, verify page, badge-generator) as the branch: when false, resolve the tenant's kit brand/primary hex + heading font and use those instead of the hardcoded design_settings values; when true, render the template's own primary_color/secondary_color/logo/signature untouched, exactly as the issue describes ('default takes the school's brand and heading font, custom templates keep their own colors'). No schema change needed — the signal is purely derived from existing design_settings columns."
+          },
+          {
+            "path": "lib/certificates/pdf-generator.tsx",
+            "current": "Lines 41-56: DesignConfig.fontFamily exists but is never read. Lines 96-98: createStyles() fallback `primary = config?.primaryColor || '#1a5632'`, `secondary = config?.secondary_color || '#0f2b1a'` (dark green — the THIRD default color pair in the codebase, distinct from DEFAULT_CERTIFICATE_DESIGN's blue). Every text style (page 103, 172, 184, 193-194 italic, 216, 248 etc.) hardcodes fontFamily: 'Helvetica' / 'Helvetica-Bold'; no Font.register call exists anywhere in the file.",
+            "change": "Add a Font.register call (guarded by try/catch, memoized so it only registers once per process) for the resolved kit heading font's WOFF2 (Google Fonts CSS2 URL) before building the Document; fall back to Helvetica/Helvetica-Bold if registration fails or the design is 'custom' tier (custom templates keep the current luxury-serif Helvetica-italic treatment, or optionally the Georgia-esque look — judgment call below). Replace the '#1a5632'/'#0f2b1a' fallback with the resolved brand/primary hex so the three-way color drift (blue vs green vs badge-blue) collapses to one source."
+          },
+          {
+            "path": "lib/certificate-generator.ts",
+            "current": "Line 34-35: `primaryColor = data.designSettings?.primary_color || '#1a5632'`, same green fallback, independent copy of the same logic as pdf-generator.tsx. Line 78: hardcoded Google Fonts <link> for 'Cormorant+Garamond' and 'DM+Sans'. Lines 231, 255, 284, 323, 347 etc.: `font-family: 'Cormorant Garamond', 'Georgia', serif` hardcoded for every heading-ish element (seal monogram, cert-title, student-name, course-name, score-value).",
+            "change": "Same branch as pdf-generator: swap the Google Fonts <link> and font-family declarations for the resolved kit heading font (or keep Cormorant Garamond as the deliberate 'custom tier keeps its own look' choice — judgment call). Fix the green fallback to match the platform default (or the resolved brand) so this file and pdf-generator.tsx never disagree again."
+          },
+          {
+            "path": "lib/certificates/badge-generator.ts",
+            "current": "Line 7: `registerFont` imported from 'canvas' but never called anywhere in the file. Lines 43-44: badgeColor gradient fallback `'#1a73e8'` → `'#0d47a1'` (a FOURTH distinct default blue). Lines 60, 83, 89, 94: `ctx.font = '... Arial'` hardcoded, no relation to the kit heading font.",
+            "change": "Call registerFont() once (module-level, guarded) for the resolved heading font's TTF/OTF (canvas's registerFont needs a local file path — a Google Fonts WOFF2 will NOT work here, this is a harder constraint than react-pdf's; see judgment call). Replace the '#1a73e8' fallback with the same resolved brand hex used everywhere else."
+          },
+          {
+            "path": "lib/email/templates/certificate-issued.ts",
+            "current": "Entirely inline styles with literal hex: line 15 `color:#2563eb` (h2), line 16 body copy, line 18 `background:#2563eb` (download button), line 21 `background:#f3f4f6` (verify button, neutral — fine), line 27 `color:#999` footer. No logo, no tenant color, generic sans-serif.",
+            "change": "Thread the resolved tenant brand hex (and optionally logo_url) into this template's data object and replace both #2563eb occurrences; this is the email surface the issue explicitly calls out ('what a school sends out ... carries its logo, brand color'). Needs a literal hex resolved server-side before this function is called (it cannot use CSS variables)."
+          },
+          {
+            "path": "app/api/og/route.tsx",
+            "current": "Lines ~29-close for `type === 'certificate'`: entirely hardcoded purple palette — background `linear-gradient(135deg, #120b24 0%, #241245 55%, #120b24 100%)`, text `#f5f3ff`/`#ddd6fe`/`#c4b5fd`, accent dot gradient `#a78bfa`→`#7c3aed`, verified badge `#22c55e`. `fontFamily: 'sans-serif'` generic, no kit heading font. `ogImageUrl()` (lib/seo, called from app/[locale]/verify/[code]/page.tsx:59-67) passes only text params (student/course/issuer/eyebrow/verifiedLabel/site) — no color or logo ever reaches this route.",
+            "change": "Adjacent to this issue's certificate area but worth flagging explicitly: the /verify OG card (the literal 'share preview' surface named in the issue) has zero tenant-brand awareness today. Extending ogImageUrl()/the og route to accept a resolved brand hex + logo URL is likely in scope even if a sibling issue owns generic OG cards — confirm ownership before touching."
+          },
+          {
+            "path": "app/[locale]/verify/[code]/page.tsx",
+            "current": "Lines 134, 158-160: already correctly reads `certificate.certificate_templates?.design_settings?.primary_color || DEFAULT_CERTIFICATE_DESIGN.primary_color` and uses it for the accent stripe/background dots (lines 164-171, 207-212, 224-231) — this page is theme-aware in the sense that it reads the template's own design, it just never knows about the tenant's kit brand as a fallback.",
+            "change": "Same hasCustomCertificateDesign() branch: when the template is still on the default design, resolve and use the tenant's kit brand hex instead of DEFAULT_CERTIFICATE_DESIGN.primary_color as the fallback on line 134."
+          },
+          {
+            "path": "components/teacher/certificate-preview.tsx",
+            "current": "Line 98: `style={{ fontFamily: 'Georgia, serif' }}` hardcoded on the student-name heading — the editor's own live preview, independent of the printed PDF/HTML fonts. Comment at lines 44-52 explicitly documents this as intentional: 'the paper and neutral ink below are fixed... every inline colour is the template's own design ink... a dark surface would swallow a dark preset ink chosen against paper' — i.e. this component was deliberately built to NEVER inherit the school theme, on the reasoning that it mimics a printed document.",
+            "change": "If the default-design behavior changes (brand+heading font when not customized), this preview's own documented invariant needs revisiting too, or it will show a permanently-wrong preview for schools on the default design. This is the one place in the certificate area where a past PR explicitly reasoned about theme-independence — flag for the implementer, do not silently override the comment's intent without owner sign-off."
+          }
+        ],
+        "facts": [
+          "lib/certificates/default-design.ts:8-12 DEFAULT_CERTIFICATE_DESIGN = {primary_color:'#3B82F6', secondary_color:'#1E40AF', show_qr_code:true}; hasCustomCertificateDesign() (lines 29-41) is the exact 'default vs custom' predicate already used by app/actions/teacher/certificates.ts:44 to gate the plan tier — reusable at render time with zero new schema.",
+          "certificate_templates (lib/database.types.ts ~228-320) has no font column at all — only design_settings jsonb (primary_color/secondary_color/show_qr_code/logo_url set by the app) plus logo_url/signature_image_url/signature_name/signature_title columns. A heading font is not stored per-template; it can only come from the tenant's theme kit at render time, not from a DB column, unless a migration adds one (out of scope per issue framing which says 'default design takes the school's ... heading font', implying derived not stored).",
+          "lib/color/contrast.ts fully converts OKLCH→sRGB (oklabToRgb/oklchToRgb/parseColor) and every value deriveKitVars() (lib/themes/kit.ts:428-436) returns for --brand/--primary/--primary-foreground/--brand-tint/--brand-text is already plain `#rrggbb` via toHex() — only the raw KIT_SURFACES background/card/border tokens remain oklch() strings; brand/primary never need conversion.",
+          "@react-pdf/renderer is 4.9.0 (package.json:65); its font engine (node_modules/@react-pdf/font, backed by fontkit ^2.0.2) supports WOFF2 per README.md:305-309 and confirmed via node_modules/fontkit/src/WOFF2Font.js + WOFF2Directory.js existing — contradicts the commonly-cited 'react-pdf is TTF/OTF only' limitation for this installed version.",
+          "No @fontsource/* package is installed (package.json has no fontsource entries, node_modules/@fontsource does not exist). Kit fonts are loaded exclusively via next/font/google in lib/themes/fonts.ts, which self-hosts hashed WOFF2 files inside .next build output at build time — not a stable readable path for a Node script to Font.register from directly.",
+          "lib/certificates/pdf-generator.tsx has zero Font.register calls; every style uses fontFamily: 'Helvetica' / 'Helvetica-Bold' literally (lines 103, 172, 184, 193, 216, 248, 272 etc.); DesignConfig.fontFamily (line 45) is declared but never read anywhere in createStyles() or CertificateDocument.",
+          "lib/certificates/badge-generator.ts imports registerFont from 'canvas' (line 7) but never calls it — canvas's registerFont requires a local TTF/OTF file path (it does NOT fetch remote URLs), a stricter constraint than react-pdf's Font.register (which accepts URLs).",
+          "The PDF is generated at TWO independent points that can drift: issue-time via generateAndUploadPDF() (lib/certificates/issue-certificate.ts step 11, ~line 184-203) uploaded once to Storage bucket 'certificates' at pdfs/{certificateId}.pdf and cached in certificates.pdf_url; and on-demand, regenerated fresh from current design_settings, on every GET /api/certificates/[id]?format=pdf (app/api/certificates/[id]/route.ts:71-96) — a later template edit changes the on-demand PDF instantly but not the stored pdf_url the verify page prefers (app/[locale]/verify/[code]/page.tsx:286).",
+          "app/api/certificates/generate/route.ts is a second, template-optional issuance path (its local issueCertificate() helper, lines 87-197) that inserts a certificates row with template_id possibly null and never calls generateAndUploadPDF/generateAndUploadBadge — pdf_url/badge_image_url stay null for these certificates, so both view routes (app/api/certificates/view/[code]/route.ts and app/api/certificates/[id]/route.ts HTML branch) fall through to generateCertificateHTML() with template undefined, which is exactly where the '#1a5632' dark-green fallback (lib/certificate-generator.ts:34-35) actually fires in production.",
+          "lib/email/templates/certificate-issued.ts hardcodes '#2563eb' twice (h2 color line 15, button background line 18) with no tenant color/logo input at all — a fifth distinct default in the certificate surface family (besides the blue design default, the green PDF/HTML fallback, and the badge's own blue).",
+          "app/api/og/route.tsx's 'certificate' variant (used by /verify's generateMetadata via ogImageUrl(), app/[locale]/verify/[code]/page.tsx:59-67) is entirely hardcoded to a fixed purple palette and generic sans-serif; ogImageUrl() never receives a color or logo parameter today.",
+          "components/teacher/certificate-preview.tsx:44-52 carries an explicit prior-PR comment arguing the preview must NOT inherit the school theme ('a themed screen... school theme must never recolour a printed document') and hardcodes fontFamily:'Georgia, serif' on line 98 for the student name — this is the one place a past decision explicitly opposed theme-following, which the new default-design behavior would need to reconcile with."
+        ],
+        "risks": [
+          "Registering a Google Fonts WOFF2 URL with @react-pdf/renderer's Font.register at PDF-generation time (both issue-time and on-demand) introduces a runtime network dependency on fonts.gstatic.com; a slow/failed fetch would need a hard fallback to Helvetica or the generation blocks/fails. This should be tested for latency and wrapped in try/catch with a Helvetica fallback, not assumed to always succeed.",
+          "canvas's registerFont (badge-generator.ts) needs a LOCAL file, not a URL — so getting the kit heading font into the PNG badge requires either (a) downloading the WOFF2/TTF to a tmp file at request time before registerFont, or (b) bundling static font files in the repo/image. This is a materially different (harder) integration than the PDF's URL-based Font.register and should not be assumed to 'just work' the same way.",
+          "The two independent PDF-generation call sites (stored pdf_url at issue time vs. regenerated-on-demand at ?format=pdf) will show DIFFERENT results after this change until both read the same resolved brand — an already-issued certificate's stored PDF will keep showing whatever color was live at issue time even after a school changes its brand, while the on-demand endpoint will reflect the new brand immediately. Decide whether that drift is acceptable or whether stored PDFs need regeneration/invalidation on brand change.",
+          "components/teacher/certificate-preview.tsx has a documented, deliberate non-goal of following the school theme; changing default-design behavior without updating this preview will make the editor's preview permanently wrong for any school still on the default design.",
+          "hasCustomCertificateDesign() treats presence of ANY logo_url or signature_image_url as 'custom', even though the issue's framing is specifically about colors and heading font — a school on the Free/basic tier can never set logo/signature anyway (locked by DesignSection.tsx:18), so this is likely fine, but a Starter+ school that only uploaded a logo (no color change) would be classified 'custom' and NOT get the brand-color treatment even though its colors are still the stock blue. Worth confirming this is the intended behavior or whether the predicate should be split (color-custom vs. asset-custom).",
+          "app/api/certificates/generate/route.ts issues certificates with no template lookup guarantee (template can be null) and no PDF/badge generation at all — any brand-resolution logic added only to issue-certificate.ts's pipeline will silently miss certificates issued through this second path, which is exactly where the current green (#1a5632) fallback already leaks into production."
+        ],
+        "judgment_calls": [
+          {
+            "id": "font-source",
+            "question": "Where should the PDF/badge fetch the kit heading font bytes from at render time, given no @fontsource packages and next/font's build output isn't a stable path?",
+            "options": [
+              "Fetch the family from Google Fonts CSS2 API at render time and Font.register the resulting WOFF2 URL directly (react-pdf 4.9's fontkit supports WOFF2) — simplest, no repo changes, but adds a live external dependency per PDF/badge generation and needs a documented Helvetica fallback.",
+              "Add @fontsource/* packages (or vendor the 4 kit heading-font files: Instrument Sans, Lora, Outfit, Noto Sans as static .ttf/.woff2 under a repo path) and Font.register/registerFont from local files — no runtime network call, works for both react-pdf AND canvas (which needs local files regardless), but adds ~4 font files to the repo/deploy image and a small maintenance surface.",
+              "Only apply the kit heading font in @react-pdf (URL-based Font.register works there) and leave the PNG badge on its current generic font, since canvas's registerFont can't consume a remote URL and wiring a temp-file download adds real complexity for a small, low-visibility surface (the badge is a 400x400 PNG, not the primary artifact)."
+            ],
+            "recommendation": "Vendor the four kit heading fonts as static local files (option 2) — it is the only option that cleanly covers both @react-pdf (Font.register from file path or fetched bytes) and canvas's registerFont (which requires a local file), avoids a runtime network dependency in the money/credential-generation path, and is a one-time, bounded addition (4 font families × 1-2 weights each)."
+          },
+          {
+            "id": "custom-tier-font",
+            "question": "Should a custom (Starter+) template also switch its heading font to the kit pairing, or keep the current Cormorant-Garamond/Helvetica-italic 'luxury credential' look even when colors are custom?",
+            "options": [
+              "Font follows the same hasCustomCertificateDesign() branch as color — custom templates keep the current serif/italic treatment untouched, matching the issue's literal wording ('custom templates keep their own colors') which only mentions colors, not font.",
+              "Font always follows the tenant's kit heading pairing regardless of custom/default color status, since the issue's opening framing says certificates should carry 'its logo, brand color and heading font' unconditionally.",
+              "Add a font toggle to the template editor (design-section.tsx) so a Starter+ school can opt in/out of the kit heading font independent of its color choice."
+            ],
+            "recommendation": "Option 1 — gate font on the same hasCustomCertificateDesign() signal as color; the issue explicitly says default design takes brand+font while custom templates 'keep their own colors' (implying their own everything), and it avoids a second, separate piece of design-editor UI in this pass."
+          },
+          {
+            "id": "brand-hex-source-for-basic-tier",
+            "question": "Free-tier / basic-certificate-tier schools cannot pick a custom brand color (custom_branding is a paid feature, resolveSchoolTheme() falls back to the theme's recommended swatch) — should their default-design certificate use that recommended kit swatch, or stay on the platform's current fixed blue?",
+            "options": [
+              "Use resolveSchoolTheme()'s resolved brand (kit swatch on Free, or the school's own custom hex on Business+) uniformly for every tenant with a theme_preset row — a Free-tier school on 'Andina' gets its green swatch, not platform blue.",
+              "Keep the platform blue #3B82F6/#1E40AF specifically for schools with no theme_preset row at all (still on the pre-kit platform palette), and only switch to the resolved kit brand for schools that have opted into a kit theme."
+            ],
+            "recommendation": "Option 2 — resolveSchoolTheme() already returns null for 'no row' (meaning platform palette), so certificates should mirror that exact rule: null theme → keep the current hardcoded blue default design_settings as-is; a resolved kit theme (any plan) → use its resolved brand + heading font. This reuses the existing resolution contract with no new special-casing."
+          }
+        ],
+        "test_plan": [
+          "npx vitest run tests/unit — check whether tests/unit already covers lib/certificates/default-design.ts or lib/certificate-generator.ts (grep found none named for these files; new unit tests should assert hasCustomCertificateDesign()-driven branching for both the PDF generator and HTML generator).",
+          "Add/extend a unit test asserting: template with stock DEFAULT_CERTIFICATE_DESIGN values + a tenant theme_preset row resolves to the tenant's --brand hex, not '#3B82F6'; a template with any customization (color/logo/signature) resolves to its own stored values regardless of tenant theme.",
+          "Manually generate a certificate PDF (?format=pdf) for a tenant on each of the 4 kit themes (estructura/andina/kodigo/luz) and visually confirm the heading font renders as the kit's pairing (Instrument Sans/Lora/Outfit/Noto Sans) rather than Helvetica, with a Helvetica fallback verified by temporarily breaking the font source.",
+          "Generate a badge PNG the same way and confirm registerFont() actually takes effect (canvas silently falls back to a system font on failure with no error — must be visually verified, not just 'no exception thrown').",
+          "Hit /verify/[code] for both a default-design and a custom-design certificate and confirm the accent color source (DEFAULT_CERTIFICATE_DESIGN.primary_color fallback vs. resolved tenant brand) matches the intended branch.",
+          "Confirm app/api/certificates/generate/route.ts's lighter issuance path either also gets brand resolution or is explicitly excluded/tracked, since it currently bypasses PDF/badge generation and the green fallback lives here.",
+          "Re-render an already-issued certificate's stored pdf_url vs. hitting ?format=pdf fresh after changing the tenant's brand color, to document/confirm the expected drift behavior for stakeholders."
+        ]
+      },
+      {
+        "area": "OG / share images and metadata (issue #765) — app/api/og/route.tsx",
+        "summary": "app/api/og/route.tsx is a pure text-in/image-out generator: it reads only URL query params (type/site/title/subtitle/badge or the certificate fields), has zero tenant awareness, and paints every card with the same hardcoded purple gradient (#0e0a1c→#1e1038 generic, #120b24→#241245 certificate) regardless of which school is sharing. Runtime is Node.js by default (no `export const runtime` override), which is good news — createAdminClient() and hasPlanFeature() work fine there. proxy.ts DOES run for /api/og (its matcher only excludes _next/static, _next/image, favicon.ico, /monitoring, api/op/, and static image extensions) and sets x-tenant-id from the Host header before intl/auth logic even runs (proxy.ts:264-269), so a crawler hitting the absolute image URL on a school's own subdomain gets the correct tenant resolved automatically — no slug/query param is needed for tenant identity, and none should be trusted for it. Three callers exist: lib/seo.ts's ogImageUrl()/buildPageMetadata() (used by the root layout, courses/[id], products/[productId], and p/[slug] pages) and a bespoke call in verify/[code]/page.tsx for certificates. Critically, courses/[id]/page.tsx passes `image: course.thumbnail_url || undefined` to buildPageMetadata, so /api/og is only used as the course's OG image when the course has NO thumbnail — most courses will bypass the branded card entirely and share their raw thumbnail_url instead, with no brand color/logo overlay at all. The theme-kit engine's own derived button ink (`readableButton().ink`) is frequently an OKLCH string literal (KIT_LIGHT_INK/KIT_DARK_INK = 'oklch(0.99 0 0)'/'oklch(0.2 0.02 262)'), which next/og's satori renderer likely cannot parse — but `--brand` itself is always literal #RRGGBB (BRAND_HEX-validated) and `mixOklch()`/`readableOn()`/`toHex()` in lib/color/contrast.ts already return real `#rrggbb` hex, so the fix is to build the card's colors from those hex-returning helpers directly rather than from deriveKitVars()'s CSS-var map. Logo comes from a free-text URL input (components/admin/branding-settings-form.tsx logo_url — no upload widget, no format/content-type validation, `accept=\"image/*\"` isn't even enforced there), which is both a satori-compatibility risk (SVG support in @vercel/og/satori is unreliable for anything but simple shapes) and a server-side-fetch (SSRF-adjacent) risk once ImageResponse fetches it at request time instead of the browser doing so. Heading-font fidelity (KIT_TYPE_PAIRINGS) would require fetching the actual TTF/OTF bytes from Google Fonts at request time (next/font/google only ships WOFF2, and satori cannot use `--font-heading` CSS vars) — no TTF/OTF assets exist anywhere in the repo today, so that's genuinely new plumbing, not a config flip.",
+        "files": [
+          {
+            "path": "app/api/og/route.tsx",
+            "current": "225 lines. No `export const runtime` (defaults to nodejs). `export const dynamic = 'force-dynamic'`. `CACHE_HEADERS = { 'cache-control': 'public, max-age=3600, s-maxage=86400' }` (line 9-11). GET(request) reads only `request.nextUrl.searchParams`: `type` ('generic'|'certificate'), `site`, and for generic: `title`/`subtitle`/`badge`; for certificate: `student`/`course`/`issuer`/`eyebrow`/`verifiedLabel` (all via `clamp()`, length-capped, no HTML — interpolated as JSX text children so no injection risk today). No `x-tenant-id` / `headers()` read anywhere. Generic background: `linear-gradient(135deg, #0e0a1c 0%, #1e1038 55%, #0e0a1c 100%)` (line 157), accent bar/logo-dot gradient `linear-gradient(90deg/135deg, #7c3aed, #a78bfa)` (lines 62-63, 132, 169, 218), text colors `#f5f3ff`/`#ddd6fe`/`#c4b5fd` fixed. Certificate variant: same purple family plus a hardcoded green checkmark badge (`#22c55e`/`#052e16`/`#bbf7d0`). `fontFamily: 'sans-serif'` on both (satori's built-in fallback, not any project font). No `<img>` tag anywhere — no logo is rendered today.",
+            "change": "Read `x-tenant-id` via `headers()` (works in a Route Handler exactly like in layout.tsx/tenant.ts). Resolve tenant branding server-side (ignore any client-supplied site/logo/color for identity purposes): tenant_settings rows `site_name`, `logo_url`, `theme_preset` (mirror app/[locale]/layout.tsx:85-96's admin-client query, or better, extract that query into a shared helper both files import — it currently only lives inline in layout.tsx as an unstable_cache'd closure). Gate custom brand color the same way layout.tsx does: `customBranding = await hasPlanFeature(tenantId, 'custom_branding')`, then `resolveSchoolTheme(tenantSettings.theme_preset?.value, { customBranding })`. If that's null (no theme row) keep today's platform-purple card unchanged — that's the correct 'no theme = platform palette' fallback per CLAUDE.md. If non-null, derive card colors directly from lib/color/contrast.ts's hex-returning primitives (never from deriveKitVars()'s CSS-var map, which mixes in OKLCH ink literals): background = a two-stop dark gradient via `mixOklch(brand, '#000000', t)` at two t values, ink/text = `readableOn(resolvedBackgroundHex)` (already hex-safe, already used for exactly this 'author-picked color, need readable text' problem elsewhere in the codebase), accent bar/logo-dot = the raw `brand` hex. Render `<img src={logoUrl} width=44 height=44 style={{objectFit:'contain'}} />` next to the site-name text when `logo_url` resolves to an http(s) URL; wrap the whole per-tenant branding block in try/catch so a bad/unreachable logo URL degrades to the text-only card instead of 500ing the whole OG response. Keep `site`/`title`/`subtitle`/`badge` as free text from the caller (legitimate, page-specific) but stop trusting `site`/`issuer` as the brand identity source — always render the resolved tenant's real name/logo/color, not whatever the query string claims."
+          },
+          {
+            "path": "lib/seo.ts",
+            "current": "`ogImageUrl()` (lines 36-42) builds `/api/og?...` from arbitrary key/value params with no tenant context passed at all — a pure string builder. `buildPageMetadata()` (lines 64-104) calls it only when the caller doesn't supply its own `image` (line 67-69), and always passes `site: siteName` from `getSeoContext()` (tenant.name), so identity data is already server-resolved on the CALLER side today — /api/og just doesn't use its own tenant context yet, it trusts whatever `site=` string was handed to it.",
+            "change": "No structural change required here — once /api/og resolves its own tenant/brand server-side, `site=` in the query becomes redundant for branding (keep only as display fallback, or drop). Optional: give courses/[id] a code path that no longer treats `course.thumbnail_url` as a full OG-image replacement (see judgment call `og-course-thumbnail`)."
+          },
+          {
+            "path": "app/[locale]/(public)/courses/[id]/page.tsx",
+            "current": "generateMetadata (lines 41-64) calls `buildPageMetadata({ ..., image: course.thumbnail_url || undefined, ogBadge: t('courses.badge') })` — when a thumbnail exists (the common case), it's used verbatim as the OG image, completely bypassing /api/og and therefore any brand color/logo/name overlay.",
+            "change": "Judgment call (see `og-course-thumbnail`) — either always route courses through /api/og (dropping the `image:` override), or accept that only thumbnail-less courses get the branded card in this pass."
+          },
+          {
+            "path": "app/[locale]/verify/[code]/page.tsx",
+            "current": "generateMetadata (lines 21-73) already resolves `certificate.certificate_templates?.design_settings?.primary_color` (line 134, falls back to `DEFAULT_CERTIFICATE_DESIGN.primary_color`) and `...logo_url` (line 158) for the ON-PAGE certificate render, but does NOT pass either to `ogImageUrl({ type: 'certificate', ... })` (lines 59-66) — the certificate OG card stays on the hardcoded purple/green palette even though the color/logo are already fetched two lines away.",
+            "change": "Out of this issue's immediate 'course share image' scope but trivial follow-up: pass `primaryColor`/`logoUrl` (already in scope) alongside the existing student/course/issuer fields once /api/og accepts brand params for the certificate variant too."
+          },
+          {
+            "path": "lib/themes/kit.ts",
+            "current": "`KIT_LIGHT_INK = 'oklch(0.99 0 0)'` / `KIT_DARK_INK = 'oklch(0.2 0.02 262)'` (lines 78-80) feed `readableButton()` as `opts.lightInk`/`opts.darkInk`; `readableButton()` (lib/color/contrast.ts:402-425) returns those OKLCH strings VERBATIM as `.ink` whenever the un-shifted brand already clears AA (the common case) — so `deriveKitVars().light['--primary-foreground']` is routinely a raw `oklch(...)` string, not hex. `--brand` (line 403) is always the literal `#RRGGBB` brand hex (never derived/oklch) since `normalizeKitBrand()` only accepts `#RRGGBB` or falls back to a swatch hex.",
+            "change": "None needed in kit.ts itself — just don't feed its OKLCH-bearing outputs into satori. Use `--brand` (hex) directly, and get ink via `readableOn(backgroundHex)` from lib/color/contrast.ts instead of reading `--primary-foreground`."
+          },
+          {
+            "path": "lib/color/contrast.ts",
+            "current": "`mixOklch(from, to, t): string | null` (line 304) returns real `#rrggbb`. `readableOn(background, fallback?): string` (line 378) returns one of `LIGHT_INK`/`DARK_INK` hex constants (`#ffffff`/`#18181b`, lines 31-33) or pure `#000000`/`#ffffff` — always hex, always satori-safe. `toHex(rgb): string` (line 487-488) converts a parsed `Rgb` back to hex.",
+            "change": "Import `mixOklch` and `readableOn` (not `readableButton`/`accentTextOn`, which are tuned for UI ink pairs and can still hand back an OKLCH ink) directly into app/api/og/route.tsx for the brand-derived gradient/ink."
+          }
+        ],
+        "facts": [
+          "proxy.ts matcher (line 530) is `/((?!_next/static|_next/image|favicon.ico|monitoring|api/op/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)` — `/api/og` is NOT excluded, so proxy.ts runs on it.",
+          "proxy.ts:214-269 resolves tenant from the request's Host/x-forwarded-host header (via `getTenantSlugFromHost`) BEFORE the `pathname.startsWith('/api')` branch (line 264) sets `x-tenant-id` on the forwarded request and short-circuits (no intl/auth). So /api/og always gets a correct x-tenant-id for whatever subdomain it was actually fetched on, with zero extra work.",
+          "app/api/og/route.tsx has no `export const runtime` line, so it uses Next's App Router default, Node.js — `createAdminClient()` (lib/supabase/admin.ts, uses `@supabase/supabase-js`) needs full Node APIs and only payment/billing/cron routes explicitly declare `runtime = 'nodejs'` elsewhere; app/api/og doesn't need to since it's already the default.",
+          "next/og's `ImageResponse` (node_modules/next/dist/server/og/image-response.d.ts) is a thin wrapper around `next/dist/compiled/@vercel/og`'s `ImageResponse` (satori + resvg) — works in Node.js runtime, not edge-only in current Next versions.",
+          "app/[locale]/layout.tsx:85-96 is the ONLY other place that reads `tenant_settings` for `site_name`/`logo_url`/`favicon_url`/`theme_preset` together, via `createAdminClient()` wrapped in `unstable_cache(..., { revalidate: 60 })` keyed `['tenant-settings-branding']` — the pattern to mirror or (better) extract into a shared helper.",
+          "`resolveSchoolTheme(value, { customBranding })` (lib/themes/kit.ts:344-352) is the ONLY plan-gate enforcement point for a custom brand hex — silently downgrades to the theme's recommended swatch when `customBranding` is false, so calling it (rather than hand-checking the plan) is correct and sufficient.",
+          "`hasPlanFeature(tenantId, 'custom_branding')` (lib/plans/server.ts:79-81) uses `createAdminClient()` internally and is wrapped in React `cache()` — safe/cheap to call from a route handler the same way layout.tsx does.",
+          "Logo URL entry (components/admin/branding-settings-form.tsx:49-58) is a plain `<Input>` text field with no `accept` attribute, no upload widget, no content-type validation — any URL, any file type, any host. Contrast with course thumbnails (components/teacher/course-form.tsx:288, `accept=\"image/jpeg,image/png,image/gif,image/webp\"`) and certificate-template logos (issuer-section.tsx:84, `accept=\"image/*\"`), which at least constrain the picker client-side (not enforced server-side either).",
+          "courses/[id]/page.tsx:58-64 passes `image: course.thumbnail_url || undefined` to `buildPageMetadata` — per lib/seo.ts:67-69 (`input.image ?? ogImageUrl(...)`), a course WITH a thumbnail never reaches /api/og at all for its OG image.",
+          "verify/[code]/page.tsx already resolves `primary_color`/`logo_url` from `certificate_templates.design_settings` (lines 134, 158) for on-page rendering but does not forward them to the certificate OG variant's params (lines 59-66).",
+          "No `.ttf`/`.otf` files exist anywhere in the app (only `mcp-server/node_modules/katex/dist/fonts/*.ttf`, unrelated). `lib/themes/fonts.ts` loads all kit fonts via `next/font/google` (WOFF2, CSS-var based) — none of that is consumable by satori, which needs raw TTF/OTF ArrayBuffers passed via `ImageResponse`'s `fonts` option.",
+          "`app/[locale]/(public)/p/[slug]/page.tsx:36-50` lets a Puck landing page set its own `rootProps.ogImage`, falling back to `ogImageUrl()` only when unset — same 'branded card is a fallback, not the default' pattern as courses."
+        ],
+        "risks": [
+          "Fetching an admin-supplied `logo_url` server-side inside ImageResponse is a fetch the LMS server itself makes (unlike today's browser-side `<img>` uses in navbar.tsx/school-landing-page.tsx) — a malicious or careless school admin's URL (internal IP, redirect chain, huge file, slow host) becomes a server-side request on every crawler hit; needs a timeout + try/catch fallback to the text-only card, and ideally a scheme allow-list (http/https only, reject `file:`/`data:`).",
+          "SVG logos (unrestricted on the site logo_url text field, loosely allowed elsewhere by `accept=\"image/*\"`) have historically unreliable/partial support in satori's `<img>` handling — a school with an SVG logo could get a blank or broken OG image; needs either server-side SVG-to-PNG rasterization before handing it to satori, or documented acceptance that SVG logos may not render.",
+          "Heading-font fidelity requires a new network fetch (Google Fonts CSS2 API → parse `url()` → fetch TTF ArrayBuffer) at request time; if that fetch is slow/fails, either the whole OG response is delayed/fails or it must gracefully fall back to `sans-serif` — new infrastructure, not a config change, and adds Google Fonts uptime as a de facto dependency of every share card.",
+          "`readableButton()`'s `.ink` can be a literal `oklch(...)` string; if a future implementation is tempted to reuse `deriveKitVars()` output directly (e.g. for `--primary-foreground`) instead of `readableOn()`, satori will either throw, ignore the style, or render a wrong default — silently wrong-looking cards rather than a hard failure, easy to miss in review.",
+          "1hr/24hr cache-control (`CACHE_HEADERS`) means a school that just uploaded a new logo/color could see the OLD card cached at the CDN/social platform edge for up to a day — acceptable today because the card is tenant-agnostic, but becomes a real staleness complaint once it's genuinely personalized; consider shortening `s-maxage` or accepting it as a known limitation (most social platforms re-scrape on demand via their own debuggers anyway)."
+        ],
+        "judgment_calls": [
+          {
+            "id": "og-course-thumbnail",
+            "question": "Courses with a `thumbnail_url` currently use it verbatim as the OG image (bypassing /api/og and any branding). Should that continue?",
+            "options": [
+              "A. Leave thumbnail-first as-is; the branded /api/og card only shows for thumbnail-less courses (products, landing pages already always go through /api/og, so this only affects courses).",
+              "B. Always route courses through /api/og, dropping the `image:` override entirely — course share images lose the raw thumbnail and become the same brand-colored title card as everything else.",
+              "C. Extend /api/og with a course-aware variant that composites the thumbnail (as a background image or side panel) behind/beside the brand color, logo and course title — most faithful to 'branded AND recognizable as this course' but the most implementation work (image-in-image compositing, now TWO remote image fetches per card; thumbnail_url is admin/teacher-supplied and not validated either)."
+            ],
+            "recommendation": "B for a first pass — simplest, consistent with every other public page type, and it's the one place CLAUDE.md's stated goal ('a course share image shows the school's brand color, logo and name') is unambiguous. C is the better long-term answer but should be a separate follow-up once B ships and is validated."
+          },
+          {
+            "id": "og-brand-background-strength",
+            "question": "How brand-forward should the card look once a school has a custom theme — replace the whole background gradient with brand-derived tones, or keep the neutral/dark background and only recolor accents (logo dot, badge border, bottom bar)?",
+            "options": [
+              "A. Minimal: keep the existing near-black gradient structure, recolor only the accent bar / logo dot / badge border to the brand hex. Lowest contrast risk, smallest visual change, ships fastest.",
+              "B. Bolder: derive the whole background gradient from the brand hex via `mixOklch(brand, '#000000', t)` at two stops (mirrors the current purple gradient's tonal shape but keyed to the tenant's hue), with ink chosen via `readableOn()` on the resulting background so AA is guaranteed regardless of brand lightness.",
+              "C. Light card: put the resolved KIT surface background/foreground behind the text (matching the school's actual site theme, light or dark) instead of always-dark — most 'this looks like their site' fidelity, but doubles the surface combinations to reason about (light-mode school + generic card vs dark-mode school)."
+            ],
+            "recommendation": "B — it's the most direct read of 'carries its brand color', reuses only hex-safe helpers (`mixOklch`, `readableOn`), and needs no new contrast logic beyond what lib/color/contrast.ts already provides."
+          },
+          {
+            "id": "og-heading-font",
+            "question": "Should the OG card also swap in the school's KIT_TYPE_PAIRINGS heading font (Instrument Sans / Lora / Outfit / Noto Sans), given it requires a brand-new Google Fonts TTF fetch pipeline satori can consume?",
+            "options": [
+              "A. Ship color+logo+name first, keep `fontFamily: 'sans-serif'` (satori's bundled default) for this pass; add font-swapping as a follow-up once a fetch/caching pipeline exists.",
+              "B. Build the Google-Fonts-CSS2-API → TTF-ArrayBuffer fetch (with module-scope/unstable_cache caching so it's not refetched per request) in this same change."
+            ],
+            "recommendation": "A. Color and logo are the highest-value, lowest-risk part of the issue; font swapping is a genuinely separate technical spike (new external dependency, new caching layer, subsetting/Latin-diacritics correctness for es locale) that shouldn't block or complicate the brand-color/logo work."
+          },
+          {
+            "id": "og-site-param-trust",
+            "question": "The route currently renders whatever `site=`/`issuer=` string the query carries, with no cross-check against the tenant resolved from `x-tenant-id`. Once the route also renders that tenant's REAL logo/brand color, a mismatched query `site=` becomes a more convincing spoof (real logo + fake name) than today's fully-generic card. Should the route validate or simply ignore the query value for identity fields?",
+            "options": [
+              "A. Ignore `site`/`issuer` from the query entirely for identity purposes; always use the server-resolved tenant name (with the certificate variant's `issuer` falling back to that resolved name too, same as it already does at lib/seo.ts callers).",
+              "B. Keep accepting `site=`/`issuer=` as-is (trust the caller, since today only our own generateMetadata functions call this route) and treat it as an accepted, pre-existing risk."
+            ],
+            "recommendation": "A — trivial to do (the route will already have the resolved tenant in hand for logo/color) and removes a needless trust boundary; no legitimate caller needs to override the tenant's own name."
+          }
+        ],
+        "test_plan": [
+          "Unit: add a test (e.g. tests/unit/og-branding.test.ts) asserting the OG route's color derivation only ever produces `#rrggbb` strings for every KIT_THEME_IDS × representative brand hex combo — i.e. assert nothing passed into ImageResponse's style objects matches /oklch\\(/.",
+          "Manual: `curl -H 'x-tenant-slug: code-academy' 'http://localhost:3000/api/og?type=generic&title=Test'` (or hit code-academy.lvh.me:3000/api/og?... directly) with Code Academy's theme_preset set to each of the 4 kit themes + a custom custom_branding-gated hex, and again with NO theme_preset row (default tenant), confirming the platform-purple fallback still renders unchanged.",
+          "Manual: verify the route degrades gracefully (falls back to text-only, no 500) when logo_url points at a 404, a non-image content-type, and an SVG.",
+          "Manual: paste the /api/og output URLs into Facebook's Sharing Debugger / Twitter Card Validator for a couple of real school subdomains to sanity-check crawler-side rendering (these tools ignore normal HTTP cache headers and re-fetch).",
+          "Playwright/vitest: no existing spec covers OG metadata directly — add a lightweight test hitting /api/og with a known-branded test tenant and asserting the response is a valid image (content-type image/png) rather than an error, since force-dynamic plus a new DB read is a failure mode that didn't exist when the route was pure string interpolation.",
+          "Re-verify courses/[id] once og-course-thumbnail is decided: if choosing option B, confirm buildPageMetadata callers for courses no longer receive image: and that the resulting Twitter/OpenGraph tags point at /api/og, not the raw thumbnail_url."
+        ]
+      },
+      {
+        "area": "color engine reuse + server-side school-brand resolver + tenants.primary_color/secondary_color cleanup (issue #765)",
+        "summary": "deriveKitVars(theme,brand) in lib/themes/kit.ts:428-436 returns a light/dark CSSVariableMap that mixes two formats: the neutral surface vars (background/foreground/card/popover/muted/accent/border/sidebar*, kit.ts:381-401) are literal oklch() strings straight from KIT_SURFACES; --primary-foreground/--sidebar-primary-foreground (kit.ts:404-407) are also oklch() (KIT_LIGHT_INK/KIT_DARK_INK constants, kit.ts:75-77); everything else -- --brand, --primary, --brand-tint, --brand-text, --ring, --sidebar-ring, --chart-1..5 -- is already #rrggbb hex because they flow through mixOklch()/readableButton()/accentTextOn() which all bottom out in toHex() (contrast.ts:487-489). lib/color/contrast.ts already has a full oklch/oklab/lab/lch/hsl->sRGB parser (parseColor, contrast.ts:185-269) and toHex (contrast.ts:487), so converting any still-oklch var to hex is a one-line toHex(parseColor(v)!) away -- no new color math needed. readableButton(color,{dark,lightInk,darkInk}) (contrast.ts:402-425) returns {background: string (hex or unmixed input), ink: string (one of the two ink constants passed in, or shiftedInk), shifted: boolean}. For emails/PDF/OG we need literal hex for: brand (already hex), button background = btn.background (already hex), button ink = btn.ink (oklch at the kit.ts callsite, needs toHex(parseColor())), and brand-on-white text -- NOT the same as the kit's --brand-text (computed against the school's own surfaces); for a white email/OG canvas it must be recomputed as accentTextOn(brand, '#ffffff'). Proposal: a pure `deriveKitHexPalette(theme, brand)` co-located in lib/themes/kit.ts, reusing kitTheme/normalizeKitBrand/readableButton/accentTextOn directly, returning {brand, buttonBackground, buttonInk, brandTextOnWhite, tintOnWhite} all guaranteed #rrggbb, computed against a fixed white canvas regardless of the school's own surface set. A getSchoolBrand(tenantId) server loader belongs in lib/themes/school-brand.ts, built on createAdminClient() (never the request-scoped @/lib/supabase/server client, since webhooks/cron have no cookies/headers) and NOT unstable_cache (that cache is process-wide and long-lived -- risky for cron/webhook callers writing a stale value into a sent email); it should join tenants(name, logo_url, plan) + tenant_settings(site_name/logo_url/theme_preset) the way app/[locale]/layout.tsx:85-97 does, run hasPlanFeature(tenantId,'custom_branding') (already admin-client + React cache()-safe, lib/plans/server.ts:79-81), resolveSchoolTheme(...) (kit.ts:359-367), then deriveKitHexPalette, falling back to a platform default when no theme row exists. On cleanup: tenants.primary_color/secondary_color are NOT dead. Zero reads of tenant.primary_color/secondary_color exist anywhere in app/, components/, lib/ outside the unrelated certificate_templates.design_settings JSONB field (a different per-template concept). The web app stopped writing these columns at #763; migration supabase/migrations/20260915140000_theme_kit_only.sql:21-23 explicitly kept the columns alive because \"MCP widgets still read them (#765)\" -- confirmed live at mcp-server/src/branding.ts:56 and mcp-server/src/tools/landing-pages.ts:255, feeding mcp-server/views/shared/branding.tsx's widget color ramp. Since nothing writes these columns anymore, MCP widgets are already rendering stale/wrong brand colors for any school that changed its kit brand post-#763 -- a live instance of #765's problem on a third surface (MCP widgets) beyond email/certificates/OG.",
+        "files": [
+          {
+            "path": "lib/themes/kit.ts",
+            "current": "deriveKitVars (428-436) is the only public function combining theme+brand into CSS vars; no hex-only export exists yet. Lines 381-401 emit raw oklch() surface tokens; lines 404-407 emit oklch() ink constants for --primary-foreground.",
+            "change": "Add `export function deriveKitHexPalette(theme: unknown, brand: unknown): { brand: string; buttonBackground: string; buttonInk: string; brandTextOnWhite: string; tintOnWhite: string }`. Reuse kitTheme()/normalizeKitBrand() for theme+brand resolution, call readableButton(normalized, {dark:false, lightInk, darkInk}) with the inks pre-converted to hex (toHex(parseColor(KIT_LIGHT_INK)!) etc.) so buttonInk comes out hex directly, and accentTextOn(normalized, '#ffffff') for brandTextOnWhite. dark:false is a judgment call -- see judgment_calls kit-dark-default."
+          },
+          {
+            "path": "lib/color/contrast.ts",
+            "current": "parseColor (185), toHex (487) already handle oklch/oklab/lab/lch/hsl/hex/keywords -> #rrggbb; no gap here.",
+            "change": "No change needed. Reuse as-is from the new kit.ts function; do not duplicate conversion logic."
+          },
+          {
+            "path": "lib/themes/school-brand.ts (new)",
+            "current": "Does not exist. Closest analog is app/[locale]/layout.tsx:85-97's getTenantSettings, which is request/header-bound (reads headers() via getCurrentTenant) and unstable_cache-wrapped -- unusable from webhooks/cron which have no request context.",
+            "change": "Add getSchoolBrand(tenantId: string): Promise<{ name: string; logoUrl: string|null; brand: string; buttonBackground: string; buttonInk: string; brandTextOnWhite: string; headingFont: string /* literal font-family fallback stack from KIT_TYPE_PAIRINGS[...].heading, not fontStack()'s var(--font-x) -- emails can't use CSS vars either */ }>. Body: createAdminClient(), select tenants(name, logo_url, plan) + tenant_settings(setting_key in ['site_name','logo_url', SCHOOL_THEME_SETTING_KEY]) filtered by tenant_id, await hasPlanFeature(tenantId,'custom_branding'), resolveSchoolTheme(...), deriveKitHexPalette(...) if a theme row exists else the platform fallback (see judgment_calls platform-default)."
+          },
+          {
+            "path": "supabase/migrations/ (new, deferred)",
+            "current": "tenants.primary_color/secondary_color columns exist (20260216200000_create_multi_tenant_infrastructure.sql:16-17, defaults '#2563eb'/'#7c3aed'), still actively selected by mcp-server/src/branding.ts:56 and mcp-server/src/tools/landing-pages.ts:255, and typed on every `tenants` row in lib/supabase/tenant.ts:10-11 + lib/database.types.ts:6128-6129/6149-6150/6170-6171.",
+            "change": "DO NOT drop yet. First port getSchoolBrand()/deriveKitHexPalette() (or a kit-aware equivalent) into mcp-server so branding.ts and landing-pages.ts read the school's actual kit theme (tenant_settings.theme_preset) instead of the frozen tenants columns -- mirrors the existing contrast.ts <-> mcp-server/views/shared/contrast.ts hand-sync pattern (kit.ts:18-24), with a parity test like tests/unit/contrast-mirror-parity.test.ts. Only once mcp-server no longer selects primary_color/secondary_color is a DROP COLUMN migration safe; then also delete the fields from lib/supabase/tenant.ts:10-11, packages/core/src/types/index.ts:13-14 (unused, zero reads found in this repo), and hand-edit lib/database.types.ts:6128-6129/6149-6150/6170-6171 (db:types targets --linked/CLOUD and `gen types --local` fails per repo memory, so this needs a manual edit or a post-migration cloud regenerate, not local codegen)."
+          },
+          {
+            "path": "scripts/seed-free-academy.ts",
+            "current": "Line 162 inserts a tenants row with `primary_color: '#7c3aed'` directly -- one of the few remaining writers of the column.",
+            "change": "Leave until the column-drop migration; update alongside it (drop the field, or switch to inserting a theme_preset tenant_settings row so the seeded tenant gets a real kit theme)."
+          }
+        ],
+        "facts": [
+          "deriveKitVars() light/dark output mixes formats: surface-derived vars (background/foreground/card/popover/muted/secondary/accent/border/input/sidebar*) and --primary-foreground/--sidebar-primary-foreground are oklch() strings; --brand/--primary/--sidebar-primary/--brand-tint/--brand-text/--ring/--sidebar-ring/--chart-1..5 are already #rrggbb hex (kit.ts:381-419).",
+          "readableButton()'s ink parameter is caller-supplied; the kit.ts callsite (deriveMode, lines 372-376) always passes KIT_LIGHT_INK/KIT_DARK_INK, both oklch() literals (kit.ts:75-77), so btn.ink in kit.ts is oklch unless the caller passes hex inks instead.",
+          "lib/color/contrast.ts already implements oklch/oklab/lab/lch->sRGB conversion (parseColor, oklabToRgb, labToRgb) and toHex -- no new conversion math is needed anywhere in this feature, only composition.",
+          "app/[locale]/layout.tsx's getTenantSettings (line 85-97) is unstable_cache-wrapped with a 60s revalidate and only reachable via getCurrentTenant()/headers() -- not usable from a request-less context (webhook, cron); a school-brand loader needs a fresh, header-free implementation.",
+          "hasPlanFeature/getTenantPlan (lib/plans/server.ts:46-81) already use createAdminClient() + React cache() and take tenantId as a plain argument (no headers/cookies) -- directly reusable from any server context including cron/webhooks.",
+          "tenants.primary_color/secondary_color are written nowhere in the current web app (zero `.primary_color`/`.secondary_color` reads on a tenant/tenants object anywhere in app/, components/, lib/ except the unrelated certificate_templates.design_settings JSONB field) -- frozen at seed/migration defaults for any tenant not manually touched since.",
+          "mcp-server/src/branding.ts:56 and mcp-server/src/tools/landing-pages.ts:255 are the only LIVE readers of tenants.primary_color/secondary_color left, feeding mcp-server/views/shared/branding.tsx's widget color ramp; supabase/migrations/20260915140000_theme_kit_only.sql:21-23 explicitly kept the columns alive for this reason and names issue #765.",
+          "certificate_templates.design_settings.primary_color/secondary_color (lib/certificates/default-design.ts) is a wholly separate per-template JSONB field (default #3B82F6/#1E40AF) unrelated to the tenants table columns; do not conflate the two in any cleanup migration.",
+          "Platform default brand in app/globals.css is oklch(0.52 0.105 223.128) light / oklch(0.45 0.085 224.283) dark (teal-cyan, ~#007595 in hex by direct sRGB conversion) -- but every transactional email template (lib/email/templates/*.ts) hardcodes an unrelated blue #2563eb for headings/buttons, so today's 'no theme row' email fallback doesn't even match the platform's own CSS default."
+        ],
+        "risks": [
+          "Recomputing brand-on-white values fresh (accentTextOn(brand, '#ffffff')) rather than reusing --brand-text is correct for a white email canvas but is a distinct code path from deriveKitVars -- must not silently drift; a shared unit test asserting both stay AA-legible on their respective surfaces is worth adding alongside tests/unit/theme-kit.test.ts.",
+          "mcp-server cannot import from lib/ (kit.ts's own comment at lines 18-24 documents the contrast.ts mirroring reason) -- any mcp-server-side kit-brand fix requires a hand-mirrored copy plus a parity test, real engineering work, not a quick column-read swap.",
+          "Dropping tenants.primary_color/secondary_color before mcp-server is migrated off them will silently break mcp-server/src/branding.ts's select() (PostgREST 42703 on the missing column) and blank out every MCP widget's brand ramp -- sequencing matters.",
+          "lib/database.types.ts is generated from --linked (cloud) per CLAUDE.md/memory, and local `gen types --local` fails -- any column drop's type-file edit will likely need to be done by hand or deferred until a cloud generate runs post-migration, creating a window where types and schema disagree if not careful.",
+          "getSchoolBrand() must never be built on the request-scoped @/lib/supabase/server client or getCurrentTenant()/headers() -- existing helpers (getCurrentTenant, getTenantSettings) look reusable but are both header-bound and wrong for the webhook/cron callers this loader is explicitly for."
+        ],
+        "judgment_calls": [
+          {
+            "id": "platform-default",
+            "question": "What hex brand should getSchoolBrand()/emails fall back to when a school has no theme_preset row (the 'no theme = platform palette' case)?",
+            "options": [
+              "Convert the CURRENT platform default oklch(0.52 0.105 223.128) to hex (~#007595, teal) and use it everywhere emails/OG currently hardcode #2563eb -- matches app/globals.css exactly as it is today.",
+              "Adopt the epic's proposed future default, Estructura's recommended swatch Tinta azul #3A50B8 (kit.ts:183) -- matches where the platform is headed per the epic, but disagrees with app/globals.css until that file itself is repointed.",
+              "Keep the legacy #2563eb the templates already hardcode, to avoid a visual diff in this PR, and treat the mismatch as a separate follow-up."
+            ],
+            "recommendation": "Option 1 (convert today's actual --primary to hex) for correctness now; treat the Estructura-default question as a separate decision for whoever owns the epic's future-default proposal, since repointing the platform's own default color is out of scope for a 'reuse the existing engine' issue."
+          },
+          {
+            "id": "kit-dark-default",
+            "question": "deriveKitHexPalette needs a `dark` flag for readableButton (button ink contrast depends on light vs dark surface). Kódigo's defaultMode is 'dark' (kit.ts:211) -- should the email/OG hex palette use the school's own defaultMode, or always assume a white/light canvas?",
+            "options": [
+              "Always dark:false / white canvas -- emails and OG cards are conventionally white regardless of in-app theme; matches brandTextOnWhite/tintOnWhite already being scoped to a white surface.",
+              "Use kitDefaultMode(theme.theme) to pick dark vs light, so a Kódigo school's transactional email matches its in-app dark aesthetic."
+            ],
+            "recommendation": "Option 1 (always white canvas) -- simpler, avoids unreadable dark-on-dark emails in mail clients that ignore prefers-color-scheme, keeps the function's surface assumption single and testable. Revisit only if a school asks for dark-mode email support specifically."
+          },
+          {
+            "id": "mcp-drop-sequencing",
+            "question": "Should #765 include migrating mcp-server off tenants.primary_color/secondary_color and dropping the columns, or stop at the hex-palette function + getSchoolBrand() for the web app's own emails/OG/certificates, leaving MCP + column drop as a follow-up?",
+            "options": [
+              "Do both in one PR: mirror deriveKitHexPalette into mcp-server (new hand-synced file + parity test, following the existing contrast.ts mirror pattern), repoint branding.ts/landing-pages.ts to read tenant_settings.theme_preset via the caller's RLS-scoped client, then drop the tenants columns.",
+              "Scope #765 to web-app-facing consumers (emails/certificates/OG) only; leave tenants.primary_color/secondary_color and mcp-server untouched, open a follow-up issue for the MCP-side migration + column drop."
+            ],
+            "recommendation": "Option 2 -- the MCP mirroring is real scope (new file, new parity test, RLS-scoped client instead of admin client since MCP tools run per-caller) and conflating it with the emails/certificates/OG work risks a much larger PR; the migration comment already deferred the column drop to '#765' as a marker, not a deadline."
+          }
+        ],
+        "test_plan": [
+          "npx vitest run tests/unit/theme-kit.test.ts tests/unit/theme-kit-tokens.test.ts tests/unit/color-contrast.test.ts tests/unit/contrast-mirror-parity.test.ts -- confirm nothing existing breaks from adding deriveKitHexPalette (pure addition, no signature changes to deriveKitVars/deriveKitStructure).",
+          "New unit test for deriveKitHexPalette: assert every returned value matches /^#[0-9A-F]{6}$/i for all 4 KIT_THEME_IDS x each theme's 6 swatches (24 combos) plus a few arbitrary custom-branding hexes, and assert buttonInk/buttonBackground clear AA_CONTRAST (4.5) against each other, and brandTextOnWhite clears AA against '#ffffff'.",
+          "New unit test for getSchoolBrand(): mock/seed a tenant with a theme_preset row and one without, assert the no-row case returns the agreed platform-default hex (see judgment call platform-default) and the with-row case matches deriveKitHexPalette(theme,brand) exactly, and assert a non-custom_branding-plan tenant with a custom brand hex stored falls back to its theme's recommended swatch (mirrors resolveSchoolTheme's existing gating, kit.ts:359-367).",
+          "Manual/integration: render one existing email template (e.g. lib/email/templates/enrollment-confirmed.ts) with getSchoolBrand() output substituted for the hardcoded #2563eb, for a Kódigo-themed tenant and a no-theme tenant, and visually confirm button/heading legibility in a real mail client preview (Mailpit, per repo's local dev setup) since email CSS support is narrower than a browser's."
+        ]
+      },
+      {
+        "area": "QA method + test infra for #765 (school branding in emails, certificate PDFs, OG images)",
+        "summary": "None of the three surfaces named in #765 read a school's theme kit today; all three are hardcoded to platform colors/fonts, confirmed by reading the code and by local DB state. Mailpit is a dead end for QA: `supabase_inbucket_lms-front` (config.toml:96-98, port 54324) only captures Supabase Auth's own SMTP (OTP/magic-link), never the app's transactional mail — `lib/email/send.ts` always calls the real Mailgun API (`lib/email/client.ts:11` hardcodes `https://api.mailgun.net`), and MAILGUN_API_KEY/MAILGUN_DOMAIN are unset in `.env.local`, so `isMailerConfigured()` is false locally and `sendEmail()` no-ops. The honest QA path is a `scripts/qa-*.ts` script (tsx, following the exact pattern of `scripts/qa-contact-sheet.ts`/`qa-theme-gif.ts`) that imports the template functions directly with `@/` aliases, writes `.html` files, and screenshots them with `playwright`'s `chromium` (not the app dev server) — the same approach those two existing scripts already use for theme matrices. For certificates, no PDF rasterizer is installed locally (`pdftoppm`/`mutool`/`magick`/`convert` all missing) — recommend either installing poppler (`brew install poppler`) or screenshotting `generateCertificateHTML()`'s HTML view instead (served at `/api/certificates/view/[code]`), flagged below as a judgment call since HTML and PDF are two separately-hardcoded renderers that already disagree with each other (green `#1a5632`/`#0f2b1a` in both HTML+PDF generators vs. blue `#3B82F6` in `default-design.ts`'s own reference object) and a screenshot of one doesn't prove the other. For OG, hit `http://default.lvh.me:3005/api/og?...` (BASE_URL in `.env.local` is `http://lvh.me:3005`, not the E2E-pinned 3005 note in memory being about Playwright's *own* webServer — same port here). Local DB already has one of the two acceptance-criteria tenants themed: Default School (`00000000-0000-0000-0000-000000000001`, plan `starter`) has `tenant_settings.theme_preset = {\"type\":\"kit\",\"theme\":\"kodigo\",\"brand\":\"#F2B705\"}` (Kódigo/Amarillo) with course 1002 having no active `certificate_templates` row (good default-design test case) and course 1001 having a custom template (`design_settings: {\"primary_color\":\"#1a5632\",\"secondary_color\":\"#0f2b1a\"}` — good \"custom unchanged\" test case). Code Academy (`...002`, plan `enterprise`) has no `theme_preset` row at all, so it renders the platform palette, not Andina — getting it to Andina/Verde andino for QA is a judgment call (see below). `lib/color/contrast.ts::parseColor` + `toHex` already convert every CSS color function (oklch/oklab/lab/lch/hsl/rgb) to hex, and `deriveKitVars()` itself already returns `--brand`/`--primary`/`--brand-tint`/`--brand-text` as concrete hex (only the neutral surface tokens in `KIT_SURFACES` are raw `oklch()` strings) — so email/cert/OG code needs zero new color-math, just needs to call `deriveKitVars(theme, brand)` and `KIT_TYPE_PAIRINGS[t.typePairing].heading` server-side and thread the hex + font name into the template/PDF/OG builders, which today accept no such params at all.",
+        "files": [
+          {
+            "path": "lib/email/templates/invitation.ts",
+            "current": "Lines 15-16, 19: hardcoded `color:#2563eb` (h2) and `background:#2563eb` (CTA button); `font-family:sans-serif` (no heading-font param); function signature `InvitationEmailData` (schoolName, inviterName, role, joinUrl) has no brand/logo/font fields at all.",
+            "change": "Add optional `brand?: {primaryHex: string; headingFont: string; logoUrl?: string|null}` to the data interface; replace the two `#2563eb` literals with `data.brand?.primaryHex ?? '#2563eb'`; swap `font-family:sans-serif` for a `font-family:${headingFontStack},sans-serif` on the h2 only (body stays system sans for deliverability); optionally prepend a logo `<img>` when `logoUrl` is set."
+          },
+          {
+            "path": "lib/email/templates/enrollment-confirmed.ts",
+            "current": "Lines 12, 15: same `#2563eb` hardcode for h2 color and CTA button background; no brand param.",
+            "change": "Same pattern as invitation.ts."
+          },
+          {
+            "path": "lib/email/templates/certificate-issued.ts",
+            "current": "Lines 14, 18: `color:#2563eb` h2, `background:#2563eb` primary CTA; no brand param.",
+            "change": "Same pattern as invitation.ts."
+          },
+          {
+            "path": "app/actions/admin/invitations.ts",
+            "current": "Lines ~99-104: calls `invitationTemplate({schoolName, inviterName, role, joinUrl})` — has `tenantId` in scope (it's a param of the action) but never fetches theme_preset or resolves brand/font before building the template.",
+            "change": "Before building the template, fetch `tenant_settings.theme_preset` (+ `hasPlanFeature(tenantId,'custom_branding')`) via `resolveSchoolTheme`, call `deriveKitVars`/`KIT_TYPE_PAIRINGS` to get hex+font, and pass as `brand` to `invitationTemplate()`. This is the pattern to replicate at the other two call sites (`app/api/certificates/issue/route.ts:165,378` and `app/api/stripe/webhook/route.ts:268`)."
+          },
+          {
+            "path": "lib/certificates/default-design.ts",
+            "current": "Lines 10-14: `DEFAULT_CERTIFICATE_DESIGN = { primary_color: '#3B82F6', secondary_color: '#1E40AF', show_qr_code: true }` — hardcoded platform blue, used as the \"what counts as custom\" baseline by `hasCustomCertificateDesign()`.",
+            "change": "Judgment call — see judgment_calls[0]. This constant needs to either become tenant-aware (computed per-tenant from the kit brand, which changes what `hasCustomCertificateDesign()` compares against) or stay a fixed platform baseline while the *renderers* (pdf-generator.tsx, certificate-generator.ts) get a separate tenant-brand fallback layered on top when `design_settings` is absent entirely (vs. present-and-default)."
+          },
+          {
+            "path": "lib/certificates/pdf-generator.tsx",
+            "current": "Line ~99-100 (`createStyles`): `const primary = config?.primaryColor || '#1a5632'; const secondary = config?.secondary_color || '#0f2b1a';` — falls back to a hardcoded dark green, NOT to `DEFAULT_CERTIFICATE_DESIGN`'s blue, when no `certificate_templates` row exists or `design_settings` is null. `fontFamily: 'Helvetica'` is also hardcoded on `page` style — no heading-font plumbing at all (react-pdf can't load arbitrary Google Fonts without registering them, which is a real constraint for this fix).",
+            "change": "Accept a tenant-brand fallback (hex + heading font family) as a new param, used only when `designConfig` is entirely absent (no template) — never override an explicit custom `design_settings`. Heading font requires `Font.register()` with a font file URL per `@react-pdf/renderer`'s API; Google Fonts TTF URLs work but add a new external fetch at PDF-generation time — flag as a risk."
+          },
+          {
+            "path": "lib/certificate-generator.ts",
+            "current": "Lines 34-35: `const primaryColor = data.designSettings?.primary_color || '#1a5632'; const secondaryColor = data.designSettings?.secondary_color || '#0f2b1a';` (same green default as pdf-generator.tsx, disagreeing with default-design.ts's blue); line 85 `font-family: 'DM Sans', system-ui, sans-serif` on body, headings pinned to `'Cormorant Garamond', 'Georgia', serif'` at lines 231/244/255/284/323/347 — none of this reads the school's kit font/brand.",
+            "change": "Same tenant-brand-fallback pattern as pdf-generator.tsx; this one is plain HTML/CSS so swapping the heading `font-family` to the kit's `KIT_TYPE_PAIRINGS[...].heading` Google Font name is trivial (no font-registration constraint, unlike react-pdf)."
+          },
+          {
+            "path": "app/api/og/route.tsx",
+            "current": "Entire file: fixed purple/violet palette (`#120b24`,`#241245`,`#a78bfa`,`#7c3aed`,`#c4b5fd`,`#22c55e` etc., lines 51,64,82,102,132,150,163,197,215) for both the `certificate` and `generic` card variants; no `site`/`logo`/`brand` color param is ever read from the request beyond text strings; `ImageResponse`'s built-in font is always the default sans, no heading-font param.",
+            "change": "Add `brand`/`logoUrl` (and optionally `font`) query params, read them in the route, and swap the two gradient/accent hardcodes for the passed hex (with server-side validation/allowlist since these are untrusted query params reflected into inline styles — must validate as `#RRGGBB` before interpolating). Judgment call — see judgment_calls[1] on whether `next/og`'s Satori renderer can load a school's custom TTF via `ImageResponse`'s `fonts` option at request time."
+          },
+          {
+            "path": "lib/seo.ts",
+            "current": "Lines 65-70 (`buildPageMetadata`): builds the OG image URL via `ogImageUrl({title, subtitle, site, badge})` — never passes tenant logo/brand/font even though `getSeoContext()` already resolves the full `Tenant` object (`tenant.logo_url` is available at line ~28-31).",
+            "change": "Thread tenant brand hex + logo URL + heading font into `ogImageUrl()`'s params once `/api/og` accepts them."
+          },
+          {
+            "path": "lib/supabase/tenant.ts",
+            "current": "Lines 4-14: `Tenant` interface has dead `primary_color`/`secondary_color: string` fields (confirmed by grep: nothing reads `.primary_color` off a tenant object anywhere in app/lib) — leftover from pre-theme-kit legacy theming that #763/#764 already deleted from the UI.",
+            "change": "Not in scope to fix for #765, but flag: don't be misled into wiring OG/email/cert to these dead columns — the real source of truth is `tenant_settings.theme_preset` via `resolveSchoolTheme()`, exactly as `app/[locale]/layout.tsx:145` already does it."
+          }
+        ],
+        "facts": [
+          "supabase/config.toml:96-100 — [inbucket] enabled=true, port=54324, smtp_port commented out; this is Supabase Auth's mail capture, unrelated to app email.",
+          "lib/email/client.ts:11 — Mailgun client URL hardcoded to `https://api.mailgun.net` (or `MAILGUN_API_URL` env override); never points at local Inbucket.",
+          ".env.local has no MAILGUN_API_KEY/MAILGUN_DOMAIN lines → `isMailerConfigured()` (lib/email/status.ts:25) is false locally → `sendEmail()` (lib/email/send.ts:20-22) logs a warning and returns false without ever building an HTTP request.",
+          "docker ps confirms container `supabase_inbucket_lms-front` is running locally alongside `supabase_db_lms-front`.",
+          "`which pdftoppm mutool magick convert` all report not found on this machine — no local PDF rasterizer.",
+          "playwright.config.ts:11-12 — `baseURL = process.env.BASE_URL || 'http://lvh.me:3000'`; `.env.local` sets `BASE_URL=http://lvh.me:3005`, `E2E_BASE_URL=http://lvh.me:3005`, `E2E_TENANT_BASE_URL=http://code-academy.lvh.me:3005` — local dev/E2E both run on port 3005.",
+          "scripts/qa-contact-sheet.ts and scripts/qa-theme-gif.ts both: run via `npx tsx scripts/qa-*.ts <args>`, import `chromium` from `playwright` directly (not via the running app), read `.png` files off disk written by an earlier capture pass, and compose an HTML page rendered offscreen for the final screenshot/gif — this is the established convention for issue #764's theme QA and is the template to follow for #765's email/cert/OG QA.",
+          "DB (local, read-only SELECT via `docker exec supabase_db_lms-front psql`): tenant `00000000-0000-0000-0000-000000000001` (slug `default`, plan `starter`) has `tenant_settings.setting_key='theme_preset'` = `{\"type\":\"kit\",\"theme\":\"kodigo\",\"brand\":\"#F2B705\"}` (Kódigo/Amarillo, matches KIT_THEMES.kodigo.swatches[0]).",
+          "DB: tenant `00000000-0000-0000-0000-000000000002` (slug `code-academy`, plan `enterprise`) has NO theme_preset row at all → renders the platform palette (`resolveSchoolTheme` returns null), NOT Andina — so the Andina/Verde-andino acceptance case is not currently reachable by just opening this tenant.",
+          "DB: `certificate_templates` — tenant 001/course 1001 (\"Introduction to Testing\") has an active template `QA764C Template` with `design_settings={\"primary_color\":\"#1a5632\",\"secondary_color\":\"#0f2b1a\"}` (custom, should stay unchanged by #765). Tenant 001/course 1002 (\"Web Development Basics\") has no active template → exercises the default-design path.",
+          "lib/themes/kit.ts:174-239 — KIT_THEMES: estructura (typePairing structured, corners soft), andina (typePairing classic → heading Lora/body Public Sans, corners soft, swatches[0]={'#2F6B4F','Verde andino'}), kodigo (typePairing plain → heading=body=Noto Sans, corners sharp, defaultMode dark, swatches[0]={'#F2B705','Amarillo'}), luz (typePairing friendly → heading Outfit/body Figtree, corners round).",
+          "lib/themes/kit.ts:428-436 `deriveKitVars(theme, brand)` returns hex strings for `--brand`/`--primary`/`--primary-foreground`/`--brand-tint`/`--brand-text` (all run through `readableButton`/`mixOklch`/`accentTextOn` from lib/color/contrast.ts, which already emit `#rrggbb`); only the neutral `KIT_SURFACES` background/card/etc. tokens (kit.ts:96-168) are raw `oklch()` strings requiring `parseColor`+`toHex` if ever needed as a literal hex.",
+          "lib/color/contrast.ts exports `parseColor` (handles hex/rgb/hsl/oklab/oklch/lab/lch/named keywords → RGB) and `toHex` — sufficient to convert any surviving oklch() string to a literal hex for email-safe HTML.",
+          "app/api/og/route.tsx: entire file is two hardcoded purple/violet gradient card variants (`generic`, `certificate`); no tenant/brand/logo query param exists or is read anywhere.",
+          "lib/seo.ts:34-42 `ogImageUrl()` + `buildPageMetadata()` (lines 65-70) only ever pass `title`/`subtitle`/`site`/`badge` into the OG URL, even though `getSeoContext()` (lines 26-32) already has the full `Tenant` object (with `logo_url`) in scope — the plumbing gap is entirely on the caller side, not just the route.",
+          "app/[locale]/layout.tsx:85-97,119-146 is the canonical reference implementation for resolving a tenant's theme server-side: `unstable_cache`'d `tenant_settings` fetch (site_name/logo_url/favicon_url/theme_preset), `hasPlanFeature(tenant.id,'custom_branding')`, then `resolveSchoolTheme(tenantSettings[SCHOOL_THEME_SETTING_KEY], {customBranding})`.",
+          "lib/plans/features.ts:56 — `custom_branding: 'business'` (FEATURE_REQUIRED_PLAN), i.e. only Business+ plans may pick an off-swatch custom hex; Default School (starter) and current DB state are both on-swatch, so no custom_branding gating interacts with the #765 QA matrix as currently seeded.",
+          "tests/unit/theme-kit.test.ts (665 lines) and theme-kit-tokens.test.ts (234 lines) already exhaustively test deriveKitVars/deriveKitStructure/contrast, but nothing in tests/unit currently imports lib/email/templates/*, lib/certificate-generator.ts, lib/certificates/pdf-generator.tsx, or app/api/og/route.tsx — zero unit coverage today ties any of the three #765 surfaces to the theme kit.",
+          "Existing Playwright specs: certificate-issuance.spec.ts and certificate-verification.spec.ts cover issuance/verification flow only (no color/font assertions); email-mailer-state.spec.ts only checks the mailer-configured banner; theme-kit-picker.spec.ts covers the picker UI + storefront/student rendering, not emails/certs/OG.",
+          "lib/certificates/default-design.ts:10-14 default `primary_color:'#3B82F6'` disagrees with the actual runtime fallback hardcoded in both lib/certificate-generator.ts:34-35 and lib/certificates/pdf-generator.tsx:~99-100, which both fall back to `#1a5632`/`#0f2b1a` (dark green) — three different 'defaults' already disagree with each other before #765 adds a fourth (school brand)."
+        ],
+        "risks": [
+          "Untrusted query params reflected into /api/og's inline styles (a new `brand` hex param) must be validated as strict `#RRGGBB` server-side before interpolation — Satori/ImageResponse doesn't sandbox arbitrary CSS injection the way a real browser would, and the route is publicly reachable with no auth.",
+          "react-pdf (`lib/certificates/pdf-generator.tsx`) cannot use CSS font-family stacks — a school's Lora/Outfit/Figtree heading font requires `Font.register()` with an actual font file fetched at generation time (network call inside a server action / API route), which is slower and can fail; today's `fontFamily: 'Helvetica'` is a static built-in with no such risk. This is a materially bigger lift than the HTML/email versions.",
+          "Mailgun's HTML sanitization/CSS-inlining on delivery is unverified by this survey — a rendered-locally screenshot of the raw HTML file is not proof the same markup survives Mailgun's transform and major inbox clients (Gmail strips `<style>` blocks, inline-only survives reliably) — the QA script must screenshot the exact inline-styled HTML, not a version with a `<style>` block, to match what templates already do (they're already all-inline, which is good).",
+          "Code Academy (tenant 002) has no theme_preset row — getting a real \"Andina/Verde andino\" tenant for true end-to-end (not just template-unit) QA requires either writing that row (a DB mutation, out of scope for this read-only survey) or driving the picker UI through the app once implementation exists.",
+          "The three certificate 'default' colors (`#3B82F6` in default-design.ts vs `#1a5632`/`#0f2b1a` in the two renderers) already disagree pre-#765; fixing #765 without reconciling these first risks a fourth inconsistent fallback layer rather than a clean one.",
+          "certificate_templates row for Code Academy has `course_id: null` (seen in the DB dump) — an oddity from prior QA/#764c work; don't assume every template row maps to a real course when picking a #765 test fixture."
+        ],
+        "judgment_calls": [
+          {
+            "id": "cert-pdf-vs-html-screenshot",
+            "question": "What exactly gets screenshotted to satisfy \"Default certificate PDF uses the brand color and heading font\"? No PDF rasterizer (pdftoppm/mutool/magick) is installed locally.",
+            "options": [
+              "Install poppler (`brew install poppler`) once and rasterize the real PDF's page 1 to PNG with `pdftoppm -png -r 150 -f 1 -l 1 cert.pdf out` — proves the actual shipped artifact.",
+              "Screenshot lib/certificate-generator.ts's HTML view (`/api/certificates/view/[code]`) instead — no new tooling, but it's a *second*, separately-hardcoded renderer (already has a different default green than the PDF's reference object) and passing this screenshot does not prove the PDF itself was fixed.",
+              "Use a JS-only PDF renderer (pdfjs-dist + node-canvas) inside a QA script — no brew dependency, but adds a new dev dependency for a one-off QA need."
+            ],
+            "recommendation": "Install poppler locally (one-time, `brew install poppler`, not a code change) and rasterize the real PDF — it's the only option that actually verifies the shipped artifact, and the other two either test the wrong renderer or add a permanent new dependency for a one-off screenshot."
+          },
+          {
+            "id": "andina-tenant-for-qa",
+            "question": "Code Academy (only enterprise-plan tenant, other candidate for the Andina/Verde-andino QA cell) has no theme_preset row today. How does the QA script get an Andina-themed rendering without a live DB write?",
+            "options": [
+              "Script computes `deriveKitVars('andina', '#2F6B4F')` + `KIT_TYPE_PAIRINGS.classic.heading` directly and feeds the hex/font into the template functions as literal args — no tenant, no DB row, fully deterministic and reviewable in a diff.",
+              "Ask a human to go through the actual theme-kit picker UI in the browser to set Code Academy to Andina/Verde andino, then run the QA script against that real tenant end-to-end.",
+              "Seed a new throwaway tenant via a migration/seed script exactly for this QA matrix (mirrors how plan-gate specs get their own hidden tenant per tests/README.md conventions)."
+            ],
+            "recommendation": "Use the first option for the template-level unit/visual QA (fast, no side effects, covers the matrix in tests/unit + the qa script) and reserve the picker-UI route only for the one true end-to-end Playwright spec that proves the picker → email/cert/OG pipeline actually wires up in the running app."
+          },
+          {
+            "id": "default-cert-design-source-of-truth",
+            "question": "Should DEFAULT_CERTIFICATE_DESIGN (lib/certificates/default-design.ts, blue #3B82F6) become tenant-brand-aware itself, or should the school-brand fallback live only in the two renderers, leaving default-design.ts as a fixed platform baseline used purely to decide 'is this custom'?",
+            "options": [
+              "Make DEFAULT_CERTIFICATE_DESIGN a function of tenant brand — `hasCustomCertificateDesign()`'s comparison then has to compare against the *tenant's* default, not a fixed constant, which is a bigger, riskier change (touches the editor's initial state and the save-action's custom-tier check too).",
+              "Leave default-design.ts untouched (fixed platform baseline for the 'is this custom' check) and add a *separate* tenant-brand fallback only inside pdf-generator.tsx/certificate-generator.ts, applied only when `design_settings` is entirely null (no template row) — never when a template exists with the platform-default colors explicitly saved."
+            ],
+            "recommendation": "Second option — narrower blast radius, matches the acceptance criterion's own wording ('custom templates unchanged'), and doesn't touch the Starter-tier custom-design gate logic at all."
+          }
+        ],
+        "test_plan": [
+          "Unit (Vitest, tests/unit/, run with `npx vitest run tests/unit/<file>.test.ts`):",
+          "1. New tests/unit/email-branding.test.ts — for each of {andina brand #2F6B4F, kodigo brand #F2B705, no theme (null → platform default)}, call `invitationTemplate()`/`enrollmentConfirmedTemplate()`/`certificateIssuedTemplate()` with the resolved brand and assert the returned HTML string contains the expected hex (not '#2563eb') in both the heading `color:` and CTA `background:`, and contains the expected heading-font family name; also assert the null-theme case still returns the current platform blue unchanged (regression guard).",
+          "2. New tests/unit/certificate-default-branding.test.ts — call the HTML generator (`lib/certificate-generator.ts`) and the PDF style builder (`createStyles` in `lib/certificates/pdf-generator.tsx`, exported or refactored to be testable) with (a) no `design_settings` + a tenant brand → expect brand hex, not `#1a5632`; (b) an explicit custom `design_settings.primary_color` → expect that value unchanged regardless of tenant brand (proves 'custom templates unchanged').",
+          "3. New tests/unit/og-branding.test.ts — extract the color-selection logic from `app/api/og/route.tsx` into a small pure function (`resolveOgColors(brandHex?: string)`) so it's unit-testable without invoking Satori; assert it rejects/ignores a non-`#RRGGBB` input (XSS/CSS-injection guard) and returns the brand hex when valid.",
+          "4. `npx vitest run tests/unit/theme-kit.test.ts tests/unit/theme-kit-tokens.test.ts` — regression run, unrelated to #765 but must stay green since email/cert/OG will now import from lib/themes/kit.ts.",
+          "QA script (new, e.g. scripts/qa-branding-matrix.ts, `npx tsx scripts/qa-branding-matrix.ts <outDir>`):",
+          "5. For theme×brand in [(andina,#2F6B4F,'Andina · Verde andino'), (kodigo,#F2B705,'Kódigo · Amarillo')]: call deriveKitVars + KIT_TYPE_PAIRINGS[...].heading, build each email template's HTML with that brand, write `<outDir>/email-<template>-<theme>.html`, then use `playwright`'s `chromium` (per scripts/qa-contact-sheet.ts convention) to screenshot each at 640px width into `<outDir>/email-<template>-<theme>.png`.",
+          "6. Same script (or a companion): render lib/certificate-generator.ts's HTML for a no-template course with each brand into `<outDir>/cert-html-<theme>.html` + screenshot; separately POST/curl `/api/certificates/generate` locally as the seeded student for course 1002 (Default School / Kódigo) to produce a real PDF, then `pdftoppm -png -r 150 -f 1 -l 1 <cert>.pdf <outDir>/cert-pdf-kodigo` (after `brew install poppler`).",
+          "7. Hit `http://default.lvh.me:3005/api/og?type=certificate&student=Test+Student&course=Web+Development+Basics&issuer=Default+School&brand=%23F2B705` (once the route accepts `brand`) and screenshot the response image directly with Playwright's `page.goto()` + `page.screenshot()`.",
+          "Playwright E2E (new spec, tests/playwright/branding-passthrough.spec.ts, run with `npx playwright test -g \"branding\"`, `--workers=1`, against `lvh.me`):",
+          "8. As `owner@e2etest.com` on `default.lvh.me:3005` (already Kódigo/Amarillo per seed): send a real invitation (`sendEmailInvite: true`), intercept the outgoing `sendEmail()` call in a test double or read the actual HTML the action built (since Mailgun isn't reachable locally, assert on the constructed template output before the `sendEmail()` call, not on an inbox) and assert it contains `#F2B705`.",
+          "9. Navigate to `/verify/<code>` for a certificate on that tenant and assert the OG meta tag's image URL includes the tenant's brand param once wired.",
+          "Commands a QA person runs: `npm run test:unit -- email-branding og-branding certificate-default-branding` · `npx tsx scripts/qa-branding-matrix.ts /tmp/branding-qa` · `npx playwright test -g branding --workers=1` · manual: `open /tmp/branding-qa/*.png` to eyeball Andina/Kódigo side by side."
+        ]
+      }
+    ],
+    "critic": {
+      "wrong_claims": [
+        {
+          "claim": "Survey 1 (judgment call j5) recommends the no-theme email fallback stay the literal #2563eb, calling any change to it 'out of scope for #765'. Survey 4 (judgment call 'platform-default', option 1, its stated recommendation) recommends the opposite: convert the platform's actual CSS default oklch(0.52 0.105 223.128) to hex and use THAT instead of #2563eb 'everywhere emails/OG currently hardcode' it.",
+          "correction": "This is a direct contradiction between two surveys' recommendations for the identical judgment call (what a school with no theme_preset row should see), not a factual error in either — both underlying facts are individually correct. A human orchestrator must pick one before implementation: keep #2563eb (zero visual diff, perpetuates a pre-existing UI/email color mismatch) vs. switch to the teal derived from globals.css (pixel-parity with the platform's actual brand, but changes every unthemed school's email look as a side effect of this PR).",
+          "evidence": "app/globals.css:98 `--primary: oklch(0.52 0.105 223.128)` (light), :157 dark — verified by direct read. lib/email/templates/*.ts confirmed to hardcode #2563eb in all 6 school-branded templates + daily-digest's CTA button."
+        }
+      ],
+      "missed_surfaces": [
+        {
+          "surface": "Supabase Auth's own transactional emails (signup confirmation, password reset, magic link, email-change confirmation) — sent by GoTrue directly, never touching lib/email/*",
+          "evidence": "components/forgot-password-form.tsx and components/sign-up-form.tsx / components/tenant/create-school-flow.tsx call `supabase.auth.resetPasswordForEmail()` / `.signUp()` client-side. supabase/config.toml:203-239 shows every `[auth.email.template.*]` / `[auth.email.smtp]` block commented out, and no `supabase/templates/` directory exists anywhere in the repo (confirmed via find) — GoTrue is using its own generic built-in HTML with zero tenant awareness. Structurally different from every surface the 5 surveys covered: this is ONE Supabase project serving every tenant/subdomain, so GoTrue has no per-request tenant context to key a template on — branding these would require a Supabase Auth 'Send Email' Hook rerouting through Mailgun + lib/email's own templates with the tenant resolved from the user's tenant_users row, not a simple hex/font swap. None of the 5 surveys mention this surface at all, despite it covering some of the highest-frequency emails a student/admin ever receives 'from a school'.",
+          "in_scope_recommendation": "Flag explicitly as a known gap requiring new Auth Hook infrastructure (separate scope/estimate from every other surface), rather than letting #765 read as 'emails fully covered' when this large slice is untouched."
+        },
+        {
+          "surface": "lib/invoice-generator.ts + app/api/invoices/[invoiceNumber]/route.ts — the manual-payment invoice HTML a student/admin downloads",
+          "evidence": "lib/invoice-generator.ts:287-293 `getInvoiceConfig()` returns `companyName: process.env.COMPANY_NAME || 'LMS Platform'`, plus companyAddress/companyEmail/companyPhone, all from global env vars — NOT read from the tenant at all, despite the route (app/api/invoices/[invoiceNumber]/route.ts) already validating `paymentRequest.product.tenant_id !== tenantId` and having tenantId in scope. The template hardcodes `border-bottom: 3px solid #000`, `background: #f8f8f8`, `color: #333/#666/#999` — no tenant color/logo/font at all. Verified via full-repo grep; single call site, only one caller of `generateInvoiceHTML`/`getInvoiceConfig`. None of the 5 surveys mention this file.",
+          "in_scope_recommendation": "Add to the phase-5 surface list: thread the same resolved school brand (name/logo/hex/heading font) into `generateInvoiceHTML()`, replacing the env-var-only company fields with the tenant's own name/logo — today it literally prints the platform's env-configured company info on every school's invoice, arguably a sharper miss than the hardcoded-blue findings the surveys already caught."
+        },
+        {
+          "surface": "tenant_settings.favicon_url is stored (admin settings UI lets a school set it) but never rendered anywhere — dead value, not wired into Next's metadata.icons or a <link rel=icon>",
+          "evidence": "app/[locale]/layout.tsx:92 fetches `favicon_url` into `getTenantSettings()`'s select list; app/actions/admin/settings.ts:285/795 lets an admin write it. But `generateMetadata()` (layout.tsx:25-59) returns only metadataBase/title/description/openGraph/twitter — no `icons` field, verified by full read. Repo-wide grep for other `favicon_url` usages found nothing beyond the fetch and the write. `app/icon.svg` is the only favicon Next serves, static and identical for every tenant.",
+          "in_scope_recommendation": "Wire `tenantSettings.favicon_url` into `metadata.icons` in the root layout as part of this work — a shared link's browser tab/unfurl can show the site favicon alongside the OG card, directly adjacent to the issue's 'share previews' framing, and it's a one-line fix for a setting that currently does nothing."
+        },
+        {
+          "surface": "The MCP widget color-RAMP consumer (resources/shared/branding.tsx / a widget.tsx) was not opened by any survey to confirm what it renders when getTenantBranding() returns null — the current reality for every tenant since nothing writes tenants.primary_color anymore post-#763",
+          "evidence": "Survey 4 correctly traces the read side (mcp-server/src/branding.ts, landing-pages.ts) and the migration comment (supabase/migrations/20260915140000_theme_kit_only.sql:21-23) keeping the columns alive for MCP — both verified accurate. I additionally confirmed mcp-server/src/tools/certificates.ts:797-850 also writes primary_color/secondary_color, but into certificate_templates.design_settings, correctly kept distinct by survey 4. No survey opened the actual widget-rendering file to see the null-branding fallback behavior today.",
+          "in_scope_recommendation": "Low priority — survey 4 already correctly scopes the MCP-side fix as a deliberate follow-up, not this PR. Worth a one-line sanity check by whoever picks that follow-up up, not blocking for #765's main PR."
+        }
+      ],
+      "contradictions": [
+        "Survey 1 (j5) vs. Survey 4 (judgment call 'platform-default'): opposite recommendations for the no-theme-row email/OG fallback color — keep #2563eb (survey 1) vs. switch to the hex conversion of the platform's actual teal-cyan CSS default oklch(0.52 0.105 223.128) (survey 4). Both surveys' underlying facts are individually correct (verified independently); only their recommendations conflict. A human must pick one before implementation, since the shared getSchoolBrand()/deriveKitHexPalette() helper that surveys 1, 4 and 5 all converge on building can only have one fallback value.",
+        "Minor scope-of-count mismatch, not a hard contradiction: Survey 2 counts FIVE distinct hardcoded 'default' colors across the certificate+email cluster (design-settings blue #3B82F6/#1E40AF, PDF/HTML green #1a5632/#0f2b1a, badge blue #1a73e8/#0d47a1, email blue #2563eb, OG purple #a78bfa/#7c3aed — all verified present at the cited lines), while Survey 5 says 'three different defaults already disagree ... before #765 adds a fourth' — Survey 5's count implicitly excludes the email and OG hardcodes from its 'certificate defaults' tally, counting only the design-settings/PDF/badge trio. Both are correct given their own scoping; worth noting so a reader doesn't think one survey missed colors the other found — Survey 2's count is the more complete one for the full #765 scope."
+      ],
+      "extra_judgment_calls": [
+        {
+          "id": "auth-email-branding-scope",
+          "question": "Should #765 (or a companion issue) address Supabase Auth's own transactional emails (password reset, signup confirmation, magic link) at all, given they structurally cannot reuse the lib/email/branding.ts helper the surveys already converge on?",
+          "options": [
+            "A) Explicitly out of scope for #765 — note it as a known gap requiring separate Supabase Auth Hook infrastructure (a 'Send Email' hook intercepting GoTrue's send and rerouting through Mailgun + lib/email templates with the tenant resolved from the user's tenant_users row), tracked as a follow-up issue.",
+            "B) In scope now — build the Auth Hook, since these are arguably the highest-frequency 'what a school sends out' emails a member ever receives (every signup, every password reset).",
+            "C) Deliberately leave these platform-generic permanently — account-security emails reading as 'from the platform' rather than 'from the school' may be the safer pattern (a phished-looking password-reset email that perfectly matches the school's branding is a bigger risk vector), so no work is needed."
+          ],
+          "recommendation": "A — flag explicitly rather than silently shipping #765 as if 'emails' were fully covered; this is a materially larger, separately-scoped piece of infrastructure work than every other surface in the issue."
+        },
+        {
+          "id": "invoice-generator-inclusion",
+          "question": "Should the invoice HTML (lib/invoice-generator.ts) be pulled into this same #765 PR, or filed as a follow-up now that it's identified?",
+          "options": [
+            "A) Include it — same shape of fix as the 7 school-branded email templates (thread a resolved brand/logo/name into a template function), the route already validates tenantId, low additional surface area.",
+            "B) File separately — #765's surveys already scope a large PR (emails + certificates + OG + a shared color-derivation helper); this needs a NEW school-name/address source since it currently reads only global env vars (unlike every other surface, which at least reads tenants.name today)."
+          ],
+          "recommendation": "A, if the shared getSchoolBrand()/getEmailBrand() helper surveys 1/4/5 already plan to build lands in this PR — the invoice route already has tenantId, so reusing that helper for name/logo/color/font is a small incremental diff. Otherwise B if the helper itself is deferred."
+        },
+        {
+          "id": "favicon-wire-up",
+          "question": "Should wiring the already-stored-but-dead tenant_settings.favicon_url into actual metadata.icons be bundled into #765, given it's adjacent to the 'share previews carry logo' framing but is really a separate, pre-existing bug (a setting that has never done anything)?",
+          "options": [
+            "A) Bundle it — one-line fix in app/[locale]/layout.tsx's generateMetadata, high value relative to effort, directly touches what a shared link's tab icon shows.",
+            "B) File as its own small bug ticket — it's not about brand color/logo/font propagation into a NEW surface, it's a dormant feature never connected, arguably a separate concern from the theme-kit engine work #765 is about."
+          ],
+          "recommendation": "A — trivial fix, clearly adjacent to the 'share preview' framing, and leaving a setting visible in the admin UI that silently does nothing is worse than either shipping it or removing the input."
+        }
+      ]
+    }
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Survey"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Critic"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "survey:emails",
+      "phaseIndex": 1,
+      "phaseTitle": "Survey",
+      "agentId": "a22edb85017c31506",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1789612736571,
+      "queuedAt": 1789612735354,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "lib/email — transactional email branding for issue #765",
+      "promptPreview": "You are surveying code for GitHub issue #765 in the lms-front repo (cwd). This is READ-ONLY research.\nSide effects are FORBIDDEN: do not create, edit, move or delete any file; do not run git commands that change state (no checkout/commit/stash/branch); do not write to any database (local or cloud) — SELECT-only SQL is fine; do not post to GitHub, Slack or any network service; do not start or stop …",
+      "promptFramed": false,
+      "lastProgressAt": 1789613036613,
+      "tokens": 155277,
+      "toolCalls": 52,
+      "durationMs": 300040,
+      "resultPreview": "{\"area\":\"lib/email — transactional email branding for issue #765\",\"summary\":\"13 template files in lib/email/templates/*.ts split cleanly into two groups by recipient+copy, verified at every call site. SCHOOL-branded (7): enrollment-confirmed, invitation, joined-school, certificate-issued, course-removed, payment-instructions, daily-digest/streak-nudge — recipient is always a student/member, copy s…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "survey:certificates",
+      "phaseIndex": 1,
+      "phaseTitle": "Survey",
+      "agentId": "a32969caa6c318bf4",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1789612736918,
+      "queuedAt": 1789612735354,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Certificates (PDF, HTML view, verify page, badge, preview, …",
+      "promptPreview": "You are surveying code for GitHub issue #765 in the lms-front repo (cwd). This is READ-ONLY research.\nSide effects are FORBIDDEN: do not create, edit, move or delete any file; do not run git commands that change state (no checkout/commit/stash/branch); do not write to any database (local or cloud) — SELECT-only SQL is fine; do not post to GitHub, Slack or any network service; do not start or stop …",
+      "promptFramed": false,
+      "lastProgressAt": 1789613019527,
+      "tokens": 182354,
+      "toolCalls": 45,
+      "durationMs": 281544,
+      "resultPreview": "{\"area\":\"Certificates (PDF, HTML view, verify page, badge, preview, template editor) — issue #765\",\"summary\":\"Every certificate surface hardcodes colors and generic serif fonts; none reads the tenant's theme kit. There are THREE different 'default' color pairs live in the codebase today (blue #3B82F6/#1E40AF as the stored design_settings default, dark-green #1a5632/#0f2b1a as the PDF/HTML fallback…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "survey:og",
+      "phaseIndex": 1,
+      "phaseTitle": "Survey",
+      "agentId": "ab7891a9fef8624ef",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1789612737943,
+      "queuedAt": 1789612735355,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "OG / share images and metadata (issue #765) — app/api/og/ro…",
+      "promptPreview": "You are surveying code for GitHub issue #765 in the lms-front repo (cwd). This is READ-ONLY research.\nSide effects are FORBIDDEN: do not create, edit, move or delete any file; do not run git commands that change state (no checkout/commit/stash/branch); do not write to any database (local or cloud) — SELECT-only SQL is fine; do not post to GitHub, Slack or any network service; do not start or stop …",
+      "promptFramed": false,
+      "lastProgressAt": 1789613070825,
+      "tokens": 142783,
+      "toolCalls": 35,
+      "durationMs": 332842,
+      "resultPreview": "{\"area\":\"OG / share images and metadata (issue #765) — app/api/og/route.tsx\",\"summary\":\"app/api/og/route.tsx is a pure text-in/image-out generator: it reads only URL query params (type/site/title/subtitle/badge or the certificate fields), has zero tenant awareness, and paints every card with the same hardcoded purple gradient (#0e0a1c→#1e1038 generic, #120b24→#241245 certificate) regardless of whi…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "survey:engine",
+      "phaseIndex": 1,
+      "phaseTitle": "Survey",
+      "agentId": "acd94a058a72a9610",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1789612737827,
+      "queuedAt": 1789612735355,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "color engine reuse + server-side school-brand resolver + te…",
+      "promptPreview": "You are surveying code for GitHub issue #765 in the lms-front repo (cwd). This is READ-ONLY research.\nSide effects are FORBIDDEN: do not create, edit, move or delete any file; do not run git commands that change state (no checkout/commit/stash/branch); do not write to any database (local or cloud) — SELECT-only SQL is fine; do not post to GitHub, Slack or any network service; do not start or stop …",
+      "promptFramed": false,
+      "lastProgressAt": 1789612952361,
+      "tokens": 126934,
+      "toolCalls": 26,
+      "durationMs": 214378,
+      "resultPreview": "{\"area\":\"color engine reuse + server-side school-brand resolver + tenants.primary_color/secondary_color cleanup (issue #765)\",\"summary\":\"deriveKitVars(theme,brand) in lib/themes/kit.ts:428-436 returns a light/dark CSSVariableMap that mixes two formats: the neutral surface vars (background/foreground/card/popover/muted/accent/border/sidebar*, kit.ts:381-401) are literal oklch() strings straight fro…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "survey:qa-and-tests",
+      "phaseIndex": 1,
+      "phaseTitle": "Survey",
+      "agentId": "a612683d724225900",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1789612736768,
+      "queuedAt": 1789612735355,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "QA method + test infra for #765 (school branding in emails,…",
+      "promptPreview": "You are surveying code for GitHub issue #765 in the lms-front repo (cwd). This is READ-ONLY research.\nSide effects are FORBIDDEN: do not create, edit, move or delete any file; do not run git commands that change state (no checkout/commit/stash/branch); do not write to any database (local or cloud) — SELECT-only SQL is fine; do not post to GitHub, Slack or any network service; do not start or stop …",
+      "promptFramed": false,
+      "lastProgressAt": 1789612973090,
+      "tokens": 129383,
+      "toolCalls": 48,
+      "durationMs": 235108,
+      "resultPreview": "{\"area\":\"QA method + test infra for #765 (school branding in emails, certificate PDFs, OG images)\",\"summary\":\"None of the three surfaces named in #765 read a school's theme kit today; all three are hardcoded to platform colors/fonts, confirmed by reading the code and by local DB state. Mailpit is a dead end for QA: `supabase_inbucket_lms-front` (config.toml:96-98, port 54324) only captures Supabas…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "critic",
+      "phaseIndex": 2,
+      "phaseTitle": "Critic",
+      "agentId": "ad652d6c9cce55c1f",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1789613073413,
+      "queuedAt": 1789613072052,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are surveying code for GitHub issue #765 in the lms-front repo (cwd). This is READ-ONLY research.\nSide effects are FORBIDDEN: do not create, edit, move or delete any file; do not run git commands that change state (no checkout/commit/stash/branch); do not write to any database (local or cloud) — SELECT-only SQL is fine; do not post to GitHub, Slack or any network service; do not start or stop …",
+      "promptFramed": false,
+      "lastProgressAt": 1789613378340,
+      "tokens": 170521,
+      "toolCalls": 59,
+      "durationMs": 304926,
+      "resultPreview": "{\"wrong_claims\":[{\"claim\":\"Survey 1 (judgment call j5) recommends the no-theme email fallback stay the literal #2563eb, calling any change to it 'out of scope for #765'. Survey 4 (judgment call 'platform-default', option 1, its stated recommendation) recommends the opposite: convert the platform's actual CSS default oklch(0.52 0.105 223.128) to hex and use THAT instead of #2563eb 'everywhere email…"
+    }
+  ],
+  "totalTokens": 907252,
+  "totalToolCalls": 265
+}

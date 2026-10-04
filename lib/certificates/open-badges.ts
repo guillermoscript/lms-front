@@ -163,7 +163,14 @@ export function generateAchievementCredential(
             id: `${appUrl}/verify/${verificationCode}`,
             type: ['Evidence'],
             name: 'Course Completion Evidence',
-            description: `Completed ${completionData.completedLessons} of ${completionData.totalLessons} lessons (${completionData.completionPercentage}%) and achieved ${completionData.averageExamScore}% average on ${completionData.submittedExams} exams`,
+            // Courses with no exams are certifiable (#696), so the exam clause is
+            // omitted rather than baking "0% average on 0 exams" into a permanent
+            // credential.
+            description:
+                `Completed ${completionData.completedLessons} of ${completionData.totalLessons} lessons (${completionData.completionPercentage}%)` +
+                (completionData.totalExams > 0
+                    ? ` and achieved ${completionData.averageExamScore}% average on ${completionData.submittedExams} exams`
+                    : ''),
             genre: 'Certificate',
         },
     ];

@@ -3,23 +3,23 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { getAllSettingsByCategory, getSolanaWallet, getBinancePersonalStatus } from '@/app/actions/admin/settings'
-import { getOrCreateTenantReferralCode } from '@/app/actions/admin/referrals'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import GeneralSettingsForm from '@/components/admin/general-settings-form'
 import EmailSettingsForm from '@/components/admin/email-settings-form'
 import PaymentSettingsForm from '@/components/admin/payment-settings-form'
-import StripeConnectCard from '@/components/admin/stripe-connect-card'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { syncConnectAccountStatus } from '@/lib/stripe-connect'
-import SolanaWalletForm from '@/components/admin/solana-wallet-form'
-import BinancePersonalForm from '@/components/admin/binance-personal-form'
 import EnrollmentSettingsForm from '@/components/admin/enrollment-settings-form'
-import { ReferralLinkCard } from '@/components/admin/referral-link-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
+import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
+import { getMailerStatus } from '@/lib/email/status'
+import { MailerStatusRow } from '@/components/admin/mailer-status-row'
+import { countPreviewLessons } from '@/lib/settings/free-preview'
+import { normalizeCountry } from '@/lib/countries'
 
 export default async function SettingsPage({
   searchParams,
@@ -66,10 +66,11 @@ export default async function SettingsPage({
   const tenantId = await getCurrentTenantId()
   const { data: tenant } = await createAdminClient()
     .from('tenants')
-    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted')
+    .select('name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, stripe_details_submitted, country')
     .eq('id', tenantId)
     .single()
   const stripeAccountId = tenant?.stripe_account_id ?? null
+  const tenantName = tenant?.name ?? null
   let connectStatus = {
     chargesEnabled: tenant?.stripe_charges_enabled ?? false,
     payoutsEnabled: tenant?.stripe_payouts_enabled ?? false,
@@ -82,6 +83,15 @@ export default async function SettingsPage({
     connectStatus = (await syncConnectAccountStatus(tenantId, stripeAccountId)) ?? connectStatus
   }
 
+  // Whether the platform mailer can send at all — read-only, from env presence
+  // (#676). Rendered on the server so the API key never reaches the client.
+  const mailer = getMailerStatus()
+
+  // How many lessons the #797 backfill (and any teacher opt-in) made public —
+  // shown next to the free-preview switch so an admin can see what turning it
+  // off actually affects (#799).
+  const previewLessonCount = await countPreviewLessons(tenantId)
+
   // Deep link support: /dashboard/admin/settings?tab=payment
   const { tab } = await searchParams
   const validTabs = ['general', 'email', 'payment', 'enrollment']
@@ -91,10 +101,6 @@ export default async function SettingsPage({
   // in the tabs above (#452). Absent user id just falls back to tours-enabled.
   const userId = await getCurrentUserId()
   const uiState = userId ? await getUiState(userId) : {}
-
-  // Fetch referral code (non-blocking — silently skip if it fails)
-  const referralCode = await getOrCreateTenantReferralCode().catch(() => null)
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'}`
 
   return (
     <div className="min-h-screen bg-background" data-testid="settings-page">
@@ -135,7 +141,11 @@ export default async function SettingsPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <GeneralSettingsForm settings={settings.general || {}} />
+                  <GeneralSettingsForm
+                    settings={settings.general || {}}
+                    tenantName={tenantName}
+                    country={normalizeCountry(tenant?.country)}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -149,7 +159,8 @@ export default async function SettingsPage({
                     {t('sections.email.description')}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                  <MailerStatusRow status={mailer} />
                   <EmailSettingsForm settings={settings.email || {}} />
                 </CardContent>
               </Card>
@@ -157,15 +168,14 @@ export default async function SettingsPage({
 
             {/* Payment Settings */}
             <TabsContent value="payment">
-              {/* Stripe Connect status lives here so payment setup is one page (#434) */}
-              <div className="mb-6">
-                <StripeConnectCard
-                  accountId={stripeAccountId}
-                  chargesEnabled={connectStatus.chargesEnabled}
-                  payoutsEnabled={connectStatus.payoutsEnabled}
-                  detailsSubmitted={connectStatus.detailsSubmitted}
-                />
-              </div>
+              {/*
+                Connect status, the Solana wallet and the Binance credentials
+                used to be a page-level banner plus two trailing cards, each
+                with its own save button. The banner alarmed about Stripe even
+                when the school had Stripe switched off, and the credential
+                cards sat below the form's own Save, far from the toggles that
+                required them. All three now live in their provider's own row.
+              */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t('sections.payment.title')}</CardTitle>
@@ -174,37 +184,19 @@ export default async function SettingsPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PaymentSettingsForm settings={settings.payment || {}} />
-                </CardContent>
-              </Card>
-
-              {/* Solana receiving wallet — one address backs both the one-time
-                  `solana` and auto-pull `solana_subs` providers. */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>{t('sections.solanaWallet.title')}</CardTitle>
-                  <CardDescription>
-                    {t('sections.solanaWallet.description')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SolanaWalletForm initialAddress={solanaWalletAddress} />
-                </CardContent>
-              </Card>
-
-              {/* Binance Pay (personal account) — school's own Pay ID + a
-                  read-only API key/secret, encrypted at rest (#482). */}
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle>{t('sections.binancePersonal.title')}</CardTitle>
-                  <CardDescription>
-                    {t('sections.binancePersonal.description')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <BinancePersonalForm
-                    initialPayId={binancePersonal?.payId ?? null}
-                    hasCredentials={binancePersonal?.hasCredentials ?? false}
+                  <PaymentSettingsForm
+                    settings={settings.payment || {}}
+                    connect={{
+                      accountId: stripeAccountId,
+                      chargesEnabled: connectStatus.chargesEnabled,
+                      payoutsEnabled: connectStatus.payoutsEnabled,
+                      detailsSubmitted: connectStatus.detailsSubmitted,
+                    }}
+                    solanaWalletAddress={solanaWalletAddress}
+                    binancePersonal={{
+                      payId: binancePersonal?.payId ?? null,
+                      hasCredentials: binancePersonal?.hasCredentials ?? false,
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -220,7 +212,7 @@ export default async function SettingsPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <EnrollmentSettingsForm settings={settings.enrollment || {}} />
+                  <EnrollmentSettingsForm settings={settings.enrollment || {}} previewLessonCount={previewLessonCount} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -240,16 +232,7 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
 
-          {/* Referral Program — secondary, below main settings */}
-          {referralCode && (
-            <ReferralLinkCard
-              code={referralCode.code}
-              usedCount={referralCode.used_count ?? 0}
-              discountMonths={referralCode.discount_months ?? 1}
-              referrerRewardMonths={referralCode.referrer_reward_months ?? 1}
-              appUrl={appUrl}
-            />
-          )}
+          <DeleteAccountCard />
         </div>
       </main>
     </div>

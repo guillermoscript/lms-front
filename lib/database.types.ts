@@ -49,6 +49,38 @@ export type Database = {
           },
         ]
       }
+      ai_chat_usage: {
+        Row: {
+          message_count: number
+          period_date: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          message_count?: number
+          period_date: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          message_count?: number
+          period_date?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_usage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aristotle_messages: {
         Row: {
           content: string
@@ -929,6 +961,86 @@ export type Database = {
           },
         ]
       }
+      community_mentions: {
+        Row: {
+          author_id: string
+          comment_id: string | null
+          created_at: string
+          id: string
+          mentioned_user_id: string
+          post_id: string
+          tenant_id: string
+        }
+        Insert: {
+          author_id: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          mentioned_user_id: string
+          post_id: string
+          tenant_id: string
+        }
+        Update: {
+          author_id?: string
+          comment_id?: string | null
+          created_at?: string
+          id?: string
+          mentioned_user_id?: string
+          post_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_mentions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_mentions_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_mentions_mentioned_user_id_fkey"
+            columns: ["mentioned_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_mentions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_poll_options: {
         Row: {
           id: string
@@ -1026,11 +1138,15 @@ export type Database = {
       }
       community_posts: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          accepted_comment_id: string | null
           author_id: string
           comment_count: number
           content: string
           course_id: number | null
           created_at: string
+          due_at: string | null
           id: string
           is_graded: boolean
           is_hidden: boolean
@@ -1047,11 +1163,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_comment_id?: string | null
           author_id: string
           comment_count?: number
           content: string
           course_id?: number | null
           created_at?: string
+          due_at?: string | null
           id?: string
           is_graded?: boolean
           is_hidden?: boolean
@@ -1068,11 +1188,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_comment_id?: string | null
           author_id?: string
           comment_count?: number
           content?: string
           course_id?: number | null
           created_at?: string
+          due_at?: string | null
           id?: string
           is_graded?: boolean
           is_hidden?: boolean
@@ -1089,6 +1213,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "community_posts_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_posts_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_accepted_comment_id_fkey"
+            columns: ["accepted_comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "community_posts_author_id_fkey"
             columns: ["author_id"]
@@ -1126,6 +1271,98 @@ export type Database = {
           },
           {
             foreignKeyName: "community_posts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_prompt_grades: {
+        Row: {
+          comment_id: string | null
+          created_at: string
+          feedback: string | null
+          graded_at: string
+          graded_by: string | null
+          id: string
+          post_id: string
+          score: number
+          student_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string
+          graded_by?: string | null
+          id?: string
+          post_id: string
+          score: number
+          student_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string
+          graded_by?: string | null
+          id?: string
+          post_id?: string
+          score?: number
+          student_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_prompt_grades_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "community_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_graded_by_fkey"
+            columns: ["graded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_prompt_grades_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1190,6 +1427,39 @@ export type Database = {
           {
             foreignKeyName: "community_reactions_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1480,6 +1750,42 @@ export type Database = {
           },
         ]
       }
+      cron_runs: {
+        Row: {
+          completed_at: string | null
+          error: string | null
+          id: number
+          request_id: number | null
+          requested_at: string
+          response: Json | null
+          route: string
+          scheduler: string
+          status_code: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          error?: string | null
+          id?: number
+          request_id?: number | null
+          requested_at?: string
+          response?: Json | null
+          route: string
+          scheduler?: string
+          status_code?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          error?: string | null
+          id?: number
+          request_id?: number | null
+          requested_at?: string
+          response?: Json | null
+          route?: string
+          scheduler?: string
+          status_code?: number | null
+        }
+        Relationships: []
+      }
       device_push_tokens: {
         Row: {
           created_at: string
@@ -1703,6 +2009,64 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "exam_submissions"
             referencedColumns: ["submission_id"]
+          },
+        ]
+      }
+      exam_grading_secrets: {
+        Row: {
+          ai_grading_criteria: string | null
+          correct_answer: string | null
+          correct_option_ids: number[]
+          exam_id: number
+          expected_keywords: string[] | null
+          grading_rubric: string | null
+          question_id: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_grading_criteria?: string | null
+          correct_answer?: string | null
+          correct_option_ids?: number[]
+          exam_id: number
+          expected_keywords?: string[] | null
+          grading_rubric?: string | null
+          question_id: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_grading_criteria?: string | null
+          correct_answer?: string | null
+          correct_option_ids?: number[]
+          exam_id?: number
+          expected_keywords?: string[] | null
+          grading_rubric?: string | null
+          question_id?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_grading_secrets_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["exam_id"]
+          },
+          {
+            foreignKeyName: "exam_grading_secrets_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "exam_questions"
+            referencedColumns: ["question_id"]
+          },
+          {
+            foreignKeyName: "exam_grading_secrets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2045,22 +2409,28 @@ export type Database = {
         Row: {
           created_at: string | null
           exercise_id: number
+          files: Json | null
           id: number
           submission_code: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
           exercise_id: number
+          files?: Json | null
           id?: number
           submission_code: string
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string | null
           exercise_id?: number
+          files?: Json | null
           id?: number
           submission_code?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -2245,6 +2615,51 @@ export type Database = {
           },
         ]
       }
+      exercise_grading_secrets: {
+        Row: {
+          config: Json
+          exercise_id: number
+          questions: Json
+          system_prompt: string | null
+          template_variables: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          exercise_id: number
+          questions?: Json
+          system_prompt?: string | null
+          template_variables?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          exercise_id?: number
+          questions?: Json
+          system_prompt?: string | null
+          template_variables?: Json | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_grading_secrets_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: true
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_grading_secrets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_media_submissions: {
         Row: {
           ai_evaluation: Json | null
@@ -2321,6 +2736,7 @@ export type Database = {
       }
       exercise_messages: {
         Row: {
+          attachments: Json | null
           created_at: string | null
           exercise_id: number
           id: number
@@ -2329,6 +2745,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachments?: Json | null
           created_at?: string | null
           exercise_id: number
           id?: never
@@ -2337,6 +2754,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachments?: Json | null
           created_at?: string | null
           exercise_id?: number
           id?: never
@@ -3883,27 +4301,33 @@ export type Database = {
       }
       lessons_ai_task_messages: {
         Row: {
+          attachments: Json | null
           created_at: string
           id: number
           lesson_id: number | null
           message: string | null
           sender: Database["public"]["Enums"]["ai_sender_type"] | null
+          tool_invocations: Json | null
           user_id: string | null
         }
         Insert: {
+          attachments?: Json | null
           created_at?: string
           id?: number
           lesson_id?: number | null
           message?: string | null
           sender?: Database["public"]["Enums"]["ai_sender_type"] | null
+          tool_invocations?: Json | null
           user_id?: string | null
         }
         Update: {
+          attachments?: Json | null
           created_at?: string
           id?: number
           lesson_id?: number | null
           message?: string | null
           sender?: Database["public"]["Enums"]["ai_sender_type"] | null
+          tool_invocations?: Json | null
           user_id?: string | null
         }
         Relationships: [
@@ -3921,6 +4345,7 @@ export type Database = {
           created_at: string
           id: number
           lesson_id: number | null
+          requirements: Json | null
           system_prompt: string | null
           task_instructions: string | null
         }
@@ -3928,6 +4353,7 @@ export type Database = {
           created_at?: string
           id?: number
           lesson_id?: number | null
+          requirements?: Json | null
           system_prompt?: string | null
           task_instructions?: string | null
         }
@@ -3935,6 +4361,7 @@ export type Database = {
           created_at?: string
           id?: number
           lesson_id?: number | null
+          requirements?: Json | null
           system_prompt?: string | null
           task_instructions?: string | null
         }
@@ -4069,6 +4496,9 @@ export type Database = {
       }
       notification_preferences: {
         Row: {
+          community_mentions: boolean
+          community_prompts: boolean
+          community_replies: boolean
           course_notifications: boolean | null
           created_at: string
           email_enabled: boolean | null
@@ -4086,6 +4516,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          community_mentions?: boolean
+          community_prompts?: boolean
+          community_replies?: boolean
           course_notifications?: boolean | null
           created_at?: string
           email_enabled?: boolean | null
@@ -4103,6 +4536,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          community_mentions?: boolean
+          community_prompts?: boolean
+          community_replies?: boolean
           course_notifications?: boolean | null
           created_at?: string
           email_enabled?: boolean | null
@@ -4170,6 +4606,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          community_post_id: string | null
           content: string
           created_at: string
           created_by: string | null
@@ -4192,6 +4629,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          community_post_id?: string | null
           content: string
           created_at?: string
           created_by?: string | null
@@ -4214,6 +4652,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          community_post_id?: string | null
           content?: string
           created_at?: string
           created_by?: string | null
@@ -4236,6 +4675,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_community_post_id_fkey"
+            columns: ["community_post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_created_by_profile_fkey"
             columns: ["created_by"]
@@ -4287,19 +4733,32 @@ export type Database = {
           contact_name: string
           contact_phone: string | null
           created_at: string | null
+          expired_at: string | null
+          expires_at: string
           invoice_generated_at: string | null
           invoice_number: string | null
           message: string | null
+          paid_at: string | null
+          paid_to_account: string | null
+          payer_bank: string | null
+          payer_document: string | null
+          payer_name: string | null
+          payer_phone: string | null
           payment_amount: number | null
           payment_confirmed_at: string | null
           payment_currency: string | null
           payment_deadline: string | null
           payment_instructions: string | null
           payment_method: string | null
+          payment_reference: string | null
+          payment_reported_at: string | null
           plan_id: number | null
           processed_by: string | null
           product_id: number | null
           proof_url: string | null
+          reminder_sent_at: string | null
+          reported_amount: number | null
+          reported_currency: string | null
           request_id: number
           status: string
           tenant_id: string
@@ -4312,19 +4771,32 @@ export type Database = {
           contact_name: string
           contact_phone?: string | null
           created_at?: string | null
+          expired_at?: string | null
+          expires_at?: string
           invoice_generated_at?: string | null
           invoice_number?: string | null
           message?: string | null
+          paid_at?: string | null
+          paid_to_account?: string | null
+          payer_bank?: string | null
+          payer_document?: string | null
+          payer_name?: string | null
+          payer_phone?: string | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_currency?: string | null
           payment_deadline?: string | null
           payment_instructions?: string | null
           payment_method?: string | null
+          payment_reference?: string | null
+          payment_reported_at?: string | null
           plan_id?: number | null
           processed_by?: string | null
           product_id?: number | null
           proof_url?: string | null
+          reminder_sent_at?: string | null
+          reported_amount?: number | null
+          reported_currency?: string | null
           request_id?: number
           status?: string
           tenant_id?: string
@@ -4337,19 +4809,32 @@ export type Database = {
           contact_name?: string
           contact_phone?: string | null
           created_at?: string | null
+          expired_at?: string | null
+          expires_at?: string
           invoice_generated_at?: string | null
           invoice_number?: string | null
           message?: string | null
+          paid_at?: string | null
+          paid_to_account?: string | null
+          payer_bank?: string | null
+          payer_document?: string | null
+          payer_name?: string | null
+          payer_phone?: string | null
           payment_amount?: number | null
           payment_confirmed_at?: string | null
           payment_currency?: string | null
           payment_deadline?: string | null
           payment_instructions?: string | null
           payment_method?: string | null
+          payment_reference?: string | null
+          payment_reported_at?: string | null
           plan_id?: number | null
           processed_by?: string | null
           product_id?: number | null
           proof_url?: string | null
+          reminder_sent_at?: string | null
+          reported_amount?: number | null
+          reported_currency?: string | null
           request_id?: number
           status?: string
           tenant_id?: string
@@ -4589,17 +5074,29 @@ export type Database = {
       }
       platform_payment_requests: {
         Row: {
+          activated_at: string | null
+          activation_alerted_at: string | null
+          activation_attempt_count: number
+          activation_last_error: string | null
+          activation_lease_expires_at: string | null
+          activation_next_retry_at: string | null
+          activation_started_at: string | null
+          activation_state: string | null
+          activation_token: string | null
           admin_notes: string | null
           amount: number
           bank_reference: string | null
           confirmed_at: string | null
           confirmed_by: string | null
+          confirmed_period_end: string | null
+          confirmed_period_start: string | null
           created_at: string | null
           currency: string
           expires_at: string
           interval: string
           notes: string | null
           payment_provider: string
+          payment_observed_at: string | null
           plan_id: string
           proof_url: string | null
           provider_charge_id: string | null
@@ -4612,21 +5109,34 @@ export type Database = {
           settlement_mint: string | null
           settlement_sol_usd: number | null
           status: string
+          switch_id: string | null
           tenant_id: string
           updated_at: string | null
         }
         Insert: {
+          activated_at?: string | null
+          activation_alerted_at?: string | null
+          activation_attempt_count?: number
+          activation_last_error?: string | null
+          activation_lease_expires_at?: string | null
+          activation_next_retry_at?: string | null
+          activation_started_at?: string | null
+          activation_state?: string | null
+          activation_token?: string | null
           admin_notes?: string | null
           amount: number
           bank_reference?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
+          confirmed_period_end?: string | null
+          confirmed_period_start?: string | null
           created_at?: string | null
           currency?: string
           expires_at?: string
           interval?: string
           notes?: string | null
           payment_provider?: string
+          payment_observed_at?: string | null
           plan_id: string
           proof_url?: string | null
           provider_charge_id?: string | null
@@ -4639,21 +5149,34 @@ export type Database = {
           settlement_mint?: string | null
           settlement_sol_usd?: number | null
           status?: string
+          switch_id?: string | null
           tenant_id: string
           updated_at?: string | null
         }
         Update: {
+          activated_at?: string | null
+          activation_alerted_at?: string | null
+          activation_attempt_count?: number
+          activation_last_error?: string | null
+          activation_lease_expires_at?: string | null
+          activation_next_retry_at?: string | null
+          activation_started_at?: string | null
+          activation_state?: string | null
+          activation_token?: string | null
           admin_notes?: string | null
           amount?: number
           bank_reference?: string | null
           confirmed_at?: string | null
           confirmed_by?: string | null
+          confirmed_period_end?: string | null
+          confirmed_period_start?: string | null
           created_at?: string | null
           currency?: string
           expires_at?: string
           interval?: string
           notes?: string | null
           payment_provider?: string
+          payment_observed_at?: string | null
           plan_id?: string
           proof_url?: string | null
           provider_charge_id?: string | null
@@ -4666,6 +5189,7 @@ export type Database = {
           settlement_mint?: string | null
           settlement_sol_usd?: number | null
           status?: string
+          switch_id?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
@@ -4676,6 +5200,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "platform_plans"
             referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_payment_requests_switch_id_fkey"
+            columns: ["switch_id"]
+            isOneToOne: false
+            referencedRelation: "platform_subscription_switches"
+            referencedColumns: ["switch_id"]
           },
           {
             foreignKeyName: "platform_payment_requests_tenant_id_fkey"
@@ -4780,6 +5311,116 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      platform_subscription_switches: {
+        Row: {
+          activated_at: string | null
+          cancel_attempts: number
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          initiated_by: string | null
+          last_error: string | null
+          next_retry_at: string | null
+          source_cancel_effective_at: string | null
+          source_cancel_mode: string | null
+          source_payment_provider: string
+          source_period_end: string | null
+          source_plan_id: string
+          source_provider_subscription_id: string | null
+          source_subscription_id: string
+          state: string
+          switch_id: string
+          target_checkout_reference: string | null
+          target_interval: string
+          target_payment_provider: string
+          target_plan_id: string
+          target_provider_subscription_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          cancel_attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          last_error?: string | null
+          next_retry_at?: string | null
+          source_cancel_effective_at?: string | null
+          source_cancel_mode?: string | null
+          source_payment_provider: string
+          source_period_end?: string | null
+          source_plan_id: string
+          source_provider_subscription_id?: string | null
+          source_subscription_id: string
+          state?: string
+          switch_id?: string
+          target_checkout_reference?: string | null
+          target_interval: string
+          target_payment_provider: string
+          target_plan_id: string
+          target_provider_subscription_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          cancel_attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          initiated_by?: string | null
+          last_error?: string | null
+          next_retry_at?: string | null
+          source_cancel_effective_at?: string | null
+          source_cancel_mode?: string | null
+          source_payment_provider?: string
+          source_period_end?: string | null
+          source_plan_id?: string
+          source_provider_subscription_id?: string | null
+          source_subscription_id?: string
+          state?: string
+          switch_id?: string
+          target_checkout_reference?: string | null
+          target_interval?: string
+          target_payment_provider?: string
+          target_plan_id?: string
+          target_provider_subscription_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_subscription_switches_source_plan_id_fkey"
+            columns: ["source_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_source_subscription_id_fkey"
+            columns: ["source_subscription_id"]
+            isOneToOne: false
+            referencedRelation: "platform_subscriptions"
+            referencedColumns: ["subscription_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_target_plan_id_fkey"
+            columns: ["target_plan_id"]
+            isOneToOne: false
+            referencedRelation: "platform_plans"
+            referencedColumns: ["plan_id"]
+          },
+          {
+            foreignKeyName: "platform_subscription_switches_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_subscriptions: {
         Row: {
@@ -5106,6 +5747,7 @@ export type Database = {
           full_name: string | null
           id: string
           onboarding_completed: boolean
+          share_milestones: boolean
           stripe_customer_id: string | null
           stripeCustomerID: string | null
           username: string | null
@@ -5121,6 +5763,7 @@ export type Database = {
           full_name?: string | null
           id: string
           onboarding_completed?: boolean
+          share_milestones?: boolean
           stripe_customer_id?: string | null
           stripeCustomerID?: string | null
           username?: string | null
@@ -5136,6 +5779,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           onboarding_completed?: boolean
+          share_milestones?: boolean
           stripe_customer_id?: string | null
           stripeCustomerID?: string | null
           username?: string | null
@@ -5198,19 +5842,19 @@ export type Database = {
       }
       question_options: {
         Row: {
-          is_correct: boolean
+          is_correct: boolean | null
           option_id: number
           option_text: string
           question_id: number
         }
         Insert: {
-          is_correct?: boolean
+          is_correct?: boolean | null
           option_id?: number
           option_text: string
           question_id: number
         }
         Update: {
-          is_correct?: boolean
+          is_correct?: boolean | null
           option_id?: number
           option_text?: string
           question_id?: number
@@ -5882,6 +6526,9 @@ export type Database = {
       }
       tenant_users: {
         Row: {
+          ban_reason: string | null
+          banned_at: string | null
+          banned_by: string | null
           id: string
           joined_at: string | null
           role: string
@@ -5890,6 +6537,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           id?: string
           joined_at?: string | null
           role?: string
@@ -5898,6 +6548,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ban_reason?: string | null
+          banned_at?: string | null
+          banned_by?: string | null
           id?: string
           joined_at?: string | null
           role?: string
@@ -5922,13 +6575,12 @@ export type Database = {
           billing_period_end: string | null
           billing_status: string | null
           created_at: string | null
+          country: string | null
           domain: string | null
           id: string
           logo_url: string | null
           name: string
           plan: string | null
-          primary_color: string | null
-          secondary_color: string | null
           slug: string
           status: string | null
           stripe_account_id: string | null
@@ -5943,13 +6595,12 @@ export type Database = {
           billing_period_end?: string | null
           billing_status?: string | null
           created_at?: string | null
+          country?: string | null
           domain?: string | null
           id?: string
           logo_url?: string | null
           name: string
           plan?: string | null
-          primary_color?: string | null
-          secondary_color?: string | null
           slug: string
           status?: string | null
           stripe_account_id?: string | null
@@ -5964,13 +6615,12 @@ export type Database = {
           billing_period_end?: string | null
           billing_status?: string | null
           created_at?: string | null
+          country?: string | null
           domain?: string | null
           id?: string
           logo_url?: string | null
           name?: string
           plan?: string | null
-          primary_color?: string | null
-          secondary_color?: string | null
           slug?: string
           status?: string | null
           stripe_account_id?: string | null
@@ -6046,15 +6696,20 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          checkout_expires_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
+          duplicate_settlement_at: string | null
+          expired_at: string | null
           payment_method: string | null
           payment_provider: string | null
           plan_id: number | null
           product_id: number | null
           provider_charge_id: string | null
+          provider_checkout_id: string | null
           provider_metadata: Json | null
           provider_subscription_id: string | null
           refunded_amount: number
+          revived_at: string | null
           school_percentage_snapshot: number | null
           settlement_base: number | null
           settlement_currency: string | null
@@ -6069,15 +6724,20 @@ export type Database = {
         }
         Insert: {
           amount: number
+          checkout_expires_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          duplicate_settlement_at?: string | null
+          expired_at?: string | null
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
           product_id?: number | null
           provider_charge_id?: string | null
+          provider_checkout_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
           refunded_amount?: number
+          revived_at?: string | null
           school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
@@ -6092,15 +6752,20 @@ export type Database = {
         }
         Update: {
           amount?: number
+          checkout_expires_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
+          duplicate_settlement_at?: string | null
+          expired_at?: string | null
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
           product_id?: number | null
           provider_charge_id?: string | null
+          provider_checkout_id?: string | null
           provider_metadata?: Json | null
           provider_subscription_id?: string | null
           refunded_amount?: number
+          revived_at?: string | null
           school_percentage_snapshot?: number | null
           settlement_base?: number | null
           settlement_currency?: string | null
@@ -6270,6 +6935,7 @@ export type Database = {
           id: string
           last_error: string | null
           payload: Json
+          processing_lease_expires_at: string | null
           processing_started_at: string | null
           processing_token: string | null
           processed_at: string | null
@@ -6284,6 +6950,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
           processing_started_at?: string | null
           processing_token?: string | null
           processed_at?: string | null
@@ -6298,6 +6965,7 @@ export type Database = {
           id?: string
           last_error?: string | null
           payload?: Json
+          processing_lease_expires_at?: string | null
           processing_started_at?: string | null
           processing_token?: string | null
           processed_at?: string | null
@@ -6434,10 +7102,18 @@ export type Database = {
       }
     }
     Functions: {
+      account_deletion_blockers: {
+        Args: { _user_id: string }
+        Returns: {
+          detail: string
+          reason: string
+        }[]
+      }
       apply_self_managed_platform_period: {
         Args: {
           _interval: string
           _plan_id: string
+          _plan_slug: string | null
           _provider: string
           _provider_customer_id?: string
           _provider_event_id: string
@@ -6449,6 +7125,41 @@ export type Database = {
           period_end: string
           period_start: string
         }[]
+      }
+      apply_webhook_subscription_period: {
+        Args: {
+          _allow_period_realign?: boolean
+          _new_period_end: string
+          _provider: string
+          _provider_event_id: string
+          _provider_subscription_id: string
+        }
+        Returns: boolean
+      }
+      assert_plan_limit_headroom: {
+        Args: { _resource: string; _tenant_id: string }
+        Returns: undefined
+      }
+      calculate_platform_billing_period: {
+        Args: {
+          _current_period_end: string | null
+          _interval: string
+          _is_renewal?: boolean
+          _now?: string
+        }
+        Returns: {
+          period_end: string
+          period_start: string
+        }[]
+      }
+      claim_webhook_business_effect: {
+        Args: {
+          _effect_type: string
+          _provider: string
+          _provider_event_id: string
+          _target_id: string
+        }
+        Returns: boolean
       }
       apply_webhook_refund: {
         Args: {
@@ -6481,8 +7192,109 @@ export type Database = {
           event_id: string
         }[]
       }
+      claim_pending_pushes: {
+        Args: { _max_age?: unknown; _max_notifications?: number }
+        Returns: {
+          content: string
+          data: Json
+          kind: string
+          notification_id: number
+          priority: string
+          recipients: number
+          title: string
+          tokens: string[]
+          url: string
+        }[]
+      }
+      claim_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _lease_seconds?: number
+          _max_attempts?: number
+          _request_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_activation_state: string
+          current_attempt_count: number
+        }[]
+      }
       complete_webhook_event: {
         Args: { _claim_token: string; _event_id: string }
+        Returns: boolean
+      }
+      complete_solana_platform_activation: {
+        Args: { _claim_token: string; _request_id: string }
+        Returns: boolean
+      }
+      confirm_platform_payment_request: {
+        Args: { _confirmed_by: string; _request_id: string }
+        Returns: {
+          applied: boolean
+          confirmed_at: string
+          confirmed_by: string
+          period_end: string
+          period_start: string
+          switch_id: string
+          tenant_id: string
+        }[]
+      }
+      count_plan_limit_usage: {
+        Args: { _resource: string; _tenant_id: string }
+        Returns: number
+      }
+      downgrade_platform_subscription_if_current: {
+        Args: {
+          _payment_provider: string
+          _provider_subscription_id: string
+          _tenant_id: string
+        }
+        Returns: number
+      }
+      fail_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _last_error: string
+          _max_attempts?: number
+          _request_id: string
+          _retry_delay_seconds?: number
+        }
+        Returns: string
+      }
+      get_tenant_plan_usage: { Args: { _tenant_id: string }; Returns: Json }
+      increment_ai_chat_usage: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: Json
+      }
+      invoke_cron_route: { Args: { _route: string }; Returns: number }
+      observe_solana_platform_payment: {
+        Args: { _request_id: string; _signature: string; _tenant_id: string }
+        Returns: {
+          current_activation_state: string
+          current_signature: string
+          observation_status: string
+        }[]
+      }
+      prepare_account_deletion: {
+        Args: { _user_id: string }
+        Returns: {
+          bucket_id: string
+          name: string
+        }[]
+      }
+      promote_platform_subscription_switch: {
+        Args: {
+          _switch_id: string
+          _target_interval: string
+          _target_payment_provider: string
+          _target_period_end: string | null
+          _target_period_start: string | null
+          _target_plan_id: string
+          _target_provider_customer_id: string | null
+          _target_provider_subscription_id: string | null
+          _target_status: string
+          _tenant_id: string
+        }
         Returns: boolean
       }
       award_xp:
@@ -6518,6 +7330,19 @@ export type Database = {
       can_read_exam: { Args: { _exam_id: number }; Returns: boolean }
       cancel_subscription: {
         Args: { _plan_id: number; _user_id: string }
+        Returns: undefined
+      }
+      ban_tenant_member: {
+        Args: {
+          _actor_id: string
+          _reason?: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      lift_tenant_ban: {
+        Args: { _tenant_id: string; _user_id: string }
         Returns: undefined
       }
       change_subscription_plan: {
@@ -6557,8 +7382,80 @@ export type Database = {
         Returns: Json
       }
       cleanup_old_preview_sessions: { Args: never; Returns: undefined }
-      create_exam_submission: {
-        Args: { p_answers: Json; p_exam_id: number; p_student_id: string }
+      community_create_milestone: {
+        Args: {
+          _course_id: number
+          _data: Json
+          _tenant_id: string
+          _type: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      community_mention_candidates: {
+        Args: {
+          _course_id?: number
+          _limit?: number
+          _post_id?: string
+          _query?: string
+          _tenant_id: string
+        }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
+      }
+      community_milestone_allowed: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      community_milestone_check_completion: {
+        Args: { _course_id: number; _tenant_id: string; _user_id: string }
+        Returns: undefined
+      }
+      community_notification_excerpt: {
+        Args: { _max: number; _text: string }
+        Returns: string
+      }
+      community_notification_place_label: {
+        Args: { _course: number; _tenant: string }
+        Returns: string
+      }
+      community_notification_post_label: {
+        Args: { _content: string; _milestone_data: Json; _title: string }
+        Returns: string
+      }
+      community_notify_answer_accepted: {
+        Args: { _actor_id: string; _comment_id: string }
+        Returns: number
+      }
+      community_notify_blocked: {
+        Args: { _a: string; _b: string }
+        Returns: boolean
+      }
+      community_notify_can_reach: {
+        Args: { _course: number; _tenant: string; _user: string }
+        Returns: boolean
+      }
+      community_notify_wants: {
+        Args: { _category: string; _user: string }
+        Returns: boolean
+      }
+      community_prompt_recipients: {
+        Args: { _post_id: string }
+        Returns: string[]
+      }
+      community_reply_recipients: {
+        Args: { _comment_id: string }
+        Returns: {
+          reply_to: string
+          user_id: string
+        }[]
+      }
+      community_upsert_reply_notification: {
+        Args: { _comment_id: string; _recipient: string; _reply_to: string }
         Returns: number
       }
       create_notification:
@@ -6578,7 +7475,15 @@ export type Database = {
             }
             Returns: undefined
           }
-      create_school: { Args: { _name: string; _slug: string }; Returns: string }
+      create_school: {
+        Args: {
+          _country?: string
+          _currency?: string
+          _name: string
+          _slug: string
+        }
+        Returns: string
+      }
       create_student_question_notification: {
         Args: { _context?: string; _course_id: number; _message: string }
         Returns: number
@@ -6630,6 +7535,7 @@ export type Database = {
           _limit?: number
         }
         Returns: {
+          community_replies: number
           current_streak: number
           due_cards: number
           email: string
@@ -6638,6 +7544,14 @@ export type Database = {
           last_activity_date: string
           tenant_id: string
           user_id: string
+        }[]
+      }
+      get_exam_answer_key: {
+        Args: { p_submission_id: number }
+        Returns: {
+          correct_answer: string
+          correct_option_ids: number[]
+          question_id: number
         }[]
       }
       get_exam_submissions: {
@@ -6677,6 +7591,10 @@ export type Database = {
         Args: { _course_id: number; _user_id: string }
         Returns: undefined
       }
+      grade_exercise_answers: {
+        Args: { _answers: Json; _exercise_id: number }
+        Returns: Json
+      }
       grant_free_subscription: {
         Args: { _plan_id: number; _user_id: string }
         Returns: undefined
@@ -6704,6 +7622,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_course_complete: {
+        Args: { _course_id: number; _user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: never; Returns: boolean }
       is_tenant_staff: { Args: never; Returns: boolean }
       issue_certificate_if_eligible: {
@@ -6725,6 +7647,7 @@ export type Database = {
         Returns: undefined
       }
       publish_scheduled_lessons: { Args: never; Returns: undefined }
+      record_cron_run_results: { Args: never; Returns: number }
       redeem_store_item: {
         Args: { _item_id: string; _tenant_id: string; _user_id: string }
         Returns: Json
@@ -6789,6 +7712,18 @@ export type Database = {
         Returns: undefined
       }
       set_league_opt_out: { Args: { _opt_out: boolean }; Returns: undefined }
+      settle_expired_checkout: {
+        Args: { _transaction_id: number }
+        Returns: string
+      }
+      submit_exam: {
+        Args: { p_answers: Json; p_exam_id: number }
+        Returns: number
+      }
+      tenant_plan_limit: {
+        Args: { _key: string; _tenant_id: string }
+        Returns: number
+      }
       update_token_last_used: {
         Args: { ip_input: unknown; token_id_input: number }
         Returns: undefined

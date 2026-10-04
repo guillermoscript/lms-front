@@ -1,4 +1,13 @@
 import * as Sentry from "@sentry/nextjs";
+import { ANALYTICS_EVENTS } from "@/lib/analytics/events";
+import { shouldDropEvent } from "@/lib/analytics/exclusions";
+import { classifyDomMutationError } from "@/lib/sentry/noise";
+
+// The OpenPanel tracker installs a queueing `window.op` stub before the script
+// loads, so calling it here is safe at any point in the page lifecycle — but it
+// only exists at all when `<OpenPanelComponent>` rendered (client id configured
+// and the environment is tracked), so it must be feature-detected every time.
+type OpenPanelGlobal = (method: "track", name: string, properties?: Record<string, unknown>) => void;
 
 // The feedback dialog is built by Sentry outside React, so it can't reach
 // next-intl's messages. `<html lang>` is server-rendered and therefore already
@@ -36,11 +45,71 @@ const feedbackText = isSpanish
       errorEmptyMessageText: "Add a description before sending.",
     };
 
+// The DSN comes from the environment, never a literal. It used to be hardcoded,
+// which meant every fork of this repo deployed elsewhere reported its crashes into
+// our Sentry project (a Vercel fork with no Supabase env vars produced the top
+// issues LMS-FRONT-9B/9C/87/8X/8W). With no DSN set, `Sentry.init` is a no-op.
 Sentry.init({
-  dsn: "https://e40fdc0a3e5965c1862e6594a8c2631f@o4507789962706944.ingest.us.sentry.io/4507789965721600",
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  // Browser-extension and bundler noise we cannot act on. MetaMask injects itself
+  // into every page and rejects when it is locked (LMS-FRONT-9D); Sandpack's
+  // bundler iframe rejects with a `digest` TypeError when its CDN is unreachable
+  // (LMS-FRONT-7S) — both from third-party code, neither reaching our own.
+  ignoreErrors: [
+    "Failed to connect to MetaMask",
+    "MetaMask",
+  ],
+  denyUrls: [
+    /sandpack-react/i,
+    /extensions\//i,
+    /^chrome-extension:\/\//i,
+    /^moz-extension:\/\//i,
+  ],
   tracesSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
+  // Sentry ↔ OpenPanel cross-link. Sentry stays the only error store; OpenPanel
+  // gets ONE pointer event (`error_captured`, carrying the `sentry_event_id`)
+  // per captured error so error rate can be charted next to the product funnels
+  // and joined back to the full Sentry event by id. Nothing here may ever block
+  // or drop the Sentry event itself — the pointer is strictly best-effort.
+  beforeSend(event) {
+    // LMS-FRONT-9M. A `removeChild` NotFoundError raised while a page
+    // translator is rewriting our text nodes is React losing a race with code
+    // we do not control; the same error with no translator present may be a
+    // real reconciliation bug, so that one is kept and tagged rather than
+    // dropped. Runs before the OpenPanel pointer so a dropped event never
+    // leaves an `error_captured` row pointing at nothing.
+    const domVerdict = classifyDomMutationError(
+      event,
+      typeof document === "undefined" ? null : document
+    );
+    if (domVerdict.kind === "drop") return null;
+    if (domVerdict.kind === "keep") {
+      event.tags = { ...event.tags, "dom.third_party_mutation": "none-detected" };
+    }
+
+    try {
+      const op = (window as { op?: OpenPanelGlobal }).op;
+      if (
+        typeof op === "function" &&
+        event.event_id &&
+        !shouldDropEvent({ path: window.location.pathname })
+      ) {
+        op("track", ANALYTICS_EVENTS.ERROR_CAPTURED, {
+          sentry_event_id: event.event_id,
+          source: "client",
+          error_name: event.exception?.values?.[0]?.type,
+        });
+        // Reverse lookup: from a Sentry event, `openpanel.pointer:sent` says a
+        // matching `error_captured` row exists on the OpenPanel side.
+        event.tags = { ...event.tags, "openpanel.pointer": "sent" };
+      }
+    } catch {
+      // Telemetry must never break telemetry.
+    }
+    return event;
+  },
   integrations: [
     Sentry.replayIntegration(),
     Sentry.feedbackIntegration({
@@ -55,3 +124,7 @@ Sentry.init({
     }),
   ],
 });
+
+// Client navigations are invisible to Sentry without this hook — the SDK has
+// warned "ACTION REQUIRED" on every dev boot and build since it was introduced.
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

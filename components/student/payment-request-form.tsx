@@ -24,8 +24,10 @@ interface PaymentRequestFormProps {
   instructions?: string
   /** 'page' renders full card chrome; 'dialog' drops the outer card + header. */
   variant?: 'page' | 'dialog'
-  /** Called after a successful submit (dialog uses it to close). */
+  /** Called after a successful submit. */
   onSuccess?: () => void
+  /** Dialog only: closes the surrounding dialog (Cancel, and Close on the success panel). */
+  onClose?: () => void
 }
 
 export function PaymentRequestForm({
@@ -38,6 +40,7 @@ export function PaymentRequestForm({
   instructions,
   variant = 'page',
   onSuccess,
+  onClose,
 }: PaymentRequestFormProps) {
   const router = useRouter()
   const t = useTranslations('components.paymentRequestForm')
@@ -56,7 +59,7 @@ export function PaymentRequestForm({
     setLoading(true)
 
     try {
-      const request = await createPaymentRequest({
+      const { request, error } = await createPaymentRequest({
         productId: productId || undefined,
         planId: planId || undefined,
         // Identity is derived server-side from the authenticated user; these
@@ -66,6 +69,7 @@ export function PaymentRequestForm({
         contactPhone: formData.contactPhone.trim() || undefined,
         message: formData.message.trim() || undefined,
       })
+      if (error) throw new Error(error)
 
       // Upload proof if one was selected
       if (proofFile && request?.request_id) {
@@ -75,13 +79,13 @@ export function PaymentRequestForm({
       }
 
       toast.success(t('success'))
-
-      if (isDialog) {
-        onSuccess?.()
-        return
-      }
-
+      onSuccess?.()
       setSuccess(true)
+
+      // The dialog keeps its success panel open until the student closes it or
+      // follows the link — it used to vanish the instant the request landed (#727).
+      if (isDialog) return
+
       setTimeout(() => {
         router.push('/dashboard/student/payments')
       }, 2500)
@@ -93,24 +97,37 @@ export function PaymentRequestForm({
     }
   }
 
-  // ─── Success state (page only) ───
+  // ─── Success state ───
   if (success) {
     return (
-      <div className="flex min-h-[420px] flex-col items-center justify-center rounded-xl border border-border bg-card px-6 py-16 text-center">
-        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10">
-          <IconCheck className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+      <div
+        data-testid="payment-request-success"
+        className={
+          isDialog
+            ? 'flex flex-col items-center justify-center px-2 py-8 text-center'
+            : 'flex min-h-[420px] flex-col items-center justify-center rounded-xl border border-border bg-card px-6 py-16 text-center'
+        }
+      >
+        <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-success/10">
+          <IconCheck className="h-7 w-7 text-success" />
         </div>
         <h3 className="text-xl font-bold">{t('successTitle')}</h3>
         <p className="mt-2 max-w-sm text-sm text-muted-foreground">
           {t('successDescription')}
         </p>
-        <Button
-          className="mt-8"
-          variant="outline"
-          onClick={() => router.push('/dashboard/student/payments')}
-        >
-          {t('viewRequests')}
-        </Button>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Button
+            variant={isDialog ? 'default' : 'outline'}
+            onClick={() => router.push('/dashboard/student/payments')}
+          >
+            {t('viewRequests')}
+          </Button>
+          {isDialog && (
+            <Button variant="outline" onClick={() => onClose?.()}>
+              {t('close')}
+            </Button>
+          )}
+        </div>
       </div>
     )
   }
@@ -128,7 +145,7 @@ export function PaymentRequestForm({
       {instructions && (
         <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
           <div className="flex items-center gap-2">
-            <IconInfoCircle className="h-4 w-4 text-primary" />
+            <IconInfoCircle className="h-4 w-4 text-brand-text" />
             <p className="text-sm font-semibold">{t('howToPayTitle')}</p>
           </div>
           <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
@@ -200,7 +217,7 @@ export function PaymentRequestForm({
   )
 
   const submitButton = (
-    <Button type="submit" disabled={loading} className="gap-2 px-6">
+    <Button data-testid="payment-request-submit" type="submit" disabled={loading} className="gap-2 px-6">
       {loading ? (
         <>
           <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -223,7 +240,7 @@ export function PaymentRequestForm({
         <div className="flex items-center justify-end gap-3">
           <button
             type="button"
-            onClick={() => onSuccess?.()}
+            onClick={() => onClose?.()}
             disabled={loading}
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >

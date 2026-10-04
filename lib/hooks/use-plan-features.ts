@@ -13,7 +13,7 @@ const DEFAULT_FEATURES: PlanFeatures = {
   ai_grading: false,
   custom_branding: false,
   custom_domain: false,
-  api_access: false,
+  api_access: true,
   white_label: false,
   priority_support: false,
   xp: true,

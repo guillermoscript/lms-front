@@ -228,10 +228,10 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       {/* Certificates Banner */}
       {(certificateCount ?? 0) > 0 && (
         <Link href="/dashboard/student/certificates" className="block group">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-amber-500/20 bg-gradient-to-r from-amber-500/[0.06] via-amber-500/[0.03] to-transparent p-4 sm:px-6 hover:border-amber-500/30 transition-colors">
+          <div className="relative overflow-hidden rounded-2xl border-2 border-primary/25 bg-brand-tint p-4 sm:px-6 hover:border-primary/40 transition-colors">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                <div className="p-2.5 rounded-xl bg-brand-tint text-brand-text shrink-0">
                   <IconCertificate size={20} />
                 </div>
                 <div>
@@ -241,7 +241,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
                   <p className="text-xs text-muted-foreground">View, download and share your achievements</p>
                 </div>
               </div>
-              <IconArrowRight size={16} className="text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+              <IconArrowRight size={16} className="text-muted-foreground group-hover:text-brand-text group-hover:translate-x-0.5 transition-all shrink-0" />
             </div>
           </div>
         </Link>
@@ -250,8 +250,8 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       {!hasEnrollments ? (
         /* Empty State */
         <div className="rounded-2xl border-2 border-dashed border-muted-foreground/15 p-8 sm:p-16 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-            <IconBook2 className="w-7 h-7 text-primary" />
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-brand-tint flex items-center justify-center mb-5">
+            <IconBook2 className="w-7 h-7 text-brand-text" />
           </div>
           <h2 className="text-xl font-bold mb-2">{t('noCoursesTitle')}</h2>
           <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto leading-relaxed">

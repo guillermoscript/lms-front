@@ -15,6 +15,8 @@ import {
   getActiveSubscriptions,
   getPlanCourses,
 } from '@lms/core'
+import { track } from '@/lib/analytics/server'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export default async function BrowseCoursesPage({
   searchParams,
@@ -70,12 +72,41 @@ export default async function BrowseCoursesPage({
 
   const hasActiveFilters = sanitizedSearch || category
 
+  // Tracked server-side because this is the one place that holds the query and
+  // the result count at the same moment — the search bar submits through the
+  // URL and never learns how many rows came back. Guarded on an active filter
+  // so an unfiltered browse does not register as a search.
+  if (hasActiveFilters) {
+    const resultCount = courses?.length ?? 0
+    await track(
+      ANALYTICS_EVENTS.CATALOG_SEARCHED,
+      {
+        // The query text itself, not just its length: `browse_zero_results` is
+        // only a content-gap detector if it says WHAT was searched for. This is
+        // a course title typed into a school's catalogue, not personal data.
+        query: sanitizedSearch || null,
+        query_length: sanitizedSearch.length,
+        has_category_filter: Boolean(category),
+        result_count: resultCount,
+      },
+      { userId, tenantId, role: 'student' }
+    )
+
+    if (resultCount === 0) {
+      await track(
+        ANALYTICS_EVENTS.BROWSE_ZERO_RESULTS,
+        { query: sanitizedSearch || null, has_category_filter: Boolean(category) },
+        { userId, tenantId, role: 'student' }
+      )
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 container" data-testid="browse-courses-page">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
-          <IconSparkles className="w-6 h-6 text-primary" />
+          <IconSparkles className="w-6 h-6 text-brand-text" />
           <h1 className="text-3xl font-bold tracking-tight truncate" data-testid="browse-title">{t('title')}</h1>
         </div>
         <p className="text-muted-foreground">
@@ -85,12 +116,12 @@ export default async function BrowseCoursesPage({
 
       {/* Subscription Status */}
       {!activeSubscription ? (
-        <Alert className="mb-8 border-amber-500/20 bg-amber-500/10">
-          <IconAlertCircle className="h-4 w-4 text-amber-500" />
-          <AlertTitle className="text-amber-600 dark:text-amber-400 font-semibold">
+        <Alert className="mb-8 border-warning/20 bg-warning/10">
+          <IconAlertCircle className="h-4 w-4 text-warning" />
+          <AlertTitle className="text-warning font-semibold">
             {t('noSubscriptionTitle')}
           </AlertTitle>
-          <AlertDescription className="text-amber-600/90 dark:text-amber-400/90">
+          <AlertDescription className="text-warning/90">
             {t('noSubscriptionDesc')}
             <div className="mt-4">
               <Link href="/pricing">
@@ -103,8 +134,8 @@ export default async function BrowseCoursesPage({
           </AlertDescription>
         </Alert>
       ) : (
-        <Alert className="mb-8 border-primary/20 bg-primary/10">
-          <IconSparkles className="h-4 w-4 text-primary" />
+        <Alert className="mb-8 border-primary/20 bg-brand-tint">
+          <IconSparkles className="h-4 w-4 text-brand-text" />
           <AlertTitle className="font-semibold">{t('activeSubscriptionTitle')}</AlertTitle>
           <AlertDescription>
             {t('activeSubscriptionDesc', {

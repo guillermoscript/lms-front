@@ -51,11 +51,7 @@ const freeCourseSchool: PuckTemplate = {
         heading: 'Our school in numbers',
         subtitle: 'Real learners, real progress — updated live from our catalog.',
         useLiveStats: true,
-        items: [
-          { value: '+1200', label: 'Lessons completed' },
-          { value: '22,000', label: 'Active students' },
-          { value: '+50', label: 'Courses published' },
-        ],
+        items: [],
       }),
       c('CourseGrid', {
         title: 'Start with a free course',

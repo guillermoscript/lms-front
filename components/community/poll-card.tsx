@@ -11,7 +11,7 @@ import { castVote } from '@/app/actions/community'
 interface CommunityPost {
   id: string
   author_id: string
-  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll'
+  post_type: 'standard' | 'discussion_prompt' | 'milestone' | 'poll' | 'question'
   title: string | null
   content: string
   media_urls: { url: string; type: 'image' | 'video' | 'file'; name: string }[]
@@ -24,7 +24,7 @@ interface CommunityPost {
   lesson_id: number | null
   is_graded: boolean
   milestone_type: string | null
-  milestone_data: any
+  milestone_data: unknown
   author: { id: string; full_name: string | null; avatar_url: string | null }
   user_reactions: string[]
   poll_options?: { id: string; option_text: string; vote_count: number; sort_order: number }[]
@@ -58,7 +58,9 @@ export function PollCard({ post, userId }: PollCardProps) {
     )
 
     try {
-      await castVote(post.id, optionId)
+      // An action returns its failure; only a network error throws.
+      const result = await castVote(post.id, optionId)
+      if (!result.success) throw new Error(result.error)
     } catch {
       // Revert
       setVotedOption(null)

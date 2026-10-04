@@ -2,7 +2,7 @@
 
 import { TenantSwitcher } from './tenant-switcher'
 
-interface TenantOption {
+export interface TenantOption {
   id: string
   slug: string
   name: string

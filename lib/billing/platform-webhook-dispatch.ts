@@ -22,15 +22,33 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
 import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
-import { downgradeTenantToFree } from '@/lib/billing/downgrade-tenant'
+import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { applyPortalPlanChange } from '@/lib/payments/platform-plan-change'
 import { PROVIDER_CAPABILITIES } from '@/lib/payments/types'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import type {
   NormalizedBillingEvent,
   PaymentProvider,
   SubscriptionLifecycleStatus,
 } from '@/lib/payments/types'
+import {
+  isCurrentPlatformSubscriptionIdentity,
+  promotePlatformSubscriptionSwitch,
+  reconcilePlatformSubscriptionSwitch,
+  recordSupersededTerminalEvent,
+  switchIdFromMetadata,
+} from '@/lib/billing/platform-subscription-switch'
+import { PLATFORM_APP_CANCELED_PROVIDERS } from '@/lib/billing/platform-billing'
+
+/**
+ * How long a push-renewal rail whose failed school stops talking to us
+ * (PayPal: SUSPENDED is the last event) keeps its plan. PayPal retries a
+ * failed charge twice at five-day intervals before suspending, so a shorter
+ * window would downgrade a school PayPal is still collecting from.
+ */
+export const PUSH_RAIL_GRACE_DAYS = 14
 
 /**
  * `platform_subscriptions.status` is CHECK-constrained
@@ -50,6 +68,8 @@ const ALLOWED_SUB_STATUS = new Set<string>([
   'incomplete_expired',
   'unpaid',
 ])
+
+const TERMINAL_STORED_STATUS = new Set<string>(['canceled', 'incomplete_expired'])
 
 function storedStatus(status: SubscriptionLifecycleStatus | undefined, fallback: string): string {
   if (!status) return fallback
@@ -117,13 +137,29 @@ async function resolveTenantId(
       .eq('provider_subscription_id', event.providerSubscriptionId)
       .maybeSingle(),
   )
-  return (row as { tenant_id: string } | null)?.tenant_id ?? null
+  const currentTenant = (row as { tenant_id: string } | null)?.tenant_id
+  if (currentTenant) return currentTenant
+
+  const sourceSwitch = await unwrap(
+    'platform_subscription_switches lookup by source identity',
+    admin
+      .from('platform_subscription_switches')
+      .select('tenant_id')
+      .eq('source_payment_provider', provider)
+      .eq('source_provider_subscription_id', event.providerSubscriptionId)
+      .in('state', ['cancellation_pending', 'cancellation_retry', 'cancellation_scheduled'])
+      .limit(1)
+      .maybeSingle(),
+  )
+  return (sourceSwitch as { tenant_id: string } | null)?.tenant_id ?? null
 }
 
 interface StoredSubscription {
   plan_id: string | null
   status: string | null
   current_period_end: string | null
+  payment_provider: string | null
+  provider_subscription_id: string | null
 }
 
 /**
@@ -274,12 +310,75 @@ async function notifyPaymentFailed(
   }
 }
 
+/**
+ * Event types the SCHOOL → PLATFORM loop has no meaning for — they are the
+ * student → school loop's vocabulary (a course purchase, a failed card, a
+ * refund on a sale).
+ *
+ * This list is a security boundary, not tidiness. Stripe is the only provider
+ * with two separate registrations and two separate signing secrets
+ * (`platformWebhookSecret`), so a student event posted to the platform endpoint
+ * fails verification. Every OTHER rail signs both loops with the one secret its
+ * factory branch reads and bills both loops through one merchant account — so
+ * the moment an operator registers `/api/billing/webhook/<provider>` for
+ * PayPal, Binance or Lemon Squeezy, that endpoint also receives every student's
+ * course purchase, correctly signed.
+ *
+ * Those events then resolved a tenant (the student loop puts `tenantId` in
+ * provider metadata and `resolveTenantId` reads exactly that key) and fell
+ * through to `STATUS_BY_TYPE[event.type] ?? 'active'` — so a $5 course sale
+ * rewrote the SCHOOL's `platform_subscriptions` row: `status: 'active'`,
+ * `payment_provider` flipped to the student rail, `grace_period_end` and
+ * `renewal_reminder_sent_at` cleared. On a school paying by bank transfer that
+ * is a free plan forever: `expire-platform-subscriptions` only walks
+ * `PLATFORM_SELF_MANAGED_PROVIDERS`, and `paypal` is not one, so nothing would
+ * ever expire the row again.
+ *
+ * Dropping them here rather than at the route keeps the redelivery cron, the
+ * Solana verify path and any future caller behind the same rule.
+ */
+const STUDENT_LOOP_EVENT_TYPES = new Set<NormalizedBillingEvent['type']>([
+  'payment.succeeded',
+  'payment.failed',
+  'refund.succeeded',
+])
+
 export async function dispatchPlatformBillingEvent(
   event: NormalizedBillingEvent,
   ctx: PlatformDispatchContext,
 ): Promise<void> {
   const { provider, admin, revertToPrice, sendEmailFn = sendEmail } = ctx
   const now = new Date().toISOString()
+
+  if (STUDENT_LOOP_EVENT_TYPES.has(event.type)) {
+    // Ack, never throw: the delivery is legitimate, it simply belongs to the
+    // other loop, and a 500 would have the provider redeliver it forever.
+    // Platform activation arrives as `subscription.activated` on every rail —
+    // Binance's own adapter branches on `planId` to say so (#610).
+    console.log(
+      `[platform-webhook] ${event.type} on ${provider} belongs to the student loop — ignoring`,
+    )
+    return
+  }
+
+  // The type guard above cannot see a student PLAN purchase: on PayPal and
+  // Lemon Squeezy it normalises to `subscription.activated`, the very type a
+  // platform activation uses. Its metadata is the student checkout's —
+  // `userId`, `tenantId` and `planId`, camelCase — which `resolveTenantId` and
+  // `isFreshActivation` both accept, so on a school with no
+  // `provider_subscription_id` (a bank-transfer school) it reached the upsert
+  // below with the student's plan id (#744).
+  //
+  // `userId` is the student checkout's owner-binding key and no platform
+  // checkout has ever set it; `tenant_id` is the platform checkout's key and no
+  // student checkout sets it. Renewals and cancels carry no metadata and still
+  // resolve by subscription identity.
+  if (event.metadata?.userId && !event.metadata?.tenant_id) {
+    console.log(
+      `[platform-webhook] ${event.type} on ${provider} carries student checkout metadata — ignoring`,
+    )
+    return
+  }
 
   const tenantId = await resolveTenantId(event, ctx)
   if (!tenantId) {
@@ -292,9 +391,104 @@ export async function dispatchPlatformBillingEvent(
   // canceled + tenant reset + free-plan split + access-cutoff reconcile), and
   // duplicating any of it here is how the two paths drift.
   if (event.type === 'subscription.canceled' || event.type === 'subscription.expired') {
-    const platformFee = await downgradeTenantToFree(admin, tenantId)
+    if (!event.providerSubscriptionId) {
+      console.warn(`[platform-webhook] ${event.type} on ${provider} has no subscription identity — ignoring`)
+      return
+    }
+    const current = await isCurrentPlatformSubscriptionIdentity(
+      admin,
+      tenantId,
+      provider,
+      event.providerSubscriptionId,
+    )
+    if (!current) {
+      const superseded = await recordSupersededTerminalEvent(
+        admin,
+        provider,
+        event.providerSubscriptionId,
+      )
+      console.log(
+        `[platform-webhook] ${event.type} for non-current ${provider}/${event.providerSubscriptionId} ` +
+          (superseded ? 'completed switch cleanup' : 'was ignored'),
+      )
+      return
+    }
+    // A rail whose cancel is final (PayPal, #744) sends CANCELLED the moment
+    // the school — or the payer, from their PayPal account — cancels, not when
+    // the period it paid for runs out. Downgrading here would take back days
+    // already paid for. Keep the plan, record the cancellation the way a
+    // scheduled one looks, and let the expiry cron's cancel phase end it at
+    // `current_period_end` (`PLATFORM_APP_CANCELED_PROVIDERS`). `expired` is
+    // not deferred: PayPal only sends it once the billing cycles are over.
+    if (
+      event.type === 'subscription.canceled' &&
+      !PROVIDER_CAPABILITIES[provider as PaymentProvider]?.supportsScheduledCancellation
+    ) {
+      const row = (await unwrap(
+        'platform_subscriptions lookup for final cancel',
+        admin
+          .from('platform_subscriptions')
+          .select('status, cancel_at_period_end, current_period_end')
+          .eq('tenant_id', tenantId)
+          .eq('payment_provider', provider)
+          .eq('provider_subscription_id', event.providerSubscriptionId)
+          .maybeSingle(),
+      )) as { status: string | null; cancel_at_period_end: boolean | null; current_period_end: string | null } | null
+      const paidThrough = row?.current_period_end ? new Date(row.current_period_end) : null
+      if (row?.status === 'active' && paidThrough && paidThrough.getTime() > new Date(now).getTime()) {
+        if (!row.cancel_at_period_end) {
+          await unwrap(
+            'platform_subscriptions final cancel keeps paid period',
+            admin
+              .from('platform_subscriptions')
+              .update({ cancel_at_period_end: true, canceled_at: now, updated_at: now })
+              .eq('tenant_id', tenantId)
+              .eq('payment_provider', provider)
+              .eq('provider_subscription_id', event.providerSubscriptionId),
+          )
+        }
+        console.log(
+          `[platform-webhook] ${event.type} on ${provider} for tenant ${tenantId} is final at the provider — ` +
+            `keeping the plan until ${row.current_period_end}`,
+        )
+        return
+      }
+    }
+    const platformFee = await downgradeTenantToFreeIfCurrent(
+      admin,
+      tenantId,
+      provider,
+      event.providerSubscriptionId,
+    )
+    if (platformFee == null) return
     console.log(
       `[platform-webhook] subscription ${event.type} on ${provider}, tenant ${tenantId} downgraded to free (fee=${platformFee}%)`,
+    )
+
+    // Loop E, terminal school churn on a PUSH-RENEWAL rail. The
+    // `expire-platform-subscriptions` cron emits the same event for rails whose
+    // period WE own (`PLATFORM_SELF_MANAGED_PROVIDERS`); it never sees Stripe,
+    // Lemon Squeezy or PayPal, whose expiry is decided here. Between the two,
+    // every rail is covered exactly once.
+    //
+    // `plan` is null on purpose rather than fetched: this branch deliberately
+    // returns before the `platform_subscriptions` lookup below, and a churn
+    // event is not worth adding a query to a webhook for. `tenant_id` joins it
+    // to whatever plan the tenant last paid for.
+    void track(
+      ANALYTICS_EVENTS.SUBSCRIPTION_EXPIRED,
+      {
+        scope: 'platform',
+        plan: null,
+        provider,
+        // No grace window on a push-renewal rail — the provider ran its own
+        // dunning before telling us. Stated rather than omitted so the property
+        // is comparable with the cron's.
+        was_grace: false,
+        churn_type: event.type === 'subscription.canceled' ? 'voluntary' : 'involuntary',
+        event_type: event.type,
+      },
+      { tenantId },
     )
     return
   }
@@ -303,36 +497,112 @@ export async function dispatchPlatformBillingEvent(
     'platform_subscriptions lookup',
     admin
       .from('platform_subscriptions')
-      .select('plan_id, status, current_period_end')
+      .select('plan_id, status, current_period_end, payment_provider, provider_subscription_id')
       .eq('tenant_id', tenantId)
       .maybeSingle(),
   )) as StoredSubscription | null
 
-  if (isStalePeriod(stored, tenantId, event.periodEnd)) return
+  const switchId = switchIdFromMetadata(event.metadata)
+  const isSwitchActivation = event.type === 'subscription.activated' && !!switchId
+  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
+  const isSameRailSelfManagedRenewal =
+    event.type === 'subscription.activated' &&
+    selfManaged &&
+    stored?.payment_provider === provider &&
+    !!event.providerSubscriptionId
+  // A terminal row is a fresh start whichever rail it ended on (#479): a school
+  // that churned from Stripe and later subscribes on PayPal still holds the
+  // dead `sub_…` id, and requiring the same provider dropped the PayPal
+  // activation as "non-current" while PayPal billed it every month.
+  const isFreshActivation =
+    event.type === 'subscription.activated' &&
+    (!stored?.provider_subscription_id || TERMINAL_STORED_STATUS.has(stored.status ?? '')) &&
+    !!(event.metadata?.plan_id ?? event.metadata?.planId)
+  // The subset that replaces a DEAD row — a school coming back after churning.
+  // A live row without a provider id (Stripe checkout before its subscription
+  // event) is not one: its echoed metadata can be stale.
+  const isReturningActivation = isFreshActivation && TERMINAL_STORED_STATUS.has(stored?.status ?? '')
+  if (
+    !isSwitchActivation &&
+    !isSameRailSelfManagedRenewal &&
+    !isFreshActivation &&
+    stored?.provider_subscription_id
+  ) {
+    const currentIdentity =
+      stored.payment_provider === provider &&
+      !!event.providerSubscriptionId &&
+      stored.provider_subscription_id === event.providerSubscriptionId
+    if (!currentIdentity) {
+      console.log(
+        `[platform-webhook] ${event.type} for non-current ${provider}/${event.providerSubscriptionId ?? 'missing'} ignored`,
+      )
+      return
+    }
+  }
+
+  if (!isSwitchActivation && isStalePeriod(stored, tenantId, event.periodEnd)) return
 
   const status = storedStatus(event.subscriptionStatus, STATUS_BY_TYPE[event.type] ?? 'active')
   const periodStart = event.periodStart?.toISOString()
   const periodEnd = event.periodEnd?.toISOString()
 
   if (event.type === 'subscription.past_due') {
-    await unwrap(
+    // The transition test lives in the WHERE clause, not in a read of `stored`:
+    // a single failed charge produces more than one past_due event (the failed
+    // invoice and the subscription's own status change), and two of them
+    // dispatching concurrently would BOTH pass a read-then-check against the
+    // same 'active' snapshot. Only the update that actually flips the row wins
+    // the right to notify.
+    //
+    // A rail in `PLATFORM_APP_CANCELED_PROVIDERS` (PayPal) opens a grace window
+    // here, on the transition (#479). PayPal retries a failed charge and then
+    // SUSPENDS the subscription — and a suspended subscription sends nothing
+    // more, ever. Without a deadline the school kept its paid plan, limits and
+    // lower fee for free until someone noticed; the expiry cron's phase 3
+    // downgrades it once this window closes, and a later successful sale
+    // clears the window (`grace_period_end: null` on every active write).
+    const opensGrace = (PLATFORM_APP_CANCELED_PROVIDERS as readonly string[]).includes(provider)
+    const transitioned = (await unwrap(
       'platform_subscriptions past_due',
-      admin.from('platform_subscriptions').update({ status, updated_at: now }).eq('tenant_id', tenantId),
-    )
+      admin
+        .from('platform_subscriptions')
+        .update({
+          status,
+          updated_at: now,
+          ...(opensGrace
+            ? { grace_period_end: new Date(Date.parse(now) + PUSH_RAIL_GRACE_DAYS * 86_400_000).toISOString() }
+            : {}),
+        })
+        .eq('tenant_id', tenantId)
+        .neq('status', 'past_due')
+        .select('tenant_id'),
+    )) as { tenant_id: string }[] | null
     await unwrap(
       'tenants past_due',
       admin.from('tenants').update({ billing_status: status, updated_at: now }).eq('id', tenantId),
     )
 
-    // Only on the TRANSITION into dunning. A single failed charge produces more
-    // than one past_due event (the failed invoice and the subscription's own
-    // status change), and a redelivery produces another — mailing on each would
-    // send a school three copies of the same bad news. Best-effort besides: a
-    // mail failure must not undo the writes above by 500-ing, which would have
-    // the provider redeliver an event we had already applied.
-    if (stored?.status !== 'past_due') {
+    // Only on the TRANSITION into dunning — mailing on each event would send a
+    // school three copies of the same bad news. `!stored` keeps the pre-#625
+    // behavior of still warning a tenant that has no subscription row at all.
+    // Best-effort besides: a mail failure must not undo the writes above by
+    // 500-ing, which would have the provider redeliver an event we had already
+    // applied.
+    if ((transitioned?.length ?? 0) > 0 || !stored) {
+      if (!event.providerEventId) {
+        throw new Error(`platform dispatch ${event.type}: provider event id is required for notification dedupe`)
+      }
       try {
-        await notifyPaymentFailed(admin, tenantId, sendEmailFn)
+        const shouldNotify = await unwrap(
+          'payment-failed notification claim',
+          admin.rpc('claim_webhook_business_effect', {
+            _provider: `platform:${provider}`,
+            _provider_event_id: event.providerEventId,
+            _effect_type: 'platform_payment_failed_email',
+            _target_id: tenantId,
+          }),
+        )
+        if (shouldNotify) await notifyPaymentFailed(admin, tenantId, sendEmailFn)
       } catch (emailErr) {
         console.error('[platform-webhook] failed to send payment-failed email:', emailErr)
       }
@@ -353,13 +623,30 @@ export async function dispatchPlatformBillingEvent(
   // is minted for one specific purchase and carries that purchase's plan, so a
   // school moving from Starter to Pro would otherwise have its Pro payment
   // extend its Starter period.
-  const selfManaged = !!PROVIDER_CAPABILITIES[provider as PaymentProvider]?.selfManagedPeriod
   const isFirstActivation = !stored?.plan_id
-  const trustMetadataPlan = isFirstActivation || selfManaged
+  // A fresh activation over a terminal row is a new subscription minted for
+  // this purchase (#479): its metadata is not stale. Reading the dead row's
+  // plan instead left a school that churned from Pro and came back on Starter
+  // with a Pro row and `tenants.plan = free`.
+  const trustMetadataPlan = isFirstActivation || isReturningActivation || selfManaged || isSwitchActivation
   const planId = trustMetadataPlan ? (event.metadata?.plan_id ?? event.metadata?.planId) : undefined
-  const planSlug = trustMetadataPlan
+  // PayPal's `custom_id` has no room for the slug next to the ids it must carry
+  // (#744), so a plan named only by id is resolved here. Without it the
+  // subscription row would move to the new plan while `tenants.plan` — what
+  // every feature gate reads — stayed on the old one.
+  const metadataPlanSlug = trustMetadataPlan
     ? (event.metadata?.plan_slug ?? event.metadata?.planSlug)
     : undefined
+  const planSlug =
+    metadataPlanSlug ??
+    (planId
+      ? (
+          (await unwrap(
+            'platform_plans slug lookup',
+            admin.from('platform_plans').select('slug').eq('plan_id', planId).maybeSingle(),
+          )) as { slug: string } | null
+        )?.slug
+      : undefined)
   const interval = event.interval ?? mapInterval(event.metadata?.interval)
 
   // The plan the ROW must carry, which is a different question from `planId`
@@ -398,28 +685,60 @@ export async function dispatchPlatformBillingEvent(
   let effectiveStart = periodStart
   let effectiveEnd = periodEnd
   let derivedPeriod = false
-  if (selfManaged && !event.periodEnd && status === 'active') {
+  if (selfManaged && !event.periodEnd && status === 'active' && isSwitchActivation) {
+    // A switch activation must NOT stack on the OUTGOING provider's period —
+    // the school is abandoning it, so the paid period starts now (#627). It is
+    // derived here rather than in apply_self_managed_platform_period because
+    // promotePlatformSubscriptionSwitch below is its own atomic writer for the
+    // whole switch transition; sending this event through the generic RPC
+    // would upsert the row behind the switch machinery's back.
     derivedPeriod = true
-    if (event.providerEventId) {
-      const rows = (await unwrap(
-        'self-managed platform period apply',
-        admin.rpc('apply_self_managed_platform_period', {
-          _provider: provider,
-          _provider_event_id: event.providerEventId,
-          _tenant_id: tenantId,
-          _plan_id: rowPlanId,
-          _interval: interval ?? 'monthly',
-          _provider_subscription_id: event.providerSubscriptionId ?? null,
-          _provider_customer_id: event.providerCustomerId ?? null,
-        }),
-      )) as { period_start: string | null; period_end: string | null }[]
-      effectiveStart = rows[0]?.period_start ?? undefined
-      effectiveEnd = rows[0]?.period_end ?? undefined
-    } else {
-      const derived = selfManagedPeriod(stored?.current_period_end, interval, new Date(now))
-      effectiveStart = derived.start.toISOString()
-      effectiveEnd = derived.end.toISOString()
+    const derived = selfManagedPeriod(null, interval, new Date(now))
+    effectiveStart = derived.start.toISOString()
+    effectiveEnd = derived.end.toISOString()
+  } else if (selfManaged && !event.periodEnd && status === 'active') {
+    derivedPeriod = true
+    if (!event.providerEventId) {
+      throw new Error(`platform dispatch ${event.type}: provider event id is required for period accounting`)
     }
+    const rows = (await unwrap(
+      'self-managed platform period apply',
+      admin.rpc('apply_self_managed_platform_period', {
+        _provider: provider,
+        _provider_event_id: event.providerEventId,
+        _tenant_id: tenantId,
+        _plan_id: rowPlanId,
+        _plan_slug: planSlug ?? null,
+        _interval: interval ?? 'monthly',
+        _provider_subscription_id: event.providerSubscriptionId ?? null,
+        _provider_customer_id: event.providerCustomerId ?? null,
+      }),
+    )) as { applied: boolean; period_start: string | null; period_end: string | null }[]
+    const result = rows[0]
+    if (!result?.period_start || !result.period_end) {
+      throw new Error(`self-managed platform period apply returned no durable period for ${tenantId}`)
+    }
+    effectiveStart = result.period_start
+    effectiveEnd = result.period_end
+
+    // The RPC is the sole writer for self-managed subscription, tenant period,
+    // plan, cancellation reset and revenue split. Re-running the generic
+    // upserts below would let an older worker rewind a newer serialized result.
+    if (event.providerCustomerId) {
+      await unwrap(
+        'tenant_billing_customers upsert',
+        admin.from('tenant_billing_customers').upsert(
+          {
+            tenant_id: tenantId,
+            payment_provider: provider,
+            provider_customer_id: event.providerCustomerId,
+          },
+          { onConflict: 'tenant_id,payment_provider' },
+        ),
+      )
+    }
+    if (result.applied) await reconcileAccessCutoffSafely(admin, tenantId)
+    return
   }
 
   const subscriptionPatch: Record<string, unknown> = {
@@ -439,7 +758,9 @@ export async function dispatchPlatformBillingEvent(
         // confirmManualPayment treats a confirmed transfer (#546 §1). Without
         // this the school pays for a month and the cron's cancel phase still
         // drops it to free at the end of it.
-        derivedPeriod
+        // A fresh subscription over a terminal row inherits nothing from the
+        // dead one's cancellation either.
+        derivedPeriod || isReturningActivation
         ? { cancel_at_period_end: false, canceled_at: null }
         : {}),
     // Paid means out of dunning. The cron reopens a window if the new period
@@ -449,6 +770,48 @@ export async function dispatchPlatformBillingEvent(
     // A paid period resets the reminder stamp so the next cycle can remind
     // again — the same un-cancel semantics confirmManualPayment applies (#546).
     ...(status === 'active' ? { renewal_reminder_sent_at: null } : {}),
+  }
+
+  if (isSwitchActivation) {
+    if (
+      PROVIDER_CAPABILITIES[provider as PaymentProvider]?.supportsNativeSubscriptions &&
+      !event.providerSubscriptionId
+    ) {
+      throw new Error(`Replacement activation on ${provider} has no subscription identity`)
+    }
+    const promoted = await promotePlatformSubscriptionSwitch({
+      admin,
+      switchId: switchId!,
+      tenantId,
+      targetProvider: provider as PaymentProvider,
+      targetProviderSubscriptionId: event.providerSubscriptionId ?? null,
+      targetProviderCustomerId: event.providerCustomerId ?? null,
+      targetPlanId: rowPlanId,
+      targetStatus: status,
+      targetInterval: interval ?? 'monthly',
+      targetPeriodStart: effectiveStart ?? null,
+      targetPeriodEnd: effectiveEnd ?? null,
+    })
+    if (!promoted) {
+      throw new Error(`Subscription switch ${switchId} no longer matches current billing state`)
+    }
+
+    if (event.providerCustomerId) {
+      await unwrap(
+        'tenant_billing_customers upsert',
+        admin.from('tenant_billing_customers').upsert(
+          {
+            tenant_id: tenantId,
+            payment_provider: provider,
+            provider_customer_id: event.providerCustomerId,
+          },
+          { onConflict: 'tenant_id,payment_provider' },
+        ),
+      )
+    }
+    if (status === 'active') await reconcileAccessCutoffSafely(admin, tenantId)
+    await reconcilePlatformSubscriptionSwitch(admin, switchId!)
+    return
   }
 
   // upsert, not update: a hosted-checkout activation is the first time this
@@ -489,6 +852,77 @@ export async function dispatchPlatformBillingEvent(
 
   if (planId) {
     await applyRevenueSplit(admin, tenantId, planId, now)
+  }
+
+  // Loop E, the money event. Emitted after the subscription + tenant writes
+  // land, so it only ever reports a period the school actually holds.
+  //
+  // THE EMISSION KEY IS THE PERIOD, NOT THE EVENT TYPE, and that is load-
+  // bearing: ONE Stripe payment produces THREE dispatchable events with three
+  // distinct `providerEventId`s, so the `webhook_events` ledger does not
+  // collapse them. A first platform subscription fires
+  // `checkout.session.completed` → activated, `customer.subscription.created`
+  // → activated, and `invoice.paid` → renewed; each renewal after that fires
+  // `invoice.paid` → renewed AND `customer.subscription.updated` → activated.
+  // Emitting per event would have reported 3× the first payment and 2× every
+  // renewal — the single worst way to be wrong about revenue.
+  //
+  // A payment buys a PERIOD, so a period that moves forward is exactly one
+  // payment. The near-duplicates all carry the same period end, so the first to
+  // land emits and the rest are no-ops. `isStalePeriod` above already dropped
+  // strictly-older events; this is the equal case. On the self-managed rails
+  // `derived` always extends past the stored end, so a Binance/Solana renewal
+  // reads as a new period, which is what it is.
+  //
+  // `is_renewal` (trap 4) is computed HERE because this is the only place that
+  // still holds `stored` — the pre-event plan state the upsert above has now
+  // overwritten. It matters most on the crypto rails: Binance Pay and Solana
+  // have no subscription object, so their SECOND purchase arrives as another
+  // `subscription.activated`, identical in shape to the first. Reading that as
+  // a new sale would inflate platform growth by every renewal.
+  //
+  // Three-way, not two: the same plan again is a RENEWAL, a different plan is
+  // EXPANSION (or contraction), and no prior plan is genuinely NEW. Collapsing
+  // the middle case into "renewal" would hide upgrade revenue, which is the
+  // number the whole `plan_limit_hit → plan_changed` funnel exists to move.
+  const opensNewPeriod =
+    !!effectiveEnd &&
+    (!stored?.current_period_end ||
+      new Date(effectiveEnd).getTime() > new Date(stored.current_period_end).getTime())
+
+  if (
+    opensNewPeriod &&
+    (event.type === 'subscription.activated' || event.type === 'subscription.renewed')
+  ) {
+    const hadPlan = stored?.plan_id != null
+    const samePlan = hadPlan && stored?.plan_id === rowPlanId
+    void track(
+      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
+      {
+        provider,
+        // MAJOR units by the `NormalizedBillingEvent` contract — each adapter
+        // converts from its own unit (Lemon Squeezy reports cents).
+        amount: event.amount ?? 0,
+        interval: interval ?? 'monthly',
+        is_renewal: event.type === 'subscription.renewed' || samePlan,
+        is_plan_change: hadPlan && !samePlan,
+        is_new_subscription: !hadPlan,
+        currency: event.currency ?? 'usd',
+        event_type: event.type,
+        // True for the rails with no subscription object, where "activated"
+        // is also what a renewal looks like.
+        self_managed_period: selfManaged,
+        // False means the provider told us nothing about the amount, so the 0
+        // above is an absence rather than a free plan. Stripe's platform mapper
+        // reports no amount on any of these events today, so Stripe rows will
+        // carry `false` — count them, do not sum them.
+        amount_reported: event.amount != null,
+        period_end: effectiveEnd,
+        ...(planSlug ? { plan: planSlug } : {}),
+      },
+      // No user: a webhook has no actor, and the money is the school's.
+      { tenantId },
+    )
   }
 
   // A paid period clears any cutoff scheduled while the school was over its

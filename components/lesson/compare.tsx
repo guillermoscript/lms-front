@@ -16,9 +16,9 @@ interface CompareProps {
 }
 
 const highlightStyles = {
-  positive: 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/50',
-  negative: 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/50',
-  neutral: 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-900/50',
+  positive: 'border-success/30 bg-success/10',
+  negative: 'border-destructive/30 bg-destructive/10',
+  neutral: 'border-border bg-muted/50',
 }
 
 export function Compare({ left, right, className }: CompareProps) {
@@ -34,10 +34,10 @@ export function Compare({ left, right, className }: CompareProps) {
         >
           <h4 className="mb-3 flex items-center gap-2 font-semibold text-sm">
             {left.highlight === 'negative' && (
-              <span className="text-red-500">✗</span>
+              <span className="text-destructive">✗</span>
             )}
             {left.highlight === 'positive' && (
-              <span className="text-green-500">✓</span>
+              <span className="text-success">✓</span>
             )}
             {left.title}
           </h4>
@@ -60,10 +60,10 @@ export function Compare({ left, right, className }: CompareProps) {
         >
           <h4 className="mb-3 flex items-center gap-2 font-semibold text-sm">
             {right.highlight === 'negative' && (
-              <span className="text-red-500">✗</span>
+              <span className="text-destructive">✗</span>
             )}
             {right.highlight === 'positive' && (
-              <span className="text-green-500">✓</span>
+              <span className="text-success">✓</span>
             )}
             {right.title}
           </h4>

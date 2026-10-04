@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server'
 const testState = vi.hoisted(() => ({
   claimStatus: 'claimed' as 'claimed' | 'processing' | 'completed',
   dispatchError: null as Error | null,
+  completeError: null as Error | null,
   rpcCalls: [] as { name: string; args: Record<string, unknown> }[],
   dispatch: vi.fn(),
 }))
@@ -23,6 +24,9 @@ function adminClient() {
           ],
           error: null,
         })
+      }
+      if (name === 'complete_webhook_event' && testState.completeError) {
+        return Promise.resolve({ data: null, error: { message: testState.completeError.message } })
       }
       return Promise.resolve({ data: true, error: null })
     },
@@ -71,6 +75,7 @@ beforeEach(() => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key-for-tests'
   testState.claimStatus = 'claimed'
   testState.dispatchError = null
+  testState.completeError = null
   testState.rpcCalls = []
   testState.dispatch.mockClear()
 })
@@ -130,14 +135,26 @@ describe('student billing webhook claim contract', () => {
     expect(testState.rpcCalls[1].args._last_error).toBe('temporary database outage')
   })
 
+  it('releases the claim when durable completion fails', async () => {
+    testState.completeError = new Error('completion database outage')
+    const res = await POST(request(), params())
+
+    expect(res.status).toBe(500)
+    expect(testState.rpcCalls.map((call) => call.name)).toEqual([
+      'claim_webhook_event',
+      'complete_webhook_event',
+      'fail_webhook_event',
+    ])
+  })
+
   it('preserves the Binance Pay transport acknowledgment for active claims', async () => {
     testState.claimStatus = 'processing'
     const res = await POST(request(), params('binance'))
 
     expect(res.status).toBe(409)
     expect(await res.json()).toMatchObject({
-      returnCode: 'SUCCESS',
-      returnMessage: null,
+      returnCode: 'FAIL',
+      returnMessage: 'Event is already processing',
       eventStatus: 'already_processing',
     })
   })

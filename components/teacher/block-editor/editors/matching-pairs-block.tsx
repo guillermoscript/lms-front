@@ -31,21 +31,21 @@ export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlock
   }
 
   return (
-    <div className="space-y-3 rounded-lg border bg-gradient-to-br from-indigo-500/5 to-violet-500/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-indigo-600">
+    <div className="space-y-3 rounded-lg border bg-brand-tint p-4">
+      <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
         <IconArrowsShuffle className="h-4 w-4" />
         {t('blocks.matching-pairs.label')}
       </div>
 
       <div className="space-y-2">
         <div className="flex gap-2 px-6">
-          <span className="flex-1 text-xs text-muted-foreground">{t('matchingPairs.termHeader')}</span>
-          <span className="flex-1 text-xs text-muted-foreground">{t('matchingPairs.pairHeader')}</span>
+          <span className="flex-1 text-xs text-foreground">{t('matchingPairs.termHeader')}</span>
+          <span className="flex-1 text-xs text-foreground">{t('matchingPairs.pairHeader')}</span>
           <span className="w-7" />
         </div>
         {block.pairs.map((pair, index) => (
           <div key={index} className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-4 shrink-0">{index + 1}</span>
+            <span className="text-xs text-foreground w-4 shrink-0">{index + 1}</span>
             <Input
               value={pair.term}
               onChange={(e) => updatePair(index, 'term', e.target.value)}
@@ -83,7 +83,7 @@ export function MatchingPairsBlockEditor({ block, onChange }: MatchingPairsBlock
       </Button>
 
       <div>
-        <span className="text-xs text-muted-foreground">{t('explanationLabel')}</span>
+        <span className="text-xs text-foreground">{t('explanationLabel')}</span>
         <Textarea
           value={block.explanation || ''}
           onChange={(e) => onChange({ explanation: e.target.value || undefined })}

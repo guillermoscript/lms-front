@@ -20,8 +20,11 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-/** Statuses that mean "this request is still an open promise to pay". */
+/** Statuses that block a second request and pause entitlement downgrade. */
 export const OPEN_REQUEST_STATUSES = ['pending', 'instructions_sent', 'payment_received'] as const
+
+/** Only unpaid promises may be swept by the request TTL. */
+export const EXPIRABLE_REQUEST_STATUSES = ['pending', 'instructions_sent'] as const
 
 /**
  * Days a request stays open before the cron expires it. Mirrors the
@@ -51,6 +54,9 @@ export function isRequestOpen(
   now: Date = new Date()
 ): boolean {
   if (!(OPEN_REQUEST_STATUSES as readonly string[]).includes(request.status)) return false
+  // Money has been observed. Expiring this row would turn a recoverable
+  // activation failure back into money-without-service with no retry record.
+  if (request.status === 'payment_received') return true
   // A NULL expiry predates the column (or was written by an older client);
   // treat it as open so a legitimate in-flight request is never dropped.
   if (!request.expires_at) return true

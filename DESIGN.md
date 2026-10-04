@@ -2,23 +2,23 @@
 name: LMS Platform
 description: Multi-tenant LMS where the room stays quiet so the material can be loud.
 colors:
-  slate-teal: "oklch(0.52 0.105 223.128)"
-  slate-teal-deep: "oklch(0.45 0.085 224.283)"
-  slate-teal-mid: "oklch(0.609 0.126 221.723)"
-  slate-teal-bright: "oklch(0.715 0.143 215.221)"
-  slate-teal-pale: "oklch(0.865 0.127 207.078)"
-  ink: "oklch(0.141 0.005 285.823)"
-  ink-muted: "oklch(0.552 0.016 285.938)"
+  tinta-azul: "#3A50B8"
+  tinta-azul-deep: "#24347C"
+  tinta-azul-mid: "#536BC5"
+  tinta-azul-bright: "#788ED4"
+  tinta-azul-pale: "#A0B1E3"
+  tinta-azul-tint: "#E5EAF8"
+  ink: "oklch(0.2 0.02 262)"
+  ink-muted: "oklch(0.47 0.02 260)"
   paper: "oklch(1 0 0)"
-  paper-raised: "oklch(0.985 0 0)"
-  surface-quiet: "oklch(0.967 0.001 286.375)"
-  surface-slate: "oklch(0.21 0.006 285.885)"
-  surface-slate-quiet: "oklch(0.274 0.006 286.033)"
-  hairline: "oklch(0.92 0.004 286.32)"
-  ring-neutral: "oklch(0.705 0.015 286.067)"
-  alert: "oklch(0.577 0.245 27.325)"
+  paper-raised: "oklch(0.985 0.004 250)"
+  surface-quiet: "oklch(0.955 0.006 250)"
+  surface-slate: "oklch(0.22 0.01 260)"
+  surface-slate-quiet: "oklch(0.27 0.01 260)"
+  hairline: "oklch(0.9 0.01 250)"
+  alert: "oklch(0.51 0.2 27)"
   alert-dark: "oklch(0.704 0.191 22.216)"
-  on-teal: "oklch(0.984 0.019 200.873)"
+  on-brand: "oklch(0.99 0 0)"
 typography:
   display:
     fontFamily: "Noto Sans, ui-sans-serif, system-ui, sans-serif"
@@ -68,6 +68,9 @@ rounded:
   lg: "10px"
   xl: "14px"
   2xl: "18px"
+  button: "8px"
+  card: "10px"
+  input: "8px"
 spacing:
   hairline-gap: "4px"
   tight: "8px"
@@ -78,57 +81,57 @@ spacing:
   chapter: "64px"
 components:
   button-primary:
-    backgroundColor: "{colors.slate-teal}"
-    textColor: "{colors.on-teal}"
+    backgroundColor: "{colors.tinta-azul}"
+    textColor: "{colors.on-brand}"
     typography: "{typography.label}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-primary-hover:
-    backgroundColor: "oklch(0.52 0.105 223.128 / 0.8)"
-    textColor: "{colors.on-teal}"
+    backgroundColor: "#3A50B8CC"
+    textColor: "{colors.on-brand}"
   button-primary-learner:
-    backgroundColor: "{colors.slate-teal}"
-    textColor: "{colors.on-teal}"
+    backgroundColor: "{colors.tinta-azul}"
+    textColor: "{colors.on-brand}"
     typography: "{typography.title}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 16px"
     height: "40px"
   button-outline:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-ghost:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   button-destructive:
     backgroundColor: "oklch(0.577 0.245 27.325 / 0.1)"
     textColor: "{colors.alert}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.button}"
     padding: "0 8px"
     height: "28px"
   input-default:
     backgroundColor: "oklch(0.92 0.004 286.32 / 0.2)"
     textColor: "{colors.ink}"
     typography: "{typography.body-staff}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.input}"
     padding: "2px 8px"
     height: "28px"
   card-default:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
     typography: "{typography.body-staff}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.card}"
     padding: "16px 0"
   card-sm:
     backgroundColor: "{colors.paper}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.card}"
     padding: "12px 0"
 ---
 
@@ -142,60 +145,64 @@ A good classroom is not decorated. It is arranged. The walls recede, the light i
 
 The room has two arrangements. On **learner surfaces** (lesson, exercise, checkpoint, exam, browse) it is a reading room: generous, single-focus, one primary action visible, body type sized for a session that lasts an hour on a phone. On **staff surfaces** (analytics, grading, payouts, enrollment, platform panel) it is a desk: dense, comparative, scan-first, small type in exchange for seeing more at once. Same tokens, same components, two spacing registers. The component library defaults to the desk, so the reading room is always an explicit choice.
 
-The room is also rented. Every school overrides the primary color, the corner radius, and the body typeface through CSS custom properties, so nothing structural may depend on any of the three. What stays constant is the arrangement: the hierarchy, the density rules, the hairlines, the placement of the next action. Two schools must be recognizably the same product and recognizably different brands. This system explicitly rejects the generic shadcn template look (default zinc, identical icon-heading-text card grids, hero-metric rows), gamified candy (mascots, confetti, elastic motion, saturated reward badges), the cluttered enterprise LMS (Moodle, Blackboard, Canvas), and SaaS marketing cliché (gradient text, glassmorphic heroes, purple mesh).
+The room is also rented. Every school overrides the primary color, the corner radii, and the typefaces through CSS custom properties, so nothing structural may depend on any of them. What stays constant is the arrangement: the hierarchy, the density rules, the hairlines, the placement of the next action. Two schools must be recognizably the same product and recognizably different brands. This system explicitly rejects the generic shadcn template look (default zinc, identical icon-heading-text card grids, hero-metric rows), gamified candy (mascots, confetti, elastic motion, saturated reward badges), the cluttered enterprise LMS (Moodle, Blackboard, Canvas), and SaaS marketing cliché (gradient text, glassmorphic heroes, purple mesh).
 
 **Key Characteristics:**
 - Flat surfaces, hairline separation, shadows reserved for floating layers only
-- Muted teal accent at low chroma, deployed sparingly, never as decoration
-- Neutrals held at a constant violet-grey hue that is deliberately independent of the tenant brand
+- A single muted brand accent at low chroma, deployed sparingly, never as decoration
+- Neutrals held at one cool hue per theme, deliberately independent of the tenant brand
 - Two named density registers, learner and staff, never averaged
 - Progress communicated by position and sequence, not by reward graphics
 - Bilingual layouts (en/es) with Spanish as the sizing case, not the afterthought
 
-## 2. Colors: The Slate Teal Palette
+## 2. Colors: The Default Theme's Palette
 
-A cool, deliberately desaturated palette. The brand teal sits at chroma 0.105, roughly half what a default framework accent would use, because it has to survive being the only saturated thing on a page full of text.
+The platform has no palette of its own. Since #766 it renders the theme kit's default theme — **Estructura** with its recommended colour, **Tinta azul** — so a school that never opens the picker and a school that picks the default see the same screen. Everything below is `deriveKitVars('estructura', '#3A50B8')` (`lib/themes/kit.ts`), written into `:root` and `.dark` in `app/globals.css` and re-derived by `tests/unit/theme-kit-tokens.test.ts`. It replaced a Slate Teal palette the kit could not produce.
+
+Still a cool, deliberately desaturated room: the brand is one saturated thing on a page full of text, and everything else is a cool grey.
 
 ### Primary
-- **Slate Teal** (`oklch(0.52 0.105 223.128)`): the brand accent. Primary buttons, active navigation, links inside prose, focus emphasis, the single filled element in an otherwise flat view. Tenant-overridable. Light theme value.
-- **Slate Teal Deep** (`oklch(0.45 0.085 224.283)`): the dark-theme primary and the darkest step of the data ramp. Lower chroma than its light counterpart so it does not glare against a near-black surface.
-- **On Teal** (`oklch(0.984 0.019 200.873)`): the only ink permitted on a filled Slate Teal surface. Very slightly teal-tinted white, never pure white.
+- **Tinta azul** (`#3A50B8`, `oklch(0.476 0.166 270)`): the brand accent. Primary buttons, active navigation, links inside prose, focus emphasis, the single filled element in an otherwise flat view. Tenant-overridable, and the same value in both modes — the kit re-derives the *ink* rather than the colour.
+- **On Brand** (`oklch(0.99 0 0)`): the ink on a filled brand surface here. Never hardcode it. It is whichever of the kit's two inks reads better on the resolved colour (`readableButton`), and on a brand that fails AA in both it is the colour that shifts.
+- **Tinta azul tint** (`#E5EAF8` light, `#1F273E` dark): the soft panel fill behind brand-coloured text, and **brand-text** (`#3A50B8` light, `#939FD8` dark) is the only brand value permitted as text.
 
 ### Secondary
-- **Slate Teal Mid** (`oklch(0.609 0.126 221.723)`) and **Slate Teal Bright** (`oklch(0.715 0.143 215.221)`): the sidebar active state and the mid steps of the chart ramp. Chroma rises as lightness rises, which is what keeps the ramp readable at both ends.
-- **Slate Teal Pale** (`oklch(0.865 0.127 207.078)`): the lightest chart step and the tint used behind selected or highlighted rows.
+- **Tinta azul Pale / Bright / Mid** (`#A0B1E3`, `#788ED4`, `#536BC5`) and **Deep** (`#24347C`): the chart ramp, mixed from the brand toward white and black. `--chart-1` through `--chart-5`.
 
-Together these five form the data-visualization ramp (`--chart-1` through `--chart-5`). It is monochromatic by construction: a single hue family stepped by lightness. That is a deliberate constraint. A categorical series needs a second encoding (label, shape, order) rather than a second hue, because a second hue would collide with tenant theming.
+The ramp is monochromatic by construction: one hue stepped by lightness. That is a deliberate constraint. A categorical series needs a second encoding (label, shape, order) rather than a second hue, because a second hue would collide with tenant theming.
 
 ### Neutral
-- **Ink** (`oklch(0.141 0.005 285.823)`): primary text on light, and the page surface on dark.
-- **Ink Muted** (`oklch(0.552 0.016 285.938)`): secondary text, captions, placeholder text, metadata. Never used for anything a user must act on.
-- **Paper** (`oklch(1 0 0)`) and **Paper Raised** (`oklch(0.985 0 0)`): the light page surface and the sidebar. The only place a pure value is permitted, and only as a background.
-- **Surface Quiet** (`oklch(0.967 0.001 286.375)`): muted and secondary fills on light. Inline code, table headers, secondary buttons, disabled fills.
-- **Surface Slate** (`oklch(0.21 0.006 285.885)`) and **Surface Slate Quiet** (`oklch(0.274 0.006 286.033)`): the dark-theme card and muted fills. Dark mode layers tonally rather than with shadow.
-- **Hairline** (`oklch(0.92 0.004 286.32)`): every border, divider, and input stroke on light. On dark this becomes `oklch(1 0 0 / 10%)`, an alpha value rather than a solid, so it composites correctly over any tonal layer.
-- **Ring Neutral** (`oklch(0.705 0.015 286.067)`): the default focus ring where the brand color would be too loud or is not yet resolved.
+These are Estructura's `cool` surface set. A school on another theme gets that theme's set (`warm`, `neutral`, `dark`) at the same roles, which is why nothing structural may read a specific grey.
+- **Ink** (`oklch(0.2 0.02 262)`): primary text on light. On dark it is `oklch(0.96 0.005 260)`.
+- **Ink Muted** (`oklch(0.47 0.02 260)`): secondary text, captions, placeholder text, metadata. Never used for anything a user must act on. AA on background, card and muted on every kit surface (#773).
+- **Paper** (`oklch(1 0 0)`) and **Paper Raised** (`oklch(0.985 0.004 250)`): the card and the page behind it. The page is the faintly cool one, so a white card reads as a sheet on a desk rather than as the page itself.
+- **Surface Quiet** (`oklch(0.955 0.006 250)`): muted and secondary fills on light. Inline code, table headers, secondary buttons, disabled fills.
+- **Surface Slate** (`oklch(0.22 0.01 260)`) and **Surface Slate Quiet** (`oklch(0.27 0.01 260)`): the dark-theme card and muted fills, over a page at `oklch(0.17 0.01 260)`. Dark mode layers tonally rather than with shadow.
+- **Hairline** (`oklch(0.9 0.01 250)` light, `oklch(0.32 0.01 260)` dark): every border, divider, and input stroke. Solid in both modes since the kit owns them.
+- The focus ring is the brand (`--ring`), not a neutral: the kit points it at brand-text, which is AA on every surface the ring lands on.
 
 ### Tertiary
-- **Alert** (`oklch(0.577 0.245 27.325)`) light, **Alert Dark** (`oklch(0.704 0.191 22.216)`) dark: destructive and error only. This is the one high-chroma color in the system and its chroma is the signal. It appears as a 10 to 20 percent tint behind red text, not as a solid red fill. A solid red button is prohibited.
+- **Alert** (`oklch(0.51 0.2 27)`) light, **Alert Dark** (`oklch(0.704 0.191 22.216)`) dark: destructive and error only. Status colours are the platform's on every theme — a kit never sets them, and each one holds AA on all four surface sets. This is the one high-chroma color in the system and its chroma is the signal. It appears as a 10 to 20 percent tint behind red text, not as a solid red fill. A solid red button is prohibited.
 
 ### Named Rules
 
-**The Constant Neutral Rule.** The neutrals sit at hue 285 to 286, a cool violet-grey, while the brand sits at hue 223. They are not tinted toward the brand, and this is deliberate rather than an oversight. The brand hue is tenant-variable; a neutral tinted toward it would shift under every school, and the whole product would change temperature per tenant. The neutral axis is the constant that makes two tenants read as one product. Never re-tint neutrals to match a tenant primary.
+**The Constant Neutral Rule.** Neutrals come from the theme, never from the brand colour. Estructura's sit at hue 250 to 262, a cool blue-grey, while Tinta azul sits at hue 270 (`oklch(0.476 0.166 270)`) — close, and still independent. A neutral tinted toward the brand would shift under every school and the product would change temperature per tenant; a school changes its colour far more often than its theme. Four surface sets exist, one per theme, and each is a fixed set. Never re-tint neutrals to match a tenant primary.
 
-**The Single Filled Element Rule.** On any learner view, exactly one element carries a filled Slate Teal background: the next action. Everything else is text, hairline, or tonal fill. If a screen has two filled teal elements, one of them is not the next action and should be an outline or ghost variant.
+**The Single Filled Element Rule.** On any learner view, exactly one element carries a filled brand background: the next action. Everything else is text, hairline, or tonal fill. If a screen has two filled brand elements, one of them is not the next action and should be an outline or ghost variant.
 
 **The Tenant-Proof Rule.** Every contrast, emphasis, and state decision must hold when the primary is replaced by an arbitrary tenant color. Color is never the sole carrier of meaning: status, validation, correctness, and severity always pair color with text, icon, or position. Derived inks are computed from the resolved color, never hardcoded. This has already shipped as a bug (issue #569); it is not hypothetical.
 
-**The No Pure Ink Rule.** `#000` and `#fff` are prohibited as text colors. Text on light is Ink at lightness 0.141; text on dark is `oklch(0.985 0 0)`. Pure white survives only as a page background.
+**The No Pure Ink Rule.** `#000` and `#fff` are prohibited as text colors. Text on light is Ink at lightness 0.2; text on dark is `oklch(0.96 0.005 260)`; the ink on a filled brand surface bottoms out at `oklch(0.99 0 0)`. Pure white survives only as a card surface.
 
 ## 3. Typography
 
 **Body and UI Font:** Noto Sans (with `ui-sans-serif, system-ui, sans-serif`), bound to `--font-sans` and applied to `html`. Chosen for its Latin coverage and its even color at small sizes in both English and Spanish.
 **Mono Font:** Geist Mono, bound to `--font-mono`. Code blocks, inline code, IDs, and any fixed-width tabular figure.
-**Display:** the same Noto Sans at heavier weight. There is no separate display face.
+**Display:** `h1` to `h3` and card titles resolve through `--font-heading`, which is `--font-sans` unless a theme kit pairs a heading face. On the platform default there is no separate display face.
 
-**Character:** a single humanist sans doing all the work, differentiated by weight and size rather than by family. This is the typographic expression of "content over chrome": the interface has no typographic personality of its own, so the material supplies it. Geist Sans was previously loaded as `--font-geist-sans` with no consumer and has been removed; do not reintroduce a second sans. Display is Noto Sans at weight 700, and it must resolve through `--font-sans` so that a tenant overriding the body face gets a coherent pairing rather than their font against a hardcoded one.
+Every family is declared once with `next/font` in `lib/themes/fonts.ts`, and its variable (`--font-noto-sans`, `--font-geist-mono`, the kit families) sits on `<html>`, where `app/globals.css` maps the three roles onto them. A role declared on `:root` can only resolve a variable set on that same element, so a family variable on `<body>` is a bug.
+
+**Character:** a single humanist sans doing all the work, differentiated by weight and size rather than by family. This is the typographic expression of "content over chrome": the interface has no typographic personality of its own, so the material supplies it. Geist Sans was previously loaded as `--font-geist-sans` with no consumer and has been removed; do not reintroduce a second sans. Display is Noto Sans at weight 700, and it must resolve through `--font-heading` (never a named family) so that a theme's heading face replaces it cleanly rather than sitting beside a hardcoded one.
 
 ### Hierarchy
 
@@ -214,9 +221,9 @@ Together these five form the data-visualization ramp (`--chart-1` through `--cha
 
 **The Measure Rule.** Read prose is capped at 65ch and never exceeds 75ch. This is already enforced by `.prose { max-width: 65ch }` in `app/globals.css`; do not override it to fill a wide container. Empty space beside a column of text is correct.
 
-**The One Sans Rule.** There is exactly one sans in the system, bound to `--font-sans`, and every text role resolves through it. Display is that face at weight 700, not a second family. Adding a display or heading font is prohibited: it doubles the font payload for the mid-range-Android baseline, and because tenants override `--font-sans`, a hardcoded second face would pair a school's chosen font against one they never picked. Geist Mono is the only other family, and it earns its place by doing work no sans can do.
+**The One Sans Rule.** By default there is exactly one sans in the system, bound to `--font-sans`, and every text role resolves through it. Display is that face at weight 700, not a second family. The platform never adds a display or heading font of its own: it would double the font payload for the mid-range-Android baseline, and a hardcoded second face would clash with the pairing a school's theme brings. The heading font is per theme: each kit theme carries a type pairing (`KIT_TYPE_PAIRINGS` in `lib/themes/kit.ts`) whose heading face arrives only through `--font-heading`, and a school gets it by picking the theme, never by picking a font. Noto Sans and Geist Mono stay preloaded for every school. Kit families are not: their `@font-face` rules ship in the root CSS on every route, but a font file downloads only when a school's theme renders text in it. Geist Mono is the only other platform family, and it earns its place by doing work no sans can do.
 
-**The Tenant Typeface Rule.** Tenants may override `--font-sans` entirely (`components/tenant/tenant-css-vars.tsx`). No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and `ch`-based widths outside the prose container are all prohibited.
+**The Tenant Typeface Rule.** A school's theme may reassign `--font-sans`, `--font-heading` and, for a monospace pairing, `--font-mono` entirely (its kit pairing, emitted by `components/tenant/tenant-css-vars-server.tsx`); there is no font setting apart from the theme. No layout may depend on Noto Sans metrics. Fixed heights sized to a specific font's cap height, single-line assumptions, and `ch`-based widths outside the prose container are all prohibited.
 
 ## 4. Elevation
 
@@ -246,7 +253,7 @@ Note for implementers: base-ui's `Button` has no `asChild` prop. Wrap `<Link>` a
 
 ### Buttons
 
-- **Shape:** softly rounded (8px, `rounded-md`); the `xs` and `icon-xs` sizes tighten to 6px (`rounded-sm`). All radii derive from `--radius: 0.625rem`, which tenants may override.
+- **Shape:** `rounded-button` (`--radius-button`, 8px by default); the `xs` and `icon-xs` sizes sit 2px tighter (6px). A theme kit sets it to 2px (sharp) or a full pill (round), so a `Button` never carries a stylistic `rounded-*` of its own; only an intentional circle (avatar trigger, floating action) may override it. Buttons, cards and inputs have their own tokens; menus, tabs, popovers, dialogs and tooltips stay on the shared `--radius` scale (`0.625rem` by default and under round corners, `2px` under sharp), so a round theme never turns them into pills.
 - **Sizes:** the staff register runs `xs` (20px) through `lg` (32px), with `default` at 28px and 12px text. The learner register uses `lg` at minimum, and learner primary actions should be raised to 40px with 14px text. Touch targets on learner surfaces never go below 40px.
 - **Primary:** filled Slate Teal with On Teal ink, at the tightest padding in the system (`px-2` at default size). It is small and saturated rather than large and soft.
 - **Hover:** primary drops to 80 percent opacity (`hover:bg-primary/80`). Outline and ghost fill with a muted tint. All transitions run on color and opacity only.
@@ -257,7 +264,7 @@ Note for implementers: base-ui's `Button` has no `asChild` prop. Wrap `<Link>` a
 
 ### Cards / Containers
 
-- **Corner Style:** 10px (`rounded-lg`).
+- **Corner Style:** `rounded-card` (`--radius-card`, 10px by default; 2px sharp, 20px round). The header, footer and bleed images use the matching `rounded-t-card` / `rounded-b-card`.
 - **Background:** Paper on light, Surface Slate on dark.
 - **Shadow Strategy:** none. `ring-1 ring-foreground/10` only. See Elevation.
 - **Internal Padding:** 16px (`px-4 py-4`) at default, 12px at `size="sm"`. Learner surfaces step up to 24px.
@@ -266,7 +273,7 @@ Note for implementers: base-ui's `Button` has no `asChild` prop. Wrap `<Link>` a
 
 ### Inputs / Fields
 
-- **Style:** 28px tall, hairline border, a 20 percent tint of the input color as fill (`bg-input/20`, `dark:bg-input/30`), 8px horizontal padding, 8px radius. Learner-facing forms step to 40px.
+- **Style:** 28px tall, hairline border, a 20 percent tint of the input color as fill (`bg-input/20`, `dark:bg-input/30`), 8px horizontal padding, `rounded-input` (`--radius-input`, 8px by default; 2px sharp, 14px round), shared by the textarea, select trigger, input group and combobox chips. Learner-facing forms step to 40px.
 - **Focus:** border shifts to ring color plus a 2px ring at 30 percent. No glow, no scale, no color flood.
 - **Error:** `aria-invalid` drives the styling, not a class. Destructive border plus a 20 percent destructive ring, paired with a text message. Color alone never marks a field invalid.
 - **Disabled:** 50 percent opacity, `cursor-not-allowed`, pointer events off.

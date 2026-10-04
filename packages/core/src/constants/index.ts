@@ -34,11 +34,27 @@ export type TenantRole = typeof TENANT_ROLE[keyof typeof TENANT_ROLE]
 
 export const SUBSCRIPTION_STATUS = {
   ACTIVE: 'active',
+  RENEWED: 'renewed',
+  PAST_DUE: 'past_due',
   EXPIRED: 'expired',
   CANCELED: 'canceled',
 } as const
 
 export type SubscriptionStatus = typeof SUBSCRIPTION_STATUS[keyof typeof SUBSCRIPTION_STATUS]
+
+/**
+ * The statuses that mean the student still has this subscription (#545).
+ *
+ * `renewed` and `past_due` are as live as `active`: both grant access, both
+ * block a parallel subscription, and cancelling must never *improve* a status.
+ * Mirrors `BLOCKING_SUBSCRIPTION_STATUSES` in lib/payments/subscription-guard.ts
+ * — the web and the native app must agree on what "has a plan" means.
+ */
+export const LIVE_SUBSCRIPTION_STATUSES: SubscriptionStatus[] = [
+  SUBSCRIPTION_STATUS.ACTIVE,
+  SUBSCRIPTION_STATUS.RENEWED,
+  SUBSCRIPTION_STATUS.PAST_DUE,
+]
 
 export const DEFAULT_PASSING_SCORE = 70
 

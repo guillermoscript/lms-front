@@ -1,13 +1,25 @@
 import { LmsSession } from "./session.js";
+import {
+  deriveWidgetBrand,
+  resolveSchoolTheme,
+  SCHOOL_THEME_SETTING_KEY,
+} from "../views/shared/kit-brand.js";
 
 /**
- * Tenant branding for widgets.
+ * Tenant branding for widgets (issue #779).
  *
- * The web app reads `tenants.primary_color` / `secondary_color` and injects
- * them as CSS custom properties in the document head
- * (`components/tenant/tenant-css-vars-server.tsx`). Widgets render inside a
- * host iframe that never sees that markup, so we ship the same values in the
- * tool result's `_meta` and let `resources/shared/branding.tsx` apply them.
+ * The web app resolves the theme kit — `tenant_settings.theme_preset`, gated
+ * by the `custom_branding` plan feature — and paints it as CSS custom
+ * properties in the document head (`TenantCssVarsServer`). Widgets render
+ * inside a host iframe that never sees that markup, so we resolve the same
+ * theme on the caller's RLS-scoped client, derive literal colours with
+ * `deriveWidgetBrand()` (`../views/shared/kit-brand.ts`, a mirror of
+ * `lib/themes/brand-outputs.ts`), and ship them in the tool result's `_meta`
+ * for `views/shared/branding.tsx` to apply.
+ *
+ * `tenants.primary_color` / `secondary_color` are gone (frozen since #763,
+ * dropped by migration `20260917150000_drop_tenants_legacy_colors.sql`) — the
+ * theme kit is the only theming path, same as the app.
  *
  * Injection is central (`installToolGuards` in register.ts), so every
  * widget-rendering tool is branded without touching its handler.
@@ -15,18 +27,22 @@ import { LmsSession } from "./session.js";
 export interface TenantBranding {
   name: string | null;
   logo_url: string | null;
-  primary_color: string | null;
-  secondary_color: string | null;
+  /** A filled button/badge colour — what the app's `--primary` resolves to. */
+  button: string;
+  /** Text on `button` (AA). */
+  buttonInk: string;
+  /** Brand-coloured text — headings, links, labels. */
+  brandText: string;
+  /** The theme's heading font family, or `null` on the platform palette. */
+  headingFont: string | null;
 }
 
-/** `_meta` key. Keep in sync with `BRANDING_META_KEY` in resources/shared/branding.tsx. */
+/** `_meta` key. Keep in sync with `BRANDING_META_KEY` in views/shared/branding.tsx. */
 export const BRANDING_META_KEY = "lms/branding";
 
 /**
  * Per-tenant cache. Widget tools are read-heavy and branding changes about
- * never, so one query per tenant per TTL keeps the injection free. Cached
- * misses are stored too — a tenant with no colours must not re-query on every
- * single widget call.
+ * never, so one query per tenant per TTL keeps the injection free.
  */
 const TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, { at: number; value: TenantBranding | null }>();
@@ -36,10 +52,16 @@ export function invalidateBranding(tenantId: string): void {
   cache.delete(tenantId);
 }
 
+interface PlanFeaturesResult {
+  features?: { custom_branding?: boolean };
+}
+
 /**
  * Fetch the caller's tenant branding. Runs on the caller's RLS-scoped client,
- * so a user can only ever read their own tenant's row. Returns `null` when the
- * tenant has no colours set, which leaves widgets on the platform default.
+ * so a user can only ever read their own tenant's row and settings. Always
+ * resolves to a colour — the theme kit's, or the platform palette when the
+ * tenant has none — so the only `null` is a failed lookup (no session, a
+ * query error), which leaves widgets on their own built-in default.
  */
 export async function getTenantBranding(
   session: LmsSession
@@ -50,25 +72,34 @@ export async function getTenantBranding(
 
   let value: TenantBranding | null = null;
   try {
-    const { data } = await session
-      .getClient()
-      .from("tenants")
-      .select("name, logo_url, primary_color, secondary_color")
-      .eq("id", tenantId)
-      .maybeSingle();
+    const supabase = session.getClient();
+    const [tenantRes, settingsRes, planRes] = await Promise.all([
+      supabase.from("tenants").select("name, logo_url").eq("id", tenantId).maybeSingle(),
+      supabase
+        .from("tenant_settings")
+        .select("setting_value")
+        .eq("tenant_id", tenantId)
+        .eq("setting_key", SCHOOL_THEME_SETTING_KEY)
+        .maybeSingle(),
+      // SECURITY DEFINER, same RPC the web app's usePlanFeatures() reads —
+      // resolves the plan features gate without a service-role client. A
+      // failure here just means no custom brand colour, never a hard error.
+      supabase.rpc("get_plan_features", { _tenant_id: tenantId }),
+    ]);
 
-    const primary = (data?.primary_color as string | undefined)?.trim();
-    const secondary = (data?.secondary_color as string | undefined)?.trim();
+    const customBranding =
+      (planRes.data as PlanFeaturesResult | null)?.features?.custom_branding === true;
+    const theme = resolveSchoolTheme(settingsRes.data?.setting_value, { customBranding });
+    const outputs = deriveWidgetBrand(theme);
 
-    // Nothing to theme with — cache the miss so we stop asking.
-    if (data && (primary || secondary || data.logo_url)) {
-      value = {
-        name: (data.name as string | undefined) ?? null,
-        logo_url: (data.logo_url as string | undefined) ?? null,
-        primary_color: primary || null,
-        secondary_color: secondary || null,
-      };
-    }
+    value = {
+      name: (tenantRes.data?.name as string | undefined) ?? null,
+      logo_url: (tenantRes.data?.logo_url as string | undefined) ?? null,
+      button: outputs.button,
+      buttonInk: outputs.buttonInk,
+      brandText: outputs.brandText,
+      headingFont: outputs.headingFont,
+    };
   } catch {
     // Branding is decoration. A failed lookup must never fail the tool.
     value = null;

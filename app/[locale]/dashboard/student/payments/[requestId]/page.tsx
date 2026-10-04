@@ -1,6 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
+import { formatCurrency } from '@/lib/currency'
+import { formatDateTime as formatInZone } from '@/lib/format-date-time'
+import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +24,9 @@ import {
 } from '@tabler/icons-react'
 import { CancelPaymentButton } from '@/components/student/cancel-payment-button'
 import { StudentProofUpload } from '../student-proof-upload'
+import { ReportPaymentForm } from '@/components/student/report-payment-form'
+import { getManualPaymentAccounts } from '@/app/actions/admin/settings'
+import { isManualRequestOpen } from '@/lib/payments/manual-request-ttl'
 
 interface PageProps {
   params: Promise<{ locale: string; requestId: string }>
@@ -31,6 +37,7 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
   const supabase = createAdminClient()
   const tenantId = await getCurrentTenantId()
   const t = await getTranslations('dashboard.student.payments')
+  const [locale, timeZone] = await Promise.all([getLocale(), getTenantTimeZone(tenantId)])
 
   const userId = await getCurrentUserId()
   if (!userId) {
@@ -51,6 +58,18 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
       payment_instructions,
       payment_deadline,
       proof_url,
+      expires_at,
+      expired_at,
+      payment_reference,
+      paid_at,
+      paid_to_account,
+      reported_amount,
+      reported_currency,
+      payer_name,
+      payer_document,
+      payer_bank,
+      payer_phone,
+      payment_reported_at,
       product:products ( product_id, name ),
       plan:plans ( plan_id, plan_name )
     `)
@@ -61,8 +80,14 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
 
   if (!request) return notFound()
 
-  const product = request.product as any
-  const plan = request.plan as any
+  // PostgREST hands an embed back as an object or a single-element array
+  // depending on how it inferred the relationship; both shapes reach here.
+  const product = (Array.isArray(request.product) ? request.product[0] : request.product) as
+    | { name?: string | null }
+    | null
+  const plan = (Array.isArray(request.plan) ? request.plan[0] : request.plan) as
+    | { plan_name?: string | null }
+    | null
   const itemName = product?.name || plan?.plan_name || t('unknownProduct')
 
   const getStatusBadge = (status: string) => {
@@ -82,17 +107,20 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
     }
   }
 
-  const formatDateTime = (dateString: string) =>
-    new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(dateString))
+  // Same locale + tenant zone as the admin screens (#727).
+  const formatDateTime = (dateString: string) => formatInZone(dateString, { locale, timeZone })
 
   const statusBadge = getStatusBadge(request.status)
   const canCancel = request.status === 'pending' || request.status === 'contacted'
+  // Awaiting money, and not already lapsed — the window in which reporting a
+  // payment (or correcting the reference on one) still means something.
+  const canReport =
+    canCancel && isManualRequestOpen({
+      status: request.status,
+      expires_at: request.expires_at,
+      payment_reported_at: request.payment_reported_at,
+    })
+  const accounts = canReport ? await getManualPaymentAccounts() : []
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
@@ -126,10 +154,7 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">{t('detail.amount')}</span>
             <span className="font-semibold">
-              {new Intl.NumberFormat(undefined, {
-                style: 'currency',
-                currency: (request.payment_currency || 'usd').toUpperCase(),
-              }).format(parseFloat(request.payment_amount || '0'))}
+              {formatCurrency(Number(request.payment_amount ?? 0), request.payment_currency || 'usd', locale)}
             </span>
           </div>
 
@@ -163,6 +188,94 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
               <IconInfoCircle className="h-4 w-4" />
               <AlertDescription>{t('detail.noInstructionsYet')}</AlertDescription>
             </Alert>
+          )}
+
+          {/* When this request closes itself. Shown while it is still live so
+              the deadline is never a surprise, and as an explanation once the
+              sweep has cancelled it. */}
+          {request.expired_at ? (
+            <Alert variant="destructive">
+              <IconAlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {t('detail.expiredOn', { date: formatDateTime(request.expired_at) })}
+              </AlertDescription>
+            </Alert>
+          ) : canCancel && request.expires_at ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <IconClock className="h-4 w-4" />
+              <span className="font-medium text-foreground">{t('detail.expiresOn')}:</span>
+              {formatDateTime(request.expires_at)}
+            </div>
+          ) : null}
+
+          <Separator />
+
+          {/* Reported payment — the reference the school matches against */}
+          {request.payment_reported_at && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4">
+              <div className="flex items-center gap-2">
+                <IconCheck className="h-4 w-4 text-success" />
+                <p className="text-sm font-medium">{t('detail.reportedTitle')}</p>
+              </div>
+              <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
+                <div className="flex justify-between gap-3 sm:block">
+                  <dt className="text-muted-foreground">{t('report.fields.reference')}</dt>
+                  <dd className="font-medium">{request.payment_reference}</dd>
+                </div>
+                {request.paid_at && (
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">{t('report.fields.paidAt')}</dt>
+                    <dd className="font-medium">{formatDateTime(request.paid_at)}</dd>
+                  </div>
+                )}
+                {request.reported_amount != null && (
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">{t('report.fields.amount')}</dt>
+                    <dd className="font-medium">
+                      {formatCurrency(
+                        Number(request.reported_amount),
+                        request.reported_currency || request.payment_currency || 'usd',
+                        locale,
+                      )}
+                    </dd>
+                  </div>
+                )}
+                {request.paid_to_account && (
+                  <div className="flex justify-between gap-3 sm:block">
+                    <dt className="text-muted-foreground">{t('report.fields.paidToAccount')}</dt>
+                    <dd className="font-medium">{request.paid_to_account}</dd>
+                  </div>
+                )}
+              </dl>
+              <p className="text-xs text-muted-foreground">{t('detail.reportedHint')}</p>
+            </div>
+          )}
+
+          {canReport && (
+            <div className="space-y-3">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">
+                  {request.payment_reported_at ? t('report.updateTitle') : t('report.title')}
+                </p>
+                <p className="text-xs text-muted-foreground">{t('report.description')}</p>
+              </div>
+              <ReportPaymentForm
+                requestId={request.request_id}
+                accounts={accounts}
+                currency={request.payment_currency || 'usd'}
+                initial={{
+                  reference: request.payment_reference,
+                  paidAt: request.paid_at,
+                  paidToAccount: request.paid_to_account,
+                  amount: request.reported_amount != null ? Number(request.reported_amount) : null,
+                  currency: request.reported_currency,
+                  payerName: request.payer_name,
+                  payerDocument: request.payer_document,
+                  payerBank: request.payer_bank,
+                  payerPhone: request.payer_phone,
+                }}
+              />
+            </div>
           )}
 
           <Separator />

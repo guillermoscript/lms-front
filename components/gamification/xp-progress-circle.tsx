@@ -55,16 +55,16 @@ export function XPProgressCircle({
                     strokeDasharray={circumference}
                     style={{ strokeDashoffset: offset }}
                     strokeLinecap="round"
-                    className="text-primary transition-all duration-1000 ease-out"
+                    className="text-brand-text transition-all duration-1000 ease-out"
                 />
             </svg>
 
             {/* Content in the middle */}
             <div className="absolute flex flex-col items-center justify-center text-center">
                 <div className="relative">
-                    <div className="absolute inset-0 bg-yellow-500/20 blur-md rounded-full" />
-                    <div className="relative h-10 w-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 mb-1">
-                        <IconStar size={20} className="text-white fill-white/20" />
+                    <div className="absolute inset-0 bg-brand-tint blur-md rounded-full" />
+                    <div className="relative h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-lg mb-1">
+                        <IconStar size={20} className="text-primary-foreground fill-primary-foreground/20" />
                     </div>
                 </div>
                 <span className="text-2xl font-black leading-none">{summary.level}</span>

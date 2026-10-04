@@ -20,10 +20,10 @@ interface CalloutBlockEditorProps {
 }
 
 const variants = {
-  info: { icon: IconInfoCircle, bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-600' },
-  warning: { icon: IconAlertTriangle, bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-600' },
-  success: { icon: IconCircleCheck, bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-600' },
-  error: { icon: IconCircleX, bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-600' },
+  info: { icon: IconInfoCircle, bg: 'bg-brand-tint', border: 'border-primary/20', text: 'text-brand-text' },
+  warning: { icon: IconAlertTriangle, bg: 'bg-warning/10', border: 'border-warning/30', text: 'text-warning' },
+  success: { icon: IconCircleCheck, bg: 'bg-success/10', border: 'border-success/30', text: 'text-success' },
+  error: { icon: IconCircleX, bg: 'bg-destructive/10', border: 'border-destructive/30', text: 'text-destructive' },
 }
 
 export function CalloutBlockEditor({ block, onChange }: CalloutBlockEditorProps) {

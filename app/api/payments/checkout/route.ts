@@ -23,11 +23,15 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { getPaymentProvider } from '@/lib/payments'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types'
 import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
 import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
+import { checkoutExpiresAt, isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
+import { reconcilePayPalCheckout } from '@/lib/payments/paypal-reconcile'
 import {
   findConflictingSubscription,
   PARALLEL_SUBSCRIPTION_CODE,
@@ -242,6 +246,53 @@ export async function POST(req: NextRequest) {
     // deliberately: it computes the identical number, and it keeps the rollback
     // migration a safe lever — drop the trigger and this path still snapshots.
     const adminClient = createAdminClient()
+
+    // The buyer's own leftover PayPal checkout for this same item (#479). A
+    // buyer who pressed "Cancel and return" on PayPal's page — or closed the
+    // tab — left a `pending` row inside transactions_unique_product /
+    // transactions_unique_plan, and every retry died on the insert below with a
+    // generic 500 until the 24h TTL lapsed (seen live). Ask PayPal what became
+    // of it: a dead checkout is released here, a paid one is settled, and one
+    // still in flight is reported instead of double-charging.
+    if (providerSlug === 'paypal') {
+      let leftoverQuery = adminClient
+        .from('transactions')
+        .select('transaction_id, provider_checkout_id, plan_id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+        .eq('payment_provider', 'paypal')
+        .limit(1)
+      leftoverQuery = planId
+        ? leftoverQuery.eq('plan_id', planId).is('product_id', null)
+        : leftoverQuery.eq('product_id', productId).is('plan_id', null)
+      const { data: leftover } = await leftoverQuery.maybeSingle()
+
+      if (leftover) {
+        const outcome = await reconcilePayPalCheckout(adminClient, leftover)
+        if (outcome === 'settled') {
+          return NextResponse.json(
+            { error: 'This purchase already went through.', code: 'ALREADY_PAID', transactionId: leftover.transaction_id },
+            { status: 409 },
+          )
+        }
+        if (outcome !== 'dead') {
+          return NextResponse.json(
+            { error: 'Your previous PayPal payment for this item is still processing. Try again in a few minutes.', code: 'CHECKOUT_IN_FLIGHT' },
+            { status: 409 },
+          )
+        }
+        // 'canceled', not 'failed' — see expire-stale-checkouts: a failed PLAN
+        // row runs cancel_subscription. Status-guarded against a webhook that
+        // settled it a moment ago.
+        await adminClient
+          .from('transactions')
+          .update({ status: 'canceled', expired_at: new Date().toISOString() })
+          .eq('transaction_id', leftover.transaction_id)
+          .eq('status', 'pending')
+      }
+    }
+
     const { data: revenueSplit } = await adminClient
       .from('revenue_splits')
       .select('school_percentage')
@@ -281,6 +332,11 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: providerSlug,
         school_percentage_snapshot: schoolPercentageSnapshot,
+        // Local TTL for hosted rails only (#624). Without it an abandoned
+        // redirect leaves this pending row inside transactions_unique_product /
+        // transactions_unique_plan forever, and the buyer can never retry.
+        // Null for in-band rails, which keeps them out of the reconciler queue.
+        checkout_expires_at: checkoutExpiresAt(providerSlug),
         ...(settlement
           ? {
               settlement_currency: settlement.currency,
@@ -297,6 +353,27 @@ export async function POST(req: NextRequest) {
       console.error('[payments/checkout] transaction insert failed:', txError)
       return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
     }
+
+    // Loop C. `amountMajor` is the USD-denominated price, NOT `settlement_base`
+    // — the lamport/USDC figure is what the chain is checked against and is
+    // meaningless summed across rails. `school_percentage_snapshot` rides along
+    // because it is the rate the payouts computation will later use for this
+    // exact sale, so the two can be reconciled row by row.
+    await track(
+      ANALYTICS_EVENTS.CHECKOUT_STARTED,
+      {
+        provider: providerSlug,
+        amount: amountMajor,
+        currency,
+        ...(productId ? { product_id: productId } : {}),
+        ...(planId ? { plan_id: planId } : {}),
+        transaction_id: transaction.transaction_id,
+        is_subscription: mode === 'subscription',
+        school_percentage_snapshot: schoolPercentageSnapshot,
+        ...(settlement ? { settlement_currency: settlement.currency } : {}),
+      },
+      { userId: user.id, tenantId },
+    )
 
     const reference = transaction.transaction_id.toString()
     // Derive the tenant's own origin from the request rather than the single
@@ -356,9 +433,26 @@ export async function POST(req: NextRequest) {
           providerSlug === 'binance') &&
         session.providerRef
       ) {
-        await supabase
+        // `provider_checkout_id` is the same value on hosted rails, stored under
+        // its own name (#624) because that is what the stale-checkout reconciler
+        // asks the provider about. It cannot read `provider_subscription_id`:
+        // for solana_subs that column marks the on-chain SUBSCRIBE reference,
+        // and handle_new_subscription copies it onto the subscription row on
+        // activation — two different meanings in one column. Splitting them
+        // keeps the reconciler from ever querying a non-checkout identifier.
+        //
+        // The admin client, not the user-scoped one: since #538 `authenticated`
+        // holds an UPDATE grant on only status / provider_subscription_id /
+        // stripe_payment_intent_id, so a user-scoped write of the new column is
+        // refused outright.
+        await adminClient
           .from('transactions')
-          .update({ provider_subscription_id: session.providerRef })
+          .update({
+            provider_subscription_id: session.providerRef,
+            ...(isHostedCheckoutProvider(providerSlug)
+              ? { provider_checkout_id: session.providerRef }
+              : {}),
+          })
           .eq('transaction_id', transaction.transaction_id)
       }
 
@@ -373,10 +467,23 @@ export async function POST(req: NextRequest) {
     } catch (providerErr) {
       console.error('[payments/checkout] provider checkout failed:', providerErr)
       // Roll the pending transaction back so the unique index does not block a retry.
+      // 'canceled', never 'failed': a failed PLAN row runs cancel_subscription in
+      // trigger_manage_transactions, ending the subscription a renewing buyer
+      // still holds (#756).
       await supabase
         .from('transactions')
-        .update({ status: 'failed' })
+        .update({ status: 'canceled' })
         .eq('transaction_id', transaction.transaction_id)
+      await track(
+        ANALYTICS_EVENTS.PAYMENT_FAILED,
+        {
+          provider: providerSlug,
+          failure_reason: providerErr instanceof Error ? providerErr.message : String(providerErr),
+          stage: 'checkout_session_create',
+          transaction_id: transaction.transaction_id,
+        },
+        { userId: user.id, tenantId },
+      )
       return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 })
     }
   } catch (error) {

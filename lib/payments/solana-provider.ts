@@ -58,6 +58,7 @@ export class SolanaProvider implements IPaymentProvider {
     supportsPlanChange: false,
     supportsCustomerPortal: false, // no hosted account page — the school manages the plan in-app
     supportsProrationPreview: false, // no mid-period quote API
+    supportsScheduledCancellation: false, // no native cancel-at-period-end — see ProviderCapabilities
     bearsPlatformFee: true, // platform wallet receives its slice in the same on-chain tx
     settlesToPlatformAccount: false,
     requiresConnectedAccount: false, // wallet address pasted in Settings — live the moment it is saved

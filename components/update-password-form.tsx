@@ -15,9 +15,12 @@ import { Label } from '@/components/ui/label'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useAnalytics } from '@/lib/analytics/client'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 export function UpdatePasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const t = useTranslations('auth.updatePassword')
+  const analytics = useAnalytics()
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -32,6 +35,9 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
+      // Closes the reset funnel. Fired before the redirect, since the push
+      // unmounts this component.
+      analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_COMPLETED, {})
       // Update this route to redirect to an authenticated route. The user already has an active session.
       router.push('/dashboard/student')
     } catch (error: unknown) {
@@ -55,6 +61,7 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
                 <Label htmlFor="password">{t('password')}</Label>
                 <Input
                   id="password"
+                  data-testid="update-password-password"
                   type="password"
                   placeholder={t('password')}
                   required
@@ -63,7 +70,7 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" data-testid="update-password-submit" className="w-full" disabled={isLoading}>
                 {isLoading ? t('submitting') : t('submit')}
               </Button>
             </div>

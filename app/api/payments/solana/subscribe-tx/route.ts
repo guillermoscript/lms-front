@@ -32,6 +32,7 @@ import {
   buildInitAuthorityTxUnsignedBase64,
 } from '@/lib/payments/solana-subscriptions'
 import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
+import { APP_NAME } from '@/lib/app-name'
 
 export const runtime = 'nodejs'
 
@@ -50,7 +51,7 @@ function pullerPubkeyFromSecret(secretBase58: string): string {
 
 export async function GET() {
   return NextResponse.json({
-    label: process.env.NEXT_PUBLIC_APP_NAME || 'LMS',
+    label: APP_NAME,
     icon: `${process.env.NEXT_PUBLIC_APP_URL || ''}/favicon.ico`,
   })
 }
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
       .eq('transaction_id', tx.transaction_id)
       .is('provider_metadata', null)
 
-    const appName = process.env.NEXT_PUBLIC_APP_NAME || 'LMS'
+    const appName = APP_NAME
 
     // STEP 1 (first-time subscribers only): the SubscriptionAuthority must be
     // created in its OWN confirmed transaction before subscribe — a bundled

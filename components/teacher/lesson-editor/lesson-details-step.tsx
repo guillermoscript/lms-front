@@ -72,7 +72,7 @@ export function LessonDetailsStep() {
           placeholder={t('videoUrlPlaceholder')}
           className="border-muted bg-muted/30 transition-colors focus:bg-background"
         />
-        <p className="mt-1.5 text-xs text-muted-foreground/70">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           {t('videoUrlHint')}
         </p>
 
@@ -116,7 +116,7 @@ export function LessonDetailsStep() {
             }
             className="w-20 border-muted bg-muted/30 text-center transition-colors focus:bg-background"
           />
-          <p className="text-xs text-muted-foreground/70">
+          <p className="text-xs text-muted-foreground">
             {t('sequenceHint')}
           </p>
         </div>
@@ -138,9 +138,12 @@ export function LessonDetailsStep() {
             onCheckedChange={(checked) => updateField('is_preview', checked)}
           />
         </div>
-        <p className="mt-1.5 text-xs text-muted-foreground/70">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           {t('freePreviewHint')}
         </p>
+        {!initialData && formData.sequence === 1 && (
+          <p className="mt-1 text-xs text-brand-text">{t('freePreviewFirstLessonHint')}</p>
+        )}
       </div>
 
       {/* Publish scheduling */}
@@ -172,7 +175,7 @@ export function LessonDetailsStep() {
               </Button>
             )}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground/70">
+          <p className="mt-1.5 text-xs text-muted-foreground">
             {t('publishAtHint')}
           </p>
         </div>

@@ -152,7 +152,7 @@ COMPANY_PHONE="+1 234 567 8900"
 ### Automated Testing
 Run Playwright tests:
 ```bash
-npx playwright test tests/admin/products-manual-payment.spec.ts
+npx playwright test tests/playwright/admin-product-course-creation.spec.ts
 ```
 
 ## Next Steps (Optional Enhancements)

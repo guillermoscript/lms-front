@@ -61,15 +61,15 @@ begin
 
   select period_end into first_period_end
   from public.apply_self_managed_platform_period(
-    'binance', 'period-A', tenant_key, plan_key, 'monthly', 'order-A', null
+    'binance', 'period-A', tenant_key, plan_key, 'starter', 'monthly', 'order-A', null
   );
   select period_end into second_period_end
   from public.apply_self_managed_platform_period(
-    'binance', 'period-B', tenant_key, plan_key, 'monthly', 'order-B', null
+    'binance', 'period-B', tenant_key, plan_key, 'starter', 'monthly', 'order-B', null
   );
   select period_end into replay_period_end
   from public.apply_self_managed_platform_period(
-    'binance', 'period-A', tenant_key, plan_key, 'monthly', 'order-A', null
+    'binance', 'period-A', tenant_key, plan_key, 'starter', 'monthly', 'order-A', null
   );
 
   if second_period_end <= first_period_end then
@@ -79,6 +79,16 @@ begin
     raise exception 'A,B,A self-managed replay extended A twice: expected %, got %',
       second_period_end, replay_period_end;
   end if;
+
+  delete from public.platform_subscriptions where tenant_id = tenant_key;
+  begin
+    perform * from public.apply_self_managed_platform_period(
+      'binance', 'period-A', tenant_key, plan_key, 'starter', 'monthly', 'order-A', null
+    );
+    raise exception 'replayed effect recreated a subscription without a durable period';
+  exception
+    when no_data_found then null;
+  end;
 end;
 $$;
 

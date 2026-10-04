@@ -1,19 +1,17 @@
 'use client'
 
 import { createContext, use, type ReactNode } from 'react'
-import type { StoredPreset } from '@/lib/themes/presets'
+import type { StoredKitTheme } from '@/lib/themes/kit'
 
 export interface TenantInfo {
   id: string
   slug: string
   name: string
   logo_url: string | null
-  primary_color: string
-  secondary_color: string
   plan: string
   settings?: Record<string, any>
-  /** Active theme preset, if one has been applied */
-  theme_preset?: StoredPreset | null
+  /** The plan-resolved theme kit the school renders with; null = platform palette. */
+  theme: StoredKitTheme | null
 }
 
 const TenantContext = createContext<TenantInfo | null>(null)

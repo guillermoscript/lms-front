@@ -2,13 +2,80 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { encryptCredential, getPaymentCredentialsKey } from '@/lib/payments/credentials'
+import { evaluateConnectedAccountReadiness } from '@/lib/payments/tenant-payment-readiness'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track, safeAnalytics } from '@/lib/analytics/server'
+import {
+  evaluateSchoolActivation,
+  isFirstConnectedProvider,
+} from '@/lib/analytics/activation'
 import { revalidatePath } from 'next/cache'
+import { SCHOOL_THEME_SETTING_KEY } from '@/lib/themes/kit'
+import { normalizeGeneralSettings } from '@/lib/settings/general-settings'
+import { normalizeManualPaymentAccounts, type ManualPaymentAccount } from '@/lib/payments/manual-payment-accounts'
+import {
+  defaultCurrencyForCountry,
+  isCurrencySettingEmpty,
+  normalizeCountry,
+  type CountryCode,
+} from '@/lib/countries'
+
+/**
+ * A `tenant_settings.setting_value` JSONB payload. Every setting is stored as
+ * one of two shapes — a boolean flag or a scalar — which is why readers
+ * throughout the app index it as `.value?.enabled` or `.value?.value`.
+ */
+export type SettingValue = {
+  enabled?: boolean
+  value?: string | number | null
+  message?: string
+  /** `manual_payment_accounts` (#802) — the one setting whose value is a list. */
+  accounts?: ManualPaymentAccount[]
+}
+
+/** One setting as `getAllSettingsByCategory()` hands it to a settings form. */
+export type SettingEntry = {
+  value: SettingValue
+  description: string | null
+}
+
+/**
+ * `settingKey → entry`, the shape each of the four settings forms receives.
+ * A type alias rather than an interface so it keeps an implicit index
+ * signature and stays assignable to the looser props of the older forms.
+ */
+export type SettingsGroup = Record<string, SettingEntry | undefined>
+
+/** A `tenant_settings` row as these actions select it. */
+type SettingRow = { setting_key: string; setting_value: SettingValue }
 
 interface SettingsResponse {
   success: boolean
-  data?: Record<string, any>
+  data?: Record<string, SettingValue>
+  error?: string
+}
+
+/**
+ * `getAllSettingsByCategory()` returns a different shape from the flat
+ * accessors — `category → settingKey → entry` — so it gets its own response
+ * type rather than a union that every caller would have to narrow.
+ */
+interface CategorySettingsResponse {
+  success: boolean
+  data?: Record<string, SettingsGroup>
+  error?: string
+}
+
+/**
+ * The wallet accessors live in this module for historical reasons but return a
+ * `tenant_payment_wallets` row, not a setting — they were sharing
+ * `SettingsResponse` and quietly typing a wallet address as a setting value.
+ */
+interface WalletResponse {
+  success: boolean
+  data?: { wallet_address: string | null }
   error?: string
 }
 
@@ -37,7 +104,7 @@ export async function getSettings(category?: string): Promise<SettingsResponse> 
         general: ['site_name', 'site_description', 'contact_email', 'support_email', 'timezone', 'maintenance_mode'],
         email: ['smtp_', 'email_'],
         payment: ['stripe_', 'paypal_', 'lemonsqueezy_', 'solana_', 'binance_', 'currency', 'tax_rate', 'invoice_prefix', 'require_payment_approval', 'manual_payment_instructions'],
-        enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled'],
+        enrollment: ['auto_enrollment', 'require_enrollment_approval', 'max_enrollments_per_user', 'allow_self_enrollment', 'enrollment_expiration_days', 'course_capacity_enabled', 'free_preview_enabled'],
       }
       const keys = categoryPrefixes[category]
       if (keys) {
@@ -49,7 +116,7 @@ export async function getSettings(category?: string): Promise<SettingsResponse> 
 
     if (error) throw error
 
-    const settings = (data || []).reduce((acc: Record<string, any>, s: any) => {
+    const settings = (data || []).reduce((acc: Record<string, SettingValue>, s: SettingRow) => {
       acc[s.setting_key] = s.setting_value
       return acc
     }, {})
@@ -91,11 +158,22 @@ export async function getSetting(key: string): Promise<SettingsResponse> {
 }
 
 /**
+ * The school theme is written only by `applyKitTheme` (app/actions/admin/theme.ts),
+ * which validates the stored shape and gates a custom colour on
+ * `custom_branding`. A generic upsert here would skip both, so these actions
+ * refuse the key on every plan (#763).
+ */
+const THEME_KEY_REFUSAL: SettingsResponse = {
+  success: false,
+  error: 'The school theme is saved from Appearance, not from settings.',
+}
+
+/**
  * Update a setting by key (upsert into tenant_settings)
  */
 export async function updateSetting(
   key: string,
-  value: any
+  value: SettingValue
 ): Promise<SettingsResponse> {
   try {
     const role = await getUserRole()
@@ -106,6 +184,13 @@ export async function updateSetting(
     if (typeof value !== 'object' || value === null) {
       return { success: false, error: 'Setting value must be an object' }
     }
+
+    if (key === SCHOOL_THEME_SETTING_KEY) return THEME_KEY_REFUSAL
+
+    // Same gate as updateSettings (#890): blank -> null, emails validated.
+    const normalized = normalizeGeneralSettings({ [key]: value })
+    if (!normalized.ok) return { success: false, error: 'invalid_email' }
+    value = normalized.settings[key]
 
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
@@ -135,13 +220,20 @@ export async function updateSetting(
  * Update multiple settings at once (bulk upsert)
  */
 export async function updateSettings(
-  settings: Record<string, any>
+  settings: Record<string, SettingValue>
 ): Promise<SettingsResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
       return { success: false, error: 'Unauthorized' }
     }
+
+    if (Object.keys(settings).includes(SCHOOL_THEME_SETTING_KEY)) return THEME_KEY_REFUSAL
+
+    // Optional contact emails: blank -> null, non-blank must be an address (#890).
+    const normalized = normalizeGeneralSettings(settings)
+    if (!normalized.ok) return { success: false, error: 'invalid_email' }
+    settings = normalized.settings
 
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
@@ -178,11 +270,11 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       return { success: false, error: 'Unauthorized' }
     }
 
-    const defaults: Record<string, any> = {
+    const defaults: Record<string, SettingValue> = {
       site_name: { value: 'My School' },
       site_description: { value: 'An online learning platform' },
-      contact_email: { value: 'contact@example.com' },
-      support_email: { value: 'support@example.com' },
+      contact_email: { value: null },
+      support_email: { value: null },
       timezone: { value: 'America/New_York' },
       maintenance_mode: { enabled: false, message: '' },
       smtp_host: { value: '' },
@@ -192,7 +284,9 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       smtp_from_email: { value: 'noreply@example.com' },
       smtp_from_name: { value: 'My School' },
       email_notifications: { enabled: true },
-      stripe_enabled: { enabled: true },
+      // Off until the school turns it on: a fresh school opened Settings →
+      // Payment to a red "Action required" on a rail it never chose (#727).
+      stripe_enabled: { enabled: false },
       paypal_enabled: { enabled: false },
       lemonsqueezy_enabled: { enabled: false },
       solana_enabled: { enabled: false },
@@ -207,9 +301,10 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
       allow_self_enrollment: { enabled: true },
       enrollment_expiration_days: { value: 365 },
       course_capacity_enabled: { enabled: false },
+      // On by default — matches what ships today (#799): every school already
+      // has free preview lessons unless it explicitly turns them off.
+      free_preview_enabled: { enabled: true },
       logo_url: { value: '' },
-      primary_color: { value: '#2563eb' },
-      secondary_color: { value: '#7c3aed' },
       favicon_url: { value: '' },
     }
 
@@ -226,12 +321,78 @@ export async function resetSetting(key: string): Promise<SettingsResponse> {
 }
 
 /**
+ * Set the school's country (#865) — `tenants.country`, not a tenant_setting.
+ *
+ * When the school has no `currency` setting yet (no row, or a blank value),
+ * the country's default currency from `lib/countries.ts` fills it. A currency
+ * the admin already chose is never overwritten. `currencyFilled` tells the
+ * form which currency was set, or `null` when none was.
+ */
+export async function updateSchoolCountry(country: string): Promise<{
+  success: boolean
+  country?: CountryCode
+  currencyFilled?: string | null
+  error?: string
+}> {
+  try {
+    const role = await getUserRole()
+    if (role !== 'admin') {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const code = normalizeCountry(country)
+    if (!code) {
+      return { success: false, error: 'Choose a country from the list.' }
+    }
+
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+
+    const { error: tenantError } = await supabase
+      .from('tenants')
+      .update({ country: code })
+      .eq('id', tenantId)
+    if (tenantError) throw tenantError
+
+    let currencyFilled: string | null = null
+    const currency = defaultCurrencyForCountry(code)
+    if (currency) {
+      const { data: existing, error: readError } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('setting_key', 'currency')
+        .maybeSingle()
+      if (readError) throw readError
+
+      if (isCurrencySettingEmpty(existing?.setting_value)) {
+        const { error: writeError } = await supabase
+          .from('tenant_settings')
+          .upsert(
+            { tenant_id: tenantId, setting_key: 'currency', setting_value: { value: currency } },
+            { onConflict: 'tenant_id,setting_key' }
+          )
+        if (writeError) throw writeError
+        currencyFilled = currency
+      }
+    }
+
+    revalidatePath('/dashboard/admin/settings')
+
+    return { success: true, country: code, currencyFilled }
+  } catch (error) {
+    console.error('Error updating school country:', error)
+    return { success: false, error: 'Failed to update the school country' }
+  }
+}
+
+/**
  * Get this tenant's configured Solana receiving wallet (if any).
  *
  * One wallet backs both the one-time `solana` provider and the auto-pull
  * `solana_subs` provider, so we read the `solana` row as the source of truth.
  */
-export async function getSolanaWallet(): Promise<SettingsResponse> {
+export async function getSolanaWallet(): Promise<WalletResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -266,7 +427,7 @@ export async function getSolanaWallet(): Promise<SettingsResponse> {
  * Uses the service-role client (bypasses RLS), so admin role + tenant scope are
  * validated above and the rows are written with this tenant's id only.
  */
-export async function setSolanaWallet(walletAddress: string): Promise<SettingsResponse> {
+export async function setSolanaWallet(walletAddress: string): Promise<WalletResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -282,6 +443,28 @@ export async function setSolanaWallet(walletAddress: string): Promise<SettingsRe
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
 
+    // Was Solana already configured? Read BEFORE the upsert: re-saving the same
+    // wallet, or correcting a typo in it, is not a new connection, and
+    // `payment_provider_connected` counted per save would make the activation
+    // funnel's denominator meaningless.
+    //
+    // Guarded: this read exists only to decide whether to emit, and it runs
+    // BEFORE the upsert — unguarded, a transient failure here would abort the
+    // wallet save itself. `null` means the read failed; unknowable is not
+    // "new", for the same reason `isFirstConnectedProvider` returns false.
+    const existingWalletRead = await Promise.resolve(
+      supabase
+        .from('tenant_payment_wallets')
+        .select('wallet_address')
+        .eq('tenant_id', tenantId)
+        .eq('provider', 'solana')
+        .maybeSingle()
+    ).catch(() => null)
+    const isNewConnection = !!existingWalletRead && !existingWalletRead.data?.wallet_address
+    const isFirstProvider = isNewConnection
+      ? await isFirstConnectedProvider(tenantId, 'solana', supabase)
+      : false
+
     const rows = ['solana', 'solana_subs'].map(provider => ({
       tenant_id: tenantId,
       provider,
@@ -294,6 +477,22 @@ export async function setSolanaWallet(walletAddress: string): Promise<SettingsRe
       .upsert(rows, { onConflict: 'tenant_id,provider' })
 
     if (error) throw error
+
+    // Wrapped: the wallet is already saved, and `getCurrentUserId()` is a real
+    // await — the enclosing catch would otherwise report "Failed to save Solana
+    // wallet" for a save that succeeded.
+    if (isNewConnection) {
+      await safeAnalytics(async () => {
+        const userId = await getCurrentUserId()
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+          { provider: 'solana', is_first_provider: isFirstProvider },
+          { userId, tenantId, role }
+        )
+        // Connecting a rail is the other half of the activation condition.
+        await evaluateSchoolActivation({ tenantId, userId, role })
+      }, 'payment_provider_connected (solana)')
+    }
 
     revalidatePath('/dashboard/admin/settings')
 
@@ -320,7 +519,7 @@ export async function setBinancePersonalCredentials(
   payId: string,
   apiKey: string,
   apiSecret: string
-): Promise<SettingsResponse> {
+): Promise<WalletResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -342,7 +541,7 @@ export async function setBinancePersonalCredentials(
     // and (b) preserve them when the admin updates only the Pay ID.
     const { data: existing } = await supabase
       .from('tenant_payment_wallets')
-      .select('credentials')
+      .select('wallet_address, credentials')
       .eq('tenant_id', tenantId)
       .eq('provider', 'binance_personal')
       .maybeSingle()
@@ -359,6 +558,14 @@ export async function setBinancePersonalCredentials(
     if (!hasExistingCredentials && (!key || !secret)) {
       return { success: false, error: 'Enter your Binance API key and secret.' }
     }
+
+    // Only the save that first makes the rail usable counts as a connection —
+    // Pay ID *and* credentials. Later Pay-ID-only edits go through this same
+    // action and must not re-fire, so they don't pay for the query either.
+    const wasUsable = Boolean(existing?.wallet_address && hasExistingCredentials)
+    const isFirstProviderBeforeSave = wasUsable
+      ? false
+      : await isFirstConnectedProvider(tenantId, 'binance_personal', supabase)
 
     let credentials = existingCredentials
     if (key || secret) {
@@ -390,6 +597,24 @@ export async function setBinancePersonalCredentials(
     )
 
     if (error) throw error
+
+    // Wrapped for the same reason as the Solana branch: the credentials are
+    // already saved, so a failing `getCurrentUserId()` must not surface as
+    // "Failed to save Binance settings".
+    if (!wasUsable) {
+      await safeAnalytics(async () => {
+        const userId = await getCurrentUserId()
+        await track(
+          ANALYTICS_EVENTS.PAYMENT_PROVIDER_CONNECTED,
+          {
+            provider: 'binance_personal',
+            is_first_provider: isFirstProviderBeforeSave,
+          },
+          { userId, tenantId, role }
+        )
+        await evaluateSchoolActivation({ tenantId, userId, role })
+      }, 'payment_provider_connected (binance_personal)')
+    }
 
     revalidatePath('/dashboard/admin/settings')
 
@@ -446,11 +671,18 @@ export async function getBinancePersonalStatus(): Promise<{
  * Resolve which payment providers an admin has enabled for this tenant.
  *
  * The `*_enabled` toggles in `tenant_settings` are the single source of truth
- * for which providers appear in the plan/product forms. `manual` (offline) is
- * always available. The one Solana toggle enables BOTH the one-time `solana`
- * and the auto-pull `solana_subs` providers, since they share one wallet.
+ * for WANTING a provider on, but a flag alone is not enough to offer a rail —
+ * a flag flipped on before the rail is actually configured (Stripe Connect
+ * abandoned mid-onboarding, no Solana receiving wallet saved) used to reach
+ * checkout and then fail at payment time, with the student staring at a
+ * generic error and the school never told why. Stripe and Solana are gated on
+ * their real readiness below, same as `binance_personal` already was.
+ * `manual` (offline) is always available. The one Solana toggle enables BOTH
+ * the one-time `solana` and the auto-pull `solana_subs` providers, since they
+ * share one wallet.
  *
- * Defaults match the seed defaults: Stripe on, everything else off.
+ * Defaults: everything off, except that a tenant with no `stripe_enabled` row
+ * and a ready Connect account keeps Stripe (see the note inline).
  */
 export async function getEnabledPaymentProviders(): Promise<{ success: boolean; data: string[]; error?: string }> {
   try {
@@ -478,28 +710,87 @@ export async function getEnabledPaymentProviders(): Promise<{ success: boolean; 
       {} as Record<string, boolean>
     )
 
-    // No row yet → fall back to the seed defaults (Stripe on, rest off).
+    // No row yet → fall back to the defaults (everything off).
     const isOn = (key: string, fallback: boolean) =>
       key in flags ? flags[key] : fallback
 
+    const solanaOn = isOn('solana_enabled', false)
+    const binancePersonalOn = isOn('binance_personal_enabled', false)
+
+    // Stripe: a flag alone used to offer a rail that fails at payment time — an
+    // admin could flip `stripe_enabled` without ever finishing Connect
+    // onboarding, and the card form would appear at checkout only for Stripe to
+    // reject the PaymentIntent (`charges_enabled: false`). This reads the same
+    // persisted columns `isReadyToAcceptPayments()` reads for checkout/publish
+    // (`evaluateConnectedAccountReadiness`) rather than calling Stripe's API on
+    // this hot path — `syncConnectAccountStatus()` and the `account.updated`
+    // webhook keep those columns fresh.
+    //
+    // A tenant with NO `stripe_enabled` row is treated as "on" only when its
+    // Connect account is already ready (#727): a school that finished
+    // onboarding before the row existed keeps selling by card, while a brand-new
+    // school no longer starts with a rail it never chose. An explicit row —
+    // either value — always wins.
+    let stripeReady = false
+    if (isOn('stripe_enabled', true)) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('stripe_account_id, stripe_charges_enabled')
+        .eq('id', tenantId)
+        .single()
+      stripeReady = evaluateConnectedAccountReadiness(tenant).ready
+    }
+    const stripeOn = isOn('stripe_enabled', stripeReady)
+
+    // Solana and binance_personal both gate on a `tenant_payment_wallets` row —
+    // fetch both providers in ONE query instead of one round trip per provider.
+    const walletProviders = [solanaOn && 'solana', binancePersonalOn && 'binance_personal'].filter(
+      (p): p is 'solana' | 'binance_personal' => Boolean(p)
+    )
+    const walletsByProvider = new Map<string, { wallet_address: string | null; credentials: unknown }>()
+    if (walletProviders.length > 0) {
+      const { data: wallets } = await supabase
+        .from('tenant_payment_wallets')
+        .select('provider, wallet_address, credentials')
+        .eq('tenant_id', tenantId)
+        .in('provider', walletProviders)
+      for (const wallet of wallets || []) {
+        walletsByProvider.set(wallet.provider, wallet)
+      }
+    }
+
     const providers: string[] = ['manual']
-    if (isOn('stripe_enabled', true)) providers.push('stripe')
+    if (stripeOn && stripeReady) providers.push('stripe')
     if (isOn('paypal_enabled', false)) providers.push('paypal')
     if (isOn('lemonsqueezy_enabled', false)) providers.push('lemonsqueezy')
-    if (isOn('solana_enabled', false)) providers.push('solana', 'solana_subs')
+
+    // Solana: a flag alone used to offer a rail with no receiving wallet — the
+    // one-time and subscription checkout routes have nowhere to point a
+    // payment without a `tenant_payment_wallets` row.
+    if (solanaOn) {
+      const wallet = walletsByProvider.get('solana')
+      if (wallet?.wallet_address) {
+        providers.push('solana', 'solana_subs')
+      }
+    }
+
     if (isOn('binance_enabled', false)) providers.push('binance')
 
     // binance_personal is only usable once the school has actually configured
     // its Pay ID + API credentials — no dead providers in the checkout forms.
-    if (isOn('binance_personal_enabled', false)) {
-      const { data: wallet } = await supabase
-        .from('tenant_payment_wallets')
-        .select('wallet_address, credentials')
-        .eq('tenant_id', tenantId)
-        .eq('provider', 'binance_personal')
-        .maybeSingle()
-      const credentials = (wallet?.credentials || {}) as { api_key?: string }
-      if (wallet?.wallet_address && credentials.api_key) {
+    if (binancePersonalOn) {
+      const wallet = walletsByProvider.get('binance_personal')
+      // Both halves of the pair, not just the key: confirming a transfer signs
+      // the SAPI query with the SECRET (`signSapiQuery`), so a row holding only
+      // an api_key offered a rail that could take a payment and then never
+      // confirm it. `getBinancePersonalStatus()` — which drives the settings
+      // screen's readiness pill — has always required both; this is the same
+      // check, so the screen and checkout can no longer disagree.
+      const credentials = (wallet?.credentials || {}) as {
+        api_key?: string
+        api_secret?: string
+      }
+      if (wallet?.wallet_address && credentials.api_key && credentials.api_secret) {
         providers.push('binance_personal')
       }
     }
@@ -566,9 +857,34 @@ export async function getManualPaymentInstructions(): Promise<string> {
 }
 
 /**
+ * Get this tenant's structured offline payment accounts (#802).
+ *
+ * No role gate, for the same reason as the instructions above it: the student
+ * reads these at checkout to know where to send the money, and again on their
+ * request page to say which one they used. Returns `[]` when the school has
+ * never opened the editor, which is exactly the pre-#802 behaviour.
+ */
+export async function getManualPaymentAccounts(): Promise<ManualPaymentAccount[]> {
+  try {
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenantId)
+      .eq('setting_key', 'manual_payment_accounts')
+      .maybeSingle()
+    return normalizeManualPaymentAccounts(data?.setting_value)
+  } catch (error) {
+    console.error('Error resolving manual payment accounts:', error)
+    return []
+  }
+}
+
+/**
  * Get all settings grouped by category (for the settings page)
  */
-export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
+export async function getAllSettingsByCategory(): Promise<CategorySettingsResponse> {
   try {
     const role = await getUserRole()
     if (role !== 'admin') {
@@ -590,19 +906,20 @@ export async function getAllSettingsByCategory(): Promise<SettingsResponse> {
     const categoryMap: Record<string, string> = {
       site_name: 'general', site_description: 'general', contact_email: 'general',
       support_email: 'general', timezone: 'general', maintenance_mode: 'general',
-      logo_url: 'general', favicon_url: 'general', primary_color: 'general', secondary_color: 'general',
+      logo_url: 'general', favicon_url: 'general',
       smtp_host: 'email', smtp_port: 'email', smtp_username: 'email', smtp_password: 'email',
       smtp_from_email: 'email', smtp_from_name: 'email', email_notifications: 'email',
       stripe_enabled: 'payment', paypal_enabled: 'payment', binance_enabled: 'payment', binance_personal_enabled: 'payment',
       lemonsqueezy_enabled: 'payment', solana_enabled: 'payment', solana_accept_sol: 'payment', currency: 'payment',
       tax_rate: 'payment', invoice_prefix: 'payment', require_payment_approval: 'payment',
-      manual_payment_instructions: 'payment',
+      manual_payment_instructions: 'payment', manual_payment_accounts: 'payment',
       auto_enrollment: 'enrollment', require_enrollment_approval: 'enrollment',
       max_enrollments_per_user: 'enrollment', allow_self_enrollment: 'enrollment',
       enrollment_expiration_days: 'enrollment', course_capacity_enabled: 'enrollment',
+      free_preview_enabled: 'enrollment',
     }
 
-    const grouped = (data || []).reduce((acc: Record<string, Record<string, any>>, s: any) => {
+    const grouped = (data || []).reduce((acc: Record<string, SettingsGroup>, s: SettingRow) => {
       const category = categoryMap[s.setting_key] || 'general'
       if (!acc[category]) acc[category] = {}
       acc[category][s.setting_key] = {

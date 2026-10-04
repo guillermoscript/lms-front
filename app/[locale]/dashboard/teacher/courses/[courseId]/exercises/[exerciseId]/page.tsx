@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
 import { getUserRole } from '@/lib/supabase/get-user-role'
+import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 interface PageProps {
@@ -40,15 +41,17 @@ export default async function EditExercisePage({ params }: PageProps) {
 
   const role = await getUserRole()
 
-  const { data: exercise } = await supabase
+  const { data: storedExercise } = await supabase
     .from('exercises')
-    .select('*')
+    .select(`*, ${GRADING_SECRETS_EMBED}`)
     .eq('id', parseInt(exerciseId))
     .eq('course_id', parseInt(courseId))
     .eq('tenant_id', tenantId)
     .single()
 
-  if (!exercise) return notFound()
+  if (!storedExercise) return notFound()
+  // The prompt and grading config live in the staff-only side table (#833).
+  const exercise = withGradingSecrets(storedExercise)
 
   const { data: course } = await supabase
     .from('courses')

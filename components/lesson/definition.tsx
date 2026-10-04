@@ -24,7 +24,7 @@ export function Definition({
       )}
     >
       <div className="flex items-start gap-3">
-        <IconBook className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+        <IconBook className="mt-0.5 size-5 shrink-0 text-brand-text" aria-hidden="true" />
         <div className="flex-1">
           <div className="flex flex-wrap items-baseline gap-2">
             <span className="font-bold text-base">{term}</span>

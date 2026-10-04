@@ -29,12 +29,16 @@ export function ExamQuestionOptions({ question: q }: ExamQuestionOptionsProps) {
       <div className="space-y-2">
         {q.options.map((opt, oIdx) => (
           <div key={opt.id} className="flex items-center gap-3">
+            {/* Ghost Button variant applies its own hover fill/text; pin explicit hover/dark:hover
+                twins here so the correct-answer marker doesn't flicker to the ghost hover state. */}
             <Button
               variant="ghost"
               size="sm"
               className={cn(
                 "shrink-0 rounded-full h-8 w-8 p-0 border flex items-center justify-center",
-                opt.is_correct ? "bg-green-600 border-green-600 text-white" : "border-muted-foreground/30 text-muted-foreground"
+                opt.is_correct
+                  ? "bg-success border-success text-success-foreground hover:bg-success hover:text-success-foreground dark:hover:bg-success"
+                  : "border-muted-foreground/30 text-muted-foreground"
               )}
               onClick={() => {
                 const newOpts = q.options.map((o) => ({
@@ -46,6 +50,8 @@ export function ExamQuestionOptions({ question: q }: ExamQuestionOptionsProps) {
             >
               {opt.is_correct ? <IconCircleCheck className="h-5 w-5" /> : <IconCircleX className="h-5 w-5 opacity-20" />}
             </Button>
+            {/* The Input primitive sets its own dark-mode fill, so the correct-answer tint needs
+                an explicit dark twin here or it would drop out of dark mode. */}
             <Input
               value={opt.option_text}
               onChange={(e) => {
@@ -56,7 +62,7 @@ export function ExamQuestionOptions({ question: q }: ExamQuestionOptionsProps) {
               }}
               placeholder={t('optionPlaceholder', { index: oIdx + 1 })}
               disabled={q.question_type === 'true_false'}
-              className={cn(opt.is_correct && "border-green-400 focus-visible:ring-green-400 bg-green-50/30 dark:bg-green-950/30")}
+              className={cn(opt.is_correct && "border-success focus-visible:ring-success bg-success/10 dark:bg-success/10")}
             />
             {q.question_type === 'multiple_choice' && q.options.length > 2 && (
               <Button
@@ -72,7 +78,7 @@ export function ExamQuestionOptions({ question: q }: ExamQuestionOptionsProps) {
               </Button>
             )}
             {opt.is_correct && (
-              <span className="text-[10px] font-black uppercase text-green-600 dark:text-green-400 shrink-0">
+              <span className="text-[10px] font-black uppercase text-success shrink-0">
                 {t('correctLabel')}
               </span>
             )}

@@ -6,16 +6,23 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { checkPlanLimits, countTenantUsage, formatPlanLimitError } from '@/lib/billing/plan-limits'
 import { classifyPlanChange } from '@/lib/billing/plan-change'
 import { PLAN_PRICE_PROVIDERS, type PlanPriceProvider } from '@/lib/billing/plan-prices'
-import { reconcileAccessCutoff } from '@/lib/billing/access-cutoff'
+import { reconcileAccessCutoff, reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { getPaymentProvider } from '@/lib/payments'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import {
   OPEN_REQUEST_STATUSES,
   hasOpenPaymentRequest,
-  isRequestOpen,
   requestExpiresAt,
 } from '@/lib/billing/payment-request-ttl'
+import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import {
+  SwitchAlreadyPendingError,
+  beginPlatformSubscriptionSwitch,
+  failPlatformSubscriptionSwitch,
+  reconcilePlatformSubscriptionSwitch,
+} from '@/lib/billing/platform-subscription-switch'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
@@ -246,6 +253,23 @@ export async function requestManualPlanUpgrade(
     throw new Error('You already have a pending plan change request. Please wait for it to be processed.')
   }
 
+  const expiresAt = requestExpiresAt()
+  let switchId: string | null
+  try {
+    switchId = await beginPlatformSubscriptionSwitch({
+      admin: adminClient,
+      tenantId,
+      targetPlanId: planId,
+      targetProvider: paymentProvider as PaymentProvider,
+      targetInterval: interval,
+      initiatedBy: userId,
+      expiresAt,
+    })
+  } catch (switchError) {
+    if (switchError instanceof SwitchAlreadyPendingError) throw switchError
+    throw new Error('Failed to prepare payment-method switch')
+  }
+
   const { data: request, error } = await adminClient
     .from('platform_payment_requests')
     .insert({
@@ -260,12 +284,14 @@ export async function requestManualPlanUpgrade(
       payment_provider: paymentProvider,
       bank_reference: bankReference || null,
       notes: notes || null,
-      expires_at: requestExpiresAt(),
+      expires_at: expiresAt,
+      switch_id: switchId,
     })
     .select('request_id')
     .single()
 
   if (error) {
+    await failPlatformSubscriptionSwitch(adminClient, switchId, error)
     console.error('Failed to create payment request:', error)
     throw new Error('Failed to create upgrade request')
   }
@@ -307,7 +333,6 @@ async function checkDowngradeLimits(
  * Super admin: confirm a manual bank transfer and activate the plan
  */
 export async function confirmManualPayment(requestId: string) {
-  const supabase = await createClient()
   const adminClient = await createAdminClient()
   const userId = await getCurrentUserId()
   if (!userId) throw new Error('Not authenticated')
@@ -321,117 +346,95 @@ export async function confirmManualPayment(requestId: string) {
 
   if (!superAdmin) throw new Error('Only super admins can confirm payments')
 
-  // Get the request
-  const { data: request } = await adminClient
+  // Keep the user-friendly limit preflight outside the transaction. The RPC
+  // repeats all security/state checks and owns every money-to-entitlement write.
+  const { data: request, error: requestError } = await adminClient
     .from('platform_payment_requests')
-    .select('*, platform_plans(slug, transaction_fee_percent)')
+    .select(
+      'tenant_id, plan_id, status, payment_provider, amount, currency, interval, request_type, created_at, platform_plans(slug)'
+    )
     .eq('request_id', requestId)
     .single()
 
-  if (!request) throw new Error('Request not found')
-  if (request.status === 'confirmed') throw new Error('Already confirmed')
+  if (requestError || !request) throw new Error('Request not found')
 
-  const plan = request.platform_plans as { slug: string; transaction_fee_percent: number }
+  // Only the analytics event below reads this; every write is the RPC's.
+  // PostgREST types a narrowed embed as an array even though the FK is to-one.
+  const plan = (Array.isArray(request.platform_plans)
+    ? request.platform_plans[0]
+    : request.platform_plans) as { slug: string } | null
 
   // Check downgrade limits before activating
-  const limitError = await checkDowngradeLimits(adminClient, request.tenant_id, request.plan_id)
-  if (limitError) throw new Error(limitError)
-
-  // Update request status
-  await adminClient
-    .from('platform_payment_requests')
-    .update({
-      status: 'confirmed',
-      confirmed_by: userId,
-      confirmed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('request_id', requestId)
-
-  // Calculate period: for renewals, extend from old period end (no gap)
-  const now = new Date()
-  let periodStart: Date
-
-  if (request.request_type === 'renewal') {
-    // Get existing subscription to extend from its end date
-    const { data: existingSub } = await adminClient
-      .from('platform_subscriptions')
-      .select('current_period_end')
-      .eq('tenant_id', request.tenant_id)
-      .single()
-
-    const oldEnd = existingSub?.current_period_end ? new Date(existingSub.current_period_end) : now
-    // If old period hasn't ended yet, start from old end; otherwise start from now
-    periodStart = oldEnd > now ? oldEnd : now
-  } else {
-    periodStart = now
+  if ((OPEN_REQUEST_STATUSES as readonly string[]).includes(request.status)) {
+    const limitError = await checkDowngradeLimits(adminClient, request.tenant_id, request.plan_id)
+    if (limitError) throw new Error(limitError)
   }
 
-  const periodEnd = new Date(periodStart)
-  if (request.interval === 'yearly') {
-    periodEnd.setFullYear(periodEnd.getFullYear() + 1)
-  } else {
-    periodEnd.setMonth(periodEnd.getMonth() + 1)
-  }
+  const { data, error } = await adminClient.rpc('confirm_platform_payment_request', {
+    _request_id: requestId,
+    _confirmed_by: userId,
+  })
+  const confirmation = data?.[0]
 
-  // Upsert subscription
-  await adminClient
-    .from('platform_subscriptions')
-    .upsert({
-      tenant_id: request.tenant_id,
-      plan_id: request.plan_id,
-      status: 'active',
-      // The rail the school actually settled on (#603). Hardcoding 'manual'
-      // here made every out-of-band payment look like a bank wire on the
-      // billing screens, whatever the school had really used.
-      payment_provider: request.payment_provider || 'manual',
-      interval: request.interval,
-      current_period_start: periodStart.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      grace_period_end: null,
-      // Reset the reminder stamp so the next cycle can remind again.
-      renewal_reminder_sent_at: null,
-      // A confirmed payment is an un-cancel (#546 §1). PostgREST's ON CONFLICT
-      // DO UPDATE only touches the columns supplied here, so omitting these two
-      // left a stale `cancel_at_period_end = true` on the row: the school paid
-      // for a full period and was then silently dropped to free at the end of
-      // it by the cron's cancel phase, with no reminder and no grace window
-      // (phases 1 and 2 both filter on `cancel_at_period_end = false`).
-      cancel_at_period_end: false,
-      canceled_at: null,
-      // A real payment supersedes any super-admin comp (#546 §3) — this is one
-      // of the override's exits, so portal changes start syncing again.
-      plan_override_by: null,
-      plan_override_at: null,
-      updated_at: now.toISOString(),
-    }, { onConflict: 'tenant_id' })
-
-  // Update tenant plan
-  await adminClient
-    .from('tenants')
-    .update({
-      plan: plan.slug,
-      billing_status: 'active',
-      billing_period_end: periodEnd.toISOString(),
-      updated_at: now.toISOString(),
-    })
-    .eq('id', request.tenant_id)
-
-  // Update revenue splits
-  await adminClient
-    .from('revenue_splits')
-    .upsert({
-      tenant_id: request.tenant_id,
-      platform_percentage: plan.transaction_fee_percent,
-      school_percentage: 100 - plan.transaction_fee_percent,
-      updated_at: now.toISOString(),
-    }, { onConflict: 'tenant_id' })
+  if (error) throw new Error(error.message || 'Failed to confirm payment')
+  if (!confirmation) throw new Error('Failed to confirm payment')
 
   // Activation already passed the pre-flight limit check above, so this
   // clears any cutoff scheduled from a prior over-limit period.
-  await reconcileAccessCutoff(adminClient, request.tenant_id)
+  await reconcileAccessCutoffSafely(adminClient, confirmation.tenant_id)
 
-  return { success: true }
+  if (confirmation.switch_id) {
+    try {
+      await reconcilePlatformSubscriptionSwitch(adminClient, confirmation.switch_id)
+    } catch (cleanupError) {
+      // Promotion already committed. The durable switch ledger lets the cron
+      // retry source cleanup; never report the paid activation itself as failed.
+      console.error('[billing/switch] post-confirmation reconciliation failed:', cleanupError)
+    }
+  }
+
+  revalidatePath('/[locale]/platform/billing', 'page')
+
+  // Gated on `applied`, which the analytics side never had to think about:
+  // before the RPC, a second confirmation threw "Already confirmed" and could
+  // not reach this line. Replay is now an audited no-op, so an ungated event
+  // would book the same platform payment into the revenue funnel twice.
+  if (confirmation.applied) {
+    // Loop E. Two deliberate attribution choices, both the same shape as the
+    // student-side manual flow (Loop C trap 3):
+    //
+    //   - NO `userId` and NO `isSuperAdmin` in the context. This runs in a SUPER
+    //     ADMIN's request, and `shouldDropEvent` drops anything flagged
+    //     super-admin (§9.6) — passing it would silently delete every
+    //     bank-transfer activation from the revenue funnel. The event belongs to
+    //     the SCHOOL, so `tenantId` carries it and no profile is attached.
+    //   - Backdated to when the school asked to pay, not to when a human got
+    //     round to confirming it, so the revenue lands in the right period.
+    //
+    // `is_renewal` comes from the request's own `request_type`, which was
+    // classified at request time — the same column the expiry cron's renewal
+    // pause reads, so the two can never disagree.
+    await track(
+      ANALYTICS_EVENTS.PLATFORM_PAYMENT_SUCCEEDED,
+      {
+        provider: request.payment_provider || 'manual',
+        amount: Number(request.amount ?? 0),
+        interval: request.interval,
+        is_renewal: request.request_type === 'renewal',
+        currency: request.currency ?? 'usd',
+        plan: plan?.slug ?? null,
+        request_type: request.request_type ?? null,
+        settlement_path: 'super_admin_confirm',
+        requested_at: request.created_at,
+        hours_to_confirm: request.created_at
+          ? Math.round(((Date.now() - new Date(request.created_at).getTime()) / 3_600_000) * 10) / 10
+          : null,
+      },
+      { tenantId: request.tenant_id, timestamp: request.created_at }
+    )
+  }
+
+  return { success: true, applied: confirmation.applied }
 }
 
 /**
@@ -451,9 +454,15 @@ async function resolvePlatformPlanChange(
   planId: string,
   interval: 'monthly' | 'yearly',
 ) {
+  // The embedded current plan is here for the analytics events in the two
+  // callers: `plan_change_previewed` and `plan_changed` are only readable as a
+  // funnel if both carry `from_plan`, and it is an embed on a query that was
+  // already happening rather than a second round trip.
   const { data: sub } = await adminClient
     .from('platform_subscriptions')
-    .select('provider_subscription_id, provider_customer_id, payment_provider, status, current_period_end')
+    .select(
+      'provider_subscription_id, provider_customer_id, payment_provider, status, current_period_end, plan_id, interval, platform_plans(slug, sort_order, price_monthly, price_yearly)',
+    )
     .eq('tenant_id', tenantId)
     .single()
 
@@ -475,7 +484,10 @@ async function resolvePlatformPlanChange(
 
   const { data: plan } = await adminClient
     .from('platform_plans')
-    .select('plan_id, slug, name, transaction_fee_percent')
+    // `sort_order` + both prices are what `classifyPlanChange` needs to label
+    // the move an upgrade or a downgrade the same way the request-type column
+    // does; extra columns on a query that already runs, not a second read.
+    .select('plan_id, slug, name, transaction_fee_percent, sort_order, price_monthly, price_yearly')
     .eq('plan_id', planId)
     .eq('is_active', true)
     .single()
@@ -500,14 +512,59 @@ async function resolvePlatformPlanChange(
     throw new Error('A price is not configured for this plan on your payment method. Please contact support.')
   }
 
+  // PostgREST types a to-one embed as a possible array; the FK makes it a row.
+  const currentPlanEmbed = sub.platform_plans as unknown as CurrentPlanEmbed | CurrentPlanEmbed[] | null
+  const currentPlan = (Array.isArray(currentPlanEmbed) ? currentPlanEmbed[0] : currentPlanEmbed) ?? null
+
   return {
     provider,
     capabilities,
     subId: sub.provider_subscription_id as string,
     customerId: (sub.provider_customer_id as string) || undefined,
     currentPeriodEnd: (sub.current_period_end as string | null) ?? null,
+    currentInterval: (sub.interval as string | null) ?? null,
+    currentPlan,
     targetPriceId: targetPriceId as string,
     plan,
+  }
+}
+
+interface CurrentPlanEmbed {
+  slug: string | null
+  sort_order: number | null
+  price_monthly: number | string | null
+  price_yearly: number | string | null
+}
+
+/**
+ * `from_plan` / `to_plan` / `is_upgrade` for the plan-change events, classified
+ * with the SAME `classifyPlanChange` the request-type column uses — an analytics
+ * "upgrade" that disagrees with the stored `request_type` would be worse than no
+ * flag at all.
+ */
+function planChangeProperties(
+  ctx: {
+    currentPlan: CurrentPlanEmbed | null
+    plan: { slug: string; name: string; sort_order?: number | null }
+  },
+  targetInterval: 'monthly' | 'yearly',
+  targetAmount: number,
+) {
+  const currentAmount = Number(
+    (targetInterval === 'yearly' ? ctx.currentPlan?.price_yearly : ctx.currentPlan?.price_monthly) ?? 0,
+  )
+  const { requestType, isIntervalOnly } = classifyPlanChange({
+    currentSortOrder: ctx.currentPlan?.sort_order ?? 0,
+    currentAmount: Number.isFinite(currentAmount) ? currentAmount : 0,
+    targetSortOrder: ctx.plan.sort_order ?? 0,
+    targetAmount,
+  })
+  return {
+    from_plan: ctx.currentPlan?.slug ?? 'free',
+    to_plan: ctx.plan.slug,
+    is_upgrade: requestType === 'upgrade',
+    is_interval_only: isIntervalOnly,
+    interval: targetInterval,
   }
 }
 
@@ -526,7 +583,7 @@ async function resolvePlatformPlanChange(
  *                             Best-effort: let the change proceed unquoted.
  */
 export async function previewPlanChange(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
-  const { tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
   // Pre-flight limit check BEFORE any provider call.
@@ -536,6 +593,25 @@ export async function previewPlanChange(planId: string, interval: 'monthly' | 'y
   }
 
   const ctx = await resolvePlatformPlanChange(adminClient, tenantId, planId, interval)
+
+  const targetAmount = Number(
+    (interval === 'yearly' ? ctx.plan.price_yearly : ctx.plan.price_monthly) ?? 0,
+  )
+  const changeProps = planChangeProperties(ctx, interval, targetAmount)
+
+  // Loop E, the step between `upgrade_page_viewed` and `plan_changed`. Emitted
+  // before the provider quote so a preview the provider fails to price is still
+  // counted as intent — that gap is the interesting part of the funnel.
+  await track(
+    ANALYTICS_EVENTS.PLAN_CHANGE_PREVIEWED,
+    {
+      ...changeProps,
+      provider: ctx.provider,
+      amount: targetAmount,
+      supports_proration_preview: !!ctx.capabilities.supportsProrationPreview,
+    },
+    { userId, tenantId, role: 'admin' },
+  )
 
   if (!ctx.capabilities.supportsProrationPreview) {
     return {
@@ -582,7 +658,7 @@ export async function previewPlanChange(planId: string, interval: 'monthly' | 'y
  * hit its no-op guard.
  */
 export async function changePlan(planId: string, interval: 'monthly' | 'yearly' = 'monthly') {
-  const { tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
   // Pre-flight limit check BEFORE touching the provider.
@@ -655,6 +731,24 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
   // so this clears any cutoff scheduled from a prior over-limit period.
   await reconcileAccessCutoff(adminClient, tenantId)
 
+  // Loop E. Below the provider call and the DB mirror, so this only ever counts
+  // a change that actually took at BOTH ends — the #461 invariant. `from_plan`
+  // is captured from the pre-change subscription inside
+  // `resolvePlatformPlanChange`, above the mirror that has since overwritten it.
+  await track(
+    ANALYTICS_EVENTS.PLAN_CHANGED,
+    {
+      ...planChangeProperties(
+        ctx,
+        interval,
+        Number((interval === 'yearly' ? ctx.plan.price_yearly : ctx.plan.price_monthly) ?? 0),
+      ),
+      provider: ctx.provider,
+      change_path: 'in_app_swap',
+    },
+    { userId, tenantId, role: 'admin' },
+  )
+
   revalidatePath('/dashboard/admin/billing')
   return { success: true, plan: ctx.plan.slug }
 }
@@ -663,12 +757,18 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
  * Cancel subscription (sets cancel_at_period_end)
  */
 export async function cancelSubscription() {
-  const { tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
+  // `current_period_start`, `created_at` and the plan embed exist for the
+  // churn event below — `days_subscribed` is the number that says whether
+  // schools leave in week one or year two, and it cannot be reconstructed after
+  // the fact from the cancel flag alone.
   const { data: subscription } = await adminClient
     .from('platform_subscriptions')
-    .select('provider_subscription_id, payment_provider, status')
+    .select(
+      'provider_subscription_id, payment_provider, status, interval, current_period_start, current_period_end, created_at, platform_plans(slug)',
+    )
     .eq('tenant_id', tenantId)
     .single()
 
@@ -719,8 +819,40 @@ export async function cancelSubscription() {
     })
     .eq('tenant_id', tenantId)
 
+  // Loop E. `_scheduled`, not `_canceled`: `cancel_at_period_end` is the ONLY
+  // signal that a cancel is coming (#545) and the school keeps its plan until
+  // the period ends — `subscription_expired` from the cron is the terminal
+  // event. Counting this one as churn would report the loss on the wrong day
+  // and double-count it when the period finally lapses.
+  await track(
+    ANALYTICS_EVENTS.SUBSCRIPTION_CANCEL_SCHEDULED,
+    {
+      scope: 'platform',
+      plan: planSlugOf(subscription.platform_plans) ?? 'unknown',
+      provider: subscription.payment_provider,
+      interval: subscription.interval,
+      days_subscribed: daysSince(subscription.created_at),
+      access_ends_at: subscription.current_period_end,
+      canceled_at_provider: cancelsAtProvider,
+    },
+    { userId, tenantId, role: 'admin' },
+  )
+
   revalidatePath('/dashboard/admin/billing')
   return { success: true }
+}
+
+/** Whole days from an ISO stamp to now, or `null` when it is missing. */
+function daysSince(from: string | null | undefined): number | null {
+  if (!from) return null
+  const ms = Date.now() - new Date(from).getTime()
+  return Number.isFinite(ms) ? Math.max(Math.round(ms / 86_400_000), 0) : null
+}
+
+/** PostgREST types a to-one embed as a possible array; the FK makes it a row. */
+function planSlugOf(embed: unknown): string | null {
+  const row = Array.isArray(embed) ? embed[0] : embed
+  return (row as { slug?: string | null } | null)?.slug ?? null
 }
 
 /**
@@ -734,12 +866,16 @@ export async function cancelSubscription() {
  * back short of contacting support.
  */
 export async function reactivateSubscription() {
-  const { tenantId } = await verifyAdminAccess()
+  const { userId, tenantId } = await verifyAdminAccess()
   const adminClient = await createAdminClient()
 
+  // `canceled_at` is read here for `days_since_cancel` — the win-back window.
+  // It has to be captured BEFORE the update below nulls it.
   const { data: subscription } = await adminClient
     .from('platform_subscriptions')
-    .select('provider_subscription_id, payment_provider, status, cancel_at_period_end, current_period_end')
+    .select(
+      'provider_subscription_id, payment_provider, status, cancel_at_period_end, current_period_end, canceled_at, interval, platform_plans(slug)',
+    )
     .eq('tenant_id', tenantId)
     .single()
 
@@ -786,6 +922,21 @@ export async function reactivateSubscription() {
       updated_at: new Date().toISOString(),
     })
     .eq('tenant_id', tenantId)
+
+  // Loop E. Paired with `subscription_cancel_scheduled`, this is the save rate:
+  // how many schools that scheduled a cancel changed their mind, and how long
+  // the window between the two decisions is.
+  await track(
+    ANALYTICS_EVENTS.SUBSCRIPTION_REACTIVATED,
+    {
+      scope: 'platform',
+      plan: planSlugOf(subscription.platform_plans) ?? 'unknown',
+      provider: subscription.payment_provider,
+      interval: subscription.interval,
+      days_since_cancel: daysSince(subscription.canceled_at),
+    },
+    { userId, tenantId, role: 'admin' },
+  )
 
   revalidatePath('/dashboard/admin/billing')
   return { success: true }
