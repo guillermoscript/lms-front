@@ -84,7 +84,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
     let count = data.content?.length ?? 0
     if (data.zones) {
       for (const zone of Object.values(data.zones)) {
-        count += (zone as any[]).length
+        count += zone.length
       }
     }
     return count
@@ -93,7 +93,6 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="md:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col p-0">
-        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <div className="flex flex-col flex-1 overflow-hidden" onPointerDownCapture={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-border">
@@ -132,7 +131,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                         type="button"
                         role="radio"
                         aria-checked={isSelected}
-                        className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                           isSelected
                             ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                             : 'border-border hover:border-foreground/20 bg-card'
@@ -154,7 +153,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                     type="button"
                     role="radio"
                     aria-checked={selectedSlug === 'custom'}
-                    className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                       selectedSlug === 'custom'
                         ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
                         : 'border-border hover:border-foreground/20 bg-card'
@@ -207,7 +206,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                     <button
                       key={template.name}
                       role="listitem"
-                      className="group relative flex flex-col rounded-lg border border-border bg-card text-left transition-all hover:border-foreground/20 hover:shadow-sm overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="group relative flex flex-col rounded-lg border border-border bg-card text-left transition-colors motion-reduce:transition-none hover:border-foreground/20  overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => handleSelectTemplate(template.puck_data, template.name)}
                       disabled={!!loading}
                     >
@@ -236,7 +235,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
                       </div>
 
                       {/* Hover overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-150">
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-lg opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity motion-reduce:transition-none duration-150">
                         {loading ? (
                           <IconLoader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                         ) : (

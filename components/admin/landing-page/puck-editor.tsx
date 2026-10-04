@@ -22,6 +22,8 @@ import BrandingSettingsForm from '@/components/admin/branding-settings-form'
 import { AiChatPanel } from '@/components/admin/landing-page/ai-chat-panel'
 import { IconArrowLeft, IconDeviceFloppy, IconPalette } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
+import { cn } from '@/lib/utils'
+import styles from './puck-editor.module.css'
 
 interface Props {
   pageId: string
@@ -121,7 +123,7 @@ export function PuckEditor({ pageId, pageName, pageStatus, initialData, branding
   }, [pageId, t])
 
   return (
-    <div className="h-[calc(100dvh-4rem)] flex flex-col">
+    <div className={cn(styles.editor, 'h-[calc(100dvh-4rem)] flex flex-col')}>
       <LandingCoursesProvider value={courses}>
       <Puck
         config={config}

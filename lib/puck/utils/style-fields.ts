@@ -89,6 +89,7 @@ export function getStyleFields(): Fields<StyleProps> {
       type: 'select',
       label: 'Border Radius',
       options: [
+        { label: 'School theme', value: 'school' },
         { label: 'None', value: '0' },
         { label: 'Small', value: '0.25rem' },
         { label: 'Medium', value: '0.5rem' },
@@ -151,7 +152,8 @@ export function getStyleFromProps(
   if (props.paddingRight) style.paddingRight = props.paddingRight
   if (props.marginTop) style.marginTop = props.marginTop
   if (props.marginBottom) style.marginBottom = props.marginBottom
-  if (props.borderRadius) style.borderRadius = props.borderRadius
+  if (props.borderRadius)
+    style.borderRadius = props.borderRadius === 'school' ? 'var(--radius-card)' : props.borderRadius
   if (props.borderWidth) style.borderWidth = props.borderWidth
   if (props.borderColor) style.borderColor = props.borderColor
 

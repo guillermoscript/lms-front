@@ -1,6 +1,5 @@
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
@@ -24,7 +23,7 @@ export type CtaBannerProps = {
  *
  * Pattern B with a friction fix: the Tailark source uses `<Button asChild><Link/></Button>`,
  * but this project's Button (`@base-ui/react`) has no `asChild` prop (see CLAUDE.md). So the
- * wrapper composes it the supported way — `<Link><Button/></Link>`. Buttons render only when
+ * wrapper uses shared button styles on semantic links. Links render only when
  * both their label and href are set.
  */
 export const CtaBanner: ComponentConfig<CtaBannerProps> = {
@@ -70,16 +69,12 @@ export const CtaBanner: ComponentConfig<CtaBannerProps> = {
             {subtitle && <p className="mt-4 text-muted-foreground">{subtitle}</p>}
             <div className="mt-12 flex flex-wrap justify-center gap-4">
               {primaryLabel && primaryHref && (
-                <Link href={primaryHref}>
-                  <Button size="lg">{primaryLabel}</Button>
-                </Link>
+                <ButtonLink href={primaryHref} size="lg">{primaryLabel}</ButtonLink>
               )}
               {secondaryLabel && secondaryHref && (
-                <Link href={secondaryHref}>
-                  <Button size="lg" variant="outline">
+                <ButtonLink href={secondaryHref} size="lg" variant="outline">
                     {secondaryLabel}
-                  </Button>
-                </Link>
+                  </ButtonLink>
               )}
             </div>
           </div>

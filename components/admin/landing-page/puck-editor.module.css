@@ -1,0 +1,61 @@
+/* Puck chrome follows the same live school tokens as the canvas and public page. */
+.editor {
+  --puck-font-family: var(--font-sans);
+  --puck-font-family-monospaced: var(--font-mono);
+  --puck-color-black: var(--foreground);
+  --puck-color-white: var(--background);
+  --puck-color-grey-01: var(--foreground);
+  --puck-color-grey-02: var(--foreground);
+  --puck-color-grey-03: var(--foreground);
+  --puck-color-grey-04: var(--muted-foreground);
+  --puck-color-grey-05: var(--muted-foreground);
+  --puck-color-grey-06: var(--muted-foreground);
+  --puck-color-grey-07: var(--border);
+  --puck-color-grey-08: var(--border);
+  --puck-color-grey-09: var(--border);
+  --puck-color-grey-10: var(--muted);
+  --puck-color-grey-11: var(--card);
+  --puck-color-grey-12: var(--background);
+  --puck-color-azure-01: var(--brand-text);
+  --puck-color-azure-02: var(--brand-text);
+  --puck-color-azure-03: var(--brand-text);
+  --puck-color-azure-04: var(--brand-text);
+  --puck-color-azure-05: var(--brand-text);
+  --puck-color-azure-06: var(--ring);
+  --puck-color-azure-07: var(--ring);
+  --puck-color-azure-08: var(--border);
+  --puck-color-azure-09: var(--brand-tint);
+  --puck-color-azure-10: var(--brand-tint);
+  --puck-color-azure-11: var(--muted);
+  --puck-color-azure-12: var(--background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor :global(*) {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.editor :global([class*="_Button_"]) {
+  border-radius: var(--radius-button);
+}
+
+.editor :global([class*="_Button--primary_"]) {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.editor :global([class*="_Button--primary_"]:hover) {
+  background: color-mix(in oklch, var(--primary) 80%, var(--background));
+}
+
+.editor :global([class*="_Input-input_"]) {
+  border-radius: var(--radius-input);
+}
+
+/* Puck 0.20 paints its canvas white even when its color variables are themed. */
+.editor :global([class*="_PuckCanvas-root_"]) {
+  background-color: var(--background);
+  color: var(--foreground);
+}

@@ -23,13 +23,14 @@ export const LANDING_PAGE_CRAFT_GUIDE = `HOW TO BUILD A GREAT LANDING PAGE:
 3. Prefer the rich marketing sections (HeroBlock, StatsBand, AnimatedStats, FeaturesGrid,
    ContentFeature, TestimonialGrid, PricingTable, TeamGrid, FaqAccordion, CtaBanner) over the
    bare primitives (Heading, TextBlock, ButtonBlock) — primitives are for one-off touches.
-4. Write REAL, specific, benefit-driven copy in the page's language — concrete numbers in
-   stats, full sentences in testimonials and FAQ answers, distinct feature titles. Never use
-   placeholder text like "Feature" or "Lorem ipsum". Fill every array with 3+ rich items.
-5. Theming: pick ONE tasteful brand accent and pass it as "accentColor" on blocks that accept
-   it (HeroBlock.backgroundColor, FeaturesGrid/StatsCounter/FaqAccordion.accentColor) — use an
-   OKLCH or hex value that fits the topic (e.g. a warm tone for photography). Keep it
-   consistent across the page. Leave it out to inherit the tenant's default brand color.
+4. Write REAL, specific, benefit-driven copy in the page's language — distinct feature titles and full FAQ answers. Use live-data widgets for stats and pricing.
+   Never invent student counts, outcomes, testimonials, or prices; omit proof the user has
+   not supplied. Never use filler like "Feature" or "Lorem ipsum".
+5. Theming: inherit the school theme by default. Leave accentColor, backgroundColor, and
+   color empty or omitted so the school's current palette applies. Keep the inherited
+   heading/body fonts and component corners; use borderRadius="school" when supported.
+   Only set explicit colors or corners when the user requests an override. Keep layout
+   surfaces flat, without decorative shadows, gradient text, or hover-lift effects.
 6. Use real CTA hrefs: "/auth/sign-up" for sign-up, "/courses" to browse, "#features"/"#faq"
    for in-page anchors. Give the hero a primary AND secondary CTA.
 7. Spacing: let blocks use their defaults; only set paddingY/marginY when a section needs more

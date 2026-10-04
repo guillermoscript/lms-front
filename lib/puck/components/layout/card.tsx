@@ -57,6 +57,7 @@ export const Card: ComponentConfig<CardProps> = {
       type: 'select',
       label: 'Border Radius',
       options: [
+        { label: 'School theme', value: 'school' },
         { label: 'None', value: '0' },
         { label: 'Small', value: '0.5rem' },
         { label: 'Medium', value: '0.75rem' },
@@ -66,18 +67,18 @@ export const Card: ComponentConfig<CardProps> = {
     },
   },
   defaultProps: {
-    shadow: 'sm',
+    shadow: 'none',
     padding: '1.5rem',
-    borderRadius: '0.75rem',
+    borderRadius: 'school',
   },
   render: ({ shadow, padding, borderRadius }) => {
     return (
       <div
         className={cn(
-          'bg-card text-card-foreground border border-border transition-shadow duration-300 hover:shadow-lg',
-          shadowMap[shadow] || 'shadow-sm',
+          'bg-card text-card-foreground ring-1 ring-foreground/10',
+          shadowMap[shadow] || 'shadow-none',
           paddingMap[padding] || 'p-6',
-          radiusMap[borderRadius] || 'rounded-xl'
+          radiusMap[borderRadius] || 'rounded-card'
         )}
       >
         <DropZone zone="content" />

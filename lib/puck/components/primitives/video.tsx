@@ -52,6 +52,7 @@ export const Video: ComponentConfig<VideoProps> = {
       type: 'select',
       label: 'Border Radius',
       options: [
+        { label: 'School theme', value: 'school' },
         { label: 'None', value: '0' },
         { label: 'Small', value: '0.5rem' },
         { label: 'Large', value: '1rem' },
@@ -63,7 +64,7 @@ export const Video: ComponentConfig<VideoProps> = {
     url: '',
     title: 'Video',
     aspectRatio: '16/9',
-    borderRadius: '0.5rem',
+    borderRadius: 'school',
   },
   render: ({ url, title, aspectRatio, borderRadius }) => {
     if (!url) {
@@ -72,7 +73,7 @@ export const Video: ComponentConfig<VideoProps> = {
           className={cn(
             'flex items-center justify-center bg-muted text-sm text-muted-foreground',
             aspectRatioMap[aspectRatio] || 'aspect-video',
-            borderRadiusMap[borderRadius] || 'rounded-lg',
+            borderRadiusMap[borderRadius] || 'rounded-card',
           )}
         >
           Paste a YouTube or Vimeo URL
@@ -84,7 +85,7 @@ export const Video: ComponentConfig<VideoProps> = {
         className={cn(
           'overflow-hidden',
           aspectRatioMap[aspectRatio] || 'aspect-video',
-          borderRadiusMap[borderRadius] || 'rounded-lg',
+          borderRadiusMap[borderRadius] || 'rounded-card',
         )}
       >
         <iframe
