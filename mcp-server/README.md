@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **91 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **102 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -56,7 +56,16 @@ implementation.
   `lms_set_certificate_template`, and admin-only `lms_revoke_certificate`.
   Issuance is **template-gated**: a course with no active
   `certificate_templates` row issues nothing at all, whatever a student has
-  completed — which is what the eligibility and template tools surface).
+  completed — which is what the eligibility and template tools surface),
+  school administration, admin-only (`lms_get_school_settings`,
+  `lms_update_school_settings` — general/enrollment settings, country and
+  currency; `lms_set_school_theme` — theme kit + brand colour, custom colours
+  gated on `custom_branding`; `lms_list_school_members`,
+  `lms_change_member_role` — last-admin and student-limit (`LM001`) guards;
+  `lms_invite_member` — records the invitation and returns the join link, no
+  email; `lms_get_plan_usage` — `get_plan_features` + `get_tenant_plan_usage`),
+  and school life for every role (`lms_my_notifications`,
+  `lms_mark_notifications_read`, `lms_my_league`).
 - **21 views** (MCP Apps), teacher/admin: `course-dashboard`
   (← `lms_list_courses`), `course-detail` (← `lms_get_course`, with a live
   "Load stats" action), `exam-submissions` (← `lms_list_exam_submissions`,

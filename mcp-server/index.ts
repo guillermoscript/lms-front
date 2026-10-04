@@ -21,6 +21,8 @@ import { registerStudyPlanTools } from "./src/tools/study-plan.js";
 import { registerAskTeacherTools } from "./src/tools/ask-teacher.js";
 import { registerLandingPageTools } from "./src/tools/landing-pages.js";
 import { registerCertificateTools } from "./src/tools/certificates.js";
+import { registerSchoolTools } from "./src/tools/school.js";
+import { registerNotificationTools } from "./src/tools/notifications.js";
 import { registerDemoTools } from "./src/tools/demo.js";
 import { registerResources } from "./src/resources.js";
 import { registerPrompts } from "./src/prompts.js";
@@ -120,6 +122,8 @@ if (demoWidgetsEnabled()) {
   registerAskTeacherTools(server);
   registerLandingPageTools(server);
   registerCertificateTools(server);
+  registerSchoolTools(server);
+  registerNotificationTools(server);
 }
 
 registerResources(server);

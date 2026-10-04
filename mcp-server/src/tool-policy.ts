@@ -72,6 +72,11 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_my_certificates",
   "lms_get_certificate_eligibility",
   "lms_issue_certificate",
+  // School life (#898) — the caller's own notifications in this school (read
+  // and mark-read on their own rows only) and their weekly league standings.
+  "lms_my_notifications",
+  "lms_mark_notifications_read",
+  "lms_my_league",
 ]);
 
 const TEACHER_DENY_TOOLS = new Set<string>([
@@ -97,6 +102,17 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   "lms_update_landing_page",
   "lms_publish_landing_page",
   "lms_unpublish_landing_page",
+  // School administration (#898) — settings, theme, members, invitations and
+  // plan usage are what the admin dashboard's Settings/Users/Billing screens
+  // do. The RLS policies on tenants/tenant_settings/tenant_users/
+  // tenant_invitations grant only tenant admins, and each handler re-checks.
+  "lms_get_school_settings",
+  "lms_update_school_settings",
+  "lms_set_school_theme",
+  "lms_list_school_members",
+  "lms_change_member_role",
+  "lms_invite_member",
+  "lms_get_plan_usage",
 ]);
 
 export function isToolAllowedForRole(
