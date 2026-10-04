@@ -61,6 +61,7 @@ export function accentVars(accentColor?: string | null): CSSProperties {
   return {
     // Cast: these are custom properties, not in the CSSProperties type.
     ['--block-accent' as string]: explicit ?? 'var(--primary)',
+    ['--block-accent-text' as string]: explicit ?? 'var(--brand-text)',
     ['--block-accent-foreground' as string]: explicit
       ? readableOn(explicit, 'var(--primary-foreground)')
       : 'var(--primary-foreground)',

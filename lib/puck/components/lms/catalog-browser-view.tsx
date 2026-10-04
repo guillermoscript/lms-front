@@ -73,7 +73,10 @@ export function CatalogBrowserView({ cards, columns, pageSize, showSearch, showP
         <div className="flex flex-col sm:flex-row gap-3 mb-8 sm:items-center sm:justify-between">
           {showSearch && (
             <input
-              type="text"
+              type="search"
+              aria-label={t('searchCourses')}
+              name="course-search"
+              autoComplete="off"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value)
@@ -89,12 +92,13 @@ export function CatalogBrowserView({ cards, columns, pageSize, showSearch, showP
                 <button
                   key={f.key}
                   type="button"
+                  aria-pressed={priceFilter === f.key}
                   onClick={() => {
                     setPriceFilter(f.key)
                     setVisible(Math.max(1, pageSize))
                   }}
                   className={cn(
-                    'px-3 py-1.5 text-sm rounded-md transition-colors',
+                    'px-3 py-1.5 text-sm rounded-button transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     priceFilter === f.key
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground'
@@ -116,13 +120,13 @@ export function CatalogBrowserView({ cards, columns, pageSize, showSearch, showP
               <Card
                 key={course.id}
                 {...(course.href ? { href: course.href } : {})}
-                className="group block rounded-card overflow-hidden border border-border bg-card transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                className="group block rounded-card overflow-hidden border border-border bg-card transition-colors motion-reduce:transition-none duration-300  "
               >
                 <div className="aspect-video overflow-hidden">
                   <img
                     src={course.image}
                     alt={course.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform motion-reduce:transition-none duration-500"
                   />
                 </div>
                 <div className="p-5">

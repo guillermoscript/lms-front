@@ -64,7 +64,7 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
     accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ items, alignment, useLiveStats, accentColor, paddingY, paddingX, maxWidth, marginY, puck }) => {
+  render: function StatsCounterView({ items, alignment, useLiveStats, accentColor, paddingY, paddingX, maxWidth, marginY, puck }) {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
 
@@ -93,11 +93,11 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
             )}
           >
             {resolvedItems.map((stat, i) => (
-              <div key={i} className="flex flex-col-reverse transition-transform duration-300 hover:scale-105">
+              <div key={i} className="flex flex-col-reverse transition-transform motion-reduce:transition-none duration-300">
                 <dt className="text-sm text-muted-foreground mt-2 uppercase tracking-wider font-medium truncate">
                   {stat.label}
                 </dt>
-                <dd className="text-4xl font-extrabold leading-none text-[var(--block-accent)]">
+                <dd className="text-4xl font-extrabold leading-none text-[var(--block-accent-text)]">
                   {stat.prefix}{stat.value}{stat.suffix}
                 </dd>
               </div>

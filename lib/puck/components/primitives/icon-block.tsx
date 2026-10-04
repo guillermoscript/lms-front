@@ -84,7 +84,7 @@ export const IconBlock: ComponentConfig<IconBlockProps> = {
 
     return (
       <div className={cn(alignmentMap[alignment] || 'text-center')}>
-        <span className="inline-flex text-foreground transition-transform duration-300 hover:scale-110" role="img" aria-label={icon}>
+        <span className="inline-flex text-foreground transition-transform motion-reduce:transition-none duration-300" role="img" aria-label={icon}>
           <IconComponent
             size={size}
             className={cn('shrink-0')}

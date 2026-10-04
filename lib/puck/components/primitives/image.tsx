@@ -47,6 +47,7 @@ export const Image: ComponentConfig<ImageProps> = {
       type: 'select',
       label: 'Border Radius',
       options: [
+        { label: 'School theme', value: 'school' },
         { label: 'None', value: '0' },
         { label: 'Small', value: '0.25rem' },
         { label: 'Medium', value: '0.5rem' },
@@ -62,14 +63,14 @@ export const Image: ComponentConfig<ImageProps> = {
     width: '100%',
     height: 'auto',
     objectFit: 'cover',
-    borderRadius: '0.5rem',
+    borderRadius: 'school',
   },
   render: ({ src, alt, width, height, objectFit, borderRadius }) => {
     return (
       <div
         className={cn(
           'overflow-hidden',
-          borderRadiusMap[borderRadius] || 'rounded-lg',
+          borderRadiusMap[borderRadius] || 'rounded-card',
         )}
         style={{
           width,
@@ -81,7 +82,7 @@ export const Image: ComponentConfig<ImageProps> = {
           alt={alt || 'Image'}
           loading="lazy"
           className={cn(
-            'block w-full h-full transition-transform duration-500 hover:scale-[1.02]',
+            'block w-full h-full transition-transform motion-reduce:transition-none duration-500 ',
             objectFitMap[objectFit] || 'object-cover',
           )}
         />

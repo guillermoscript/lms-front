@@ -1,7 +1,6 @@
+import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Button } from '@/components/ui/button'
 import type { LandingCourse, PuckMetadata } from '../../types'
 import {
   type SectionSpacingProps,
@@ -52,7 +51,7 @@ export const EnrollCta: ComponentConfig<EnrollCtaProps> = {
     buttonLabel: '',
     accentColor: '',
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, courseId, headline, subtext, buttonLabel, accentColor, puck }) => {
+  render: function EnrollCtaView({ paddingY, paddingX, maxWidth, marginY, courseId, headline, subtext, buttonLabel, accentColor, puck }) {
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY }
 
@@ -67,20 +66,17 @@ export const EnrollCta: ComponentConfig<EnrollCtaProps> = {
     return (
       <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
         <div className={sectionInnerClass(spacing)}>
-          <div className="rounded-2xl border border-border bg-[color-mix(in_srgb,var(--block-accent)_6%,var(--card))] px-6 py-12 text-center">
+          <div className="rounded-card border border-border bg-[color-mix(in_srgb,var(--block-accent)_6%,var(--card))] px-6 py-12 text-center">
             {headline && (
               <h2 className="text-balance text-3xl font-semibold text-foreground lg:text-4xl">{headline}</h2>
             )}
             {subtext && <p className="mt-4 text-muted-foreground max-w-[560px] mx-auto">{subtext}</p>}
             <div className="mt-8 flex justify-center">
-              <Link href={href}>
-                <Button
-                  size="lg"
+              <ButtonLink href={href} size="lg"
                   className="bg-[var(--block-accent)] text-[var(--block-accent-foreground)] hover:opacity-90"
                 >
                   {label}
-                </Button>
-              </Link>
+                </ButtonLink>
             </div>
           </div>
         </div>

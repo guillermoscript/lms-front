@@ -57,7 +57,7 @@ export const LogoCloud: ComponentConfig<LogoCloudProps> = {
                     src={logo.src}
                     alt={logo.alt}
                     loading="lazy"
-                    className="h-10 object-contain opacity-60 hover:opacity-100 transition-all duration-300 hover:scale-105"
+                    className="h-10 object-contain opacity-60 hover:opacity-100 transition-colors motion-reduce:transition-none duration-300"
                   />
                 )
                 return logo.url ? (
@@ -66,7 +66,7 @@ export const LogoCloud: ComponentConfig<LogoCloudProps> = {
                     href={logo.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-all duration-300"
+                    className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors motion-reduce:transition-none duration-300"
                   >
                     {img}
                   </a>

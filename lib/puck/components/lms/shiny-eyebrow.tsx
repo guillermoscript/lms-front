@@ -1,5 +1,4 @@
 import type { ComponentConfig } from '@measured/puck'
-import { AnimatedShinyText } from '@/components/ui/animated-shiny-text'
 import { cn } from '@/lib/utils'
 
 export type ShinyEyebrowProps = {
@@ -7,12 +6,7 @@ export type ShinyEyebrowProps = {
   align: 'left' | 'center' | 'right'
 }
 
-/**
- * Puck wrapper for Magic UI `AnimatedShinyText` (components/ui/animated-shiny-text.tsx,
- * installed via `npx shadcn add @magicui/animated-shiny-text`). Pattern A — imports the
- * primitive and exposes its text + alignment as fields. Useful as an eyebrow/announcement
- * label above headings.
- */
+/** Retain the saved block name; its solid label follows the school theme. */
 export const ShinyEyebrow: ComponentConfig<ShinyEyebrowProps> = {
   label: 'Shiny Eyebrow',
   fields: {
@@ -37,7 +31,7 @@ export const ShinyEyebrow: ComponentConfig<ShinyEyebrowProps> = {
     return (
       <div className={cn('flex w-full py-2', justify)}>
         <div className="rounded-full border border-border bg-muted px-4 py-1.5 transition-colors hover:bg-muted/70">
-          <AnimatedShinyText className="text-sm">{text}</AnimatedShinyText>
+          <span className="text-sm text-foreground">{text}</span>
         </div>
       </div>
     )
