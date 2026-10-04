@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { IconChevronDown } from '@tabler/icons-react'
 import type { CommunityCourse } from '@/lib/community/access'
@@ -10,6 +9,8 @@ const VISIBLE_COURSES = 6
  * The school feed's way into each course feed the student can open (#868).
  * Plain links, not a filter: the school feed's filters work on the posts
  * already loaded, and a course feed is its own page with its own access gate.
+ * Use document navigation: a pending school-feed Server Action can otherwise
+ * replace the router tree while a course transition is in flight.
  * A long list folds into a native `<details>` — progressive disclosure with
  * no client JS. Renders nothing for an empty list.
  */
@@ -24,13 +25,13 @@ export async function CourseCommunityLinks({ courses }: { courses: CommunityCour
     <ul className="flex flex-wrap gap-2">
       {items.map((course) => (
         <li key={course.courseId} className="max-w-full">
-          <Link
+          <a
             href={`/${locale}/dashboard/student/courses/${course.courseId}/community`}
             title={course.title}
             className="inline-flex h-10 max-w-full items-center rounded-button px-3 text-sm ring-1 ring-border transition-colors hover:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="truncate">{course.title}</span>
-          </Link>
+          </a>
         </li>
       ))}
     </ul>

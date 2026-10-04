@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from 'vitest'
 import type { CommunityCourse } from '@/lib/community/access'
 
 const { locale } = vi.hoisted(() => ({ locale: { value: 'en' } }))
+vi.mock('next/link', () => ({
+  default: () => { throw new Error('Course feed entry points must use document navigation') },
+}))
 vi.mock('next-intl/server', () => ({
   getLocale: async () => locale.value,
   getTranslations: async () => (key: string) => key,
