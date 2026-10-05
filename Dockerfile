@@ -86,11 +86,10 @@ ARG SENTRY_RELEASE
 # log.
 ENV CI=true
 
-# sentry-cli reported only "failed with exit code 1" for both `releases new`
-# and `sourcemaps upload`, and told us to set this to see why. Keep it: the
-# upload runs once per deploy, so the extra output costs nothing and is the
-# difference between a diagnosable failure and a silent one.
-ENV SENTRY_LOG_LEVEL=debug
+# `warn` keeps upload failures visible without dumping every request and
+# header into a public repo's CI log. For a failing upload, temporarily set
+# this to `debug` to see why (sentry-cli otherwise says only "exit code 1").
+ENV SENTRY_LOG_LEVEL=warn
 
 # Explicit rather than inferred. Note these were NOT the cause of the upload
 # failing — the debug log showed `releases new` already sending
