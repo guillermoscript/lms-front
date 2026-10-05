@@ -125,6 +125,7 @@ implementation.
 ```bash
 cp .env.example .env   # fill in Supabase OAuth values
 npm install
+npm run check:connection # confirms Supabase accepts this process's public key
 npm run dev            # server + inspector at http://localhost:3000/inspector
 ```
 
@@ -132,7 +133,8 @@ Verify a view without the UI:
 
 ```bash
 npx mcp-use client connect dev http://localhost:3000/mcp
-npx mcp-use client dev tools call lms_list_courses --screenshot
+npx mcp-use client dev tools call lms_list_courses limit=1
+npx mcp-use screenshot --server dev --tool lms_list_courses limit=1
 ```
 
 ## Build & run
@@ -141,7 +143,8 @@ npx mcp-use client dev tools call lms_list_courses --screenshot
 npm run build          # mcp-use build (server + views to .mcp-use/build)
 npm start              # mcp-use start
 # or: npm run deploy
-docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-mcp-server
+docker build --build-context core=../packages/core -t lms-mcp-server .
+docker run -p 3000:3000 --env-file .env lms-mcp-server
 ```
 
 ## Supabase OAuth setup (one-time, in the dashboard)
@@ -156,6 +159,18 @@ docker build -t lms-mcp-server . && docker run -p 3000:3000 --env-file .env lms-
 3. **Authentication → Sign In / Providers** — enable at least one method
    (email/password, magic link, or anonymous for demos).
 4. Copy the **publishable key** into `MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY`.
+
+The URL and public key must belong to the same project. `SUPABASE_URL` /
+`SUPABASE_PROJECT_ID` and `SUPABASE_PUBLISHABLE_KEY` (the v2 docs' names) are
+also supported. Explicit `MCP_USE_OAUTH_SUPABASE_*` values win over fallbacks;
+remove stale overrides before updating a fallback. The standalone process
+reads its own `.env`, not the Next.js `.env.local`.
+
+If a tool returns **Unregistered API key**, update the MCP service's public
+key from its configured Supabase project's API settings, restart it, and run
+`npm run check:connection` followed by an authenticated tool call. OAuth
+verification can succeed while the database gateway rejects a revoked or
+mismatched public key. See [the setup and troubleshooting guide](../docs/MCP_SETUP.md).
 
 ## Connect from Claude (custom connector)
 

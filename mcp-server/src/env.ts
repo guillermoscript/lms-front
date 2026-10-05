@@ -11,27 +11,57 @@
 /** Base URL of the Supabase project (e.g. https://xyz.supabase.co or http://localhost:54321). */
 export function getSupabaseUrl(): string {
   const explicit =
-    process.env.MCP_USE_OAUTH_SUPABASE_URL || process.env.SUPABASE_URL;
-  if (explicit) return explicit.replace(/\/$/, "");
+    process.env.MCP_USE_OAUTH_SUPABASE_URL?.trim() ||
+    process.env.SUPABASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (explicit) {
+    const url = new URL(explicit);
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) {
+      throw new Error("Supabase URL must be an HTTP(S) URL without credentials.");
+    }
+    return explicit.replace(/\/+$/, "");
+  }
 
-  const projectId = process.env.MCP_USE_OAUTH_SUPABASE_PROJECT_ID;
+  const projectId =
+    process.env.MCP_USE_OAUTH_SUPABASE_PROJECT_ID?.trim() ||
+    process.env.SUPABASE_PROJECT_ID?.trim();
   if (projectId) return `https://${projectId}.supabase.co`;
 
   throw new Error(
-    "Supabase URL not configured. Set MCP_USE_OAUTH_SUPABASE_URL, SUPABASE_URL, or MCP_USE_OAUTH_SUPABASE_PROJECT_ID."
+    "Supabase URL not configured. Set MCP_USE_OAUTH_SUPABASE_URL, SUPABASE_URL, NEXT_PUBLIC_SUPABASE_URL, or SUPABASE_PROJECT_ID."
   );
 }
 
 /** Publishable / anon key used to construct request-scoped clients. */
 export function getPublishableKey(): string {
   const key =
-    process.env.MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY;
+    process.env.MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ||
+    process.env.SUPABASE_ANON_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY?.trim() ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
   if (!key) {
     throw new Error(
-      "Supabase publishable key not configured. Set MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY or SUPABASE_ANON_KEY."
+      "Supabase publishable key not configured. Set MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY or SUPABASE_PUBLISHABLE_KEY to the public key from the same Supabase project as the URL."
     );
+  }
+  if (key.startsWith("sb_secret_") || key === getServiceRoleKey()?.trim()) {
+    throw new Error("Supabase data access requires a publishable or anon key, never a secret or service-role key.");
+  }
+  // Legacy API keys are JWTs. Inspect only their key type here; this does not
+  // verify a signature or authenticate a caller. The gateway validates them.
+  if (key.startsWith("eyJ")) {
+    let role: unknown;
+    try {
+      role = JSON.parse(Buffer.from(key.split(".")[1], "base64url").toString()).role;
+    } catch {
+      throw new Error("Supabase anon key is malformed. Copy the public API key from the configured project's API settings.");
+    }
+    if (role !== "anon") {
+      throw new Error("Supabase data access requires an anon API key, never a user access token or service-role key.");
+    }
+  } else if (!key.startsWith("sb_publishable_") || key === "sb_publishable_") {
+    throw new Error("Supabase public API key has an unsupported format. Use a publishable (sb_publishable_...) or legacy anon key from the configured project's API settings.");
   }
   return key;
 }

@@ -1,6 +1,6 @@
 import { MCPServer, type ServerConfig } from "mcp-use";
 import { oauthSupabaseProvider, type SupabaseOAuthUser } from "mcp-use/oauth/supabase";
-import { getSupabaseUrl, getSupabaseJwtSecret, demoWidgetsEnabled } from "./src/env.js";
+import { getSupabaseUrl, getPublishableKey, getSupabaseJwtSecret, demoWidgetsEnabled } from "./src/env.js";
 import type { LmsServer } from "./src/server-types.js";
 import { installToolGuards } from "./src/register.js";
 import { installToolPolicy } from "./src/tool-policy.js";
@@ -103,6 +103,9 @@ if (demoWidgetsEnabled()) {
   // real tool anyway, and there is no OAuth (so no consent UI) to host.
   registerDemoTools(server);
 } else {
+  // Catch missing/mis-typed/privileged public keys before advertising tools.
+  // Revoked keys still require the live check: npm run check:connection.
+  getPublishableKey();
   // Host the OAuth consent UI Supabase redirects to (needs Supabase env).
   installAuthRoutes(server);
 

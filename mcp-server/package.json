@@ -26,13 +26,14 @@
     "start": "mcp-use start",
     "deploy": "mcp-use deploy",
     "typecheck": "mcp-use typecheck",
+    "check:connection": "tsx scripts/check-connection.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@openai/apps-sdk-ui": "^0.2.2",
     "@supabase/supabase-js": "^2.112.0",
-    "mcp-use": "2.3.3",
+    "mcp-use": "2.7.3",
     "nanoid": "^6.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

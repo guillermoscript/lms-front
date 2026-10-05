@@ -20,7 +20,7 @@ COPY skills ./skills
 COPY public ./public
 # A Supabase URL must be importable at build time (the server module is loaded
 # during view/skill snapshot generation). A dummy value is fine for the build.
-RUN SUPABASE_URL=http://localhost:54321 SUPABASE_ANON_KEY=build npm run build
+RUN SUPABASE_URL=http://localhost:54321 SUPABASE_PUBLISHABLE_KEY=sb_publishable_build_only npm run build
 
 FROM node:22-alpine AS runner
 
