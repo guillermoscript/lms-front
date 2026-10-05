@@ -1,437 +1,180 @@
-# MCP Server Setup Guide
+# LMS MCP setup and troubleshooting
 
-## 📋 Overview
+The server uses mcp-use 2.7.3, Streamable HTTP, and Supabase OAuth 2.1. Clients
+sign in through Supabase; the MCP server verifies their access tokens and
+queries the database with the caller's token so RLS enforces tenant access.
+The Next.js app proxies the server at `/api/mcp`.
 
-The LMS MCP (Model Context Protocol) Server enables AI assistants like Claude to interact with your LMS system. Teachers and admins can use AI to create courses, manage lessons, generate content, and more.
+## Configure the standalone MCP server
 
-**Architecture**: HTTP Proxy Authentication
-- **Client**: Claude web interface (claude.ai)
-- **Proxy**: Next.js API route (`/api/mcp`)
-- **MCP Server**: Node.js HTTP server (localhost:3001)
-- **Database**: Supabase with RLS
-
----
-
-## 🔐 Prerequisites
-
-### 1. User Requirements
-- ✅ LMS account with **teacher** or **admin** role
-- ✅ Active session (logged in to LMS)
-
-### 2. System Requirements
-- ✅ Node.js 18+ installed
-- ✅ LMS application running (Next.js dev server or production)
-- ✅ Supabase instance accessible
-
-### 3. Environment Setup
-- ✅ `.env.local` configured with MCP settings (see below)
-- ✅ `mcp-server/.env` configured (see below)
-
----
-
-## ⚙️ Installation
-
-### Step 1: Configure Main LMS Environment
-
-Add these lines to `.env.local` in the root of your LMS project:
-
-```bash
-# MCP Server Configuration
-MCP_SERVER_URL=http://127.0.0.1:3001
-MCP_PROXY_SECRET=<your-secret-here>
-```
-
-**Generate a secure secret**:
-```bash
-openssl rand -hex 32
-```
-
-### Step 2: Configure MCP Server Environment
-
-Create `mcp-server/.env`:
-
-```bash
-# Supabase Configuration
-SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# MCP HTTP Server
-MCP_HTTP_PORT=3001
-MCP_HTTP_HOST=127.0.0.1
-
-# Security (must match .env.local)
-MCP_PROXY_SECRET=<same-secret-as-above>
-
-# CORS
-ALLOWED_ORIGIN=http://localhost:3000
-```
-
-**Important**: `MCP_PROXY_SECRET` must be identical in both files!
-
-### Step 3: Build MCP Server
+From the repository root:
 
 ```bash
 cd mcp-server
-npm install
-npm run build
+npm ci
+cp .env.example .env
 ```
 
-### Step 4: Apply Database Migration
+Set a URL and a **public API key from the same Supabase project** in `.env`:
 
-```bash
-# From project root
-supabase db push
-
-# Or if using hosted Supabase
-supabase migration up
+```dotenv
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_REPLACE_WITH_PROJECT_KEY
+PORT=3001
+MCP_URL=http://localhost:3001
 ```
 
-This creates the `mcp_audit_log` table for tracking all MCP actions.
+For hosted Supabase, `SUPABASE_PROJECT_ID` can replace `SUPABASE_URL`. For local
+or self-hosted Supabase, use the gateway URL and the public API key actually
+registered by that gateway. A legacy JWT **anon** key is also supported through
+`SUPABASE_ANON_KEY`. A cloud publishable key is not interchangeable with a
+local project's key.
 
----
+The first nonblank variable wins, with surrounding whitespace removed:
 
-## 🚀 Running the MCP Server
+| Setting | Resolution order |
+| --- | --- |
+| URL | `MCP_USE_OAUTH_SUPABASE_URL`, `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`; otherwise project ID below |
+| Project ID | `MCP_USE_OAUTH_SUPABASE_PROJECT_ID`, `SUPABASE_PROJECT_ID` |
+| Public key | `MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
 
-### Option A: Local Development (Recommended)
+The standalone process reads `mcp-server/.env`, not the app's `.env.local`.
+Deployment environment variables take precedence over `.env` entries. Set them
+on the **MCP service** as well as the Next.js service when deploying separately.
+Never use a secret key, service-role key, or user's access token as the public
+API key. `SUPABASE_SERVICE_ROLE_KEY` is optional and reserved for audit logging.
 
-**Terminal 1** - Start Next.js (if not already running):
+Only projects still issuing HS256 access tokens need
+`MCP_USE_OAUTH_SUPABASE_JWT_SECRET` / `SUPABASE_JWT_SECRET`. Leave it unset for
+ES256 tokens: passing this secret selects HS256 verification instead of JWKS.
+
+Check the key, then start the server:
+
 ```bash
+npm run check:connection
 npm run dev
 ```
 
-**Terminal 2** - Start MCP HTTP Server:
+The connection check makes one read-only request to `/auth/v1/settings` using
+the public key. It prints no keys or upstream response bodies. It proves
+gateway acceptance, not user authorization, tenant claims, or RLS access.
+Run this command from the source checkout after `npm ci`, with the same
+environment as the deployed MCP service; it is not included in the runtime
+Docker image.
+
+## Configure Supabase OAuth
+
+In Supabase Dashboard → Authentication → OAuth Server:
+
+1. Enable OAuth 2.1 and Dynamic OAuth Apps.
+2. Configure the consent screen URL:
+   - Standalone: `http://localhost:3001/auth/consent`.
+   - Through the LMS app: `https://<platform-domain>/oauth/consent`.
+3. Enable the appropriate sign-in method for your accounts.
+4. Ensure access tokens include `tenant_id` and `tenant_role`, populated by
+   the LMS access-token hook. The server recognizes student, teacher, and
+   admin roles and exposes each role's permitted tools.
+
+## Configure the Next.js proxy
+
+In the app's `.env.local` for development, or its deployment environment:
+
+```dotenv
+# Internal listener, reachable from the Next.js process/container
+MCP_SERVER_URL=http://127.0.0.1:3001
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=sb_publishable_REPLACE_WITH_PROJECT_KEY
+```
+
+In production, set `MCP_URL` on the MCP service to its externally visible
+proxied base, such as `https://<tenant>.<platform-domain>/api/mcp`. The app's
+`MCP_SERVER_URL` instead points to the internal MCP container (for example,
+`http://<mcp-service>:3000`). Set `HOST=0.0.0.0` in containers; the Dockerfile
+already does this. Configure both services against the same Supabase project.
+
+## Connect and verify
+
+Add the MCP endpoint in the client's connector settings and complete OAuth:
+
+- Standalone: `http://localhost:3001/mcp` (a client on this machine).
+- Production: `https://<tenant>.<platform-domain>/api/mcp`.
+
+Use OAuth with the current server. The historical `/api/mcp/cli` route forwards
+legacy identity headers without an OAuth bearer token; those headers do not
+authenticate against this server. Older instructions using `/mcp/lms`,
+`npm run start:http`, `HTTP_PROXY_AUTH`, or a shared proxy secret describe the
+retired server implementation.
+
+From `mcp-server`, the mcp-use CLI can drive the same endpoint:
+
+```bash
+npx mcp-use client connect dev http://localhost:3001/mcp
+npx mcp-use client dev tools list
+npx mcp-use client dev tools call lms_list_courses limit=1
+npx mcp-use screenshot --server dev --tool lms_list_courses limit=1
+```
+
+Sign in as a teacher or admin to call `lms_list_courses`. Students should use
+`lms_my_learning`. Confirm an expected course is returned and the View renders.
+A successful discovery response alone does not prove database access.
+
+## “Unregistered API key” / “Invalid API key”
+
+If `lms_list_courses` returns `Listing courses: Unregistered API key`, the
+request reached the tool but Supabase's gateway rejected the public key used
+by the MCP server. OAuth token verification and gateway API-key validation are
+separate checks. Reconnecting OAuth or changing `limit` cannot repair this key.
+
+1. Check the MCP service's URL and the key from **that project's** API settings.
+   A revoked key or a key belonging to a different project fails.
+2. Check higher-priority `MCP_USE_OAUTH_SUPABASE_*` values. Updating a fallback
+   such as `SUPABASE_ANON_KEY` has no effect while an old override remains set.
+3. Replace the incorrect key in the MCP service's environment with its current
+   public key. For self-hosted Supabase, use a key registered in its gateway.
+4. Restart/redeploy the MCP service so it reads the changed environment.
+5. Run `npm run check:connection` with that environment, then repeat the
+   authenticated `lms_list_courses` call.
+
+The updated tool error labels this as `UPSTREAM_CONFIGURATION_ERROR` instead
+of suggesting invalid tool arguments. Missing or privileged public credentials
+are also rejected at server startup.
+
+Other failures:
+
+- **401 before a tool runs:** inspect OAuth discovery, token issuer, signing
+  algorithm, and expiry.
+- **Tenant context missing:** check the token hook and refresh the session.
+- **Empty results:** check tenant claims, ownership, and RLS using the intended
+  user role. Do not bypass RLS to make results appear.
+- **Proxy 502:** verify `MCP_SERVER_URL`, container networking, and the listener.
+
+## Build and test
+
 ```bash
 cd mcp-server
-npm run start:http
+npm test
+npm run typecheck
+npm run build
+npm start
 ```
 
-You should see:
-```
-╔════════════════════════════════════════════════════════════╗
-║  LMS MCP HTTP Server                                       ║
-╠════════════════════════════════════════════════════════════╣
-║  Status:   READY                                           ║
-║  Address:  http://127.0.0.1:3001                           ║
-║  Mode:     Proxy Authentication                            ║
-╠════════════════════════════════════════════════════════════╣
-║  Registered:                                               ║
-║    • 27 tools (courses, lessons, exams, etc.)              ║
-║    • 3 resources (course, lesson, exam data)               ║
-║    • 4 prompts (course creation, content gen, etc.)        ║
-╠════════════════════════════════════════════════════════════╣
-║  Security:                                                 ║
-║    ✓ Shared secret validation enabled                      ║
-║    ✓ Per-user authentication required                      ║
-║    ✓ Audit logging enabled                                 ║
-╚════════════════════════════════════════════════════════════╝
-```
+The build needs URL/public-key-shaped environment values when importing the
+server entry. The Dockerfile supplies build-only placeholders; the running
+container requires its actual project URL and public key. The container health
+check validates discovery availability; use the connection check and a real
+tool call to validate Supabase access.
 
-### Option B: Using Docker
+The Docker build includes the shared core package:
 
 ```bash
-cd mcp-server
-
-# Build Docker image
-npm run docker:build
-
-# Run container
-npm run docker:run
-
-# Stop container
-npm run docker:stop
+docker build --build-context core=../packages/core -t lms-mcp-server .
+docker run --env-file .env -p 3001:3000 -e PORT=3000 lms-mcp-server
 ```
 
----
-
-## 🌐 Connecting Claude to the MCP Server
-
-### Step 1: Log into LMS
-1. Open your browser
-2. Navigate to `http://localhost:3000`
-3. Log in with a **teacher** or **admin** account
-
-### Step 2: Open Claude
-1. Go to https://claude.ai
-2. Navigate to **Settings** → **Connectors**
-
-### Step 3: Add Custom Connector
-1. Click **"Add custom connector"**
-2. Enter MCP Server URL: `http://localhost:3000/api/mcp`
-3. Click **"Add"**
-
-**Note**: Authentication uses your LMS session cookies automatically!
-
-### Step 4: Configure Tool Permissions
-1. In the Connectors settings, click on your LMS connector
-2. Enable/disable specific tools as needed
-3. Set usage preferences
-
-### Step 5: Test the Connection
-In a new Claude conversation:
-
-**Example prompts**:
-- "List all my courses"
-- "Create a new course about Python basics"
-- "Show me the lessons in course 5"
-- "Generate lesson content about functions in Python"
-
----
-
-## 🔧 Troubleshooting
-
-### Issue: "Unauthorized" Error
-
-**Symptoms**: API returns 401 error
-
-**Solutions**:
-1. ✅ Verify you're logged into the LMS
-2. ✅ Check your session hasn't expired (refresh the page)
-3. ✅ Ensure cookies are enabled in your browser
-
-### Issue: "Forbidden: MCP access requires teacher or admin role"
-
-**Symptoms**: API returns 403 error
-
-**Solutions**:
-1. ✅ Verify your user role — the `tenant_users` table is **authoritative** for roles within a tenant (not just `user_roles`):
-   ```sql
-   -- Check tenant-scoped role (authoritative)
-   SELECT * FROM tenant_users WHERE user_id = '<your-user-id>';
-   -- Check global role (fallback)
-   SELECT * FROM user_roles WHERE user_id = '<your-user-id>';
-   ```
-2. ✅ If you're a student, ask an admin to upgrade your role
-3. ✅ Admins can assign roles via admin dashboard or SQL:
-   ```sql
-   INSERT INTO tenant_users (user_id, tenant_id, role)
-   VALUES ('<user-id>', '<tenant-id>', 'teacher')
-   ON CONFLICT DO NOTHING;
-   ```
-
-### Issue: "Rate limit exceeded"
-
-**Symptoms**: API returns 429 error
-
-**Solutions**:
-1. ✅ Wait 1 minute for the rate limit window to reset
-2. ✅ You're limited to 100 requests per minute
-3. ✅ If you need higher limits, modify `lib/rate-limit.ts`
-
-### Issue: "MCP server error" / Connection Refused
-
-**Symptoms**: API returns 502 error
-
-**Solutions**:
-1. ✅ Check MCP server is running:
-   ```bash
-   curl http://127.0.0.1:3001
-   ```
-2. ✅ Verify `MCP_SERVER_URL` in `.env.local` is correct
-3. ✅ Check MCP server logs for errors
-4. ✅ Restart MCP server:
-   ```bash
-   cd mcp-server && npm run start:http
-   ```
-
-### Issue: "Invalid secret" (401 from MCP server)
-
-**Symptoms**: MCP server rejects requests
-
-**Solutions**:
-1. ✅ Verify `MCP_PROXY_SECRET` matches in both:
-   - `.env.local` (main project)
-   - `mcp-server/.env`
-2. ✅ No spaces or quotes around the secret
-3. ✅ Regenerate secret if needed:
-   ```bash
-   openssl rand -hex 32
-   ```
-
-### Issue: Database Migration Fails
-
-**Symptoms**: Can't create `mcp_audit_log` table
-
-**Solutions**:
-1. ✅ Check Supabase connection:
-   ```bash
-   supabase db pull
-   ```
-2. ✅ Verify migration file exists:
-   ```bash
-   ls supabase/migrations/*mcp_audit_log*
-   ```
-3. ✅ Manually apply migration:
-   ```bash
-   supabase db push
-   ```
-
----
-
-## 📊 Monitoring & Auditing
-
-### View Audit Logs
-
-**As a Teacher** (view your own actions):
-```sql
-SELECT 
-  created_at,
-  method,
-  tool_name,
-  success,
-  duration_ms
-FROM mcp_audit_log
-WHERE user_id = auth.uid()
-ORDER BY created_at DESC
-LIMIT 50;
-```
-
-**As an Admin** (view all actions):
-```sql
-SELECT 
-  created_at,
-  user_role,
-  tool_name,
-  success,
-  COUNT(*) OVER (PARTITION BY tool_name) as usage_count
-FROM mcp_audit_log
-ORDER BY created_at DESC
-LIMIT 100;
-```
-
-### Hourly Summary View
-
-```sql
-SELECT * FROM mcp_audit_summary
-WHERE hour >= NOW() - INTERVAL '24 hours'
-ORDER BY hour DESC;
-```
-
-### Check Rate Limit Status
-
-Rate limits are per-user and reset every minute. To check current usage:
-- Look at server logs in real-time
-- Or add monitoring via the audit log timestamps
-
----
-
-## 🔒 Security Best Practices
-
-### 1. Keep Secrets Secret
-- ✅ Never commit `.env` or `.env.local` to git
-- ✅ Use different secrets for dev/staging/production
-- ✅ Rotate secrets regularly (monthly recommended)
-
-### 2. Use HTTPS in Production
-- ✅ Never expose MCP server publicly
-- ✅ Always use HTTPS for the Next.js API endpoint
-- ✅ Configure CORS properly (`ALLOWED_ORIGIN`)
-
-### 3. Monitor Audit Logs
-- ✅ Review logs weekly for suspicious activity
-- ✅ Set up alerts for failed authentication attempts
-- ✅ Archive old logs (>90 days) to keep table small
-
-### 4. Principle of Least Privilege
-- ✅ Only grant teacher role when necessary
-- ✅ Admin role should be limited to actual admins
-- ✅ Review user roles quarterly
-
----
-
-## 🚢 Production Deployment
-
-### Remote Deployment Checklist
-
-- [ ] Generate new production secrets
-- [ ] Set `MCP_SERVER_URL` to production URL
-- [ ] Configure `ALLOWED_ORIGIN` to your domain
-- [ ] Use HTTPS for all endpoints
-- [ ] Set up proper firewall rules
-- [ ] Configure monitoring and alerts
-- [ ] Set up log rotation for audit table
-- [ ] Test failover scenarios
-- [ ] Document rollback procedure
-
-### Environment Variables for Production
-
-**Next.js** (`.env.production`):
-```bash
-MCP_SERVER_URL=http://internal-mcp-server:3001
-MCP_PROXY_SECRET=<production-secret>
-```
-
-**MCP Server**:
-```bash
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=<prod-anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<prod-service-key>
-MCP_PROXY_SECRET=<same-production-secret>
-ALLOWED_ORIGIN=https://your-domain.com
-```
-
----
-
-## 📚 Available MCP Tools
-
-The server currently exposes 27 tools across 5 categories (courses, lessons, exercises, exams, analytics). Future tools may cover landing pages, invitations, certificates, and other features as the platform evolves.
-
-### Courses (5 tools)
-- `list_courses` - List your courses
-- `get_course` - Get course details
-- `create_course` - Create new course
-- `update_course` - Update course details
-- `delete_course` - Delete course
-
-### Lessons (6 tools)
-- `list_lessons` - List lessons in course
-- `get_lesson` - Get lesson details
-- `create_lesson` - Create new lesson
-- `update_lesson` - Update lesson content
-- `delete_lesson` - Delete lesson
-- `reorder_lessons` - Change lesson sequence
-
-### Exams (7 tools)
-- `list_exams` - List exams
-- `get_exam` - Get exam details
-- `create_exam` - Create exam with questions
-- `update_exam` - Update exam details
-- `delete_exam` - Delete exam
-- `add_question` - Add question to exam
-- `update_question` - Update exam question
-
-### Exercises (5 tools)
-- `list_exercises` - List exercises
-- `get_exercise` - Get exercise details
-- `create_exercise` - Create new exercise
-- `update_exercise` - Update exercise
-- `delete_exercise` - Delete exercise
-
-### Analytics (4 tools)
-- `get_course_stats` - Course enrollment/completion stats
-- `get_lesson_stats` - Lesson completion stats
-- `get_exam_stats` - Exam submission stats
-- `get_student_progress` - Individual student progress
-
----
-
-## 🤝 Getting Help
-
-- **Issues**: Check troubleshooting section above
-- **Questions**: Contact your LMS administrator
-- **Bugs**: Report to development team
-- **Feature Requests**: Submit via proper channels
-
----
-
-## 📖 Additional Resources
-
-- [MCP Protocol Documentation](https://modelcontextprotocol.io)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase RLS Guide](https://supabase.com/docs/guides/auth/row-level-security)
-- [Claude MCP Integration](https://support.anthropic.com/en/articles/custom-connectors)
-
----
-
-**Last Updated**: February 2026  
-**Version**: 1.0.0
+## References
+
+- [mcp-use v2 welcome](https://docs.mcp-use.com/v2/typescript/getting-started/welcome)
+- [Supabase OAuth provider and request-scoped RLS clients](https://docs.mcp-use.com/v2/typescript/server/authentication/providers/supabase)
+- [mcp-use CLI client](https://docs.mcp-use.com/v2/typescript/tooling/client-cli)
+- [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys)
+- [Server implementation](../mcp-server/README.md)

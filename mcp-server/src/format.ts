@@ -1,4 +1,4 @@
-import { text, object, mix, error, widget } from "mcp-use";
+import { text, object, mix, widget } from "mcp-use";
 import { z } from "zod";
 
 /** Response format shared by every read tool. */
@@ -72,16 +72,33 @@ export function okText(textContent: string): ReturnType<typeof text> {
 /**
  * Graceful error response. Never throw from a tool handler.
  *
- * The return type pins `isError: true` (the helper always sets it, but its
- * declared type leaves it optional): a tool with an `outputSchema` must return
- * either schema-matching `structuredContent` or a provable error result, and
- * the optional flag satisfies neither branch of that compile-time check.
+ * Return the raw v2 MCP error envelope with a literal `isError: true`, so
+ * schema-backed tools can report failures without their success payload.
+ * Upstream key failures carry a configuration code; other failures have no
+ * invented argument-error classification.
  */
 export function errorResult(
   message: string
-): ReturnType<typeof error> & { isError: true } {
-  return error(`Error: ${message}`) as ReturnType<typeof error> & {
-    isError: true;
+): {
+  isError: true;
+  content: { type: "text"; text: string }[];
+  structuredContent?: { error_code: string };
+} {
+  // This is an upstream configuration failure, not invalid tool arguments.
+  // A valid OAuth JWT can pass verification while Supabase rejects the apikey.
+  if (/unregistered api key|invalid api key|no api key found/i.test(message)) {
+    return {
+      isError: true,
+      content: [{
+        type: "text",
+        text: "Error: Supabase rejected the MCP server's public API key. Set MCP_USE_OAUTH_SUPABASE_PUBLISHABLE_KEY to a current publishable or anon key from the same project as MCP_USE_OAUTH_SUPABASE_URL / SUPABASE_URL. Check for an old higher-priority MCP_USE_* value, then restart the MCP server. Run npm run check:connection in mcp-server to verify. Changing tool arguments or reconnecting OAuth will not repair this server configuration.",
+      }],
+      structuredContent: { error_code: "UPSTREAM_CONFIGURATION_ERROR" },
+    };
+  }
+  return {
+    isError: true,
+    content: [{ type: "text", text: `Error: ${message}` }],
   };
 }
 
