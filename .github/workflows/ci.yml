@@ -314,3 +314,25 @@ jobs:
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+
+  # The MCP server image (#911). `image` above only builds the web Dockerfile,
+  # so a broken mcp-server/Dockerfile (ts-fsrs not resolvable from the
+  # out-of-tree @lms/core copy) reached master and only surfaced as a failed
+  # deploy-mcp.yml run. Same context + named `core` build context as the
+  # deploy; push is off. The build-time Supabase values are dummies set in the
+  # Dockerfile itself, so no secrets or vars are needed.
+  mcp-image:
+    name: MCP image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build MCP image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp-server
+          build-contexts: |
+            core=./packages/core
+          push: false
+          cache-from: type=gha,scope=mcp-image
+          cache-to: type=gha,mode=max,scope=mcp-image
