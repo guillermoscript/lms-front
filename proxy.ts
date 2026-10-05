@@ -266,6 +266,20 @@ export default async function proxy(request: NextRequest) {
   // (no intl/auth guards)
   if (pathname.startsWith('/api') || pathname === '/robots.txt' || pathname === '/sitemap.xml') {
     request.headers.set('x-tenant-id', tenantId)
+    if (pathname === '/api/community/new-posts' || pathname === '/api/community/blocked-members') {
+      // These reads reuse the same user-header-based access gates as the pages.
+      // API requests normally skip session validation; never trust a caller's header.
+      request.headers.delete('x-user-id')
+      const { response: sessionResponse, user } = await updateSession(request)
+      if (user) request.headers.set('x-user-id', user.id)
+      const response = user
+        ? NextResponse.next({ request })
+        : NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
+      sessionResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+      response.headers.set('x-tenant-id', tenantId)
+      response.headers.set('Cache-Control', 'private, no-store')
+      return response
+    }
     const response = NextResponse.next({ request })
     response.headers.set('x-tenant-id', tenantId)
     return response
