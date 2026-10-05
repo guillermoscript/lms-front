@@ -61,6 +61,7 @@ export default function ArtifactExercise({
   const artifactHtml = config.artifact_html ?? ''
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const submissionInFlight = useRef(false)
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(initialEvaluation)
   const [passed, setPassed] = useState<boolean>(isExerciseCompleted)
@@ -70,6 +71,9 @@ export default function ArtifactExercise({
   const [gradedNonce, setGradedNonce] = useState(0)
 
   const handleSubmit = useCallback(async (content: string, metadata: Record<string, unknown> = {}) => {
+    // The iframe can post multiple SUBMIT messages before React re-renders.
+    if (submissionInFlight.current || !content.trim()) return
+    submissionInFlight.current = true
     setSubmitState('evaluating')
     setErrorMsg(null)
     setRateLimited(false)
@@ -114,6 +118,8 @@ export default function ArtifactExercise({
       console.error('Artifact evaluation error:', err)
       setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
       setSubmitState('error')
+    } finally {
+      submissionInFlight.current = false
     }
   }, [exercise.id, evaluateSubmission, tGamification])
 
@@ -124,8 +130,10 @@ export default function ArtifactExercise({
       if (event.source !== iframeRef.current?.contentWindow) return
 
       const { type, payload } = event.data ?? {}
-      if (type === 'SUBMIT' && payload) {
-        handleSubmit(payload.content ?? '', payload.metadata ?? {})
+      if (type === 'SUBMIT' && payload && typeof payload.content === 'string') {
+        const metadata = payload.metadata && typeof payload.metadata === 'object' && !Array.isArray(payload.metadata)
+          ? payload.metadata : {}
+        void handleSubmit(payload.content, metadata)
       }
     }
 
