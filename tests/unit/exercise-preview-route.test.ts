@@ -99,6 +99,12 @@ describe('staff exercise dry runs', () => {
     expect((await POST(request('real_time_conversation', { transcript: [{ role: 'assistant', text: 'Hello' }] }))).status).toBe(400)
     expect(state.generate).not.toHaveBeenCalled()
   })
+  it('rejects whitespace-only conversation turns before spending AI credits', async () => {
+    expect((await POST(request('real_time_conversation', { transcript: [{ role: 'user', text: '   ' }] }))).status).toBe(400)
+    expect(state.generate).not.toHaveBeenCalled()
+    expect(state.budget).not.toHaveBeenCalled()
+  })
+
   it('reports provider failure without falling back to a fabricated score', async () => {
     state.fail = true
     vi.spyOn(console, 'error').mockImplementation(() => {})

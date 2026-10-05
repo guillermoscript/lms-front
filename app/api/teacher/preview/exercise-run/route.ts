@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   const isMedia = draft.exercise_type === 'audio_evaluation' || draft.exercise_type === 'video_evaluation'
   const isConversation = draft.exercise_type === 'real_time_conversation'
   const questions = (CLOSED_EXERCISE_TYPES as readonly string[]).includes(draft.exercise_type) ? parseCheckpointQuestions(config) : null
-  if ((isMedia && !media) || (isConversation && !transcript?.some((turn) => turn.role === 'user')) || (!isMedia && !isConversation && !questions && !content?.trim())) {
+  if ((isMedia && !media) || (isConversation && !transcript?.some((turn) => turn.role === 'user' && turn.text.trim())) || (!isMedia && !isConversation && !questions && !content?.trim())) {
     return Response.json({ error: 'A test response is required' }, { status: 400 })
   }
   if (questions) {
