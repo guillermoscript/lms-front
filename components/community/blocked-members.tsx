@@ -14,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { getBlockedMembers, unblockUser } from '@/app/actions/community'
+import { unblockUser } from '@/app/actions/community'
+import type { getBlockedMembers } from '@/app/actions/community'
 
 type BlockedMember = { id: string; full_name: string | null; avatar_url: string | null }
 
@@ -30,9 +31,14 @@ export function BlockedMembers() {
   const [pending, setPending] = useState<string | null>(null)
 
   useEffect(() => {
-    getBlockedMembers().then((result) => {
-      if (result.success && result.data) setMembers(result.data.members)
-    })
+    const controller = new AbortController()
+    void fetch('/api/community/blocked-members', { cache: 'no-store', signal: controller.signal })
+      .then((response) => response.json() as Promise<Awaited<ReturnType<typeof getBlockedMembers>>>)
+      .then((result) => {
+        if (!controller.signal.aborted && result.success && result.data) setMembers(result.data.members)
+      })
+      .catch(() => { /* Keep the list hidden when the background read fails. */ })
+    return () => controller.abort()
   }, [])
 
   async function handleUnblock(id: string) {

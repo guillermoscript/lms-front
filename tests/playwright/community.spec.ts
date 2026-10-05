@@ -2,7 +2,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsTeacher, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
-import { openSidebarGroup } from './utils/sidebar'
+import { openSidebar, openSidebarGroup } from './utils/sidebar'
 import { getAdmin, SEEDED } from './utils/plan-gate-fixtures'
 
 /**
@@ -146,6 +146,7 @@ test.describe('Community Spaces', () => {
     test('student sidebar contains community link', async ({ page }) => {
       await loginAsStudent(page)
 
+      await openSidebar(page)
       const communityLink = page.locator('a[href*="/dashboard/student/community"]')
       await expect(communityLink.first()).toBeVisible({ timeout: 10_000 })
     })
@@ -345,7 +346,7 @@ test.describe('Course community entry points (#868)', () => {
     await loginAsTenantStudent(page)
     await page.goto(`${TENANT_BASE}/en/dashboard/student/community`)
 
-    const links = page.getByTestId('course-community-links')
+    const links = page.getByTestId('course-community-links').filter({ visible: true })
     await expect(links).toBeVisible({ timeout: 20_000 })
     const feedLink = (id: number) => links.locator(`a[href$="/dashboard/student/courses/${id}/community"]`)
     await expect(feedLink(PYTHON)).toBeVisible()
@@ -354,7 +355,7 @@ test.describe('Course community entry points (#868)', () => {
     await expect(feedLink(fixture.welcome)).toHaveCount(0)
 
     await feedLink(fixture.open).click()
-    await page.waitForURL(new RegExp(`/dashboard/student/courses/${fixture.open}/community$`), { timeout: 20_000 })
+    await page.waitForURL(new RegExp(`/dashboard/student/courses/${fixture.open}/community$`), { timeout: 20_000, waitUntil: 'commit' })
     await expect(page.getByRole('heading', { level: 1, name: `${COURSE_PREFIX} open — Community` })).toBeVisible()
   })
 

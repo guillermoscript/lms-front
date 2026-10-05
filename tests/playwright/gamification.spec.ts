@@ -138,7 +138,7 @@ test.describe('Gamification', () => {
       test.setTimeout(60_000)
 
       await page.goto(`${BASE}/en/dashboard/student/profile`)
-      await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByTestId('profile-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')
 
       // XPProgressCircle renders an SVG with circles or a loading placeholder
@@ -155,7 +155,7 @@ test.describe('Gamification', () => {
       test.setTimeout(60_000)
 
       await page.goto(`${BASE}/en/dashboard/student/profile`)
-      await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByTestId('profile-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')
 
       // ProfileGamificationStats shows coins and streak labels
@@ -176,7 +176,7 @@ test.describe('Gamification', () => {
       test.setTimeout(60_000)
 
       await page.goto(`${BASE}/en/dashboard/student/profile`)
-      await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByTestId('profile-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')
 
       // StreakCalendar renders 7 day columns with abbreviated day labels
@@ -198,7 +198,7 @@ test.describe('Gamification', () => {
       test.setTimeout(60_000)
 
       await page.goto(`${BASE}/en/dashboard/student/profile`)
-      await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByTestId('profile-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
       await page.waitForLoadState('networkidle')
 
       // The profile page should render — gamification elements may or may not be visible

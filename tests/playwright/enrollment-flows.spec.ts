@@ -243,7 +243,7 @@ test.describe('Manual Payment Request Lifecycle', () => {
     await loginAsTeacher(page)
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/payment-requests`)
 
-    await expect(page.getByTestId('payment-requests-page')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('payment-requests-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
 
     // The page should show at least the pending count as > 0
     const body = await page.locator('body').textContent()
@@ -256,7 +256,7 @@ test.describe('Manual Payment Request Lifecycle', () => {
     await loginAsTeacher(page)
     await page.goto(`${BASE}/${LOCALE}/dashboard/admin/payment-requests`)
 
-    await expect(page.getByTestId('payment-requests-page')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('payment-requests-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
 
     // Verify stats cards are rendered (4 cards: pending, contacted, received, completed)
     const body = await page.locator('body').textContent()
@@ -313,6 +313,6 @@ test.describe('Payment Requests - Tenant Scoping', () => {
     await loginAsAdmin(page)
     await page.goto(`${TENANT_BASE}/${LOCALE}/dashboard/admin/payment-requests`)
 
-    await expect(page.getByTestId('payment-requests-page')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('payment-requests-page').filter({ visible: true })).toBeVisible({ timeout: 15_000 })
   })
 })

@@ -150,7 +150,8 @@ test.describe('Student Course Flows', () => {
       await expect(commentTextarea.first()).toBeVisible({ timeout: 10_000 })
     })
 
-    test('sidebar navigation is visible on desktop', async ({ page }) => {
+    test('sidebar navigation is visible on desktop', async ({ page, isMobile }) => {
+      test.skip(isMobile, 'Desktop sidebar is replaced by a lesson menu on mobile')
       test.setTimeout(60_000)
       await page.goto(`${BASE}/en/dashboard/student/courses/1001/lessons/1001`, {
         timeout: 40_000,

@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
-import { openSidebarGroup } from './utils/sidebar'
+import { openSidebar, openSidebarGroup } from './utils/sidebar'
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -264,7 +264,8 @@ test.describe('Community Sidebar Navigation', () => {
     test.setTimeout(60_000)
     await loginAsStudent(page)
 
-    const communityLink = page.locator('a[href*="/dashboard/student/community"]')
+    await openSidebar(page)
+      const communityLink = page.locator('a[href*="/dashboard/student/community"]')
     await expect(communityLink.first()).toBeVisible({ timeout: 10_000 })
   })
 

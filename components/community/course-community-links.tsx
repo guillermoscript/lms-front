@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getTranslations } from 'next-intl/server'
+import { getLocale, getTranslations } from 'next-intl/server'
 import { IconChevronDown } from '@tabler/icons-react'
 import type { CommunityCourse } from '@/lib/community/access'
 
@@ -16,7 +16,7 @@ const VISIBLE_COURSES = 6
 export async function CourseCommunityLinks({ courses }: { courses: CommunityCourse[] }) {
   if (courses.length === 0) return null
 
-  const t = await getTranslations('community.courseEntry')
+  const [t, locale] = await Promise.all([getTranslations('community.courseEntry'), getLocale()])
   const visible = courses.slice(0, VISIBLE_COURSES)
   const folded = courses.slice(VISIBLE_COURSES)
 
@@ -25,7 +25,7 @@ export async function CourseCommunityLinks({ courses }: { courses: CommunityCour
       {items.map((course) => (
         <li key={course.courseId} className="max-w-full">
           <Link
-            href={`/dashboard/student/courses/${course.courseId}/community`}
+            href={`/${locale}/dashboard/student/courses/${course.courseId}/community`}
             title={course.title}
             className="inline-flex h-10 max-w-full items-center rounded-button px-3 text-sm ring-1 ring-border transition-colors hover:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >

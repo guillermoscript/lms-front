@@ -8,7 +8,7 @@ test.describe('onboarding orchestration', () => {
     await page.evaluate(() => localStorage.removeItem('tours-disabled'))
     await page.goto(`${TENANT_BASE}/en/dashboard/admin`)
 
-    await expect(page.getByTestId('admin-dashboard')).toBeVisible()
+    await expect(page.getByTestId('admin-dashboard').filter({ visible: true })).toBeVisible()
     await page.waitForTimeout(1_000)
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(page.getByTestId('onboarding-next-step')).toHaveCount(1)
@@ -23,7 +23,7 @@ test.describe('onboarding orchestration', () => {
     await loginAsAdmin(page)
     await page.goto(`${TENANT_BASE}/es/dashboard/admin`)
 
-    await expect(page.getByText('Haz esto ahora', { exact: true })).toBeVisible()
+    await expect(page.getByText('Haz esto ahora', { exact: true }).filter({ visible: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Repetir recorrido' })).toBeVisible()
   })
 })

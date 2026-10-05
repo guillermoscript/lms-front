@@ -109,7 +109,7 @@ async function clickUntil(
 async function publishLesson(page: Page) {
   const backOnCourse = new RegExp(`/dashboard/teacher/courses/${COURSE_ID}$`)
   await clickUntil(
-    page.getByRole('button', { name: /^publish$/i }),
+    page.getByRole('button', { name: /^publish$/i }).filter({ visible: true }).last(),
     async () => backOnCourse.test(page.url()),
   )
   await expect(page).toHaveURL(backOnCourse, { timeout: 30_000 })

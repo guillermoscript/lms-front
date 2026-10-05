@@ -307,7 +307,7 @@ test('a deep link to a post beyond the first page leads the feed, exactly once',
 
   await loginAsTenantStudent(page)
   await page.goto(`${COURSE_FEED}?post=${oldPrompt}`)
-  const card = page.locator(`#post-${oldPrompt}`)
+  const card = page.locator(`#post-${oldPrompt}`).filter({ visible: true })
   await expect(card).toBeFocused({ timeout: 20_000 })
   await expect(page.locator('[data-tour="community-feed"] > [id^="post-"]').first()).toHaveAttribute(
     'id',
@@ -358,7 +358,7 @@ test('?post= focuses the post on all five feeds and refuses posts from elsewhere
 
   const expectFocused = async (page: Page, url: string, postId: string) => {
     await page.goto(`${url}?post=${postId}`)
-    const card = page.locator(`#post-${postId}`)
+    const card = page.locator(`#post-${postId}`).filter({ visible: true })
     await expect(card).toHaveAttribute('data-focused', '', { timeout: 20_000 })
     await expect(card).toBeFocused()
     await expect(page.getByText(UNAVAILABLE)).toHaveCount(0)
@@ -416,7 +416,7 @@ test('a locked prompt can be read but not answered, on the lesson and in the fee
   await expect(article.getByRole('textbox')).toHaveCount(0)
 
   await page.goto(`${COURSE_FEED}?post=${promptId}`)
-  const card = page.locator(`#post-${promptId}`)
+  const card = page.locator(`#post-${promptId}`).filter({ visible: true })
   await expect(card.getByText(answer)).toBeVisible({ timeout: 20_000 })
   await expect(card.getByText('This post is locked. No new comments can be added.')).toBeVisible()
   await expect(card.getByRole('textbox')).toHaveCount(0)

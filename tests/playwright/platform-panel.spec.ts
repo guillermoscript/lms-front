@@ -1,3 +1,4 @@
+import { openSidebar } from './utils/sidebar'
 import { test, expect } from '@playwright/test'
 import { login, loginAsSuperAdmin, loginAsStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
@@ -85,6 +86,7 @@ test.describe('Platform Overview', () => {
   })
 
   test('sidebar navigation links are present', async ({ page }) => {
+    await openSidebar(page)
     // Sidebar links are rendered via SidebarMenuButton with render={<Link>}
     // In collapsed mode, text labels may be hidden — check for link hrefs instead
     const sidebarLinks = [
@@ -119,7 +121,7 @@ test.describe('Platform Tenants', () => {
   })
 
   test('tenants page loads with table', async ({ page }) => {
-    await expect(page.getByTestId('platform-tenants-page')).toBeVisible()
+    await expect(page.getByTestId('platform-tenants-page').filter({ visible: true })).toBeVisible()
     await expect(page.getByTestId('tenants-table')).toBeVisible()
     await expect(page.getByTestId('tenants-count')).toBeVisible()
   })
@@ -139,7 +141,7 @@ test.describe('Platform Tenants', () => {
   test('search filter narrows results', async ({ page }) => {
     const initialCount = await page.getByTestId('tenant-row').count()
 
-    await page.getByTestId('tenants-search').fill('Code Academy')
+    await page.getByTestId('tenants-search').filter({ visible: true }).fill('Code Academy')
     await page.getByTestId('tenants-filter-submit').click()
     await page.waitForLoadState('networkidle')
 
@@ -166,7 +168,7 @@ test.describe('Platform Tenants', () => {
   })
 
   test('clear filter restores all tenants', async ({ page }) => {
-    await page.getByTestId('tenants-search').fill('zzz-no-match')
+    await page.getByTestId('tenants-search').filter({ visible: true }).fill('zzz-no-match')
     await page.getByTestId('tenants-filter-submit').click()
     await page.waitForLoadState('networkidle')
     const emptyCount = await page.getByTestId('tenant-row').count()
