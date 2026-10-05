@@ -94,4 +94,7 @@ jobs:
 
       - name: Trigger Dokploy deployment
         run: |
-          curl -sSf -X POST "${{ secrets.DOKPLOY_MCP_DEPLOY_WEBHOOK_URL }}"
+          # Identify this client explicitly: Cloudflare Browser Integrity Check
+          # rejects the default curl User-Agent with HTTP 403 / error 1010.
+          curl -sSf --user-agent "LMS-MCP-Deployment/1.0" \
+            -X POST "${{ secrets.DOKPLOY_MCP_DEPLOY_WEBHOOK_URL }}"
