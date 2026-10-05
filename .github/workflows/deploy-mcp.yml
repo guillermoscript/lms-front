@@ -96,6 +96,19 @@ jobs:
         run: |
           # Identify this client explicitly: Cloudflare Browser Integrity Check
           # rejects the default curl User-Agent with HTTP 403 / error 1010.
-          curl --silent --show-error --fail-with-body --max-time 30 \
+          MCP_WEBHOOK_RESPONSE=$(mktemp)
+          trap 'rm -f "$MCP_WEBHOOK_RESPONSE"' EXIT
+          MCP_WEBHOOK_STATUS=$(curl --silent --show-error --max-time 30 \
             --user-agent "LMS-MCP-Deployment/1.0" \
-            -X POST "${{ secrets.DOKPLOY_MCP_DEPLOY_WEBHOOK_URL }}"
+            --output "$MCP_WEBHOOK_RESPONSE" --write-out '%{http_code}' \
+            -X POST "${{ secrets.DOKPLOY_MCP_DEPLOY_WEBHOOK_URL }}")
+          if [[ ! "$MCP_WEBHOOK_STATUS" =~ ^2[0-9][0-9]$ ]]; then
+            echo "Dokploy webhook returned HTTP $MCP_WEBHOOK_STATUS"
+            # Challenge pages can echo the secret webhook path. Classify the
+            # response without printing its body or URL to public CI logs.
+            if grep -qiE 'cloudflare|cf_chl|challenge-platform' "$MCP_WEBHOOK_RESPONSE"; then
+              echo "Cloudflare blocked the CI webhook with a browser challenge. Review the webhook's Cloudflare API access configuration."
+            fi
+            exit 1
+          fi
+          echo "Dokploy accepted the MCP deployment"
