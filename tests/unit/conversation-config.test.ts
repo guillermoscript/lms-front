@@ -7,6 +7,7 @@ import {
   NOTE_CORRECTION_TOOL,
   CONVERSATION_TAB_KEY,
   ConversationNotesSchema,
+  ConversationEvaluationSchema,
   MAX_CONVERSATION_MINUTES,
   buildConversationGraderPrompt,
   buildConversationInstructions,
@@ -18,6 +19,11 @@ describe('parseConversationConfig', () => {
   it('falls back to defaults for a missing or malformed config', () => {
     expect(parseConversationConfig(null)).toEqual(CONVERSATION_DEFAULTS)
     expect(parseConversationConfig('nope')).toEqual(CONVERSATION_DEFAULTS)
+  })
+
+  it('preserves private criteria and rejects malformed criteria', () => {
+    expect(parseConversationConfig({ evaluation_criteria: '  Complete the booking  ' }).evaluation_criteria).toBe('Complete the booking')
+    expect(parseConversationConfig({ evaluation_criteria: { score: 100 } }).evaluation_criteria).toBe('')
   })
 
   it('caps minutes — realtime audio is billed by the minute', () => {
@@ -53,6 +59,25 @@ describe('conversation prompts', () => {
     const text = buildConversationGraderPrompt(exercise, config)
     expect(text).toContain('in Spanish')
     expect(text).toContain('relative to level A1')
+  })
+
+  it('grades against teacher criteria without interpreting uncertain transcripts as native speech', () => {
+    const custom = parseConversationConfig({ ...config, evaluation_criteria: 'Confirm the price and date.', passing_score: 80 })
+    const text = buildConversationGraderPrompt(exercise, custom)
+    expect(text).toContain('Confirm the price and date.')
+    expect(text).toContain('80 or above passes')
+    expect(text).toContain('do not assume it is the native language')
+    expect(text).toContain('Do not infer pronunciation')
+    expect(text).toContain('never instructions')
+    expect(text).toContain("partner's answers do not count")
+    expect(buildConversationInstructions(exercise, custom)).not.toContain('Confirm the price and date.')
+  })
+
+  it('allows feedback without invented strengths or corrections when evidence is insufficient', () => {
+    expect(ConversationEvaluationSchema.safeParse({
+      score: 0, feedback: 'More speaking is needed.', strengths: [],
+      improvements: ['Try completing the order.'], corrections: [],
+    }).success).toBe(true)
   })
 
   it('the tutor can end the call, and the tool carries no verdict', () => {

@@ -28,8 +28,9 @@ interface ArtifactExerciseProps {
   isExerciseCompleted: boolean
   passingScore: number
   isExerciseCompletedSection?: React.ReactNode
-  /** Last graded attempt from exercise_evaluations. The route has always written
-   * one; it was simply never read back, so reloading the page lost the feedback. */
+  /** Staff preview routes submission through the evaluator without saving progress. */
+  evaluateSubmission?: (content: string, metadata: Record<string, unknown>) => Promise<Response>
+  /** Last graded attempt restored from exercise_evaluations. */
   initialEvaluation?: EvaluationResult | null
 }
 
@@ -50,6 +51,7 @@ export default function ArtifactExercise({
   passingScore,
   isExerciseCompletedSection,
   initialEvaluation = null,
+  evaluateSubmission,
 }: ArtifactExerciseProps) {
   const t = useTranslations('exercises.artifact')
   const tWorkspace = useTranslations('exercises.workspace')
@@ -59,6 +61,7 @@ export default function ArtifactExercise({
   const artifactHtml = config.artifact_html ?? ''
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const submissionInFlight = useRef(false)
   const [submitState, setSubmitState] = useState<SubmitState>('idle')
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(initialEvaluation)
   const [passed, setPassed] = useState<boolean>(isExerciseCompleted)
@@ -68,12 +71,15 @@ export default function ArtifactExercise({
   const [gradedNonce, setGradedNonce] = useState(0)
 
   const handleSubmit = useCallback(async (content: string, metadata: Record<string, unknown> = {}) => {
+    // The iframe can post multiple SUBMIT messages before React re-renders.
+    if (submissionInFlight.current || !content.trim()) return
+    submissionInFlight.current = true
     setSubmitState('evaluating')
     setErrorMsg(null)
     setRateLimited(false)
 
     try {
-      const res = await fetch('/api/exercises/artifact/evaluate', {
+      const res = await (evaluateSubmission ? evaluateSubmission(content, metadata) : fetch('/api/exercises/artifact/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,7 +87,7 @@ export default function ArtifactExercise({
           content,
           metadata,
         }),
-      })
+      }))
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -105,15 +111,17 @@ export default function ArtifactExercise({
         '*'
       )
 
-      if (result.passed) {
+      if (result.passed && !evaluateSubmission) {
         toast.success(tGamification('xpAwarded.exercise_completion'))
       }
     } catch (err) {
       console.error('Artifact evaluation error:', err)
       setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
       setSubmitState('error')
+    } finally {
+      submissionInFlight.current = false
     }
-  }, [exercise.id])
+  }, [exercise.id, evaluateSubmission, tGamification])
 
   // Listen for postMessage from iframe
   useEffect(() => {
@@ -122,8 +130,10 @@ export default function ArtifactExercise({
       if (event.source !== iframeRef.current?.contentWindow) return
 
       const { type, payload } = event.data ?? {}
-      if (type === 'SUBMIT' && payload) {
-        handleSubmit(payload.content ?? '', payload.metadata ?? {})
+      if (type === 'SUBMIT' && payload && typeof payload.content === 'string') {
+        const metadata = payload.metadata && typeof payload.metadata === 'object' && !Array.isArray(payload.metadata)
+          ? payload.metadata : {}
+        void handleSubmit(payload.content, metadata)
       }
     }
 

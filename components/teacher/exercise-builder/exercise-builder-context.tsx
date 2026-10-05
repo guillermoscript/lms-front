@@ -27,6 +27,9 @@ export interface ExerciseBuilderProps {
     time_limit?: number | null
     system_prompt?: string | null
     status?: string | null
+    preview_files?: Record<string, string>
+    active_file?: string | null
+    visible_files?: string[] | null
     // jsonb whose shape depends on exercise_type — read field by field below.
     exercise_config?: Record<string, any> | null // eslint-disable-line @typescript-eslint/no-explicit-any
   }
@@ -59,6 +62,7 @@ export interface ExerciseFormData {
   speech_feedback_language: string
   // live conversation config
   conv_scenario: string
+  conv_evaluation_criteria: string
   conv_target_language: string
   conv_native_language: string
   conv_level: string
@@ -151,6 +155,7 @@ export function ExerciseBuilderProvider({
     speech_target_language: initialData?.exercise_config?.target_language || SPEECH_RUBRIC_DEFAULTS.target_language,
     speech_level: initialData?.exercise_config?.level || SPEECH_RUBRIC_DEFAULTS.level,
     speech_feedback_language: initialData?.exercise_config?.feedback_language || '',
+    conv_evaluation_criteria: initialData?.exercise_config?.evaluation_criteria || '',
     conv_scenario: initialData?.exercise_config?.scenario || CONVERSATION_DEFAULTS.scenario,
     conv_target_language: initialData?.exercise_config?.target_language || CONVERSATION_DEFAULTS.target_language,
     conv_native_language: initialData?.exercise_config?.native_language || CONVERSATION_DEFAULTS.native_language,
@@ -204,6 +209,7 @@ export function ExerciseBuilderProvider({
         speech_level: formData.speech_level,
         speech_feedback_language: formData.speech_feedback_language,
         conv_scenario: formData.conv_scenario,
+        conv_evaluation_criteria: formData.conv_evaluation_criteria,
         conv_target_language: formData.conv_target_language,
         conv_native_language: formData.conv_native_language,
         conv_level: formData.conv_level,
@@ -274,7 +280,7 @@ export function ExerciseBuilderProvider({
       key: 'conversation-config' as ExerciseStep,
       label: t('conversationSetupTitle'),
       icon: <IconMessageCircle className="h-4 w-4" />,
-      complete: formData.conv_scenario.trim().length > 0,
+      complete: formData.conv_scenario.trim().length > 0 && formData.instructions.trim().length > 0,
     }] : [{
       key: 'ai-config' as ExerciseStep,
       label: t('aiConfigTitle'),

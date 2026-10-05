@@ -5,6 +5,9 @@ import { useExerciseBuilder } from './exercise-builder-context'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
+import { ImprovedTemplateSelector, type PromptTemplate } from '../improved-template-selector'
 import { Separator } from '@/components/ui/separator'
 import {
   Select,
@@ -22,8 +25,20 @@ import {
 } from '@/lib/speech/conversation'
 
 export function ExerciseConversationConfigStep() {
-  const { formData, updateField } = useExerciseBuilder()
+  const { formData, updateField, setFormData } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
+
+  const templates: PromptTemplate[] = ['roleplay', 'interview', 'discussion'].map((kind, index) => ({
+    id: -100 - index,
+    name: t(`voiceTemplates.${kind}.name`),
+    description: t(`voiceTemplates.${kind}.description`),
+    category: 'exercise',
+    task_description_template: t(`voiceTemplates.${kind}.instructions`),
+    system_prompt_template: t(`voiceTemplates.${kind}.criteria`),
+    scenario_template: t(`voiceTemplates.${kind}.scenario`),
+    variables: { variables: ['topic', 'student_role', 'partner_role', 'goals'] },
+    is_system: true,
+  }))
 
   const languageSelect = (
     field: 'conv_target_language' | 'conv_native_language',
@@ -59,6 +74,27 @@ export function ExerciseConversationConfigStep() {
         </div>
       </div>
 
+      <ImprovedTemplateSelector
+        category="exercise"
+        additionalTemplates={templates}
+        onApply={(data) => setFormData((previous) => ({
+          ...previous,
+          instructions: data.instructions,
+          conv_evaluation_criteria: data.system_prompt,
+          conv_scenario: data.scenario ?? previous.conv_scenario,
+        }))}
+      />
+
+      <Field>
+        <FieldLabel htmlFor="conv_instructions">
+          {t('studentInsLabel')} <Badge variant="outline">{t('visibleToStudents')}</Badge>
+        </FieldLabel>
+        <Textarea id="conv_instructions" rows={6} value={formData.instructions}
+          onChange={(event) => updateField('instructions', event.target.value)}
+          placeholder={t('conversationInstructionsPlaceholder')} />
+        <FieldDescription>{t('conversationInstructionsHint')}</FieldDescription>
+      </Field>
+
       {/* Scenario */}
       <div>
         <Label htmlFor="conv_scenario" className="mb-2 block text-sm font-medium">
@@ -76,6 +112,26 @@ export function ExerciseConversationConfigStep() {
       </div>
 
       <Separator className="my-2" />
+
+      <Field>
+        <FieldLabel htmlFor="conv_partner_prompt">
+          {t('conversationPartnerPromptLabel')} <Badge variant="secondary">{t('hiddenFromStudents')}</Badge>
+        </FieldLabel>
+        <Textarea id="conv_partner_prompt" rows={4} value={formData.system_prompt}
+          onChange={(event) => updateField('system_prompt', event.target.value)}
+          placeholder={t('conversationPartnerPromptPlaceholder')} />
+        <FieldDescription>{t('conversationPartnerPromptHint')}</FieldDescription>
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="conv_evaluation_criteria">
+          {t('conversationCriteriaLabel')} <Badge variant="secondary">{t('hiddenFromStudents')}</Badge>
+        </FieldLabel>
+        <Textarea id="conv_evaluation_criteria" rows={7} value={formData.conv_evaluation_criteria}
+          onChange={(event) => updateField('conv_evaluation_criteria', event.target.value)}
+          placeholder={t('conversationCriteriaPlaceholder')} />
+        <FieldDescription>{t('conversationCriteriaHint')}</FieldDescription>
+      </Field>
 
       {/* Languages & level */}
       <div>

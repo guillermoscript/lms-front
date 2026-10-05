@@ -305,7 +305,7 @@ describe('POST /api/exercises/evaluate', () => {
 
     expect(state.generateCalls).toHaveLength(1)
     const { prompt, system } = state.generateCalls[0]
-    expect(prompt).toMatch(/<submission>\s*STUDENT-ANSWER-XYZ\s*<\/submission>/)
+    expect(prompt).toContain(JSON.stringify({ submission: 'STUDENT-ANSWER-XYZ' }))
     expect(prompt).toContain('SECRET-CRITERIA mentions recursion')
     expect(system).toContain('SECRET-SYSTEM-PROMPT')
   })

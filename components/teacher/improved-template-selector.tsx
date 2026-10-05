@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 import { mapSystemTemplateToStructured } from '@/lib/ai/structured-template-mapping'
 import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
 
-interface Template {
+export interface PromptTemplate {
   id: number
   name: string
   description: string
@@ -22,57 +22,55 @@ interface Template {
   system_prompt_template: string
   variables: { variables: string[] }
   is_system: boolean
+  scenario_template?: string
 }
 
 interface ImprovedTemplateSelectorProps {
   category: 'lesson_task' | 'exercise' | 'exam_grading'
+  additionalTemplates?: PromptTemplate[]
   // `structured` is the template's mapping into the structured task form
   // (#806) when one is known for it (see `mapSystemTemplateToStructured`) —
   // `null` for a teacher's own template, or one with no known mapping. The
   // caller decides which of `{instructions, system_prompt}` / `structured`
   // it wants based on which mode the task form is in.
-  onApply: (data: { instructions: string; system_prompt: string; structured: StructuredRequirements | null }) => void
+  onApply: (data: { instructions: string; system_prompt: string; structured: StructuredRequirements | null; scenario?: string }) => void
 }
 
-export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplateSelectorProps) {
+export function ImprovedTemplateSelector({ category, onApply, additionalTemplates = [] }: ImprovedTemplateSelectorProps) {
   const t = useTranslations('dashboard.teacher.templateSelector')
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<'select' | 'customize'>('select')
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [templates, setTemplates] = useState<PromptTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [variableValues, setVariableValues] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [previewMode, setPreviewMode] = useState(false)
 
-  useEffect(() => {
-    if (open) {
-      loadTemplates()
-    }
-  }, [open, category])
-
-  useEffect(() => {
-    if (selectedTemplate) {
-      const initialValues: Record<string, string> = {}
-      selectedTemplate.variables.variables.forEach((v) => {
-        initialValues[v] = ''
-      })
-      setVariableValues(initialValues)
-      setErrors({})
-      setPreviewMode(false)
-    }
-  }, [selectedTemplate])
-
   const loadTemplates = async () => {
+    setOpen(true)
     setLoading(true)
-    const params = new URLSearchParams({ category })
-    const res = await fetch(`/api/teacher/templates?${params}`)
-    const data = await res.json()
-    setTemplates(data)
-    setLoading(false)
+    setLoadError(false)
+    setTemplates(additionalTemplates)
+    try {
+      const params = new URLSearchParams({ category })
+      const res = await fetch(`/api/teacher/templates?${params}`)
+      if (!res.ok) throw new Error('Template request failed')
+      const data = await res.json()
+      if (!Array.isArray(data)) throw new Error('Invalid template response')
+      setTemplates([...additionalTemplates, ...data])
+    } catch {
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleTemplateSelect = (template: Template) => {
+  const handleTemplateSelect = (template: PromptTemplate) => {
+    setVariableValues(Object.fromEntries(template.variables.variables.map((variable) => [variable, ''])))
+    setErrors({})
+    setPreviewMode(false)
     setSelectedTemplate(template)
     setStep('customize')
   }
@@ -81,7 +79,7 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
     if (!text) return ''
     let result = text
     Object.entries(variableValues).forEach(([key, value]) => {
-      result = result.replace(new RegExp(`{{${key}}}`, 'g'), value)
+      result = result.split(`{{${key}}}`).join(value)
     })
     return result
   }
@@ -104,7 +102,7 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
     const system_prompt = replaceVariables(selectedTemplate?.system_prompt_template ?? null)
     const structured = selectedTemplate ? mapSystemTemplateToStructured(selectedTemplate.name, variableValues) : null
 
-    onApply({ instructions, system_prompt, structured })
+    onApply({ instructions, system_prompt, structured, scenario: selectedTemplate?.scenario_template ? replaceVariables(selectedTemplate.scenario_template) : undefined })
     handleClose()
   }
 
@@ -129,14 +127,14 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
       <Button
         type="button"
         variant="outline"
-        onClick={() => setOpen(true)}
+        onClick={loadTemplates}
         className="gap-2"
       >
         <IconTemplate className="h-4 w-4" />
         {t('useTemplate')}
       </Button>
 
-      <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) handleClose() }}>
         <DialogContent className="!max-w-[90vw] !w-[1000px] h-[85vh] max-h-[800px] p-0 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="px-6 py-4 border-b shrink-0 flex items-center justify-between">
@@ -344,7 +342,7 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
 
                       {selectedTemplate.system_prompt_template && (
                         <div className="space-y-2.5">
-                          <Label className="text-sm font-semibold">{t('aiPreviewTitle')}</Label>
+                          <Label className="text-sm font-semibold">{additionalTemplates.length ? t('evaluationPreviewTitle') : t('aiPreviewTitle')}</Label>
                           <div className="rounded-xl border bg-muted/40 p-5">
                             <p className="text-sm whitespace-pre-wrap font-mono leading-relaxed">
                               {replaceVariables(selectedTemplate.system_prompt_template)}
@@ -363,6 +361,8 @@ export function ImprovedTemplateSelector({ category, onApply }: ImprovedTemplate
               </ScrollArea>
             )}
           </div>
+
+          {loadError && <p role="alert" className="px-6 text-sm text-destructive">{t('loadError')}</p>}
 
           {/* Footer */}
           {step === 'customize' && selectedTemplate && (
