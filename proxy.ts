@@ -272,8 +272,21 @@ export default async function proxy(request: NextRequest) {
       request.headers.delete('x-user-id')
       const { response: sessionResponse, user } = await updateSession(request)
       if (user) request.headers.set('x-user-id', user.id)
+      let isMember = false
+      if (user) {
+        const supabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+          { cookies: { getAll: () => request.cookies.getAll(), setAll: () => {} } },
+        )
+        const { data, error } = await supabase.from('tenant_users').select('id')
+          .eq('user_id', user.id).eq('tenant_id', tenantId).eq('status', 'active').maybeSingle()
+        isMember = !error && !!data
+      }
       const response = user
-        ? NextResponse.next({ request })
+        ? isMember
+          ? NextResponse.next({ request })
+          : NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 })
         : NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 })
       sessionResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
       response.headers.set('x-tenant-id', tenantId)
