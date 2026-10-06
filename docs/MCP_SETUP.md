@@ -86,8 +86,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=sb_publishable_REPLACE_WITH_PROJECT_KEY
 ```
 
-In production, set `MCP_URL` on the MCP service to its externally visible
-proxied base, such as `https://<tenant>.<platform-domain>/api/mcp`. The app's
+In production, set `MCP_URL` on the MCP service to the externally visible
+**origin only**, such as `https://<tenant>.<platform-domain>` (no path: mcp-use
+v2 fails at startup with `MCP_URL must be an absolute origin without a path`,
+and the container exits, so Swarm keeps serving the previous one). Also set
+`LMS_APP_URL` to the same origin. The `/api/mcp` path is added by the Next.js
+proxy, which forwards to this server's `/mcp`. The app's
 `MCP_SERVER_URL` instead points to the internal MCP container (for example,
 `http://<mcp-service>:3000`). Set `HOST=0.0.0.0` in containers; the Dockerfile
 already does this. Configure both services against the same Supabase project.
