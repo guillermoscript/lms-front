@@ -7167,6 +7167,8 @@
     "postDeleted": "Publicación eliminada",
     "reply": "Responder",
     "writeReply": "Escribe una respuesta...",
+    "collapseReplies": "Ocultar respuestas",
+    "expandReplies": "{count, plural, one {Ver # respuesta} other {Ver # respuestas}}",
     "replyPosted": "Respuesta publicada",
     "comments": "{count, plural, one {# comentario} other {# comentarios}}",
     "noComments": "Sin comentarios aún",

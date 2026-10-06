@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,7 +13,8 @@ import {
   IconUser,
   IconSend,
   IconDots,
-  IconCornerDownRight,
+  IconChevronDown,
+  IconChevronUp,
   IconFlag,
   IconBan,
   IconMessageCircle,
@@ -74,6 +75,9 @@ interface QuestionState {
 
 /** Mirrors MAX_COMMENT_LENGTH in app/actions/community.ts. */
 const MAX_COMMENT_LENGTH = 2000
+
+/** Replies nest this deep; deeper ones continue at the same indent (Reddit/YouTube style). */
+const MAX_INDENT_DEPTH = 3
 
 interface CommentThreadProps {
   postId: string
@@ -615,7 +619,40 @@ function CommentItem({
   const authorIsStaff = comment.authorRole === 'teacher' || comment.authorRole === 'admin'
   const markedHelpful = isAnswer && question.viewerHelpful.has(comment.id)
 
+  const [collapsed, setCollapsed] = useState(false)
+  const replies = comment.replies ?? []
+  const flattenReplies = depth >= MAX_INDENT_DEPTH
+  const avatarSize = depth === 0 ? 'h-8 w-8' : 'h-6 w-6'
+
+  const renderReply = (reply: Comment) => (
+    <CommentItem
+      key={reply.id}
+      postId={postId}
+      comment={reply}
+      depth={depth + 1}
+      userId={userId}
+      userRole={userRole}
+      locale={locale}
+      t={t}
+      replyingTo={replyingTo}
+      setReplyingTo={setReplyingTo}
+      onReply={onReply}
+      onDelete={onDelete}
+      onFlag={onFlag}
+      onBlock={onBlock}
+      submitting={submitting}
+      isLocked={isLocked}
+      isLearner={isLearner}
+      focusCommentId={focusCommentId}
+      question={question}
+      accepting={accepting}
+      onAccept={onAccept}
+      onHelpful={onHelpful}
+    />
+  )
+
   return (
+    <Fragment>
     <div
       id={commentAnchorId(comment.id)}
       // Focusable only as a deep-link target, so it is announced on arrival.
@@ -624,17 +661,29 @@ function CommentItem({
       data-accepted={isAccepted ? '' : undefined}
       className={cn(
         'flex gap-2.5 group/comment scroll-mt-24 outline-none',
-        depth > 0 && 'mt-3',
         isAccepted && 'rounded-lg border border-success/40 bg-success/5 p-3',
         isFocused && 'rounded-md bg-muted p-2 ring-1 ring-ring/40'
       )}
     >
-      <Avatar className="h-7 w-7 shrink-0">
-        <AvatarImage src={comment.author.avatar_url || undefined} />
-        <AvatarFallback>
-          <IconUser size={12} />
-        </AvatarFallback>
-      </Avatar>
+      <div className="flex shrink-0 flex-col items-center">
+        <Avatar className={avatarSize}>
+          <AvatarImage src={comment.author.avatar_url || undefined} />
+          <AvatarFallback>
+            <IconUser size={depth === 0 ? 14 : 12} />
+          </AvatarFallback>
+        </Avatar>
+        {/* Thread line: click to collapse this comment and everything under it. */}
+        {!collapsed && replies.length > 0 && !flattenReplies && (
+          <button
+            type="button"
+            aria-label={t('collapseReplies')}
+            onClick={() => setCollapsed(true)}
+            className="group/line mt-1 flex w-4 flex-1 justify-center outline-none"
+          >
+            <span className="w-px bg-border transition-colors group-hover/line:bg-foreground/40 group-focus-visible/line:bg-foreground/40" />
+          </button>
+        )}
+      </div>
 
       <div className="flex-1 space-y-1 min-w-0">
         {isAccepted && (
@@ -664,6 +713,19 @@ function CommentItem({
                 ...(locale === 'es' ? { locale: es } : {}),
               })}
             </span>
+            {replies.length > 0 && (
+              <button
+                type="button"
+                aria-expanded={!collapsed}
+                onClick={() => setCollapsed((c) => !c)}
+                className="inline-flex items-center gap-0.5 rounded text-[11px] text-muted-foreground hover:text-foreground"
+              >
+                {collapsed ? <IconChevronDown size={12} aria-hidden /> : <IconChevronUp size={12} aria-hidden />}
+                {collapsed
+                  ? t('expandReplies', { count: replies.length })
+                  : t('collapseReplies')}
+              </button>
+            )}
           </div>
 
           <DropdownMenu>
@@ -705,6 +767,8 @@ function CommentItem({
           </DropdownMenu>
         </div>
 
+        {!collapsed && (
+          <>
         <CommunityMarkdown
           content={comment.content}
           className={isLearner ? 'text-sm' : 'text-xs'}
@@ -765,10 +829,7 @@ function CommentItem({
         )}
 
         {isReplying && (
-          <div className="flex gap-2 mt-2 animate-in fade-in slide-in-from-top-1">
-            <div className="w-6 shrink-0 flex justify-end">
-              <IconCornerDownRight size={12} className="text-muted-foreground/50 mt-2" />
-            </div>
+          <div className="mt-2 flex animate-in fade-in slide-in-from-top-1">
             <CommentReplyForm
               postId={postId}
               t={t}
@@ -778,39 +839,20 @@ function CommentItem({
             />
           </div>
         )}
+          </>
+        )}
 
         {/* Nested replies */}
-        {comment.replies && comment.replies.length > 0 && (
-          <div className="space-y-3 pt-2">
-            {comment.replies.map((reply) => (
-              <CommentItem
-                key={reply.id}
-                postId={postId}
-                comment={reply}
-                depth={depth + 1}
-                userId={userId}
-                userRole={userRole}
-                locale={locale}
-                t={t}
-                replyingTo={replyingTo}
-                setReplyingTo={setReplyingTo}
-                onReply={onReply}
-                onDelete={onDelete}
-                onFlag={onFlag}
-                onBlock={onBlock}
-                submitting={submitting}
-                isLocked={isLocked}
-                isLearner={isLearner}
-                focusCommentId={focusCommentId}
-                question={question}
-                accepting={accepting}
-                onAccept={onAccept}
-                onHelpful={onHelpful}
-              />
-            ))}
+        {!collapsed && replies.length > 0 && !flattenReplies && (
+          <div className="space-y-3 pt-3">
+            {replies.map((reply) => renderReply(reply))}
           </div>
         )}
       </div>
     </div>
+    {!collapsed && flattenReplies && replies.length > 0 && (
+      <div className="space-y-3">{replies.map((reply) => renderReply(reply))}</div>
+    )}
+    </Fragment>
   )
 }

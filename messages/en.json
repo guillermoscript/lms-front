@@ -7167,6 +7167,8 @@
     "postDeleted": "Post deleted",
     "reply": "Reply",
     "writeReply": "Write a reply...",
+    "collapseReplies": "Hide replies",
+    "expandReplies": "{count, plural, one {Show # reply} other {Show # replies}}",
     "replyPosted": "Reply posted",
     "comments": "{count, plural, one {# comment} other {# comments}}",
     "noComments": "No comments yet",
