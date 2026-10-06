@@ -397,7 +397,7 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
     "fields": {
       "url": {
         "type": "text",
-        "label": "Video URL (YouTube or Vimeo)"
+        "label": "Video URL or embed code (YouTube, Vimeo, Loom, Cap…)"
       },
       "title": {
         "type": "text",

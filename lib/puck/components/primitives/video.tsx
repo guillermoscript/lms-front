@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
+import { getEmbedUrl, VIDEO_IFRAME_ALLOW } from '@/lib/video/embed'
 
 export type VideoProps = {
   url: string
@@ -8,17 +9,12 @@ export type VideoProps = {
   borderRadius: string
 }
 
-// Convert YouTube/Vimeo URLs to embed URLs
-function getEmbedUrl(url: string): string {
-  // YouTube
-  const ytMatch = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]+)/
-  )
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`
-  // Vimeo
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
-  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
-  return url
+// Known platforms and pasted iframe snippets resolve via the shared helper;
+// anything else keeps the legacy behavior (use the URL as the iframe src).
+function toEmbedSrc(url: string): string {
+  const embed = getEmbedUrl(url)
+  if (embed) return embed
+  return /^https?:\/\//i.test(url.trim()) ? url.trim() : ''
 }
 
 const aspectRatioMap: Record<string, string> = {
@@ -37,7 +33,7 @@ const borderRadiusMap: Record<string, string> = {
 export const Video: ComponentConfig<VideoProps> = {
   label: 'Video',
   fields: {
-    url: { type: 'text', label: 'Video URL (YouTube or Vimeo)' },
+    url: { type: 'text', label: 'Video URL or embed code (YouTube, Vimeo, Loom, Cap…)' },
     title: { type: 'text', label: 'Title' },
     aspectRatio: {
       type: 'select',
@@ -76,7 +72,7 @@ export const Video: ComponentConfig<VideoProps> = {
             borderRadiusMap[borderRadius] || 'rounded-card',
           )}
         >
-          Paste a YouTube or Vimeo URL
+          Paste a video URL or embed code
         </div>
       )
     }
@@ -89,9 +85,9 @@ export const Video: ComponentConfig<VideoProps> = {
         )}
       >
         <iframe
-          src={getEmbedUrl(url)}
+          src={toEmbedSrc(url)}
           title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow={VIDEO_IFRAME_ALLOW}
           allowFullScreen
           className="h-full w-full border-none"
         />

@@ -16,10 +16,12 @@ import {
 } from '@tabler/icons-react'
 import { useLessonEditor } from './lesson-editor-context'
 import { VideoCheckpointMarkers } from '../video-checkpoint-markers'
+import { getEmbedUrl, VIDEO_IFRAME_ALLOW } from '@/lib/video/embed'
 
 export function LessonDetailsStep() {
   const { formData, updateField, initialData, setActiveStep, courseId } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
+  const previewEmbedUrl = getEmbedUrl(formData.video_url)
 
   return (
     <div className="animate-in fade-in slide-in-from-left-2 duration-300">
@@ -66,7 +68,6 @@ export function LessonDetailsStep() {
         </Label>
         <Input
           id="video_url"
-          type="url"
           value={formData.video_url}
           onChange={(e) => updateField('video_url', e.target.value)}
           placeholder={t('videoUrlPlaceholder')}
@@ -77,16 +78,18 @@ export function LessonDetailsStep() {
         </p>
 
         {/* Video embed preview */}
-        {formData.video_url && formData.video_url.includes('youtube') && (
+        {formData.video_url && !previewEmbedUrl && (
+          <p className="mt-2 text-xs text-destructive">{t('videoUrlUnrecognized')}</p>
+        )}
+        {previewEmbedUrl && (
           <div className="mt-3 overflow-hidden rounded-lg border bg-muted/30">
             <div className="aspect-video">
               <iframe
-                src={formData.video_url
-                  .replace('watch?v=', 'embed/')
-                  .replace('youtu.be/', 'youtube.com/embed/')}
+                src={previewEmbedUrl}
                 className="h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                allow={VIDEO_IFRAME_ALLOW}
                 allowFullScreen
+                title={t('videoUrlLabel')}
               />
             </div>
           </div>
