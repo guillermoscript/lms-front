@@ -59,7 +59,7 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b bg-card">
-          <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
             <Link
               href={`/dashboard/teacher/courses/${courseId}`}
               className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -70,7 +70,7 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
             <h1 className="text-2xl font-bold tracking-tight">{course.title} — {t('title')}</h1>
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
           <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
         </main>
       </div>
@@ -95,7 +95,7 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
           <Link
             href={`/dashboard/teacher/courses/${courseId}`}
             className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -107,7 +107,7 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
           <p className="mt-0.5 text-sm text-muted-foreground">{t('courseFeedDescription')}</p>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
         <CommunityFeed
           key={questionFilter ?? 'all'}
           questionFilter={questionFilter}

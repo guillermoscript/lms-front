@@ -387,7 +387,7 @@
     "fields": {
       "url": {
         "type": "text",
-        "label": "Video URL (YouTube or Vimeo)"
+        "label": "Video URL or embed code (YouTube, Vimeo, Loom, Cap…)"
       },
       "title": {
         "type": "text",

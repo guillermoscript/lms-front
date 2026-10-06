@@ -11,6 +11,7 @@ import {
   type CheckpointVideoMarker,
   type CheckpointVideoPlayerHandle,
 } from '@/components/lesson/checkpoint-video-player'
+import { getEmbedUrl } from '@/lib/video/embed'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useCheckpoints } from '@/components/lesson/checkpoints/checkpoints-provider'
 import { CheckpointExerciseRenderer } from '@/components/lesson/checkpoints/checkpoint-exercise-renderer'
@@ -70,14 +71,6 @@ export function LessonContent({
     },
     [analytics, lessonId, courseId, videoUrl]
   )
-
-  const getEmbedUrl = (url: string): string | null => {
-    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/)
-    if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`
-    const vimeoMatch = url.match(/vimeo\.com\/(?:channels\/[^/]+\/|groups\/[^/]+\/videos\/|video\/)?(\d+)/)
-    if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
-    return null
-  }
 
   const videoMarkers: CheckpointVideoMarker[] = checkpointsCtx
     ? checkpointsCtx.checkpoints

@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { resolveVideoEmbed } from '@/lib/video/embed'
 
 /**
  * Provider-aware video player that pauses at checkpoint markers (issue #392).
@@ -85,6 +86,8 @@ export function getVideoProvider(url: string): VideoProvider | null {
   if (host === 'vimeo.com' || host === 'player.vimeo.com') {
     return extractVimeoId(url) ? 'vimeo' : null
   }
+  // Loom, Cap, Wistia… are iframe-only: no seek/time API, so no checkpoints.
+  if (resolveVideoEmbed(url)) return null
   if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
     return 'native'
   }
