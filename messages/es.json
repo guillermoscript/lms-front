@@ -1933,7 +1933,7 @@
         "conversationSetupDesc": "El estudiante habla en voz alta con un compañero de IA y luego recibe comentarios con nota.",
         "conversationScenarioLabel": "Escenario",
         "conversationScenarioPlaceholder": "Eres barista en una cafetería de Londres. El estudiante pide una bebida, pregunta precios y paga.",
-        "conversationScenarioHint": "Describe a quién interpreta la IA y qué debe lograr el estudiante. Los estudiantes lo ven.",
+        "conversationScenarioHint": "Describe a quién interpreta la IA y qué debe lograr el estudiante. Los estudiantes lo ven. Admite Markdown (listas, **negrita**, ## títulos).",
         "conversationLanguageSection": "Idioma",
         "conversationTargetLanguage": "Idioma que se practica",
         "conversationNativeLanguage": "Idioma del estudiante",

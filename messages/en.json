@@ -1933,7 +1933,7 @@
         "conversationSetupDesc": "The student talks out loud with an AI partner, then gets graded feedback.",
         "conversationScenarioLabel": "Scenario",
         "conversationScenarioPlaceholder": "You are a barista in a London café. The student orders a drink, asks about prices and pays.",
-        "conversationScenarioHint": "Describe who the AI plays and what the student has to get done. Students see this.",
+        "conversationScenarioHint": "Describe who the AI plays and what the student has to get done. Students see this. Markdown supported (lists, **bold**, ## headings).",
         "conversationLanguageSection": "Language",
         "conversationTargetLanguage": "Language practised",
         "conversationNativeLanguage": "Student's language",

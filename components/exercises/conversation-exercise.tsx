@@ -32,6 +32,7 @@ import {
   type ConversationTurn,
 } from '@/lib/speech/conversation'
 import ExerciseBrief from './exercise-brief'
+import Markdown from 'react-markdown'
 import ExerciseHeader from './exercise-header'
 import { cn } from '@/lib/utils'
 import ExerciseResultSummary from './exercise-result-summary'
@@ -388,7 +389,9 @@ export default function ConversationExercise({
       {scenario && (
         <div className="border-t pt-5">
           <h2 className="mb-2 text-sm font-semibold">{t('scenario')}</h2>
-          <p className="max-w-[68ch] text-base leading-relaxed text-foreground/85">{scenario}</p>
+          <div className="prose prose-sm prose-neutral max-w-[68ch] dark:prose-invert prose-p:leading-relaxed prose-p:text-foreground/85 prose-li:text-foreground/85 prose-strong:text-foreground prose-headings:text-foreground prose-headings:font-semibold prose-headings:text-sm">
+            <Markdown>{scenario}</Markdown>
+          </div>
         </div>
       )}
     </div>
