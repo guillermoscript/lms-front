@@ -1,68 +1,70 @@
+import { PageSkeleton } from '@/components/skeletons'
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** Mirrors dashboard/student/billing/page.tsx: header w/ icon + title,
- * active-subscription card, purchase-history table, offline requests table. */
-export default function Loading() {
+function TableCard({ rows, cols }: { rows: number; cols: number }) {
   return (
-    <div className="container mx-auto max-w-4xl space-y-8 px-4 py-8" aria-busy="true">
-      {/* Header */}
+    <div className="rounded-xl border">
+      <div className="flex items-center gap-4 border-b bg-muted/20 px-4 py-3">
+        {Array.from({ length: cols }).map((_, i) => (
+          <Skeleton key={i} className={i === cols - 1 ? 'ml-auto h-3 w-14' : 'h-3 w-20'} />
+        ))}
+      </div>
+      <div className="divide-y">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="flex h-14 items-center gap-4 px-4">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="hidden h-4 w-20 sm:block" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="ml-auto h-4 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Mirrors billing/page.tsx: max-w-4xl, header, subscription card, purchases table, offline table. */
+export default function BillingLoading() {
+  return (
+    <PageSkeleton
+      label="Loading billing"
+      className="container mx-auto max-w-4xl space-y-8 p-0 px-4 py-8 lg:p-0 lg:px-4 lg:py-8"
+    >
       <div>
         <div className="mb-1 flex items-center gap-2">
-          <Skeleton className="h-6 w-6 rounded-full" />
-          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-6 w-6 rounded" />
+          <Skeleton className="h-8 w-40" />
         </div>
-        <Skeleton className="h-4 w-64 max-w-full" />
+        <Skeleton className="h-5 w-64 max-w-full" />
       </div>
 
-      {/* Active subscription */}
       <div>
-        <Skeleton className="mb-3 h-3 w-32" />
-        <div className="rounded-xl border p-5 space-y-3">
+        <Skeleton className="mb-3 h-4 w-32" />
+        <div className="space-y-3 rounded-xl border p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1.5">
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-5 w-36" />
               <Skeleton className="h-3 w-24" />
             </div>
             <Skeleton className="h-5 w-16 rounded-full" />
           </div>
-          <Skeleton className="h-4 w-full max-w-xs" />
-          <Skeleton className="h-9 w-32" />
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <Skeleton className="h-8 w-32 rounded-md" />
         </div>
       </div>
 
-      {/* Purchase history */}
       <div>
-        <Skeleton className="mb-3 h-3 w-36" />
-        <div className="rounded-xl border">
-          <div className="divide-y">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-4 py-3">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="hidden h-4 w-20 sm:block" />
-                <Skeleton className="hidden h-4 w-24 sm:block" />
-                <Skeleton className="h-5 w-16 rounded-full" />
-                <Skeleton className="ml-auto h-4 w-16" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <Skeleton className="mb-3 h-4 w-36" />
+        <TableCard rows={5} cols={5} />
       </div>
 
-      {/* Offline / manual payment requests */}
       <div>
-        <Skeleton className="mb-3 h-3 w-40" />
-        <div className="rounded-xl border">
-          <div className="divide-y">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-4 py-3">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-5 w-16 rounded-full" />
-                <Skeleton className="ml-auto h-4 w-16" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <Skeleton className="mb-3 h-4 w-40" />
+        <TableCard rows={3} cols={4} />
       </div>
-    </div>
+    </PageSkeleton>
   )
 }

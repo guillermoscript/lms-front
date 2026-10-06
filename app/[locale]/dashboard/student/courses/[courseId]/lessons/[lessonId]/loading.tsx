@@ -1,9 +1,13 @@
+import { PageSkeleton } from "@/components/skeletons"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {
   // 4rem offsets the dashboard layout's h-16 header, matching page.tsx
   return (
-    <div className="flex h-[calc(100dvh-4rem)] bg-background overflow-hidden">
+    <PageSkeleton
+      label="Loading lesson"
+      className="p-0 lg:p-0 space-y-0 flex-none flex h-[calc(100dvh-4rem)] bg-background overflow-hidden"
+    >
       <main className="flex flex-1 flex-col overflow-hidden w-full">
         {/* Course progress line placeholder */}
         <div className="shrink-0 h-1 bg-muted" />
@@ -49,6 +53,6 @@ export default function Loading() {
           </div>
         ))}
       </div>
-    </div>
+    </PageSkeleton>
   )
 }
