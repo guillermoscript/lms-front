@@ -11,7 +11,9 @@ WORKDIR /app
 COPY --from=core . /packages/core
 
 COPY package*.json ./
-RUN npm ci
+# npm links @lms/core to /packages/core. Imports from that real path must
+# resolve against the same locked dependencies installed for the MCP server.
+RUN npm ci && ln -s /app/node_modules /packages/node_modules
 
 COPY tsconfig.json index.ts ./
 COPY src ./src

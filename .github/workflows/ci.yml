@@ -74,6 +74,36 @@ jobs:
       - name: Unit tests
         run: npm test
         working-directory: mcp-server
+      # Test the same isolated layout deploy-mcp.yml ships. Package tests can
+      # pass through the root workspace while Docker misses core dependencies.
+      - uses: docker/setup-buildx-action@v3
+      - name: Build MCP production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp-server
+          build-contexts: |
+            core=./packages/core
+          push: false
+          load: true
+          tags: lms-mcp-ci:latest
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,scope=mcp,mode=max
+      - name: Smoke test MCP production image
+        run: |
+          MCP_TEST_CONTAINER=$(docker run -d -p 127.0.0.1:3001:3000 \
+            -e SUPABASE_URL=https://mcp-smoke.invalid \
+            -e SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_only \
+            -e MCP_URL=http://localhost:3001 lms-mcp-ci:latest)
+          trap 'docker logs "$MCP_TEST_CONTAINER"; docker rm -f "$MCP_TEST_CONTAINER"' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3001/.well-known/oauth-protected-resource/mcp > /tmp/mcp-resource.json; then
+              node -e 'const r = require("/tmp/mcp-resource.json"); if (!r.resource || !r.authorization_servers?.length) process.exit(1)'
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "MCP production container did not become ready"
+          exit 1
 
   # The Playwright suite (#667). Until this job existed, 374 E2E tests ran only
   # on whoever remembered to run them locally.
