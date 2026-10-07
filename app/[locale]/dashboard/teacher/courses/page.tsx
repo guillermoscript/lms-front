@@ -11,6 +11,7 @@ import {
     IconBook,
     IconEdit,
     IconEye,
+    IconSparkles,
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
 import Image from 'next/image'
@@ -19,6 +20,7 @@ import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 export default async function TeacherCoursesPage() {
     const supabase = await createClient()
     const t = await getTranslations('dashboard.teacher.courses')
+    const tArchitect = await getTranslations('courseArchitect')
     const tenantId = await getCurrentTenantId()
 
     const userId = await getCurrentUserId()
@@ -52,12 +54,20 @@ export default async function TeacherCoursesPage() {
                         {t('description')}
                     </p>
                 </div>
-                <Link href="/dashboard/teacher/courses/new">
-                    <Button size="sm" className="gap-2">
-                        <IconPlus className="h-3.5 w-3.5" />
-                        {t('createFirstBtn')}
-                    </Button>
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Link href="/dashboard/teacher/courses/ai">
+                        <Button size="sm" variant="outline" className="gap-2">
+                            <IconSparkles className="h-3.5 w-3.5" />
+                            {tArchitect('createWithAi')}
+                        </Button>
+                    </Link>
+                    <Link href="/dashboard/teacher/courses/new">
+                        <Button size="sm" className="gap-2">
+                            <IconPlus className="h-3.5 w-3.5" />
+                            {t('createFirstBtn')}
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             <ContentListExplorer kind="courses"

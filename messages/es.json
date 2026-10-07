@@ -8011,6 +8011,197 @@
       }
     }
   },
+  "courseArchitect": {
+    "title": "Arquitecto de cursos",
+    "description": "Describe tu curso y la IA crea lecciones, ejercicios y exámenes por ti.",
+    "back": "Cursos",
+    "createWithAi": "Crear con IA",
+    "editWithAi": "Editar con IA",
+    "editSheet": {
+      "course": { "title": "Edita este curso con IA", "description": "Pide cambios al curso, sus lecciones, ejercicios o exámenes." },
+      "lesson": { "title": "Edita esta lección con IA", "description": "Reescribe, amplía o reestructura esta lección." },
+      "exercise": { "title": "Edita este ejercicio con IA", "description": "Ajusta el enunciado, la dificultad o las respuestas de este ejercicio." },
+      "exam": { "title": "Edita este examen con IA", "description": "Agrega, reescribe o reequilibra las preguntas de este examen." }
+    },
+    "cta": {
+      "title": "Crea tu primer curso con IA",
+      "description": "Cuéntale al Arquitecto de cursos qué quieres enseñar. Te entrevista, propone un esquema y construye lecciones, ejercicios y exámenes.",
+      "button": "Crear con IA"
+    },
+    "openCourse": "Abrir curso",
+    "chatTab": "Chat",
+    "blueprintTab": "Esquema del curso",
+    "placeholder": "Describe tu curso o pide un cambio…",
+    "approval": { "title": "Requiere aprobación", "approve": "Aprobar", "deny": "Rechazar", "approved": "Aprobado", "denied": "Rechazado", "price": "Precio", "fields": {"title": "Título", "name": "Nombre", "lesson_id": "Lección", "course_id": "Curso", "exercise_id": "Ejercicio", "exam_id": "Examen", "product_id": "Producto", "publish_at": "Publicar el", "scheduled_for": "Programado para"}, "action": "{verb} {entity}" },
+    "thinking": "Pensando…",
+    "newChat": "Nuevo chat",
+    "retry": "Reintentar",
+    "outlineUpdated": "Esquema del curso actualizado",
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "verbs": {
+      "list": "list",
+      "get": "get",
+      "create": "create",
+      "update": "update",
+      "delete": "delete",
+      "publish": "publish",
+      "schedule": "schedule",
+      "reorder": "reorder",
+      "archive": "archive",
+      "restore": "restore",
+      "duplicate": "duplicate",
+      "upsert": "upsert",
+      "add": "add",
+      "generate": "generate",
+      "other": "other"
+    },
+    "running": {
+      "list": "Consultando {entity}",
+      "get": "Leyendo {entity}",
+      "create": "Creando {entity}",
+      "update": "Actualizando {entity}",
+      "delete": "Eliminando {entity}",
+      "publish": "Publicando {entity}",
+      "schedule": "Programando {entity}",
+      "reorder": "Reordenando {entity}",
+      "archive": "Archivando {entity}",
+      "restore": "Restaurando {entity}",
+      "duplicate": "Duplicando {entity}",
+      "upsert": "Guardando {entity}",
+      "add": "Agregando {entity}",
+      "generate": "Generando {entity}",
+      "other": "Trabajando en {entity}"
+    },
+    "done": {
+      "list": "Consultado: {entity}",
+      "get": "Leído: {entity}",
+      "create": "Creado: {entity}",
+      "update": "Actualizado: {entity}",
+      "delete": "Eliminado: {entity}",
+      "publish": "Publicado: {entity}",
+      "schedule": "Programado: {entity}",
+      "reorder": "Reordenado: {entity}",
+      "archive": "Archivado: {entity}",
+      "restore": "Restaurado: {entity}",
+      "duplicate": "Duplicado: {entity}",
+      "upsert": "Guardado: {entity}",
+      "add": "Agregado: {entity}",
+      "generate": "Generado: {entity}",
+      "other": "Actualizado: {entity}"
+    },
+    "failed": {
+      "list": "No se pudo completar: consultando {entity}",
+      "get": "No se pudo completar: leyendo {entity}",
+      "create": "No se pudo completar: creando {entity}",
+      "update": "No se pudo completar: actualizando {entity}",
+      "delete": "No se pudo completar: eliminando {entity}",
+      "publish": "No se pudo completar: publicando {entity}",
+      "schedule": "No se pudo completar: programando {entity}",
+      "reorder": "No se pudo completar: reordenando {entity}",
+      "archive": "No se pudo completar: archivando {entity}",
+      "restore": "No se pudo completar: restaurando {entity}",
+      "duplicate": "No se pudo completar: duplicando {entity}",
+      "upsert": "No se pudo completar: guardando {entity}",
+      "add": "No se pudo completar: agregando {entity}",
+      "generate": "No se pudo completar: generando {entity}",
+      "other": "No se pudo completar: trabajando en {entity}"
+    },
+    "entities": {
+      "course": "curso",
+      "courses": "cursos",
+      "course_content": "contenido del curso",
+      "lesson": "lección",
+      "lessons": "lecciones",
+      "lesson_content": "contenido de la lección",
+      "lesson_resource": "recurso de la lección",
+      "lesson_resources": "recursos de la lección",
+      "lesson_ai_task": "tarea de IA de la lección",
+      "exercise": "ejercicio",
+      "exercises": "ejercicios",
+      "artifact_exercise": "ejercicio interactivo",
+      "exam": "examen",
+      "exams": "exámenes",
+      "exam_question": "pregunta del examen",
+      "product": "producto",
+      "products": "productos",
+      "course_categories": "categorías",
+      "mdx_components": "componentes de lección",
+      "templates": "plantillas",
+      "plan_usage": "uso del plan",
+      "course_image": "imagen del curso",
+      "lesson_image": "imagen de la lección"
+    },
+    "suggestions": {
+      "new": {
+        "one": "Quiero crear un curso",
+        "two": "Ayúdame a convertir lo que sé en un curso",
+        "three": "Crea desde cero un curso corto para principiantes"
+      },
+      "course": {
+        "one": "Agrega una lección y un ejercicio",
+        "two": "Escribe un examen para este curso",
+        "three": "Revisa el esquema y sugiere mejoras"
+      },
+      "lesson": {
+        "one": "Haz esta lección más clara",
+        "two": "Agrega un ejercicio a esta lección",
+        "three": "Acorta esta lección"
+      },
+      "exercise": {
+        "one": "Haz este ejercicio más fácil",
+        "two": "Agrega una pista",
+        "three": "Escribe un ejercicio parecido"
+      },
+      "exam": {
+        "one": "Agrega cinco preguntas más",
+        "two": "Haz el examen más difícil",
+        "three": "Revisa la claridad de las preguntas"
+      }
+    },
+    "empty": {
+      "new": {
+        "title": "Diseña un curso con IA",
+        "body": "Cuéntame qué quieres enseñar. Te preguntaré por tu audiencia, objetivo, nivel, idioma, duración y precio, propondré un esquema y lo construiré cuando confirmes."
+      },
+      "course": {
+        "title": "Edita este curso",
+        "body": "Pide cambios al curso, las lecciones, los ejercicios o los exámenes."
+      },
+      "lesson": {
+        "title": "Edita esta lección",
+        "body": "Pide cambios a esta lección."
+      },
+      "exercise": {
+        "title": "Edita este ejercicio",
+        "body": "Pide cambios a este ejercicio."
+      },
+      "exam": {
+        "title": "Edita este examen",
+        "body": "Pide cambios a este examen."
+      }
+    },
+    "blueprint": {
+      "emptyTitle": "Tu curso aparecerá aquí",
+      "emptyBody": "Cuando la IA lo cree, verás las lecciones, ejercicios y exámenes actualizarse en vivo.",
+      "lessons": "Lecciones",
+      "exercises": "Ejercicios",
+      "exams": "Exámenes",
+      "noLessons": "Aún no hay lecciones",
+      "noExams": "Aún no hay exámenes",
+      "error": "No se pudo cargar el esquema.",
+      "retry": "Reintentar",
+      "stale": "No se pudo actualizar. Se muestra el último esquema cargado.",
+      "notFound": "Curso no encontrado.",
+      "loading": "Cargando el esquema…",
+      "openEditor": "Abrir editor completo",
+      "status": {
+        "draft": "Borrador",
+        "published": "Publicado",
+        "archived": "Archivado",
+        "scheduled": "Programado"
+      }
+    }
+  },
   "aiChatLimits": {
     "burst": "Estás enviando mensajes muy rápido. Espera un momento e inténtalo de nuevo.",
     "daily": "Has alcanzado el límite de práctica de hoy. Inténtalo de nuevo mañana.",

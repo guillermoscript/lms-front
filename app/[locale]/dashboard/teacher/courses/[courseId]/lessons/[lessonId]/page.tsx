@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { parseStructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 const LessonEditor = dynamic(
@@ -100,6 +101,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
         toursEnabled={areToursEnabled(uiState)}
       />
       {fromNewCourse && <FirstLessonHint courseTitle={course.title} />}
+      <AiEditSheet scope={{ type: 'lesson', lessonId: lesson.id, courseId: parseInt(courseId) }} className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 gap-2 bg-background shadow-md" />
       <LessonEditor
         courseId={parseInt(courseId)}
         courseTitle={course.title}

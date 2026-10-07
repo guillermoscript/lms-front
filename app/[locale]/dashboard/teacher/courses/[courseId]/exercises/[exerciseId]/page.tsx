@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import dynamic from 'next/dynamic'
+import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const ExerciseBuilder = dynamic(
@@ -95,6 +96,9 @@ export default async function EditExercisePage({ params }: PageProps) {
           <span className="truncate max-w-[200px]">{course.title}</span>
           <IconChevronRight className="h-3 w-3 shrink-0" />
           <span className="font-medium text-foreground">{tEx('updateExercise')}</span>
+        </div>
+        <div className="ml-auto">
+          <AiEditSheet scope={{ type: 'exercise', exerciseId: exercise.id, courseId: parseInt(courseId) }} />
         </div>
       </div>
 

@@ -8011,6 +8011,197 @@
       }
     }
   },
+  "courseArchitect": {
+    "title": "Course Architect",
+    "description": "Describe your course and the AI builds lessons, exercises and exams for you.",
+    "back": "Courses",
+    "createWithAi": "Create with AI",
+    "editWithAi": "Edit with AI",
+    "editSheet": {
+      "course": { "title": "Edit this course with AI", "description": "Ask for changes to the course, its lessons, exercises or exams." },
+      "lesson": { "title": "Edit this lesson with AI", "description": "Rewrite, expand or restructure this lesson." },
+      "exercise": { "title": "Edit this exercise with AI", "description": "Adjust the prompt, difficulty or answers of this exercise." },
+      "exam": { "title": "Edit this exam with AI", "description": "Add, rewrite or rebalance the questions of this exam." }
+    },
+    "cta": {
+      "title": "Build your first course with AI",
+      "description": "Tell the Course Architect what you want to teach. It interviews you, proposes an outline and builds lessons, exercises and exams.",
+      "button": "Create with AI"
+    },
+    "openCourse": "Open course",
+    "chatTab": "Chat",
+    "blueprintTab": "Course outline",
+    "placeholder": "Describe your course or ask for a change…",
+    "approval": { "title": "Approval needed", "approve": "Approve", "deny": "Deny", "approved": "Approved", "denied": "Denied", "price": "Price", "fields": {"title": "Title", "name": "Name", "lesson_id": "Lesson", "course_id": "Course", "exercise_id": "Exercise", "exam_id": "Exam", "product_id": "Product", "publish_at": "Publish at", "scheduled_for": "Scheduled for"}, "action": "{verb} {entity}" },
+    "thinking": "Thinking…",
+    "newChat": "New chat",
+    "retry": "Try again",
+    "outlineUpdated": "Course outline updated",
+    "error": "Something went wrong. Please try again.",
+    "verbs": {
+      "list": "list",
+      "get": "get",
+      "create": "create",
+      "update": "update",
+      "delete": "delete",
+      "publish": "publish",
+      "schedule": "schedule",
+      "reorder": "reorder",
+      "archive": "archive",
+      "restore": "restore",
+      "duplicate": "duplicate",
+      "upsert": "upsert",
+      "add": "add",
+      "generate": "generate",
+      "other": "other"
+    },
+    "running": {
+      "list": "Looking up {entity}",
+      "get": "Reading {entity}",
+      "create": "Creating {entity}",
+      "update": "Updating {entity}",
+      "delete": "Deleting {entity}",
+      "publish": "Publishing {entity}",
+      "schedule": "Scheduling {entity}",
+      "reorder": "Reordering {entity}",
+      "archive": "Archiving {entity}",
+      "restore": "Restoring {entity}",
+      "duplicate": "Duplicating {entity}",
+      "upsert": "Saving {entity}",
+      "add": "Adding {entity}",
+      "generate": "Generating {entity}",
+      "other": "Working on {entity}"
+    },
+    "done": {
+      "list": "Looked up {entity}",
+      "get": "Read {entity}",
+      "create": "Created {entity}",
+      "update": "Updated {entity}",
+      "delete": "Deleted {entity}",
+      "publish": "Published {entity}",
+      "schedule": "Scheduled {entity}",
+      "reorder": "Reordered {entity}",
+      "archive": "Archived {entity}",
+      "restore": "Restored {entity}",
+      "duplicate": "Duplicated {entity}",
+      "upsert": "Saved {entity}",
+      "add": "Added {entity}",
+      "generate": "Generated {entity}",
+      "other": "Updated {entity}"
+    },
+    "failed": {
+      "list": "Couldn't finish: looking up {entity}",
+      "get": "Couldn't finish: reading {entity}",
+      "create": "Couldn't finish: creating {entity}",
+      "update": "Couldn't finish: updating {entity}",
+      "delete": "Couldn't finish: deleting {entity}",
+      "publish": "Couldn't finish: publishing {entity}",
+      "schedule": "Couldn't finish: scheduling {entity}",
+      "reorder": "Couldn't finish: reordering {entity}",
+      "archive": "Couldn't finish: archiving {entity}",
+      "restore": "Couldn't finish: restoring {entity}",
+      "duplicate": "Couldn't finish: duplicating {entity}",
+      "upsert": "Couldn't finish: saving {entity}",
+      "add": "Couldn't finish: adding {entity}",
+      "generate": "Couldn't finish: generating {entity}",
+      "other": "Couldn't finish: working on {entity}"
+    },
+    "entities": {
+      "course": "course",
+      "courses": "courses",
+      "course_content": "course content",
+      "lesson": "lesson",
+      "lessons": "lessons",
+      "lesson_content": "lesson content",
+      "lesson_resource": "lesson resource",
+      "lesson_resources": "lesson resources",
+      "lesson_ai_task": "lesson AI task",
+      "exercise": "exercise",
+      "exercises": "exercises",
+      "artifact_exercise": "interactive exercise",
+      "exam": "exam",
+      "exams": "exams",
+      "exam_question": "exam question",
+      "product": "product",
+      "products": "products",
+      "course_categories": "categories",
+      "mdx_components": "lesson components",
+      "templates": "templates",
+      "plan_usage": "plan usage",
+      "course_image": "course image",
+      "lesson_image": "lesson image"
+    },
+    "suggestions": {
+      "new": {
+        "one": "I want to create a course",
+        "two": "Help me turn my expertise into a course",
+        "three": "Build a short beginner course from scratch"
+      },
+      "course": {
+        "one": "Add a lesson and an exercise",
+        "two": "Write an exam for this course",
+        "three": "Review the outline and suggest improvements"
+      },
+      "lesson": {
+        "one": "Make this lesson clearer",
+        "two": "Add an exercise for this lesson",
+        "three": "Shorten this lesson"
+      },
+      "exercise": {
+        "one": "Make this exercise easier",
+        "two": "Add a hint",
+        "three": "Write a similar exercise"
+      },
+      "exam": {
+        "one": "Add five more questions",
+        "two": "Make the exam harder",
+        "three": "Review the questions for clarity"
+      }
+    },
+    "empty": {
+      "new": {
+        "title": "Design a course with AI",
+        "body": "Tell me what you want to teach. I will ask about your audience, goal, level, language, length and price, propose an outline, and build it once you confirm."
+      },
+      "course": {
+        "title": "Edit this course",
+        "body": "Ask for changes to the course, lessons, exercises or exams."
+      },
+      "lesson": {
+        "title": "Edit this lesson",
+        "body": "Ask for changes to this lesson."
+      },
+      "exercise": {
+        "title": "Edit this exercise",
+        "body": "Ask for changes to this exercise."
+      },
+      "exam": {
+        "title": "Edit this exam",
+        "body": "Ask for changes to this exam."
+      }
+    },
+    "blueprint": {
+      "emptyTitle": "Your course will appear here",
+      "emptyBody": "Once the AI creates it, you will see lessons, exercises and exams update live.",
+      "lessons": "Lessons",
+      "exercises": "Exercises",
+      "exams": "Exams",
+      "noLessons": "No lessons yet",
+      "noExams": "No exams yet",
+      "loading": "Loading outline…",
+      "error": "Could not load the outline.",
+      "retry": "Retry",
+      "stale": "Could not refresh. Showing the last loaded outline.",
+      "notFound": "Course not found.",
+      "openEditor": "Open full editor",
+      "status": {
+        "draft": "Draft",
+        "published": "Published",
+        "archived": "Archived",
+        "scheduled": "Scheduled"
+      }
+    }
+  },
   "aiChatLimits": {
     "burst": "You're sending messages a bit fast. Wait a moment and try again.",
     "daily": "You've reached today's practice limit. Try again tomorrow.",
