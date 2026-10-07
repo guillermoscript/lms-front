@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
-import { handleAiError, isAiError } from '@/lib/ai/errors'
+import { AiProviderError, classifyProviderError, handleAiError, isAiError } from '@/lib/ai/errors'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { runSpeechPipeline, SpeechAudioError } from '@/lib/speech/pipeline'
 import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
@@ -11,6 +11,9 @@ import type { ExerciseContext } from '@/lib/speech/types'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 
 export const maxDuration = 120
+
+/** Leaves ~20s of `maxDuration` to reset the row and answer. */
+const PIPELINE_BUDGET_MS = 100_000
 
 const STORAGE_BUCKET = 'exercise-media'
 
@@ -159,7 +162,15 @@ export async function POST(req: Request) {
       }
 
       // 10. Run the speech pipeline (transcribe, then grade)
-      const evaluation = await runSpeechPipeline(urlData.signedUrl, exerciseContext, providers, { supabase: adminClient })
+      // Bounded below `maxDuration`: if the platform killed the request mid-poll the row would stay
+      // `processing` for good (retries 409). A timeout here lands in the catch, which resets it.
+      let deadline: ReturnType<typeof setTimeout> | undefined
+      const evaluation = await Promise.race([
+        runSpeechPipeline(urlData.signedUrl, exerciseContext, providers, { supabase: adminClient }),
+        new Promise<never>((_, reject) => {
+          deadline = setTimeout(() => reject(new AiProviderError({ upstreamStatus: 408 })), PIPELINE_BUDGET_MS)
+        }),
+      ]).finally(() => clearTimeout(deadline))
 
       // 11. Save results
       const passed = evaluation.score >= passingScore
@@ -228,7 +239,10 @@ export async function POST(req: Request) {
             providerId: ai.lastProviderId(),
             actorId: user.id,
           })
-          retryable = true
+          // Retry only what the school can fix or a blip (key, quota, model, timeout/5xx). A deterministic
+          // provider rejection (unsupported codec, 400/422) would loop forever against the school's paid key.
+          const classified = classifyProviderError(err)
+          retryable = !(classified instanceof AiProviderError) || classified.transient
         } catch {
           response = Response.json({ error: { code: 'analysis_failed' } }, { status: 500 })
         }

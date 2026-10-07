@@ -169,7 +169,9 @@ async function runValidate(url: string, headers: Record<string, string>): Promis
   const { res } = out
   await discard(res)
   if (isRedirect(res)) return { ok: false, status: res.status, reason: 'redirect' }
-  return { ok: res.ok, status: res.status }
+  // 403 means the key authenticated but is scoped down (e.g. an OpenAI restricted key without
+  // `models.read`, which can still chat). Only 401/400-style answers prove a bad key.
+  return { ok: res.ok || res.status === 403, status: res.status }
 }
 
 /** Typed error for a failed listing call; never carries the provider's body. */

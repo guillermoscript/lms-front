@@ -90,6 +90,16 @@ describe('classifyProviderError', () => {
     expect(err).toBeInstanceOf(AiModelUnsupportedError)
   })
 
+  it('a 401 from fetching an attachment does not disable the key', () => {
+    const download = Object.assign(new Error('download failed'), { name: 'AI_DownloadError', statusCode: 401 })
+    expect(classifyProviderError(download)).toBeInstanceOf(AiProviderError)
+  })
+
+  it('a bare "quota" in a 400/403 body is not a billing problem', () => {
+    expect(classifyProviderError(apiCallError(400, 'unsupported file quota field'))).not.toBeInstanceOf(AiProviderQuotaError)
+    expect(classifyProviderError(apiCallError(400, 'Quota exceeded for this project'))).toBeInstanceOf(AiProviderQuotaError)
+  })
+
   it('400 "model does not exist" is a model error', () => {
     expect(classifyProviderError(apiCallError(400, 'The model `foo` does not exist'))).toBeInstanceOf(AiModelUnsupportedError)
   })

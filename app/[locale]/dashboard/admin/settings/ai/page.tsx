@@ -85,7 +85,7 @@ export default async function AiSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {settings.providers.map((provider) => (
+              {settings.providers.map(({ models: _models, ...provider }) => ( // eslint-disable-line @typescript-eslint/no-unused-vars
                 <ProviderCard key={provider.provider} provider={provider} />
               ))}
             </div>

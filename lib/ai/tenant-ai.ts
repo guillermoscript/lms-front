@@ -110,6 +110,8 @@ export interface GetModelOptions {
   courseId?: string | number
   /** Capabilities the request cannot work without (e.g. `vision` when attachments are present). */
   require?: readonly Cap[]
+  /** Aristotle: the `course_ai_tutors` provider/model the caller already loaded; skips a second read. */
+  courseTutor?: { provider: string | null; model: string | null } | null
 }
 
 export interface TenantAiOptions {
@@ -286,6 +288,10 @@ export function createTenantAi(tenantId: string, opts: TenantAiOptions = {}): Te
     if (!p) {
       p = readCredential(providerId, feature)
       credentialPromises.set(providerId, p)
+      // A failed read must not stay cached for the rest of the request.
+      p.catch(() => {
+        if (credentialPromises.get(providerId) === p) credentialPromises.delete(providerId)
+      })
     }
     return p
   }
@@ -379,16 +385,23 @@ export function createTenantAi(tenantId: string, opts: TenantAiOptions = {}): Te
     return { providerId: provider, modelId: model, selection, params: isRecord(params) ? params : {} }
   }
 
-  async function choose(feature: AiFeature, courseId?: string | number): Promise<Choice> {
-    const config = await loadConfig()
+  async function choose(
+    feature: AiFeature,
+    courseId?: string | number,
+    knownTutor?: GetModelOptions['courseTutor'],
+  ): Promise<Choice> {
+    const chain = featureChain(feature)
+    const wantsCourseTutor = courseId !== undefined && chain.includes('aristotle')
+    // Independent reads: start both before awaiting either.
+    const [config, tutor] = await Promise.all([
+      loadConfig(),
+      wantsCourseTutor ? (knownTutor !== undefined ? knownTutor : loadCourseTutor(courseId)) : null,
+    ])
     // Reserved seam: platform-billed AI is not built. Never fall through to a platform key.
     if (config.settings?.mode === 'managed') throw new AiPlatformManagedUnavailableError({ feature })
 
-    const chain = featureChain(feature)
-
     // 1. per-course Aristotle override
-    if (courseId !== undefined && chain.includes('aristotle')) {
-      const tutor = await loadCourseTutor(courseId)
+    if (wantsCourseTutor) {
       const picked = toChoice(feature, tutor?.provider, tutor?.model, 'course')
       if (picked) return picked
     }
@@ -419,15 +432,22 @@ export function createTenantAi(tenantId: string, opts: TenantAiOptions = {}): Te
     const preferred = isProviderId(defaultProvider) ? [defaultProvider] : []
     const order = [...preferred, ...(Object.keys(defaults) as ProviderId[])]
     const candidates = [...new Set(order)].filter((p) => defaults[p] && featureAllowsProvider(feature, p))
+    let rejected: AiKeyInvalidError | undefined
     for (const providerId of candidates) {
       try {
         await loadCredential(providerId, feature)
       } catch (e) {
         if (e instanceof AiNotConfiguredError) continue // no usable key for this provider: try the next
+        if (e instanceof AiKeyInvalidError) {
+          rejected ??= e // a bad key must not shadow a good one on another provider
+          continue
+        }
         throw e
       }
       return { providerId, modelId: defaults[providerId]!, selection: 'kind_default', params: {} }
     }
+    // Only bad keys on offer: say so (the admin needs the "replace your key" copy, not "add a key").
+    if (rejected) throw rejected
     throw new AiNotConfiguredError(candidates.length ? 'no_key' : 'no_model', { feature })
   }
 
@@ -463,7 +483,7 @@ export function createTenantAi(tenantId: string, opts: TenantAiOptions = {}): Te
       if (featureProviderKind(feature) !== 'language') {
         throw new Error(`tenant-ai: "${feature}" is not a language feature; use getTranscriber/getRealtime/getImageModel`)
       }
-      const choice = await choose(feature, options.courseId)
+      const choice = await choose(feature, options.courseId, options.courseTutor)
       lastProvider = choice.providerId
       const cred = await loadCredential(choice.providerId, feature)
 

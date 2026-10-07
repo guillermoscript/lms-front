@@ -34,13 +34,18 @@ const AI_UNAVAILABLE_VERDICT: CompletionVerdict = {
  * unsupported model — fails CLOSED, otherwise a school with a broken key would
  * auto-complete every lesson on the tutor's word alone.
  */
-function verdictForFailure(label: string, error: unknown): CompletionVerdict {
+function verdictForFailure(label: string, error: unknown, onProviderError?: (error: unknown) => void): CompletionVerdict {
     const name = error instanceof Error ? error.name : typeof error
     if (isTransientAiError(error)) {
         console.error(`${label} failed transiently (tutor decision stands):`, name)
         return { done: true, reason: '' }
     }
     console.error(`${label} failed (completion refused, fail closed):`, name)
+    try {
+        onProviderError?.(error)
+    } catch {
+        /* reporting must never change the verdict */
+    }
     return AI_UNAVAILABLE_VERDICT
 }
 
@@ -119,7 +124,8 @@ function countStudentTurns(messages: TranscriptMessage[]): number {
 async function verifyStructuredCompletion(
     structured: StructuredRequirements,
     transcript: string,
-    model: LanguageModel
+    model: LanguageModel,
+    onProviderError?: (error: unknown) => void
 ): Promise<CompletionVerdict> {
     try {
         const { output } = await generateText({
@@ -148,7 +154,7 @@ async function verifyStructuredCompletion(
         ]
         return { done: false, reason: reasonParts.join('; ') }
     } catch (error) {
-        return verdictForFailure('Structured lesson completion verifier', error)
+        return verdictForFailure('Structured lesson completion verifier', error, onProviderError)
     }
 }
 
@@ -172,6 +178,8 @@ export async function verifyLessonCompletion(input: {
     teacherPrompt?: string
     structuredRequirements?: StructuredRequirements | null
     messages: TranscriptMessage[]
+    /** Called with a non-transient failure so the route can flag a rejected key (the verdict still fails closed). */
+    onProviderError?: (error: unknown) => void
 }): Promise<CompletionVerdict> {
     const minStudentTurns = input.structuredRequirements?.min_student_turns ?? 0
     if (minStudentTurns > 0) {
@@ -187,7 +195,7 @@ export async function verifyLessonCompletion(input: {
     const transcript = buildTranscript(input.messages)
 
     if (input.structuredRequirements) {
-        return verifyStructuredCompletion(input.structuredRequirements, transcript, input.model)
+        return verifyStructuredCompletion(input.structuredRequirements, transcript, input.model, input.onProviderError)
     }
 
     try {
@@ -205,6 +213,6 @@ export async function verifyLessonCompletion(input: {
                 : output.requirements_check,
         }
     } catch (error) {
-        return verdictForFailure('Lesson completion verifier', error)
+        return verdictForFailure('Lesson completion verifier', error, input.onProviderError)
     }
 }

@@ -79,7 +79,11 @@ describe('aristotle chat route without a key', () => {
     m.getModelForFeature.mockRejectedValue(new AiNotConfiguredError('no_key'))
     const { POST } = await import('@/app/api/chat/aristotle/route')
     await POST(req({ messages: [{ role: 'user', parts: [{ type: 'text', text: 'hi' }] }], courseId: 5 }))
-    expect(m.getModelForFeature).toHaveBeenLastCalledWith('aristotle', { courseId: 5, require: undefined })
+    expect(m.getModelForFeature).toHaveBeenLastCalledWith('aristotle', {
+      courseId: 5,
+      courseTutor: { provider: null, model: null },
+      require: undefined,
+    })
   })
 })
 

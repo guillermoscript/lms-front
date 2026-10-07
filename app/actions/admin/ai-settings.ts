@@ -111,6 +111,8 @@ export interface AiProviderDTO {
   lastErrorCode: string | null
   lastUsedAt: string | null
   models: AiModelOption[] | null
+  /** `models.length`, so a card needing only the count never carries the whole list to the client. */
+  modelCount: number | null
   modelsCachedAt: string | null
 }
 
@@ -1005,6 +1007,7 @@ export async function getAiSettingsDTO(): Promise<AiActionResult<{ settings: AiS
     const providers: AiProviderDTO[] = PROVIDER_IDS.map((provider) => {
       const row = credByProvider.get(provider)
       const status = row && (row.status === 'active' || row.status === 'invalid' || row.status === 'disabled') ? row.status : null
+      const models = row ? parseModelsCache(row.models_cache) : null
       return {
         provider,
         label: PROVIDER_LABELS[provider],
@@ -1016,7 +1019,8 @@ export async function getAiSettingsDTO(): Promise<AiActionResult<{ settings: AiS
         validatedAt: row?.validated_at ?? null,
         lastErrorCode: row?.last_error_code ?? null,
         lastUsedAt: row?.last_used_at ?? null,
-        models: row ? parseModelsCache(row.models_cache) : null,
+        models,
+        modelCount: models ? models.length : null,
         modelsCachedAt: row?.models_cached_at ?? null,
       }
     })

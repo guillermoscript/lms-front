@@ -8,8 +8,12 @@ export interface WithTenantAiOptions {
   /** From `getApiAuthContext` / `getCurrentTenantId` / `authorizeExercisePreview`, never the request body. */
   tenantId: string
   feature: AiFeature
-  /** Is the caller a school admin (decides the error copy and the settings link)? */
-  canConfigure: boolean
+  /**
+   * Is the caller a school admin (decides the error copy and the settings link)?
+   * Pass a function to defer the lookup: it only runs on the error path, so the
+   * happy path pays no round trip.
+   */
+  canConfigure: boolean | (() => Promise<boolean>)
   actorId?: string | null
   locale?: string
 }
@@ -37,9 +41,11 @@ export async function withTenantAi(
   try {
     return await fn(ai)
   } catch (e) {
+    const canConfigure =
+      typeof opts.canConfigure === 'function' ? await opts.canConfigure().catch(() => false) : opts.canConfigure
     return handleAiError(e, {
       feature: opts.feature,
-      canConfigure: opts.canConfigure,
+      canConfigure,
       locale: opts.locale,
       tenantId: opts.tenantId,
       providerId: ai.lastProviderId(),

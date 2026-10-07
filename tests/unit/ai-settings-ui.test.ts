@@ -21,6 +21,7 @@ const provider = (over: Partial<AiProviderDTO> = {}): AiProviderDTO => ({
   lastErrorCode: null,
   lastUsedAt: null,
   models: [{ id: 'gpt-4o' }, { id: 'text-embedding-3-small' }, { id: 'whisper-1' }],
+  modelCount: 3,
   modelsCachedAt: null,
   ...over,
 })

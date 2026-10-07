@@ -14,8 +14,10 @@ import type { ReadableSpan, Span, SpanProcessor } from '@opentelemetry/sdk-trace
  *
  * Wraps the Langfuse processor instead of adding `recordInputs: false` to every
  * call, so a new call site cannot forget it and no tenant lookup leaks into
- * route code. Fails PRIVATE: if the preference cannot be read, content is dropped.
- * Spans with no tenant (not an AI feature call) pass through untouched.
+ * route code. Fails PRIVATE twice over: if the preference cannot be read, content is
+ * dropped; and a span that carries prompt/completion text but NO tenant id (a call
+ * site that forgot `propagateAttributes`) is stripped too, since its school's choice
+ * is unknowable. Spans with neither tenant nor content pass through untouched.
  *
  * Relies on the same trick Langfuse's own processor uses: `span.attributes` of
  * an ended span is a plain object we may edit before the exporter reads it.
@@ -38,6 +40,10 @@ const CONTENT_ATTRIBUTE =
 
 export function isContentAttribute(key: string): boolean {
   return CONTENT_ATTRIBUTE.test(key)
+}
+
+function hasContent(span: Pick<ReadableSpan, 'attributes'>): boolean {
+  return Object.keys(span.attributes).some(isContentAttribute)
 }
 
 export function tenantIdOfSpan(span: Pick<ReadableSpan, 'attributes'>): string | undefined {
@@ -109,7 +115,7 @@ export class TraceContentGuardProcessor implements SpanProcessor {
   onEnd(span: ReadableSpan): void {
     const tenantId = tenantIdOfSpan(span)
     if (!tenantId) {
-      this.inner.onEnd(span)
+      this.finish(span, !hasContent(span))
       return
     }
 

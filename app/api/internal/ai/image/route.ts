@@ -47,7 +47,10 @@ function fail(status: number, code: string, extra: Record<string, unknown> = {})
   return Response.json({ error: { code, ...extra } }, { status, headers: noStore })
 }
 
-export async function POST(req: Request): Promise<Response> {
+type Caller = { tenantId: string; userId: string; role: 'teacher' | 'admin' }
+
+/** Shared gate for POST and DELETE: secret, verified bearer, tenant claim, active teacher/admin. */
+async function authenticate(req: Request): Promise<Caller | Response> {
   if (!process.env.MCP_PROXY_SECRET) return fail(503, 'internal_not_configured')
   if (!hasValidInternalSecret(req)) return fail(401, 'unauthorized')
 
@@ -58,15 +61,7 @@ export async function POST(req: Request): Promise<Response> {
   const tenantId = tenantIdFromVerifiedToken(token)
   if (!tenantId) return fail(400, 'tenant_missing')
 
-  let parsed: z.infer<typeof bodySchema>
-  try {
-    parsed = bodySchema.parse(await req.json())
-  } catch {
-    return fail(400, 'invalid_request')
-  }
-
-  const admin = createAdminClient()
-  const { data: membership } = await admin
+  const { data: membership } = await createAdminClient()
     .from('tenant_users')
     .select('role')
     .eq('tenant_id', tenantId)
@@ -75,6 +70,38 @@ export async function POST(req: Request): Promise<Response> {
     .maybeSingle()
   const role = membership?.role as string | undefined
   if (role !== 'teacher' && role !== 'admin') return fail(403, 'forbidden')
+  return { tenantId, userId: user.id, role }
+}
+
+/**
+ * DELETE: gives back the caller's slot when the MCP server could not store an image it already
+ * generated (upload failed), so a storage hiccup does not eat the daily cap.
+ */
+export async function DELETE(req: Request): Promise<Response> {
+  const caller = await authenticate(req)
+  if (caller instanceof Response) return caller
+  try {
+    await createAdminClient().rpc('release_ai_image_generation', { _tenant_id: caller.tenantId, _user_id: caller.userId })
+  } catch {
+    /* best effort */
+  }
+  return Response.json({ released: true }, { headers: noStore })
+}
+
+export async function POST(req: Request): Promise<Response> {
+  const caller = await authenticate(req)
+  if (caller instanceof Response) return caller
+  const { tenantId, role } = caller
+  const user = { id: caller.userId }
+
+  let parsed: z.infer<typeof bodySchema>
+  try {
+    parsed = bodySchema.parse(await req.json())
+  } catch {
+    return fail(400, 'invalid_request')
+  }
+
+  const admin = createAdminClient()
 
   return withTenantAi(
     { tenantId, feature: FEATURE, canConfigure: role === 'admin', actorId: user.id },

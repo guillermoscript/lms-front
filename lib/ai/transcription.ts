@@ -44,7 +44,7 @@ export interface TranscribeInput {
 
 const MAX_AUDIO_BYTES = 100 * 1024 * 1024
 const ASSEMBLY_POLL_INTERVAL_MS = 3000
-const ASSEMBLY_POLL_ATTEMPTS = 60
+const ASSEMBLY_POLL_ATTEMPTS = 30
 
 export async function transcribeWithProvider(input: TranscribeInput): Promise<TenantTranscript> {
   return input.providerId === 'assemblyai' ? transcribeAssemblyAi(input) : transcribeViaSdk(input)

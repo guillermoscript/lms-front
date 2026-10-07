@@ -77,6 +77,7 @@ export async function POST(req: Request) {
     try {
         resolved = await ai.getModelForFeature('aristotle', {
             courseId: numericCourseId,
+            courseTutor: { provider: tutorConfig.provider ?? null, model: tutorConfig.model ?? null },
             require: lastUserMessageHasAttachments(messages) ? ['vision'] : undefined,
         })
     } catch (e) {

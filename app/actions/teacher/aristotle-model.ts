@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-import { checkFeatureModel, inferModelCaps, mergeCaps, type ModelCaps } from '@/lib/ai/capabilities'
-import { providersForFeature } from '@/lib/ai/features'
-import { isProviderId, PROVIDER_LABELS, type ProviderId } from '@/lib/ai/provider-ids'
+import { checkFeatureModel } from '@/lib/ai/capabilities'
+import { buildAristotleProviders } from '@/lib/ai/aristotle-model-state'
+import { isProviderId, type ProviderId } from '@/lib/ai/provider-ids'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { createClient } from '@/lib/supabase/server'
@@ -63,21 +63,6 @@ async function authorize(courseId: number) {
   return { supabase, userId, tenantId }
 }
 
-function listedModels(raw: unknown, provider: ProviderId): AristotleModelOption[] {
-  if (!Array.isArray(raw)) return []
-  const out: AristotleModelOption[] = []
-  for (const entry of raw) {
-    if (!entry || typeof entry !== 'object' || typeof (entry as { id?: unknown }).id !== 'string') continue
-    const { id, label, caps } = entry as { id: string; label?: unknown; caps?: ModelCaps }
-    const merged = mergeCaps(inferModelCaps(provider, id), caps)
-    // Skip models that are provably not text models (speech, realtime, image); unknown ids stay selectable.
-    if (merged.language === false) continue
-    if (!merged.language && (merged.stt || merged.realtime || merged.image)) continue
-    out.push({ id, label: typeof label === 'string' && label ? label : id, vision: merged.vision === true })
-  }
-  return out.sort((a, b) => a.id.localeCompare(b.id))
-}
-
 /** Picker data for the tutor config form: configured providers + their models, and the current override. */
 export async function getAristotleModelOptions(courseId: number): Promise<AristotleModelResult<{ state: AristotleModelState }>> {
   const parsed = courseIdSchema.safeParse(courseId)
@@ -85,15 +70,8 @@ export async function getAristotleModelOptions(courseId: number): Promise<Aristo
   const ctx = await authorize(parsed.data)
   if (!ctx) return { ok: false, error: 'forbidden' }
 
-  const allowed = providersForFeature('aristotle')
-  const admin = createAdminClient()
-  const [{ data: creds }, { data: tutor }] = await Promise.all([
-    // Never select key_ciphertext here.
-    admin
-      .from('tenant_ai_credentials')
-      .select('tenant_id, provider, status, models_cache')
-      .eq('tenant_id', ctx.tenantId)
-      .eq('status', 'active'),
+  const [providers, { data: tutor }] = await Promise.all([
+    buildAristotleProviders(ctx.tenantId),
     ctx.supabase
       .from('course_ai_tutors')
       .select('provider, model')
@@ -101,24 +79,9 @@ export async function getAristotleModelOptions(courseId: number): Promise<Aristo
       .eq('tenant_id', ctx.tenantId)
       .maybeSingle(),
   ])
-
-  const providers: AristotleProviderOptions[] = []
-  for (const row of creds ?? []) {
-    if (row.tenant_id !== ctx.tenantId || !isProviderId(row.provider) || !allowed.includes(row.provider)) continue
-    providers.push({
-      provider: row.provider,
-      label: PROVIDER_LABELS[row.provider],
-      models: listedModels(row.models_cache, row.provider),
-    })
-  }
-  providers.sort((a, b) => a.label.localeCompare(b.label))
-
   return {
     ok: true,
-    state: {
-      providers,
-      current: tutor?.provider && tutor.model ? { provider: tutor.provider, model: tutor.model } : null,
-    },
+    state: { providers, current: tutor?.provider && tutor.model ? { provider: tutor.provider, model: tutor.model } : null },
   }
 }
 

@@ -22,15 +22,16 @@ export default async function StudentCourseLayout({ children, params }: LayoutPr
     const numericCourseId = parseInt(courseId)
 
     // Check if Aristotle is enabled and get persona
-    const { data: tutorConfig } = await supabase
-        .from('course_ai_tutors')
-        .select('enabled, persona')
-        .eq('course_id', numericCourseId)
-        .eq('tenant_id', tenantId)
-        .single()
-
     // Hide the trigger/panel when the school has no AI key: BYOK, no platform fallback.
-    const aiConfigured = await getTenantAiEnabled()
+    const [{ data: tutorConfig }, aiConfigured] = await Promise.all([
+        supabase
+            .from('course_ai_tutors')
+            .select('enabled, persona')
+            .eq('course_id', numericCourseId)
+            .eq('tenant_id', tenantId)
+            .single(),
+        getTenantAiEnabled(),
+    ])
     const isEnabled = (tutorConfig?.enabled ?? false) && aiConfigured
 
     // Extract a display name from persona if present (first sentence or first few words)

@@ -148,6 +148,8 @@ function layers(e: unknown): Record<string, unknown>[] {
 }
 
 function statusOf(rec: Record<string, unknown>): number | undefined {
+  // A 401/403 fetching an attachment (private media URL) says nothing about the school's key.
+  if (rec.name === 'AI_DownloadError') return undefined
   for (const v of [rec.statusCode, rec.status, (rec.response as Record<string, unknown> | undefined)?.status]) {
     if (typeof v === 'number' && v >= 100 && v < 600) return v
   }
@@ -194,7 +196,7 @@ function isTimeoutOrNetwork(all: Record<string, unknown>[]): boolean {
 }
 
 const QUOTA_RE =
-  /insufficient_quota|exceeded your current quota|credit balance is too low|insufficient (?:credits|balance)|out of credits|payment required|billing (?:hard )?limit|resource_exhausted|quota/
+  /insufficient_quota|exceeded your current quota|credit balance is too low|insufficient (?:credits|balance)|out of credits|payment required|billing (?:hard )?limit|resource_exhausted|quota (?:exceeded|exhausted|limit)|exceeded (?:your |the )?(?:\w+ )?quota/
 const KEY_RE =
   /api[_ ]key not valid|api_key_invalid|incorrect api key|invalid api key|invalid_api_key|invalid x-api-key|invalid[_ ]authentication|authentication_error|unauthorized|no auth credentials|user not found/
 const MODEL_RE =
@@ -312,6 +314,22 @@ export async function handleAiError(e: unknown, o: HandleAiErrorOptions): Promis
   }
 
   return aiErrorResponse(err, o)
+}
+
+/**
+ * Mid-stream failure hook (`streamText({ onError })`): `withTenantAi` only sees errors thrown
+ * before the stream starts, so a key revoked or drained during streaming is reported here.
+ * Logs name/status only, never the message; a rejected key flips the credential to `invalid`.
+ */
+export async function reportStreamError(
+  error: unknown,
+  ctx: { feature: AiFeature; tenantId: string; userId: string | null; providerId: ProviderId },
+): Promise<void> {
+  const err = classifyProviderError(error, { feature: ctx.feature, providerId: ctx.providerId })
+  console.error(`[ai] ${ctx.feature} stream error`, err.code, err.upstreamStatus ?? '-')
+  if (err.code === 'ai_key_invalid') {
+    await markCredentialInvalid(ctx.tenantId, ctx.providerId, ctx.feature, ctx.userId)
+  }
 }
 
 /** Flips an active credential to `invalid` once, with an audit row. Best effort: never throws. */

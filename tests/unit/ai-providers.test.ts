@@ -90,7 +90,7 @@ describe('validate', () => {
     expect(firstCall()[1].headers['anthropic-version']).toBe('2023-06-01')
   })
 
-  it.each([401, 403, 400, 429, 500])('reports %i as not ok with the status', async (status) => {
+  it.each([401, 400, 429, 500])('reports %i as not ok with the status', async (status) => {
     fetchMock.mockResolvedValue(json({ error: { message: `secret echo ${KEY}` } }, status))
     const result = await PROVIDERS.openai.validate(KEY)
     expect(result).toEqual({ ok: false, status })
@@ -225,6 +225,11 @@ describe('listModels', () => {
     expect(models.map((m) => m.id)).toEqual(['universal-3-5-pro', 'universal-2'])
     expect(models.every((m) => m.caps?.stt)).toBe(true)
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('treats 403 as a valid but scoped-down key', async () => {
+    fetchMock.mockResolvedValue(json({ error: { message: 'missing scopes' } }, 403))
+    expect(await PROVIDERS.openai.validate(KEY)).toEqual({ ok: true, status: 403 })
   })
 
   it('401/403 become AiKeyInvalidError carrying the provider', async () => {

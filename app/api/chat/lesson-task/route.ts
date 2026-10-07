@@ -1,5 +1,7 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG } from '@/lib/ai/config'
+import { reportStreamError } from '@/lib/ai/errors'
+import { canConfigureAi } from '@/lib/exercises/ai-failure'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
@@ -42,6 +44,14 @@ export async function POST(req: Request) {
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
 
+    // In-memory burst brake first: no DB round trip (see chat-usage.ts). Only the
+    // per-day usage count below waits for access and model resolution.
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return aiChatRateLimitedResponse()
+    }
+
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
     const { messages: rawMessages, lessonId } = parsed.data
@@ -58,33 +68,23 @@ export async function POST(req: Request) {
 
     if (!lesson) return new Response('Lesson not found', { status: 404 })
 
-    // 3. role: only decides the error copy (admins get the settings link).
-    // tenant_users is authoritative; x-user-id does not reach route handlers.
-    const { data: membership } = await supabase
-        .from('tenant_users')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active')
-        .maybeSingle()
-    const canConfigure = membership?.role === 'admin'
+    // 3. role: only decides the error copy (admins get the settings link), so it
+    // is looked up lazily, on the error path only.
+    const canConfigure = () => canConfigureAi(supabase, user.id, tenantId)
 
     return withTenantAi({ tenantId, feature: 'lesson_tutor', canConfigure, actorId: user.id }, async (ai) => {
         // 4. resolve the school's models BEFORE any rate-limit slot, usage
         // increment or row write: no key = no side effects. The verifier model
         // is resolved up front too, so a misconfigured one fails here, not
         // mid-stream when markLessonCompleted runs.
-        const tutor = await ai.getModelForFeature('lesson_tutor', {
-            require: lastUserMessageHasAttachments(messages) ? ['vision'] : undefined,
-        })
-        const verifier = await ai.getModelForFeature('lesson_verifier')
+        const [tutor, verifier] = await Promise.all([
+            ai.getModelForFeature('lesson_tutor', {
+                require: lastUserMessageHasAttachments(messages) ? ['vision'] : undefined,
+            }),
+            ai.getModelForFeature('lesson_verifier'),
+        ])
 
-        // 5. rate limit and usage
-        try {
-            await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
-        } catch {
-            return aiChatRateLimitedResponse()
-        }
+        // 5. usage (the per-minute limiter already ran at the top)
         const usage = await checkAiChatUsage(supabase, tenantId, user.id)
         if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
 
@@ -117,6 +117,9 @@ export async function POST(req: Request) {
         // 7. Stream Response
         // Only the MODEL's view is capped — verify() below still reads the full,
         // untrimmed `messages` as its evidence.
+        const reportProviderFailure = (error: unknown, providerId: typeof tutor.providerId) =>
+            reportStreamError(error, { feature: 'lesson_tutor', tenantId, userId: user.id, providerId })
+
         const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
         const result = propagateAttributes(
             {
@@ -143,6 +146,8 @@ export async function POST(req: Request) {
                     teacherPrompt: aiTask?.system_prompt,
                     structuredRequirements,
                     messages,
+                    // The verifier swallows provider errors into a closed verdict; still flag a rejected key.
+                    onProviderError: (error) => reportProviderFailure(error, verifier.providerId),
                 }),
             }),
             experimental_telemetry: { functionId: 'lesson-tutor' },
@@ -190,6 +195,8 @@ export async function POST(req: Request) {
             const { error } = await supabase.from('lessons_ai_task_messages').insert(messageData)
             if (error) console.error('Failed to persist lesson assistant message:', error)
         },
+        // Mid-stream provider rejections (withTenantAi only sees errors thrown before the stream starts).
+        onError: ({ error }) => reportProviderFailure(error, tutor.providerId),
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),
         }),
     )

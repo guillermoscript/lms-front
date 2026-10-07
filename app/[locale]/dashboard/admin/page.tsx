@@ -201,9 +201,8 @@ export default async function AdminDashboardPage({
     : firstCourseLessonCount === 0
       ? `/dashboard/teacher/courses/${firstCourse.course_id}/lessons/new?from=new-course`
       : `/dashboard/teacher/courses/${firstCourse.course_id}`
-  const joinUrl = await getSchoolJoinUrl()
   // BYOK: no provider key yet means every AI feature answers "not configured".
-  const aiEnabled = await getTenantAiEnabled()
+  const [joinUrl, aiEnabled] = await Promise.all([getSchoolJoinUrl(), getTenantAiEnabled()])
 
   const stats = [
     {

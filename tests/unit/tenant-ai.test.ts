@@ -656,6 +656,24 @@ describe('transcriber', () => {
     expect(t.providerId).toBe('assemblyai')
   })
 
+  it('a rejected key on one candidate does not shadow a good key on another', async () => {
+    seed({
+      credentials: [credential(A, 'assemblyai', 'aai-0123456789abcdef', { status: 'invalid' }), credential(A, 'groq', 'gsk_tenantA0123456789')],
+      settings: [settings(A, { default_provider: null, default_model: null })],
+    })
+    const t = await createTenantAi(A).getTranscriber()
+    expect(t.providerId).toBe('groq')
+  })
+
+  it('only rejected keys on offer: reports the rejected key, not "no key"', async () => {
+    seed({
+      credentials: [credential(A, 'openai', KEY_A, { status: 'invalid' })],
+      settings: [settings(A, { default_provider: null, default_model: null })],
+    })
+    const err = await thrown(createTenantAi(A).getTranscriber())
+    expect(err).toBeInstanceOf(AiKeyInvalidError)
+  })
+
   it('anthropic-only school: stt is not configured', async () => {
     seed({
       credentials: [credential(A, 'anthropic', 'sk-ant-0123456789abcdefghij')],

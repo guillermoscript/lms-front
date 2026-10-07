@@ -21,6 +21,8 @@ import type { AiProviderDTO } from '@/app/actions/admin/ai-settings'
 import { asTranslator, capWarningText, modelsForKind } from './helpers'
 
 const NONE = '__none__'
+/** OpenRouter lists hundreds of models; rendering all of them per keystroke is slow. Typing narrows the rest. */
+const MAX_VISIBLE = 100
 
 interface ModelPickerProps {
   /** Providers that may be offered (already filtered to connected + able to serve the kind). */
@@ -72,8 +74,10 @@ export function ModelPicker({
   const visible = useMemo(() => {
     const q = model.trim().toLowerCase()
     // Typing narrows the list; once a listed id is picked, show the whole list again.
-    if (!q || suggestions.some((m) => m.id.toLowerCase() === q)) return suggestions
-    return suggestions.filter((m) => m.id.toLowerCase().includes(q) || (m.label ?? '').toLowerCase().includes(q))
+    if (!q || suggestions.some((m) => m.id.toLowerCase() === q)) return suggestions.slice(0, MAX_VISIBLE)
+    return suggestions
+      .filter((m) => m.id.toLowerCase().includes(q) || (m.label ?? '').toLowerCase().includes(q))
+      .slice(0, MAX_VISIBLE)
   }, [suggestions, model])
   const visibleIds = useMemo(() => visible.map((m) => m.id), [visible])
 

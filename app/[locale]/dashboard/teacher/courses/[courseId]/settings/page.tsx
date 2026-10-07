@@ -9,7 +9,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
 import { AristotleConfig } from '@/components/teacher/aristotle-config'
-import { getAristotleModelOptions } from '@/app/actions/teacher/aristotle-model'
+import { buildAristotleProviders } from '@/lib/ai/aristotle-model-state'
 import { SequentialCompletionToggle } from '@/components/teacher/sequential-completion-toggle'
 import { Separator } from '@/components/ui/separator'
 
@@ -59,7 +59,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   }
 
   // Get categories and Aristotle config in parallel
-  const [{ data: categories }, { data: aristotleConfig }, modelOptions] = await Promise.all([
+  const [{ data: categories }, { data: aristotleConfig }, aristotleProviders] = await Promise.all([
     supabase
       .from('course_categories')
       .select('id, name')
@@ -67,11 +67,12 @@ export default async function CourseSettingsPage({ params }: PageProps) {
       .order('name'),
     supabase
       .from('course_ai_tutors')
-      .select('tutor_id, enabled, persona, teaching_approach, boundaries, model_config')
+      .select('tutor_id, enabled, persona, teaching_approach, boundaries, model_config, provider, model')
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .single(),
-    getAristotleModelOptions(parseInt(courseId)),
+    // Ownership is established above; reuses this page's reads instead of re-authorizing in an action.
+    buildAristotleProviders(tenantId),
   ])
 
   return (
@@ -118,7 +119,13 @@ export default async function CourseSettingsPage({ params }: PageProps) {
           courseId={parseInt(courseId)}
           tenantId={tenantId}
           initialConfig={aristotleConfig}
-          modelState={modelOptions.ok ? modelOptions.state : null}
+          modelState={{
+            providers: aristotleProviders,
+            current:
+              aristotleConfig?.provider && aristotleConfig.model
+                ? { provider: aristotleConfig.provider, model: aristotleConfig.model }
+                : null,
+          }}
         />
 
         <Separator className="my-8" />

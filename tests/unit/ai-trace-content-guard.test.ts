@@ -132,12 +132,24 @@ describe('TraceContentGuardProcessor', () => {
     expect((s as never as { attributes: Record<string, unknown> }).attributes).not.toHaveProperty('ai.response.text')
   })
 
-  it('passes spans with no tenant straight through without a lookup', () => {
+  it('strips text from a span with no tenant (a call site that forgot propagateAttributes), without a lookup', () => {
     const lookup = vi.fn()
     const { guard, inner } = harness(lookup)
-    guard.onEnd(aiSpan(undefined))
+    const orphan = aiSpan(undefined)
+    guard.onEnd(orphan)
     expect(lookup).not.toHaveBeenCalled()
     expect(inner.onEnd).toHaveBeenCalledTimes(1)
+    expect((orphan as { attributes: Record<string, unknown> }).attributes['ai.response.text']).toBeUndefined()
+    expect((orphan as { attributes: Record<string, unknown> }).attributes['ai.usage.inputTokens']).toBe(12)
+  })
+
+  it('passes spans with neither tenant nor content straight through', () => {
+    const lookup = vi.fn()
+    const { guard, inner } = harness(lookup)
+    const plain = span({ 'http.method': 'GET' })
+    guard.onEnd(plain)
+    expect(lookup).not.toHaveBeenCalled()
+    expect(inner.onEnd).toHaveBeenCalledWith(plain)
   })
 
   it('looks a tenant up once per ttl, deduplicating concurrent spans, and decides per tenant', async () => {

@@ -77,13 +77,8 @@ export const generateLessonImageInput = z.object({
   style: styleField,
 });
 
-interface Generated {
-  url: string;
-  path: string;
-}
-
 const NOT_CONFIGURED =
-  "AI image generation is not set up for this school. A school admin must add an image-capable AI key (OpenAI or Google) in Settings > AI (/dashboard/admin/settings/ai). Nothing was generated.";
+  "AI image generation is not set up for this school. A school admin must add an OpenAI key (it has a default image model), or pick an image model for "Image generation" under Advanced for another provider such as Google, in Settings > AI (/dashboard/admin/settings/ai). Nothing was generated.";
 
 /** Model-readable message for a failed internal call; never echoes a provider body. */
 export function describeImageFailure(status: number, code: string | undefined, reason?: string): string {
@@ -181,6 +176,24 @@ export async function requestImageFromApp(
   return { bytes, mediaType: body.mediaType };
 }
 
+/** Best effort: gives the daily-cap slot back when an image was generated but could not be stored. */
+async function releaseImageSlot(accessToken: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  const secret = process.env.MCP_PROXY_SECRET?.trim();
+  const origin = getAppOrigin();
+  if (!secret || !origin) return;
+  try {
+    const res = await fetchImpl(`${origin}/api/internal/ai/image`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}`, "X-MCP-Secret": secret },
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    await res.body?.cancel();
+  } catch {
+    /* the slot simply expires with the day */
+  }
+}
+
 interface Generated {
   url: string;
   path: string;
@@ -202,7 +215,10 @@ async function generateAndUpload(
     contentType: generated.mediaType,
     upsert: false,
   });
-  if (error) return { error: `Uploading image: ${error.message}` };
+  if (error) {
+    await releaseImageSlot(session.getAccessToken());
+    return { error: `Uploading image: ${error.message}` };
+  }
   return { url: storage.getPublicUrl(path).data.publicUrl, path };
 }
 

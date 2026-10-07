@@ -1,6 +1,7 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
+import { reportStreamError } from '@/lib/ai/errors'
 import { canConfigureAi } from '@/lib/exercises/ai-failure'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createExerciseTools } from '@/lib/ai/tools'
@@ -59,8 +60,9 @@ export async function POST(req: Request) {
 
     if (!exercise) return new Response('Exercise not found', { status: 404 })
 
-    // 3. role: only decides the error copy (admins get the settings link).
-    const canConfigure = await canConfigureAi(supabase, user.id, tenantId)
+    // 3. role: only decides the error copy (admins get the settings link), so it
+    // is looked up lazily, on the error path only.
+    const canConfigure = () => canConfigureAi(supabase, user.id, tenantId)
 
     return withTenantAi({ tenantId, feature: 'exercise_coach', canConfigure, actorId: user.id }, async (ai) => {
         // 4. resolve the school's model BEFORE any rate-limit slot, usage
@@ -127,6 +129,8 @@ export async function POST(req: Request) {
                     })
                     if (error) console.error('Failed to persist exercise assistant message:', error)
                 },
+                onError: ({ error }) =>
+                    reportStreamError(error, { feature: 'exercise_coach', tenantId, userId: user.id, providerId: coach.providerId }),
                 stopWhen: stepCountIs(AI_CONFIG.maxSteps),
             }),
         )

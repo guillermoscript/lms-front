@@ -104,7 +104,7 @@ describe.each([
   ['/api/chat/lesson-task', () => import('@/app/api/chat/lesson-task/route'), 'student'],
   ['/api/teacher/preview/lesson-task', () => import('@/app/api/teacher/preview/lesson-task/route'), 'teacher'],
 ])('%s check order', (_name, load, role) => {
-  it('no key -> 402 ai_not_configured, no limiter slot, no usage increment, no rows', async () => {
+  it('no key -> 402 ai_not_configured, no usage increment, no rows', async () => {
     state.role = role
     state.resolveError = new AiNotConfiguredError('no_key')
     const { POST } = await load()
@@ -112,7 +112,7 @@ describe.each([
     expect(res.status).toBe(402)
     const json = await res.json()
     expect(json.error).toMatchObject({ code: 'ai_not_configured', feature: 'lesson_tutor', canConfigure: false })
-    expect(state.limiter).not.toHaveBeenCalled()
+    // The in-memory burst brake runs first (no DB round trip); the daily usage count does not.
     expect(state.usage).not.toHaveBeenCalled()
     expect(state.persist).not.toHaveBeenCalled()
     expect(state.insert).not.toHaveBeenCalled()

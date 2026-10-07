@@ -29,8 +29,11 @@ import {
 
 import { asTranslator, failureText, formatDate } from './helpers'
 
+/** The card only needs `modelCount`; the model list itself is sent to the pickers, not to every card. */
+export type ProviderCardData = Omit<AiProviderDTO, 'models'>
+
 interface ProviderCardProps {
-  provider: AiProviderDTO
+  provider: ProviderCardData
 }
 
 /** One provider: connect / replace / remove / test / refresh models. The key itself never comes back, only `last4`. */
@@ -114,7 +117,7 @@ export function ProviderCard({ provider }: ProviderCardProps) {
               {[
                 checkedOn ? t('providers.checkedOn', { date: checkedOn }) : null,
                 usedOn ? t('providers.usedOn', { date: usedOn }) : t('providers.neverUsed'),
-                provider.models ? t('providers.modelCount', { count: provider.models.length }) : null,
+                provider.modelCount !== null ? t('providers.modelCount', { count: provider.modelCount }) : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -170,7 +173,7 @@ function KeyDialog({
   onOpenChange,
   replacing,
 }: {
-  provider: AiProviderDTO
+  provider: ProviderCardData
   open: boolean
   onOpenChange: (open: boolean) => void
   replacing: boolean
