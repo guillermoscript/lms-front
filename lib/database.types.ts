@@ -49,6 +49,38 @@ export type Database = {
           },
         ]
       }
+      ai_image_usage: {
+        Row: {
+          image_count: number
+          last_reserved_at: string | null
+          period_date: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          image_count?: number
+          last_reserved_at?: string | null
+          period_date: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          image_count?: number
+          last_reserved_at?: string | null
+          period_date?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_image_usage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_chat_usage: {
         Row: {
           message_count: number
@@ -7898,6 +7930,19 @@ export type Database = {
       submit_exam: {
         Args: { p_answers: Json; p_exam_id: number }
         Returns: number
+      }
+      release_ai_image_generation: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: undefined
+      }
+      reserve_ai_image_generation: {
+        Args: {
+          _cooldown_seconds: number
+          _daily_cap: number
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: Json
       }
       tenant_ai_configured: {
         Args: { _tenant_id: string }
