@@ -5216,6 +5216,23 @@
     }
   },
   "courseDetails": {
+    "lessonsDone": "{done}/{total} lessons",
+    "completedLabel": "Completed",
+    "list": {
+      "search": "Search",
+      "searchPlaceholder": "Search lessons…",
+      "status": "Status",
+      "sort": "Sort by",
+      "all": "All lessons",
+      "pending": "Not completed",
+      "completed": "Completed",
+      "order": "Curriculum order",
+      "title": "Title A–Z",
+      "results": "Showing {count} of {total}",
+      "reset": "Clear filters",
+      "noMatches": "No matching lessons",
+      "noMatchesHint": "Try another title or clear the filters."
+    },
     "backToLearning": "Back to My Learning",
     "instructor": "Instructor:",
     "unknownInstructor": "Unknown Instructor",
@@ -7196,6 +7213,7 @@
       "discussions": "Discussions",
       "polls": "Polls",
       "milestones": "Milestones",
+      "byAuthor": "Author",
       "byTeachers": "By Teachers",
       "byStudents": "By Students",
       "questions": "Questions",

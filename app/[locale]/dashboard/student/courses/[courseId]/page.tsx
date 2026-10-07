@@ -3,20 +3,12 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
-import {
-  IconBarbell,
-  IconBook,
-  IconCheck,
-  IconClock,
-  IconPlayerPlay,
-  IconFileText,
-} from '@tabler/icons-react'
+import { IconBarbell, IconPlayerPlay, IconFileText } from '@tabler/icons-react'
+import { LessonExplorer, type StudentLesson } from '@/components/student/lesson-explorer'
 import { CourseReviews, type Review } from '@/components/student/course-reviews'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageShell, BackLink } from '@/components/dashboard/page-shell'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 
 const AristotleStudySection = dynamic(
   () => import('@/components/aristotle/aristotle-study-section').then(m => m.AristotleStudySection),
@@ -164,214 +156,117 @@ export default async function CourseOverviewPage({ params }: PageProps) {
     }))
   }
 
+  const lessonItems: StudentLesson[] = (lessons ?? []).map((l) => ({
+    id: l.id,
+    title: l.title ?? '',
+    description: l.description,
+    sequence: l.sequence ?? 0,
+    completed: completedLessonIds.has(l.id),
+  }))
+
   return (
-    <PageShell variant="wide" className="space-y-8">
-      {/* Header with course info */}
-      <header className="space-y-6">
-        <BackLink href="/dashboard/student">{t('backToLearning')}</BackLink>
-        <div>
-
-          <div className="flex flex-col gap-6 md:flex-row md:items-start lg:gap-10">
-            {/* Thumbnail */}
-            {course.thumbnail_url && (
-              <div className="aspect-video w-full shrink-0 overflow-hidden rounded-2xl shadow-lg border md:w-80 lg:w-96">
-                <img
-                  src={course.thumbnail_url}
-                  alt={course.title}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
-
-            <div className="flex-1 space-y-3 sm:space-y-4">
-              <div className="space-y-2">
-                <h1 className="text-xl font-black sm:text-2xl md:text-3xl lg:text-4xl tracking-tight leading-tight line-clamp-3">
-                  {course.title}
-                </h1>
-
-                {authorProfile && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <span className="text-sm font-medium">{t('instructor')}</span>
-                    <span className="text-sm font-bold text-foreground">
-                      {authorProfile.full_name || t('unknownInstructor')}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {course.description && (
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed line-clamp-3 md:line-clamp-none">
-                  {course.description}
-                </p>
-              )}
-
-              {/* Progress bar */}
-              <div className="pt-2 space-y-3">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <span className="text-2xl font-black text-brand-text">{progressPercent}%</span>
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('courseProgress')}</p>
-                  </div>
-                  <span className="text-xs font-bold bg-muted px-2 py-1 rounded-md text-muted-foreground">
-                    {t('lessonsCount', { count: completedCount + '/' + totalLessons })}
-                  </span>
-                </div>
-                <div className="h-3 w-full overflow-hidden rounded-full bg-muted border p-[2px]">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2.5 sm:space-y-3 pt-3 sm:pt-4">
-                {/* Action buttons */}
-                <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
-                  {nextLesson && (
-                    <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`} className="flex-1">
-                      <Button size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold shadow-md hover:shadow-lg active:shadow-lg transition-all">
-                        <IconPlayerPlay className="mr-2 h-5 w-5 sm:h-6 sm:w-6 fill-current" />
-                        {completedCount > 0 ? t('continue') : t('startNow')}
-                      </Button>
-                    </Link>
-                  )}
-                  {exerciseCount > 0 && (
-                    <Link href={`/dashboard/student/courses/${courseId}/exercises`} className="flex-1">
-                      <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
-                        <IconBarbell className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                        {t('exercises', { count: exerciseCount })}
-                      </Button>
-                    </Link>
-                  )}
-                  {examCount > 0 && (
-                    <Link href={`/dashboard/student/courses/${courseId}/exams`} className="flex-1">
-                      <Button variant="outline" size="lg" className="w-full h-12 md:h-14 text-base sm:text-lg font-bold border-2">
-                        <IconFileText className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
-                        {t('exams', { count: examCount })}
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-
-                {/* Course community (#868) — its own row, so Spanish labels never squeeze the actions */}
-                {communityEntry.enabled && (
-                  <CourseCommunityEntry
-                    href={`/dashboard/student/courses/${courseId}/community`}
-                    activity={communityEntry.activity}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Lessons list */}
-      <section>
-        <div className="flex items-center justify-between mb-5 sm:mb-8">
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight">{t('curriculum')}</h2>
-          <Badge variant="outline" className="font-bold border-2">
-            {t('lessonsCount', { count: totalLessons })}
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
-          {lessons?.map((lesson) => {
-            const isCompleted = completedLessonIds.has(lesson.id)
-
-            return (
-              <Link
-                key={lesson.id}
-                href={`/dashboard/student/courses/${courseId}/lessons/${lesson.id}`}
-                className="group"
-              >
-                <Card className="transition-all hover:border-primary/50 active:border-primary/50 hover:shadow-md rounded-2xl overflow-hidden border-2 border-transparent bg-muted/30">
-                  <CardContent className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 md:p-6">
-                    <div
-                      className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl transition-colors ${isCompleted
-                          ? 'bg-success/20 text-success'
-                          : 'bg-background text-muted-foreground group-hover:bg-brand-tint group-hover:text-brand-text shadow-sm border'
-                        }`}
-                    >
-                      {isCompleted ? (
-                        <IconCheck className="h-6 w-6" />
-                      ) : (
-                        <span className="text-lg font-black">
-                          {lesson.sequence}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base sm:text-lg group-hover:text-brand-text transition-colors truncate">
-                        {lesson.title}
-                      </h3>
-                      {lesson.description ? (
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-1">
-                          {lesson.description}
-                        </p>
-                      ) : (
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            <IconClock size={12} />
-                            {t('mins', { count: 15 })}
-                          </span>
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            <IconBook size={12} />
-                            {t('videoText')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="hidden sm:block">
-                      {isCompleted ? (
-                        <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20 font-bold px-3 py-1">
-                          {t('completed')}
-                        </Badge>
-                      ) : (
-                        <Button variant="ghost" size="sm" className="font-bold text-brand-text group-hover:bg-primary group-hover:text-primary-foreground">
-                          {t('study')}
-                        </Button>
-                      )}
-                    </div>
-                    <div className="sm:hidden">
-                      <IconPlayerPlay className={cn(
-                        "h-5 w-5 transition-transform group-hover:scale-110",
-                        isCompleted ? "text-success" : "text-brand-text"
-                      )} />
-                    </div>
-                  </CardContent>
-                </Card>
+    <PageShell variant="wide">
+      <PageHeader
+        back={{ href: '/dashboard/student', label: t('backToLearning') }}
+        title={course.title}
+        description={
+          authorProfile && (
+            <>
+              {t('instructor')}{' '}
+              <span className="font-medium text-foreground">
+                {authorProfile.full_name || t('unknownInstructor')}
+              </span>
+            </>
+          )
+        }
+        actions={
+          <>
+            {exerciseCount > 0 && (
+              <Link href={`/dashboard/student/courses/${courseId}/exercises`}>
+                <Button size="sm" variant="outline" className="gap-2">
+                  <IconBarbell className="h-3.5 w-3.5" />
+                  {t('exercises', { count: exerciseCount })}
+                </Button>
               </Link>
-            )
-          })}
+            )}
+            {examCount > 0 && (
+              <Link href={`/dashboard/student/courses/${courseId}/exams`}>
+                <Button size="sm" variant="outline" className="gap-2">
+                  <IconFileText className="h-3.5 w-3.5" />
+                  {t('exams', { count: examCount })}
+                </Button>
+              </Link>
+            )}
+            {nextLesson && (
+              <Link href={`/dashboard/student/courses/${courseId}/lessons/${nextLesson.id}`}>
+                <Button size="sm" className="gap-2">
+                  <IconPlayerPlay className="h-3.5 w-3.5 fill-current" />
+                  {completedCount > 0 ? t('continue') : t('startNow')}
+                </Button>
+              </Link>
+            )}
+          </>
+        }
+      />
 
-          {(!lessons || lessons.length === 0) && (
-            <div className="rounded-lg border bg-card p-8 text-center">
-              <IconBook className="mx-auto h-10 w-10 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">
-                {t('noLessons')}
-              </p>
+      {/* Overview: thumbnail, description, progress */}
+      <Card>
+        <CardContent className="flex flex-col gap-5 md:flex-row md:items-start">
+          {course.thumbnail_url && (
+            <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg border md:w-64">
+              <img src={course.thumbnail_url} alt={course.title} className="h-full w-full object-cover" />
             </div>
           )}
-        </div>
+          <div className="min-w-0 flex-1 space-y-4">
+            {course.description && (
+              <p className="text-sm leading-relaxed text-muted-foreground">{course.description}</p>
+            )}
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm">
+                  <span className="text-lg font-semibold tabular-nums text-brand-text">{progressPercent}%</span>{' '}
+                  <span className="text-muted-foreground">{t('courseProgress')}</span>
+                </p>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {t('lessonsDone', { done: completedCount, total: totalLessons })}
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuenow={progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-700 ease-out motion-reduce:transition-none"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+            {communityEntry.enabled && (
+              <CourseCommunityEntry
+                href={`/dashboard/student/courses/${courseId}/community`}
+                activity={communityEntry.activity}
+              />
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Aristotle Study Tab */}
-        {aristotleEnabled && (
-          <AristotleStudySection courseId={numericCourseId} />
-        )}
-
-        {/* Course Reviews */}
-        <div className="mt-8">
-          <CourseReviews
-            courseId={parseInt(courseId)}
-            userId={userId}
-            userHasReviewed={userHasReviewed}
-            initialReviews={initialReviews}
-          />
-        </div>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight">{t('curriculum')}</h2>
+        <LessonExplorer lessons={lessonItems} courseId={courseId} />
       </section>
+
+      {aristotleEnabled && <AristotleStudySection courseId={numericCourseId} />}
+
+      <CourseReviews
+        courseId={parseInt(courseId)}
+        userId={userId}
+        userHasReviewed={userHasReviewed}
+        initialReviews={initialReviews}
+      />
     </PageShell>
   )
 }

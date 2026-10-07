@@ -5216,6 +5216,23 @@
     }
   },
   "courseDetails": {
+    "lessonsDone": "{done}/{total} lecciones",
+    "completedLabel": "Completada",
+    "list": {
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar lecciones…",
+      "status": "Estado",
+      "sort": "Ordenar por",
+      "all": "Todas las lecciones",
+      "pending": "Sin completar",
+      "completed": "Completadas",
+      "order": "Orden del curso",
+      "title": "Título A–Z",
+      "results": "Mostrando {count} de {total}",
+      "reset": "Borrar filtros",
+      "noMatches": "Ninguna lección coincide",
+      "noMatchesHint": "Prueba otro título o borra los filtros."
+    },
     "backToLearning": "Volver a Mi Aprendizaje",
     "instructor": "Instructor:",
     "unknownInstructor": "Instructor Desconocido",
@@ -7196,6 +7213,7 @@
       "discussions": "Discusiones",
       "polls": "Encuestas",
       "milestones": "Logros",
+      "byAuthor": "Autor",
       "byTeachers": "De Profesores",
       "byStudents": "De Estudiantes",
       "questions": "Preguntas",
