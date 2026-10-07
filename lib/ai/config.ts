@@ -9,6 +9,8 @@ export const AI_CONFIG = {
     defaultModel,
     maxDuration: 120,
     maxSteps: 10,
+    // Building a whole course is one tool call per lesson/exercise/exam.
+    courseArchitectMaxSteps: 30,
     // Messages sent to the model as history, not persisted history — issue
     // #807. ~20 back-and-forths. Bounds token cost on a runaway conversation
     // while keeping a normal lesson-length one whole. Only what the model
@@ -24,6 +26,7 @@ export const AI_MODELS = {
     grader: defaultModel,
     aristotle: defaultModel,
     starterCourse: defaultModel,
+    courseArchitect: defaultModel,
     questionGenerator: defaultModel,
 };
 

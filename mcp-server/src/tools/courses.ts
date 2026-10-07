@@ -10,6 +10,22 @@ import { courseLimitHeadroomError, isPlanLimitError, planLimitMessage } from "..
 import { propsSchema as courseDashboardPropsSchema } from "../../views/course-dashboard/schema.js";
 import { propsSchema as courseDetailPropsSchema } from "../../views/course-detail/schema.js";
 
+/** category_id must belong to THIS school: course_categories is world-readable, so a foreign id would otherwise link. */
+async function categoryOutsideTenant(
+  supabase: ReturnType<LmsSession["getClient"]>,
+  tenantId: string,
+  categoryId: number
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("course_categories")
+    .select("id")
+    .eq("id", categoryId)
+    .eq("tenant_id", tenantId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  return data ? null : `Category ${categoryId} not found in this school (see lms_list_course_categories).`;
+}
+
 export function registerCourseTools(server: LmsServer) {
   // ── lms_list_courses ────────────────────────────────────────────────────────
   server.tool(
@@ -234,6 +250,11 @@ export function registerCourseTools(server: LmsServer) {
       try {
         const supabase = session.getClient();
 
+        if (input.category_id != null) {
+          const catErr = await categoryOutsideTenant(supabase, session.getTenantId(), input.category_id);
+          if (catErr) return errorResult(catErr);
+        }
+
         // Plan-limit pre-check (#658). The DB trigger behind it is the
         // authoritative gate; this just gives the agent the upgrade message
         // before it spends a round-trip on an insert that will be refused.
@@ -276,7 +297,7 @@ export function registerCourseTools(server: LmsServer) {
     {
       name: "lms_update_course",
       description:
-        "Update course metadata such as title, description, tags, status, learning objectives, estimated duration, or sequential completion mode.",
+        "Update course metadata such as title, description, tags, cover image (thumbnail_url), category, status, learning objectives, estimated duration, or sequential completion mode.",
       schema: z.object({
         course_id: z.number().describe("The course ID"),
         title: z.string().optional().describe("New title"),
@@ -294,6 +315,18 @@ export function registerCourseTools(server: LmsServer) {
           .describe(
             "Estimated total course duration in minutes shown on the public page. Pass 0 to clear (hides the duration)."
           ),
+        thumbnail_url: z
+          .string()
+          .url()
+          .nullable()
+          .optional()
+          .describe("Course cover image URL (null clears it)"),
+        category_id: z
+          .number()
+          .int()
+          .nullable()
+          .optional()
+          .describe("Category ID from lms_list_course_categories (null clears it)"),
         status: z
           .enum(["draft", "published", "archived"])
           .optional()
@@ -322,6 +355,11 @@ export function registerCourseTools(server: LmsServer) {
         await session.verifyCourseOwnership(input.course_id);
         const supabase = session.getClient();
 
+        if (input.category_id != null) {
+          const catErr = await categoryOutsideTenant(supabase, session.getTenantId(), input.category_id);
+          if (catErr) return errorResult(catErr);
+        }
+
         const updateData: Record<string, unknown> = {};
         if (input.title !== undefined) updateData.title = input.title;
         if (input.description !== undefined) updateData.description = input.description;
@@ -337,6 +375,8 @@ export function registerCourseTools(server: LmsServer) {
             input.estimated_duration_minutes > 0
               ? Math.round(input.estimated_duration_minutes)
               : null;
+        if (input.thumbnail_url !== undefined) updateData.thumbnail_url = input.thumbnail_url;
+        if (input.category_id !== undefined) updateData.category_id = input.category_id;
         if (input.status !== undefined) updateData.status = input.status;
         if (input.require_sequential_completion !== undefined)
           updateData.require_sequential_completion = input.require_sequential_completion;

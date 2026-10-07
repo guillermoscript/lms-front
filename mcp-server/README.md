@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **120 tools** (`lms_*`) across courses, lessons, exercises, exams, analytics,
+- **127 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -136,6 +136,10 @@ npx mcp-use client connect dev http://localhost:3000/mcp
 npx mcp-use client dev tools call lms_list_courses limit=1
 npx mcp-use screenshot --server dev --tool lms_list_courses limit=1
 ```
+
+### AI image generation
+
+`lms_generate_course_image` / `lms_generate_lesson_image` (admin + teacher, own courses) call OpenAI via the AI SDK `generateImage` and upload as the caller into the public `course-images` bucket under `<tenantId>/courses/...`. Env: `OPENAI_API_KEY` (required; missing → clean error), `MCP_IMAGE_MODEL` (default `gpt-image-1-mini`), `MCP_IMAGE_DAILY_CAP` (per user/day, default 20; in-memory per process, resets on restart). Prompt capped at 1000 chars, output at 5MB.
 
 ## Build & run
 

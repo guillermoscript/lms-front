@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.65",
+    "@ai-sdk/mcp": "^2.0.46",
     "@ai-sdk/openai": "^4.0.62",
     "@ai-sdk/otel": "^1.0.94",
     "@ai-sdk/react": "^4.0.97",

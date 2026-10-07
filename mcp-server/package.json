@@ -31,8 +31,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.85",
     "@openai/apps-sdk-ui": "^0.2.2",
     "@supabase/supabase-js": "^2.112.0",
+    "ai": "^7.0.129",
     "mcp-use": "2.7.3",
     "nanoid": "^6.0.1",
     "react": "^19.2.8",

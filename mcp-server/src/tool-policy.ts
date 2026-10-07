@@ -137,6 +137,15 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   "lms_change_member_role",
   "lms_invite_member",
   "lms_get_plan_usage",
+  // Products (what the school sells) — admin only, as on the web
+  // (verifyAdminAccess) and in RLS (products / product_courses policies).
+  // Teachers sell nothing: they author courses, an admin prices them.
+  "lms_list_products",
+  "lms_get_product",
+  "lms_create_product",
+  "lms_update_product",
+  "lms_archive_product",
+  "lms_restore_product",
 ]);
 
 export function isToolAllowedForRole(
