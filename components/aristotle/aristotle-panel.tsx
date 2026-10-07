@@ -36,7 +36,7 @@ import {
     useChatAttachmentInputProps,
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
-import { classifyAiChatError } from '@/lib/ai/chat-error'
+import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { useTranslations } from 'next-intl'
@@ -46,7 +46,7 @@ function InnerAristotlePanel() {
     const [isRestarting, setIsRestarting] = useState(false)
     const { textInput } = usePromptInputController()
     const t = useTranslations('aristotle')
-    const tChatLimits = useTranslations('aiChatLimits')
+    const onChatError = useAiChatErrorToast({ audience: 'student', genericMessage: t('toast.error') })
 
     // Close on Escape
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -87,10 +87,7 @@ function InnerAristotlePanel() {
                 contextPage,
             },
         }),
-        onError: (error) => {
-            const kind = classifyAiChatError(error)
-            toast.error(kind === 'generic' ? t('toast.error') : tChatLimits(kind))
-        },
+        onError: onChatError,
     })
 
     const isLoading = status === 'submitted' || status === 'streaming'

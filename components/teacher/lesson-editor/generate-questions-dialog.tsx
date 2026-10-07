@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { isAiErrorCode } from '@/lib/ai/error-codes'
 import Link from 'next/link'
 import {
   IconSparkles,
@@ -55,6 +56,7 @@ function parseTimestamp(value: string): number {
 export function GenerateQuestionsDialog() {
   const { formData, courseId, initialData } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor.generateQuestions')
+  const tAi = useTranslations('aiErrorNotice')
 
   const [open, setOpen] = useState(false)
   const [phase, setPhase] = useState<Phase>('idle')
@@ -80,8 +82,16 @@ export function GenerateQuestionsDialog() {
         body: JSON.stringify({ content: formData.content || '' }),
       })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        throw new Error(body?.error || t('generateFailed'))
+        // Plain `{error: string}` for validation errors; `{error:{code,canConfigure}}` for
+        // the school's AI setup problems (no key, rejected key, quota...).
+        const body = (await res.json().catch(() => null)) as
+          | { error?: string | { code?: unknown; canConfigure?: unknown } }
+          | null
+        if (body?.error && typeof body.error === 'object') {
+          const audience = body.error.canConfigure === true ? 'admin' : 'teacher'
+          throw new Error(isAiErrorCode(body.error.code) ? tAi(`${audience}.${body.error.code}`) : t('generateFailed'))
+        }
+        throw new Error(typeof body?.error === 'string' && body.error ? body.error : t('generateFailed'))
       }
       const data = (await res.json()) as GenerateQuestionsResponse
       setDrafts(

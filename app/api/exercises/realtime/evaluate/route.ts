@@ -4,7 +4,8 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
-import { AI_MODELS } from '@/lib/ai/config'
+import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
+import { aiFailureResponse, canConfigureAi } from '@/lib/exercises/ai-failure'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import {
@@ -29,7 +30,7 @@ export const maxDuration = 120
 export async function POST(req: Request) {
   const auth = await getApiAuthContext(req)
   if (!auth) return new Response('Unauthorized', { status: 401 })
-  const { user, tenantId } = auth
+  const { supabase, user, tenantId } = auth
   const adminClient = createAdminClient()
 
   let exerciseId: number
@@ -65,6 +66,29 @@ export async function POST(req: Request) {
   }
   if (!(await hasCourseAccess(adminClient, user.id, exercise.course_id))) {
     return Response.json({ error: 'You do not have access to this course' }, { status: 403 })
+  }
+
+  // Resolve the school's grader BEFORE claiming the session: with no usable
+  // key the session stays open, so the student can have the call graded once
+  // the school fixes its AI settings.
+  const ai = createTenantAi(tenantId, { actorId: user.id })
+  const aiFailure = async (err: unknown) =>
+    aiFailureResponse(
+      err,
+      {
+        feature: 'exercise_grader',
+        canConfigure: await canConfigureAi(supabase, user.id, tenantId),
+        tenantId,
+        providerId: ai.lastProviderId(),
+        actorId: user.id,
+      },
+      () => Response.json({ error: 'Evaluation failed' }, { status: 500 })
+    )
+  let grader: ResolvedFeatureModel
+  try {
+    grader = await ai.getModelForFeature('exercise_grader')
+  } catch (err) {
+    return aiFailure(err)
   }
 
   // Claim the open session atomically: pending → processing. No open session
@@ -128,7 +152,7 @@ export async function POST(req: Request) {
 
   try {
     const { output } = await generateText({
-      model: AI_MODELS.grader,
+      model: grader.model,
       output: Output.object({ schema: ConversationEvaluationSchema }),
       system: buildConversationGraderPrompt(exercise, config, notes),
       prompt: JSON.stringify({ transcript }),
@@ -194,10 +218,9 @@ export async function POST(req: Request) {
 
     return Response.json({ ...output, score, passed, passingScore: config.passing_score })
   } catch (err) {
-    console.error('Conversation evaluation error:', err)
     // Back to pending, not failed: the conversation happened and the student
     // should be able to get it graded on a retry.
     await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', session.id)
-    return Response.json({ error: 'Evaluation failed' }, { status: 500 })
+    return aiFailure(err)
   }
 }

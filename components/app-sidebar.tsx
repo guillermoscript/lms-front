@@ -247,6 +247,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                     items: [
                         { title: t('billing'), href: "/dashboard/admin/billing" },
                         { title: t('apiTokens'), href: "/dashboard/admin/api-tokens" },
+                        { title: t('aiSettings'), href: "/dashboard/admin/settings/ai" },
                     ],
                 },
             ],

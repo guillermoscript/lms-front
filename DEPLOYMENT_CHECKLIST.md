@@ -26,7 +26,8 @@ This will create:
 Add the OpenAI API key to your `.env.local`:
 
 ```bash
-OPENAI_API_KEY=your_openai_api_key_here
+AI_KEYS_ENCRYPTION_KEYS={"1":"<openssl rand -base64 32>"}   # BYOK master key; schools add their own AI keys in Admin > Settings > AI
+AI_KEYS_ACTIVE_VERSION=1
 ```
 
 Get your API key from: https://platform.openai.com/api-keys
@@ -174,7 +175,7 @@ npx playwright test tests/exam-auto-grading.spec.ts
 
 ### Immediate
 1. ✅ Run `supabase db push`
-2. ✅ Add `OPENAI_API_KEY` to `.env.local`
+2. ✅ Add `AI_KEYS_ENCRYPTION_KEYS` / `AI_KEYS_ACTIVE_VERSION` to `.env.local` (AI is BYOK: no platform OpenAI key)
 3. ⏳ Test manually (create exam → take exam → review)
 
 ### Future Enhancements

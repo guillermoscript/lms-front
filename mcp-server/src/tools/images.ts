@@ -1,33 +1,36 @@
 import { z } from "zod";
-import { generateImage } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import { getAppOrigin } from "../env.js";
 
 /**
  * AI image generation for course thumbnails and lesson illustrations.
  *
- * Uploads happen AS THE CALLER (their token, RLS-scoped) into the existing
- * public `course-images` bucket, tenant-prefixed (`<tenantId>/...`) exactly
- * like `app/actions/teacher/course-images.ts`. Its storage policy only
- * requires an authenticated user, so no migration is needed; tenant/role gating
- * is the handler's job (course/lesson ownership check below).
+ * BYOK: this server NEVER holds a provider key or the master key. Generation
+ * runs in the LMS app (`POST /api/internal/ai/image`), authenticated by the
+ * shared `MCP_PROXY_SECRET` plus the caller's own access token; the app takes
+ * the tenant from that verified token, uses the SCHOOL's own image-provider
+ * key, enforces the per-user daily cap in the database, and returns the bytes.
+ * Here we only check course/lesson ownership, then upload AS THE CALLER (their
+ * token, RLS-scoped) into the existing public `course-images` bucket,
+ * tenant-prefixed (`<tenantId>/...`) exactly like
+ * `app/actions/teacher/course-images.ts`.
  *
- * Guardrails: prompt length cap, 5MB output cap (the bucket limit), per-user
- * daily cap + short cooldown (in-memory — per server process, resets on
- * restart; good enough to bound cost, not a billing control), missing key →
- * clean error. No plan-feature gate: no AI-images key exists in
- * `lib/plans/features.ts`.
+ * Not configured (no secret, no app address, or the school has no image key)
+ * -> a clear model-readable error, nothing generated, nothing uploaded.
  */
 
 export const IMAGE_BUCKET = "course-images";
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_PROMPT_CHARS = 1000;
-const DEFAULT_DAILY_CAP = 20;
-const COOLDOWN_MS = 5_000;
-// Allowed by the bucket's allowed_mime_types; webp keeps files well under 5MB.
-const OUTPUT_FORMAT = "webp";
+const REQUEST_TIMEOUT_MS = 110_000;
+const EXT_BY_TYPE: Record<string, string> = {
+  "image/webp": "webp",
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+};
 const STYLES = ["illustration", "photo", "flat", "3d", "minimal", "watercolor"] as const;
 const STYLE_HINTS: Record<(typeof STYLES)[number], string> = {
   illustration: "clean digital illustration",
@@ -38,39 +41,6 @@ const STYLE_HINTS: Record<(typeof STYLES)[number], string> = {
   watercolor: "watercolor painting",
 };
 
-export function dailyCap(): number {
-  const n = Number(process.env.MCP_IMAGE_DAILY_CAP);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_DAILY_CAP;
-}
-
-const usage = new Map<string, { day: string; count: number; last: number }>();
-
-/** Reserves one generation for the user, or returns the reason it is refused. */
-export function reserveImageQuota(userId: string, now = Date.now()): string | null {
-  const day = new Date(now).toISOString().slice(0, 10);
-  const u = usage.get(userId);
-  const cur = u && u.day === day ? u : { day, count: 0, last: 0 };
-  if (now - cur.last < COOLDOWN_MS) return "Wait a few seconds before generating another image.";
-  if (cur.count >= dailyCap()) {
-    return `Daily AI image limit reached (${dailyCap()}/day per user). Try again tomorrow or upload an image manually.`;
-  }
-  usage.set(userId, { day, count: cur.count + 1, last: now });
-  return null;
-}
-
-export function releaseImageQuota(userId: string) {
-  const u = usage.get(userId);
-  if (u && u.count > 0) usage.set(userId, { ...u, count: u.count - 1, last: 0 });
-}
-
-export function resetImageQuotaForTests() {
-  usage.clear();
-}
-
-export function imageModelId(): string {
-  return process.env.MCP_IMAGE_MODEL?.trim() || "gpt-image-1-mini";
-}
-
 export function buildImagePrompt(prompt: string, style?: (typeof STYLES)[number]): string {
   return [
     prompt.trim(),
@@ -79,10 +49,6 @@ export function buildImagePrompt(prompt: string, style?: (typeof STYLES)[number]
   ]
     .filter(Boolean)
     .join(" ");
-}
-
-function apiKey(): string | null {
-  return process.env.OPENAI_API_KEY?.trim() || null;
 }
 
 const promptField = z
@@ -111,54 +77,149 @@ export const generateLessonImageInput = z.object({
   style: styleField,
 });
 
+const NOT_CONFIGURED =
+  "AI image generation is not set up for this school. A school admin must add an OpenAI key (it has a default image model), or pick an image model for 'Image generation' under Advanced for another provider such as Google, in Settings > AI (/dashboard/admin/settings/ai). Nothing was generated.";
+
+/** Model-readable message for a failed internal call; never echoes a provider body. */
+export function describeImageFailure(status: number, code: string | undefined, reason?: string): string {
+  switch (code) {
+    case "ai_not_configured":
+      return NOT_CONFIGURED;
+    case "ai_key_invalid":
+      return "The school's AI image key was rejected by the provider. A school admin must replace it in Settings > AI.";
+    case "ai_model_unsupported":
+      return "The school's selected image model is not available with its key. A school admin must pick another image model in Settings > AI.";
+    case "ai_quota":
+      return "The school's AI provider reports its quota or billing limit was reached. Try again later or ask the admin to check the provider account.";
+    case "ai_provider_error":
+      return "The AI provider failed to generate the image. Try again, or upload an image manually.";
+    case "image_rate_limited":
+      return reason === "cooldown"
+        ? "Wait a few seconds before generating another image."
+        : "Daily AI image limit reached for your account. Try again tomorrow or upload an image manually.";
+    case "image_too_large":
+      return "Generated image is larger than 5MB. Try a simpler prompt.";
+    case "internal_not_configured":
+      return NOT_CONFIGURED;
+    case "forbidden":
+      return "Only teachers and admins of this school can generate images.";
+    case "unauthorized":
+      return "The LMS app rejected this server's request (check MCP_PROXY_SECRET matches the app's). Nothing was generated.";
+    default:
+      return `Image generation failed (HTTP ${status}). Nothing was generated.`;
+  }
+}
+
+export interface InternalImageResult {
+  bytes: Uint8Array;
+  mediaType: string;
+}
+
+/** Calls the app's internal route. Returns an error string on any failure. */
+export async function requestImageFromApp(
+  accessToken: string,
+  prompt: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<InternalImageResult | { error: string }> {
+  const secret = process.env.MCP_PROXY_SECRET?.trim();
+  const origin = getAppOrigin();
+  if (!secret || !origin) return { error: NOT_CONFIGURED };
+
+  let res: Response;
+  try {
+    res = await fetchImpl(`${origin}/api/internal/ai/image`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "X-MCP-Secret": secret,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const name = (err as { name?: string } | null)?.name;
+    return {
+      error:
+        name === "TimeoutError" || name === "AbortError"
+          ? "Image generation timed out. Try a simpler prompt."
+          : "Could not reach the LMS app to generate the image. Nothing was generated.",
+    };
+  }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = ((await res.json()) ?? {}) as Record<string, unknown>;
+  } catch {
+    /* non-JSON (proxy error page) */
+  }
+
+  if (!res.ok) {
+    const err = (body.error ?? {}) as { code?: unknown; reason?: unknown };
+    return {
+      error: describeImageFailure(
+        res.status,
+        typeof err.code === "string" ? err.code : undefined,
+        typeof err.reason === "string" ? err.reason : undefined
+      ),
+    };
+  }
+
+  if (typeof body.image !== "string" || typeof body.mediaType !== "string" || !EXT_BY_TYPE[body.mediaType]) {
+    return { error: "The LMS app returned an unexpected image response. Nothing was generated." };
+  }
+  const bytes = new Uint8Array(Buffer.from(body.image, "base64"));
+  if (bytes.byteLength > MAX_IMAGE_BYTES) {
+    return { error: "Generated image is larger than 5MB. Try a simpler prompt." };
+  }
+  return { bytes, mediaType: body.mediaType };
+}
+
+/** Best effort: gives the daily-cap slot back when an image was generated but could not be stored. */
+async function releaseImageSlot(accessToken: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  const secret = process.env.MCP_PROXY_SECRET?.trim();
+  const origin = getAppOrigin();
+  if (!secret || !origin) return;
+  try {
+    const res = await fetchImpl(`${origin}/api/internal/ai/image`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}`, "X-MCP-Secret": secret },
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
+    await res.body?.cancel();
+  } catch {
+    /* the slot simply expires with the day */
+  }
+}
+
 interface Generated {
   url: string;
   path: string;
 }
 
-/** Generates, size-checks and uploads as the caller. Returns an error string on failure. */
+/** Generates (in the app), then uploads as the caller. Returns an error string on failure. */
 async function generateAndUpload(
   session: LmsSession,
   folder: string,
   prompt: string,
   style?: (typeof STYLES)[number]
 ): Promise<Generated | { error: string }> {
-  const key = apiKey();
-  if (!key) {
-    return { error: "AI image generation is not configured on this server (OPENAI_API_KEY is missing)." };
-  }
-  const refused = reserveImageQuota(session.getUserId());
-  if (refused) return { error: refused };
+  const generated = await requestImageFromApp(session.getAccessToken(), buildImagePrompt(prompt, style));
+  if ("error" in generated) return generated;
 
-  try {
-    const openai = createOpenAI({ apiKey: key });
-    const { image } = await generateImage({
-      model: openai.image(imageModelId()),
-      prompt: buildImagePrompt(prompt, style),
-      size: "1536x1024",
-      maxRetries: 1,
-      abortSignal: AbortSignal.timeout(90_000),
-      providerOptions: { openai: { quality: "medium", outputFormat: OUTPUT_FORMAT } },
-    });
-    const bytes = image.uint8Array;
-    if (bytes.byteLength > MAX_IMAGE_BYTES) {
-      return { error: "Generated image is larger than 5MB. Try a simpler prompt." };
-    }
-
-    const path = `${session.getTenantId()}/${folder}/${crypto.randomUUID()}.${OUTPUT_FORMAT}`;
-    const storage = session.getClient().storage.from(IMAGE_BUCKET);
-    const { error } = await storage.upload(path, bytes, {
-      contentType: `image/${OUTPUT_FORMAT}`,
-      upsert: false,
-    });
-    if (error) return { error: `Uploading image: ${error.message}` };
-    return { url: storage.getPublicUrl(path).data.publicUrl, path };
-  } catch (err) {
-    // The generation (and its cost) may have failed before billing; give the slot back.
-    releaseImageQuota(session.getUserId());
-    const msg = (err instanceof Error ? err.message : String(err)).replace(/sk-[A-Za-z0-9_*.-]+/g, "sk-***");
-    return { error: `Image generation failed: ${msg}` };
+  const path = `${session.getTenantId()}/${folder}/${crypto.randomUUID()}.${EXT_BY_TYPE[generated.mediaType]}`;
+  const storage = session.getClient().storage.from(IMAGE_BUCKET);
+  const { error } = await storage.upload(path, generated.bytes, {
+    contentType: generated.mediaType,
+    upsert: false,
+  });
+  if (error) {
+    await releaseImageSlot(session.getAccessToken());
+    return { error: `Uploading image: ${error.message}` };
   }
+  return { url: storage.getPublicUrl(path).data.publicUrl, path };
 }
 
 export function registerImageTools(server: LmsServer) {
@@ -167,7 +228,7 @@ export function registerImageTools(server: LmsServer) {
     {
       name: "lms_generate_course_image",
       description:
-        "Generate an AI cover image for a course, upload it to the school's public image storage and (by default) set it as the course thumbnail. Costs money per call; capped per user per day. Write a prompt describing a single clear subject matching the course topic, 3:2 wide composition, NO text or logos in the image. Returns the public URL.",
+        "Generate an AI cover image for a course, upload it to the school's public image storage and (by default) set it as the course thumbnail. Runs on the school's own AI key (set by an admin in Settings > AI); capped per user per day. Write a prompt describing a single clear subject matching the course topic, 3:2 wide composition, NO text or logos in the image. Returns the public URL.",
       schema: generateCourseImageInput,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
@@ -210,7 +271,7 @@ export function registerImageTools(server: LmsServer) {
     {
       name: "lms_generate_lesson_image",
       description:
-        "Generate an AI illustration for a lesson and return a markdown-ready image snippet to place inside the lesson content (e.g. via lms_update_lesson_content). Does not modify the lesson. Costs money per call; capped per user per day. No text in the image.",
+        "Generate an AI illustration for a lesson and return a markdown-ready image snippet to place inside the lesson content (e.g. via lms_update_lesson_content). Does not modify the lesson. Runs on the school's own AI key (set by an admin in Settings > AI); capped per user per day. No text in the image.",
       schema: generateLessonImageInput,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },

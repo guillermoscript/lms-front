@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
-import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
+import { AI_CONFIG } from '@/lib/ai/config'
+import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createPreviewExerciseTools } from '@/lib/ai/tools'
 import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 'ai'
@@ -23,17 +24,18 @@ const bodySchema = z.object({
     .optional(),
 })
 
+/** Does the newest user message carry an image? Only then does the model need vision. */
+function lastUserHasImage(messages: { role?: string; parts?: { type?: string; mediaType?: string }[] }[]): boolean {
+  const last = messages[messages.length - 1]
+  if (last?.role !== 'user') return false
+  return !!last.parts?.some((part) => part.type === 'file' && part.mediaType?.startsWith('image/'))
+}
+
 export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return new Response('Unauthorized', { status: 401 })
-
-  try {
-    await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
-  } catch {
-    return aiChatRateLimitedResponse()
-  }
 
   // The system prompt comes from the request body: for anyone but staff this
   // route would be an open-ended model proxy. tenant_users is the authoritative
@@ -50,34 +52,53 @@ export async function POST(req: Request) {
     return new Response('Forbidden', { status: 403 })
   }
 
-  // A preview turn spends the same tenant/user budget as the real chat.
-  const usage = await checkAiChatUsage(supabase, tenantId, user.id)
-  if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
-
   const parsed = bodySchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return new Response('Invalid request body', { status: 400 })
   const { messages, instructions, system_prompt, exercise } = parsed.data
+  const sanitized = sanitizeLastUserAttachments(messages as UIMessage[])
 
-  // Preview mode: the student's prompt and tool, but the tool is a dry run and nothing is saved.
-  const modelMessages = await convertToModelMessages(
-    capChatHistory(sanitizeLastUserAttachments(messages as UIMessage[]), AI_CONFIG.maxHistoryMessages)
-  )
-  const result = propagateAttributes(
-    { userId: user.id },
-    () => streamText({
-      model: AI_MODELS.coach,
-      system: PROMPTS.exerciseCoach({
-        title: exercise?.title || '',
-        description: exercise?.description,
-        instructions: instructions || '',
-        system_prompt: system_prompt || undefined,
-      }),
-      messages: modelMessages,
-      tools: createPreviewExerciseTools(),
-      experimental_telemetry: { functionId: 'preview-exercise' },
-      stopWhen: stepCountIs(AI_CONFIG.maxSteps),
-    }),
-  )
+  // Same feature as the student coach, so the teacher tests what students get.
+  return withTenantAi(
+    { tenantId, feature: 'exercise_coach', canConfigure: membership.role === 'admin', actorId: user.id },
+    async (ai) => {
+      // Resolve the school's model BEFORE the rate limit and usage budget: no key = no side effects.
+      const coach = await ai.getModelForFeature('exercise_coach', {
+        require: lastUserHasImage(sanitized) ? ['vision'] : undefined,
+      })
 
-  return result.toUIMessageStreamResponse()
+      try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+      } catch {
+        return aiChatRateLimitedResponse()
+      }
+
+      // A preview turn spends the same tenant/user budget as the real chat.
+      const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+      if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
+
+      // Preview mode: the student's prompt and tool, but the tool is a dry run and nothing is saved.
+      const modelMessages = await convertToModelMessages(capChatHistory(sanitized, AI_CONFIG.maxHistoryMessages))
+      const result = propagateAttributes(
+        {
+          userId: user.id,
+          metadata: { tenantId, feature: 'exercise_coach', provider: coach.providerId, modelId: coach.modelId },
+        },
+        () => streamText({
+          model: coach.model,
+          system: PROMPTS.exerciseCoach({
+            title: exercise?.title || '',
+            description: exercise?.description,
+            instructions: instructions || '',
+            system_prompt: system_prompt || undefined,
+          }),
+          messages: modelMessages,
+          tools: createPreviewExerciseTools(),
+          experimental_telemetry: { functionId: 'preview-exercise' },
+          stopWhen: stepCountIs(AI_CONFIG.maxSteps),
+        }),
+      )
+
+      return result.toUIMessageStreamResponse()
+    },
+  )
 }

@@ -7,13 +7,21 @@ import { z } from 'zod'
  * `experimental_useRealtime` hook. Everything that decides what the tutor says
  * — scenario, level, correction style — is built HERE, on the server, and
  * embedded in the ephemeral token, so the browser never supplies instructions.
+ *
+ * Which provider and model run the call is the SCHOOL's choice (BYOK, feature
+ * `voice_conversation`): the token route returns `{ provider, model, voice }`
+ * and the browser builds its model from that (`lib/speech/realtime-model.ts`).
+ * Nothing here names a model or a vendor.
  */
-
-export const REALTIME_MODEL = 'gpt-realtime'
 
 export const CONVERSATION_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'] as const
 export type ConversationLevel = (typeof CONVERSATION_LEVELS)[number]
 
+/**
+ * Voices the exercise builder offers. They are OpenAI voice names: when the
+ * school's realtime provider has a different voice list, the token routes drop
+ * the teacher's pick and use the school's configured voice (or the provider default).
+ */
 export const CONVERSATION_VOICES = ['marin', 'cedar', 'alloy', 'ash', 'coral', 'sage', 'verse'] as const
 
 /** BCP-47 primary subtags the builder offers. */

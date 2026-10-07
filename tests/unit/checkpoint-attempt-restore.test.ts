@@ -56,6 +56,11 @@ describe('parseStoredEvaluation', () => {
     // not shown an unexplained empty result.
     expect(parseStoredEvaluation({ fallback_reason: 'provider_error' })).toEqual({
       aiUnavailable: true,
+      fallbackReason: 'provider_error',
+    })
+    expect(parseStoredEvaluation({ fallback_reason: 'ai_not_configured' })).toEqual({
+      aiUnavailable: true,
+      fallbackReason: 'ai_not_configured',
     })
   })
 

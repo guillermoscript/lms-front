@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { mcpLimiter } from '@/lib/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
+import { tenantIdFromVerifiedToken } from '@/lib/ai/image-request';
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://127.0.0.1:3001';
 const MCP_PROXY_SECRET = process.env.MCP_PROXY_SECRET;
@@ -219,6 +220,16 @@ async function proxyToMcp(request: NextRequest, subpath: string): Promise<Respon
   request.nextUrl.searchParams.forEach((value, key) => {
     targetUrl.searchParams.set(key, value);
   });
+
+  // Deny-only guard: every MCP tool takes its tenant from the token's claim, so a token minted for school A
+  // presented on school B's host would act (and bill AI) on A. The MCP server verifies the signature; this
+  // only compares the claim with the tenant the request was served for.
+  const bearer = (request.headers.get('authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1];
+  const servedTenant = request.headers.get('x-tenant-id');
+  const claimTenant = bearer ? tenantIdFromVerifiedToken(bearer) : null;
+  if (servedTenant && claimTenant && servedTenant.toLowerCase() !== claimTenant.toLowerCase()) {
+    return NextResponse.json({ error: 'tenant_mismatch' }, { status: 403 });
+  }
 
   const headers = new Headers();
   for (const name of ['content-type', 'content-length', 'accept', 'authorization', 'x-tenant-id', 'x-forwarded-for', 'x-real-ip', 'mcp-session-id', 'mcp-protocol-version', 'last-event-id']) {

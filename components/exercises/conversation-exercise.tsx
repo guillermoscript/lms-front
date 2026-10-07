@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { experimental_useRealtime as useRealtime } from '@ai-sdk/react'
-import { openai } from '@ai-sdk/openai'
 import { useTranslations } from 'next-intl'
 import { nanoid } from 'nanoid'
 import {
@@ -26,7 +25,6 @@ import {
   FINISH_CONVERSATION_TOOL,
   GIVE_HINT_TOOL,
   NOTE_CORRECTION_TOOL,
-  REALTIME_MODEL,
   type ConversationEvaluation,
   type ConversationNote,
   type ConversationTurn,
@@ -38,6 +36,10 @@ import { cn } from '@/lib/utils'
 import ExerciseResultSummary from './exercise-result-summary'
 import { EXERCISE_SURFACE, ResultSection, RESULT_PROSE } from './result-parts'
 import ExerciseWorkspace, { initialWorkspacePanel } from './exercise-workspace'
+import { AiErrorNotice } from '@/components/ai/ai-error-notice'
+import { parseAiChatError, isAiSetupErrorKind } from '@/lib/ai/chat-error'
+import type { AiErrorCode } from '@/lib/ai/error-codes'
+import { createLateBoundRealtimeModel, observeRealtimeSetup } from '@/lib/speech/realtime-model'
 
 type Phase = 'idle' | 'live' | 'grading' | 'error'
 
@@ -78,6 +80,21 @@ interface ConversationExerciseProps {
   }
 }
 
+/** The school's AI setup (key, model, provider) is why the call could not run. */
+interface AiSetupError {
+  code: AiErrorCode
+  canConfigure: boolean
+  settingsUrl: string | null
+}
+
+/** Typed `{error:{code,...}}` body from the AI routes, or null for anything else. */
+function parseSetupError(bodyText: string): AiSetupError | null {
+  const info = parseAiChatError(bodyText)
+  return isAiSetupErrorKind(info.kind)
+    ? { code: info.kind, canConfigure: info.canConfigure, settingsUrl: info.settingsUrl }
+    : null
+}
+
 function formatClock(totalSeconds: number) {
   const s = Math.max(0, totalSeconds)
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -100,6 +117,7 @@ export default function ConversationExercise({
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [aiError, setAiError] = useState<AiSetupError | null>(null)
   const [muted, setMuted] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(maxMinutes * 60)
   const [result, setResult] = useState<ConversationResult | null>(initialResult)
@@ -115,7 +133,11 @@ export default function ConversationExercise({
   // Latest transcript, readable from async code that outlives a render.
   const turnsRef = useRef<ConversationTurn[]>([])
 
-  const model = useMemo(() => openai.experimental_realtime(REALTIME_MODEL), [])
+  // Provider and model are the school's choice: the token response says which,
+  // and this stand-in becomes that provider's realtime model when it arrives.
+  const lateModel = useMemo(() => createLateBoundRealtimeModel(), [])
+  // The hook's own setup request failed (status + body), captured as it passed by.
+  const setupFailureRef = useRef<{ status: number; body: string } | null>(null)
   // One key per mounted tab: the server ties the session to it, so a second
   // tab on the same exercise can't close or grade this one's call. Stable on
   // purpose — the hook rebuilds its store whenever the token URL changes.
@@ -124,11 +146,13 @@ export default function ConversationExercise({
   const [hint, setHint] = useState<string | null>(null)
   const notesRef = useRef<ConversationNote[]>([])
 
+  const tokenEndpoint = preview?.tokenEndpoint ?? `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}`
+
   // No `sessionConfig` on purpose: instructions, voice and turn detection are
   // embedded in the token by the server, where the student can't edit them.
   const realtime = useRealtime({
-    model,
-    api: { token: preview?.tokenEndpoint ?? `/api/exercises/realtime/token?exerciseId=${exercise.id}&tab=${tab}` },
+    model: lateModel.model,
+    api: { token: tokenEndpoint },
     sessionConfig: preview?.sessionConfig,
     // No tool carries a verdict — grading stays on the server. Returning a
     // value sends a tool output, which makes the tutor speak again: wanted
@@ -156,13 +180,22 @@ export default function ConversationExercise({
       // and a dropped one is handled by the status watcher below.
       if (statusRef.current === 'connected') return
       releaseRef.current()
-      setErrorMsg(
-        error.message.includes('429')
-          ? t('dailyLimitReached')
-          : error.message.includes('403')
-            ? t('notAvailable')
-            : t('connectionError')
-      )
+      const failure = setupFailureRef.current
+      setupFailureRef.current = null
+      const typed = failure ? parseSetupError(failure.body) : null
+      if (typed) {
+        // 402/424/422/502 with a typed body: the school's AI setup, not the student's doing.
+        setAiError(typed)
+      } else {
+        const status = failure ? String(failure.status) : error.message
+        setErrorMsg(
+          status.includes('429')
+            ? t('dailyLimitReached')
+            : status.includes('403')
+              ? t('notAvailable')
+              : t('connectionError')
+        )
+      }
       setPhase('error')
     },
   })
@@ -197,6 +230,8 @@ export default function ConversationExercise({
 
   const start = async () => {
     setErrorMsg(null)
+    setAiError(null)
+    setupFailureRef.current = null
     setMuted(false)
     setEndRequested(false)
     setHint(null)
@@ -222,7 +257,19 @@ export default function ConversationExercise({
       return
     }
     setPhase('live')
-    await realtime.connect()
+    // The hook fetches the setup endpoint itself; watch that one response so
+    // the model stand-in learns the provider/model BEFORE the socket opens.
+    const stopObserving = observeRealtimeSetup(tokenEndpoint, {
+      onDescriptor: (descriptor) => lateModel.bind(descriptor),
+      onFailure: (status, body) => {
+        setupFailureRef.current = { status, body }
+      },
+    })
+    try {
+      await realtime.connect()
+    } finally {
+      stopObserving()
+    }
   }
 
   // Once the socket is up: open the mic and have the tutor speak first.
@@ -272,7 +319,16 @@ export default function ConversationExercise({
         setPhase('error')
         return
       }
-      if (!res.ok) throw new Error(String(res.status))
+      if (!res.ok) {
+        // A school with no usable AI key can't grade; the session stays open.
+        const typed = parseSetupError(await res.text().catch(() => ''))
+        if (typed) {
+          setAiError(typed)
+          setPhase('error')
+          return
+        }
+        throw new Error(String(res.status))
+      }
       const data = await res.json()
       setResult({
         score: data.score,
@@ -401,12 +457,20 @@ export default function ConversationExercise({
   // One alert, next to the button the student will press next.
   const retryInResult = showResult && !limitReached
 
-  const errorAlert = errorMsg && (
+  const hasError = Boolean(errorMsg || aiError)
+  const errorAlert = aiError ? (
+    <AiErrorNotice
+      code={aiError.code}
+      canConfigure={aiError.canConfigure}
+      settingsUrl={aiError.settingsUrl}
+      audience={preview ? 'teacher' : 'student'}
+    />
+  ) : errorMsg ? (
     <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
       <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
       {errorMsg}
     </p>
-  )
+  ) : null
 
   const taskPanel = (
     <div className="space-y-4">
@@ -424,7 +488,7 @@ export default function ConversationExercise({
         </div>
 
         {/* On a phone the alert rides with the result tab's retry button. */}
-        {errorMsg && <div className={cn('mt-4', retryInResult && 'hidden lg:block')}>{errorAlert}</div>}
+        {hasError && <div className={cn('mt-4', retryInResult && 'hidden lg:block')}>{errorAlert}</div>}
 
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           {phase === 'live' ? (

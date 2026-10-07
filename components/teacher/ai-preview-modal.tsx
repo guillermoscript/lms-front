@@ -26,7 +26,8 @@ import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion"
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { LessonCompletionCard } from '@/components/ai/lesson-completion-card'
 import { findLessonCompletion, lessonCompletionOutput } from '@/lib/ai/lesson-completion'
-import { classifyAiChatError } from '@/lib/ai/chat-error'
+import { parseAiChatError, isAiSetupErrorKind } from '@/lib/ai/chat-error'
+import { AiErrorNotice } from '@/components/ai/ai-error-notice'
 import { DefaultChatTransport } from 'ai'
 import {
   ChatAttachButton,
@@ -82,7 +83,7 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
   const [transport] = useState(() => new DefaultChatTransport({ api: endpoint }))
   const { messages, sendMessage: send, setMessages, status, stop, error, clearError, regenerate } = useChat({ transport })
   const sendMessage = (message: Parameters<typeof send>[0]) => send(message, { body: config })
-  const errorKind = error ? classifyAiChatError(error) : 'generic'
+  const errorInfo = error ? parseAiChatError(error) : null
 
   const isBusy = status === 'submitted' || status === 'streaming'
   const isCompleted = Boolean(findLessonCompletion(messages)) || messages.some((message) => message.parts.some((part) => exerciseCompletion(part)?.success))
@@ -209,12 +210,25 @@ function InnerAIPreviewModal({ type, config }: AIPreviewModalProps) {
                   </Message>
                 )}
                 {error && (
-                  <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                    <span>{errorKind === 'generic' ? t('error') : tChatLimits(errorKind)}</span>
-                    <Button type="button" variant="outline" size="sm" onClick={() => { clearError(); regenerate({ body: config }) }}>
-                      {t('retry')}
-                    </Button>
-                  </div>
+                  errorInfo && isAiSetupErrorKind(errorInfo.kind) ? (
+                    <AiErrorNotice
+                      code={errorInfo.kind}
+                      canConfigure={errorInfo.canConfigure}
+                      settingsUrl={errorInfo.settingsUrl}
+                      audience="teacher"
+                    >
+                      <Button type="button" variant="outline" size="sm" onClick={() => { clearError(); regenerate({ body: config }) }}>
+                        {t('retry')}
+                      </Button>
+                    </AiErrorNotice>
+                  ) : (
+                    <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      <span>{errorInfo && errorInfo.kind !== 'generic' ? tChatLimits(errorInfo.kind) : t('error')}</span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { clearError(); regenerate({ body: config }) }}>
+                        {t('retry')}
+                      </Button>
+                    </div>
+                  )
                 )}
               </ConversationContent>
               <ConversationScrollButton />

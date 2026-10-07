@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserId, getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isPlanFeatureError, planFeatureErrorMessage, requirePlanFeature } from '@/lib/plans/server'
 import { getLocale } from 'next-intl/server'
+import type { AiErrorCode } from '@/lib/ai/errors'
 import {
   AI_PERSONAS,
   DETAIL_LEVELS,
@@ -33,12 +34,16 @@ interface ExamGradingResult {
   overall_feedback?: string
   question_feedback?: Record<string, QuestionFeedback>
   error?: string
+  /** Set on a typed AI failure (quota, provider down): the submission stays pending, so retry is safe. */
+  aiCode?: AiErrorCode
 }
 
 /**
  * Grade the caller's own exam submission. The grading itself lives in
  * `lib/exams/grade.ts`, shared with `POST /api/exams/[examId]/grade` (#839).
  * The answers are read from `exam_answers`, not taken from the caller.
+ * Free text is graded on the school's own AI key; a school without a usable
+ * key gets it parked for teacher review (a successful result), see grade.ts.
  */
 export async function gradeExamWithAI(params: {
   examId: number
@@ -56,7 +61,7 @@ export async function gradeExamWithAI(params: {
       examId: params.examId,
       locale: await requestLocale(),
     })
-    if (!outcome.ok) return { success: false, error: outcome.error }
+    if (!outcome.ok) return { success: false, error: outcome.error, aiCode: outcome.aiCode }
     return {
       success: true,
       score: outcome.score,
@@ -69,10 +74,8 @@ export async function gradeExamWithAI(params: {
       const Sentry = await import('@sentry/nextjs')
       Sentry.captureException(error, { extra: { examId: params.examId, submissionId: params.submissionId } })
     } catch {}
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to grade exam',
-    }
+    // Never echo error.message: a provider failure can carry request detail.
+    return { success: false, error: 'Failed to grade exam' }
   }
 }
 
@@ -114,6 +117,7 @@ export async function updateExamAIConfig(params: {
       .eq('user_id', userId)
 
     const isAdmin = roles?.some((r) => r.role === 'admin')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isCourseAuthor = (exam.course as any).author_id === userId
 
     if (!isAdmin && !isCourseAuthor) {

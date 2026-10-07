@@ -81,6 +81,38 @@ export type Database = {
           },
         ]
       }
+      ai_image_usage: {
+        Row: {
+          image_count: number
+          last_reserved_at: string | null
+          period_date: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          image_count?: number
+          last_reserved_at?: string | null
+          period_date: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          image_count?: number
+          last_reserved_at?: string | null
+          period_date?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_image_usage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aristotle_messages: {
         Row: {
           content: string
@@ -1454,8 +1486,22 @@ export type Database = {
             foreignKeyName: "community_user_blocks_blocked_id_fkey"
             columns: ["blocked_id"]
             isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "community_user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "get_reviews"
+            referencedColumns: ["profile_id"]
           },
           {
             foreignKeyName: "community_user_blocks_blocker_id_fkey"
@@ -1470,7 +1516,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          muted_by: string
+          muted_by: string | null
           muted_until: string | null
           reason: string | null
           tenant_id: string
@@ -1479,7 +1525,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          muted_by: string
+          muted_by?: string | null
           muted_until?: string | null
           reason?: string | null
           tenant_id: string
@@ -1488,7 +1534,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          muted_by?: string
+          muted_by?: string | null
           muted_until?: string | null
           reason?: string | null
           tenant_id?: string
@@ -1568,8 +1614,10 @@ export type Database = {
           course_id: number
           created_at: string | null
           enabled: boolean | null
+          model: string | null
           model_config: Json | null
           persona: string | null
+          provider: string | null
           teaching_approach: string | null
           tenant_id: string
           tutor_id: string
@@ -1580,8 +1628,10 @@ export type Database = {
           course_id: number
           created_at?: string | null
           enabled?: boolean | null
+          model?: string | null
           model_config?: Json | null
           persona?: string | null
+          provider?: string | null
           teaching_approach?: string | null
           tenant_id: string
           tutor_id?: string
@@ -1592,8 +1642,10 @@ export type Database = {
           course_id?: number
           created_at?: string | null
           enabled?: boolean | null
+          model?: string | null
           model_config?: Json | null
           persona?: string | null
+          provider?: string | null
           teaching_approach?: string | null
           tenant_id?: string
           tutor_id?: string
@@ -2645,14 +2697,21 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "exercise_grading_secrets_exercise_id_fkey"
+            foreignKeyName: "exercise_answer_keys_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: true
+            referencedRelation: "exercise_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_answer_keys_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: true
             referencedRelation: "exercises"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "exercise_grading_secrets_tenant_id_fkey"
+            foreignKeyName: "exercise_answer_keys_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2798,7 +2857,7 @@ export type Database = {
           active_file: string | null
           course_id: number
           created_at: string | null
-          created_by: string
+          created_by: string | null
           description: string | null
           difficulty_level: Database["public"]["Enums"]["difficulty_level"]
           exercise_config: Json | null
@@ -2820,7 +2879,7 @@ export type Database = {
           active_file?: string | null
           course_id: number
           created_at?: string | null
-          created_by: string
+          created_by?: string | null
           description?: string | null
           difficulty_level: Database["public"]["Enums"]["difficulty_level"]
           exercise_config?: Json | null
@@ -2842,7 +2901,7 @@ export type Database = {
           active_file?: string | null
           course_id?: number
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           difficulty_level?: Database["public"]["Enums"]["difficulty_level"]
           exercise_config?: Json | null
@@ -3499,7 +3558,7 @@ export type Database = {
           total_amount: number
           transaction_id: number | null
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -3516,7 +3575,7 @@ export type Database = {
           total_amount: number
           transaction_id?: number | null
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -3533,7 +3592,7 @@ export type Database = {
           total_amount?: number
           transaction_id?: number | null
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3919,7 +3978,7 @@ export type Database = {
           allow_skip: boolean
           content_block_id: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           exercise_id: number
           id: number
           is_enabled: boolean
@@ -3936,7 +3995,7 @@ export type Database = {
           allow_skip?: boolean
           content_block_id?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           exercise_id: number
           id?: number
           is_enabled?: boolean
@@ -3953,7 +4012,7 @@ export type Database = {
           allow_skip?: boolean
           content_block_id?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           exercise_id?: number
           id?: number
           is_enabled?: boolean
@@ -4139,7 +4198,7 @@ export type Database = {
           lesson_id: number
           mime_type: string
           tenant_id: string
-          uploaded_by: string
+          uploaded_by: string | null
         }
         Insert: {
           created_at?: string
@@ -4151,7 +4210,7 @@ export type Database = {
           lesson_id: number
           mime_type: string
           tenant_id: string
-          uploaded_by: string
+          uploaded_by?: string | null
         }
         Update: {
           created_at?: string
@@ -4163,7 +4222,7 @@ export type Database = {
           lesson_id?: number
           mime_type?: string
           tenant_id?: string
-          uploaded_by?: string
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -4763,7 +4822,7 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           admin_notes?: string | null
@@ -4801,7 +4860,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           admin_notes?: string | null
@@ -4839,7 +4898,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -5095,15 +5154,15 @@ export type Database = {
           expires_at: string
           interval: string
           notes: string | null
-          payment_provider: string
           payment_observed_at: string | null
+          payment_provider: string
           plan_id: string
           proof_url: string | null
           provider_charge_id: string | null
           provider_reference: string | null
           request_id: string
           request_type: string | null
-          requested_by: string
+          requested_by: string | null
           settlement_base: number | null
           settlement_currency: string | null
           settlement_mint: string | null
@@ -5135,15 +5194,15 @@ export type Database = {
           expires_at?: string
           interval?: string
           notes?: string | null
-          payment_provider?: string
           payment_observed_at?: string | null
+          payment_provider?: string
           plan_id: string
           proof_url?: string | null
           provider_charge_id?: string | null
           provider_reference?: string | null
           request_id?: string
           request_type?: string | null
-          requested_by: string
+          requested_by?: string | null
           settlement_base?: number | null
           settlement_currency?: string | null
           settlement_mint?: string | null
@@ -5175,15 +5234,15 @@ export type Database = {
           expires_at?: string
           interval?: string
           notes?: string | null
-          payment_provider?: string
           payment_observed_at?: string | null
+          payment_provider?: string
           plan_id?: string
           proof_url?: string | null
           provider_charge_id?: string | null
           provider_reference?: string | null
           request_id?: string
           request_type?: string | null
-          requested_by?: string
+          requested_by?: string | null
           settlement_base?: number | null
           settlement_currency?: string | null
           settlement_mint?: string | null
@@ -6381,6 +6440,179 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_ai_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          at: string
+          feature: string | null
+          id: number
+          provider: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          at?: string
+          feature?: string | null
+          id?: never
+          provider?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          at?: string
+          feature?: string | null
+          id?: never
+          provider?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ai_credentials: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          key_ciphertext: string
+          key_last4: string
+          key_version: number
+          last_error_code: string | null
+          last_used_at: string | null
+          models_cache: Json | null
+          models_cached_at: string | null
+          provider: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          validated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_ciphertext: string
+          key_last4: string
+          key_version: number
+          last_error_code?: string | null
+          last_used_at?: string | null
+          models_cache?: Json | null
+          models_cached_at?: string | null
+          provider: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_ciphertext?: string
+          key_last4?: string
+          key_version?: number
+          last_error_code?: string | null
+          last_used_at?: string | null
+          models_cache?: Json | null
+          models_cached_at?: string | null
+          provider?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ai_feature_models: {
+        Row: {
+          feature: string
+          model: string
+          params: Json
+          provider: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          feature: string
+          model: string
+          params?: Json
+          provider: string
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          feature?: string
+          model?: string
+          params?: Json
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_feature_models_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ai_settings: {
+        Row: {
+          ai_trace_content: boolean
+          default_model: string | null
+          default_provider: string | null
+          mode: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_trace_content?: boolean
+          default_model?: string | null
+          default_provider?: string | null
+          mode?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_trace_content?: boolean
+          default_model?: string | null
+          default_provider?: string | null
+          mode?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_billing_customers: {
         Row: {
           created_at: string
@@ -6574,8 +6806,8 @@ export type Database = {
           billing_email: string | null
           billing_period_end: string | null
           billing_status: string | null
-          created_at: string | null
           country: string | null
+          created_at: string | null
           domain: string | null
           id: string
           logo_url: string | null
@@ -6594,8 +6826,8 @@ export type Database = {
           billing_email?: string | null
           billing_period_end?: string | null
           billing_status?: string | null
-          created_at?: string | null
           country?: string | null
+          created_at?: string | null
           domain?: string | null
           id?: string
           logo_url?: string | null
@@ -6614,8 +6846,8 @@ export type Database = {
           billing_email?: string | null
           billing_period_end?: string | null
           billing_status?: string | null
-          created_at?: string | null
           country?: string | null
+          created_at?: string | null
           domain?: string | null
           id?: string
           logo_url?: string | null
@@ -6720,7 +6952,7 @@ export type Database = {
           tenant_id: string
           transaction_date: string
           transaction_id: number
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           amount: number
@@ -6748,7 +6980,7 @@ export type Database = {
           tenant_id?: string
           transaction_date?: string
           transaction_id?: number
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           amount?: number
@@ -6776,7 +7008,7 @@ export type Database = {
           tenant_id?: string
           transaction_date?: string
           transaction_id?: number
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -6935,10 +7167,10 @@ export type Database = {
           id: string
           last_error: string | null
           payload: Json
+          processed_at: string | null
           processing_lease_expires_at: string | null
           processing_started_at: string | null
           processing_token: string | null
-          processed_at: string | null
           provider: string
           provider_event_id: string
           received_at: string
@@ -6950,10 +7182,10 @@ export type Database = {
           id?: string
           last_error?: string | null
           payload?: Json
+          processed_at?: string | null
           processing_lease_expires_at?: string | null
           processing_started_at?: string | null
           processing_token?: string | null
-          processed_at?: string | null
           provider: string
           provider_event_id: string
           received_at?: string
@@ -6965,10 +7197,10 @@ export type Database = {
           id?: string
           last_error?: string | null
           payload?: Json
+          processed_at?: string | null
           processing_lease_expires_at?: string | null
           processing_started_at?: string | null
           processing_token?: string | null
-          processed_at?: string | null
           provider?: string
           provider_event_id?: string
           received_at?: string
@@ -7066,8 +7298,7 @@ export type Database = {
           course_id: number | null
           description: string | null
           difficulty_level:
-            | Database["public"]["Enums"]["difficulty_level"]
-            | null
+            Database["public"]["Enums"]["difficulty_level"] | null
           exercise_type: Database["public"]["Enums"]["exercise_type"] | null
           id: number | null
           time_limit: number | null
@@ -7113,7 +7344,7 @@ export type Database = {
         Args: {
           _interval: string
           _plan_id: string
-          _plan_slug: string | null
+          _plan_slug: string
           _provider: string
           _provider_customer_id?: string
           _provider_event_id: string
@@ -7125,41 +7356,6 @@ export type Database = {
           period_end: string
           period_start: string
         }[]
-      }
-      apply_webhook_subscription_period: {
-        Args: {
-          _allow_period_realign?: boolean
-          _new_period_end: string
-          _provider: string
-          _provider_event_id: string
-          _provider_subscription_id: string
-        }
-        Returns: boolean
-      }
-      assert_plan_limit_headroom: {
-        Args: { _resource: string; _tenant_id: string }
-        Returns: undefined
-      }
-      calculate_platform_billing_period: {
-        Args: {
-          _current_period_end: string | null
-          _interval: string
-          _is_renewal?: boolean
-          _now?: string
-        }
-        Returns: {
-          period_end: string
-          period_start: string
-        }[]
-      }
-      claim_webhook_business_effect: {
-        Args: {
-          _effect_type: string
-          _provider: string
-          _provider_event_id: string
-          _target_id: string
-        }
-        Returns: boolean
       }
       apply_webhook_refund: {
         Args: {
@@ -7177,125 +7373,19 @@ export type Database = {
           user_id: string
         }[]
       }
-      claim_webhook_event: {
+      apply_webhook_subscription_period: {
         Args: {
-          _claim_token: string
-          _event_type: string
-          _lease_seconds?: number
-          _payload: Json
+          _allow_period_realign?: boolean
+          _new_period_end: string
           _provider: string
           _provider_event_id: string
-        }
-        Returns: {
-          claim_status: string
-          current_attempt_count: number
-          event_id: string
-        }[]
-      }
-      claim_pending_pushes: {
-        Args: { _max_age?: unknown; _max_notifications?: number }
-        Returns: {
-          content: string
-          data: Json
-          kind: string
-          notification_id: number
-          priority: string
-          recipients: number
-          title: string
-          tokens: string[]
-          url: string
-        }[]
-      }
-      claim_solana_platform_activation: {
-        Args: {
-          _claim_token: string
-          _lease_seconds?: number
-          _max_attempts?: number
-          _request_id: string
-        }
-        Returns: {
-          claim_status: string
-          current_activation_state: string
-          current_attempt_count: number
-        }[]
-      }
-      complete_webhook_event: {
-        Args: { _claim_token: string; _event_id: string }
-        Returns: boolean
-      }
-      complete_solana_platform_activation: {
-        Args: { _claim_token: string; _request_id: string }
-        Returns: boolean
-      }
-      confirm_platform_payment_request: {
-        Args: { _confirmed_by: string; _request_id: string }
-        Returns: {
-          applied: boolean
-          confirmed_at: string
-          confirmed_by: string
-          period_end: string
-          period_start: string
-          switch_id: string
-          tenant_id: string
-        }[]
-      }
-      count_plan_limit_usage: {
-        Args: { _resource: string; _tenant_id: string }
-        Returns: number
-      }
-      downgrade_platform_subscription_if_current: {
-        Args: {
-          _payment_provider: string
           _provider_subscription_id: string
-          _tenant_id: string
-        }
-        Returns: number
-      }
-      fail_solana_platform_activation: {
-        Args: {
-          _claim_token: string
-          _last_error: string
-          _max_attempts?: number
-          _request_id: string
-          _retry_delay_seconds?: number
-        }
-        Returns: string
-      }
-      get_tenant_plan_usage: { Args: { _tenant_id: string }; Returns: Json }
-      increment_ai_chat_usage: {
-        Args: { _tenant_id: string; _user_id: string }
-        Returns: Json
-      }
-      invoke_cron_route: { Args: { _route: string }; Returns: number }
-      observe_solana_platform_payment: {
-        Args: { _request_id: string; _signature: string; _tenant_id: string }
-        Returns: {
-          current_activation_state: string
-          current_signature: string
-          observation_status: string
-        }[]
-      }
-      prepare_account_deletion: {
-        Args: { _user_id: string }
-        Returns: {
-          bucket_id: string
-          name: string
-        }[]
-      }
-      promote_platform_subscription_switch: {
-        Args: {
-          _switch_id: string
-          _target_interval: string
-          _target_payment_provider: string
-          _target_period_end: string | null
-          _target_period_start: string | null
-          _target_plan_id: string
-          _target_provider_customer_id: string | null
-          _target_provider_subscription_id: string | null
-          _target_status: string
-          _tenant_id: string
         }
         Returns: boolean
+      }
+      assert_plan_limit_headroom: {
+        Args: { _resource: string; _tenant_id: string }
+        Returns: undefined
       }
       award_xp:
         | {
@@ -7319,19 +7409,6 @@ export type Database = {
             }
             Returns: undefined
           }
-      calculate_course_completion: {
-        Args: { p_course_id: number; p_user_id: string }
-        Returns: Json
-      }
-      calculate_pending_payout: {
-        Args: { p_tenant_id: string }
-        Returns: number
-      }
-      can_read_exam: { Args: { _exam_id: number }; Returns: boolean }
-      cancel_subscription: {
-        Args: { _plan_id: number; _user_id: string }
-        Returns: undefined
-      }
       ban_tenant_member: {
         Args: {
           _actor_id: string
@@ -7341,8 +7418,29 @@ export type Database = {
         }
         Returns: undefined
       }
-      lift_tenant_ban: {
-        Args: { _tenant_id: string; _user_id: string }
+      calculate_course_completion: {
+        Args: { p_course_id: number; p_user_id: string }
+        Returns: Json
+      }
+      calculate_pending_payout: {
+        Args: { p_tenant_id: string }
+        Returns: number
+      }
+      calculate_platform_billing_period: {
+        Args: {
+          _current_period_end: string
+          _interval: string
+          _is_renewal?: boolean
+          _now?: string
+        }
+        Returns: {
+          period_end: string
+          period_start: string
+        }[]
+      }
+      can_read_exam: { Args: { _exam_id: number }; Returns: boolean }
+      cancel_subscription: {
+        Args: { _plan_id: number; _user_id: string }
         Returns: undefined
       }
       change_subscription_plan: {
@@ -7381,7 +7479,76 @@ export type Database = {
         Args: { p_course_id: number; p_user_id: string }
         Returns: Json
       }
-      cleanup_old_preview_sessions: { Args: never; Returns: undefined }
+      claim_pending_pushes: {
+        Args: { _max_age?: string; _max_notifications?: number }
+        Returns: {
+          content: string
+          data: Json
+          kind: string
+          notification_id: number
+          priority: string
+          recipients: number
+          title: string
+          tokens: string[]
+          url: string
+        }[]
+      }
+      claim_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _lease_seconds?: number
+          _max_attempts?: number
+          _request_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_activation_state: string
+          current_attempt_count: number
+        }[]
+      }
+      claim_webhook_business_effect: {
+        Args: {
+          _effect_type: string
+          _provider: string
+          _provider_event_id: string
+          _target_id: string
+        }
+        Returns: boolean
+      }
+      claim_webhook_event: {
+        Args: {
+          _claim_token: string
+          _event_type: string
+          _lease_seconds?: number
+          _payload: Json
+          _provider: string
+          _provider_event_id: string
+        }
+        Returns: {
+          claim_status: string
+          current_attempt_count: number
+          event_id: string
+        }[]
+      }
+      cleanup_old_preview_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      community_award_xp: {
+        Args: {
+          _action: string
+          _reference_id: string
+          _reference_type: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: number
+      }
+      community_can_accept_answer: {
+        Args: { _author: string; _tenant: string; _user: string }
+        Returns: boolean
+      }
+      community_can_write: { Args: { _tenant_id: string }; Returns: boolean }
       community_create_milestone: {
         Args: {
           _course_id: number
@@ -7391,6 +7558,11 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      community_enabled: { Args: { _tenant_id: string }; Returns: boolean }
+      community_is_muted: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
       }
       community_mention_candidates: {
         Args: {
@@ -7406,6 +7578,16 @@ export type Database = {
           role: string
           user_id: string
         }[]
+      }
+      community_mention_eligible: {
+        Args: {
+          _author: string
+          _course: number
+          _post_author: string
+          _tenant: string
+          _user: string
+        }
+        Returns: boolean
       }
       community_milestone_allowed: {
         Args: { _tenant_id: string; _user_id: string }
@@ -7439,13 +7621,37 @@ export type Database = {
         Args: { _course: number; _tenant: string; _user: string }
         Returns: boolean
       }
+      community_notify_mention: {
+        Args: { _mention_id: string }
+        Returns: number
+      }
+      community_notify_prompt_graded: {
+        Args: { _grade_id: string }
+        Returns: number
+      }
       community_notify_wants: {
         Args: { _category: string; _user: string }
+        Returns: boolean
+      }
+      community_parse_mentions: {
+        Args: { _content: string; _max?: number }
+        Returns: string[]
+      }
+      community_post_accepts: {
+        Args: { _for_reply: boolean; _post_id: string; _tenant_id: string }
+        Returns: boolean
+      }
+      community_post_target_ok: {
+        Args: { _course_id: number; _lesson_id: number; _tenant_id: string }
         Returns: boolean
       }
       community_prompt_recipients: {
         Args: { _post_id: string }
         Returns: string[]
+      }
+      community_reply_parent_ok: {
+        Args: { _parent_id: string; _post_id: string }
+        Returns: boolean
       }
       community_reply_recipients: {
         Args: { _comment_id: string }
@@ -7454,8 +7660,48 @@ export type Database = {
           user_id: string
         }[]
       }
+      community_setting_on: {
+        Args: { _key: string; _tenant_id: string }
+        Returns: boolean
+      }
+      community_sync_mentions: {
+        Args: { _comment_id: string; _is_insert: boolean; _post_id: string }
+        Returns: undefined
+      }
       community_upsert_reply_notification: {
         Args: { _comment_id: string; _recipient: string; _reply_to: string }
+        Returns: number
+      }
+      community_viewer_blocked: {
+        Args: { _author_id: string }
+        Returns: boolean
+      }
+      community_xp_rule: {
+        Args: { _action: string }
+        Returns: Record<string, unknown>
+      }
+      complete_solana_platform_activation: {
+        Args: { _claim_token: string; _request_id: string }
+        Returns: boolean
+      }
+      complete_webhook_event: {
+        Args: { _claim_token: string; _event_id: string }
+        Returns: boolean
+      }
+      confirm_platform_payment_request: {
+        Args: { _confirmed_by: string; _request_id: string }
+        Returns: {
+          applied: boolean
+          confirmed_at: string
+          confirmed_by: string
+          period_end: string
+          period_start: string
+          switch_id: string
+          tenant_id: string
+        }[]
+      }
+      count_plan_limit_usage: {
+        Args: { _resource: string; _tenant_id: string }
         Returns: number
       }
       create_notification:
@@ -7488,12 +7734,16 @@ export type Database = {
         Args: { _context?: string; _course_id: number; _message: string }
         Returns: number
       }
-      fail_webhook_event: {
-        Args: { _claim_token: string; _event_id: string; _last_error: string }
-        Returns: boolean
-      }
       create_transaction_for_renewal: {
         Args: { pln_id: number; sub_id: number; usr_id: string }
+        Returns: number
+      }
+      downgrade_platform_subscription_if_current: {
+        Args: {
+          _payment_provider: string
+          _provider_subscription_id: string
+          _tenant_id: string
+        }
         Returns: number
       }
       elo_apply_match: {
@@ -7523,7 +7773,24 @@ export type Database = {
         }
         Returns: undefined
       }
-      generate_verification_code: { Args: never; Returns: string }
+      fail_solana_platform_activation: {
+        Args: {
+          _claim_token: string
+          _last_error: string
+          _max_attempts?: number
+          _request_id: string
+          _retry_delay_seconds?: number
+        }
+        Returns: string
+      }
+      fail_webhook_event: {
+        Args: { _claim_token: string; _event_id: string; _last_error: string }
+        Returns: boolean
+      }
+      generate_verification_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_completed_courses_count: {
         Args: { _user_id: string }
         Returns: number
@@ -7570,14 +7837,14 @@ export type Database = {
         }[]
       }
       get_gamification_features: { Args: { _tenant_id: string }; Returns: Json }
-      get_league_standings: { Args: never; Returns: Json }
+      get_league_standings: { Args: Record<PropertyKey, never>; Returns: Json }
       get_likes_received_count: { Args: { _user_id: string }; Returns: number }
       get_plan_features: { Args: { _tenant_id: string }; Returns: Json }
       get_platform_revenue: {
         Args: { _end?: string; _start?: string }
         Returns: Json
       }
-      get_platform_stats: { Args: never; Returns: Json }
+      get_platform_stats: { Args: Record<PropertyKey, never>; Returns: Json }
       get_published_lesson_counts: {
         Args: { _course_ids: number[] }
         Returns: {
@@ -7585,15 +7852,16 @@ export type Database = {
           lesson_count: number
         }[]
       }
-      get_tenant_id: { Args: never; Returns: string }
-      get_tenant_role: { Args: never; Returns: string }
-      grant_free_entitlement: {
-        Args: { _course_id: number; _user_id: string }
-        Returns: undefined
-      }
+      get_tenant_id: { Args: Record<PropertyKey, never>; Returns: string }
+      get_tenant_plan_usage: { Args: { _tenant_id: string }; Returns: Json }
+      get_tenant_role: { Args: Record<PropertyKey, never>; Returns: string }
       grade_exercise_answers: {
         Args: { _answers: Json; _exercise_id: number }
         Returns: Json
+      }
+      grant_free_entitlement: {
+        Args: { _course_id: number; _user_id: string }
+        Returns: undefined
       }
       grant_free_subscription: {
         Args: { _plan_id: number; _user_id: string }
@@ -7608,7 +7876,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      handle_student_subscription_expiry: { Args: never; Returns: undefined }
+      handle_student_subscription_expiry: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_course_access: {
         Args: { _course_id: number; _user_id: string }
         Returns: boolean
@@ -7622,21 +7893,50 @@ export type Database = {
           user_id: string
         }[]
       }
+      increment_ai_chat_usage: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: Json
+      }
+      invoke_cron_route: { Args: { _route: string }; Returns: number }
+      is_admin_of: { Args: { _tenant: string }; Returns: boolean }
       is_course_complete: {
         Args: { _course_id: number; _user_id: string }
         Returns: boolean
       }
-      is_super_admin: { Args: never; Returns: boolean }
-      is_tenant_staff: { Args: never; Returns: boolean }
+      is_member_of: { Args: { _tenant: string }; Returns: boolean }
+      is_notification_recipient: {
+        Args: { _notification_id: number }
+        Returns: boolean
+      }
+      is_staff_of: { Args: { _tenant: string }; Returns: boolean }
+      is_super_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_tenant_staff: { Args: Record<PropertyKey, never>; Returns: boolean }
       issue_certificate_if_eligible: {
         Args: { p_course_id: number; p_user_id: string }
         Returns: Json
       }
+      lift_tenant_ban: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: undefined
+      }
+      manages_user: { Args: { _user: string }; Returns: boolean }
       next_version_number: {
         Args: { _id: number; _type: string }
         Returns: number
       }
-      notify_users_for_renewal: { Args: never; Returns: undefined }
+      normalize_answer_text: { Args: { _value: string }; Returns: string }
+      notify_users_for_renewal: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      observe_solana_platform_payment: {
+        Args: { _request_id: string; _signature: string; _tenant_id: string }
+        Returns: {
+          current_activation_state: string
+          current_signature: string
+          observation_status: string
+        }[]
+      }
       override_exam_score: {
         Args: {
           p_new_points: number
@@ -7646,16 +7946,60 @@ export type Database = {
         }
         Returns: undefined
       }
-      publish_scheduled_lessons: { Args: never; Returns: undefined }
-      record_cron_run_results: { Args: never; Returns: number }
+      prepare_account_deletion: {
+        Args: { _user_id: string }
+        Returns: {
+          bucket_id: string
+          name: string
+        }[]
+      }
+      promote_platform_subscription_switch: {
+        Args: {
+          _switch_id: string
+          _target_interval: string
+          _target_payment_provider: string
+          _target_period_end: string
+          _target_period_start: string
+          _target_plan_id: string
+          _target_provider_customer_id: string
+          _target_provider_subscription_id: string
+          _target_status: string
+          _tenant_id: string
+        }
+        Returns: boolean
+      }
+      publish_scheduled_lessons: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      record_cron_run_results: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       redeem_store_item: {
         Args: { _item_id: string; _tenant_id: string; _user_id: string }
         Returns: Json
       }
-      refresh_leaderboard_cache: { Args: never; Returns: undefined }
+      refresh_leaderboard_cache: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       register_push_token: {
         Args: { _device_name?: string; _platform: string; _token: string }
         Returns: undefined
+      }
+      release_ai_image_generation: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: undefined
+      }
+      reserve_ai_image_generation: {
+        Args: {
+          _cooldown_seconds: number
+          _daily_cap: number
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: Json
       }
       restore_exam_version: {
         Args: { _exam_id: number; _version_number: number }
@@ -7716,10 +8060,15 @@ export type Database = {
         Args: { _transaction_id: number }
         Returns: string
       }
+      split_exercise_answer_key: {
+        Args: { _config: Json; _existing: Json }
+        Returns: Record<string, unknown>
+      }
       submit_exam: {
         Args: { p_answers: Json; p_exam_id: number }
         Returns: number
       }
+      tenant_ai_configured: { Args: { _tenant_id: string }; Returns: Json }
       tenant_plan_limit: {
         Args: { _key: string; _tenant_id: string }
         Returns: number
@@ -7740,23 +8089,11 @@ export type Database = {
     }
     Enums: {
       ai_sender_type:
-        | "system"
-        | "user"
-        | "assistant"
-        | "function"
-        | "data"
-        | "tool"
+        "system" | "user" | "assistant" | "function" | "data" | "tool"
       app_role: "admin" | "moderator" | "teacher" | "student"
       chat_types: "free_chat" | "q&a" | "exam_prep" | "course_convo"
       currency_type:
-        | "usd"
-        | "eur"
-        | "mxn"
-        | "cop"
-        | "clp"
-        | "pen"
-        | "ars"
-        | "brl"
+        "usd" | "eur" | "mxn" | "cop" | "clp" | "pen" | "ars" | "brl"
       difficulty_level: "easy" | "medium" | "hard"
       enrollement_status: "active" | "disabled"
       entitlement_source: "product" | "subscription" | "free" | "admin_grant"
@@ -7785,11 +8122,7 @@ export type Database = {
       reviewable: "lessons" | "courses" | "exams"
       status: "published" | "draft" | "archived"
       subscription_status:
-        | "active"
-        | "canceled"
-        | "expired"
-        | "renewed"
-        | "past_due"
+        "active" | "canceled" | "expired" | "renewed" | "past_due"
       ticket_status: "open" | "in_progress" | "resolved" | "closed"
       transaction_status:
         | "pending"
@@ -7813,12 +8146,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7840,13 +8173,12 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7865,13 +8197,12 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7890,13 +8221,12 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -7909,11 +8239,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

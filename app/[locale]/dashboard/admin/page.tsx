@@ -26,6 +26,8 @@ import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
 import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { getSchoolJoinUrl } from '@/app/actions/admin/invitations'
+import { AiKeyBanner } from '@/components/admin/ai/ai-key-banner'
+import { getTenantAiEnabled } from '@/lib/ai/ui-flags'
 
 export default async function AdminDashboardPage({
   params,
@@ -199,7 +201,8 @@ export default async function AdminDashboardPage({
     : firstCourseLessonCount === 0
       ? `/dashboard/teacher/courses/${firstCourse.course_id}/lessons/new?from=new-course`
       : `/dashboard/teacher/courses/${firstCourse.course_id}`
-  const joinUrl = await getSchoolJoinUrl()
+  // BYOK: no provider key yet means every AI feature answers "not configured".
+  const [joinUrl, aiEnabled] = await Promise.all([getSchoolJoinUrl(), getTenantAiEnabled()])
 
   const stats = [
     {
@@ -255,6 +258,8 @@ export default async function AdminDashboardPage({
         completed={isTourCompleted(uiState, 'admin-dashboard')}
         toursEnabled={areToursEnabled(uiState)}
       />
+
+      {!aiEnabled && <AiKeyBanner />}
 
       {(totalCourses ?? 0) === 0 && <CourseArchitectCta />}
 

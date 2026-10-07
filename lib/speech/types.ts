@@ -79,10 +79,13 @@ export interface ExerciseContext {
 
 export interface STTProvider {
   name: string
-  transcribe(audioUrl: string, config?: STTConfig): Promise<TranscriptionResult>
+  /** Raw audio bytes. Fetching a storage URL is the pipeline's job, not the provider's. */
+  transcribe(audio: Buffer | Uint8Array | URL, config?: STTConfig): Promise<TranscriptionResult>
 }
 
 export interface SpeechCoachOptions {
+  /** Aborts the provider calls (route deadline), so a timed-out run stops spending the school's key. */
+  abortSignal?: AbortSignal
   supabase?: import('@supabase/supabase-js').SupabaseClient
 }
 

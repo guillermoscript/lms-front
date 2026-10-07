@@ -82,11 +82,15 @@ NEXT_PUBLIC_APP_URL=http://lvh.me:3000
 | `MAILGUN_API_URL` | Optional | Mailgun API base URL. Use `https://api.eu.mailgun.net` for EU region. Defaults to `https://api.mailgun.net`. | Mailgun docs (based on your region) | `https://api.mailgun.net` |
 | `EMAIL_FROM` | Optional | Sender address for outgoing emails. Defaults to `noreply@<MAILGUN_DOMAIN>`. | Choose your own | `noreply@yourdomain.com` |
 
-### AI / OpenAI
+### AI (bring your own key)
+
+AI is BYOK: each school stores its own provider keys (Admin > Settings > AI). The platform holds **no** AI provider key and has no fallback, so `OPENAI_API_KEY`, `ASSEMBLYAI_API_KEY` and `NEXT_PUBLIC_OPENAI_API_KEY` are not read anywhere. Only the master key that encrypts the stored keys is configured here. See [`AI_BYOK.md`](AI_BYOK.md).
 
 | Variable | Required | Description | Where to get it | Example |
 |----------|----------|-------------|-----------------|---------|
-| `OPENAI_API_KEY` | Optional | OpenAI API key for AI-powered features (exam grading, exercise generation, AI tutor). Server-side only. | OpenAI Platform > API Keys | `sk-proj-abc123...` |
+| `AI_KEYS_ENCRYPTION_KEYS` | Required for AI | JSON map of master-key version to base64 32-byte key. Encrypts `tenant_ai_credentials` (AES-256-GCM, AAD `tenantId:provider`). Missing or wrong length = every AI call and key save fails closed. **Losing it makes every stored key unreadable: back it up in a secret manager.** | `openssl rand -base64 32` per version | `{"1":"<base64 32 bytes>"}` |
+| `AI_KEYS_ACTIVE_VERSION` | Required for AI | Version in the map used to encrypt new keys. | Your choice | `1` |
+| `AI_PROVIDER_BASE_URL_OVERRIDE` | Test only | Sends every provider to `<override>/<providerId>` (stub server for E2E). Ignored when `NODE_ENV=production`. | n/a | `http://127.0.0.1:4010` |
 
 ### Certificates
 

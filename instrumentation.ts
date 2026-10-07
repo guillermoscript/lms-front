@@ -15,8 +15,19 @@ export async function register() {
       },
     });
 
+    // BYOK telemetry: schools that turned `ai_trace_content` off keep their
+    // traces (tokens, latency, model, errors) but lose prompt/completion text.
+    // Spans carry {tenantId, feature, provider, modelId} from each call site's
+    // propagateAttributes(); no headers or keys are ever recorded.
+    const { TraceContentGuardProcessor } = await import("@/lib/ai/trace-content-guard");
+    const { lookupTraceContentAllowed } = await import("@/lib/ai/trace-content-lookup");
+
     const tracerProvider = new NodeTracerProvider({
-      spanProcessors: [langfuseSpanProcessor],
+      spanProcessors: [
+        new TraceContentGuardProcessor(langfuseSpanProcessor, {
+          lookup: lookupTraceContentAllowed,
+        }),
+      ],
     });
 
     tracerProvider.register();

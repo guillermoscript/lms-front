@@ -4,6 +4,7 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import { redactSentryEvent } from "@/lib/sentry/redact-event";
 
 // The DSN comes from the environment, never a literal. It used to be hardcoded,
 // which meant every fork of this repo deployed elsewhere reported its crashes into
@@ -22,4 +23,9 @@ Sentry.init({
   // Enable sending user PII (Personally Identifiable Information)
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
   sendDefaultPii: true,
+
+  // BYOK: never let a provider API key / bearer token reach Sentry.
+  beforeSend(event) {
+    return redactSentryEvent(event);
+  },
 });

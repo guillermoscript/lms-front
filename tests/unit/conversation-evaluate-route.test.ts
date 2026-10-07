@@ -4,17 +4,37 @@ const state = vi.hoisted(() => ({
   tenantId: 'school',
   calls: [] as { system: string; prompt: string }[],
   selected: [] as string[],
+  updates: [] as unknown[],
+  resolved: [] as string[],
+  resolveError: null as unknown,
+  models: [] as unknown[],
 }))
+vi.mock('server-only', () => ({}))
 vi.mock('@/lib/supabase/api-auth', () => ({
-  getApiAuthContext: async () => ({ user: { id: 'student' }, tenantId: state.tenantId }),
+  getApiAuthContext: async () => ({
+    user: { id: 'student' },
+    tenantId: state.tenantId,
+    supabase: { from: () => ({ select: () => ({ eq: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { role: 'student' } }) }) }) }) }) }) },
+  }),
+}))
+vi.mock('@/lib/ai/tenant-ai', () => ({
+  createTenantAi: (tenantId: string) => ({
+    tenantId,
+    lastProviderId: () => 'openai',
+    getModelForFeature: async (feature: string) => {
+      state.resolved.push(`${tenantId}:${feature}`)
+      if (state.resolveError) throw state.resolveError
+      return { model: 'school-grader', providerId: 'openai', modelId: 'gpt-x' }
+    },
+  }),
 }))
 vi.mock('@/lib/services/course-access', () => ({ hasCourseAccess: async () => true }))
 vi.mock('@/lib/analytics/server', () => ({ track: async () => {} }))
-vi.mock('@/lib/ai/config', () => ({ AI_MODELS: { grader: 'test' } }))
 vi.mock('ai', () => ({
   Output: { object: (options: unknown) => options },
   generateText: async (options: { system: string; prompt: string }) => {
     state.calls.push(options)
+    state.models.push((options as { model?: unknown }).model)
     return { output: { score: 50, feedback: 'Practice again.', strengths: [], improvements: ['Ask the price.'], corrections: [] } }
   },
 }))
@@ -26,7 +46,7 @@ vi.mock('@/lib/supabase/admin', () => ({
         eq: () => query,
         order: () => query,
         limit: () => query,
-        update: () => query,
+        update: (values: unknown) => { state.updates.push(values); return query },
         insert: async () => ({ error: null }),
         single: async () => ({ error: null, data: {
           id: 7, title: 'Booking', instructions: 'Ask the price.',
@@ -51,7 +71,10 @@ const request = () => new Request('http://localhost/api/exercises/realtime/evalu
   }),
 })
 
-beforeEach(() => { state.calls = []; state.selected = []; state.tenantId = 'school' })
+beforeEach(() => {
+  state.calls = []; state.selected = []; state.tenantId = 'school'
+  state.updates = []; state.resolved = []; state.resolveError = null; state.models = []
+})
 
 describe('conversation grading', () => {
   it('restores private criteria, serializes roles and does not expose criteria in the response', async () => {
@@ -66,6 +89,23 @@ describe('conversation grading', () => {
     expect(body.score).toBe(50)
     expect(body.passed).toBe(false)
     expect(JSON.stringify(body)).not.toContain('Confirm the dates and price.')
+  })
+
+  it("grades with the school's own exercise_grader model", async () => {
+    await POST(request())
+    expect(state.resolved).toEqual(['school:exercise_grader'])
+    expect(state.models).toEqual(['school-grader'])
+  })
+
+  it('returns the typed 402 before claiming the session when the school has no key', async () => {
+    const { AiNotConfiguredError } = await import('@/lib/ai/errors')
+    state.resolveError = new AiNotConfiguredError('no_key', { feature: 'exercise_grader' })
+    const response = await POST(request())
+    expect(response.status).toBe(402)
+    expect((await response.json()).error).toMatchObject({ code: 'ai_not_configured', feature: 'exercise_grader', canConfigure: false })
+    expect(state.calls).toHaveLength(0)
+    // No claim (pending -> processing) and no failure stamp: the session stays open.
+    expect(state.updates).toEqual([])
   })
 
   it('rejects another school before invoking the grader', async () => {

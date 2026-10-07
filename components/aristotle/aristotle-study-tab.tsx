@@ -35,7 +35,7 @@ import {
     useChatAttachmentInputProps,
 } from '@/components/ai/chat-attachments'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
-import { classifyAiChatError } from '@/lib/ai/chat-error'
+import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
 import { Suggestion, Suggestions } from '@/components/ai-elements/suggestion'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { SessionList } from './session-list'
@@ -50,7 +50,7 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
     const [showSessions, setShowSessions] = useState(false)
     const { textInput } = usePromptInputController()
     const t = useTranslations('aristotle')
-    const tChatLimits = useTranslations('aiChatLimits')
+    const onChatError = useAiChatErrorToast({ audience: 'student', genericMessage: t('toast.error') })
 
     const suggestions = [
         t('suggestions.practiceQuiz'),
@@ -71,10 +71,7 @@ function InnerStudyTab({ courseId }: AristotleStudyTabProps) {
                 courseId: String(courseId),
             },
         }),
-        onError: (error) => {
-            const kind = classifyAiChatError(error)
-            toast.error(kind === 'generic' ? t('toast.error') : tChatLimits(kind))
-        },
+        onError: onChatError,
     })
 
     const isLoading = status === 'submitted' || status === 'streaming'

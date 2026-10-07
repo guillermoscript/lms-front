@@ -1,19 +1,21 @@
 /**
- * LIVE end-to-end test of the AI landing-page generation pipeline — including a REAL OpenAI call.
+ * LIVE end-to-end test of the AI landing-page generation pipeline — including a REAL model call.
  *
- * Runs the exact logic of app/api/landing/generate/route.ts (catalog prompt → generateObject →
+ * Runs the exact logic of app/api/landing/generate/route.ts (catalog prompt → generateText + Output.object →
  * catalog.validate → specToPuckData), bypassing only the HTTP/cookie-auth wrapper. This proves
  * the pipeline the "Generate with AI" button depends on, with a genuine model call.
  *
  * Run: npx tsx scripts/json-render-live-test.ts "your page description"
- * Requires OPENAI_API_KEY in .env.local.
+ * BYOK: the platform holds no AI key. Pass YOUR OWN OpenAI key as JSON_RENDER_TEST_OPENAI_KEY
+ * (shell or .env.local); optional JSON_RENDER_TEST_MODEL (default gpt-5-mini). The key is used for
+ * this script only and is never logged.
  */
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { z } from 'zod'
-import { AI_CONFIG } from '../lib/ai/config'
+import { createProviderInstance } from '../lib/ai/providers'
 import { landingCatalog, CATALOG_COMPONENT_NAMES, DEFAULT_PROPS_BY_TYPE } from '../lib/json-render/catalog'
 import {
   specToPuckData,
@@ -45,17 +47,25 @@ const specShape = z.object({
   ),
 })
 
+function testModel() {
+  const apiKey = process.env.JSON_RENDER_TEST_OPENAI_KEY
+  if (!apiKey) throw new Error('Set JSON_RENDER_TEST_OPENAI_KEY to your own OpenAI key (no platform key exists).')
+  const modelId = process.env.JSON_RENDER_TEST_MODEL ?? 'gpt-5-mini'
+  return { modelId, model: createProviderInstance('openai', apiKey).languageModel(modelId) }
+}
+
 async function main() {
   console.log('Catalog exposes', CATALOG_COMPONENT_NAMES.length, 'components')
   console.log('Prompt:', prompt, '\n')
 
   const systemPrompt = landingCatalog.prompt() + '\n\n' + LANDING_AUTHORING_GUIDE
 
-  console.log('→ Calling OpenAI (', String(AI_CONFIG.defaultModel), ')...')
+  const { model, modelId } = testModel()
+  console.log('→ Calling OpenAI (', modelId, ')...')
   const t0 = Date.now()
-  const { object } = await generateObject({
-    model: AI_CONFIG.defaultModel,
-    schema: specShape,
+  const { output: object } = await generateText({
+    model,
+    output: Output.object({ schema: specShape }),
     system: systemPrompt,
     prompt: `Build a landing page: ${prompt}`,
   })

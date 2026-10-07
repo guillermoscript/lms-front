@@ -11,10 +11,17 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * increments atomically so two concurrent requests cannot both slip past a
  * cap. `-1` or a missing limit key means unlimited, same rule as every other
  * plan limit.
+ *
+ * BYOK (no platform key): the tenant-MONTHLY budget no longer blocks. The
+ * school pays its own provider, so a platform plan has no cost to protect;
+ * the migration sets the AI-chat keys in `platform_plans.limits` to `-1`, and
+ * `monthly_limit` is also ignored here so a plan that still carries a finite
+ * value (or a stale function) cannot block a tenant on its own key. The
+ * per-user DAILY cap and the in-memory burst limiter stay as abuse brakes.
  */
 export type AiChatUsageCheck =
     | { allowed: true }
-    | { allowed: false; reason: 'daily_limit' | 'monthly_limit' }
+    | { allowed: false; reason: 'daily_limit' }
 
 export async function checkAiChatUsage(
     supabase: SupabaseClient,
@@ -36,7 +43,9 @@ export async function checkAiChatUsage(
 
     const result = data as { allowed?: boolean; reason?: string } | null
     if (!result || result.allowed) return { allowed: true }
-    return { allowed: false, reason: result.reason === 'monthly_limit' ? 'monthly_limit' : 'daily_limit' }
+    // Tenant-monthly cap is non-blocking under BYOK (see the header note).
+    if (result.reason === 'monthly_limit') return { allowed: true }
+    return { allowed: false, reason: 'daily_limit' }
 }
 
 /**

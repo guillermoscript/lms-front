@@ -1,5 +1,7 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { gradeExamSubmission } from '@/lib/exams/grade'
+import { AiError, aiErrorBody } from '@/lib/ai/errors'
+import { canConfigureAi } from '@/lib/exercises/ai-failure'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -17,7 +19,10 @@ const bodySchema = z.object({
  * can't call a server action, so this route exposes the same grader over
  * cookie or `Authorization: Bearer` auth. The body carries only the submission
  * id — answers are read from `exam_answers`, the answer key with the service
- * role, and a graded submission is refused (409).
+ * role, and a graded submission is refused (409). Free text is graded on the
+ * school's own AI key; with no usable key it is parked for teacher review (200,
+ * `overall_feedback: 'pending_teacher_review'`). Quota or provider failures
+ * answer the typed `{error:{code,...}}` body and leave the submission pending.
  */
 export async function POST(req: Request, { params }: { params: Promise<{ examId: string }> }) {
   const auth = await getApiAuthContext(req)
@@ -39,7 +44,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ examId:
       examId,
       locale: parsed.data.locale ?? 'en',
     })
-    if (!outcome.ok) return Response.json({ error: outcome.error }, { status: outcome.status })
+    if (!outcome.ok) {
+      if (outcome.aiCode) {
+        // Typed AI failure (quota / provider down): 402/422/424/429/502, never 401/403.
+        // The submission stays pending, so the client may retry.
+        const err = new AiError(outcome.aiCode, 'ai')
+        return Response.json(
+          aiErrorBody(err, {
+            feature: 'exam_grader',
+            canConfigure: await canConfigureAi(auth.supabase, auth.user.id, auth.tenantId),
+            // Only known locales reach the settings link; the body is not trusted.
+            locale: parsed.data.locale === 'es' ? 'es' : 'en',
+          }),
+          { status: outcome.status, headers: { 'Cache-Control': 'no-store' } },
+        )
+      }
+      return Response.json({ error: outcome.error }, { status: outcome.status })
+    }
     return Response.json({
       score: outcome.score,
       overall_feedback: outcome.overall_feedback,

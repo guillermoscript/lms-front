@@ -4,7 +4,6 @@ import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses } from 'ai'
 import type { ComponentProps } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
-import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
 import { IconCheck, IconAlertTriangle, IconRotateClockwise2 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
@@ -35,7 +34,7 @@ import {
 } from '@/components/ai-elements/confirmation'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
-import { classifyAiChatError } from '@/lib/ai/chat-error'
+import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
 import type { ArchitectScope } from './scope'
 
 export interface ContentChange {
@@ -168,7 +167,7 @@ function ApprovalCard({ part, onRespond }: { part: ToolPartLike; onRespond: (id:
 
 function Inner({ scope, locale, onContentChanged, className }: Props) {
     const t = useTranslations('courseArchitect')
-    const tChatLimits = useTranslations('aiChatLimits')
+    const onChatError = useAiChatErrorToast({ audience: 'teacher', genericMessage: t('error') })
     const { textInput } = usePromptInputController()
 
     // Scope and locale ride on every request, including the automatic resend after an approval.
@@ -190,10 +189,7 @@ function Inner({ scope, locale, onContentChanged, className }: Props) {
     const { messages, status, sendMessage: rawSend, setMessages, addToolApprovalResponse, error, clearError, regenerate } = useChat({
         transport,
         sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
-        onError: (error) => {
-            const kind = classifyAiChatError(error)
-            toast.error(kind === 'generic' ? t('error') : tChatLimits(kind))
-        },
+        onError: onChatError,
     })
 
     const sendMessage = rawSend

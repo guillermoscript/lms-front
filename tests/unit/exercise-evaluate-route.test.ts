@@ -13,13 +13,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 type Row = Record<string, unknown>
 
 const state = vi.hoisted(() => ({
-  auth: { user: { id: 'user-1' }, tenantId: 'tenant-1' } as { user: { id: string }; tenantId: string } | null,
+  auth: null as { user: { id: string }; tenantId: string; supabase: unknown } | null,
+  resolveError: null as unknown,
+  resolved: [] as string[],
+  models: [] as unknown[],
   exercise: null as Record<string, unknown> | null,
   checkpoint: null as Record<string, unknown> | null,
   recentCount: 0,
   hasAccess: true,
   graderOutput: { score: 40, feedback: 'ok', strengths: ['a'], improvements: ['b'] } as unknown,
-  graderThrows: false,
+  graderThrows: false as boolean | Error,
   completionUpsertRows: [{ id: 1 }] as Row[],
   inserts: [] as { table: string; values: unknown }[],
   upserts: [] as { table: string; values: unknown; options: unknown }[],
@@ -87,16 +90,35 @@ vi.mock('@/lib/services/course-access', () => ({
   hasCourseAccess: () => Promise.resolve(state.hasAccess),
 }))
 
+vi.mock('server-only', () => ({}))
+
 vi.mock('@/lib/ai/config', () => ({
-  AI_MODELS: { grader: 'grader-model' },
   DEFAULT_PASSING_SCORE: 70,
+}))
+
+vi.mock('@/lib/ai/tenant-ai', () => ({
+  createTenantAi: (tenantId: string) => ({
+    tenantId,
+    lastProviderId: () => 'openai',
+    getModelForFeature: async (feature: string) => {
+      state.resolved.push(`${tenantId}:${feature}`)
+      if (state.resolveError) throw state.resolveError
+      return { model: 'school-grader', providerId: 'openai', modelId: 'gpt-x' }
+    },
+  }),
+}))
+
+vi.mock('@/lib/ai/errors', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ai/errors')>()),
+  markCredentialInvalid: vi.fn(),
 }))
 
 vi.mock('ai', () => ({
   Output: { object: (x: unknown) => x },
-  generateText: vi.fn((args: { system?: string; prompt?: string }) => {
+  generateText: vi.fn((args: { system?: string; prompt?: string; model?: unknown }) => {
     state.generateCalls.push(args)
-    if (state.graderThrows) return Promise.reject(new Error('model down'))
+    state.models.push(args.model)
+    if (state.graderThrows) return Promise.reject(state.graderThrows instanceof Error ? state.graderThrows : new Error('model down'))
     return Promise.resolve({ output: state.graderOutput })
   }),
 }))
@@ -106,6 +128,7 @@ vi.mock('@/lib/analytics/server', () => ({
 }))
 
 import { POST } from '@/app/api/exercises/evaluate/route'
+import { AiNotConfiguredError, AiKeyInvalidError } from '@/lib/ai/errors'
 
 function exercise(overrides: Record<string, unknown> = {}) {
   return {
@@ -136,7 +159,10 @@ const completionWrites = () =>
 const evaluationInserts = () => state.inserts.filter((w) => w.table === 'exercise_evaluations')
 
 beforeEach(() => {
-  state.auth = { user: { id: 'user-1' }, tenantId: 'tenant-1' }
+  state.auth = { user: { id: 'user-1' }, tenantId: 'tenant-1', supabase: { from: (table: string) => builder(table) } }
+  state.resolveError = null
+  state.resolved = []
+  state.models = []
   state.exercise = exercise()
   state.checkpoint = null
   state.recentCount = 0
@@ -261,6 +287,41 @@ describe('POST /api/exercises/evaluate', () => {
     expect(await res.json()).toMatchObject({ rateLimited: true })
     expect(state.filters.exercise_evaluations).toMatchObject({ exercise_id: 7, user_id: 'user-1', tenant_id: 'tenant-1' })
     expect(state.generateCalls).toHaveLength(0)
+    expect(state.inserts).toHaveLength(0)
+  })
+
+  it('grades with the school\'s own model, resolved for the auth tenant', async () => {
+    const res = await POST(request({ exerciseId: 7, content: 'my answer', tenantId: 'tenant-evil' }))
+    expect(res.status).toBe(200)
+    expect(state.resolved).toEqual(['tenant-1:exercise_grader'])
+    expect(state.models).toEqual(['school-grader'])
+  })
+
+  it('402s a school without a key BEFORE the attempt budget, with no side effects', async () => {
+    state.resolveError = new AiNotConfiguredError('no_key')
+    const res = await POST(request({ exerciseId: 7, content: 'x' }))
+    expect(res.status).toBe(402)
+    expect(await res.json()).toEqual({
+      error: { code: 'ai_not_configured', feature: 'exercise_grader', canConfigure: false, settingsUrl: null },
+    })
+    expect(state.filters.exercise_evaluations).toBeUndefined()
+    expect(state.generateCalls).toHaveLength(0)
+    expect(state.inserts).toHaveLength(0)
+    expect(state.upserts).toHaveLength(0)
+  })
+
+  it('424s a rejected key and writes nothing', async () => {
+    state.resolveError = new AiKeyInvalidError({ providerId: 'openai' })
+    const res = await POST(request({ exerciseId: 7, content: 'x' }))
+    expect(res.status).toBe(424)
+    expect(state.inserts).toHaveLength(0)
+  })
+
+  it('maps a provider 401 during grading to ai_key_invalid, not a 500', async () => {
+    state.graderThrows = Object.assign(new Error('bad key'), { name: 'AI_APICallError', statusCode: 401 })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await POST(request({ exerciseId: 7, content: 'x' }))
+    expect(res.status).toBe(424)
     expect(state.inserts).toHaveLength(0)
   })
 

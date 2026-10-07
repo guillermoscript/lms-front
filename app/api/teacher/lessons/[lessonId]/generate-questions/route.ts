@@ -8,16 +8,17 @@
  * draft exercises.
  *
  * Guard order (same as /api/landing/generate): auth → tenant → role →
- * ownership → rate limit → generate. Fail before spending tokens.
+ * ownership → resolve the school's model (BYOK) → rate limit → generate.
+ * Fail before spending tokens; a missing key never costs a rate-limit slot.
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { aiGenerationLimiter } from '@/lib/rate-limit'
-import { AI_MODELS } from '@/lib/ai/config'
+import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { getLessonTranscript, type LessonTranscript } from '@/lib/lessons/video-transcript'
 import type { GenerateQuestionsResponse } from '@/lib/lessons/generated-questions'
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
 
@@ -137,81 +138,99 @@ export async function POST(
     return Response.json({ error: 'You do not own this course.' }, { status: 403 })
   }
 
+  // Resolve the school's model BEFORE the rate limiter, the transcript fetch
+  // and any other work: no key = no side effects.
   try {
-    await aiGenerationLimiter.check(GENERATIONS_PER_HOUR, `lesson-questions:${user.id}`)
-  } catch {
+    return await withTenantAi(
+      { tenantId, feature: 'question_generator', canConfigure: role === 'admin', actorId: user.id },
+      async (ai) => {
+        const { model, providerId, modelId } = await ai.getModelForFeature('question_generator')
+
+        try {
+          await aiGenerationLimiter.check(GENERATIONS_PER_HOUR, `lesson-questions:${user.id}`)
+        } catch {
+          return Response.json(
+            { error: 'Too many generations. Please try again in a while.' },
+            { status: 429 }
+          )
+        }
+
+        // The editor sends its CURRENT content (possibly unsaved) so the teacher
+        // generates from what they see, not from the last-saved DB row.
+        let bodyContent: string | undefined
+        try {
+          const body = (await req.json()) as { content?: string }
+          if (typeof body.content === 'string') bodyContent = body.content
+        } catch {
+          // empty body is fine — fall back to the stored lesson content
+        }
+
+        const content = (bodyContent ?? lesson.content ?? '').slice(0, MAX_CONTENT_CHARS).trim()
+        if (content.length < 80) {
+          return Response.json(
+            { error: 'The lesson needs more content before questions can be generated.' },
+            { status: 422 }
+          )
+        }
+
+        const transcript = await getLessonTranscript(admin, {
+          id: lesson.id,
+          video_url: lesson.video_url,
+          transcript: (lesson.transcript as LessonTranscript | null) ?? null,
+        })
+
+        const system = buildSystemPrompt(Boolean(transcript))
+        const prompt = buildPrompt(lesson.title, content, transcript)
+
+        const { output } = await propagateAttributes(
+          { userId: user.id, metadata: { tenantId, lessonId: String(lessonId), feature: 'question_generator', provider: providerId, modelId } },
+          () => generateText({
+            model,
+            output: Output.object({ schema: generationSchema }),
+            system,
+            prompt,
+            experimental_telemetry: { functionId: 'lesson-question-generator' },
+          }),
+        )
+
+        const response: GenerateQuestionsResponse = {
+          questions: output.questions,
+          transcript_used: Boolean(transcript),
+          transcript_language: transcript?.language ?? null,
+        }
+        return Response.json(response)
+      },
+    )
+  } catch (err) {
+    // Typed AI failures (no key, bad key, quota...) were already answered by
+    // withTenantAi; anything that reaches here is our own bug.
+    console.error('lesson-question generation failed:', err instanceof Error ? err.name : typeof err)
     return Response.json(
-      { error: 'Too many generations. Please try again in a while.' },
-      { status: 429 }
+      { error: 'Question generation failed. Please try again.' },
+      { status: 502 }
     )
   }
+}
 
-  // The editor sends its CURRENT content (possibly unsaved) so the teacher
-  // generates from what they see, not from the last-saved DB row.
-  let bodyContent: string | undefined
-  try {
-    const body = (await req.json()) as { content?: string }
-    if (typeof body.content === 'string') bodyContent = body.content
-  } catch {
-    // empty body is fine — fall back to the stored lesson content
-  }
-
-  const content = (bodyContent ?? lesson.content ?? '').slice(0, MAX_CONTENT_CHARS).trim()
-  if (content.length < 80) {
-    return Response.json(
-      { error: 'The lesson needs more content before questions can be generated.' },
-      { status: 422 }
-    )
-  }
-
-  const transcript = await getLessonTranscript(admin, {
-    id: lesson.id,
-    video_url: lesson.video_url,
-    transcript: (lesson.transcript as LessonTranscript | null) ?? null,
-  })
-
-  const system = `You draft retrieval-practice questions for an online lesson. Rules:
+function buildSystemPrompt(hasTranscript: boolean): string {
+  return `You draft retrieval-practice questions for an online lesson. Rules:
 - Every question must be answerable from the provided lesson content alone — never require outside knowledge.
 - One concept per question. No compound questions.
 - At least half of the questions must be generative recall (short_answer or fill_in_the_blank), not recognition. Use multiple_choice only where distractors genuinely discriminate, and make distractors plausible.
 - Rubrics must be concrete and checkable ("names the import statement and explains namespace collision", not "understands imports").
 - fill_in_the_blank prompts contain exactly one blank written as "____"; accepted_answers lists every reasonable normalized form, lowercase.
 - Write all output in the same language as the lesson content.${
-    transcript
+    hasTranscript
       ? '\n- A timestamped video transcript is provided. For EVERY question, scan the transcript: if the video explains the concept anywhere (even if the lesson text also covers it), you MUST set video_timestamp_seconds to that segment\'s start (the number after @ in [m:ss @ Ns]). Only use -1 when the transcript never touches the concept. Most questions about material the video covers should carry a timestamp.'
       : '\n- No video transcript is available: always set video_timestamp_seconds to -1.'
   }`
+}
 
-  const prompt = `## Lesson: ${lesson.title}
+function buildPrompt(title: string, content: string, transcript: LessonTranscript | null): string {
+  return `## Lesson: ${title}
 
 ## Lesson content (MDX):
 ${content}
 ${transcript ? `\n## Video transcript (${transcript.language}), one segment per line as [m:ss @ Ns] text:\n${transcriptForPrompt(transcript)}\n` : ''}
 Draft ${MIN_QUESTIONS}-${MAX_QUESTIONS} questions following the rules.`
-
-  try {
-    const { object } = await propagateAttributes(
-      { userId: user.id, metadata: { tenantId, lessonId: String(lessonId) } },
-      () => generateObject({
-        model: AI_MODELS.questionGenerator,
-        schema: generationSchema,
-        system,
-        prompt,
-        experimental_telemetry: { functionId: 'lesson-question-generator' },
-      }),
-    )
-
-    const response: GenerateQuestionsResponse = {
-      questions: object.questions,
-      transcript_used: Boolean(transcript),
-      transcript_language: transcript?.language ?? null,
-    }
-    return Response.json(response)
-  } catch (err) {
-    console.error('lesson-question generation failed:', err)
-    return Response.json(
-      { error: 'Question generation failed. Please try again.' },
-      { status: 502 }
-    )
-  }
 }

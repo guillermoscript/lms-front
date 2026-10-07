@@ -1,6 +1,6 @@
-import { generateText, Output } from 'ai'
+import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
-import { AI_MODELS } from '@/lib/ai/config'
+import { isTransientAiError } from '@/lib/ai/errors'
 import type { StructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 interface TranscriptMessage {
@@ -12,6 +12,41 @@ export interface CompletionVerdict {
     done: boolean
     /** Fed back to the tutor on a refusal so it can keep guiding. */
     reason: string
+    /**
+     * Set when the verifier could not run at all (missing/invalid key, quota,
+     * unsupported model). The verdict is `done: false` — fail CLOSED — and
+     * callers must not present it as "the student has not met the task".
+     */
+    unavailable?: 'ai_unavailable'
+}
+
+/** No verdict could be obtained and the failure is not transient: nobody gets a free completion. */
+const AI_UNAVAILABLE_VERDICT: CompletionVerdict = {
+    done: false,
+    unavailable: 'ai_unavailable',
+    reason:
+        'The completion check is unavailable right now (the AI service could not be reached with the school\'s configuration). Do not tell the student the lesson is done and do not retry the tool; keep helping them and let them know the check cannot be run at the moment.',
+}
+
+/**
+ * Fail OPEN only on genuinely transient failures (timeout, network, 5xx): an
+ * outage must not lock a student out. Anything else — bad/missing key, quota,
+ * unsupported model — fails CLOSED, otherwise a school with a broken key would
+ * auto-complete every lesson on the tutor's word alone.
+ */
+function verdictForFailure(label: string, error: unknown, onProviderError?: (error: unknown) => void): CompletionVerdict {
+    const name = error instanceof Error ? error.name : typeof error
+    if (isTransientAiError(error)) {
+        console.error(`${label} failed transiently (tutor decision stands):`, name)
+        return { done: true, reason: '' }
+    }
+    console.error(`${label} failed (completion refused, fail closed):`, name)
+    try {
+        onProviderError?.(error)
+    } catch {
+        /* reporting must never change the verdict */
+    }
+    return AI_UNAVAILABLE_VERDICT
 }
 
 // The verdict is computed from these fields, not asked for outright: a bare
@@ -88,11 +123,13 @@ function countStudentTurns(messages: TranscriptMessage[]): number {
 
 async function verifyStructuredCompletion(
     structured: StructuredRequirements,
-    transcript: string
+    transcript: string,
+    model: LanguageModel,
+    onProviderError?: (error: unknown) => void
 ): Promise<CompletionVerdict> {
     try {
         const { output } = await generateText({
-            model: AI_MODELS.tutor,
+            model,
             output: Output.object({ schema: structuredVerdictSchema }),
             system: STRUCTURED_VERIFIER_SYSTEM,
             prompt: `REQUIREMENTS:\n${structured.requirements
@@ -117,10 +154,7 @@ async function verifyStructuredCompletion(
         ]
         return { done: false, reason: reasonParts.join('; ') }
     } catch (error) {
-        // Fail-open (#804 behavior, carried over to structured tasks): an outage
-        // must never lock a student out of finishing.
-        console.error('Structured lesson completion verifier failed (tutor decision stands):', error)
-        return { done: true, reason: '' }
+        return verdictForFailure('Structured lesson completion verifier', error, onProviderError)
     }
 }
 
@@ -130,18 +164,22 @@ async function verifyStructuredCompletion(
  * The tool used to trust the tutor outright, and the tutor reads whatever the
  * student types: one persuasive message was a completed lesson (progress,
  * certificate, XP). This runs only when the tutor actually calls the tool, so
- * it costs nothing per turn. If the verifier itself fails, the tutor's call
- * stands — an outage must not lock students out of finishing.
+ * it costs nothing per turn. If the verifier fails TRANSIENTLY the tutor's call
+ * stands; a key/quota/model failure refuses the completion (fail closed).
  *
  * `structuredRequirements` (#806) switches two things: the per-requirement
  * verifier above instead of the free-text one, and a `min_student_turns`
  * floor checked BEFORE any model call — deterministic, and free.
  */
 export async function verifyLessonCompletion(input: {
+    /** The school's resolved `lesson_verifier` model (BYOK) — there is no platform default. */
+    model: LanguageModel
     taskInstructions?: string
     teacherPrompt?: string
     structuredRequirements?: StructuredRequirements | null
     messages: TranscriptMessage[]
+    /** Called with a non-transient failure so the route can flag a rejected key (the verdict still fails closed). */
+    onProviderError?: (error: unknown) => void
 }): Promise<CompletionVerdict> {
     const minStudentTurns = input.structuredRequirements?.min_student_turns ?? 0
     if (minStudentTurns > 0) {
@@ -157,12 +195,12 @@ export async function verifyLessonCompletion(input: {
     const transcript = buildTranscript(input.messages)
 
     if (input.structuredRequirements) {
-        return verifyStructuredCompletion(input.structuredRequirements, transcript)
+        return verifyStructuredCompletion(input.structuredRequirements, transcript, input.model, input.onProviderError)
     }
 
     try {
         const { output } = await generateText({
-            model: AI_MODELS.tutor,
+            model: input.model,
             output: Output.object({ schema: verdictSchema }),
             system: VERIFIER_SYSTEM,
             prompt: `TASK SHOWN TO THE STUDENT:\n${input.taskInstructions || '(none — the task is to show understanding of the lesson)'}\n\nTUTOR'S INSTRUCTIONS FROM THE TEACHER:\n${input.teacherPrompt || '(none)'}\n\nCONVERSATION:\n${transcript}`,
@@ -175,7 +213,6 @@ export async function verifyLessonCompletion(input: {
                 : output.requirements_check,
         }
     } catch (error) {
-        console.error('Lesson completion verifier failed (tutor decision stands):', error)
-        return { done: true, reason: '' }
+        return verdictForFailure('Lesson completion verifier', error, input.onProviderError)
     }
 }

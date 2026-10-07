@@ -139,7 +139,7 @@ npx mcp-use screenshot --server dev --tool lms_list_courses limit=1
 
 ### AI image generation
 
-`lms_generate_course_image` / `lms_generate_lesson_image` (admin + teacher, own courses) call OpenAI via the AI SDK `generateImage` and upload as the caller into the public `course-images` bucket under `<tenantId>/courses/...`. Env: `OPENAI_API_KEY` (required; missing → clean error), `MCP_IMAGE_MODEL` (default `gpt-image-1-mini`), `MCP_IMAGE_DAILY_CAP` (per user/day, default 20; in-memory per process, resets on restart). Prompt capped at 1000 chars, output at 5MB.
+`lms_generate_course_image` / `lms_generate_lesson_image` (admin + teacher, own courses) never hold a provider key (BYOK). They POST the prompt to the app's `/api/internal/ai/image` (auth: shared `MCP_PROXY_SECRET` in `X-MCP-Secret` + the caller's bearer token; the app takes the tenant from the verified token, uses the school's own image key from Settings > AI, and enforces the per-user daily cap in the DB, `AI_IMAGE_DAILY_CAP` on the app, default 20). The tools then upload the returned bytes as the caller into the public `course-images` bucket under `<tenantId>/courses/...`. Env here: `MCP_PROXY_SECRET` (+ `LMS_APP_URL` or a derivable app origin); missing, or no school key → clean "not set up for this school" error. Prompt capped at 1000 chars, output at 5MB.
 
 ## Build & run
 

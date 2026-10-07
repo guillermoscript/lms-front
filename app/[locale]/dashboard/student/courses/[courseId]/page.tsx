@@ -26,6 +26,7 @@ const AristotleStudySection = dynamic(
 )
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getTenantAiEnabled } from '@/lib/ai/ui-flags'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getCheckpointLinkedExerciseIds } from '@/lib/checkpoints/load'
 import { loadCourseCommunityEntry } from '@/lib/community/access'
@@ -142,7 +143,8 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   })
   const exerciseCount = exercises?.filter((e) => !checkpointExerciseIds.has(e.id)).length || 0
   const userHasReviewed = !!userReview
-  const aristotleEnabled = tutorConfig?.enabled ?? false
+  // BYOK: no school AI key means no study-session entry point (deduped with the layout's call).
+  const aristotleEnabled = (tutorConfig?.enabled ?? false) && (await getTenantAiEnabled())
 
   // Build initial reviews with user profiles
   let initialReviews: Review[] = []

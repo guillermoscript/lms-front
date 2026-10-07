@@ -40,6 +40,11 @@ describe('teacher preview authorization', () => {
     expect(state.filters).toContainEqual(['courses', 'tenant_id', 'school'])
     expect(state.filters).toContainEqual(['courses', 'course_id', 2])
   })
+  it('flags school admins (not teachers) as able to configure AI', async () => {
+    expect(await authorizeExercisePreview(req, 2)).toMatchObject({ canConfigure: false })
+    state.role = 'admin'
+    expect(await authorizeExercisePreview(req, 2)).toMatchObject({ canConfigure: true })
+  })
   it('denies a teacher another author’s course but permits school admins', async () => {
     state.author = 'another-teacher'
     expect((await authorizeExercisePreview(req, 2) as Response).status).toBe(404)

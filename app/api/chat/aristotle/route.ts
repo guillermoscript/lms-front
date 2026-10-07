@@ -1,5 +1,7 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
-import { AI_CONFIG, AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
+import { AI_CONFIG, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
+import { createTenantAi } from '@/lib/ai/tenant-ai'
+import { classifyProviderError, handleAiError, markCredentialInvalid } from '@/lib/ai/errors'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
 import { capChatHistory, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
@@ -10,6 +12,7 @@ import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 import { aiChatRateLimitedResponse, aiChatUsageLimitResponse, checkAiChatUsage } from '@/lib/ai/chat-usage'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
 export const maxDuration = 120
@@ -22,19 +25,25 @@ const bodySchema = z.object({
     contextPage: z.string().optional(),
 })
 
+async function isTenantAdmin(
+    supabase: SupabaseClient,
+    userId: string,
+    tenantId: string,
+): Promise<boolean> {
+    const { data } = await supabase
+        .from('tenant_users')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle()
+    return data?.role === 'admin'
+}
+
 export async function POST(req: Request) {
     const auth = await getApiAuthContext(req)
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
-
-    // Was not covered by #804 — Aristotle gets the same burst brake every
-    // other AI chat surface does (issue #807). The durable budget is checked
-    // below, after enrollment, so a 403 never costs a budget slot.
-    try {
-        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
-    } catch {
-        return aiChatRateLimitedResponse()
-    }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
@@ -49,9 +58,6 @@ export async function POST(req: Request) {
         return new Response('Not enrolled', { status: 403 })
     }
 
-    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
-    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
-
     // Fetch tutor config
     const { data: tutorConfig } = await supabase
         .from('course_ai_tutors')
@@ -61,6 +67,41 @@ export async function POST(req: Request) {
         .single()
 
     if (!tutorConfig?.enabled) return new Response('Aristotle is not enabled for this course', { status: 404 })
+
+    // Resolve the school's model BEFORE the rate limiter, the usage counter and
+    // the session insert: a school with no usable key must leave no side effects.
+    // The course override (course_ai_tutors.provider/model) is applied inside
+    // the resolver. Images need a vision-capable model (422 ai_model_unsupported).
+    const ai = createTenantAi(tenantId, { actorId: user.id })
+    let resolved: Awaited<ReturnType<typeof ai.getModelForFeature>>
+    try {
+        resolved = await ai.getModelForFeature('aristotle', {
+            courseId: numericCourseId,
+            courseTutor: { provider: tutorConfig.provider ?? null, model: tutorConfig.model ?? null },
+            require: lastUserMessageHasAttachments(messages) ? ['vision'] : undefined,
+        })
+    } catch (e) {
+        return handleAiError(e, {
+            feature: 'aristotle',
+            canConfigure: await isTenantAdmin(supabase, user.id, tenantId),
+            tenantId,
+            providerId: ai.lastProviderId(),
+            actorId: user.id,
+        })
+    }
+
+    // Was not covered by #804 — Aristotle gets the same burst brake every
+    // other AI chat surface does (issue #807). The durable budget is checked
+    // below, after enrollment and model resolution, so a 403 or a missing key
+    // never costs a budget slot.
+    try {
+        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+    } catch {
+        return aiChatRateLimitedResponse()
+    }
+
+    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
 
     // Fetch course structure, progress, and session summaries in parallel
     const [
@@ -273,9 +314,18 @@ export async function POST(req: Request) {
     // Stream response
     const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
     const result = propagateAttributes(
-        { userId: user.id, metadata: { tenantId, contextPage: contextPage || '' } },
+        {
+            userId: user.id,
+            metadata: {
+                tenantId,
+                feature: 'aristotle',
+                provider: resolved.providerId,
+                modelId: resolved.modelId,
+                contextPage: contextPage || '',
+            },
+        },
         () => streamText({
-        model: AI_MODELS.aristotle,
+        model: resolved.model,
         system: systemPrompt,
         messages: modelMessages,
         experimental_telemetry: { functionId: 'aristotle-assistant' },
@@ -288,6 +338,15 @@ export async function POST(req: Request) {
                     context_page: contextPage || null,
                 })
                 if (error) console.error('Failed to persist aristotle assistant message:', error)
+            }
+        },
+        // Mid-stream provider rejections: a revoked key flips the credential to
+        // `invalid` so the admin sees it. Name/status only, never the message.
+        onError: async ({ error }) => {
+            const err = classifyProviderError(error, { feature: 'aristotle', providerId: resolved.providerId })
+            console.error('[aristotle] stream error', err.code, err.upstreamStatus ?? '-')
+            if (err.code === 'ai_key_invalid') {
+                await markCredentialInvalid(tenantId, resolved.providerId, 'aristotle', user.id)
             }
         },
         stopWhen: stepCountIs(AI_CONFIG.maxSteps),

@@ -1,4 +1,4 @@
-import { generateText, Output } from 'ai'
+import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
 import { PreviewDraftSchema } from '@/lib/exercises/preview'
 import { authorizeExercisePreview, checkExercisePreviewBudget } from '@/lib/exercises/preview-auth'
@@ -7,9 +7,10 @@ import { evaluateArtifactExercise } from '@/lib/exercises/evaluate-artifact'
 import { CLOSED_EXERCISE_TYPES, parseCheckpointQuestions } from '@/lib/checkpoints/types'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
 import { ConversationTranscriptSchema, ConversationNotesSchema, ConversationEvaluationSchema, buildConversationGraderPrompt, parseConversationConfig } from '@/lib/speech/conversation'
-import { AI_MODELS } from '@/lib/ai/config'
+import { createTenantAi } from '@/lib/ai/tenant-ai'
+import { aiFailureResponse } from '@/lib/exercises/ai-failure'
 import { runSpeechPipeline } from '@/lib/speech/pipeline'
-import { getPipeline } from '@/lib/speech/registry'
+import { getPipeline, type SpeechPipelineProviders } from '@/lib/speech/registry'
 import { parseSpeechRubricConfig } from '@/lib/speech/learner-rubric'
 import type { ExerciseContext } from '@/lib/speech/types'
 import { hasPlanFeature } from '@/lib/plans/server'
@@ -75,12 +76,29 @@ export async function POST(req: Request) {
       : ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/ogg']
     if (!allowed.includes(mediaMime)) return Response.json({ error: 'Unsupported media type' }, { status: 400 })
   }
+  // Previews spend the school's own key, same as the student surface. Resolve
+  // the grader BEFORE the budget so a missing key leaves no usage increment.
+  const ai = createTenantAi(auth.tenantId, { actorId: auth.user.id })
+  const aiFailure = (err: unknown) =>
+    aiFailureResponse(
+      err,
+      { feature: isMedia ? 'speech_coach' : 'exercise_grader', canConfigure: auth.canConfigure, tenantId: auth.tenantId, providerId: ai.lastProviderId(), actorId: auth.user.id },
+      () => Response.json({ error: 'Evaluation failed' }, { status: 502 })
+    )
+  let grader: LanguageModel | null = null
+  let providers: SpeechPipelineProviders | null = null
+  try {
+    if (isMedia) providers = await getPipeline(ai)
+    else grader = (await ai.getModelForFeature('exercise_grader')).model
+  } catch (err) {
+    return aiFailure(err)
+  }
   const denied = await checkExercisePreviewBudget(auth)
   if (denied) return denied
   try {
     if (isConversation) {
       const conversation = parseConversationConfig(config)
-      const { output } = await generateText({ model: AI_MODELS.grader,
+      const { output } = await generateText({ model: grader!,
         output: Output.object({ schema: ConversationEvaluationSchema }),
         system: buildConversationGraderPrompt(draft, conversation, notes ?? []),
         prompt: JSON.stringify({ transcript }),
@@ -98,17 +116,15 @@ export async function POST(req: Request) {
       // The STT provider uploads these bytes exactly as it uploads stored media.
       // No permanent LMS media, attempts, or progress records are created.
       const source = `data:${mediaMime};base64,${Buffer.from(await media.arrayBuffer()).toString('base64')}`
-      const providers = getPipeline(typeof config.stt_provider === 'string' ? config.stt_provider : 'assemblyai', typeof config.ai_coach === 'string' ? config.ai_coach : 'openai')
-      const evaluation = await runSpeechPipeline(source, context, providers)
+      const evaluation = await runSpeechPipeline(source, context, providers!)
       return Response.json({ ...evaluation, feedback: evaluation.focus_next, passed: evaluation.score >= passingScore, passingScore, preview: true, evaluator: 'ai' })
     }
     const result = draft.exercise_type === 'artifact'
-      ? { evaluation: await evaluateArtifactExercise(draft, content!, metadata), passingScore }
-      : await evaluateWrittenExercise(draft, content!)
+      ? { evaluation: await evaluateArtifactExercise(draft, content!, grader!, metadata), passingScore }
+      : await evaluateWrittenExercise(draft, content!, grader!)
     const score = Math.min(100, Math.max(0, Math.round(result.evaluation.score)))
     return Response.json({ ...result.evaluation, score, passed: score >= result.passingScore, passingScore: result.passingScore, preview: true, evaluator: 'ai' })
   } catch (error) {
-    console.error('Exercise preview evaluation failed:', error)
-    return Response.json({ error: 'Evaluation failed' }, { status: 502 })
+    return aiFailure(error)
   }
 }

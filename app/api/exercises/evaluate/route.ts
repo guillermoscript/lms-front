@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
+import { aiFailureResponse, canConfigureAi } from '@/lib/exercises/ai-failure'
 import { evaluateWrittenExercise, type WrittenEvaluation } from '@/lib/exercises/evaluate-written'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { getEngineType } from '@/lib/exercises/engine'
@@ -27,7 +29,7 @@ const MAX_CONTENT_CHARS = 60_000
 export async function POST(req: Request) {
   const auth = await getApiAuthContext(req)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const { user, tenantId } = auth
+  const { supabase, user, tenantId } = auth
   const adminClient = createAdminClient()
 
   let exerciseId: number
@@ -87,6 +89,28 @@ export async function POST(req: Request) {
     }
   }
 
+  // Resolve the school's grader BEFORE the attempt budget: a school without a
+  // usable key gets the typed AI error and the attempt is never counted.
+  const ai = createTenantAi(tenantId, { actorId: user.id })
+  const aiFailure = async (err: unknown) =>
+    aiFailureResponse(
+      err,
+      {
+        feature: 'exercise_grader',
+        canConfigure: await canConfigureAi(supabase, user.id, tenantId),
+        tenantId,
+        providerId: ai.lastProviderId(),
+        actorId: user.id,
+      },
+      () => Response.json({ error: 'Evaluation failed' }, { status: 500 })
+    )
+  let grader: ResolvedFeatureModel
+  try {
+    grader = await ai.getModelForFeature('exercise_grader')
+  } catch (err) {
+    return aiFailure(err)
+  }
+
   // Same budget as the artifact grader: 10 graded attempts per hour per exercise.
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
   const { count: recentCount } = await adminClient
@@ -106,12 +130,11 @@ export async function POST(req: Request) {
   let evaluation: WrittenEvaluation
   let passingScore: number
   try {
-    const result = await evaluateWrittenExercise(exercise, content)
+    const result = await evaluateWrittenExercise(exercise, content, grader.model)
     evaluation = result.evaluation
     passingScore = result.passingScore
   } catch (err) {
-    console.error('Exercise evaluation error:', err)
-    return Response.json({ error: 'Evaluation failed' }, { status: 500 })
+    return aiFailure(err)
   }
 
   const score = Math.max(0, Math.min(100, Math.round(evaluation.score)))

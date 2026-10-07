@@ -78,7 +78,7 @@ NEXT_PUBLIC_APP_URL=http://lvh.me:3000
 CRON_SECRET=local-dev-secret      # without it, every /api/cron/* request is rejected
 ```
 
-Everything else (Stripe, OpenAI, Mailgun, PayPal, Solana, Binance, Lemon Squeezy, Langfuse) is optional — the app boots without them and only the corresponding feature is unavailable.
+Everything else (Stripe, Mailgun, PayPal, Solana, Binance, Lemon Squeezy, Langfuse) is optional — the app boots without them and only the corresponding feature is unavailable.
 
 > **Never commit `.env.local`.** It is gitignored. `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS entirely and is server-only.
 

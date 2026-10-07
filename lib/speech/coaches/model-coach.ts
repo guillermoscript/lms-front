@@ -1,6 +1,5 @@
-import { generateText, Output } from 'ai'
+import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
-import { AI_MODELS } from '@/lib/ai/config'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { SpeechCorrectionSchema, buildLearnerSpeechPrompt, feedbackLanguageInstruction, unclearWords } from '../learner-rubric'
 import type { SpeechCoach, TranscriptionResult, ExerciseContext, SpeechEvaluation, SpeechMetrics, AnnotatedSegment, SpeechCoachOptions } from '../types'
@@ -15,8 +14,16 @@ const LearnerEvaluationSchema = SpeechEvaluationSchema.extend({
   corrections: z.array(SpeechCorrectionSchema).max(5).describe('The most useful language corrections'),
 })
 
-export class OpenAICoachProvider implements SpeechCoach {
-  name = 'openai'
+/**
+ * Speech coach on whichever language model the school mapped to `speech_coach`
+ * (resolved by `getPipeline`). Provider-agnostic: it only needs structured output.
+ */
+export class ModelCoachProvider implements SpeechCoach {
+  readonly name: string
+
+  constructor(private readonly model: LanguageModel, name = 'model') {
+    this.name = name
+  }
 
   async evaluate(transcription: TranscriptionResult, context: ExerciseContext, options?: SpeechCoachOptions): Promise<SpeechEvaluation> {
     const metrics: SpeechMetrics = {
@@ -35,7 +42,7 @@ export class OpenAICoachProvider implements SpeechCoach {
     const learner = rubric?.rubric_mode === 'language_learner'
     // Grading only: completion is recorded by the analyze route from the score.
     const { output } = await generateText({
-      model: AI_MODELS.coach,
+      model: this.model,
       output: Output.object({ schema: learner ? LearnerEvaluationSchema : SpeechEvaluationSchema }),
       system: learner
         ? buildLearnerSpeechPrompt(context, rubric, metrics, unclearWords(transcription.words))
@@ -43,6 +50,7 @@ export class OpenAICoachProvider implements SpeechCoach {
             { ...context, feedbackLanguageInstruction: feedbackLanguageInstruction(rubric?.feedback_language ?? '') },
             metrics
           ),
+      abortSignal: options?.abortSignal,
       prompt: `Student transcript:\n\n"${transcription.transcript}"`,
     })
 
