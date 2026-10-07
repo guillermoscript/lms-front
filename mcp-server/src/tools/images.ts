@@ -78,7 +78,7 @@ export const generateLessonImageInput = z.object({
 });
 
 const NOT_CONFIGURED =
-  "AI image generation is not set up for this school. A school admin must add an OpenAI key (it has a default image model), or pick an image model for "Image generation" under Advanced for another provider such as Google, in Settings > AI (/dashboard/admin/settings/ai). Nothing was generated.";
+  "AI image generation is not set up for this school. A school admin must add an OpenAI key (it has a default image model), or pick an image model for 'Image generation' under Advanced for another provider such as Google, in Settings > AI (/dashboard/admin/settings/ai). Nothing was generated.";
 
 /** Model-readable message for a failed internal call; never echoes a provider body. */
 export function describeImageFailure(status: number, code: string | undefined, reason?: string): string {
