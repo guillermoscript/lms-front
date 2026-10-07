@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
+import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
+import { aiFailureResponse, canConfigureAi } from '@/lib/exercises/ai-failure'
 import { evaluateArtifactExercise } from '@/lib/exercises/evaluate-artifact'
 import { hasCourseAccess } from '@/lib/services/course-access'
 import { recordExerciseCompletion } from '@/lib/exercises/record-completion'
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
   // 1. Auth — session cookie (web) or Bearer token (native app, #839)
   const auth = await getApiAuthContext(req)
   if (!auth) return new Response('Unauthorized', { status: 401 })
-  const { user, tenantId } = auth
+  const { supabase, user, tenantId } = auth
   const adminClient = createAdminClient()
 
   // 2. Parse input
@@ -49,13 +51,36 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Not an artifact exercise' }, { status: 400 })
   }
   const courseTenantId = (exercise.courses as { tenant_id?: string } | null)?.tenant_id
-  if (exercise.tenant_id !== tenantId && courseTenantId !== tenantId) {
+  // BOTH the exercise row and its course must belong to the caller's tenant.
+  if (exercise.tenant_id !== tenantId || courseTenantId !== tenantId) {
     return Response.json({ error: 'Exercise not found' }, { status: 404 })
   }
 
   // 5. Verify access (entitlements model)
   if (!(await hasCourseAccess(adminClient, user.id, exercise.course_id))) {
     return Response.json({ error: 'Not enrolled in this course' }, { status: 403 })
+  }
+
+  // Resolve the school's grader BEFORE the attempt budget: a school without a
+  // usable key gets the typed AI error and the attempt is never counted.
+  const ai = createTenantAi(tenantId, { actorId: user.id })
+  const aiFailure = async (err: unknown) =>
+    aiFailureResponse(
+      err,
+      {
+        feature: 'exercise_grader',
+        canConfigure: await canConfigureAi(supabase, user.id, tenantId),
+        tenantId,
+        providerId: ai.lastProviderId(),
+        actorId: user.id,
+      },
+      () => Response.json({ error: 'Evaluation failed' }, { status: 500 })
+    )
+  let grader: ResolvedFeatureModel
+  try {
+    grader = await ai.getModelForFeature('exercise_grader')
+  } catch (err) {
+    return aiFailure(err)
   }
 
   // 6. Rate limit — max 10 evaluations/hour per exercise+user
@@ -85,7 +110,7 @@ export async function POST(req: Request) {
 
   // 8. AI evaluation
   try {
-    const evaluation = await evaluateArtifactExercise(exercise, content, metadata)
+    const evaluation = await evaluateArtifactExercise(exercise, content, grader.model, metadata)
 
     const passed = evaluation.score >= passingScore
 
@@ -138,7 +163,6 @@ export async function POST(req: Request) {
       passingScore,
     })
   } catch (err) {
-    console.error('Artifact evaluation error:', err)
-    return Response.json({ error: 'Evaluation failed' }, { status: 500 })
+    return aiFailure(err)
   }
 }

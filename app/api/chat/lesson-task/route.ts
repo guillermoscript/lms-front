@@ -1,5 +1,6 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
-import { AI_CONFIG, AI_MODELS } from '@/lib/ai/config'
+import { AI_CONFIG } from '@/lib/ai/config'
+import { withTenantAi } from '@/lib/ai/with-tenant-ai'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createLessonTools } from '@/lib/ai/tools'
 import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
@@ -7,7 +8,7 @@ import { parseStructuredRequirements, requirementIds } from '@/lib/ai/lesson-req
 import { AI_CHAT_TURNS_PER_MINUTE, aiChatLimiter } from '@/lib/rate-limit'
 import { checkAiChatUsage, aiChatRateLimitedResponse, aiChatUsageLimitResponse } from '@/lib/ai/chat-usage'
 import { capChatHistory, fetchTenantLesson, lastUserMessageText } from '@/lib/ai/chat-helpers'
-import { persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
+import { lastUserMessageHasAttachments, persistLastUserAttachments, sanitizeLastUserAttachments } from '@/lib/ai/attachments'
 import { LESSON_TASK_TOOL_INVOCATION_VERSION } from '@/lib/ai/lesson-task-history'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
@@ -36,15 +37,10 @@ interface LessonRow {
 }
 
 export async function POST(req: Request) {
+    // 1. auth
     const auth = await getApiAuthContext(req)
     if (!auth) return new Response('Unauthorized', { status: 401 })
     const { supabase, user, tenantId } = auth
-
-    try {
-        await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
-    } catch {
-        return aiChatRateLimitedResponse()
-    }
 
     const parsed = bodySchema.safeParse(await req.json().catch(() => null))
     if (!parsed.success) return new Response('Invalid request body', { status: 400 })
@@ -52,7 +48,7 @@ export async function POST(req: Request) {
     // Body is user-controlled: drop non-image / oversized file parts before they reach the model.
     const messages = sanitizeLastUserAttachments(rawMessages)
 
-    // 1. Fetch lesson details and validate tenant
+    // 2. access: RLS-scoped read + explicit tenant check. A 404 never costs a budget slot.
     const lesson = await fetchTenantLesson<LessonRow>(
         supabase,
         lessonId,
@@ -62,58 +58,94 @@ export async function POST(req: Request) {
 
     if (!lesson) return new Response('Lesson not found', { status: 404 })
 
-    // A 404 above never costs a budget slot.
-    const usage = await checkAiChatUsage(supabase, tenantId, user.id)
-    if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
+    // 3. role: only decides the error copy (admins get the settings link).
+    // tenant_users is authoritative; x-user-id does not reach route handlers.
+    const { data: membership } = await supabase
+        .from('tenant_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active')
+        .maybeSingle()
+    const canConfigure = membership?.role === 'admin'
 
-    // Handle both array and object response from Supabase (one-to-one relationship)
-    const aiTaskRow = (Array.isArray(lesson.lessons_ai_tasks)
-        ? lesson.lessons_ai_tasks?.[0]
-        : lesson.lessons_ai_tasks) ?? undefined
-
-    // NULL/invalid `requirements` falls back to the free-text task below (#806
-    // compatibility contract) — never a 500 on a row from before this shipped.
-    const structuredRequirements = parseStructuredRequirements(aiTaskRow?.requirements)
-    const aiTask = aiTaskRow ? { ...aiTaskRow, requirements: structuredRequirements } : undefined
-
-    // 2. Save user message
-    const messageText = lastUserMessageText(messages)
-    const attachments = await persistLastUserAttachments(messages, {
-        tenantId, userId: user.id, kind: 'lesson', referenceId: lessonId,
-    })
-    if (messageText || attachments.length > 0) {
-        // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
-        await supabase.from('lessons_ai_task_messages').insert({
-            lesson_id: lessonId,
-            user_id: user.id,
-            sender: 'user',
-            message: messageText ?? '',
-            attachments: attachments.length > 0 ? attachments : null,
+    return withTenantAi({ tenantId, feature: 'lesson_tutor', canConfigure, actorId: user.id }, async (ai) => {
+        // 4. resolve the school's models BEFORE any rate-limit slot, usage
+        // increment or row write: no key = no side effects. The verifier model
+        // is resolved up front too, so a misconfigured one fails here, not
+        // mid-stream when markLessonCompleted runs.
+        const tutor = await ai.getModelForFeature('lesson_tutor', {
+            require: lastUserMessageHasAttachments(messages) ? ['vision'] : undefined,
         })
-    }
+        const verifier = await ai.getModelForFeature('lesson_verifier')
 
-    // 3. Stream Response
-    // Only the MODEL's view is capped — verify() below still reads the full,
-    // untrimmed `messages` as its evidence.
-    const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
-    const result = propagateAttributes(
-        { userId: user.id, metadata: { lessonId: String(lessonId), tenantId } },
-        () => streamText({
-        model: AI_MODELS.tutor,
-        system: PROMPTS.lessonTutor(lesson, aiTask),
-        messages: modelMessages,
-        tools: createLessonTools(supabase, {
-            lessonId: String(lessonId),
-            userId: user.id,
-            requirementIds: requirementIds(structuredRequirements),
-            verify: () => verifyLessonCompletion({
-                taskInstructions: aiTask?.task_instructions,
-                teacherPrompt: aiTask?.system_prompt,
-                structuredRequirements,
-                messages,
+        // 5. rate limit and usage
+        try {
+            await aiChatLimiter.check(AI_CHAT_TURNS_PER_MINUTE, user.id)
+        } catch {
+            return aiChatRateLimitedResponse()
+        }
+        const usage = await checkAiChatUsage(supabase, tenantId, user.id)
+        if (!usage.allowed) return aiChatUsageLimitResponse(usage.reason)
+
+        // Handle both array and object response from Supabase (one-to-one relationship)
+        const aiTaskRow = (Array.isArray(lesson.lessons_ai_tasks)
+            ? lesson.lessons_ai_tasks?.[0]
+            : lesson.lessons_ai_tasks) ?? undefined
+
+        // NULL/invalid `requirements` falls back to the free-text task below (#806
+        // compatibility contract) — never a 500 on a row from before this shipped.
+        const structuredRequirements = parseStructuredRequirements(aiTaskRow?.requirements)
+        const aiTask = aiTaskRow ? { ...aiTaskRow, requirements: structuredRequirements } : undefined
+
+        // 6. side effects: save user message
+        const messageText = lastUserMessageText(messages)
+        const attachments = await persistLastUserAttachments(messages, {
+            tenantId, userId: user.id, kind: 'lesson', referenceId: lessonId,
+        })
+        if (messageText || attachments.length > 0) {
+            // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
+            await supabase.from('lessons_ai_task_messages').insert({
+                lesson_id: lessonId,
+                user_id: user.id,
+                sender: 'user',
+                message: messageText ?? '',
+                attachments: attachments.length > 0 ? attachments : null,
+            })
+        }
+
+        // 7. Stream Response
+        // Only the MODEL's view is capped — verify() below still reads the full,
+        // untrimmed `messages` as its evidence.
+        const modelMessages = await convertToModelMessages(capChatHistory(messages, AI_CONFIG.maxHistoryMessages))
+        const result = propagateAttributes(
+            {
+                userId: user.id,
+                metadata: {
+                    lessonId: String(lessonId),
+                    tenantId,
+                    feature: 'lesson_tutor',
+                    provider: tutor.providerId,
+                    modelId: tutor.modelId,
+                },
+            },
+            () => streamText({
+            model: tutor.model,
+            system: PROMPTS.lessonTutor(lesson, aiTask),
+            messages: modelMessages,
+            tools: createLessonTools(supabase, {
+                lessonId: String(lessonId),
+                userId: user.id,
+                requirementIds: requirementIds(structuredRequirements),
+                verify: () => verifyLessonCompletion({
+                    model: verifier.model,
+                    taskInstructions: aiTask?.task_instructions,
+                    teacherPrompt: aiTask?.system_prompt,
+                    structuredRequirements,
+                    messages,
+                }),
             }),
-        }),
-        experimental_telemetry: { functionId: 'lesson-tutor' },
+            experimental_telemetry: { functionId: 'lesson-tutor' },
         onFinish: async (event) => {
             // lessons_ai_task_messages has NO tenant_id column — sending it silently fails the insert.
             // `event.text` is the LAST step only. The tutor congratulates and calls
@@ -162,5 +194,6 @@ export async function POST(req: Request) {
         }),
     )
 
-    return result.toUIMessageStreamResponse()
+        return result.toUIMessageStreamResponse()
+    })
 }

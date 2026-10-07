@@ -4,6 +4,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { isServerActionNotFoundError } from "@/lib/sentry/noise";
+import { redactSentryEvent } from "@/lib/sentry/redact-event";
 
 // The DSN comes from the environment, never a literal. It used to be hardcoded,
 // which meant every fork of this repo deployed elsewhere reported its crashes into
@@ -39,6 +40,11 @@ Sentry.init({
     // not leave an `error_captured` row pointing at an event that was never
     // stored. See `lib/sentry/noise.ts` for why this one is not ours to fix.
     if (isServerActionNotFoundError(event)) return null;
+
+    // BYOK: a provider error or captured request must never carry a tenant's
+    // API key into Sentry. Runs before the OpenPanel pointer so nothing leaves
+    // the process unscrubbed.
+    redactSentryEvent(event);
 
     try {
       if (event.event_id) {

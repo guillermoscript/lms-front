@@ -3,15 +3,19 @@
  * The summary is injected into future sessions as memory.
  */
 
-import { generateText } from 'ai'
-import { AI_MODELS } from './config'
+import { generateText, type LanguageModel } from 'ai'
 
 interface Message {
     role: string
     content: string
 }
 
-export async function generateSessionSummary(messages: Message[]): Promise<{
+/**
+ * `model` is the school's resolved `aristotle_summary` model (it inherits the
+ * `aristotle` mapping, including a per-course override). There is no default:
+ * the caller resolves it from the tenant's own key.
+ */
+export async function generateSessionSummary(messages: Message[], model: LanguageModel): Promise<{
     summary: string
     topics: string[]
 }> {
@@ -24,7 +28,7 @@ export async function generateSessionSummary(messages: Message[]): Promise<{
         .join('\n')
 
     const { text } = await generateText({
-        model: AI_MODELS.aristotle,
+        model,
         system: `You summarize tutoring conversations. Output JSON only, no markdown.
 
 Format: {"summary": "...", "topics": ["topic1", "topic2"]}
@@ -38,7 +42,8 @@ Rules:
     })
 
     try {
-        const parsed = JSON.parse(text)
+        // Not every provider honours "no markdown": tolerate a ```json fence.
+        const parsed = JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''))
         return {
             summary: parsed.summary || '',
             topics: Array.isArray(parsed.topics) ? parsed.topics : [],

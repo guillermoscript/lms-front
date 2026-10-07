@@ -18,6 +18,29 @@ export type CheckpointEvaluatorType =
   | 'pending'
   | 'fallback'
 
+/**
+ * Why a 'fallback' attempt carries no AI feedback (`evaluation.fallback_reason`).
+ * `ai_not_configured` / `ai_key_invalid`: the school has no usable AI key (BYOK).
+ */
+export type CheckpointFallbackReason =
+  | 'plan_excluded'
+  | 'checkpoint_attempts_exhausted'
+  | 'student_monthly_quota'
+  | 'tenant_monthly_quota'
+  | 'ai_not_configured'
+  | 'ai_key_invalid'
+  | 'provider_error'
+
+export const CHECKPOINT_FALLBACK_REASONS: readonly CheckpointFallbackReason[] = [
+  'plan_excluded',
+  'checkpoint_attempts_exhausted',
+  'student_monthly_quota',
+  'tenant_monthly_quota',
+  'ai_not_configured',
+  'ai_key_invalid',
+  'provider_error',
+]
+
 /** Closed-type question stored in exercise_config.questions. */
 export interface CheckpointQuestion {
   id: string
@@ -91,6 +114,8 @@ export interface CheckpointAttemptResult {
   perQuestion?: PerQuestionResult[]
   /** True when AI evaluation was unavailable (quota/plan/provider). */
   aiUnavailable?: boolean
+  /** Set with `aiUnavailable`; lets the UI tell "ask your admin to add a key" from a transient failure. */
+  fallbackReason?: CheckpointFallbackReason
   canRetryAi?: boolean
 }
 
@@ -108,6 +133,7 @@ export interface StoredCheckpointEvaluation {
   nextStepHint?: string
   perQuestion?: PerQuestionResult[]
   aiUnavailable?: boolean
+  fallbackReason?: CheckpointFallbackReason
 }
 
 /**
@@ -146,7 +172,12 @@ export function parseStoredEvaluation(raw: unknown): StoredCheckpointEvaluation 
   const parsed: StoredCheckpointEvaluation = {}
   if (typeof row.feedback === 'string') parsed.feedback = row.feedback
   if (typeof row.next_step_hint === 'string') parsed.nextStepHint = row.next_step_hint
-  if (typeof row.fallback_reason === 'string') parsed.aiUnavailable = true
+  if (typeof row.fallback_reason === 'string') {
+    parsed.aiUnavailable = true
+    if ((CHECKPOINT_FALLBACK_REASONS as readonly string[]).includes(row.fallback_reason)) {
+      parsed.fallbackReason = row.fallback_reason as CheckpointFallbackReason
+    }
+  }
   if (Array.isArray(row.per_question)) {
     const perQuestion: PerQuestionResult[] = []
     for (const item of row.per_question) {

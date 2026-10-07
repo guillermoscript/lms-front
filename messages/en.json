@@ -163,7 +163,14 @@
       "save": "Save",
       "saving": "Saving...",
       "saved": "Saved",
-      "saveFailed": "Couldn't save. Try again."
+      "saveFailed": "Couldn't save. Try again.",
+      "model": "AI model",
+      "modelHint": "Overrides the school default for this course's tutor. Only providers your school has connected appear here.",
+      "modelDefault": "School default",
+      "modelNoProviders": "No AI provider is connected yet. Ask your school admin to add an API key.",
+      "modelVisionWarning": "This model may not read images. Students who attach an image will see an error.",
+      "modelSaveFailed": "Tutor saved, but the model couldn't be updated.",
+      "modelVision": "images"
     }
   },
   "auth": {
@@ -4586,6 +4593,7 @@
     "revenue": "Revenue",
     "billing": "Billing",
     "apiTokens": "API Tokens",
+    "aiSettings": "AI",
     "appearance": "Appearance",
     "pages": "Pages",
     "analytics": "Analytics",
@@ -8206,6 +8214,251 @@
     "burst": "You're sending messages a bit fast. Wait a moment and try again.",
     "daily": "You've reached today's practice limit. Try again tomorrow.",
     "monthly": "Your school's monthly AI budget is spent for this month. Ask an admin to upgrade the plan."
+  },
+  "aiSettings": {
+    "title": "AI",
+    "description": "Connect your own AI provider keys and choose the models behind every AI feature in your school. You pay your provider directly.",
+    "breadcrumb": "AI",
+    "loadError": {
+      "title": "Couldn't load AI settings",
+      "description": "Reload the page. If it keeps failing, check that the server has encryption keys configured."
+    },
+    "setup": {
+      "title": "Two steps to turn AI on",
+      "step1": "Connect a provider with your API key.",
+      "step2": "Pick a default model. Every AI feature uses it unless you choose otherwise."
+    },
+    "providers": {
+      "title": "Providers",
+      "description": "Keys are checked with the provider before they are saved, then stored encrypted. They are never shown again, only the last four characters.",
+      "status": {
+        "active": "Connected",
+        "invalid": "Key rejected",
+        "disabled": "Disabled",
+        "notConnected": "Not connected"
+      },
+      "kinds": {
+        "language": "Text",
+        "stt": "Speech to text",
+        "realtime": "Live voice",
+        "image": "Images"
+      },
+      "keyEnding": "Key ending in {last4}",
+      "checkedOn": "Checked {date}",
+      "usedOn": "Last used {date}",
+      "neverUsed": "Not used yet",
+      "modelCount": "{count, plural, one {# model} other {# models}}",
+      "invalidHint": "The provider rejected this key. Replace it to restore AI features.",
+      "add": "Connect",
+      "replace": "Replace key",
+      "remove": "Remove",
+      "test": "Test key",
+      "refresh": "Refresh models",
+      "dialog": {
+        "addTitle": "Connect {provider}",
+        "replaceTitle": "Replace the {provider} key",
+        "description": "We check the key with {provider} first, then store it encrypted. You won't be able to see it again.",
+        "keyLabel": "API key",
+        "keyPlaceholder": "Paste your key",
+        "show": "Show key",
+        "hide": "Hide key",
+        "submit": "Check and save",
+        "submitting": "Checking...",
+        "cancel": "Cancel"
+      },
+      "removeConfirm": {
+        "title": "Remove the {provider} key?",
+        "description": "AI features that use {provider} will stop working until you pick another model. Models you chose on this provider are cleared.",
+        "confirm": "Remove key",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "saved": "{provider} connected",
+        "removed": "{provider} key removed",
+        "removedCleared": "{provider} key removed. Cleared {count, plural, one {# model choice} other {# model choices}}.",
+        "testOk": "{provider} accepted the key",
+        "refreshed": "{count, plural, one {# model} other {# models}} loaded from {provider}"
+      }
+    },
+    "default": {
+      "title": "Default model",
+      "description": "The model every AI feature uses unless you choose a different one under Advanced.",
+      "provider": "Provider",
+      "model": "Model",
+      "providerPlaceholder": "Choose a provider",
+      "modelPlaceholder": "Choose or type a model",
+      "noProviders": "Connect a provider above to choose a default model.",
+      "save": "Save default",
+      "saving": "Saving...",
+      "clear": "Clear",
+      "saved": "Default model saved",
+      "cleared": "Default model cleared",
+      "current": "Currently {provider} / {model}",
+      "none": "No default yet"
+    },
+    "advanced": {
+      "title": "Advanced",
+      "description": "Use a different model for a single feature, for example a cheaper one for grading or a stronger one for the tutor.",
+      "show": "Show per-feature models",
+      "hide": "Hide per-feature models",
+      "areas": {
+        "student": "Student features",
+        "teacher": "Teacher features",
+        "admin": "School setup"
+      },
+      "source": {
+        "custom": "Custom",
+        "inherits": "Follows {feature}",
+        "default": "School default"
+      },
+      "provider": "Provider",
+      "model": "Model",
+      "voice": "Voice",
+      "voiceDefault": "Provider default",
+      "providerPlaceholder": "Use default",
+      "noProviders": "No connected provider can serve this feature.",
+      "save": "Save",
+      "saving": "Saving...",
+      "reset": "Reset",
+      "test": "Test",
+      "testing": "Testing...",
+      "saved": "Saved",
+      "resetDone": "Back to the default",
+      "longRunning": "Long task. It makes many model calls on your provider bill.",
+      "sttWordsHint": "Providers other than AssemblyAI may not return word timing, so speaking pace and pause metrics can be less accurate.",
+      "testOk": "Works: {provider} / {model} ({ms} ms)",
+      "probe": {
+        "text": "text reply",
+        "tools": "tool calling",
+        "structured": "structured output",
+        "credential": "key check",
+        "realtime_token": "live session token"
+      }
+    },
+    "features": {
+      "aristotle": { "name": "Aristotle tutor", "description": "The course tutor chat that students open from a course." },
+      "aristotle_summary": { "name": "Aristotle summaries", "description": "Summarizes a tutor session when it closes." },
+      "lesson_tutor": { "name": "Lesson tutor", "description": "The AI helper inside AI lesson tasks." },
+      "lesson_verifier": { "name": "Lesson task checker", "description": "Decides whether a student finished an AI lesson task." },
+      "checkpoint_grader": { "name": "Checkpoint grader", "description": "Grades short checkpoint answers inside lessons." },
+      "exercise_coach": { "name": "Exercise coach", "description": "Chat help while students work on an exercise." },
+      "exercise_grader": { "name": "Exercise grader", "description": "Grades written and artifact exercises with feedback." },
+      "speech_coach": { "name": "Speaking coach", "description": "Gives feedback on recorded speaking exercises." },
+      "speech_stt": { "name": "Speech to text", "description": "Transcribes student recordings." },
+      "voice_conversation": { "name": "Live conversation", "description": "Real-time voice practice with an AI partner." },
+      "exam_grader": { "name": "Exam grader", "description": "Grades free-text exam answers." },
+      "question_generator": { "name": "Question generator", "description": "Drafts quiz questions from a lesson." },
+      "starter_course": { "name": "Starter course", "description": "Generates a first course for a new school." },
+      "course_architect": { "name": "Course architect", "description": "The agent that plans and builds a course with a teacher." },
+      "landing_builder": { "name": "Landing page builder", "description": "Generates landing pages from a prompt." },
+      "image_generation": { "name": "Image generation", "description": "Creates cover and lesson images." }
+    },
+    "billing": {
+      "title": "Billing",
+      "description": "Who pays for AI usage.",
+      "byok": {
+        "label": "Your own provider keys",
+        "description": "Usage is billed by your AI provider to your account."
+      },
+      "managed": {
+        "label": "Managed billing",
+        "description": "We run the models and bill usage with your plan.",
+        "badge": "Coming soon"
+      }
+    },
+    "trace": {
+      "title": "AI traces",
+      "description": "The platform records AI calls (model, tokens, timing, errors) to find and fix problems.",
+      "label": "Include prompt and response text",
+      "hint": "Turn off to keep your students' messages and the AI's answers out of those traces. Takes effect within a minute.",
+      "saved": "Saved."
+    },
+    "warnings": {
+      "missing_cap": {
+        "language": "This model may not be a text model.",
+        "tools": "This model may not support tool calling, which this feature needs.",
+        "vision": "This model may not read images. Students who attach an image will see an error.",
+        "structured": "This model may not support structured output, which this feature needs.",
+        "stt": "This model may not transcribe audio.",
+        "realtime": "This model may not support live voice.",
+        "image": "This model may not generate images."
+      },
+      "model_not_in_list": "This model isn't in the list your provider returned. Check the name.",
+      "key_invalid": "The key for this provider was rejected. Replace it first.",
+      "not_a_language_model": "This model may not be a text model."
+    },
+    "blocked": {
+      "provider_not_allowed": "This provider can't serve this feature.",
+      "not_a_speech_model": "This isn't a speech-to-text model.",
+      "not_a_realtime_model": "This isn't a live voice model.",
+      "not_an_image_model": "This isn't an image model."
+    },
+    "errors": {
+      "unauthorized": "Only school admins can change AI settings.",
+      "invalid_input": "Check the values and try again.",
+      "rate_limited": "Too many attempts. Wait a minute and try again.",
+      "key_rejected": "The provider rejected this key. Check it and try again.",
+      "provider_unreachable": "Couldn't reach the provider. Try again in a moment.",
+      "not_found": "Nothing to change here.",
+      "no_credential": "Connect this provider first.",
+      "provider_not_allowed": "This provider can't serve this feature.",
+      "model_blocked": "This model can't be used for this feature.",
+      "invalid_voice": "This voice isn't available for the provider.",
+      "server_misconfigured": "Key storage isn't configured on this server. Contact the platform operator.",
+      "save_failed": "Couldn't save. Try again.",
+      "ai_failed": "The test call failed."
+    },
+    "codes": {
+      "ai_not_configured": "No key is set for this feature.",
+      "ai_key_invalid": "The provider rejected the key.",
+      "ai_model_unsupported": "This model can't do what the feature needs.",
+      "ai_quota": "The provider account is out of credit or rate limited.",
+      "ai_provider_error": "The provider didn't respond correctly."
+    },
+    "banner": {
+      "title": "Add an AI key to turn on AI",
+      "description": "The tutor, graders and generators need your own AI provider key. Connecting one takes about a minute.",
+      "action": "Set up AI"
+    },
+    "history": {
+      "title": "Recent changes",
+      "empty": "No changes yet.",
+      "you": "You",
+      "team": "Another admin",
+      "actions": {
+        "set": "connected a provider",
+        "rotate": "replaced a key",
+        "delete": "removed a key",
+        "validate_fail": "had a key rejected",
+        "model_change": "changed a model",
+        "auto_invalidated": "had a key flagged as invalid"
+      }
+    },
+    "loading": "Loading AI settings"
+  },
+  "aiErrorNotice": {
+    "configure": "Open AI settings",
+    "student": {
+      "ai_not_configured": "Your school hasn't enabled AI yet.",
+      "ai_key_invalid": "AI is unavailable right now. Your school's AI connection needs attention.",
+      "ai_model_unsupported": "AI can't handle this request right now. Please try something else.",
+      "ai_quota": "AI is unavailable right now. Please try again later.",
+      "ai_provider_error": "The AI service didn't respond. Please try again in a moment."
+    },
+    "teacher": {
+      "ai_not_configured": "AI isn't set up for this school yet. Ask your school admin.",
+      "ai_key_invalid": "The school's AI key was rejected by the provider. Ask your school admin to update it.",
+      "ai_model_unsupported": "The model your school picked can't handle this request. Ask your school admin to choose another.",
+      "ai_quota": "The school's AI provider account is out of credit or rate limited. Ask your school admin.",
+      "ai_provider_error": "The AI service didn't respond. Please try again in a moment."
+    },
+    "admin": {
+      "ai_not_configured": "Add an AI provider key to turn on AI features.",
+      "ai_key_invalid": "Your AI provider rejected the saved key. Update it in AI settings.",
+      "ai_model_unsupported": "The selected model can't handle this request. Pick a different model in AI settings.",
+      "ai_quota": "Your AI provider account is out of credit or rate limited. Check billing with your provider.",
+      "ai_provider_error": "The AI service didn't respond. Please try again in a moment."
+    }
   },
   "deleteAccountPage": {
     "metaTitle": "Delete your account",

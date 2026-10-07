@@ -34,5 +34,6 @@ This is a multi-tenant platform, so anything that crosses a boundary is high pri
 ## Self-hosting notes
 
 If you run your own instance: keep `SUPABASE_SERVICE_ROLE_KEY` server-side only, never put a
-production OpenAI key in `NEXT_PUBLIC_OPENAI_API_KEY` (it ships to the browser), reseed nothing
-from `supabase/seed.sql` in production, and verify RLS is enabled on every table you add.
+`AI_KEYS_ENCRYPTION_KEYS` out of the repo and backed up (schools' AI provider keys are encrypted with it;
+the platform holds no AI key of its own), reseed nothing from `supabase/seed.sql` in production, and verify
+RLS is enabled on every table you add.

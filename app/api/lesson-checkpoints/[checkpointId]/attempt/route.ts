@@ -1,10 +1,12 @@
 import { z } from 'zod'
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveCourseAccessState } from '@/lib/services/course-access'
-import { AI_MODELS } from '@/lib/ai/config'
+import { createTenantAi, type ResolvedFeatureModel } from '@/lib/ai/tenant-ai'
+import { classifyProviderError, isAiError, markCredentialInvalid } from '@/lib/ai/errors'
+import { redact } from '@/lib/ai/byok/redact'
 import { gradeCheckpointQuestions } from '@/lib/checkpoints/grading'
 import { GRADING_SECRETS_EMBED, withGradingSecrets } from '@/lib/exercises/grading-secrets'
 import { track } from '@/lib/analytics/server'
@@ -16,6 +18,7 @@ import {
   parseCheckpointQuestions,
   type CheckpointAttemptResult,
   type CheckpointEvaluatorType,
+  type CheckpointFallbackReason,
 } from '@/lib/checkpoints/types'
 
 export const maxDuration = 60
@@ -44,6 +47,14 @@ const aiEvaluationSchema = z.object({
   feedback: z.string(),
   next_step_hint: z.string(),
 })
+
+/** Logs name, status and a redacted message only, never a provider body or key. */
+function logAiFailure(err: unknown, code: string) {
+  const name = err instanceof Error ? err.name : typeof err
+  const status = isAiError(err) ? err.upstreamStatus : undefined
+  const msg = err instanceof Error ? redact(err.message).slice(0, 200) : ''
+  console.error('Checkpoint AI evaluation failed:', code, name, status ?? '-', msg)
+}
 
 function monthStartIso(): string {
   const now = new Date()
@@ -178,6 +189,21 @@ export async function POST(
     }
     response = { text: body.text }
 
+    const tenantAi = createTenantAi(tenantId, { actorId: user.id })
+
+    // Resolve the school's model BEFORE the allowance gate (a missing key must
+    // leave no usage side effects). The attempt is still recorded either way:
+    // an unavailable grader degrades to a 'fallback' attempt, never an error.
+    let resolved: ResolvedFeatureModel | null = null
+    let fallbackReason: CheckpointFallbackReason | null = null
+    try {
+      resolved = await tenantAi.getModelForFeature('checkpoint_grader')
+    } catch (err) {
+      const aiErr = classifyProviderError(err, { feature: 'checkpoint_grader' })
+      fallbackReason = aiErr.code === 'ai_not_configured' ? 'ai_not_configured' : aiErr.code === 'ai_key_invalid' ? 'ai_key_invalid' : 'provider_error'
+      logAiFailure(err, aiErr.code)
+    }
+
     const gate = await checkAiAllowance(adminClient, {
       tenantId,
       userId: user.id,
@@ -189,6 +215,10 @@ export async function POST(
       evaluatorType = 'fallback'
       evaluation = { fallback_reason: gate.reason }
       aiUnavailable = true
+    } else if (!resolved) {
+      evaluatorType = 'fallback'
+      evaluation = { fallback_reason: fallbackReason ?? 'provider_error' }
+      aiUnavailable = true
     } else {
       try {
         const systemPrompt =
@@ -198,11 +228,22 @@ export async function POST(
           typeof config.evaluation_criteria === 'string'
             ? config.evaluation_criteria
             : ''
-        const { object } = await propagateAttributes(
-          { userId: user.id, metadata: { checkpointId: String(checkpointId), exerciseId: String(exercise.id), tenantId } },
-          () => generateObject({
-          model: AI_MODELS.grader,
-          schema: aiEvaluationSchema,
+        const gradingModel = resolved
+        const { output: object } = await propagateAttributes(
+          {
+            userId: user.id,
+            metadata: {
+              checkpointId: String(checkpointId),
+              exerciseId: String(exercise.id),
+              tenantId,
+              feature: 'checkpoint_grader',
+              provider: gradingModel.providerId,
+              modelId: gradingModel.modelId,
+            },
+          },
+          () => generateText({
+          model: gradingModel.model,
+          output: Output.object({ schema: aiEvaluationSchema }),
           system: systemPrompt
             ? `${systemPrompt}\n\nYou are evaluating one short student checkpoint answer. Be fair, concise, and formative.`
             : 'You are an expert educational evaluator. Evaluate the student answer fairly and constructively. Be concise and formative.',
@@ -221,9 +262,19 @@ export async function POST(
           meets_expectations: object.meets_expectations,
         }
       } catch (err) {
-        console.error('Checkpoint AI evaluation failed:', err)
+        const aiErr = classifyProviderError(err, {
+          feature: 'checkpoint_grader',
+          providerId: resolved.providerId,
+        })
+        logAiFailure(err, aiErr.code)
+        if (aiErr.code === 'ai_key_invalid') {
+          await markCredentialInvalid(tenantId, resolved.providerId, 'checkpoint_grader', user.id)
+        }
         evaluatorType = 'fallback'
-        evaluation = { fallback_reason: 'provider_error' }
+        evaluation = {
+          fallback_reason:
+            aiErr.code === 'ai_key_invalid' ? 'ai_key_invalid' : 'provider_error',
+        }
         aiUnavailable = true
       }
     }
@@ -345,6 +396,9 @@ export async function POST(
     nextStepHint,
     perQuestion,
     aiUnavailable,
+    ...(aiUnavailable && typeof evaluation?.fallback_reason === 'string'
+      ? { fallbackReason: evaluation.fallback_reason as CheckpointFallbackReason }
+      : {}),
     canRetryAi:
       evaluatorType === 'ai' &&
       passed === false &&

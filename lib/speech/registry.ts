@@ -1,25 +1,28 @@
-import { AssemblyAIProvider } from './providers/assemblyai'
-import { VapiProvider } from './providers/vapi'
-import { OpenAICoachProvider } from './coaches/openai'
-import { GeminiCoachProvider } from './coaches/gemini'
+import type { TenantAi } from '@/lib/ai/tenant-ai'
+import { ModelCoachProvider } from './coaches/model-coach'
+import { TenantSttProvider } from './providers/tenant-stt'
 import type { STTProvider, SpeechCoach } from './types'
 
-export const STT_PROVIDERS: Record<string, () => STTProvider> = {
-  assemblyai: () => new AssemblyAIProvider(),
-  vapi: () => new VapiProvider(),
+export interface SpeechPipelineProviders {
+  stt: STTProvider
+  coach: SpeechCoach
 }
 
-export const SPEECH_COACHES: Record<string, () => SpeechCoach> = {
-  openai: () => new OpenAICoachProvider(),
-  gemini: () => new GeminiCoachProvider(),
-}
-
-export function getPipeline(sttName = 'assemblyai', coachName = 'openai') {
-  const stt = STT_PROVIDERS[sttName]
-  const coach = SPEECH_COACHES[coachName]
-
-  if (!stt) throw new Error(`Unknown STT provider: "${sttName}". Available: ${Object.keys(STT_PROVIDERS).join(', ')}`)
-  if (!coach) throw new Error(`Unknown speech coach: "${coachName}". Available: ${Object.keys(SPEECH_COACHES).join(', ')}`)
-
-  return { stt: stt(), coach: coach() }
+/**
+ * The school's own speech pipeline: STT from `ai.getTranscriber()` (feature
+ * `speech_stt`) and the coach from `ai.getModelForFeature('speech_coach')`.
+ * There is no per-exercise provider choice any more (`stt_provider` /
+ * `ai_coach` in old exercise configs are ignored) and no platform fallback.
+ *
+ * Both are resolved here, up front, so a missing key or an unsupported model
+ * throws a typed Ai*Error before the caller claims a submission or spends
+ * anything. Wrap the caller in `withTenantAi` to turn that into the 402/424/422.
+ */
+export async function getPipeline(ai: Pick<TenantAi, 'getTranscriber' | 'getModelForFeature'>): Promise<SpeechPipelineProviders> {
+  const transcriber = await ai.getTranscriber()
+  const coach = await ai.getModelForFeature('speech_coach', { require: ['structured'] })
+  return {
+    stt: new TenantSttProvider(transcriber),
+    coach: new ModelCoachProvider(coach.model, coach.providerId),
+  }
 }

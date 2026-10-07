@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { capChatHistory } from '@/lib/ai/chat-helpers'
 import { checkAiChatUsage } from '@/lib/ai/chat-usage'
-import { classifyAiChatError } from '@/lib/ai/chat-error'
+import { classifyAiChatError, parseAiChatError } from '@/lib/ai/chat-error'
 
 /**
  * Pins the client half of issue #807's durable AI chat budget:
@@ -62,10 +62,10 @@ describe('checkAiChatUsage', () => {
     expect(result).toEqual({ allowed: false, reason: 'daily_limit' })
   })
 
-  it('blocks with reason monthly_limit when the RPC refuses on the monthly budget', async () => {
+  it('does NOT block on the tenant-monthly budget (BYOK: the school pays its own provider)', async () => {
     const supabase = fakeSupabase({ data: { allowed: false, reason: 'monthly_limit' }, error: null })
     const result = await checkAiChatUsage(supabase, 'tenant-1', 'user-1')
-    expect(result).toEqual({ allowed: false, reason: 'monthly_limit' })
+    expect(result).toEqual({ allowed: true })
   })
 
   it('treats an unrecognised refusal reason as the daily cap, never as unlimited', async () => {
@@ -107,5 +107,40 @@ describe('classifyAiChatError', () => {
 
   it('falls back to generic when there is no error', () => {
     expect(classifyAiChatError(undefined)).toBe('generic')
+  })
+
+  it('classifies each BYOK AI error body and carries canConfigure + settingsUrl', () => {
+    for (const code of ['ai_not_configured', 'ai_key_invalid', 'ai_model_unsupported', 'ai_quota', 'ai_provider_error']) {
+      const body = { error: { code, feature: 'aristotle', canConfigure: true, settingsUrl: '/en/dashboard/admin/settings/ai' } }
+      expect(parseAiChatError(new Error(JSON.stringify(body)))).toEqual({
+        kind: code,
+        canConfigure: true,
+        settingsUrl: '/en/dashboard/admin/settings/ai',
+      })
+    }
+  })
+
+  it('never hands a settings link to a viewer who cannot configure', () => {
+    const body = { error: { code: 'ai_not_configured', feature: 'aristotle', canConfigure: false, settingsUrl: '/dashboard/admin/settings/ai' } }
+    expect(parseAiChatError(new Error(JSON.stringify(body)))).toEqual({
+      kind: 'ai_not_configured',
+      canConfigure: false,
+      settingsUrl: null,
+    })
+  })
+
+  it('ignores an off-site settingsUrl and falls back to the settings path', () => {
+    const body = { error: { code: 'ai_key_invalid', feature: 'aristotle', canConfigure: true, settingsUrl: 'https://evil.example' } }
+    expect(parseAiChatError(new Error(JSON.stringify(body))).settingsUrl).toBe('/dashboard/admin/settings/ai')
+  })
+
+  it('treats an unknown nested code as generic', () => {
+    const body = { error: { code: 'nope', canConfigure: true } }
+    expect(classifyAiChatError(new Error(JSON.stringify(body)))).toBe('generic')
+  })
+
+  it('survives a JSON null / primitive body', () => {
+    expect(classifyAiChatError(new Error('null'))).toBe('generic')
+    expect(classifyAiChatError(new Error('42'))).toBe('generic')
   })
 })

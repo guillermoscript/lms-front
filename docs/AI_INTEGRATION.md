@@ -1,8 +1,8 @@
 # AI Integration Guide
 
-**Status**: Fully implemented
-**AI SDK**: Vercel AI SDK (`ai` package) with OpenAI provider (`@ai-sdk/openai`)
-**Model**: `gpt-5-mini` (centrally configured in `lib/ai/config.ts`)
+**Status**: Fully implemented, bring-your-own-key (BYOK). See [`AI_BYOK.md`](AI_BYOK.md) for the key/provider/model model.
+**AI SDK**: Vercel AI SDK (`ai` package). Provider SDKs are imported only in `lib/ai/providers.ts`.
+**Model**: chosen per school and per feature (Admin > Settings > AI); resolved with `createTenantAi(tenantId)`. No model is hardcoded and there is no platform key.
 **Streaming**: `UIMessageStreamResponse` for chat endpoints
 **Limits**: `maxDuration: 120s`, `maxSteps: 10`
 
@@ -23,7 +23,7 @@
    ↓
 5. API route fetches context from Supabase (exercise, lesson, course structure)
    ↓
-6. Vercel AI SDK calls OpenAI with context + system prompt
+6. API route resolves the school's model (`createTenantAi(tenantId).getModelForFeature(feature)`) and the AI SDK calls the school's provider with context + system prompt
    ↓
 7. Streaming response sent back via UIMessageStreamResponse (chat)
    or generateText returns structured output (evaluations)
@@ -31,28 +31,16 @@
 8. On completion, save results to database (onFinish callback or explicit insert)
 ```
 
-### Central Configuration
+### Model resolution
 
-**File**: `lib/ai/config.ts`
+**Files**: `lib/ai/tenant-ai.ts` (resolver), `lib/ai/features.ts` (feature ids), `lib/ai/providers.ts` (the only provider-SDK importer), `lib/ai/config.ts` (constants only: `maxSteps`, `maxDuration`, `maxHistoryMessages`, `DEFAULT_PASSING_SCORE`).
 
 ```typescript
-import { openai } from '@ai-sdk/openai'
-
-export const AI_CONFIG = {
-    defaultModel: openai('gpt-5-mini'),
-    maxDuration: 120,
-    maxSteps: 10,
-}
-
-export const AI_MODELS = {
-    tutor: openai('gpt-5-mini'),
-    coach: openai('gpt-5-mini'),
-    grader: openai('gpt-5-mini'),
-    aristotle: openai('gpt-5-mini'),
-}
+const ai = createTenantAi(tenantId) // tenantId from the auth context, never the request body
+const { model, providerId, modelId } = await ai.getModelForFeature('lesson_tutor')
 ```
 
-All AI endpoints import from `AI_MODELS` — changing the model in one place updates the entire platform.
+Every call site picks one `AiFeature`; the school maps features to `(provider, model)`. Missing key or model throws a typed `Ai*Error`, which `withTenantAi` / `handleAiError` turn into 402/424/422/429/502 (`{error:{code, feature, canConfigure, settingsUrl}}`).
 
 ### AI Tools (Function Calling)
 
@@ -135,7 +123,7 @@ Non-streaming AI evaluation of HTML/CSS/JS artifact submissions.
 1. Validates exercise is type `artifact` and belongs to tenant
 2. Verifies enrollment
 3. **Rate limited**: max 10 evaluations per hour per exercise+user (checked via `exercise_evaluations` table)
-4. Uses `generateText()` with `AI_MODELS.grader` to evaluate the submission
+4. Uses `generateText()` with the school's `exercise_grader` model to evaluate the submission
 5. Parses structured JSON response: `{ score, feedback, strengths, improvements }`
 6. Inserts into `exercise_evaluations` and `exercise_completions` (if passed)
 7. Returns `{ score, feedback, passed, strengths, improvements, passingScore }`
@@ -157,10 +145,8 @@ Speech-to-text transcription followed by AI coaching evaluation.
 - `types.ts` — Defines `TranscriptionResult`, `SpeechMetrics`, `SpeechEvaluation`, `STTProvider`, `SpeechCoach` interfaces
 - `registry.ts` — Registry of STT providers and speech coaches
 - `pipeline.ts` — Orchestrates STT → metrics computation → AI evaluation
-- `providers/assemblyai.ts` — AssemblyAI STT provider
-- `providers/vapi.ts` — Vapi STT provider
-- `coaches/openai.ts` — OpenAI-based speech coach
-- `coaches/gemini.ts` — Gemini-based speech coach
+- `providers/tenant-stt.ts` — STT through the school's transcriber (`ai.getTranscriber()`: AssemblyAI, OpenAI or Groq; word timestamps feed WPM/pause metrics)
+- `coaches/model-coach.ts` — coach on the school's `speech_coach` model
 
 **How It Works**:
 1. Student records audio via `MediaRecorderComponent`, uploads to `exercise-media` Supabase bucket
@@ -172,7 +158,7 @@ Speech-to-text transcription followed by AI coaching evaluation.
 7. AI evaluation returns: score, strengths, improvements, focus_next, annotated_transcript
 8. Saves to `exercise_media_submissions`, `exercise_evaluations`, and `exercise_completions` (if passed)
 
-**Configurable per exercise**: STT provider (`assemblyai` or `vapi`), AI coach (`openai` or `gemini`), rubric criteria (filler words, pace, structure, confidence), topic prompt, passing score.
+**Configurable per exercise**: rubric criteria (filler words, pace, structure, confidence), topic prompt, passing score.
 
 ---
 
@@ -197,7 +183,7 @@ AI tutoring for lesson activities/tasks.
 
 AI grading for exam submissions, with configurable persona and feedback style.
 
-**API Route**: `POST /api/teacher/exams/[examId]/grade` — Teacher-initiated grading for individual submissions
+**API Route**: `POST /api/exams/[examId]/grade` — grading for a submission (role and ownership checked)
 
 **Server Action**: `app/actions/exam-grading.ts` — `gradeExamWithAI()` function, also callable from student exam submission flow
 
@@ -205,10 +191,10 @@ AI grading for exam submissions, with configurable persona and feedback style.
 1. Separates questions into auto-gradable (multiple choice, true/false) and free-text
 2. Auto-grades MC/TF programmatically with 100% confidence
 3. For free-text questions: builds a prompt using configurable AI persona, feedback tone, and detail level
-4. Uses `generateText()` with structured output to grade each free-text answer
+4. Uses `generateText()` + `Output.object` on the school's `exam_grader` model to grade each free-text answer
 5. Awards partial credit based on rubric, grading criteria, and expected keywords
 6. Saves results via `save_exam_feedback` RPC
-7. If AI grading is disabled, marks free-text questions as "pending teacher review"
+7. If AI grading is disabled, or the school has no usable key, free-text questions are parked as "pending teacher review"
 
 **AI Configuration** (per exam, stored in `exam_ai_configs`):
 - **Personas**: `professional_educator`, `friendly_tutor`, `strict_professor`, `supportive_mentor`
@@ -279,9 +265,11 @@ Feature gating is enforced via `get_plan_features(_tenant_id)` RPC and the `<Fea
 - Speech analysis: atomic `pending` → `processing` status transition prevents concurrent analysis of the same submission
 
 ### API Key Protection
-- All AI calls happen server-side in API routes and server actions
-- `OPENAI_API_KEY` is never exposed to the client
-- No AI SDK imports in client components
+- All AI calls happen server-side in API routes and server actions, with the school's own key
+- Keys are AES-256-GCM encrypted at rest (AAD `tenantId:provider`), decrypted only inside a per-request closure, never returned (UI shows last 4), never logged (`redact()`), never sent to Sentry (`redactSentryEvent`)
+- No platform key, no fallback: a school without a usable key gets a typed error, never someone else's credentials
+- Provider hosts are a fixed allowlist (no free-form base URL, no SSRF); the only client-side provider import is the key-free realtime protocol parser in `lib/speech/realtime-model.ts`
+- Langfuse traces carry `{tenantId, feature, provider, modelId}` and never headers; a school can opt out of prompt/response text (`tenant_ai_settings.ai_trace_content`, enforced in `lib/ai/trace-content-guard.ts`)
 
 ---
 
@@ -308,14 +296,11 @@ Feature gating is enforced via `get_plan_features(_tenant_id)` RPC and the `<Fea
 ## Environment Variables
 
 ```bash
-OPENAI_API_KEY=sk-...              # Required for all AI features
+AI_KEYS_ENCRYPTION_KEYS={"1":"<base64 32 bytes>"}   # master key(s) for stored school keys; back it up
+AI_KEYS_ACTIVE_VERSION=1
 ```
 
-Optional (for speech pipeline):
-```bash
-ASSEMBLYAI_API_KEY=...             # AssemblyAI STT provider
-VAPI_API_KEY=...                   # Vapi STT provider (alternative)
-```
+No AI provider key is configured on the platform (`OPENAI_API_KEY`, `ASSEMBLYAI_API_KEY` and `NEXT_PUBLIC_OPENAI_API_KEY` are gone). Optional: `LANGFUSE_*` for observability.
 
 ---
 
@@ -323,7 +308,12 @@ VAPI_API_KEY=...                   # Vapi STT provider (alternative)
 
 | File | Purpose |
 |------|---------|
-| `lib/ai/config.ts` | Central model configuration |
+| `lib/ai/tenant-ai.ts` | Per-request resolver: `createTenantAi(tenantId)` -> model / transcriber / realtime / image |
+| `lib/ai/providers.ts` | Provider registry (the only `@ai-sdk/*` importer): factories, key validation, model listing |
+| `lib/ai/features.ts` | `AiFeature` ids, kinds, inheritance, provider allowlists |
+| `lib/ai/errors.ts` | Typed AI errors, `classifyProviderError`, `withTenantAi` helpers |
+| `lib/ai/byok/` | Server-only key crypto (`crypto`), `redact` |
+| `lib/ai/config.ts` | AI constants (steps, duration, history cap, passing score), no models |
 | `lib/ai/prompts.ts` | All prompt templates |
 | `lib/ai/tools.ts` | AI function-calling tools (markExerciseCompleted, markLessonCompleted) |
 | `lib/ai/aristotle-prompt.ts` | Aristotle system prompt builder |
@@ -331,8 +321,8 @@ VAPI_API_KEY=...                   # Vapi STT provider (alternative)
 | `lib/speech/types.ts` | Speech pipeline type definitions |
 | `lib/speech/registry.ts` | STT provider and speech coach registry |
 | `lib/speech/pipeline.ts` | Speech analysis orchestration |
-| `lib/speech/providers/` | STT provider implementations (AssemblyAI, Vapi) |
-| `lib/speech/coaches/` | Speech coach implementations (OpenAI, Gemini) |
+| `lib/speech/providers/` | Tenant STT adapter |
+| `lib/speech/coaches/` | Model-backed speech coach |
 | `app/actions/exam-grading.ts` | Server action for exam AI grading with configurable personas |
 | `components/aristotle/` | Aristotle UI components (panel, provider, trigger, context setter) |
 | `components/exercises/exercise-chat.tsx` | Exercise chat UI component |

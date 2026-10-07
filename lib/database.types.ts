@@ -1568,8 +1568,10 @@ export type Database = {
           course_id: number
           created_at: string | null
           enabled: boolean | null
+          model: string | null
           model_config: Json | null
           persona: string | null
+          provider: string | null
           teaching_approach: string | null
           tenant_id: string
           tutor_id: string
@@ -1580,8 +1582,10 @@ export type Database = {
           course_id: number
           created_at?: string | null
           enabled?: boolean | null
+          model?: string | null
           model_config?: Json | null
           persona?: string | null
+          provider?: string | null
           teaching_approach?: string | null
           tenant_id: string
           tutor_id?: string
@@ -1592,8 +1596,10 @@ export type Database = {
           course_id?: number
           created_at?: string | null
           enabled?: boolean | null
+          model?: string | null
           model_config?: Json | null
           persona?: string | null
+          provider?: string | null
           teaching_approach?: string | null
           tenant_id?: string
           tutor_id?: string
@@ -6381,6 +6387,179 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_ai_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          at: string
+          feature: string | null
+          id: number
+          provider: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          at?: string
+          feature?: string | null
+          id?: never
+          provider?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          at?: string
+          feature?: string | null
+          id?: never
+          provider?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ai_credentials: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          key_ciphertext: string
+          key_last4: string
+          key_version: number
+          last_error_code: string | null
+          last_used_at: string | null
+          models_cache: Json | null
+          models_cached_at: string | null
+          provider: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          validated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_ciphertext: string
+          key_last4: string
+          key_version: number
+          last_error_code?: string | null
+          last_used_at?: string | null
+          models_cache?: Json | null
+          models_cached_at?: string | null
+          provider: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_ciphertext?: string
+          key_last4?: string
+          key_version?: number
+          last_error_code?: string | null
+          last_used_at?: string | null
+          models_cache?: Json | null
+          models_cached_at?: string | null
+          provider?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ai_feature_models: {
+        Row: {
+          feature: string
+          model: string
+          params: Json
+          provider: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          feature: string
+          model: string
+          params?: Json
+          provider: string
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          feature?: string
+          model?: string
+          params?: Json
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_feature_models_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ai_settings: {
+        Row: {
+          ai_trace_content: boolean
+          default_model: string | null
+          default_provider: string | null
+          mode: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_trace_content?: boolean
+          default_model?: string | null
+          default_provider?: string | null
+          mode?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_trace_content?: boolean
+          default_model?: string | null
+          default_provider?: string | null
+          mode?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_billing_customers: {
         Row: {
           created_at: string
@@ -7719,6 +7898,10 @@ export type Database = {
       submit_exam: {
         Args: { p_answers: Json; p_exam_id: number }
         Returns: number
+      }
+      tenant_ai_configured: {
+        Args: { _tenant_id: string }
+        Returns: Json
       }
       tenant_plan_limit: {
         Args: { _key: string; _tenant_id: string }

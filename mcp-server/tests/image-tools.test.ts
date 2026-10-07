@@ -1,4 +1,4 @@
-/** AI image tools: policy, guardrails, upload path and thumbnail write. */
+/** AI image tools: policy, internal-endpoint call (BYOK, no key here), upload path and thumbnail write. */
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 type Result = { data?: unknown; error?: unknown };
@@ -39,9 +39,7 @@ function makeFake(script: Record<string, Result[]>) {
 }
 
 vi.mock("../src/supabase.js", () => ({ createUserClient: () => fake.client, getServiceClient: () => null }));
-const generateImage = vi.fn();
-vi.mock("ai", () => ({ generateImage: (...a: unknown[]) => generateImage(...a) }));
-vi.mock("@ai-sdk/openai", () => ({ createOpenAI: () => ({ image: (id: string) => ({ id }) }) }));
+const appFetch = vi.fn();
 
 const { isToolAllowedForRole } = await import("../src/tool-policy.js");
 const images = await import("../src/tools/images.js");
@@ -58,19 +56,30 @@ const ctxFor = (role: string) => ({
   auth: { user: { id: ME }, accessToken: "t", payload: { tenant_id: TENANT, tenant_role: role } },
 });
 const text = (r: { content?: { text?: string }[] }) => r.content?.[0]?.text ?? "";
+const appImage = (bytes: number, mediaType = "image/webp") =>
+  new Response(
+    JSON.stringify({ image: Buffer.alloc(bytes, 1).toString("base64"), mediaType, provider: "openai", model: "gpt-image-1" }),
+    { status: 200 }
+  );
+const appError = (status: number, code: string, extra: object = {}) =>
+  new Response(JSON.stringify({ error: { code, ...extra } }), { status });
 const PROMPT = "A friendly robot teaching a class of plants";
 
 beforeEach(() => {
   uploads.length = 0;
   uploadError = null;
-  generateImage.mockReset();
-  generateImage.mockResolvedValue({ image: { uint8Array: new Uint8Array(1000) } });
-  process.env.OPENAI_API_KEY = "sk-test";
-  delete process.env.MCP_IMAGE_DAILY_CAP;
-  images.resetImageQuotaForTests();
+  appFetch.mockReset();
+  appFetch.mockResolvedValue(appImage(1000));
+  vi.stubGlobal("fetch", appFetch);
+  process.env.MCP_PROXY_SECRET = "shared-secret";
+  process.env.LMS_APP_URL = "https://app.example.com";
   fake = makeFake({ courses: [{ data: { author_id: ME, tenant_id: TENANT } }, { data: null }] });
 });
-afterEach(() => { delete process.env.OPENAI_API_KEY; });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  delete process.env.MCP_PROXY_SECRET;
+  delete process.env.LMS_APP_URL;
+});
 
 describe("policy + schema", () => {
   it("teachers and admins only", () => {
@@ -96,19 +105,60 @@ describe("lms_generate_course_image", () => {
   const run = (extra: object = {}, role = "teacher") =>
     handlers.get("lms_generate_course_image")!({ course_id: 5, prompt: PROMPT, ...extra }, ctxFor(role));
 
-  it("errors cleanly without OPENAI_API_KEY and does not generate", async () => {
-    delete process.env.OPENAI_API_KEY;
+  it("calls the internal app route with the caller token + shared secret, never a provider key", async () => {
+    const r = await run({ style: "flat" });
+    expect(r.isError).toBeUndefined();
+    expect(appFetch).toHaveBeenCalledTimes(1);
+    const [url, init] = appFetch.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
+    expect(url).toBe("https://app.example.com/api/internal/ai/image");
+    expect(init.headers.Authorization).toBe("Bearer t");
+    expect(init.headers["X-MCP-Secret"]).toBe("shared-secret");
+    const body = JSON.parse(init.body as string);
+    expect(Object.keys(body)).toEqual(["prompt"]);
+    expect(body.prompt).toMatch(/No text/);
+  });
+
+  it("says 'not configured' (no call, no upload) without MCP_PROXY_SECRET or an app address", async () => {
+    delete process.env.MCP_PROXY_SECRET;
+    let r = await run();
+    expect(r.isError).toBe(true);
+    expect(text(r)).toContain("not set up for this school");
+    delete process.env.LMS_APP_URL;
+    process.env.MCP_PROXY_SECRET = "x";
+    fake = makeFake({ courses: [{ data: { author_id: ME, tenant_id: TENANT } }, { data: null }] });
+    r = await run();
+    expect(r.isError).toBe(true);
+    expect(appFetch).not.toHaveBeenCalled();
+    expect(uploads).toHaveLength(0);
+  });
+
+  it("maps the school's missing key (402) to a clear admin-facing message", async () => {
+    appFetch.mockResolvedValue(appError(402, "ai_not_configured", { feature: "image_generation" }));
     const r = await run();
     expect(r.isError).toBe(true);
-    expect(text(r)).toContain("OPENAI_API_KEY");
-    expect(generateImage).not.toHaveBeenCalled();
+    expect(text(r)).toContain("Settings > AI");
+    expect(uploads).toHaveLength(0);
+  });
+
+  it("maps invalid key, quota and rate limits without echoing provider detail", async () => {
+    const cases: [Response, string][] = [
+      [appError(424, "ai_key_invalid"), "rejected"],
+      [appError(429, "image_rate_limited", { reason: "cooldown" }), "Wait a few seconds"],
+      [appError(429, "image_rate_limited", { reason: "daily_limit" }), "Daily AI image limit"],
+      [appError(500, "weird"), "HTTP 500"],
+    ];
+    for (const [res, expected] of cases) {
+      fake = makeFake({ courses: [{ data: { author_id: ME, tenant_id: TENANT } }, { data: null }] });
+      appFetch.mockResolvedValueOnce(res);
+      expect(text(await run())).toContain(expected);
+    }
   });
 
   it("refuses a course the teacher does not own", async () => {
     fake = makeFake({ courses: [{ data: { author_id: "someone-else", tenant_id: TENANT } }] });
     const r = await run();
     expect(r.isError).toBe(true);
-    expect(generateImage).not.toHaveBeenCalled();
+    expect(appFetch).not.toHaveBeenCalled();
     expect(uploads).toHaveLength(0);
   });
 
@@ -130,32 +180,28 @@ describe("lms_generate_course_image", () => {
     expect(fake.calls.some((c) => c.ops.some((o) => o[0] === "update"))).toBe(false);
   });
 
-  it("rejects oversized output and upload failures", async () => {
-    generateImage.mockResolvedValue({ image: { uint8Array: new Uint8Array(images.MAX_IMAGE_BYTES + 1) } });
+  it("rejects oversized output and unsupported media types", async () => {
+    appFetch.mockResolvedValueOnce(appImage(images.MAX_IMAGE_BYTES + 1));
     expect(text(await run())).toContain("larger than 5MB");
+    fake = makeFake({ courses: [{ data: { author_id: ME, tenant_id: TENANT } }, { data: null }] });
+    appFetch.mockResolvedValueOnce(appImage(10, "image/svg+xml"));
+    expect((await run()).isError).toBe(true);
     expect(uploads).toHaveLength(0);
   });
 
-  it("surfaces provider failures and refunds the quota slot", async () => {
-    generateImage.mockRejectedValueOnce(new Error("boom"));
+  it("uses the returned media type for the extension", async () => {
+    appFetch.mockResolvedValueOnce(appImage(100, "image/png"));
+    await run();
+    expect(uploads[0].path).toMatch(/\.png$/);
+    expect(uploads[0].type).toBe("image/png");
+  });
+
+  it("reports network failure cleanly", async () => {
+    appFetch.mockRejectedValueOnce(new Error("ECONNREFUSED sk-secret"));
     const r = await run();
     expect(r.isError).toBe(true);
-    expect(text(r)).toContain("boom");
-    fake = makeFake({ courses: [{ data: { author_id: ME, tenant_id: TENANT } }, { data: null }] });
-    expect((await run()).isError).toBeUndefined();
-  });
-});
-
-describe("quota", () => {
-  it("enforces cooldown and daily cap per user", () => {
-    process.env.MCP_IMAGE_DAILY_CAP = "2";
-    const t0 = Date.parse("2026-10-06T10:00:00Z");
-    expect(images.reserveImageQuota("u", t0)).toBeNull();
-    expect(images.reserveImageQuota("u", t0 + 1000)).toMatch(/Wait/);
-    expect(images.reserveImageQuota("u", t0 + 10_000)).toBeNull();
-    expect(images.reserveImageQuota("u", t0 + 20_000)).toMatch(/Daily AI image limit/);
-    expect(images.reserveImageQuota("other", t0 + 20_000)).toBeNull();
-    expect(images.reserveImageQuota("u", t0 + 86_400_000)).toBeNull();
+    expect(text(r)).toContain("Could not reach");
+    expect(text(r)).not.toContain("sk-secret");
   });
 });
 

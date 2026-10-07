@@ -107,10 +107,13 @@ const MARK_LESSON_COMPLETED = {
  */
 type VerifyCompletion = () => Promise<CompletionVerdict>;
 
-const refusal = (verdict: CompletionVerdict) => ({
-    success: false,
-    error: `Not complete yet — do not tell the student the lesson is done. Keep guiding them. What is missing: ${verdict.reason}`,
-});
+const refusal = (verdict: CompletionVerdict) =>
+    verdict.unavailable
+        ? { success: false, code: verdict.unavailable, error: verdict.reason }
+        : {
+            success: false,
+            error: `Not complete yet — do not tell the student the lesson is done. Keep guiding them. What is missing: ${verdict.reason}`,
+        };
 
 const REPORT_PROGRESS = {
     description:

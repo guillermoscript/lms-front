@@ -19,8 +19,7 @@ export function buildConversationConfig(data: ExerciseFormData) {
 
 export function buildAudioConfig(data: ExerciseFormData) {
   return {
-    stt_provider: 'assemblyai',
-    ai_coach: 'openai',
+    // STT and the coach model are the school's, set under Settings > AI (speech_stt / speech_coach).
     topic_prompt: data.topic_prompt,
     min_duration_seconds: data.min_duration_seconds,
     max_duration_seconds: data.max_duration_seconds,

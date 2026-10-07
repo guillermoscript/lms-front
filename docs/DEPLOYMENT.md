@@ -183,8 +183,10 @@ SOLANA_USDC_MINT=                               # Set = settle in USDC (recommen
 # Price rows: paste each Billing Plan id (P-…) under Platform → Plans.
 PAYPAL_PLATFORM_WEBHOOK_ID=
 
-# OpenAI (AI grading)
-OPENAI_API_KEY=sk-...
+# AI is bring-your-own-key: schools add their keys in Admin > Settings > AI.
+# Only the master key that encrypts them is configured here (back it up!).
+AI_KEYS_ENCRYPTION_KEYS={"1":"<openssl rand -base64 32>"}
+AI_KEYS_ACTIVE_VERSION=1
 
 # Email (Mailgun)
 MAILGUN_API_KEY=...

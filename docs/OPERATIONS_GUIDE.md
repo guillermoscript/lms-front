@@ -99,8 +99,10 @@ STRIPE_WEBHOOK_SECRET=whsec_...    # From your Connect webhook
 # ─── STRIPE (school billing — Stripe Billing) ───────────────────
 STRIPE_PLATFORM_WEBHOOK_SECRET=whsec_...   # Different webhook!
 
-# ─── AI (optional but recommended) ─────────────────────────────
-OPENAI_API_KEY=sk-...
+# ─── AI (BYOK: schools bring their own provider keys) ───────────
+# Master key encrypting the stored keys. No platform AI key exists. Back it up.
+AI_KEYS_ENCRYPTION_KEYS={"1":"<openssl rand -base64 32>"}
+AI_KEYS_ACTIVE_VERSION=1
 
 # ─── EMAIL (optional but recommended) ──────────────────────────
 MAILGUN_API_KEY=key-...

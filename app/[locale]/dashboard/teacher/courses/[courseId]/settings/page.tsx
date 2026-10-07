@@ -9,6 +9,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { CourseDeleteButton } from '@/components/teacher/course-delete-button'
 import { AristotleConfig } from '@/components/teacher/aristotle-config'
+import { getAristotleModelOptions } from '@/app/actions/teacher/aristotle-model'
 import { SequentialCompletionToggle } from '@/components/teacher/sequential-completion-toggle'
 import { Separator } from '@/components/ui/separator'
 
@@ -58,7 +59,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   }
 
   // Get categories and Aristotle config in parallel
-  const [{ data: categories }, { data: aristotleConfig }] = await Promise.all([
+  const [{ data: categories }, { data: aristotleConfig }, modelOptions] = await Promise.all([
     supabase
       .from('course_categories')
       .select('id, name')
@@ -70,6 +71,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
       .eq('course_id', parseInt(courseId))
       .eq('tenant_id', tenantId)
       .single(),
+    getAristotleModelOptions(parseInt(courseId)),
   ])
 
   return (
@@ -97,6 +99,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
 
         <CourseForm
           categories={categories || []}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           initialData={course as any}
         />
 
@@ -115,6 +118,7 @@ export default async function CourseSettingsPage({ params }: PageProps) {
           courseId={parseInt(courseId)}
           tenantId={tenantId}
           initialConfig={aristotleConfig}
+          modelState={modelOptions.ok ? modelOptions.state : null}
         />
 
         <Separator className="my-8" />

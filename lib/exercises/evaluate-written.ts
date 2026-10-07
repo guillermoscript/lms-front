@@ -1,6 +1,6 @@
-import { generateText, Output } from 'ai'
+import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
-import { AI_MODELS, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
+import { DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { getEngineType } from '@/lib/exercises/engine'
 
 const EvaluationSchema = z.object({
@@ -20,7 +20,11 @@ export interface WrittenGradingExercise {
   exercise_config?: unknown
 }
 
-export async function evaluateWrittenExercise(exercise: WrittenGradingExercise, content: string) {
+/**
+ * `model` is the school's own grader (`getModelForFeature('exercise_grader')`):
+ * there is no platform-key fallback, so the caller resolves it first.
+ */
+export async function evaluateWrittenExercise(exercise: WrittenGradingExercise, content: string, model: LanguageModel) {
   const engineType = getEngineType(exercise.exercise_type)
   const config = (exercise.exercise_config ?? {}) as Record<string, unknown> & {
     evaluation_criteria?: string
@@ -35,7 +39,7 @@ export async function evaluateWrittenExercise(exercise: WrittenGradingExercise, 
   const systemPrompt = exercise.system_prompt?.trim() ? exercise.system_prompt : null
 
   const { output } = await generateText({
-    model: AI_MODELS.grader,
+    model,
     output: Output.object({ schema: EvaluationSchema }),
     system: [
       systemPrompt ?? 'You are an expert educational evaluator. Grade fairly and constructively.',

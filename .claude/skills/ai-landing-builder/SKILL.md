@@ -61,9 +61,9 @@ descriptions, re-run `npm run gen:puck-fields` — it updates both surfaces.** I
 | `lib/json-render/catalog.ts` | Builds the json-render catalog from the manifest. Exports `landingCatalog`, `CATALOG_COMPONENT_NAMES`, `DEFAULT_PROPS_BY_TYPE`. Holds `EXCLUDED` + `DESCRIPTIONS`. |
 | `lib/json-render/authoring-guide.ts` | `LANDING_AUTHORING_GUIDE` — the landing-specific prompt suffix (output shape + how to build a good page). Shared by the route and the test script. |
 | `lib/json-render/to-puck.ts` | The bridge: `arraySpecToSpec`, `normalizeSpec`, `specToPuckData`. |
-| `app/api/landing/generate/route.ts` | The endpoint: auth + tenant scope → `generateObject` → validate → Puck Data. |
+| `app/api/landing/generate/route.ts` | The endpoint: auth + tenant scope → `streamText`/`generateText` + `Output.object` on the school's own model (`createTenantAi`, feature `landing_builder`) → validate → Puck Data. |
 | `components/admin/landing-page/generate-with-ai.tsx` | The "Generate with AI" button + dialog; injects via `dispatch({type:'setData'})`. |
-| `scripts/json-render-live-test.ts` | Offline end-to-end test with a REAL OpenAI call (reads `.env.local`). |
+| `scripts/json-render-live-test.ts` | Offline end-to-end test with a REAL model call on YOUR OWN OpenAI key (`JSON_RENDER_TEST_OPENAI_KEY`). |
 
 ## Critical invariants — read before editing anything here
 
@@ -134,7 +134,7 @@ what keeps the bridge a trivial pass-through. Steps:
 ```bash
 npx tsx scripts/json-render-live-test.ts "A landing page for <whatever>"
 ```
-Requires a valid `OPENAI_API_KEY` in `.env.local`. It prints the generated block list, runs
+Requires `JSON_RENDER_TEST_OPENAI_KEY` (your own OpenAI key; the platform holds none) in `.env.local`. It prints the generated block list, runs
 `catalog.validate`, and dumps the Puck `Data`. A healthy run shows 6–9 blocks opening with
 HeroBlock and closing with CtaBanner.
 

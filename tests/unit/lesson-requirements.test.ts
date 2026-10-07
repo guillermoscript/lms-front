@@ -145,6 +145,8 @@ describe('reportProgress tool', () => {
     })
 })
 
+const FAKE_MODEL = { specificationVersion: 'v3', provider: 'test', modelId: 'test' } as never
+
 describe('lesson-completion-verifier min_student_turns rule', () => {
     it('refuses before calling the model when the student has not sent enough messages', async () => {
         vi.resetModules()
@@ -161,7 +163,7 @@ describe('lesson-completion-verifier min_student_turns rule', () => {
             { role: 'assistant', parts: [{ type: 'text', text: 'hello' }] },
         ]
 
-        const verdict = await verifyLessonCompletion({ structuredRequirements: structured, messages })
+        const verdict = await verifyLessonCompletion({ model: FAKE_MODEL, structuredRequirements: structured, messages })
         expect(verdict.done).toBe(false)
         expect(verdict.reason).toContain('at least 4')
         expect(generateTextSpy).not.toHaveBeenCalled()
@@ -182,9 +184,98 @@ describe('lesson-completion-verifier min_student_turns rule', () => {
         const structured = structuredRequirementsSchema.parse({ ...validStructured, min_student_turns: 0, closing_phase: undefined })
         const messages = [{ role: 'user', parts: [{ type: 'text', text: 'Hi, I would like a large latte please, thanks!' }] }]
 
-        const verdict = await verifyLessonCompletion({ structuredRequirements: structured, messages })
+        const verdict = await verifyLessonCompletion({ model: FAKE_MODEL, structuredRequirements: structured, messages })
         expect(verdict.done).toBe(true)
         vi.doUnmock('ai')
         vi.resetModules()
+    })
+})
+
+describe('lesson-completion-verifier failure policy', () => {
+    const structured = structuredRequirementsSchema.parse({ ...validStructured, min_student_turns: 0, closing_phase: undefined })
+    const messages = [{ role: 'user', parts: [{ type: 'text', text: 'I would like a large latte please' }] }]
+
+    async function verifyWithError(makeError: unknown | (() => Promise<unknown>)) {
+        vi.resetModules()
+        vi.doMock('ai', () => ({
+            generateText: vi.fn().mockImplementation(async () => {
+                // Built after the module reset so `instanceof AiError` matches the verifier's copy.
+                throw typeof makeError === 'function' ? await (makeError as () => Promise<unknown>)() : makeError
+            }),
+            Output: { object: () => ({}) },
+        }))
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const { verifyLessonCompletion } = await import('@/lib/ai/lesson-completion-verifier')
+        const verdict = await verifyLessonCompletion({ model: FAKE_MODEL, structuredRequirements: structured, messages })
+        const freeText = await verifyLessonCompletion({ model: FAKE_MODEL, taskInstructions: 'x', messages })
+        spy.mockRestore()
+        vi.doUnmock('ai')
+        vi.resetModules()
+        return { verdict, freeText }
+    }
+
+    const http = (statusCode: number, message = 'boom') => Object.assign(new Error(message), { name: 'AI_APICallError', statusCode })
+
+    it.each([
+        ['invalid key (401)', http(401)],
+        ['quota (429)', http(429)],
+        ['unsupported model (404)', http(404)],
+    ])('fails CLOSED on %s', async (_label, error) => {
+        const { verdict, freeText } = await verifyWithError(error)
+        for (const v of [verdict, freeText]) {
+            expect(v.done).toBe(false)
+            expect(v.unavailable).toBe('ai_unavailable')
+        }
+    })
+
+    it('fails CLOSED when no key is configured', async () => {
+        const { verdict } = await verifyWithError(async () => {
+            const { AiNotConfiguredError } = await import('@/lib/ai/errors')
+            return new AiNotConfiguredError('no_key')
+        })
+        expect(verdict.done).toBe(false)
+        expect(verdict.unavailable).toBe('ai_unavailable')
+    })
+
+    it.each([
+        ['5xx', http(503)],
+        ['timeout/network (no status)', Object.assign(new Error('timeout'), { name: 'TimeoutError' })],
+    ])('fails OPEN only on a transient error: %s', async (_label, error) => {
+        const { verdict, freeText } = await verifyWithError(error)
+        expect(verdict).toEqual({ done: true, reason: '' })
+        expect(freeText).toEqual({ done: true, reason: '' })
+    })
+
+    it.each([
+        ['schema failure (NoObjectGeneratedError)', Object.assign(new Error('No object generated'), { name: 'AI_NoObjectGeneratedError' })],
+        ['bug in our code (TypeError)', new TypeError("Cannot read properties of undefined (reading 'x')")],
+        ['unknown error', new Error('boom')],
+    ])('fails CLOSED on a status-less non-network error: %s', async (_label, error) => {
+        const { verdict, freeText } = await verifyWithError(error)
+        for (const v of [verdict, freeText]) {
+            expect(v.done).toBe(false)
+            expect(v.unavailable).toBe('ai_unavailable')
+        }
+    })
+
+    it('never puts the provider message in the verdict', async () => {
+        const { verdict } = await verifyWithError(http(401, 'Incorrect API key provided: sk-secret123'))
+        expect(JSON.stringify(verdict)).not.toContain('sk-secret123')
+    })
+})
+
+describe('markLessonCompleted when the verifier is unavailable', () => {
+    it('refuses without writing and tells the tutor not to claim completion', async () => {
+        const { createLessonTools } = await import('@/lib/ai/tools')
+        const from = vi.fn()
+        const tools = createLessonTools({ from } as never, {
+            lessonId: '1',
+            userId: 'u',
+            verify: async () => ({ done: false, reason: 'unavailable', unavailable: 'ai_unavailable' }),
+        })
+        const out = (await tools.markLessonCompleted.execute!({ feedback: 'great' }, { toolCallId: 't', messages: [] } as never)) as { success: boolean; code?: string }
+        expect(out.success).toBe(false)
+        expect(out.code).toBe('ai_unavailable')
+        expect(from).not.toHaveBeenCalled()
     })
 })

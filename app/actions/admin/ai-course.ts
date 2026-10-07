@@ -1,10 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
 import { z } from 'zod'
-import { AI_MODELS } from '@/lib/ai/config'
+import { createTenantAi, type TenantAi } from '@/lib/ai/tenant-ai'
+import { aiActionError } from '@/lib/ai/action-error'
+import { redact } from '@/lib/ai/byok/redact'
 import { createAdminClient, type ActionResult } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -80,8 +82,9 @@ const lessonsOutlineSchema = z.object({
  * MAX_LESSONS lessons with Markdown stubs) and persists everything as DRAFT
  * content the owner edits. Nothing auto-publishes.
  *
- * Uses the server-side OPENAI_API_KEY via the shared AI SDK config — never
- * the NEXT_PUBLIC_ key.
+ * Runs on the school's own AI key (BYOK, feature `starter_course`): the model
+ * is resolved before the rate limiter, plan check or any row write, so a school
+ * without a key gets a clear message and no side effects. No platform fallback.
  */
 export async function generateStarterCourse(
   description: string
@@ -92,12 +95,15 @@ export async function generateStarterCourse(
   // rate limit, plan limit) from being counted as a failed generation.
   let analyticsCtx: { userId?: string; tenantId?: string; role?: string } = {}
   let generationStartedAt = 0
+  let ai: TenantAi | undefined
+  let aiRole: 'teacher' | 'admin' = 'teacher'
 
   try {
     const role = await getUserRole()
     if (role !== 'teacher' && role !== 'admin') {
       throw new Error('Unauthorized: Only teachers and admins can generate courses')
     }
+    aiRole = role
 
     const userId = await getCurrentUserId()
     if (!userId) {
@@ -112,6 +118,11 @@ export async function generateStarterCourse(
     if (prompt.length > 500) {
       throw new Error('Please keep the description under 500 characters.')
     }
+
+    // Resolve the school's model first: no key = no rate-limit slot, no
+    // analytics event, no rows.
+    ai = createTenantAi(tenantId, { actorId: userId })
+    const { model, providerId, modelId } = await ai.getModelForFeature('starter_course')
 
     try {
       await aiGenerationLimiter.check(GENERATIONS_PER_HOUR, `starter-course:${userId}`)
@@ -136,11 +147,11 @@ export async function generateStarterCourse(
       analyticsCtx
     )
 
-    const { object: outline } = await propagateAttributes(
-      { userId, metadata: { tenantId } },
-      () => generateObject({
-      model: AI_MODELS.starterCourse,
-      schema: outlineSchema,
+    const { output: outline } = await propagateAttributes(
+      { userId, metadata: { tenantId, feature: 'starter_course', provider: providerId, modelId } },
+      () => generateText({
+      model,
+      output: Output.object({ schema: outlineSchema }),
       system:
         'You draft starter courses for an online school platform. The school owner gives a one-sentence description; you produce a practical, well-sequenced course outline. Every lesson gets a short Markdown content stub the owner will expand — not full lesson text. Write all output in the same language as the owner’s description.',
       prompt: `The school owner describes the course they want to create:\n\n"${prompt}"\n\nDraft the course: a title, a catalog description, a thumbnail image prompt, and an outline of at most ${MAX_LESSONS} lessons in teaching order. Each lesson content stub should use Markdown headings and end with a "> TODO:" line telling the author what to fill in.`,
@@ -238,14 +249,25 @@ export async function generateStarterCourse(
       },
     }
   } catch (error) {
-    console.error('generateStarterCourse failed:', error)
+    // A typed AI failure (no key, rejected key, quota...) gets the localized
+    // role-aware copy; handleAiError already logged it and flagged a bad key.
+    const aiErr = ai
+      ? await aiActionError(error, {
+          tenantId: ai.tenantId,
+          feature: 'starter_course',
+          role: aiRole,
+          actorId: analyticsCtx.userId,
+          providerId: ai.lastProviderId(),
+        })
+      : null
+    if (!aiErr) console.error('generateStarterCourse failed:', redact(error instanceof Error ? error.message : String(error)))
     if (generationStartedAt) {
       await track(
         ANALYTICS_EVENTS.COURSE_AI_GENERATION_COMPLETED,
         {
           success: false,
           duration_ms: Date.now() - generationStartedAt,
-          failure_reason: error instanceof Error ? error.message : 'unknown',
+          failure_reason: aiErr?.code ?? (error instanceof Error ? error.message : 'unknown'),
         },
         analyticsCtx
       )
@@ -253,7 +275,7 @@ export async function generateStarterCourse(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : 'Failed to generate the course draft',
+        aiErr?.message ?? (error instanceof Error ? error.message : 'Failed to generate the course draft'),
     }
   }
 }
@@ -276,12 +298,15 @@ export async function generateStarterLessons(
 ): Promise<ActionResult<StarterLessonsResult>> {
   let analyticsCtx: { userId?: string; tenantId?: string; role?: string } = {}
   let generationStartedAt = 0
+  let ai: TenantAi | undefined
+  let aiRole: 'teacher' | 'admin' = 'teacher'
 
   try {
     const role = await getUserRole()
     if (role !== 'teacher' && role !== 'admin') {
       throw new Error('Unauthorized: Only teachers and admins can generate lessons')
     }
+    aiRole = role
 
     const userId = await getCurrentUserId()
     if (!userId) {
@@ -308,6 +333,11 @@ export async function generateStarterLessons(
       throw new Error('This course already has lessons. Add the next one by hand.')
     }
 
+    // Resolve the school's model before the rate limiter, analytics or any
+    // row write: no key = no side effects.
+    ai = createTenantAi(tenantId, { actorId: userId })
+    const { model, providerId, modelId } = await ai.getModelForFeature('starter_course')
+
     try {
       await aiGenerationLimiter.check(GENERATIONS_PER_HOUR, `starter-course:${userId}`)
     } catch {
@@ -331,11 +361,11 @@ export async function generateStarterLessons(
       .filter(Boolean)
       .join('\n')
 
-    const { object: outline } = await propagateAttributes(
-      { userId, metadata: { tenantId } },
-      () => generateObject({
-        model: AI_MODELS.starterCourse,
-        schema: lessonsOutlineSchema,
+    const { output: outline } = await propagateAttributes(
+      { userId, metadata: { tenantId, feature: 'starter_course', provider: providerId, modelId } },
+      () => generateText({
+        model,
+        output: Output.object({ schema: lessonsOutlineSchema }),
         system:
           'You draft lesson outlines for an online school platform. The course already exists; you produce a practical, well-sequenced list of lessons for it. Every lesson gets a short Markdown content stub the owner will expand — not full lesson text. Write all output in the same language as the course title and description.',
         prompt: `The course:\n\n${courseBrief}\n\nDraft an outline of at most ${MAX_LESSONS} lessons in teaching order. Each lesson content stub should use Markdown headings and end with a "> TODO:" line telling the author what to fill in.`,
@@ -386,14 +416,23 @@ export async function generateStarterLessons(
       },
     }
   } catch (error) {
-    console.error('generateStarterLessons failed:', error)
+    const aiErr = ai
+      ? await aiActionError(error, {
+          tenantId: ai.tenantId,
+          feature: 'starter_course',
+          role: aiRole,
+          actorId: analyticsCtx.userId,
+          providerId: ai.lastProviderId(),
+        })
+      : null
+    if (!aiErr) console.error('generateStarterLessons failed:', redact(error instanceof Error ? error.message : String(error)))
     if (generationStartedAt) {
       await track(
         ANALYTICS_EVENTS.COURSE_AI_GENERATION_COMPLETED,
         {
           success: false,
           duration_ms: Date.now() - generationStartedAt,
-          failure_reason: error instanceof Error ? error.message : 'unknown',
+          failure_reason: aiErr?.code ?? (error instanceof Error ? error.message : 'unknown'),
           mode: 'lessons',
         },
         analyticsCtx
@@ -401,7 +440,7 @@ export async function generateStarterLessons(
     }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate lessons',
+      error: aiErr?.message ?? (error instanceof Error ? error.message : 'Failed to generate lessons'),
     }
   }
 }

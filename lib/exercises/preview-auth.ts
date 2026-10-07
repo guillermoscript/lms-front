@@ -2,7 +2,10 @@ import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { aiChatLimiter, AI_CHAT_TURNS_PER_MINUTE } from '@/lib/rate-limit'
 import { checkAiChatUsage, aiChatRateLimitedResponse, aiChatUsageLimitResponse } from '@/lib/ai/chat-usage'
 
-/** Staff sandbox, authorized against current membership AND the course being edited. */
+/**
+ * Staff sandbox, authorized against current membership AND the course being edited.
+ * `canConfigure` (school admin) shapes the typed AI error: admins get the settings link.
+ */
 export async function authorizeExercisePreview(req: Request, courseId: number) {
   const auth = await getApiAuthContext(req)
   if (!auth) return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -17,7 +20,7 @@ export async function authorizeExercisePreview(req: Request, courseId: number) {
   if (!course || (membership.role !== 'admin' && course.author_id !== user.id)) {
     return Response.json({ error: 'Course not found' }, { status: 404 })
   }
-  return auth
+  return { ...auth, canConfigure: membership.role === 'admin' }
 }
 
 export async function checkExercisePreviewBudget(auth: Exclude<Awaited<ReturnType<typeof authorizeExercisePreview>>, Response>) {

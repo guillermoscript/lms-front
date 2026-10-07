@@ -68,7 +68,7 @@ import { cn } from "@/lib/utils";
 import { LessonCompletionCard } from "@/components/ai/lesson-completion-card";
 import { findLessonCompletion, lessonCompletionOutput } from "@/lib/ai/lesson-completion";
 import { latestReportedProgress, type Requirement } from "@/lib/ai/lesson-requirements";
-import { classifyAiChatError } from "@/lib/ai/chat-error";
+import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
 
 /**
  * Tracks the visual viewport height while the mobile chat overlay is open so
@@ -158,7 +158,7 @@ function InnerLessonAIChat({
 }: LessonAIChatProps) {
     const router = useRouter();
     const t = useTranslations('components.lessonAIChat');
-    const tChatLimits = useTranslations('aiChatLimits');
+    const onChatError = useAiChatErrorToast({ audience: 'student', genericMessage: t('toast.genericError') })
     const [isRestarting, setIsRestarting] = useState(false);
     const [restartDialogOpen, setRestartDialogOpen] = useState(false);
     // Mobile-only: the chat lives behind a launcher and opens as a
@@ -197,10 +197,7 @@ function InnerLessonAIChat({
             },
         }),
         messages: initialMessages,
-        onError: (error) => {
-            const kind = classifyAiChatError(error);
-            toast.error(kind === 'generic' ? t('toast.genericError') : tChatLimits(kind));
-        },
+        onError: onChatError,
     });
 
     // Completion is the tool's ANSWER, not its call: the server refuses while

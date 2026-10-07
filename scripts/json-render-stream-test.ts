@@ -1,17 +1,18 @@
 /**
  * LIVE test of the STREAMING landing-page generation — mirrors app/api/landing/generate/route.ts
- * (streamObject → partialObjectStream progress → validate → specToPuckData), bypassing only the
+ * (streamText + Output.object → partialOutputStream progress → validate → specToPuckData), bypassing only the
  * HTTP/cookie-auth wrapper. Proves progress events fire and the final object validates + bridges.
  *
  * Run: npx tsx scripts/json-render-stream-test.ts "your page description"
- * Requires OPENAI_API_KEY in .env.local.
+ * BYOK: the platform holds no AI key. Pass YOUR OWN OpenAI key as JSON_RENDER_TEST_OPENAI_KEY
+ * (shell or .env.local); optional JSON_RENDER_TEST_MODEL (default gpt-5-mini). Never logged.
  */
 import { config } from 'dotenv'
 config({ path: '.env.local' })
 
-import { streamObject } from 'ai'
+import { streamText, Output } from 'ai'
 import { z } from 'zod'
-import { AI_CONFIG } from '../lib/ai/config'
+import { createProviderInstance } from '../lib/ai/providers'
 import { landingCatalog, DEFAULT_PROPS_BY_TYPE } from '../lib/json-render/catalog'
 import {
   specToPuckData,
@@ -41,16 +42,22 @@ async function main() {
   console.log('Prompt:', prompt, '\n→ Streaming…\n')
   const t0 = Date.now()
 
-  const result = streamObject({
-    model: AI_CONFIG.defaultModel,
-    schema: specShape,
+  const apiKey = process.env.JSON_RENDER_TEST_OPENAI_KEY
+  if (!apiKey) throw new Error('Set JSON_RENDER_TEST_OPENAI_KEY to your own OpenAI key (no platform key exists).')
+  const model = createProviderInstance('openai', apiKey).languageModel(
+    process.env.JSON_RENDER_TEST_MODEL ?? 'gpt-5-mini',
+  )
+
+  const result = streamText({
+    model,
+    output: Output.object({ schema: specShape }),
     system: landingCatalog.prompt() + '\n\n' + LANDING_AUTHORING_GUIDE,
     prompt: `Build a landing page: ${prompt}`,
   })
 
   let lastCount = 0
   let firstAt = 0
-  for await (const partial of result.partialObjectStream) {
+  for await (const partial of result.partialOutputStream) {
     const els = partial?.elements
     if (!Array.isArray(els)) continue
     if (els.length > lastCount) {
@@ -61,7 +68,7 @@ async function main() {
     }
   }
 
-  const object = await result.object
+  const object = await result.output
   const usage = await result.usage
   console.log(`\n← Complete in ${Date.now() - t0}ms (first progress at ${firstAt}ms). Usage:`, usage)
 

@@ -35,6 +35,7 @@ import { IconSparkles, IconArrowUp, IconUser } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useTranslations } from 'next-intl'
+import { isAiErrorCode } from '@/lib/ai/error-codes'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -46,11 +47,13 @@ type StreamEvent =
   | { type: 'progress'; count: number; lastType?: string }
   | { type: 'page'; data: Data; blocks: number; reply: string }
   | { type: 'block'; targetId: string; blockType: string; props: Record<string, unknown>; reply: string }
-  | { type: 'error'; status: number; error: string }
+  | { type: 'error'; status: number; error: string; code?: string }
 
 export function AiChatPanel() {
   const { appState, selectedItem, dispatch } = usePuck()
   const t = useTranslations('puck')
+  // School AI setup problems (no key, rejected key, quota...): this panel is admin-only.
+  const tAi = useTranslations('aiErrorNotice.admin')
 
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -122,7 +125,12 @@ export function AiChatPanel() {
       })
 
       if (!res.ok || !res.body) {
-        appendAssistant(t('ai.failed'))
+        // Typed AI failures come back as JSON `{error:{code,...}}` (402/424/422/429/502).
+        const code = await res
+          .json()
+          .then((b: { error?: { code?: unknown } }) => b?.error?.code)
+          .catch(() => undefined)
+        appendAssistant(isAiErrorCode(code) ? tAi(code) : t('ai.failed'))
         return
       }
 
@@ -159,7 +167,7 @@ export function AiChatPanel() {
           appendAssistant(t('ai.updatedBlock', { block: humanize(event.blockType) }))
           replied = true
         } else if (event.type === 'error') {
-          appendAssistant(translateError(event.status))
+          appendAssistant(isAiErrorCode(event.code) ? tAi(event.code) : translateError(event.status))
           replied = true
         }
       }

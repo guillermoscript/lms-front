@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getTenantAiEnabled } from '@/lib/ai/ui-flags'
 import { AristotleProvider } from '@/components/aristotle/aristotle-provider'
 import { AristotleTrigger } from '@/components/aristotle/aristotle-trigger'
 import dynamic from 'next/dynamic'
@@ -28,7 +29,9 @@ export default async function StudentCourseLayout({ children, params }: LayoutPr
         .eq('tenant_id', tenantId)
         .single()
 
-    const isEnabled = tutorConfig?.enabled ?? false
+    // Hide the trigger/panel when the school has no AI key: BYOK, no platform fallback.
+    const aiConfigured = await getTenantAiEnabled()
+    const isEnabled = (tutorConfig?.enabled ?? false) && aiConfigured
 
     // Extract a display name from persona if present (first sentence or first few words)
     let personaName: string | null = null

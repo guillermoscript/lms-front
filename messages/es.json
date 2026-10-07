@@ -163,7 +163,14 @@
       "save": "Guardar",
       "saving": "Guardando...",
       "saved": "Guardado",
-      "saveFailed": "No se pudo guardar. Intenta de nuevo."
+      "saveFailed": "No se pudo guardar. Intenta de nuevo.",
+      "model": "Modelo de IA",
+      "modelHint": "Reemplaza el modelo predeterminado de la escuela para el tutor de este curso. Solo aparecen los proveedores que tu escuela conectó.",
+      "modelDefault": "Predeterminado de la escuela",
+      "modelNoProviders": "Aún no hay un proveedor de IA conectado. Pide al administrador de tu escuela que agregue una clave API.",
+      "modelVisionWarning": "Este modelo podría no leer imágenes. Los estudiantes que adjunten una imagen verán un error.",
+      "modelSaveFailed": "El tutor se guardó, pero no se pudo actualizar el modelo.",
+      "modelVision": "imágenes"
     }
   },
   "auth": {
@@ -4468,6 +4475,7 @@
     "profile": "Perfil",
     "billing": "Facturación",
     "apiTokens": "Tokens de API",
+    "aiSettings": "IA",
     "appearance": "Apariencia",
     "pages": "Páginas",
     "analytics": "Analíticas",
@@ -8206,6 +8214,251 @@
     "burst": "Estás enviando mensajes muy rápido. Espera un momento e inténtalo de nuevo.",
     "daily": "Has alcanzado el límite de práctica de hoy. Inténtalo de nuevo mañana.",
     "monthly": "El presupuesto mensual de IA de tu escuela se agotó este mes. Pide a un administrador que mejore el plan."
+  },
+  "aiSettings": {
+    "title": "IA",
+    "description": "Conecta tus propias claves de proveedores de IA y elige los modelos detrás de cada función de IA de tu escuela. Pagas directamente a tu proveedor.",
+    "breadcrumb": "IA",
+    "loadError": {
+      "title": "No pudimos cargar los ajustes de IA",
+      "description": "Recarga la página. Si sigue fallando, revisa que el servidor tenga claves de cifrado configuradas."
+    },
+    "setup": {
+      "title": "Dos pasos para activar la IA",
+      "step1": "Conecta un proveedor con tu clave de API.",
+      "step2": "Elige un modelo predeterminado. Todas las funciones de IA lo usan salvo que elijas otro."
+    },
+    "providers": {
+      "title": "Proveedores",
+      "description": "Las claves se verifican con el proveedor antes de guardarse y se almacenan cifradas. No se vuelven a mostrar, solo los últimos cuatro caracteres.",
+      "status": {
+        "active": "Conectado",
+        "invalid": "Clave rechazada",
+        "disabled": "Desactivado",
+        "notConnected": "Sin conectar"
+      },
+      "kinds": {
+        "language": "Texto",
+        "stt": "Voz a texto",
+        "realtime": "Voz en vivo",
+        "image": "Imágenes"
+      },
+      "keyEnding": "Clave terminada en {last4}",
+      "checkedOn": "Verificada el {date}",
+      "usedOn": "Último uso el {date}",
+      "neverUsed": "Aún sin usar",
+      "modelCount": "{count, plural, one {# modelo} other {# modelos}}",
+      "invalidHint": "El proveedor rechazó esta clave. Reemplázala para restaurar las funciones de IA.",
+      "add": "Conectar",
+      "replace": "Reemplazar clave",
+      "remove": "Quitar",
+      "test": "Probar clave",
+      "refresh": "Actualizar modelos",
+      "dialog": {
+        "addTitle": "Conectar {provider}",
+        "replaceTitle": "Reemplazar la clave de {provider}",
+        "description": "Primero verificamos la clave con {provider} y luego la guardamos cifrada. No podrás volver a verla.",
+        "keyLabel": "Clave de API",
+        "keyPlaceholder": "Pega tu clave",
+        "show": "Mostrar clave",
+        "hide": "Ocultar clave",
+        "submit": "Verificar y guardar",
+        "submitting": "Verificando...",
+        "cancel": "Cancelar"
+      },
+      "removeConfirm": {
+        "title": "¿Quitar la clave de {provider}?",
+        "description": "Las funciones de IA que usan {provider} dejarán de funcionar hasta que elijas otro modelo. Los modelos que elegiste en este proveedor se borran.",
+        "confirm": "Quitar clave",
+        "cancel": "Cancelar"
+      },
+      "toast": {
+        "saved": "{provider} conectado",
+        "removed": "Clave de {provider} eliminada",
+        "removedCleared": "Clave de {provider} eliminada. Se borró {count, plural, one {# elección de modelo} other {# elecciones de modelo}}.",
+        "testOk": "{provider} aceptó la clave",
+        "refreshed": "{count, plural, one {# modelo cargado} other {# modelos cargados}} desde {provider}"
+      }
+    },
+    "default": {
+      "title": "Modelo predeterminado",
+      "description": "El modelo que usan todas las funciones de IA salvo que elijas otro en Avanzado.",
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "providerPlaceholder": "Elige un proveedor",
+      "modelPlaceholder": "Elige o escribe un modelo",
+      "noProviders": "Conecta un proveedor arriba para elegir un modelo predeterminado.",
+      "save": "Guardar predeterminado",
+      "saving": "Guardando...",
+      "clear": "Quitar",
+      "saved": "Modelo predeterminado guardado",
+      "cleared": "Modelo predeterminado eliminado",
+      "current": "Actualmente {provider} / {model}",
+      "none": "Aún sin predeterminado"
+    },
+    "advanced": {
+      "title": "Avanzado",
+      "description": "Usa otro modelo para una sola función, por ejemplo uno más económico para calificar o uno más potente para el tutor.",
+      "show": "Mostrar modelos por función",
+      "hide": "Ocultar modelos por función",
+      "areas": {
+        "student": "Funciones para estudiantes",
+        "teacher": "Funciones para profesores",
+        "admin": "Configuración de la escuela"
+      },
+      "source": {
+        "custom": "Personalizado",
+        "inherits": "Sigue a {feature}",
+        "default": "Predeterminado de la escuela"
+      },
+      "provider": "Proveedor",
+      "model": "Modelo",
+      "voice": "Voz",
+      "voiceDefault": "Predeterminada del proveedor",
+      "providerPlaceholder": "Usar predeterminado",
+      "noProviders": "Ningún proveedor conectado puede ofrecer esta función.",
+      "save": "Guardar",
+      "saving": "Guardando...",
+      "reset": "Restablecer",
+      "test": "Probar",
+      "testing": "Probando...",
+      "saved": "Guardado",
+      "resetDone": "Vuelve al predeterminado",
+      "longRunning": "Tarea larga. Hace muchas llamadas al modelo en la factura de tu proveedor.",
+      "sttWordsHint": "Los proveedores distintos de AssemblyAI pueden no devolver el tiempo de cada palabra, así que las métricas de ritmo y pausas pueden ser menos precisas.",
+      "testOk": "Funciona: {provider} / {model} ({ms} ms)",
+      "probe": {
+        "text": "respuesta de texto",
+        "tools": "llamada a herramientas",
+        "structured": "salida estructurada",
+        "credential": "verificación de clave",
+        "realtime_token": "token de sesión en vivo"
+      }
+    },
+    "features": {
+      "aristotle": { "name": "Tutor Aristóteles", "description": "El chat tutor del curso que los estudiantes abren desde un curso." },
+      "aristotle_summary": { "name": "Resúmenes de Aristóteles", "description": "Resume una sesión del tutor al cerrarse." },
+      "lesson_tutor": { "name": "Tutor de lección", "description": "El asistente de IA dentro de las tareas de lección con IA." },
+      "lesson_verifier": { "name": "Verificador de tarea de lección", "description": "Decide si un estudiante terminó una tarea de lección con IA." },
+      "checkpoint_grader": { "name": "Calificador de puntos de control", "description": "Califica respuestas cortas de los puntos de control en las lecciones." },
+      "exercise_coach": { "name": "Entrenador de ejercicios", "description": "Ayuda por chat mientras los estudiantes hacen un ejercicio." },
+      "exercise_grader": { "name": "Calificador de ejercicios", "description": "Califica ejercicios escritos y de artefacto con retroalimentación." },
+      "speech_coach": { "name": "Entrenador de habla", "description": "Da retroalimentación sobre ejercicios de habla grabados." },
+      "speech_stt": { "name": "Voz a texto", "description": "Transcribe las grabaciones de los estudiantes." },
+      "voice_conversation": { "name": "Conversación en vivo", "description": "Práctica de voz en tiempo real con un compañero de IA." },
+      "exam_grader": { "name": "Calificador de exámenes", "description": "Califica respuestas de texto libre en exámenes." },
+      "question_generator": { "name": "Generador de preguntas", "description": "Redacta preguntas de quiz a partir de una lección." },
+      "starter_course": { "name": "Curso inicial", "description": "Genera un primer curso para una escuela nueva." },
+      "course_architect": { "name": "Arquitecto de cursos", "description": "El agente que planifica y construye un curso junto al profesor." },
+      "landing_builder": { "name": "Constructor de landing", "description": "Genera páginas de aterrizaje a partir de una indicación." },
+      "image_generation": { "name": "Generación de imágenes", "description": "Crea imágenes de portada y de lecciones." }
+    },
+    "billing": {
+      "title": "Facturación",
+      "description": "Quién paga el uso de IA.",
+      "byok": {
+        "label": "Tus propias claves de proveedor",
+        "description": "Tu proveedor de IA factura el uso directamente a tu cuenta."
+      },
+      "managed": {
+        "label": "Facturación administrada",
+        "description": "Nosotros ejecutamos los modelos y cobramos el uso con tu plan.",
+        "badge": "Próximamente"
+      }
+    },
+    "trace": {
+      "title": "Trazas de IA",
+      "description": "La plataforma registra las llamadas de IA (modelo, tokens, tiempos, errores) para detectar y corregir problemas.",
+      "label": "Incluir el texto de mensajes y respuestas",
+      "hint": "Desactívalo para que los mensajes de tus estudiantes y las respuestas de la IA no aparezcan en esas trazas. Se aplica en un minuto.",
+      "saved": "Guardado."
+    },
+    "warnings": {
+      "missing_cap": {
+        "language": "Este modelo puede no ser un modelo de texto.",
+        "tools": "Este modelo puede no admitir llamadas a herramientas, que esta función necesita.",
+        "vision": "Este modelo puede no leer imágenes. Los estudiantes que adjunten una imagen verán un error.",
+        "structured": "Este modelo puede no admitir salida estructurada, que esta función necesita.",
+        "stt": "Este modelo puede no transcribir audio.",
+        "realtime": "Este modelo puede no admitir voz en vivo.",
+        "image": "Este modelo puede no generar imágenes."
+      },
+      "model_not_in_list": "Este modelo no está en la lista que devolvió tu proveedor. Revisa el nombre.",
+      "key_invalid": "La clave de este proveedor fue rechazada. Reemplázala primero.",
+      "not_a_language_model": "Este modelo puede no ser un modelo de texto."
+    },
+    "blocked": {
+      "provider_not_allowed": "Este proveedor no puede ofrecer esta función.",
+      "not_a_speech_model": "Este no es un modelo de voz a texto.",
+      "not_a_realtime_model": "Este no es un modelo de voz en vivo.",
+      "not_an_image_model": "Este no es un modelo de imágenes."
+    },
+    "errors": {
+      "unauthorized": "Solo los administradores de la escuela pueden cambiar los ajustes de IA.",
+      "invalid_input": "Revisa los valores e inténtalo de nuevo.",
+      "rate_limited": "Demasiados intentos. Espera un minuto e inténtalo de nuevo.",
+      "key_rejected": "El proveedor rechazó esta clave. Revísala e inténtalo de nuevo.",
+      "provider_unreachable": "No pudimos contactar al proveedor. Inténtalo de nuevo en un momento.",
+      "not_found": "No hay nada que cambiar aquí.",
+      "no_credential": "Conecta primero este proveedor.",
+      "provider_not_allowed": "Este proveedor no puede ofrecer esta función.",
+      "model_blocked": "Este modelo no se puede usar para esta función.",
+      "invalid_voice": "Esta voz no está disponible para el proveedor.",
+      "server_misconfigured": "El almacenamiento de claves no está configurado en este servidor. Contacta al operador de la plataforma.",
+      "save_failed": "No se pudo guardar. Inténtalo de nuevo.",
+      "ai_failed": "La llamada de prueba falló."
+    },
+    "codes": {
+      "ai_not_configured": "No hay clave configurada para esta función.",
+      "ai_key_invalid": "El proveedor rechazó la clave.",
+      "ai_model_unsupported": "Este modelo no puede hacer lo que la función necesita.",
+      "ai_quota": "La cuenta del proveedor se quedó sin crédito o tiene límite de uso.",
+      "ai_provider_error": "El proveedor no respondió correctamente."
+    },
+    "banner": {
+      "title": "Agrega una clave de IA para activar la IA",
+      "description": "El tutor, los calificadores y los generadores necesitan tu propia clave de un proveedor de IA. Conectar una toma aproximadamente un minuto.",
+      "action": "Configurar IA"
+    },
+    "history": {
+      "title": "Cambios recientes",
+      "empty": "Aún no hay cambios.",
+      "you": "Tú",
+      "team": "Otro administrador",
+      "actions": {
+        "set": "conectó un proveedor",
+        "rotate": "reemplazó una clave",
+        "delete": "quitó una clave",
+        "validate_fail": "tuvo una clave rechazada",
+        "model_change": "cambió un modelo",
+        "auto_invalidated": "tuvo una clave marcada como inválida"
+      }
+    },
+    "loading": "Cargando ajustes de IA"
+  },
+  "aiErrorNotice": {
+    "configure": "Abrir ajustes de IA",
+    "student": {
+      "ai_not_configured": "Tu escuela aún no ha activado la IA.",
+      "ai_key_invalid": "La IA no está disponible ahora. La conexión de IA de tu escuela necesita atención.",
+      "ai_model_unsupported": "La IA no puede atender esta solicitud ahora. Prueba con otra cosa.",
+      "ai_quota": "La IA no está disponible ahora. Inténtalo de nuevo más tarde.",
+      "ai_provider_error": "El servicio de IA no respondió. Inténtalo de nuevo en un momento."
+    },
+    "teacher": {
+      "ai_not_configured": "La IA aún no está configurada en esta escuela. Pregunta al administrador.",
+      "ai_key_invalid": "El proveedor rechazó la clave de IA de la escuela. Pide al administrador que la actualice.",
+      "ai_model_unsupported": "El modelo elegido por tu escuela no puede atender esta solicitud. Pide al administrador que elija otro.",
+      "ai_quota": "La cuenta del proveedor de IA de la escuela se quedó sin crédito o llegó a su límite. Pregunta al administrador.",
+      "ai_provider_error": "El servicio de IA no respondió. Inténtalo de nuevo en un momento."
+    },
+    "admin": {
+      "ai_not_configured": "Agrega una clave de proveedor de IA para activar las funciones de IA.",
+      "ai_key_invalid": "Tu proveedor de IA rechazó la clave guardada. Actualízala en los ajustes de IA.",
+      "ai_model_unsupported": "El modelo seleccionado no puede atender esta solicitud. Elige otro en los ajustes de IA.",
+      "ai_quota": "Tu cuenta del proveedor de IA se quedó sin crédito o llegó a su límite. Revisa la facturación con tu proveedor.",
+      "ai_provider_error": "El servicio de IA no respondió. Inténtalo de nuevo en un momento."
+    }
   },
   "deleteAccountPage": {
     "metaTitle": "Eliminar tu cuenta",
