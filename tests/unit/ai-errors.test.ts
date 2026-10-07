@@ -102,7 +102,7 @@ describe('classifyProviderError', () => {
   it('a mid-stream bare 403 does not disable the credential, a 401 does', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     adminMock.state.updates.length = 0
-    const ctx = { feature: 'tutor' as const, tenantId: 't1', userId: null, providerId: 'openai' as const }
+    const ctx = { feature: 'aristotle' as const, tenantId: 't1', userId: null, providerId: 'openai' as const }
     await reportStreamError(apiCallError(403, 'Organization restricted'), ctx)
     expect(adminMock.state.updates).toHaveLength(0)
     await reportStreamError(apiCallError(401), ctx)
