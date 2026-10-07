@@ -133,6 +133,10 @@ jobs:
       NEXT_PUBLIC_APP_NAME: LMS CI
       BASE_URL: http://lvh.me:3000
       NEXT_PUBLIC_ANALYTICS_DISABLED: "true"
+      # BYOK key-at-rest master key for the app server and for the specs that seed a synthetic tenant
+      # key (tests/playwright/utils/ai-fixtures.ts). Synthetic: 32 zero-ish bytes, never a real key.
+      AI_KEYS_ENCRYPTION_KEYS: '{"1":"ZTJlLWNpLXN5bnRoZXRpYy1haS1rZXlzLTMyYnl0ZXM="}'
+      AI_KEYS_ACTIVE_VERSION: "1"
       # Gated specs (platform-billing-*, access-cutoff-lifecycle, webhook claims)
       CRON_SECRET: ci-cron-secret-synthetic
       # Loop 3 (loop-3-student-pays) charges a real test-mode card through Stripe

@@ -5,6 +5,7 @@ import { test, expect, type Page, type Request } from '@playwright/test'
 import { loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { noisePng, tinyPdf } from './utils/images'
+import { reactivateTenantAi, seedTenantAi } from './utils/ai-fixtures'
 
 /**
  * Image attachments in the AI chats (#633).
@@ -171,6 +172,8 @@ test.describe('AI chat image attachments', () => {
         // a sign-in that may also be paying for a cold dev-server compile.
         test.setTimeout(120_000)
         fixtureDir = mkdtempSync(join(tmpdir(), 'lms-attachments-'))
+        // BYOK: the chat route resolves the school's model before it stores the images.
+        await seedTenantAi('code-academy')
 
         // A dev server with no warm cache occasionally strands the post-login
         // navigation altogether. One sign-in gates the whole file, so give it a
@@ -290,6 +293,7 @@ test.describe('AI chat image attachments', () => {
         await expect.poll(() => posts.count(), { timeout: 90_000 }).toBeGreaterThan(0)
         await expect(page.locator('img[src^="data:image/"]').first()).toBeVisible({ timeout: 30_000 })
 
+        await reactivateTenantAi('code-academy') // the synthetic key is 401'd by the provider mid-stream
         await page.goto(EXERCISE_URL, { waitUntil: 'domcontentloaded' })
         // The bucket is private, so history can only render through a signed URL.
         const restored = page.locator('img[src*="ai-chat-attachments"]').first()
