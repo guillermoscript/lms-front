@@ -347,6 +347,20 @@
           }
         },
         "purchases": {
+          "list": {
+            "search": "Search",
+            "searchPlaceholder": "Search purchases…",
+            "allStatuses": "All statuses",
+            "sort": "Sort by",
+            "newest": "Newest first",
+            "oldest": "Oldest first",
+            "amountHigh": "Amount: high to low",
+            "amountLow": "Amount: low to high",
+            "results": "Showing {count} of {total}",
+            "reset": "Clear filters",
+            "noMatches": "No matching purchases",
+            "noMatchesHint": "Try another search or clear the filters."
+          },
           "sectionTitle": "Purchase History",
           "empty": "No purchases yet.",
           "unknownItem": "Unknown item",
@@ -524,6 +538,12 @@
         }
       },
       "courses": {
+        "search": "Search",
+        "status": "Status",
+        "results": "Showing {count} of {total}",
+        "reset": "Clear filters",
+        "noMatches": "No matching courses",
+        "noMatchesHint": "Try another title or clear the filters.",
         "title": "My Courses",
         "enrolledMessage": "You're enrolled in {count, plural, one {# course} other {# courses}}",
         "startJourney": "Start your learning journey by enrolling in courses",
@@ -597,6 +617,20 @@
         "subtitle": "Spend your earned coins on rewards"
       },
       "progress": {
+        "list": {
+          "search": "Search",
+          "searchPlaceholder": "Search courses…",
+          "status": "Status",
+          "sort": "Sort by",
+          "all": "All courses",
+          "recent": "Recently enrolled",
+          "progress": "Most progress",
+          "title": "Title A–Z",
+          "results": "Showing {count} of {total}",
+          "reset": "Clear filters",
+          "noMatches": "No matching courses",
+          "noMatchesHint": "Try another title or clear the filters."
+        },
         "title": "Progress Report",
         "subtitle": "Track your learning progress across all courses",
         "overallStats": "Overall Statistics",
@@ -620,6 +654,18 @@
         "untitledPrompt": "Discussion prompt"
       },
       "certificates": {
+        "list": {
+          "search": "Search",
+          "searchPlaceholder": "Search by course title…",
+          "sort": "Sort by",
+          "newest": "Newest first",
+          "oldest": "Oldest first",
+          "title": "Course A–Z",
+          "results": "Showing {count} of {total}",
+          "reset": "Clear filters",
+          "noMatches": "No matching certificates",
+          "noMatchesHint": "Try another course title or clear the filters."
+        },
         "title": "My Certificates",
         "subtitle": "View and share your earned certificates",
         "noCertificates": "No Certificates Yet",
@@ -632,6 +678,20 @@
         "statsLatest": "Latest"
       },
       "payments": {
+        "list": {
+          "search": "Search",
+          "searchPlaceholder": "Search by product or plan…",
+          "status": "Status",
+          "sort": "Sort by",
+          "all": "All statuses",
+          "newest": "Newest first",
+          "oldest": "Oldest first",
+          "amount": "Amount (high to low)",
+          "results": "Showing {count} of {total}",
+          "reset": "Clear filters",
+          "noMatches": "No matching requests",
+          "noMatchesHint": "Try another search or clear the filters."
+        },
         "title": "Payment Requests",
         "subtitle": "Track your manual payment requests and instructions",
         "infoMessage": "The school will review your request and post payment instructions here. You'll get a notification when they're ready.",
@@ -5076,6 +5136,24 @@
         "platinum": "Platinum"
       },
       "store": {
+        "list": {
+          "search": "Search",
+          "searchPlaceholder": "Search rewards…",
+          "category": "Category",
+          "allCategories": "All categories",
+          "availability": "Availability",
+          "all": "All items",
+          "affordable": "Can afford",
+          "sort": "Sort by",
+          "sortDefault": "Featured",
+          "priceAsc": "Price: low to high",
+          "priceDesc": "Price: high to low",
+          "name": "Name A–Z",
+          "results": "Showing {count} of {total}",
+          "reset": "Clear filters",
+          "noMatches": "No matching items",
+          "noMatchesHint": "Try another search or clear the filters."
+        },
         "title": "Point Store",
         "subtitle": "Spend your hard-earned coins on rewards and power-ups",
         "balance": "Your Balance",
@@ -6651,6 +6729,19 @@
       "tapToRecord": "Record"
     },
     "list": {
+      "search": "Search",
+      "searchPlaceholder": "Search exercises…",
+      "status": "Status",
+      "statusAll": "All exercises",
+      "statusPending": "Not completed",
+      "sort": "Sort by",
+      "sortDefault": "Default order",
+      "sortTitle": "Title A–Z",
+      "sortDifficulty": "Difficulty",
+      "results": "Showing {count} of {total}",
+      "reset": "Clear filters",
+      "noMatches": "No matching exercises",
+      "noMatchesHint": "Try another search or clear the filters.",
       "title": "Practice Arena",
       "subtitle": "Challenge yourself with interactive activities and coding tasks.",
       "breadcrumb": {
@@ -6765,6 +6856,20 @@
   },
   "exams": {
     "list": {
+      "search": "Search",
+      "searchPlaceholder": "Search exams…",
+      "status": "Status",
+      "sort": "Sort by",
+      "statusAll": "All exams",
+      "statusNotStarted": "Not started",
+      "statusSubmitted": "Awaiting grade",
+      "statusCompleted": "Completed",
+      "sortOrder": "Course order",
+      "sortTitle": "Title A–Z",
+      "results": "Showing {count} of {total}",
+      "reset": "Clear filters",
+      "noMatches": "No matching exams",
+      "noMatchesHint": "Try another title or clear the filters.",
       "title": "Assessments",
       "subtitle": "Demonstrate your knowledge and earn your certification.",
       "progress": "Completion Progress",

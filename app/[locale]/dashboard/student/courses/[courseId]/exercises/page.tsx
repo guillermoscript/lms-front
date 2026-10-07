@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
-import ExerciseBrowseList from '@/components/exercises/exercise-browse-list'
+import { ExercisesExplorer } from '@/components/student/exercises-explorer'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -87,7 +87,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
                     </p>
                 </div>
             ) : (
-                <ExerciseBrowseList exercises={standaloneExercises} courseId={courseId} />
+                <ExercisesExplorer exercises={standaloneExercises} courseId={courseId} />
             )}
         </PageShell>
     )

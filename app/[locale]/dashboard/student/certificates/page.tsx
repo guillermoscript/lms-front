@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { IconCertificate, IconBook2, IconTrophy, IconAward } from '@tabler/icons-react'
 import Link from 'next/link'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
-import { StudentCertificateCard } from '@/components/student/student-certificate-card'
+import { CertificatesExplorer } from '@/components/student/certificates-explorer'
 
 export default async function StudentCertificatesPage() {
   const supabase = createAdminClient()
@@ -113,11 +114,7 @@ export default async function StudentCertificatesPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {certificates.map((cert) => (
-            <StudentCertificateCard key={cert.certificate_id} certificate={cert} />
-          ))}
-        </div>
+        <CertificatesExplorer certificates={certificates as unknown as ComponentProps<typeof CertificatesExplorer>["certificates"]} />
       )}
     </PageShell>
   )

@@ -2,10 +2,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { ProgressExplorer } from '@/components/student/progress-explorer'
 import Link from 'next/link'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import {
@@ -211,108 +210,7 @@ export default async function StudentProgressPage() {
           </div>
 
           {/* Per-Course Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('courseProgress')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {courseProgress.map((course) => (
-                <div
-                  key={course.enrollmentId}
-                  className="border rounded-lg p-4 space-y-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{course.courseTitle}</h3>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {t('lessons', {
-                            completed: course.completedLessons,
-                            total: course.totalLessons,
-                          })}
-                        </span>
-                        {course.totalExams > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            {t('exams', {
-                              completed: course.completedExams,
-                              total: course.totalExams,
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          course.percentage === 100
-                            ? 'default'
-                            : course.percentage > 0
-                              ? 'secondary'
-                              : 'outline'
-                        }
-                      >
-                        {course.percentage === 100
-                          ? t('completed')
-                          : course.percentage > 0
-                            ? t('inProgress')
-                            : t('notStarted')}
-                      </Badge>
-                      <Link href={`/dashboard/student/courses/${course.courseId}`}>
-                        <Button variant="ghost" size="sm">
-                          {t('viewCourse')}
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Progress value={course.percentage} className="flex-1" />
-                    <span className="text-sm font-medium w-12 text-right">
-                      {course.percentage}%
-                    </span>
-                  </div>
-
-                  {/* Exam scores */}
-                  {course.examScores.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {course.examScores.map((exam, idx) => (
-                        <Badge
-                          key={idx}
-                          variant={
-                            exam.score !== undefined
-                              ? exam.score >= 70
-                                ? 'default'
-                                : 'destructive'
-                              : 'outline'
-                          }
-                          className="text-xs"
-                        >
-                          {exam.title}
-                          {exam.score !== undefined
-                            ? ` — ${t('examScore', { score: Math.round(exam.score) })}`
-                            : ''}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Discussion grades (#873) */}
-                  {course.discussionGrades.length > 0 && (
-                    <div className="space-y-1.5 pt-1" data-testid="progress-discussion-grades">
-                      <p className="text-xs font-medium text-muted-foreground">{t('discussionGrades')}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {course.discussionGrades.map((grade, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {t('discussionScore', { title: grade.title, score: grade.score })}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <ProgressExplorer courses={courseProgress} />
         </div>
       )}
     </PageShell>

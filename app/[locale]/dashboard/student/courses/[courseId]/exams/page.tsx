@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
-import ExamCard from '@/components/exercises/exam-card'
+import { ExamsExplorer, type StudentExam } from '@/components/student/exams-explorer'
 import { IconCertificate, IconProgress } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { getTranslations } from 'next-intl/server'
@@ -127,15 +127,10 @@ export default async function ExamsPage({ params }: PageProps) {
         <Progress value={progressPercent} className="h-2" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {exams.map((exam) => (
-          <ExamCard
-            key={exam.exam_id}
-            exam={exam}
-            courseId={courseId}
-          />
-        ))}
-      </div>
+      <ExamsExplorer
+        exams={exams.map((exam) => ({ ...exam, courses: undefined })) as unknown as StudentExam[]}
+        courseId={courseId}
+      />
     </PageShell>
   )
 }

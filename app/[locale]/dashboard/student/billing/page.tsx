@@ -11,18 +11,14 @@ import { ManageSubscription } from '@/components/student/manage-subscription'
 import {
   IconCreditCard,
   IconPackage,
-  IconRefresh,
   IconAlertTriangle,
-  IconCheck,
-  IconClock,
-  IconX,
   IconBrandStripe,
   IconWallet,
   IconCoin,
   IconDownload,
   IconInfoCircle,
 } from '@tabler/icons-react'
-import { VerifyPaymentButton } from '@/components/student/verify-payment-button'
+import { BillingPurchasesExplorer } from '@/components/student/billing-purchases-explorer'
 import { ChangePlanDialog, type SwitchablePlan } from '@/components/student/change-plan-dialog'
 import { PROVIDER_CAPABILITIES, cancelIsFinalAtProvider, type PaymentProvider } from '@/lib/payments/types'
 
@@ -99,42 +95,6 @@ function formatDate(dateStr: string): string {
     month: 'short',
     day: 'numeric',
   }).format(new Date(dateStr))
-}
-
-function getTransactionStatusMeta(status: TransactionStatus): {
-  variant: 'default' | 'secondary' | 'destructive' | 'outline'
-  icon: React.ReactNode
-  className: string
-} {
-  switch (status) {
-    case 'successful':
-      return {
-        variant: 'default',
-        icon: <IconCheck className="w-3 h-3" />,
-        className: 'bg-success/10 text-success border-success/30',
-      }
-    case 'pending':
-      return {
-        variant: 'secondary',
-        icon: <IconClock className="w-3 h-3" />,
-        className: 'bg-warning/10 text-warning border-warning/30',
-      }
-    case 'refunded':
-      return {
-        variant: 'secondary',
-        icon: <IconRefresh className="w-3 h-3" />,
-        className: 'bg-muted text-muted-foreground border-border',
-      }
-    case 'failed':
-    case 'canceled':
-    case 'archived':
-    default:
-      return {
-        variant: 'destructive',
-        icon: <IconX className="w-3 h-3" />,
-        className: 'bg-destructive/10 text-destructive border-destructive/30',
-      }
-  }
 }
 
 function getSubscriptionStatusMeta(status: SubscriptionStatus): {
@@ -451,79 +411,21 @@ export default async function StudentBillingPage() {
               {t('purchases.empty')}
             </CardContent>
           ) : (
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="min-w-[620px] w-full text-sm">
-                  <thead className="bg-muted/20">
-                    <tr className="border-b">
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t('purchases.table.item')}
-                      </th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:table-cell">
-                        {t('purchases.table.provider')}
-                      </th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden sm:table-cell">
-                        {t('purchases.table.date')}
-                      </th>
-                      <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t('purchases.table.status')}
-                      </th>
-                      <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        {t('purchases.table.amount')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {transactions.map((tx) => {
-                      const itemName =
-                        (tx.product_id ? productMap.get(tx.product_id) : null) ??
-                        (tx.plan_id ? planMap.get(tx.plan_id) : null) ??
-                        t('purchases.unknownItem')
-                      const statusMeta = getTransactionStatusMeta(tx.status)
-                      return (
-                        <tr key={tx.transaction_id} className="hover:bg-muted/30 transition-colors">
-                          <td className="max-w-[160px] px-4 py-3 align-top font-medium" title={itemName}>
-                            <span className="block truncate">{itemName}</span>
-                            <p className="mt-1 text-xs font-normal text-muted-foreground sm:hidden">
-                              {formatDate(tx.transaction_date)}
-                            </p>
-                          </td>
-                          <td className="hidden px-4 py-3 align-top sm:table-cell">
-                            <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                              <ProviderIcon provider={tx.payment_provider} />
-                              {tx.payment_provider
-                                ? (t(`provider.${tx.payment_provider}` as Parameters<typeof t>[0]) ?? tx.payment_provider)
-                                : '—'}
-                            </span>
-                          </td>
-                          <td className="hidden px-4 py-3 align-top tabular-nums text-muted-foreground sm:table-cell">
-                            {formatDate(tx.transaction_date)}
-                          </td>
-                          <td className="px-4 py-3 align-top">
-                            <div className="flex flex-col items-start gap-1.5">
-                              <Badge
-                                variant="outline"
-                                className={`gap-1 text-xs ${statusMeta.className}`}
-                              >
-                                {statusMeta.icon}
-                                {t(`purchases.status.${tx.status}` as Parameters<typeof t>[0])}
-                              </Badge>
-                              {/* Stranded pending one-time Solana payment: let the
-                                  student re-run on-chain confirmation (#467). */}
-                              {tx.status === 'pending' && tx.payment_provider === 'solana' && (
-                                <VerifyPaymentButton transactionId={tx.transaction_id} />
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right align-top font-medium tabular-nums">
-                            {formatCurrency(Number(tx.amount), tx.currency ?? 'USD')}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <CardContent className="p-4">
+              <BillingPurchasesExplorer
+                rows={transactions.map((tx) => ({
+                  id: tx.transaction_id,
+                  itemName:
+                    (tx.product_id ? productMap.get(tx.product_id) : null) ??
+                    (tx.plan_id ? planMap.get(tx.plan_id) : null) ??
+                    null,
+                  provider: tx.payment_provider,
+                  date: tx.transaction_date,
+                  status: tx.status,
+                  amount: Number(tx.amount),
+                  currency: tx.currency,
+                }))}
+              />
             </CardContent>
           )}
         </Card>
