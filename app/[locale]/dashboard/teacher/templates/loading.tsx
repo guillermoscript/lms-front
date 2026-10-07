@@ -1,16 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading templates">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Skeleton className="h-8 w-44" />
-          <Skeleton className="mt-1.5 h-4 w-72 max-w-full" />
-        </div>
-        <Skeleton className="h-8 w-36 rounded-md" />
-      </div>
+    <PageShell variant="default" skeleton>
+      <PageHeaderSkeleton actions={1} />
 
       <div className="flex flex-col gap-4 rounded-card bg-card py-4 ring-1 ring-foreground/10">
         <div className="space-y-1.5 px-4">
@@ -22,8 +16,8 @@ export default function Loading() {
           <div className="flex items-center gap-4 border-b py-3">
             <Skeleton className="h-3 w-32 flex-1" />
             <Skeleton className="h-3 w-[88px]" />
-            <Skeleton className="hidden h-3 w-24 sm:block" />
-            <Skeleton className="hidden h-3 w-20 sm:block" />
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-3 w-20" />
             <Skeleton className="h-3 w-[80px]" />
           </div>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -33,11 +27,11 @@ export default function Loading() {
                 <Skeleton className="h-3 w-3/4" />
               </div>
               <Skeleton className="h-5 w-[88px] rounded-full" />
-              <div className="hidden w-24 gap-1 sm:flex">
+              <div className="flex w-24 gap-1">
                 <Skeleton className="h-4 w-10 rounded-sm" />
                 <Skeleton className="h-4 w-10 rounded-sm" />
               </div>
-              <Skeleton className="hidden h-3 w-20 sm:block" />
+              <Skeleton className="h-3 w-20" />
               <div className="w-[80px]">
                 <Skeleton className="h-6 w-6 rounded-md" />
               </div>
@@ -45,6 +39,6 @@ export default function Loading() {
           ))}
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

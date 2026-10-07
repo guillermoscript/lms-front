@@ -1,9 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { Button } from '@/components/ui/button'
-import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { ExamSubmissionsReview } from '@/components/teacher/exam-submissions-review'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
@@ -73,19 +71,12 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
   })
 
   return (
-    <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center gap-2">
-        <Link href={`/dashboard/teacher/courses/${courseId}`}>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('manageCourse.backToCourses')}>
-            <IconArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <span className="truncate max-w-[200px]">{exam.title}</span>
-          <IconChevronRight className="h-3 w-3 shrink-0" />
-          <span className="font-medium text-foreground">{t('manageCourse.assessments.submissions')}</span>
-        </div>
-      </div>
+    <PageShell variant="wide">
+      <PageHeader
+        back={{ href: `/dashboard/teacher/courses/${courseId}`, label: t('manageCourse.backToCourses') }}
+        title={t('manageCourse.assessments.submissions')}
+        description={exam.title}
+      />
 
       <ExamSubmissionsReview
         examId={parseInt(examId)}
@@ -93,6 +84,6 @@ export default async function SubmissionsPage({ params }: { params: Promise<{ co
         courseId={parseInt(courseId)}
         submissions={submissions}
       />
-    </div>
+    </PageShell>
   )
 }

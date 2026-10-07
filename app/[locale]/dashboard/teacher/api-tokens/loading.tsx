@@ -1,25 +1,13 @@
 import { Skeleton } from "@/components/ui/skeleton"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 const CARD = "rounded-card bg-card ring-1 ring-foreground/10 py-4"
 
-/** Page shell is `p-6 lg:p-8` > `space-y-6`; PageSkeleton's chrome is replicated here. */
 export default function Loading() {
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      className="p-6 lg:p-8 animate-in fade-in duration-300 motion-reduce:animate-none"
-    >
-      <span className="sr-only">Loading API tokens…</span>
+    <PageShell variant="form" skeleton>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="mt-1.5 h-4 w-64 max-w-full" />
-          </div>
-          <Skeleton className="h-8 w-32 shrink-0 rounded-md" />
-        </div>
+        <PageHeaderSkeleton actions={1} />
 
         {/* Connect Claude card */}
         <div className={`${CARD} flex flex-col gap-4`}>
@@ -76,6 +64,6 @@ export default function Loading() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

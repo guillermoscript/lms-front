@@ -34,6 +34,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/admin/confirm-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 
 interface Template {
   id: number
@@ -140,21 +142,19 @@ export default function PromptTemplatesPage() {
   )
 
   return (
-    <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="templates-page">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {t('description')}
-          </p>
-        </div>
-        <Link href="/dashboard/teacher/templates/new">
-          <Button size="sm" className="gap-2">
-            <IconPlus size={16} />
-            {t('createTemplate')}
-          </Button>
-        </Link>
-      </div>
+    <PageShell variant="default" data-testid="templates-page">
+      <PageHeader
+        title={t('title')}
+        description={t('description')}
+        actions={
+          <Link href="/dashboard/teacher/templates/new">
+            <Button size="sm" className="gap-2">
+              <IconPlus size={16} />
+              {t('createTemplate')}
+            </Button>
+          </Link>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -185,11 +185,23 @@ export default function PromptTemplatesPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
-                    {t('loading')}
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i} aria-hidden="true">
+                    <TableCell>
+                      <Skeleton className="h-5 w-44 max-w-full" />
+                      <Skeleton className="mt-1 h-3.5 w-3/4" />
+                    </TableCell>
+                    <TableCell><Skeleton className="h-5 w-[88px] rounded-full" /></TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Skeleton className="h-4 w-10 rounded-sm" />
+                        <Skeleton className="h-4 w-10 rounded-sm" />
+                      </div>
+                    </TableCell>
+                    <TableCell><Skeleton className="h-3 w-20" /></TableCell>
+                    <TableCell><Skeleton className="size-5 rounded-md" /></TableCell>
+                  </TableRow>
+                ))
               ) : filteredTemplates.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-sm text-muted-foreground">
@@ -275,6 +287,6 @@ export default function PromptTemplatesPage() {
         variant="destructive"
         onConfirm={() => deleteId !== null && handleDelete(deleteId)}
       />
-    </div>
+    </PageShell>
   )
 }

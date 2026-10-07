@@ -12,7 +12,8 @@ import type { SpeechEvaluation } from '@/lib/speech/types'
 import { ConversationTranscriptSchema, parseConversationConfig } from '@/lib/speech/conversation'
 
 import dynamic from 'next/dynamic'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ExerciseWorkPaneSkeleton } from './exercise-skeletons'
+import { PageShell } from '@/components/dashboard/page-shell'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import RelatedExercises from '@/components/exercises/related-exercises'
 import EssayExercise from '@/components/exercises/essay-exercise'
@@ -22,63 +23,35 @@ import ExerciseChat from '@/components/exercises/exercise-chat'
 const AudioExercise = dynamic(
   () => import('@/components/exercises/audio-exercise'),
   {
-    loading: () => (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-        <Skeleton className="h-12 w-32 mx-auto" />
-      </div>
-    ),
+    loading: () => <ExerciseWorkPaneSkeleton />,
   }
 )
 
 const ConversationExercise = dynamic(
   () => import('@/components/exercises/conversation-exercise'),
   {
-    loading: () => (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="mx-auto size-40 rounded-full" />
-        <Skeleton className="h-12 w-32 mx-auto" />
-      </div>
-    ),
+    loading: () => <ExerciseWorkPaneSkeleton />,
   }
 )
 
 const CodeChallengeWrapper = dynamic(
   () => import('@/components/exercises/code-challenge-wrapper'),
   {
-    loading: () => (
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-[400px] w-full" />
-      </div>
-    ),
+    loading: () => <ExerciseWorkPaneSkeleton />,
   }
 )
 
 const ArtifactExercise = dynamic(
   () => import('@/components/exercises/artifact-exercise'),
   {
-    loading: () => (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    ),
+    loading: () => <ExerciseWorkPaneSkeleton />,
   }
 )
 
 const VideoExercise = dynamic(
   () => import('@/components/exercises/video-exercise'),
   {
-    loading: () => (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-        <Skeleton className="h-12 w-32 mx-auto" />
-      </div>
-    ),
+    loading: () => <ExerciseWorkPaneSkeleton />,
   }
 )
 
@@ -351,7 +324,7 @@ export default async function ExercisePage({ params }: PageProps) {
     // so it takes the viewport less the dashboard's 4rem header and the panes
     // scroll instead of the body. A phone scrolls normally.
     return (
-        <div className="mx-auto container px-3 py-3 sm:px-4 sm:py-6 lg:flex lg:h-[calc(100dvh-4rem)] lg:max-w-none lg:flex-col lg:overflow-hidden lg:px-8 lg:py-0 space-y-3 sm:space-y-6 lg:space-y-0">
+        <PageShell className="lg:flex lg:h-[calc(100dvh-4rem)] lg:flex-col lg:overflow-hidden lg:py-0 lg:space-y-0">
             <div className="lg:shrink-0 lg:border-b lg:py-3">
                 <BreadcrumbComponent links={breadcrumbLinks} />
             </div>
@@ -468,6 +441,6 @@ export default async function ExercisePage({ params }: PageProps) {
                 </EssayExercise>
             )}
             </div>
-        </div>
+        </PageShell>
     )
 }

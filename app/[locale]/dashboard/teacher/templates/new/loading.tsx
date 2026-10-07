@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 const CARD = "flex flex-col gap-4 rounded-card bg-card py-4 ring-1 ring-foreground/10"
 
@@ -11,23 +12,10 @@ function Field({ control = "h-8" }: { control?: string }) {
   )
 }
 
-/** Page shell is `flex-1 space-y-8 p-8 pt-6`; header is back button + h2 (text-3xl). */
 export default function Loading() {
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-live="polite"
-      className="flex-1 space-y-8 p-8 pt-6 animate-in fade-in duration-300 motion-reduce:animate-none"
-    >
-      <span className="sr-only">Loading template form…</span>
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-9 w-9 shrink-0 rounded-md" />
-        <div>
-          <Skeleton className="h-9 w-56" />
-          <Skeleton className="mt-1.5 h-5 w-80 max-w-full" />
-        </div>
-      </div>
+    <PageShell variant="form" skeleton>
+      <PageHeaderSkeleton back />
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -77,6 +65,6 @@ export default function Loading() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

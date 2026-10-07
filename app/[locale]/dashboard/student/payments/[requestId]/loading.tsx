@@ -1,17 +1,11 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** Mirrors payments/[requestId]/page.tsx: max-w-3xl, back button + title, one detail card. */
+/** Mirrors payments/[requestId]/page.tsx: form shell, back link + title, one detail card. */
 export default function PaymentDetailLoading() {
   return (
-    <PageSkeleton
-      label="Loading payment"
-      className="container mx-auto max-w-3xl space-y-0 p-0 px-4 py-8 lg:p-0 lg:px-4 lg:py-8"
-    >
-      <div className="mb-6 flex items-center gap-2">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-48" />
-      </div>
+    <PageShell variant="form" skeleton>
+      <PageHeaderSkeleton back description={false} />
 
       <div className="rounded-xl border">
         <div className="flex items-start justify-between gap-4 p-6 pb-4">
@@ -53,6 +47,6 @@ export default function PaymentDetailLoading() {
           </div>
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

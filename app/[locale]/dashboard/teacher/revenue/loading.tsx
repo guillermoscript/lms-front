@@ -1,15 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 const CARD = "rounded-card bg-card ring-1 ring-foreground/10"
 
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading revenue">
-      <div>
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="mt-1.5 h-4 w-72 max-w-full" />
-      </div>
+    <PageShell variant="default" skeleton>
+      <PageHeaderSkeleton />
 
       {/* Stat tiles */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -49,8 +46,8 @@ export default function Loading() {
 
       {/* Tabs + table */}
       <div className="space-y-4">
-        <Skeleton className="h-8 w-72 max-w-full rounded-lg" />
-        <div className={`${CARD} py-2`}>
+        <Skeleton className="h-8 w-64 max-w-full rounded-lg" />
+        <div className={`${CARD} min-h-80 py-2`}>
           <div className="flex items-center gap-4 border-b px-4 py-3">
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-3 w-24" />
@@ -67,6 +64,6 @@ export default function Loading() {
           ))}
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

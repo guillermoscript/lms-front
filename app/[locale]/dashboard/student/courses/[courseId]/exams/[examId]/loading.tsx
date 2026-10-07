@@ -1,13 +1,12 @@
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell } from "@/components/dashboard/page-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // Mirrors exam-taker.tsx: sticky top bar (title + progress, timer), segmented
 // question card with answer options, prev/next footer.
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading exam" className="p-0 lg:p-0 space-y-0 flex-none">
-      <div className="min-h-[calc(100vh-80px)] flex flex-col pt-6 pb-12">
-        <div className="container max-w-4xl flex-1 flex flex-col gap-8">
+    <PageShell variant="form" skeleton className="flex flex-col">
+      <div className="flex-1 flex flex-col gap-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="bg-background border rounded-2xl p-4 flex flex-1 items-center gap-6">
               <Skeleton className="h-11 w-11 rounded-xl shrink-0" />
@@ -44,8 +43,7 @@ export default function Loading() {
             <Skeleton className="h-14 w-36 rounded-md" />
             <Skeleton className="h-14 w-48 rounded-md" />
           </div>
-        </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

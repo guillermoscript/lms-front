@@ -1,23 +1,13 @@
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 
 export default function BrowseCoursesLoading() {
   return (
-    <PageSkeleton
-      label="Loading course catalog"
-      className="flex-none container mx-auto py-8 px-4 space-y-0"
-    >
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Skeleton className="size-6 rounded" />
-          <Skeleton className="h-9 w-48" />
-        </div>
-        <Skeleton className="h-6 w-72 max-w-full" />
-      </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton />
 
       {/* Subscription alert */}
-      <Skeleton className="h-[88px] w-full rounded-lg mb-8" />
+      <Skeleton className="h-[140px] w-full rounded-lg" />
 
       {/* Search + category pills */}
       <div className="space-y-4 mb-8">
@@ -56,6 +46,6 @@ export default function BrowseCoursesLoading() {
           </div>
         ))}
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

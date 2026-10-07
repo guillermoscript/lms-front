@@ -11,6 +11,7 @@ import { parseQuestionFilter } from '@/lib/community/questions'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { getCommunityCourses } from '@/lib/community/access'
 import { CourseCommunityLinks } from '@/components/community/course-community-links'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { CommunityTour } from '@/components/tours/community-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -41,17 +42,10 @@ export default async function StudentCommunityPage({ searchParams }: PageProps) 
 
   if (!planFeatures?.features?.community) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">{t('schoolFeedDescription')}</p>
-          </div>
-        </header>
-        <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
-          <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
-        </main>
-      </div>
+      <PageShell variant="reading">
+        <PageHeader title={t('title')} description={t('schoolFeedDescription')} />
+        <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
+      </PageShell>
     )
   }
 
@@ -70,39 +64,35 @@ export default async function StudentCommunityPage({ searchParams }: PageProps) 
   const focus = await focusPromise
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell variant="reading">
       <CommunityTour
         userId={userId}
         userRole={role as 'student' | 'teacher' | 'admin'}
         completed={isTourCompleted(uiState, 'community')}
         toursEnabled={areToursEnabled(uiState)}
       />
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8" data-tour="community-header">
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('schoolFeedDescription')}</p>
-          <div className="mt-2 -ml-3">
-            <BlockedMembers />
-          </div>
-          <CourseCommunityLinks courses={courseLinks} />
-        </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
-        <CommunityUnread role={role} />
-        <CommunityFeed
-          key={questionFilter ?? 'all'}
-          questionFilter={questionFilter}
-          scope="school"
-          tenantId={tenantId}
-          initialPosts={feed.posts}
-          initialHasMore={feed.hasMore}
-          userRole={role}
-          userId={userId}
-          settings={settings}
-          focusPostId={focus.focusPostId}
-          focusPost={focus.focusPost}
+      <div data-tour="community-header" className="space-y-2">
+        <PageHeader
+          title={t('title')}
+          description={t('schoolFeedDescription')}
+          actions={<BlockedMembers />}
         />
-      </main>
-    </div>
+        <CourseCommunityLinks courses={courseLinks} />
+      </div>
+      <CommunityUnread role={role} />
+      <CommunityFeed
+        key={questionFilter ?? 'all'}
+        questionFilter={questionFilter}
+        scope="school"
+        tenantId={tenantId}
+        initialPosts={feed.posts}
+        initialHasMore={feed.hasMore}
+        userRole={role}
+        userId={userId}
+        settings={settings}
+        focusPostId={focus.focusPostId}
+        focusPost={focus.focusPost}
+      />
+    </PageShell>
   )
 }

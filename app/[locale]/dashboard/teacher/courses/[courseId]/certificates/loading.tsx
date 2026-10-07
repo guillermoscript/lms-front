@@ -1,27 +1,12 @@
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {
   return (
-    <PageSkeleton
-      label="Loading certificates"
-      className="mx-auto container flex-none space-y-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-6"
-    >
-      {/* Breadcrumb */}
-      <div className="mb-8 flex items-center gap-2">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-4 w-52" />
-      </div>
-      {/* Header */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-4 w-72 max-w-full" />
-        </div>
-        <Skeleton className="h-8 w-36 rounded-md" />
-      </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton back actions={1} />
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="rounded-xl border p-5">
             <div className="flex items-center gap-3">
@@ -97,6 +82,6 @@ export default function Loading() {
           </div>
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

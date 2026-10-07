@@ -1,23 +1,11 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 /** Mirrors certificates/page.tsx: icon+title header with action, 3 stat tiles, certificate cards. */
 export default function CertificatesLoading() {
   return (
-    <PageSkeleton
-      label="Loading certificates"
-      className="container mx-auto space-y-6 p-0 px-4 py-8 lg:p-0 lg:px-8 lg:py-8"
-    >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="mb-1 flex items-center gap-2.5">
-            <Skeleton className="h-9 w-9 rounded-xl" />
-            <Skeleton className="h-8 w-44" />
-          </div>
-          <Skeleton className="h-5 w-56 max-w-full" />
-        </div>
-        <Skeleton className="h-9 w-32 rounded-md" />
-      </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton actions={1} />
 
       <div className="grid grid-cols-3 gap-3">
         {Array.from({ length: 3 }).map((_, i) => (
@@ -43,6 +31,6 @@ export default function CertificatesLoading() {
           </div>
         ))}
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

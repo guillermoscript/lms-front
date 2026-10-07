@@ -1,20 +1,10 @@
 import { Skeleton } from '@/components/ui/skeleton'
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 
 export default function MyCoursesLoading() {
   return (
-    <PageSkeleton
-      label="Loading courses"
-      className="flex-none mx-auto container py-5 sm:py-8 px-4 lg:px-8 space-y-5 sm:space-y-6"
-    >
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Skeleton className="h-7 sm:h-8 w-40" />
-          <Skeleton className="h-5 w-56 mt-1" />
-        </div>
-        <Skeleton className="h-9 w-36 rounded-md" />
-      </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton actions={1} />
 
       <div className="space-y-4">
         {/* Status pills */}
@@ -55,6 +45,6 @@ export default function MyCoursesLoading() {
           </div>
         ))}
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

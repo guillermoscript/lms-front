@@ -1,11 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  IconArrowLeft,
   IconCheck,
   IconX,
   IconClock,
@@ -22,6 +23,7 @@ interface PageProps {
 export default async function ExamReviewPage({ params }: PageProps) {
   const { courseId, examId } = await params
   const supabase = createAdminClient()
+  const t = await getTranslations('examResult')
 
   const userId = await getCurrentUserId()
   if (!userId) {
@@ -103,21 +105,18 @@ export default async function ExamReviewPage({ params }: PageProps) {
   const aiData = submission.ai_data as Record<string, unknown> | null
 
   return (
-    <div className="container mx-auto max-w-3xl py-8 px-4">
-      {/* Header */}
-      <div className="mb-8">
-        <Link href={`/dashboard/student/courses/${courseId}/exams`}>
-          <Button variant="ghost" size="sm" className="mb-4">
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            Back to Exams
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold">{exam.title}</h1>
-        <p className="text-muted-foreground">Exam Results</p>
-      </div>
+    <PageShell variant="reading">
+      <PageHeader
+        title={exam.title}
+        description={t('detailedReview')}
+        back={{
+          href: `/dashboard/student/courses/${courseId}/exams`,
+          label: t('viewAllAssessments'),
+        }}
+      />
 
       {/* Score Card */}
-      <Card className="mb-8">
+      <Card>
         <CardContent className="py-8">
           <div className="flex items-center justify-center gap-8">
             <div className="text-center">
@@ -167,7 +166,8 @@ export default async function ExamReviewPage({ params }: PageProps) {
       </Card>
 
       {/* Questions Review */}
-      <h2 className="mb-4 text-lg font-semibold">Question Review</h2>
+      <div className="space-y-4">
+      <h2 className="text-lg font-semibold">{t('detailedReview')}</h2>
       <div className="space-y-4">
         {questions?.map((question, index) => {
           const answer = answersMap.get(question.question_id)
@@ -270,9 +270,10 @@ export default async function ExamReviewPage({ params }: PageProps) {
           )
         })}
       </div>
+      </div>
 
       {/* Action buttons */}
-      <div className="mt-8 flex justify-center gap-4">
+      <div className="flex justify-center gap-4">
         <Link href={`/dashboard/student/courses/${courseId}`}>
           <Button variant="outline">Back to Course</Button>
         </Link>
@@ -280,6 +281,6 @@ export default async function ExamReviewPage({ params }: PageProps) {
           <Button>View Other Exams</Button>
         </Link>
       </div>
-    </div>
+    </PageShell>
   )
 }

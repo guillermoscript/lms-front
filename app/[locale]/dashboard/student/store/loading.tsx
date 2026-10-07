@@ -1,17 +1,11 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 /** Mirrors store/page.tsx + StoreSection: h1/subtitle, section header with balance pill, 4-col item grid. */
 export default function StoreLoading() {
   return (
-    <PageSkeleton
-      label="Loading store"
-      className="container mx-auto space-y-0 p-0 px-4 py-8 lg:p-0 lg:px-4 lg:py-8"
-    >
-      <div className="mb-8">
-        <Skeleton className="h-9 w-32" />
-        <Skeleton className="mt-1 h-6 w-56 max-w-full" />
-      </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton />
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -30,6 +24,6 @@ export default function StoreLoading() {
           ))}
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

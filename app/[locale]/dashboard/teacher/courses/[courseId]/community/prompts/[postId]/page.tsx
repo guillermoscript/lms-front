@@ -1,7 +1,6 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { Badge } from '@/components/ui/badge'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -62,43 +61,41 @@ export default async function PromptGradingPage({ params, searchParams }: PagePr
   const initialFilter = query.filter === undefined ? 'ungraded' : parseGradingFilter(query.filter)
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-3xl space-y-2 px-4 py-5 sm:px-6 lg:px-8">
-          <Link
-            href={`/dashboard/teacher/courses/${numericCourseId}/community?post=${prompt.id}`}
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <IconArrowLeft className="h-4 w-4" aria-hidden="true" />
-            {t('backToCommunity')}
-          </Link>
-          <p className="text-xs text-muted-foreground">{course.title}</p>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="grading-title">
-            {t('title')}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2">
+    <PageShell variant="reading">
+      <PageHeader
+        back={{
+          href: `/dashboard/teacher/courses/${numericCourseId}/community?post=${prompt.id}`,
+          label: t('backToCommunity'),
+        }}
+        title={<span data-testid="grading-title">{t('title')}</span>}
+        badges={
+          <>
             <Badge variant="default">{tCommunity('graded')}</Badge>
             <PromptDueBadge dueAt={prompt.due_at} />
             {prompt.lesson && (
               <Badge variant="outline">{t('lesson', { lesson: prompt.lesson.title })}</Badge>
             )}
-            <span className="text-sm text-muted-foreground" data-testid="grading-summary">
+          </>
+        }
+        description={
+          <>
+            {course.title}
+            {' · '}
+            <span data-testid="grading-summary">
               {t('summary', { graded: counts.graded, total: counts.all })}
             </span>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <section className="space-y-2 rounded-xl border-l-4 border-primary bg-card p-4">
-          {prompt.title && <h2 className="font-semibold">{prompt.title}</h2>}
-          <CommunityMarkdown content={prompt.content} className="text-sm" collapsible />
-        </section>
+      <section className="space-y-2 rounded-xl border-l-4 border-primary bg-card p-4">
+        {prompt.title && <h2 className="font-semibold">{prompt.title}</h2>}
+        <CommunityMarkdown content={prompt.content} className="text-sm" collapsible />
+      </section>
 
-        <p className="text-xs text-muted-foreground">{t('certificateNote')}</p>
+      <p className="text-xs text-muted-foreground">{t('certificateNote')}</p>
 
-        <PromptGradingView courseId={numericCourseId} postId={prompt.id} rows={rows} initialFilter={initialFilter} />
-      </main>
-    </div>
+      <PromptGradingView courseId={numericCourseId} postId={prompt.id} rows={rows} initialFilter={initialFilter} />
+    </PageShell>
   )
 }

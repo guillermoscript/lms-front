@@ -5,12 +5,11 @@ import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { RevokeSolanaDelegation } from '@/components/student/revoke-solana-delegation'
 import { ManageSubscription } from '@/components/student/manage-subscription'
 import {
   IconCreditCard,
-  IconReceipt,
-  IconFileInvoice,
   IconPackage,
   IconRefresh,
   IconAlertTriangle,
@@ -64,6 +63,16 @@ interface Subscription {
  * still being billed, even though both server actions accept the status.
  */
 const LIVE_SUBSCRIPTION_STATUSES: SubscriptionStatus[] = ['active', 'renewed', 'past_due']
+
+interface ProductNameRow {
+  product_id: number
+  name: string
+}
+
+interface PlanNameRow {
+  plan_id: number
+  plan_name: string
+}
 
 interface PaymentRequest {
   request_id: number
@@ -203,8 +212,8 @@ export default async function StudentBillingPage() {
       : Promise.resolve({ data: [] }),
   ])
 
-  const productMap = new Map((productsRes.data ?? []).map((p: any) => [p.product_id, p.name as string]))
-  const planMap = new Map((plansRes.data ?? []).map((p: any) => [p.plan_id, p.plan_name as string]))
+  const productMap = new Map((productsRes.data ?? []).map((p: ProductNameRow) => [p.product_id, p.name as string]))
+  const planMap = new Map((plansRes.data ?? []).map((p: PlanNameRow) => [p.plan_id, p.plan_name as string]))
 
   // ── 2. Subscriptions ────────────────────────────────────────────────────────
   const { data: rawSubs } = await supabase
@@ -223,7 +232,7 @@ export default async function StudentBillingPage() {
       .from('plans')
       .select('plan_id, plan_name')
       .in('plan_id', subPlanIds)
-    ;(extraPlans ?? []).forEach((p: any) => planMap.set(p.plan_id, p.plan_name))
+    ;(extraPlans ?? []).forEach((p: PlanNameRow) => planMap.set(p.plan_id, p.plan_name))
   }
 
   // ── 3. Payment Requests (offline/manual) ────────────────────────────────────
@@ -243,7 +252,7 @@ export default async function StudentBillingPage() {
       .from('products')
       .select('product_id, name')
       .in('product_id', prProductIds)
-    ;(prProducts ?? []).forEach((p: any) => productMap.set(p.product_id, p.name))
+    ;(prProducts ?? []).forEach((p: ProductNameRow) => productMap.set(p.product_id, p.name))
   }
 
   // Derived
@@ -304,15 +313,16 @@ export default async function StudentBillingPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl space-y-8">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <IconCreditCard className="w-6 h-6 text-brand-text" />
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <PageShell variant="form" className="space-y-8">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <IconCreditCard className="w-6 h-6 text-brand-text" />
+            {t('title')}
+          </span>
+        }
+        description={t('subtitle')}
+      />
 
       {/* ── Active Subscription ────────────────────────────────────────────── */}
       <section aria-labelledby="subscription-heading">
@@ -329,14 +339,14 @@ export default async function StudentBillingPage() {
                   </CardTitle>
                   <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                     <ProviderIcon provider={activeSubscription.payment_provider} />
-                    {t(`provider.${activeSubscription.payment_provider}` as any) ?? activeSubscription.payment_provider}
+                    {t(`provider.${activeSubscription.payment_provider}` as Parameters<typeof t>[0]) ?? activeSubscription.payment_provider}
                   </p>
                 </div>
                 <Badge
                   className={`gap-1 text-xs ${getSubscriptionStatusMeta(activeSubscription.subscription_status).className}`}
                   variant="outline"
                 >
-                  {t(`subscription.status.${activeSubscription.subscription_status}` as any)}
+                  {t(`subscription.status.${activeSubscription.subscription_status}` as Parameters<typeof t>[0])}
                 </Badge>
               </div>
             </CardHeader>
@@ -482,7 +492,7 @@ export default async function StudentBillingPage() {
                             <span className="flex items-center gap-1 text-muted-foreground text-xs">
                               <ProviderIcon provider={tx.payment_provider} />
                               {tx.payment_provider
-                                ? (t(`provider.${tx.payment_provider}` as any) ?? tx.payment_provider)
+                                ? (t(`provider.${tx.payment_provider}` as Parameters<typeof t>[0]) ?? tx.payment_provider)
                                 : '—'}
                             </span>
                           </td>
@@ -496,7 +506,7 @@ export default async function StudentBillingPage() {
                                 className={`gap-1 text-xs ${statusMeta.className}`}
                               >
                                 {statusMeta.icon}
-                                {t(`purchases.status.${tx.status}` as any)}
+                                {t(`purchases.status.${tx.status}` as Parameters<typeof t>[0])}
                               </Badge>
                               {/* Stranded pending one-time Solana payment: let the
                                   student re-run on-chain confirmation (#467). */}
@@ -606,6 +616,6 @@ export default async function StudentBillingPage() {
           </p>
         </section>
       )}
-    </div>
+    </PageShell>
   )
 }

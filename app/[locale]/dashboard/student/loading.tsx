@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell } from "@/components/dashboard/page-shell"
 
 function SideCardSkeleton({ rows = 3 }: { rows?: number }) {
   return (
@@ -50,12 +50,8 @@ function ProgressCardSkeleton() {
 
 export default function Loading() {
   return (
-    <PageSkeleton
-      label="Loading dashboard"
-      className="p-0 lg:p-0 space-y-0 min-h-screen bg-background"
-    >
-      <div className="container mx-auto px-4 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
-        {/* WelcomeHero */}
+    <PageShell variant="default" skeleton>
+      {/* WelcomeHero */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-2">
           <div className="space-y-1">
             <Skeleton className="h-8 w-64 max-w-full" />
@@ -98,7 +94,6 @@ export default function Loading() {
             <SideCardSkeleton rows={3} />
           </div>
         </div>
-      </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

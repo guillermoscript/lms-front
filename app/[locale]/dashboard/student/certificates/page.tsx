@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { IconCertificate, IconBook2, IconTrophy, IconAward } from '@tabler/icons-react'
 import Link from 'next/link'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
 
 export default async function StudentCertificatesPage() {
@@ -45,31 +45,23 @@ export default async function StudentCertificatesPage() {
   const uniqueCourses = new Set(certificates?.map(c => c.course_id) || [])
 
   return (
-    <div className="mx-auto container py-8 px-4 lg:px-8 space-y-6" data-testid="certificates-page">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="p-2 rounded-xl bg-brand-tint text-brand-text">
-              <IconCertificate size={20} />
-            </div>
-            <h1 className="text-2xl font-black tracking-tight" data-testid="certificates-title">
-              {t('title')}
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {certificates && certificates.length > 0
-              ? t('earned', { count: certificates.length })
-              : t('subtitle')}
-          </p>
-        </div>
-        <Link href="/dashboard/student/courses">
-          <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs font-bold">
-            <IconBook2 size={14} />
-            {t('myCourses')}
-          </Button>
-        </Link>
-      </div>
+    <PageShell variant="wide" data-testid="certificates-page">
+      <PageHeader
+        title={<span data-testid="certificates-title">{t('title')}</span>}
+        description={
+          certificates && certificates.length > 0
+            ? t('earned', { count: certificates.length })
+            : t('subtitle')
+        }
+        actions={
+          <Link href="/dashboard/student/courses">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <IconBook2 size={14} />
+              {t('myCourses')}
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Stats Row */}
       {certificates && certificates.length > 0 && (
@@ -122,11 +114,11 @@ export default async function StudentCertificatesPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {certificates.map((cert: any) => (
+          {certificates.map((cert) => (
             <StudentCertificateCard key={cert.certificate_id} certificate={cert} />
           ))}
         </div>
       )}
-    </div>
+    </PageShell>
   )
 }

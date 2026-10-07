@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
 import { Button } from '@/components/ui/button'
-import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import Link from 'next/link'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -48,13 +48,13 @@ export default async function CourseSettingsPage({ params }: PageProps) {
 
   if (!isOwner && !isAdmin) {
     return (
-      <div className="p-8">
+      <PageShell variant="form">
         <h1 className="text-2xl font-bold text-destructive">{t('accessDenied')}</h1>
-        <p className="mt-2 text-muted-foreground">{t('notAuthor')}</p>
-        <Link href="/dashboard/teacher/courses" className="mt-4 inline-block">
+        <p className="text-muted-foreground">{t('notAuthor')}</p>
+        <Link href="/dashboard/teacher/courses" className="inline-block">
           <Button variant="outline">{t('backToCourses')}</Button>
         </Link>
-      </div>
+      </PageShell>
     )
   }
 
@@ -76,69 +76,53 @@ export default async function CourseSettingsPage({ params }: PageProps) {
   ])
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center gap-2">
-          <Link href={`/dashboard/teacher/courses/${courseId}`}>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('backToCourse')}>
-              <IconArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <span className="truncate max-w-[200px]">{course.title}</span>
-            <IconChevronRight className="h-3 w-3 shrink-0" />
-            <span className="font-medium text-foreground">{t('settings')}</span>
-          </div>
-        </div>
+    <PageShell variant="form">
+      <PageHeader
+        back={{ href: `/dashboard/teacher/courses/${courseId}`, label: course.title }}
+        title={t('settings')}
+        description={tForm('descriptionPlaceholder')}
+      />
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">{t('settings')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {tForm('descriptionPlaceholder')}
-          </p>
-        </div>
+      <CourseForm
+        categories={categories || []}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        initialData={course as any}
+      />
 
-        <CourseForm
-          categories={categories || []}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          initialData={course as any}
-        />
+      <Separator />
 
-        <Separator className="my-8" />
+      {/* Sequential Completion */}
+      <SequentialCompletionToggle
+        courseId={parseInt(courseId)}
+        initialValue={course.require_sequential_completion ?? false}
+      />
 
-        {/* Sequential Completion */}
-        <SequentialCompletionToggle
-          courseId={parseInt(courseId)}
-          initialValue={course.require_sequential_completion ?? false}
-        />
+      <Separator />
 
-        <Separator className="my-8" />
+      {/* Aristotle AI Tutor */}
+      <AristotleConfig
+        courseId={parseInt(courseId)}
+        tenantId={tenantId}
+        initialConfig={aristotleConfig}
+        modelState={{
+          providers: aristotleProviders,
+          current:
+            aristotleConfig?.provider && aristotleConfig.model
+              ? { provider: aristotleConfig.provider, model: aristotleConfig.model }
+              : null,
+        }}
+      />
 
-        {/* Aristotle AI Tutor */}
-        <AristotleConfig
-          courseId={parseInt(courseId)}
-          tenantId={tenantId}
-          initialConfig={aristotleConfig}
-          modelState={{
-            providers: aristotleProviders,
-            current:
-              aristotleConfig?.provider && aristotleConfig.model
-                ? { provider: aristotleConfig.provider, model: aristotleConfig.model }
-                : null,
-          }}
-        />
+      <Separator />
 
-        <Separator className="my-8" />
-
-        {/* Danger Zone */}
-        <div className="rounded-lg border border-destructive/30 p-6">
-          <h2 className="text-lg font-semibold text-destructive mb-1">{t('dangerZone')}</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            {t('dangerZoneDesc')}
-          </p>
-          <CourseDeleteButton courseId={parseInt(courseId)} courseTitle={course.title} />
-        </div>
+      {/* Danger Zone */}
+      <div className="rounded-lg border border-destructive/30 p-6">
+        <h2 className="text-lg font-semibold text-destructive mb-1">{t('dangerZone')}</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          {t('dangerZoneDesc')}
+        </p>
+        <CourseDeleteButton courseId={parseInt(courseId)} courseTitle={course.title} />
       </div>
-    </div>
+    </PageShell>
   )
 }

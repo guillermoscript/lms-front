@@ -8,8 +8,7 @@ import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
 import { parseQuestionFilter } from '@/lib/community/questions'
 import { getCommunitySettings } from '@/lib/community/settings'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
-import Link from 'next/link'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -55,25 +54,20 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
   // Check plan features for community access
   const { data: planFeatures } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
 
+  const header = (description?: string) => (
+    <PageHeader
+      back={{ href: `/dashboard/teacher/courses/${courseId}`, label: t('courseEntry.backToCourse') }}
+      title={`${course.title} — ${t('title')}`}
+      description={description}
+    />
+  )
+
   if (!planFeatures?.features?.community) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
-            <Link
-              href={`/dashboard/teacher/courses/${courseId}`}
-              className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <IconArrowLeft className="h-4 w-4" />
-              {t('courseEntry.backToCourse')}
-            </Link>
-            <h1 className="text-2xl font-bold tracking-tight">{course.title} — {t('title')}</h1>
-          </div>
-        </header>
-        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-          <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
-        </main>
-      </div>
+      <PageShell variant="reading">
+        {header()}
+        <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
+      </PageShell>
     )
   }
 
@@ -93,36 +87,22 @@ export default async function TeacherCourseCommunityPage({ params, searchParams 
   const focus = await focusPromise
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
-          <Link
-            href={`/dashboard/teacher/courses/${courseId}`}
-            className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <IconArrowLeft className="h-4 w-4" />
-            {t('courseEntry.backToCourse')}
-          </Link>
-          <h1 className="text-2xl font-bold tracking-tight">{course.title} — {t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('courseFeedDescription')}</p>
-        </div>
-      </header>
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-        <CommunityFeed
-          key={questionFilter ?? 'all'}
-          questionFilter={questionFilter}
-          scope="course"
-          tenantId={tenantId}
-          courseId={numericCourseId}
-          initialPosts={feed.posts}
-          initialHasMore={feed.hasMore}
-          userRole={role}
-          userId={userId}
-          settings={settings}
-          focusPostId={focus.focusPostId}
-          focusPost={focus.focusPost}
-        />
-      </main>
-    </div>
+    <PageShell variant="reading">
+      {header(t('courseFeedDescription'))}
+      <CommunityFeed
+        key={questionFilter ?? 'all'}
+        questionFilter={questionFilter}
+        scope="course"
+        tenantId={tenantId}
+        courseId={numericCourseId}
+        initialPosts={feed.posts}
+        initialHasMore={feed.hasMore}
+        userRole={role}
+        userId={userId}
+        settings={settings}
+        focusPostId={focus.focusPostId}
+        focusPost={focus.focusPost}
+      />
+    </PageShell>
   )
 }

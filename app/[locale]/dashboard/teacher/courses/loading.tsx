@@ -1,16 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading courses">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Skeleton className="h-8 w-36" />
-          <Skeleton className="mt-1.5 h-4 w-56 max-w-full" />
-        </div>
-        <Skeleton className="h-8 w-32 rounded-md" />
-      </div>
+    <PageShell variant="default" skeleton>
+      <PageHeaderSkeleton actions={1} />
 
       <div className="flex flex-col gap-4">
         {/* Search / status / sort / view */}
@@ -64,6 +58,6 @@ export default function Loading() {
           ))}
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

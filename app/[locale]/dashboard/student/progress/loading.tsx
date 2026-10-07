@@ -1,20 +1,10 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 export default function Loading() {
   return (
-    <PageSkeleton
-      label="Loading progress"
-      className="space-y-0 container mx-auto p-0 lg:p-0 py-8 px-4 lg:py-8 lg:px-4"
-    >
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Skeleton className="size-6 rounded" />
-          <Skeleton className="h-9 w-48" />
-        </div>
-        <Skeleton className="h-6 w-72 max-w-full" />
-      </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton />
 
       <div className="space-y-6">
         {/* Stats */}
@@ -59,6 +49,6 @@ export default function Loading() {
           </div>
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

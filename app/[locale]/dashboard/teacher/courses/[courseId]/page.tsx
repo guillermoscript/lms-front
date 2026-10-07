@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -106,7 +107,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
 
   if (courseError || !course) {
     return (
-      <div className="p-8">
+      <PageShell variant="form">
         <Card>
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
@@ -122,7 +123,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
@@ -135,7 +136,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
 
   if (!isOwner && !isAdmin) {
     return (
-      <div className="p-8">
+      <PageShell variant="form">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -151,7 +152,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
@@ -284,7 +285,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
   })
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="flex-1">
       {/* Guided Tour */}
       <CourseEditorTour
         userId={userId}
@@ -292,70 +293,63 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
         toursEnabled={areToursEnabled(uiState)}
       />
 
-      {/* Header */}
-      <header data-tour="course-header" className="border-b bg-card sticky top-0 z-10">
-        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <Link href="/dashboard/teacher" className="shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('backToCourses')}>
-                    <IconArrowLeft className="h-4 w-4" />
+      {/* Header: sticky band, inner container matches the shell padding */}
+      <div data-tour="course-header" className="sticky top-0 z-10 border-b bg-card">
+        <div className="mx-auto w-full container px-6 py-4 lg:px-8">
+          <PageHeader
+            back={{ href: '/dashboard/teacher/courses', label: t('backToCourses') }}
+            title={<span className="block truncate">{course.title}</span>}
+            badges={
+              <Badge variant={course.status === 'published' ? 'default' : 'secondary'} className={course.status === 'published' ? 'bg-success/10 text-success border-success/30' : ''}>
+                {t(`status.${course.status}`)}
+              </Badge>
+            }
+            description={t('enrolledCount', { count: enrollments.length })}
+            actions={
+              <>
+                <AiEditSheet scope={{ type: 'course', courseId: course.course_id }} />
+                <Link href={`/dashboard/teacher/courses/${courseId}/preview`} data-tour="course-preview">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <IconEye className="h-3.5 w-3.5" />
+                    {t('tabs.preview')}
                   </Button>
                 </Link>
-                <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
-                <Badge variant={course.status === 'published' ? 'default' : 'secondary'} className={course.status === 'published' ? 'bg-success/10 text-success border-success/30' : ''}>
-                  {t(`status.${course.status}`)}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground ml-10">
-                {t('enrolledCount', { count: enrollments.length })}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <AiEditSheet scope={{ type: 'course', courseId: course.course_id }} />
-              <Link href={`/dashboard/teacher/courses/${courseId}/preview`} data-tour="course-preview">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <IconEye className="h-3.5 w-3.5" />
-                  {t('tabs.preview')}
-                </Button>
-              </Link>
-              <Link href={`/dashboard/teacher/courses/${courseId}/analytics`}>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <IconChartBar className="h-3.5 w-3.5" />
-                  {t('analytics')}
-                </Button>
-              </Link>
-              {communityOn && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  nativeButton={false}
-                  render={
-                    <Link
-                      href={`/dashboard/teacher/courses/${courseId}/community`}
-                      data-testid="teacher-course-community-link"
-                    />
-                  }
-                >
-                  <IconMessages className="h-3.5 w-3.5" />
-                  {tc('title')}
-                </Button>
-              )}
-              <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <IconSettings className="h-3.5 w-3.5" />
-                  {t('settings')}
-                </Button>
-              </Link>
-            </div>
-          </div>
+                <Link href={`/dashboard/teacher/courses/${courseId}/analytics`}>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <IconChartBar className="h-3.5 w-3.5" />
+                    {t('analytics')}
+                  </Button>
+                </Link>
+                {communityOn && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    nativeButton={false}
+                    render={
+                      <Link
+                        href={`/dashboard/teacher/courses/${courseId}/community`}
+                        data-testid="teacher-course-community-link"
+                      />
+                    }
+                  >
+                    <IconMessages className="h-3.5 w-3.5" />
+                    {tc('title')}
+                  </Button>
+                )}
+                <Link href={`/dashboard/teacher/courses/${courseId}/settings`} data-tour="course-settings">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <IconSettings className="h-3.5 w-3.5" />
+                    {t('settings')}
+                  </Button>
+                </Link>
+              </>
+            }
+          />
         </div>
-      </header>
+      </div>
 
-      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
+      <PageShell variant="wide">
         {showWelcome && (
           <CourseWelcomePrompt
             courseId={course.course_id}
@@ -775,7 +769,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
             </div>
           </TabsContent>
         </Tabs>
-      </main>
+      </PageShell>
     </div>
   )
 }

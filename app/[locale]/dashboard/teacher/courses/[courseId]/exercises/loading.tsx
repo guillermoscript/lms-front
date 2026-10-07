@@ -1,25 +1,11 @@
-import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { Skeleton } from '@/components/ui/skeleton'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 
-// Mirrors exercises/page.tsx: container, breadcrumb, header + CTA, type chips, exercise rows.
+// Mirrors exercises/page.tsx: back link + header + CTA, type chips, exercise rows.
 export default function Loading() {
   return (
-    <PageSkeleton
-      label="Loading exercises"
-      className="container mx-auto flex-none space-y-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-6"
-    >
-      <div className="mb-6 flex items-center gap-2">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-4 w-20" />
-      </div>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-4 w-72 max-w-full" />
-        </div>
-        <Skeleton className="h-8 w-32 rounded-md" />
-      </div>
+    <PageShell variant="default" skeleton>
+      <PageHeaderSkeleton back actions={1} />
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -42,6 +28,6 @@ export default function Loading() {
           ))}
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

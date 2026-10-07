@@ -1,17 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading community" className="min-h-screen space-y-0 bg-background p-0 lg:p-0">
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
-          <Skeleton className="h-8 w-36" />
-          <Skeleton className="mt-1.5 h-4 w-64 max-w-full" />
-        </div>
-      </header>
+    <PageShell variant="reading" skeleton>
+      <PageHeaderSkeleton />
 
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="space-y-4">
         {/* Composer */}
         <Skeleton className="h-20 w-full rounded-xl" />
 
@@ -45,7 +40,7 @@ export default function Loading() {
             </div>
           ))}
         </div>
-      </main>
-    </PageSkeleton>
+      </div>
+    </PageShell>
   )
 }

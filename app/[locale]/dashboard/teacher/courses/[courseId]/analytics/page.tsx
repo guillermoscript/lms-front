@@ -5,9 +5,9 @@ import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
-  IconArrowLeft,
   IconAlertTriangle,
   IconChartBar,
   IconFlame,
@@ -105,7 +105,7 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
   // expose every student's results, so a non-author teacher must not see them.
   if (!course || course.author_id !== userId) {
     return (
-      <div className="p-8">
+      <PageShell variant="wide">
         <Card className="border-destructive">
           <CardHeader>
             <CardTitle>{t('accessDenied')}</CardTitle>
@@ -117,20 +117,20 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </PageShell>
     )
   }
 
   // Per-course confusion hotspots are Advanced analytics (Pro+, #662).
   if ((await getAnalyticsTier(tenantId)) !== 'advanced') {
     return (
-      <div className="p-8" data-testid="teacher-analytics-page">
+      <PageShell variant="wide" data-testid="teacher-analytics-page">
         <UpgradeNudge
           feature="analytics"
           hint="analyticsBasic"
           currentPlan={(await getTenantPlan(tenantId)).slug}
         />
-      </div>
+      </PageShell>
     )
   }
 
@@ -149,43 +149,30 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
     sources.examSubmissions
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <header className="sticky top-0 z-10 border-b bg-card">
-        <div className="container mx-auto px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link href={`/dashboard/teacher/courses/${courseId}`} className="shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('backToCourse')}>
-                    <IconArrowLeft className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <h1 className="truncate text-2xl font-bold tracking-tight">{t('title')}</h1>
-              </div>
-              <p className="ml-10 text-sm text-muted-foreground">
-                {t('subtitle', { course: course.title })}
-              </p>
-            </div>
+    <PageShell variant="wide">
+      <PageHeader
+        back={{ href: `/dashboard/teacher/courses/${courseId}`, label: t('backToCourse') }}
+        title={t('title')}
+        description={t('subtitle', { course: course.title })}
+        actions={
+          /* Look-back window. Plain links keep the page fully server-rendered. */
+          <nav aria-label={t('windowLabel')} className="flex items-center gap-1">
+            {WINDOWS.map((w) => (
+              <Link
+                key={w}
+                href={`/dashboard/teacher/courses/${courseId}/analytics?days=${w}`}
+                scroll={false}
+              >
+                <Button variant={w === days ? 'default' : 'outline'} size="sm">
+                  {t('windowDays', { days: w })}
+                </Button>
+              </Link>
+            ))}
+          </nav>
+        }
+      />
 
-            {/* Look-back window. Plain links keep the page fully server-rendered. */}
-            <nav aria-label={t('windowLabel')} className="flex items-center gap-1">
-              {WINDOWS.map((w) => (
-                <Link
-                  key={w}
-                  href={`/dashboard/teacher/courses/${courseId}/analytics?days=${w}`}
-                  scroll={false}
-                >
-                  <Button variant={w === days ? 'default' : 'outline'} size="sm">
-                    {t('windowDays', { days: w })}
-                  </Button>
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="space-y-6">
         {warnings.length > 0 && (
           <Alert variant="destructive">
             <IconAlertTriangle />
@@ -336,6 +323,6 @@ export default async function CourseAnalyticsPage({ params, searchParams }: Page
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageShell>
   )
 }

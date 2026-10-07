@@ -1,38 +1,21 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Mirrors the course editor: sticky header, tab strip, curriculum rows.
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading course" className="min-h-screen space-y-0 bg-background p-0 pb-20 lg:p-0">
-      <div className="border-b bg-card">
-        <div className="mx-auto container px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
-                <Skeleton className="h-8 w-64 max-w-full" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-              </div>
-              <Skeleton className="ml-10 h-4 w-48" />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-8 w-24 rounded-md" />
-              <Skeleton className="h-8 w-28 rounded-md" />
-              <Skeleton className="h-8 w-28 rounded-md" />
-              <Skeleton className="h-8 w-28 rounded-md" />
-            </div>
-          </div>
+    <div className="flex-1" role="status" aria-busy="true" aria-live="polite">
+      <div className="sticky top-0 z-10 border-b bg-card">
+        <div className="mx-auto w-full container px-6 py-4 lg:px-8">
+          <PageHeaderSkeleton back actions={4} />
         </div>
       </div>
-      <div className="mx-auto container space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <Skeleton className="h-9 w-full min-w-full rounded-lg" />
-        </div>
+      <PageShell variant="wide" skeleton>
+        <Skeleton className="h-9 w-full min-w-full rounded-lg" />
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-7 w-40" />
-            <Skeleton className="h-8 w-32 rounded-md" />
+            <Skeleton className="h-6 w-32 rounded-md" />
           </div>
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -49,7 +32,7 @@ export default function Loading() {
             ))}
           </div>
         </div>
-      </div>
-    </PageSkeleton>
+      </PageShell>
+    </div>
   )
 }

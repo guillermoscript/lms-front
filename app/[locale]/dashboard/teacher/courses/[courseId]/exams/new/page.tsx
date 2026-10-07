@@ -1,21 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Skeleton } from '@/components/ui/skeleton'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { ExamBuilderSkeleton } from '../_builder-skeleton'
 
 const ExamBuilder = dynamic(
   () => import('@/components/teacher/exam-builder').then(m => m.ExamBuilder),
   {
     loading: () => (
-      <div className="mx-auto max-w-4xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-9 w-32" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
+      <PageShell variant="form">
+        <ExamBuilderSkeleton />
+      </PageShell>
     ),
   }
 )
@@ -56,12 +51,12 @@ export default async function NewExamPage({ params }: PageProps) {
   const nextSequence = (exams?.[0]?.sequence || 0) + 1
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell variant="form">
       <ExamBuilder
         courseId={parseInt(courseId)}
         courseTitle={course.title}
         initialData={{ sequence: nextSequence }}
       />
-    </div>
+    </PageShell>
   )
 }

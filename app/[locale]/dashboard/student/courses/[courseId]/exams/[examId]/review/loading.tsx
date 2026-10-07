@@ -1,33 +1,29 @@
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// Mirrors review/page.tsx: back button + title, 3-stat score card, question review cards.
+// Mirrors review/page.tsx: header with back, 3-stat score card, question review cards.
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading exam review" className="p-0 lg:p-0 space-y-0">
-      <div className="container mx-auto max-w-3xl py-8 px-4">
-        <div className="mb-8">
-          <Skeleton className="h-8 w-32 mb-4 rounded-md" />
-          <Skeleton className="h-8 w-64 max-w-full" />
-          <Skeleton className="h-6 w-28 mt-1" />
-        </div>
+    <PageShell variant="reading" skeleton>
+      <PageHeaderSkeleton back />
 
-        <div className="mb-8 rounded-xl border py-8 px-6">
-          <div className="flex items-center justify-center gap-4 sm:gap-8">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="contents">
-                {i > 0 && <div className="h-16 w-px bg-border" />}
-                <div className="flex flex-col items-center gap-2">
-                  <Skeleton className="h-8 w-8 rounded-md" />
-                  <Skeleton className="h-10 w-20" />
-                  <Skeleton className="h-5 w-24" />
-                </div>
+      <div className="rounded-xl border py-8 px-6">
+        <div className="flex items-center justify-center gap-4 sm:gap-8">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="contents">
+              {i > 0 && <div className="h-16 w-px bg-border" />}
+              <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-md" />
+                <Skeleton className="h-10 w-20" />
+                <Skeleton className="h-5 w-24" />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <Skeleton className="h-7 w-44 mb-4" />
+      <div className="space-y-4">
+        <Skeleton className="h-7 w-44" />
         <div className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-xl border p-4 space-y-3">
@@ -44,6 +40,6 @@ export default function Loading() {
           ))}
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

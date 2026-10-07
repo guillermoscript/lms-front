@@ -1,4 +1,4 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function FieldSkeleton({ area = false }: { area?: boolean }) {
@@ -10,40 +10,31 @@ function FieldSkeleton({ area = false }: { area?: boolean }) {
   )
 }
 
-// Mirrors course settings: breadcrumb, title, form, toggles, danger zone.
+// Mirrors course settings: header, form, toggles, danger zone (same shell, space-y-6 rhythm).
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading settings" className="min-h-screen space-y-0 bg-background p-0 lg:p-0">
-      <div className="mx-auto container px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center gap-2">
-          <Skeleton className="h-8 w-8 rounded-md" />
-          <Skeleton className="h-5 w-56" />
-        </div>
-        <div className="mb-6 space-y-1.5">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-72 max-w-full" />
-        </div>
-        <div className="space-y-6">
+    <PageShell variant="form" skeleton>
+      <PageHeaderSkeleton back />
+      <div className="space-y-6">
+        <FieldSkeleton />
+        <FieldSkeleton area />
+        <div className="grid gap-6 sm:grid-cols-2">
           <FieldSkeleton />
-          <FieldSkeleton area />
-          <div className="grid gap-6 sm:grid-cols-2">
-            <FieldSkeleton />
-            <FieldSkeleton />
-          </div>
-          <Skeleton className="h-40 w-full rounded-xl" />
-          <Skeleton className="h-9 w-32 rounded-md" />
+          <FieldSkeleton />
         </div>
-        <Skeleton className="my-8 h-px w-full" />
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="my-8 h-px w-full" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-        <Skeleton className="my-8 h-px w-full" />
-        <div className="space-y-2 rounded-lg border border-destructive/30 p-6">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-80 max-w-full" />
-          <Skeleton className="mt-2 h-9 w-36 rounded-md" />
-        </div>
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-9 w-32 rounded-md" />
       </div>
-    </PageSkeleton>
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-16 w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <Skeleton className="h-64 w-full rounded-xl" />
+      <Skeleton className="h-px w-full" />
+      <div className="space-y-2 rounded-lg border border-destructive/30 p-6">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+        <Skeleton className="mt-2 h-9 w-36 rounded-md" />
+      </div>
+    </PageShell>
   )
 }
