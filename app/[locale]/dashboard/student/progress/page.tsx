@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import {
   IconChartBar,
   IconBook,
@@ -138,17 +139,11 @@ export default async function StudentProgressPage() {
       : 0
 
   return (
-    <div className="container mx-auto py-8 px-4 container" data-testid="progress-page">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <IconChartBar className="w-6 h-6 text-brand-text" />
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="progress-title">
-            {t('title')}
-          </h1>
-        </div>
-        <p className="text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <PageShell variant="wide" data-testid="progress-page">
+      <PageHeader
+        title={<span data-testid="progress-title">{t('title')}</span>}
+        description={t('subtitle')}
+      />
 
       {!enrollments || enrollments.length === 0 ? (
         <Card>
@@ -320,6 +315,6 @@ export default async function StudentProgressPage() {
           </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   )
 }

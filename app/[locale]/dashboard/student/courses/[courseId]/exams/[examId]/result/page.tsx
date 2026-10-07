@@ -1,12 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { IconTrophy, IconCheck, IconX, IconClock, IconMessageChatbot, IconArrowLeft, IconUserCheck, IconHourglass, IconCertificate } from '@tabler/icons-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { PageShell } from '@/components/dashboard/page-shell'
 import { getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
 import { getFormatter, getTranslations } from 'next-intl/server'
@@ -108,7 +109,12 @@ export default async function ExamResultPage({ params }: PageProps) {
     const { data: answerKey } = await supabase.rpc('get_exam_answer_key', {
         p_submission_id: submission.submission_id,
     })
-    examData.exam_questions = withExamAnswerKey(examData.exam_questions ?? [], answerKey)
+    const examQuestions = withExamAnswerKey(examData.exam_questions ?? [], answerKey)
+    examData.exam_questions = examQuestions
+    type ResultQuestion = (typeof examQuestions)[number]
+    type ResultOption = NonNullable<ResultQuestion['question_options']>[number]
+    type QuestionScoreRow = NonNullable<NonNullable<typeof submission>['exam_question_scores']>[number]
+    type AnswerRow = NonNullable<NonNullable<typeof submission>['exam_answers']>[number]
 
     // Check if a certificate was issued for this course
     const { data: certificate } = await supabase
@@ -119,40 +125,40 @@ export default async function ExamResultPage({ params }: PageProps) {
         .maybeSingle()
 
     const score = submission.score ?? submission.exam_scores?.[0]?.score
-    const aiData = submission.ai_data as any
+    const aiData = submission.ai_data as { overall_feedback?: string; summary?: string } | null
     const reviewStatus = submission.review_status as string | null
     const questionScoresByQuestionId = (submission.exam_question_scores || []).reduce(
-        (acc: any, qs: any) => {
+        (acc: Record<number, QuestionScoreRow>, qs) => {
             acc[qs.question_id] = qs
             return acc
         },
-        {}
+        {} as Record<number, QuestionScoreRow>
     )
     const answersByQuestionId = (submission.exam_answers || []).reduce(
-        (acc: any, answer: any) => {
+        (acc: Record<number, AnswerRow>, answer) => {
             acc[answer.question_id] = answer
             return acc
         },
-        {}
+        {} as Record<number, AnswerRow>
     )
 
     // Match answer_text to an option — answer_text may be the option_id (MC)
     // or the literal text "True"/"False" (TF), so check both
-    function findSelectedOption(options: any[], answerText: string | null | undefined) {
+    function findSelectedOption(options: ResultOption[], answerText: string | null | undefined) {
         if (!answerText || !options) return null
-        return options.find((opt: any) =>
+        return options.find((opt) =>
             opt.option_id.toString() === answerText ||
             opt.option_text.toLowerCase() === answerText.toLowerCase()
         ) || null
     }
 
     // Build a lookup of whether the student's answer was correct per question
-    const correctOptionsByQuestion = (examData.exam_questions || []).reduce(
-        (acc: Record<number, boolean>, q: any) => {
+    const correctOptionsByQuestion = examQuestions.reduce(
+        (acc: Record<number, boolean>, q: ResultQuestion) => {
             if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
                 const answer = answersByQuestionId[q.question_id]
                 if (answer) {
-                    const selectedOpt = findSelectedOption(q.question_options, answer.answer_text)
+                    const selectedOpt = findSelectedOption(q.question_options ?? [], answer.answer_text)
                     if (selectedOpt !== null) {
                         acc[q.question_id] = !!selectedOpt?.is_correct
                     }
@@ -166,7 +172,7 @@ export default async function ExamResultPage({ params }: PageProps) {
 
     const firstExam = examData;
     const courseData = firstExam?.courses;
-    const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || t('courseFallback');
+    const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as { title?: string | null } | null | undefined)?.title) || t('courseFallback');
 
     const breadcrumbLinks = [
         { href: '/dashboard/student', label: t('breadcrumb.dashboard') },
@@ -203,7 +209,7 @@ export default async function ExamResultPage({ params }: PageProps) {
     )
 
     return (
-        <div className="container mx-auto py-5 sm:py-8 px-4 space-y-5 sm:space-y-8 animate-in fade-in duration-500">
+        <PageShell variant="wide">
             <BreadcrumbComponent links={breadcrumbLinks} />
 
             {/* Score Header */}
@@ -352,7 +358,7 @@ export default async function ExamResultPage({ params }: PageProps) {
             <div className="space-y-4 sm:space-y-6">
                 <h2 className="text-xl sm:text-2xl font-bold px-1 sm:px-2">{t('detailedReview')}</h2>
                 <div className="space-y-4">
-                    {examData.exam_questions?.map((question: any, idx: number) => {
+                    {examQuestions.map((question: ResultQuestion, idx: number) => {
                         const answer = answersByQuestionId[question.question_id];
                         const qScore = questionScoresByQuestionId[question.question_id];
                         // For MC/TF, derive correctness from the options (ground truth);
@@ -402,7 +408,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     {/* Multiple Choice Options */}
                                     {question.question_type === 'multiple_choice' && (
                                         <div className="grid gap-2.5 sm:gap-3">
-                                            {question.question_options?.map((opt: any) => {
+                                            {question.question_options?.map((opt: ResultOption) => {
                                                 const isSelected = answer?.answer_text === opt.option_id.toString()
                                                     || (answer?.answer_text?.toLowerCase() === opt.option_text?.toLowerCase());
                                                 const isOptionCorrect = opt.is_correct;
@@ -454,7 +460,7 @@ export default async function ExamResultPage({ params }: PageProps) {
                                     {/* True/False Questions */}
                                     {question.question_type === 'true_false' && (
                                         <div className="grid gap-2.5 sm:gap-3">
-                                            {question.question_options?.map((opt: any) => {
+                                            {question.question_options?.map((opt: ResultOption) => {
                                                 const isSelected = answer?.answer_text === opt.option_id.toString()
                                                     || (answer?.answer_text?.toLowerCase() === opt.option_text?.toLowerCase());
                                                 const isOptionCorrect = opt.is_correct;
@@ -606,6 +612,6 @@ export default async function ExamResultPage({ params }: PageProps) {
                     </Button>
                 </Link>
             </div>
-        </div>
+        </PageShell>
     )
 }

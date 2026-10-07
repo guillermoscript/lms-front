@@ -8,6 +8,7 @@ import { CommunityUnread } from '@/components/notifications/community-unread'
 import { getFeedFocus, getFeedPage } from '@/lib/community/feed'
 import { parseQuestionFilter } from '@/lib/community/questions'
 import { getCommunitySettings } from '@/lib/community/settings'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { UpgradeNudge } from '@/components/shared/upgrade-nudge'
 import { CommunityTour } from '@/components/tours/community-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -38,17 +39,10 @@ export default async function TeacherCommunityPage({ searchParams }: PageProps) 
 
   if (!planFeatures?.features?.community) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8">
-            <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">{t('schoolFeedDescription')}</p>
-          </div>
-        </header>
-        <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
-          <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
-        </main>
-      </div>
+      <PageShell variant="reading">
+        <PageHeader title={t('title')} description={t('schoolFeedDescription')} />
+        <UpgradeNudge feature="community" currentPlan={planFeatures?.plan} />
+      </PageShell>
     )
   }
 
@@ -66,20 +60,17 @@ export default async function TeacherCommunityPage({ searchParams }: PageProps) 
   const focus = await focusPromise
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell variant="reading">
       <CommunityTour
         userId={userId}
         userRole={role as 'student' | 'teacher' | 'admin'}
         completed={isTourCompleted(uiState, 'community')}
         toursEnabled={areToursEnabled(uiState)}
       />
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-3xl px-4 py-5 sm:px-6 lg:px-8" data-tour="community-header">
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('schoolFeedDescription')}</p>
-        </div>
-      </header>
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+      <div data-tour="community-header">
+        <PageHeader title={t('title')} description={t('schoolFeedDescription')} />
+      </div>
+      <div className="space-y-4">
         <CommunityUnread role={role} />
         <CommunityFeed
           key={questionFilter ?? 'all'}
@@ -94,7 +85,7 @@ export default async function TeacherCommunityPage({ searchParams }: PageProps) 
           focusPostId={focus.focusPostId}
           focusPost={focus.focusPost}
         />
-      </main>
-    </div>
+      </div>
+    </PageShell>
   )
 }

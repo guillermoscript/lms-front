@@ -33,6 +33,7 @@ import { StudentCertificateCard } from '@/components/student/student-certificate
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUiState } from '@/lib/supabase/ui-state'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { areToursEnabled } from '@/lib/ui-state-keys'
 import { hasPlanFeature } from '@/lib/plans/server'
 import { getCommunitySettings } from '@/lib/community/settings'
@@ -305,13 +306,8 @@ export default async function ProfilePage() {
         new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' }).format(amount)
 
     return (
-        <div className="min-h-screen bg-background pb-20" data-testid="profile-page">
-            <main className="container mx-auto px-4 md:px-8 py-8 md:py-12">
-                {/* Page Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold tracking-tight">{t('editProfile')}</h1>
-                    <p className="text-muted-foreground mt-1">{t('editProfileSubtitle')}</p>
-                </div>
+        <PageShell variant="wide" data-testid="profile-page">
+                <PageHeader title={t('editProfile')} description={t('editProfileSubtitle')} />
 
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* ── Sidebar ─────────────────────────────────────── */}
@@ -600,7 +596,6 @@ export default async function ProfilePage() {
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+        </PageShell>
     )
 }

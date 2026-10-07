@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Link from 'next/link'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import {
   IconReceipt,
   IconAlertCircle,
@@ -175,15 +176,16 @@ export default async function StudentPaymentsPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 container" data-testid="payments-page">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <IconReceipt className="w-6 h-6 text-brand-text" />
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="payments-title">{t('title')}</h1>
-        </div>
-        <p className="text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <PageShell variant="form" data-testid="payments-page">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <IconReceipt className="w-6 h-6 text-brand-text" />
+            <span data-testid="payments-title">{t('title')}</span>
+          </span>
+        }
+        description={t('subtitle')}
+      />
 
       {/* Payment Requests */}
       {!paymentRequests || paymentRequests.length === 0 ? (
@@ -355,6 +357,6 @@ export default async function StudentPaymentsPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   )
 }

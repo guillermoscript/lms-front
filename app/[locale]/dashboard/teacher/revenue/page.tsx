@@ -12,6 +12,7 @@ import { IconCurrencyDollar, IconTrendingUp, IconClock, IconAlertCircle } from '
 import { RevenueChart } from '@/components/teacher/revenue-chart'
 import { PayoutHistory } from '@/components/teacher/payout-history'
 import { TransactionList } from '@/components/teacher/transaction-list'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 
 export default async function RevenuePage() {
   const role = await getUserRole()
@@ -118,39 +119,8 @@ export default async function RevenuePage() {
   ]
 
   return (
-    <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="revenue-page">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {t('subtitle')}
-        </p>
-      </div>
-
-      {!isStripeConnected && (
-        <div className="rounded-xl bg-warning/10 p-5 ring-1 ring-warning/30">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/15">
-              <IconAlertCircle className="h-[18px] w-[18px] text-warning" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-warning">{t('stripeNotConnected.title')}</h3>
-              <p className="mt-0.5 text-xs text-warning">
-                {t('stripeNotConnected.description')}
-              </p>
-              {/* Stays a plain anchor: /api/stripe/connect is a route handler that
-                  mints a Stripe onboarding link and redirects. next/link would
-                  prefetch it and fire that side effect on hover. */}
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-              <a
-                href="/api/stripe/connect"
-                className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-warning text-warning-foreground hover:bg-warning/90 h-8 px-4 transition-colors"
-              >
-                {t('stripeNotConnected.connect')}
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
+    <PageShell variant="default" data-testid="revenue-page">
+      <PageHeader title={t('title')} description={t('subtitle')} />
 
       {/* Revenue Stats */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -221,18 +191,45 @@ export default async function RevenuePage() {
           <TabsTrigger value="chart">{t('tabs.chart')}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="transactions" className="space-y-4">
+        <TabsContent value="transactions" className="min-h-80 space-y-4">
           <TransactionList transactions={transactions || []} />
         </TabsContent>
 
-        <TabsContent value="payouts" className="space-y-4">
+        <TabsContent value="payouts" className="min-h-80 space-y-4">
           <PayoutHistory payouts={payouts || []} />
         </TabsContent>
 
-        <TabsContent value="chart" className="space-y-4">
+        <TabsContent value="chart" className="min-h-80 space-y-4">
           <RevenueChart transactions={transactions || []} />
         </TabsContent>
       </Tabs>
-    </div>
+
+      {/* Late/conditional: kept below the main content so it never pushes the page down */}
+      {!isStripeConnected && (
+        <div className="rounded-xl bg-warning/10 p-5 ring-1 ring-warning/30">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/15">
+              <IconAlertCircle className="h-[18px] w-[18px] text-warning" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-warning">{t('stripeNotConnected.title')}</h3>
+              <p className="mt-0.5 text-xs text-warning">
+                {t('stripeNotConnected.description')}
+              </p>
+              {/* Stays a plain anchor: /api/stripe/connect is a route handler that
+                  mints a Stripe onboarding link and redirects. next/link would
+                  prefetch it and fire that side effect on hover. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
+                href="/api/stripe/connect"
+                className="mt-3 inline-flex items-center justify-center rounded-lg text-xs font-medium bg-warning text-warning-foreground hover:bg-warning/90 h-8 px-4 transition-colors"
+              >
+                {t('stripeNotConnected.connect')}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </PageShell>
   )
 }

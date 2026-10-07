@@ -10,9 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
-import Link from 'next/link'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import {
-  IconArrowLeft,
   IconClock,
   IconCheck,
   IconX,
@@ -123,16 +122,11 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
   const accounts = canReport ? await getManualPaymentAccounts() : []
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
-      {/* Header */}
-      <div className="mb-6 flex items-center gap-2">
-        <Link href="/dashboard/student/payments">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('detail.backToPayments')}>
-            <IconArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight">{t('detail.title')}</h1>
-      </div>
+    <PageShell variant="form">
+      <PageHeader
+        back={{ href: '/dashboard/student/payments', label: t('detail.backToPayments') }}
+        title={t('detail.title')}
+      />
 
       <Card>
         <CardHeader>
@@ -313,6 +307,6 @@ export default async function StudentPaymentDetailPage({ params }: PageProps) {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   )
 }

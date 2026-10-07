@@ -1,26 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { Button } from '@/components/ui/button'
-import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import dynamic from 'next/dynamic'
-import { Skeleton } from '@/components/ui/skeleton'
+import { CertificateSettingsFormSkeleton } from './form-skeleton'
 
+// No dynamic fallback: the route's loading.tsx already shows the matching skeleton.
 const CertificateTemplateForm = dynamic(
   () => import('@/components/teacher/certificate-template-form').then(m => m.CertificateTemplateForm),
-  {
-    loading: () => (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <div className="aspect-[1.414/1] w-full">
-          <Skeleton className="h-full w-full" />
-        </div>
-        <Skeleton className="h-10 w-32" />
-      </div>
-    ),
-  }
+  { loading: () => <CertificateSettingsFormSkeleton /> }
 )
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
@@ -70,29 +58,12 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
         .single()
 
     return (
-        <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-            {/* Breadcrumb */}
-            <div className="mb-8 flex items-center gap-2">
-                <Link href={`/dashboard/teacher/courses/${courseId}/certificates`} aria-label={t('backToCourses')}>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <IconArrowLeft className="h-4 w-4" />
-                    </Button>
-                </Link>
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <span className="truncate max-w-[200px]">{course.title}</span>
-                    <IconChevronRight className="h-3 w-3 shrink-0" />
-                    <Link
-                        href={`/dashboard/teacher/courses/${courseId}/certificates`}
-                        className="hover:text-foreground transition-colors"
-                    >
-                        {t('certificates.title')}
-                    </Link>
-                    <IconChevronRight className="h-3 w-3 shrink-0" />
-                    <span className="font-medium text-foreground">
-                        {template ? t('certificates.templates.edit') : t('certificates.templates.create')}
-                    </span>
-                </div>
-            </div>
+        <PageShell variant="wide">
+            <PageHeader
+                back={{ href: `/dashboard/teacher/courses/${courseId}/certificates`, label: t('certificates.title') }}
+                title={template ? t('certificates.templates.edit') : t('certificates.templates.create')}
+                description={course.title}
+            />
 
             <CertificateTemplateForm
                 courseId={parseInt(courseId)}
@@ -101,6 +72,6 @@ export default async function CertificateSettingsPage({ params }: PageProps) {
                 certificateTier={certificateTier === 'custom' ? 'custom' : 'basic'}
                 brand={brand.outputs}
             />
-        </div>
+        </PageShell>
     )
 }

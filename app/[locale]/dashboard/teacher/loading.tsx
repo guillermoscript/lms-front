@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton"
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 
 const CARD = "rounded-card bg-card ring-1 ring-foreground/10"
 
@@ -20,18 +20,8 @@ function StatTile() {
 
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading dashboard">
-      {/* Welcome + actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Skeleton className="h-8 w-64 max-w-full" />
-          <Skeleton className="mt-1.5 h-4 w-80 max-w-full" />
-        </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-36 rounded-md" />
-          <Skeleton className="h-8 w-32 rounded-md" />
-        </div>
-      </div>
+    <PageShell variant="default" skeleton>
+      <PageHeaderSkeleton actions={2} />
 
       {/* Stats */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -89,6 +79,6 @@ export default function Loading() {
           </div>
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

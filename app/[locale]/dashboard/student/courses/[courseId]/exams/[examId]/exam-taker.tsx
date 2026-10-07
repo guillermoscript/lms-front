@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { PageShell } from '@/components/dashboard/page-shell'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
@@ -166,7 +167,7 @@ export function ExamTaker({
 
   if (questions.length === 0) {
     return (
-      <div className="container mx-auto max-w-2xl py-20 px-4 text-center">
+      <PageShell variant="form" className="text-center">
         <div className="bg-card border rounded-3xl p-12 shadow-soft">
           <IconFileText className="mx-auto mb-6 h-16 w-16 text-muted-foreground/30" />
           <h2 className="text-2xl font-bold mb-2">{t('noQuestionsTitle')}</h2>
@@ -178,13 +179,13 @@ export function ExamTaker({
             </Button>
           </Link>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col pt-6 pb-12">
-      <div className="container max-w-4xl flex-1 flex flex-col gap-8">
+    <PageShell variant="form" className="flex flex-col">
+      <div className="flex-1 flex flex-col gap-8">
         {/* Top bar with stats and timer */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-4 z-20">
           <div className="bg-background/80 backdrop-blur-md border border-muted-foreground/10 rounded-2xl p-4 flex flex-1 items-center gap-6 shadow-xl">
@@ -232,7 +233,7 @@ export function ExamTaker({
             </div>
 
             <div className="flex-1 p-8 md:p-12 flex flex-col items-center justify-center max-w-3xl mx-auto w-full">
-              <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="w-full space-y-8 animate-in fade-in duration-500 motion-reduce:animate-none">
                 <div className="flex items-center gap-3 text-brand-text font-black uppercase tracking-[0.2em] text-sm">
                   <span className="h-[1px] w-8 bg-current opacity-20" />
                   {t('question', { number: currentQuestionIndex + 1 })}
@@ -363,6 +364,6 @@ export function ExamTaker({
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

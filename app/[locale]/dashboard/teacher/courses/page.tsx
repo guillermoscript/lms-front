@@ -13,7 +13,7 @@ import {
     IconEye,
     IconSparkles,
 } from '@tabler/icons-react'
-import * as motion from 'motion/react-client'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import Image from 'next/image'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
@@ -44,40 +44,31 @@ export default async function TeacherCoursesPage() {
     const coursesList = courses || []
 
     return (
-        <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-courses-list">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        {t('title')}
-                    </h1>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                        {t('description')}
-                    </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <Link href="/dashboard/teacher/courses/ai">
-                        <Button size="sm" variant="outline" className="gap-2">
-                            <IconSparkles className="h-3.5 w-3.5" />
-                            {tArchitect('createWithAi')}
-                        </Button>
-                    </Link>
-                    <Link href="/dashboard/teacher/courses/new">
-                        <Button size="sm" className="gap-2">
-                            <IconPlus className="h-3.5 w-3.5" />
-                            {t('createFirstBtn')}
-                        </Button>
-                    </Link>
-                </div>
-            </div>
+        <PageShell variant="default" data-testid="teacher-courses-list">
+            <PageHeader
+                title={t('title')}
+                description={t('description')}
+                actions={
+                    <>
+                        <Link href="/dashboard/teacher/courses/ai">
+                            <Button size="sm" variant="outline" className="gap-2">
+                                <IconSparkles className="h-3.5 w-3.5" />
+                                {tArchitect('createWithAi')}
+                            </Button>
+                        </Link>
+                        <Link href="/dashboard/teacher/courses/new">
+                            <Button size="sm" className="gap-2">
+                                <IconPlus className="h-3.5 w-3.5" />
+                                {t('createFirstBtn')}
+                            </Button>
+                        </Link>
+                    </>
+                }
+            />
 
             <ContentListExplorer kind="courses"
-                items={coursesList.map((course, idx) => ({ id: course.course_id, title: course.title, status: course.status, createdAt: course.created_at, content: (
-                    <motion.div
-                            key={course.course_id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.04, duration: 0.25 }}
-                        >
+                items={coursesList.map((course) => ({ id: course.course_id, title: course.title, status: course.status, createdAt: course.created_at, content: (
+                    <div key={course.course_id}>
                             <Card className="group flex flex-col h-full overflow-hidden transition-all duration-200 hover:shadow-md hover:ring-1 hover:ring-primary/20">
                                 {/* Thumbnail */}
                                 <div data-course-thumbnail className="relative aspect-video w-full overflow-hidden bg-muted">
@@ -161,7 +152,7 @@ export default async function TeacherCoursesPage() {
                                     </div>
                                 </CardContent>
                             </Card>
-                        </motion.div>
+                        </div>
                 ) }))}
                 emptyState={(
                     <div className="col-span-full">
@@ -185,6 +176,6 @@ export default async function TeacherCoursesPage() {
                     </div>
                 )}
             />
-        </div>
+        </PageShell>
     )
 }

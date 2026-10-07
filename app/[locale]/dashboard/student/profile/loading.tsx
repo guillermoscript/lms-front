@@ -1,4 +1,4 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function SectionCardHeader({ withBadge = false }: { withBadge?: boolean }) {
@@ -17,15 +17,8 @@ function SectionCardHeader({ withBadge = false }: { withBadge?: boolean }) {
 /** Mirrors profile/page.tsx: header, sticky-width sidebar (profile, stats, subscription), main column cards. */
 export default function ProfileLoading() {
   return (
-    <PageSkeleton
-      label="Loading profile"
-      className="min-h-screen space-y-0 p-0 pb-20 lg:p-0 lg:pb-20"
-    >
-      <div className="container mx-auto px-4 py-8 md:px-8 md:py-12">
-        <div className="mb-8">
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="mt-1 h-6 w-64 max-w-full" />
-        </div>
+    <PageShell variant="wide" skeleton>
+      <PageHeaderSkeleton />
 
         <div className="flex flex-col gap-8 lg:flex-row">
           <div className="w-full shrink-0 space-y-6 lg:w-80 xl:w-96">
@@ -111,7 +104,6 @@ export default function ProfileLoading() {
             </div>
           </div>
         </div>
-      </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

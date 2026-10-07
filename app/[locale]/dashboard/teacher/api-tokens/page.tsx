@@ -2,6 +2,7 @@ import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenant } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { listMcpTokens } from '@/app/actions/mcp-tokens'
+import { PageShell } from '@/components/dashboard/page-shell'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
 
 export default async function TeacherApiTokensPage() {
@@ -18,8 +19,8 @@ export default async function TeacherApiTokensPage() {
     : `https://${platformDomain}/api/mcp/cli`
 
   return (
-    <div className="p-6 lg:p-8">
+    <PageShell variant="form">
       <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} />
-    </div>
+    </PageShell>
   )
 }

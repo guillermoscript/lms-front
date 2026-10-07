@@ -1,4 +1,4 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell, PageHeaderSkeleton } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function TableCard({ rows, cols }: { rows: number; cols: number }) {
@@ -23,20 +23,11 @@ function TableCard({ rows, cols }: { rows: number; cols: number }) {
   )
 }
 
-/** Mirrors billing/page.tsx: max-w-4xl, header, subscription card, purchases table, offline table. */
+/** Mirrors billing/page.tsx: form shell, header, subscription card, purchases table, offline table. */
 export default function BillingLoading() {
   return (
-    <PageSkeleton
-      label="Loading billing"
-      className="container mx-auto max-w-4xl space-y-8 p-0 px-4 py-8 lg:p-0 lg:px-4 lg:py-8"
-    >
-      <div>
-        <div className="mb-1 flex items-center gap-2">
-          <Skeleton className="h-6 w-6 rounded" />
-          <Skeleton className="h-8 w-40" />
-        </div>
-        <Skeleton className="h-5 w-64 max-w-full" />
-      </div>
+    <PageShell variant="form" skeleton className="space-y-8">
+      <PageHeaderSkeleton />
 
       <div>
         <Skeleton className="mb-3 h-4 w-32" />
@@ -65,6 +56,6 @@ export default function BillingLoading() {
         <Skeleton className="mb-3 h-4 w-40" />
         <TableCard rows={3} cols={4} />
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

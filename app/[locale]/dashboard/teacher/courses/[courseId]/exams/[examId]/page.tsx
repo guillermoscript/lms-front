@@ -2,23 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import { getTranslations } from 'next-intl/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Skeleton } from '@/components/ui/skeleton'
 import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
+import { PageShell } from '@/components/dashboard/page-shell'
+import { ExamBuilderSkeleton } from '../_builder-skeleton'
 import { EXAM_GRADING_SECRETS_EMBED, withExamGradingSecrets } from '@/lib/exams/grading-secrets'
 
 const ExamBuilder = dynamic(
   () => import('@/components/teacher/exam-builder').then(m => m.ExamBuilder),
   {
     loading: () => (
-      <div className="mx-auto max-w-4xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-9 w-32" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
+      <PageShell variant="form">
+        <ExamBuilderSkeleton />
+      </PageShell>
     ),
   }
 )
@@ -73,13 +68,13 @@ export default async function EditExamPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell variant="form">
       <AiEditSheet scope={{ type: 'exam', examId: parseInt(examId), courseId: parseInt(courseId) }} className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 gap-2 bg-background shadow-md" />
       <ExamBuilder
         courseId={parseInt(courseId)}
         courseTitle={course.title}
         initialData={{ ...exam, questions: exam.questions.map((q: { question_id: number }) => withExamGradingSecrets(q)) }}
       />
-    </div>
+    </PageShell>
   )
 }

@@ -4,11 +4,13 @@ import { getTranslations } from 'next-intl/server'
 import { EnrolledCourseCard } from '@/components/student/enrolled-course-card'
 import { CourseFilters } from '@/components/student/course-filters'
 import { Button } from '@/components/ui/button'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { IconBook2, IconSparkles, IconCertificate, IconArrowRight } from '@tabler/icons-react'
 import Link from 'next/link'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { fetchCourseAccessMap } from '@/lib/services/course-access'
 import type { CourseAccess } from '@/lib/services/enrollment-service'
+import type { Tables } from '@/lib/database.types'
 import {
   getCoursesByIds,
   getLessonsByCourseIds,
@@ -23,6 +25,21 @@ const NO_ACCESS: CourseAccess = {
   accessTypes: [],
   isPerpetual: false,
   isExpired: false,
+}
+
+type RowsOf<F extends (...args: never[]) => PromiseLike<{ data: unknown }>> =
+  NonNullable<Awaited<ReturnType<F>>['data']> extends (infer R)[] ? R : never
+
+type EnrichedEnrollment = {
+  access: CourseAccess
+  course: RowsOf<typeof getCoursesByIds> & {
+    lessons: (RowsOf<typeof getLessonsByCourseIds> & {
+      lesson_completions: RowsOf<typeof getLessonCompletions>[]
+    })[]
+    exams: (RowsOf<typeof getExamsByCourseIds> & {
+      exam_submissions: RowsOf<typeof getExamSubmissions>[]
+    })[]
+  }
 }
 
 interface PageProps {
@@ -53,7 +70,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
 
 
   // Enrich enrollments with related data using batch queries (avoids N+1)
-  let enrichedEnrollments: any[] = []
+  const enrichedEnrollments: (Tables<'enrollments'> & EnrichedEnrollment)[] = []
 
   if (enrollments && enrollments.length > 0) {
     const courseIds = enrollments.map(e => e.course_id)
@@ -90,7 +107,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
       arr.push(e)
       examsByCourse.set(e.course_id, arr)
     }
-    const completionSet = new Set((lessonCompletions || []).map(lc => lc.lesson_id))
     const completionsByLessonId = new Map<number, typeof lessonCompletions>()
     for (const lc of lessonCompletions || []) {
       const arr = completionsByLessonId.get(lc.lesson_id) || []
@@ -133,18 +149,18 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-5xl py-12 px-4">
+      <PageShell variant="wide">
         <div className="text-center py-16">
           <p className="text-muted-foreground">{t('errorLoading')}</p>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   // Calculate progress and apply filters
   const processedEnrollments = enrichedEnrollments.map(enrollment => {
     const totalItems = enrollment.course.lessons.length
-    const completedItems = enrollment.course.lessons.filter((l: any) => l.lesson_completions.length > 0).length
+    const completedItems = enrollment.course.lessons.filter((l) => l.lesson_completions.length > 0).length
     const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
 
     return {
@@ -164,7 +180,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     not_started: processedEnrollments.filter(e => e.course.progress === 0).length,
   }
 
-  let filteredEnrollments = processedEnrollments.filter(enrollment => {
+  const filteredEnrollments = processedEnrollments.filter(enrollment => {
     if (params.status && params.status !== 'all') {
       if (params.status === 'completed' && enrollment.course.progress < 100) return false
       if (params.status === 'in_progress' && (enrollment.course.progress === 0 || enrollment.course.progress === 100)) return false
@@ -200,52 +216,23 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
   const hasFilteredEnrollments = filteredEnrollments.length > 0
 
   return (
-    <div className="mx-auto container py-5 sm:py-8 px-4 lg:px-8 space-y-5 sm:space-y-6" data-testid="student-courses-page">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight" data-testid="my-courses-title">
-            {t('title')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {hasEnrollments
-              ? t('enrolledMessage', { count: enrichedEnrollments.length, s: enrichedEnrollments.length === 1 ? '' : 's' })
-              : t('startJourney')
-            }
-          </p>
-        </div>
-
-        <div className="flex gap-2">
+    <PageShell variant="wide" data-testid="student-courses-page">
+      <PageHeader
+        title={<span data-testid="my-courses-title">{t('title')}</span>}
+        description={
+          hasEnrollments
+            ? t('enrolledMessage', { count: enrichedEnrollments.length, s: enrichedEnrollments.length === 1 ? '' : 's' })
+            : t('startJourney')
+        }
+        actions={
           <Link href="/dashboard/student/browse">
             <Button variant="outline" size="sm" className="gap-1.5 h-9 text-xs font-bold">
               <IconSparkles size={14} />
               {t('browseCatalog')}
             </Button>
           </Link>
-        </div>
-      </div>
-
-      {/* Certificates Banner */}
-      {(certificateCount ?? 0) > 0 && (
-        <Link href="/dashboard/student/certificates" className="block group">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-primary/25 bg-brand-tint p-4 sm:px-6 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-brand-tint text-brand-text shrink-0">
-                  <IconCertificate size={20} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">
-                    {certificateCount} {certificateCount === 1 ? 'Certificate' : 'Certificates'} Earned
-                  </p>
-                  <p className="text-xs text-muted-foreground">View, download and share your achievements</p>
-                </div>
-              </div>
-              <IconArrowRight size={16} className="text-muted-foreground group-hover:text-brand-text group-hover:translate-x-0.5 transition-all shrink-0" />
-            </div>
-          </div>
-        </Link>
-      )}
+        }
+      />
 
       {!hasEnrollments ? (
         /* Empty State */
@@ -297,6 +284,27 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
           )}
         </>
       )}
-    </div>
+      {/* Certificates Banner */}
+      {(certificateCount ?? 0) > 0 && (
+        <Link href="/dashboard/student/certificates" className="block group">
+          <div className="relative overflow-hidden rounded-2xl border-2 border-primary/25 bg-brand-tint p-4 sm:px-6 hover:border-primary/40 transition-colors">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-brand-tint text-brand-text shrink-0">
+                  <IconCertificate size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">
+                    {certificateCount} {certificateCount === 1 ? 'Certificate' : 'Certificates'} Earned
+                  </p>
+                  <p className="text-xs text-muted-foreground">View, download and share your achievements</p>
+                </div>
+              </div>
+              <IconArrowRight size={16} className="text-muted-foreground group-hover:text-brand-text group-hover:translate-x-0.5 transition-all shrink-0" />
+            </div>
+          </div>
+        </Link>
+      )}
+    </PageShell>
   )
 }

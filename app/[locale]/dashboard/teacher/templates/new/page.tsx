@@ -1,29 +1,19 @@
 import { TemplateForm } from '@/components/teacher/template-form'
-import { IconArrowLeft } from '@tabler/icons-react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { getTranslations } from 'next-intl/server'
 
 export default async function NewTemplatePage() {
   const t = await getTranslations('dashboard.teacher.templates')
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/teacher/templates" aria-label={t('backToTemplates')}>
-          <Button variant="ghost" size="icon">
-            <IconArrowLeft size={20} />
-          </Button>
-        </Link>
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t('createTemplate')}</h2>
-          <p className="text-muted-foreground">
-            {t('createDescription')}
-          </p>
-        </div>
-      </div>
+    <PageShell variant="form">
+      <PageHeader
+        back={{ href: '/dashboard/teacher/templates', label: t('backToTemplates') }}
+        title={t('createTemplate')}
+        description={t('createDescription')}
+      />
 
       <TemplateForm />
-    </div>
+    </PageShell>
   )
 }

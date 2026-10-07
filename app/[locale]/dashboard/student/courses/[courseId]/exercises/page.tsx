@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
-import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import ExerciseBrowseList from '@/components/exercises/exercise-browse-list'
 import { IconBarbell } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
@@ -70,26 +70,13 @@ export default async function ExercisesListPage({ params }: PageProps) {
 
     const courseTitle = courseData.title
 
-    const breadcrumbLinks = [
-        { href: '/dashboard/student', label: t('breadcrumb.dashboard') },
-        { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
-        { href: '#', label: t('breadcrumb.exercises') },
-    ]
-
     return (
-        <div className="container mx-auto py-5 sm:py-8 px-4 space-y-6 sm:space-y-8">
-            <div className="space-y-3 sm:space-y-4">
-                <BreadcrumbComponent links={breadcrumbLinks} />
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-brand-tint text-brand-text flex items-center justify-center shrink-0">
-                        <IconBarbell className="h-6 w-6 sm:h-7 sm:w-7" />
-                    </div>
-                    <div className="min-w-0">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
-                        <p className="text-muted-foreground">{t('subtitle')}</p>
-                    </div>
-                </div>
-            </div>
+        <PageShell>
+            <PageHeader
+                back={{ href: `/dashboard/student/courses/${courseId}`, label: courseTitle }}
+                title={t('title')}
+                description={t('subtitle')}
+            />
 
             {standaloneExercises.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-muted/20 border border-dashed rounded-3xl">
@@ -102,6 +89,6 @@ export default async function ExercisesListPage({ params }: PageProps) {
             ) : (
                 <ExerciseBrowseList exercises={standaloneExercises} courseId={courseId} />
             )}
-        </div>
+        </PageShell>
     )
 }

@@ -1,12 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
-import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import ExamCard from '@/components/exercises/exam-card'
 import { IconCertificate, IconProgress } from '@tabler/icons-react'
 import { Progress } from '@/components/ui/progress'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { requireCourseAccess } from '@/lib/services/course-access-guard'
+
+interface ExamSubmissionScore {
+  score?: number | null
+  exam_scores?: { score?: number | null }[] | { score?: number | null } | null
+}
 
 interface PageProps {
   params: Promise<{ courseId: string }>
@@ -72,12 +77,12 @@ export default async function ExamsPage({ params }: PageProps) {
     if (!course) notFound()
 
     return (
-      <div className="container mx-auto py-8 px-4 space-y-8">
-        <BreadcrumbComponent links={[
-          { href: '/dashboard/student', label: t('breadcrumb.dashboard') },
-          { href: `/dashboard/student/courses/${courseId}`, label: course.title },
-          { href: '#', label: t('breadcrumb.exams') },
-        ]} />
+      <PageShell variant="wide">
+        <PageHeader
+          back={{ href: `/dashboard/student/courses/${courseId}`, label: course.title }}
+          title={t('title')}
+          description={t('subtitle')}
+        />
         <div className="flex flex-col items-center justify-center py-20 bg-muted/20 border border-dashed rounded-3xl">
           <IconCertificate className="h-16 w-16 text-muted-foreground/30 mb-4" />
           <h3 className="text-xl font-semibold text-muted-foreground">{t('empty.title')}</h3>
@@ -85,61 +90,41 @@ export default async function ExamsPage({ params }: PageProps) {
             {t('empty.description')}
           </p>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   const firstExam = exams[0]
   const courseData = firstExam?.courses
-  const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as any)?.title) || 'Course'
+  const courseTitle = (Array.isArray(courseData) ? courseData[0]?.title : (courseData as { title?: string | null } | null | undefined)?.title) || 'Course'
 
   const completedExams = exams.filter(exam => {
     const subs = exam.exam_submissions
-    const submission = Array.isArray(subs) ? subs[0] : (subs as any)
+    const submission = Array.isArray(subs) ? subs[0] : (subs as ExamSubmissionScore | null | undefined)
     if (!submission) return false
-    const score = submission.score ?? (Array.isArray(submission.exam_scores) ? submission.exam_scores[0]?.score : (submission.exam_scores as any)?.score)
+    const score = submission.score ?? (Array.isArray(submission.exam_scores) ? submission.exam_scores[0]?.score : (submission.exam_scores as { score?: number | null } | null | undefined)?.score)
     return score !== undefined && score !== null
-  }).length
-  const submittedExams = exams.filter(exam => {
-    const subs = exam.exam_submissions
-    const submission = Array.isArray(subs) ? subs[0] : (subs as any)
-    return !!submission
   }).length
   const totalExams = exams.length
   const progressPercent = (completedExams / totalExams) * 100
 
-  const breadcrumbLinks = [
-    { href: '/dashboard/student', label: t('breadcrumb.dashboard') },
-    { href: `/dashboard/student/courses/${courseId}`, label: courseTitle },
-    { href: '#', label: t('breadcrumb.exams') },
-  ]
-
   return (
-    <div className="container mx-auto py-5 sm:py-8 px-4 space-y-6 sm:space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
-        <div className="space-y-3 sm:space-y-4 flex-1 min-w-0">
-          <BreadcrumbComponent links={breadcrumbLinks} />
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-brand-tint text-brand-text flex items-center justify-center shrink-0">
-              <IconCertificate className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
-              <p className="text-muted-foreground">{t('subtitle')}</p>
-            </div>
-          </div>
-        </div>
+    <PageShell variant="wide">
+      <PageHeader
+        back={{ href: `/dashboard/student/courses/${courseId}`, label: courseTitle }}
+        title={t('title')}
+        description={t('subtitle')}
+      />
 
-        <div className="bg-card border rounded-2xl p-4 min-w-[240px] shadow-sm shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <IconProgress size={16} />
-              {t('progress')}
-            </span>
-            <span className="text-sm font-bold">{completedExams}/{totalExams}</span>
-          </div>
-          <Progress value={progressPercent} className="h-2" />
+      <div className="bg-card border rounded-2xl p-4 shadow-sm w-full sm:max-w-xs">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <IconProgress size={16} />
+            {t('progress')}
+          </span>
+          <span className="text-sm font-bold">{completedExams}/{totalExams}</span>
         </div>
+        <Progress value={progressPercent} className="h-2" />
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -151,7 +136,6 @@ export default async function ExamsPage({ params }: PageProps) {
           />
         ))}
       </div>
-    </div>
+    </PageShell>
   )
 }
-

@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { BrowseCourseCard } from '@/components/student/browse-course-card'
 import { CourseSearchBar } from '@/components/shared/course-search-bar'
 import { Button } from '@/components/ui/button'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
 import { IconAlertCircle, IconSparkles, IconTrophy, IconSearch } from '@tabler/icons-react'
@@ -53,7 +54,7 @@ export default async function BrowseCoursesPage({
   // planCourses is conditional on subscription result -- sequential is correct
   let allowedCourseIds: Set<number> | null = null
   if (activeSubscription) {
-    const planId = (activeSubscription.plan as any)?.plan_id
+    const planId = activeSubscription.plan?.plan_id
     if (planId) {
       const { data: planCourses } = await getPlanCourses(supabase, planId)
 
@@ -102,21 +103,20 @@ export default async function BrowseCoursesPage({
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 container" data-testid="browse-courses-page">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <IconSparkles className="w-6 h-6 text-brand-text" />
-          <h1 className="text-3xl font-bold tracking-tight truncate" data-testid="browse-title">{t('title')}</h1>
-        </div>
-        <p className="text-muted-foreground">
-          {t('subtitle')}
-        </p>
-      </div>
+    <PageShell variant="wide" data-testid="browse-courses-page">
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <IconSparkles className="w-6 h-6 text-brand-text" />
+            <span data-testid="browse-title">{t('title')}</span>
+          </span>
+        }
+        description={t('subtitle')}
+      />
 
       {/* Subscription Status */}
       {!activeSubscription ? (
-        <Alert className="mb-8 border-warning/20 bg-warning/10">
+        <Alert className="border-warning/20 bg-warning/10">
           <IconAlertCircle className="h-4 w-4 text-warning" />
           <AlertTitle className="text-warning font-semibold">
             {t('noSubscriptionTitle')}
@@ -134,12 +134,12 @@ export default async function BrowseCoursesPage({
           </AlertDescription>
         </Alert>
       ) : (
-        <Alert className="mb-8 border-primary/20 bg-brand-tint">
+        <Alert className="border-primary/20 bg-brand-tint">
           <IconSparkles className="h-4 w-4 text-brand-text" />
           <AlertTitle className="font-semibold">{t('activeSubscriptionTitle')}</AlertTitle>
           <AlertDescription>
             {t('activeSubscriptionDesc', {
-              planName: (activeSubscription.plan as any)?.plan_name || 'Premium',
+              planName: activeSubscription.plan?.plan_name || 'Premium',
             })}
           </AlertDescription>
         </Alert>
@@ -190,6 +190,6 @@ export default async function BrowseCoursesPage({
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   )
 }

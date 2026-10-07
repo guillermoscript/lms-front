@@ -1,17 +1,10 @@
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell, PageHeaderSkeleton } from "@/components/dashboard/page-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {
   return (
-    <PageSkeleton
-      label="Loading submission"
-      className="mx-auto max-w-4xl flex-none space-y-0 px-4 py-8 sm:px-6 lg:px-8 lg:py-8"
-    >
-      {/* Back + student name */}
-      <div className="mb-6 flex items-center gap-2">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-4 w-40" />
-      </div>
+    <PageShell variant="form" skeleton>
+      <PageHeaderSkeleton back description={false} />
       <div className="space-y-8">
         {/* Summary header */}
         <div className="flex flex-col justify-between gap-4 rounded-xl border bg-muted/30 p-6 md:flex-row md:items-center">
@@ -55,6 +48,6 @@ export default function Loading() {
           <Skeleton className="h-9 w-36 rounded-md" />
         </div>
       </div>
-    </PageSkeleton>
+    </PageShell>
   )
 }

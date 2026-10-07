@@ -1,18 +1,18 @@
-import { PageSkeleton } from '@/components/skeletons'
+import { PageShell } from '@/components/dashboard/page-shell'
 import { Skeleton } from '@/components/ui/skeleton'
 
 // Mirrors the student-view course preview: banner, hero, curriculum list.
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading preview" className="min-h-screen space-y-0 bg-background p-0 lg:p-0">
-      <div className="border-b bg-warning/10 px-4 py-2">
-        <div className="mx-auto flex h-6 max-w-5xl items-center justify-between gap-3">
+    <div className="flex-1" role="status" aria-busy="true" aria-live="polite">
+      <div className="sticky top-0 z-50 border-b bg-background bg-linear-to-r from-warning/10 to-warning/10 px-4 py-2">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <Skeleton className="h-4 w-56" />
-          <Skeleton className="h-6 w-24 rounded-md" />
+          <Skeleton className="h-7 w-28 rounded-md" />
         </div>
       </div>
       <div className="border-b bg-card">
-        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 md:py-8 lg:px-8">
+        <div className="mx-auto w-full max-w-5xl px-6 py-6 lg:px-8 lg:py-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start lg:gap-10">
             <Skeleton className="aspect-video w-full shrink-0 rounded-2xl md:w-80 lg:w-96" />
             <div className="flex-1 space-y-4">
@@ -43,8 +43,8 @@ export default function Loading() {
           </div>
         </div>
       </div>
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-between">
+      <PageShell variant="default" skeleton className="mx-auto w-full max-w-5xl">
+        <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-40" />
           <Skeleton className="h-6 w-24 rounded-full" />
         </div>
@@ -61,7 +61,7 @@ export default function Loading() {
             </div>
           ))}
         </div>
-      </div>
-    </PageSkeleton>
+      </PageShell>
+    </div>
   )
 }

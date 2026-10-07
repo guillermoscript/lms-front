@@ -20,6 +20,7 @@ import {
   IconBolt
 } from '@tabler/icons-react'
 import * as motion from 'motion/react-client'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Suspense } from 'react'
 import { CourseArchitectCta } from '@/components/teacher/course-architect/course-architect-cta'
@@ -122,7 +123,7 @@ export default async function TeacherDashboard() {
   const totalPendingReviews = allSubmissions.length
 
   return (
-    <div className="flex-1 space-y-6 p-6 lg:p-8" data-testid="teacher-dashboard">
+    <PageShell variant="default" data-testid="teacher-dashboard">
       {/* Guided Tour (client component) */}
       <TeacherDashboardTour
         userId={userId}
@@ -130,39 +131,37 @@ export default async function TeacherDashboard() {
         toursEnabled={areToursEnabled(uiState)}
       />
 
-      <div data-tour="teacher-welcome" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground" data-testid="teacher-welcome">
-            {t.rich('welcome', {
-              userName: profile?.full_name?.split(' ')[0] || t('defaultName')
-            })}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {t('subtitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard/teacher/templates">
-            <Button variant="outline" size="sm" className="gap-2">
-              <IconTemplate className="h-3.5 w-3.5" />
-              {t('promptTemplates')}
-            </Button>
-          </Link>
-          <Link href="/dashboard/teacher/courses/new" data-tour="sidebar-create-course">
-            <Button size="sm" className="gap-2">
-              <IconPlus className="h-3.5 w-3.5" />
-              {t('createCourse')}
-            </Button>
-          </Link>
-        </div>
+      <div data-tour="teacher-welcome">
+        <PageHeader
+          title={
+            <span data-testid="teacher-welcome">
+              {t.rich('welcome', {
+                userName: profile?.full_name?.split(' ')[0] || t('defaultName')
+              })}
+            </span>
+          }
+          description={t('subtitle')}
+          actions={
+            <>
+              <Link href="/dashboard/teacher/templates">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <IconTemplate className="h-3.5 w-3.5" />
+                  {t('promptTemplates')}
+                </Button>
+              </Link>
+              <Link href="/dashboard/teacher/courses/new" data-tour="sidebar-create-course">
+                <Button size="sm" className="gap-2">
+                  <IconPlus className="h-3.5 w-3.5" />
+                  {t('createCourse')}
+                </Button>
+              </Link>
+            </>
+          }
+        />
       </div>
 
       <div data-tour="teacher-stats" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05, duration: 0.3 }}
-        >
+        <div>
           <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -179,13 +178,9 @@ export default async function TeacherDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.3 }}
-        >
+        <div>
           <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -202,13 +197,9 @@ export default async function TeacherDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.3 }}
-        >
+        <div>
           <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -225,13 +216,9 @@ export default async function TeacherDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
-        >
+        <div>
           <Card className="group transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 hover:shadow-md">
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
@@ -250,7 +237,7 @@ export default async function TeacherDashboard() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
 
       {/* Unanswered questions in the teacher's courses (#875) */}
@@ -444,6 +431,6 @@ export default async function TeacherDashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageShell>
   )
 }

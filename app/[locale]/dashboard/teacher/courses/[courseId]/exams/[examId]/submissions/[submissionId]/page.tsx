@@ -3,9 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import { getLocale, getTranslations } from 'next-intl/server'
 import { SubmissionReview } from '@/components/teacher/submission-review'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { IconArrowLeft, IconChevronRight } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { revalidatePath } from 'next/cache'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { describeExamFeedback, parseExamFeedback } from '@/lib/exams/feedback-codes'
@@ -76,7 +74,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   ])
 
   // Build per-question data combining questions, answers, and AI scores
-  const questionData = (questions || []).map((raw: any) => {
+  const questionData = (questions || []).map((raw) => {
     const q = withExamGradingSecrets(raw)
     const answer = answers?.find(a => a.question_id === q.question_id)
     const qScore = questionScores?.find(qs => qs.question_id === q.question_id)
@@ -125,7 +123,7 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     // longer recognises it, and a student reading in the other language would
     // get that sentence verbatim (#725).
     teacher_feedback: teacherOwnFeedback(
-      examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as any)?.overall_feedback
+      examScores?.[0]?.feedback || rawSubmission.feedback || (rawSubmission.ai_data as { overall_feedback?: string } | null)?.overall_feedback
     ),
     ai_data: rawSubmission.ai_data,
     ai_model_used: rawSubmission.ai_model_used,
@@ -149,9 +147,9 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
     // codes, so passing the raw value would have shown the teacher the token
     // `incorrect` / `pending_teacher_review`.
     ai_feedback: describeExamFeedback(q.ai_feedback, tFeedback, {
-      correctAnswer: (q.options || []).find((o: any) => o.is_correct)?.option_text ?? null,
+      correctAnswer: (q.options || []).find((o) => o.is_correct)?.option_text ?? null,
     }),
-    options: (q.options || []).map((o: any) => ({
+    options: (q.options || []).map((o) => ({
       id: o.option_id,
       option_text: o.option_text,
       is_correct: o.is_correct,
@@ -239,19 +237,14 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6 flex items-center gap-2">
-        <Link href={`/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`}>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('submissions.backToSubmissions')}>
-            <IconArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {submission.student_name}
-          </span>
-        </div>
-      </div>
+    <PageShell variant="form">
+      <PageHeader
+        back={{
+          href: `/dashboard/teacher/courses/${courseId}/exams/${examId}/submissions`,
+          label: t('submissions.backToSubmissions'),
+        }}
+        title={submission.student_name}
+      />
 
       <SubmissionReview
         submission={submission}
@@ -259,6 +252,6 @@ export default async function SubmissionDetailPage({ params }: { params: Promise
         answers={answersForReview}
         onSave={handleSave}
       />
-    </div>
+    </PageShell>
   )
 }

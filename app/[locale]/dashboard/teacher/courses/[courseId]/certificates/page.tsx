@@ -6,7 +6,8 @@ import { formatDate } from '@/lib/format-date'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { IconArrowLeft, IconChevronRight, IconSettings, IconAward, IconUsers, IconShieldCheck, IconExternalLink } from '@tabler/icons-react'
+import { IconSettings, IconAward, IconUsers, IconShieldCheck, IconExternalLink } from '@tabler/icons-react'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { CertificatePreview } from '@/components/teacher/certificate-preview'
@@ -44,13 +45,13 @@ export default async function CertificatesPage({ params }: PageProps) {
 
   if (!isOwner && !isAdmin) {
     return (
-      <div className="p-8 max-w-2xl mx-auto">
+      <PageShell variant="form">
         <h1 className="text-2xl font-bold text-destructive mb-2">{t('accessDenied')}</h1>
         <p className="text-muted-foreground">{t('notAuthor')}</p>
         <Link href={`/dashboard/teacher/courses/${courseId}`} className="mt-6 inline-block">
           <Button variant="outline">{t('backToCourses')}</Button>
         </Link>
-      </div>
+      </PageShell>
     )
   }
 
@@ -89,37 +90,23 @@ export default async function CertificatesPage({ params }: PageProps) {
   )
 
   return (
-    <div className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-      {/* Breadcrumb */}
-      <div className="mb-8 flex items-center gap-2">
-        <Link href={`/dashboard/teacher/courses/${courseId}`} aria-label={t('backToCourses')}>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-            <IconArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <span className="truncate max-w-[200px]">{course.title}</span>
-          <IconChevronRight className="h-3 w-3 shrink-0" />
-          <span className="font-medium text-foreground">{t('certificates.title')}</span>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight mb-1">{t('certificates.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('certificates.description')}</p>
-        </div>
-        <Link href={`/dashboard/teacher/courses/${courseId}/certificates/settings`}>
-          <Button variant="outline" size="sm" className="gap-2">
-            <IconSettings className="h-4 w-4" />
-            {template ? t('certificates.templates.edit') : t('certificates.templates.create')}
-          </Button>
-        </Link>
-      </div>
+    <PageShell variant="wide">
+      <PageHeader
+        back={{ href: `/dashboard/teacher/courses/${courseId}`, label: t('backToCourses') }}
+        title={t('certificates.title')}
+        description={t('certificates.description')}
+        actions={
+          <Link href={`/dashboard/teacher/courses/${courseId}/certificates/settings`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <IconSettings className="h-4 w-4" />
+              {template ? t('certificates.templates.edit') : t('certificates.templates.create')}
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
@@ -376,6 +363,6 @@ export default async function CertificatesPage({ params }: PageProps) {
           )}
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

@@ -1,24 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Skeleton } from '@/components/ui/skeleton'
+import { LessonEditorSkeleton } from '../_editor-skeleton'
 import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { parseStructuredRequirements } from '@/lib/ai/lesson-requirements'
 
 const LessonEditor = dynamic(
   () => import('@/components/teacher/lesson-editor').then(m => m.LessonEditor),
   {
-    loading: () => (
-      <div className="mx-auto max-w-4xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-9 w-24" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    ),
+    loading: () => <LessonEditorSkeleton />,
   }
 )
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -94,7 +84,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
     : lesson.lessons_ai_tasks
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-1 flex-col bg-background">
       <LessonEditorTour
         userId={userId}
         completed={isTourCompleted(uiState, 'lesson-editor')}

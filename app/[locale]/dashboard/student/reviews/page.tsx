@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { IconCards } from '@tabler/icons-react'
 import { getDueReviewCards } from '@lms/core'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { ReviewSession } from '@/components/student/review-session'
 
 /** Cards per session — the MCP review widget uses the same default. */
@@ -29,16 +29,8 @@ export default async function StudentReviewsPage() {
   const cards = data ?? []
 
   return (
-    <div className="mx-auto container max-w-2xl py-8 px-4 lg:px-8 space-y-6" data-testid="reviews-page">
-      <div>
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="p-2 rounded-xl bg-brand-tint text-brand-text">
-            <IconCards size={20} />
-          </div>
-          <h1 className="text-2xl font-black tracking-tight">{t('title')}</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <PageShell variant="reading" data-testid="reviews-page">
+      <PageHeader title={t('title')} description={t('subtitle')} />
 
       {/* Keyed on the batch so "review more" (router.refresh) starts a fresh session. */}
       <ReviewSession
@@ -48,6 +40,6 @@ export default async function StudentReviewsPage() {
         cards={cards.map(({ id, front, back }) => ({ id, front, back }))}
         totalDue={count ?? cards.length}
       />
-    </div>
+    </PageShell>
   )
 }

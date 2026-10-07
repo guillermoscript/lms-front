@@ -1,11 +1,11 @@
-import { PageSkeleton } from "@/components/skeletons"
+import { PageShell } from "@/components/dashboard/page-shell"
 import { Skeleton } from "@/components/ui/skeleton"
 
 // Mirrors result/page.tsx: breadcrumb, score hero, status card, detailed question review.
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading exam result" className="p-0 lg:p-0 space-y-0">
-      <div className="container mx-auto py-5 sm:py-8 px-4 space-y-5 sm:space-y-8">
+    <PageShell variant="wide" skeleton>
+      <>
         <Skeleton className="h-5 w-72 max-w-full" />
 
         <div className="rounded-2xl sm:rounded-3xl border p-5 sm:p-8 md:p-12">
@@ -43,7 +43,7 @@ export default function Loading() {
             ))}
           </div>
         </div>
-      </div>
-    </PageSkeleton>
+      </>
+    </PageShell>
   )
 }

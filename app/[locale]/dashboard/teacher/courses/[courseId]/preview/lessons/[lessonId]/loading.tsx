@@ -4,11 +4,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 // Mirrors the lesson preview: banner, lesson header, content, nav footer, sidebar.
 export default function Loading() {
   return (
-    <PageSkeleton label="Loading lesson" className="flex h-screen flex-col space-y-0 overflow-hidden bg-background p-0 lg:p-0">
-      <div className="shrink-0 border-b bg-warning/10 px-4 py-2">
-        <div className="mx-auto flex h-6 max-w-5xl items-center justify-between gap-3">
+    <PageSkeleton label="Loading lesson" className="flex h-[calc(100svh-4rem)] flex-col space-y-0 overflow-hidden bg-background p-0 lg:p-0">
+      <div className="sticky top-0 z-50 shrink-0 border-b bg-background bg-linear-to-r from-warning/10 to-warning/10 px-4 py-2">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <Skeleton className="h-4 w-56" />
-          <Skeleton className="h-6 w-24 rounded-md" />
+          <Skeleton className="h-7 w-28 rounded-md" />
         </div>
       </div>
       <div className="flex flex-1 overflow-hidden">

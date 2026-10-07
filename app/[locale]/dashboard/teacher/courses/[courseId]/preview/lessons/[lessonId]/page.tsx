@@ -88,7 +88,7 @@ export default async function LessonPreviewPage({ params }: PageProps) {
     currentIndex < (allLessons?.length ?? 0) - 1 ? allLessons?.[currentIndex + 1] : null
 
   return (
-    <div className="flex h-screen flex-col bg-background overflow-hidden">
+    <div className="flex h-[calc(100svh-4rem)] flex-col bg-background overflow-hidden">
       <PreviewBanner courseId={courseId} />
 
       <div className="flex flex-1 overflow-hidden">

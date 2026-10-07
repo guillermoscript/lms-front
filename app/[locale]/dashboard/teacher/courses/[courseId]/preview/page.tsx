@@ -13,6 +13,7 @@ import {
 } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
+import { PageShell } from '@/components/dashboard/page-shell'
 import { PreviewBanner } from '@/components/teacher/preview-banner'
 
 interface PageProps {
@@ -80,12 +81,12 @@ export default async function CoursePreviewPage({ params }: PageProps) {
   const exerciseCount = exercises?.length || 0
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1">
       <PreviewBanner courseId={courseId} />
 
       {/* Header with course info */}
       <header className="border-b bg-card">
-        <div className="mx-auto max-w-5xl px-4 py-6 md:py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-5xl px-6 py-6 lg:px-8 lg:py-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-start lg:gap-10">
             {/* Thumbnail */}
             {course.thumbnail_url && (
@@ -168,8 +169,8 @@ export default async function CoursePreviewPage({ params }: PageProps) {
       </header>
 
       {/* Lessons list */}
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
+      <PageShell variant="default" className="mx-auto w-full max-w-5xl">
+        <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black tracking-tight">{t('curriculum')}</h2>
           <Badge variant="outline" className="font-bold border-2">
             {t('lessonsCount', { count: totalLessons })}
@@ -235,7 +236,7 @@ export default async function CoursePreviewPage({ params }: PageProps) {
             </div>
           )}
         </div>
-      </main>
+      </PageShell>
     </div>
   )
 }

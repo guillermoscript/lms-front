@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTranslations } from 'next-intl/server'
@@ -9,6 +10,7 @@ import { DueReviewsBanner } from '@/components/student/due-reviews-banner'
 import { RecentActivity } from '@/components/student/recent-activity'
 import { IconRocket, IconSparkles, IconCircleCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { PageShell } from '@/components/dashboard/page-shell'
 import Link from 'next/link'
 import { MiniLeaderboard } from '@/components/gamification/mini-leaderboard'
 import { WeeklyLeague } from '@/components/gamification/weekly-league'
@@ -18,6 +20,16 @@ import { StudentDashboardTour } from '@/components/tours/student-dashboard-tour'
 import { getLessonCompletions } from '@lms/core'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { isTourCompleted, areToursEnabled, isChecklistDismissed, checklistStateKey } from '@/lib/ui-state-keys'
+
+interface DashboardEnrollmentRow {
+  course: {
+    course_id: number
+    title: string
+    description: string | null
+    thumbnail_url: string | null
+    lessons?: { lesson_completions?: { user_id: string }[] | null }[] | null
+  }
+}
 
 async function getData(userId: string, tenantId: string) {
   const supabase = createAdminClient()
@@ -75,11 +87,11 @@ async function getData(userId: string, tenantId: string) {
 
   if (enrollments.error) throw new Error(enrollments.error.message)
 
-  const courses = (enrollments.data as any[])?.map((enrollment) => {
+  const courses = (enrollments.data as unknown as DashboardEnrollmentRow[] | null)?.map((enrollment) => {
     const course = enrollment.course
     const lessons = course?.lessons || []
-    const completedLessons = lessons.filter((l: any) =>
-      l.lesson_completions?.some((lc: any) => lc.user_id === userId)
+    const completedLessons = lessons.filter((l) =>
+      l.lesson_completions?.some((lc) => lc.user_id === userId)
     ).length
 
     return {
@@ -97,15 +109,14 @@ async function getData(userId: string, tenantId: string) {
     courses,
     examSubmissions: examSubmissions.data || [],
     lessonCompletions: lessonCompletions.data || [],
-    upcomingExams: (upcomingExams.data || []) as any[],
+    upcomingExams: (upcomingExams.data || []) as unknown as ComponentProps<typeof UpcomingExams>['exams'],
     hasActiveSubscription: (activeSubscription.data?.length ?? 0) > 0,
-    planName: (activeSubscription.data?.[0]?.plan as any)?.plan_name || null,
+    planName: (activeSubscription.data?.[0]?.plan as { plan_name?: string } | null | undefined)?.plan_name || null,
   }
 }
 
 export default async function StudentDashboard() {
   const tenantId = await getCurrentTenantId()
-  const supabase = createAdminClient()
   const user = await getSessionUser()
   if (!user) {
     redirect('/auth/login')
@@ -127,7 +138,7 @@ export default async function StudentDashboard() {
     .sort((a, b) => b.progress - a.progress)[0] || null
 
   return (
-    <div className="min-h-screen bg-background" data-testid="student-dashboard">
+    <PageShell variant="default" data-testid="student-dashboard">
       {/* Guided Tour */}
       <StudentDashboardTour
         userId={user.id}
@@ -135,7 +146,6 @@ export default async function StudentDashboard() {
         toursEnabled={areToursEnabled(uiState)}
       />
 
-      <main className="container mx-auto px-4 md:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Welcome + Continue CTA */}
         <div data-tour="student-welcome">
         <WelcomeHero
@@ -159,40 +169,6 @@ export default async function StudentDashboard() {
           />
           </div>
         )}
-
-        {/* Getting Started Checklist */}
-        <div data-tour="student-checklist">
-        <OnboardingChecklist
-          storageKey={`student-${user.id}`}
-          stateKey={checklistStateKey('student')}
-          dismissed={isChecklistDismissed(uiState, 'student')}
-          title={t('onboarding.title')}
-          subtitle={t('onboarding.subtitle')}
-          steps={[
-            {
-              id: 'browse-courses',
-              label: t('onboarding.browseCourses'),
-              description: t('onboarding.browseCoursesDesc'),
-              href: '/dashboard/student/browse',
-              completed: data.courses.length > 0,
-            },
-            {
-              id: 'complete-lesson',
-              label: t('onboarding.completeLesson'),
-              description: t('onboarding.completeLessonDesc'),
-              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
-              completed: totalLessonsCompleted > 0,
-            },
-            {
-              id: 'finish-course',
-              label: t('onboarding.finishCourse'),
-              description: t('onboarding.finishCourseDesc'),
-              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
-              completed: coursesCompleted.length > 0,
-            },
-          ]}
-        />
-        </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -279,7 +255,40 @@ export default async function StudentDashboard() {
             <RecentActivity submissions={data.examSubmissions} />
           </div>
         </div>
-      </main>
-    </div>
+
+        {/* Getting Started Checklist */}
+        <div data-tour="student-checklist">
+        <OnboardingChecklist
+          storageKey={`student-${user.id}`}
+          stateKey={checklistStateKey('student')}
+          dismissed={isChecklistDismissed(uiState, 'student')}
+          title={t('onboarding.title')}
+          subtitle={t('onboarding.subtitle')}
+          steps={[
+            {
+              id: 'browse-courses',
+              label: t('onboarding.browseCourses'),
+              description: t('onboarding.browseCoursesDesc'),
+              href: '/dashboard/student/browse',
+              completed: data.courses.length > 0,
+            },
+            {
+              id: 'complete-lesson',
+              label: t('onboarding.completeLesson'),
+              description: t('onboarding.completeLessonDesc'),
+              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              completed: totalLessonsCompleted > 0,
+            },
+            {
+              id: 'finish-course',
+              label: t('onboarding.finishCourse'),
+              description: t('onboarding.finishCourseDesc'),
+              href: data.courses[0] ? `/dashboard/student/courses/${data.courses[0].course_id}` : '/dashboard/student/browse',
+              completed: coursesCompleted.length > 0,
+            },
+          ]}
+        />
+        </div>
+    </PageShell>
   )
 }

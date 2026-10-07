@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
-  IconArrowLeft,
   IconBarbell,
   IconBook,
   IconCheck,
@@ -17,6 +16,7 @@ import {
 import { CourseReviews, type Review } from '@/components/student/course-reviews'
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageShell, BackLink } from '@/components/dashboard/page-shell'
 
 const AristotleStudySection = dynamic(
   () => import('@/components/aristotle/aristotle-study-section').then(m => m.AristotleStudySection),
@@ -165,17 +165,11 @@ export default async function CourseOverviewPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <PageShell variant="wide" className="space-y-8">
       {/* Header with course info */}
-      <header className="border-b bg-card">
-        <div className="mx-auto max-w-5xl px-4 py-5 sm:py-6 md:py-8 sm:px-6 lg:px-8">
-          <Link
-            href="/dashboard/student"
-            className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <IconArrowLeft className="h-4 w-4" />
-            {t('backToLearning')}
-          </Link>
+      <header className="space-y-6">
+        <BackLink href="/dashboard/student">{t('backToLearning')}</BackLink>
+        <div>
 
           <div className="flex flex-col gap-6 md:flex-row md:items-start lg:gap-10">
             {/* Thumbnail */}
@@ -273,7 +267,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
       </header>
 
       {/* Lessons list */}
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
+      <section>
         <div className="flex items-center justify-between mb-5 sm:mb-8">
           <h2 className="text-xl sm:text-2xl font-black tracking-tight">{t('curriculum')}</h2>
           <Badge variant="outline" className="font-bold border-2">
@@ -377,7 +371,7 @@ export default async function CourseOverviewPage({ params }: PageProps) {
             initialReviews={initialReviews}
           />
         </div>
-      </main>
-    </div>
+      </section>
+    </PageShell>
   )
 }
