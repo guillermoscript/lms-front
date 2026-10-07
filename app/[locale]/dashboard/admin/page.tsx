@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { UsageMeter } from '@/components/admin/usage-meter'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { CourseArchitectCta } from '@/components/teacher/course-architect/course-architect-cta'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
 import { getUiState } from '@/lib/supabase/ui-state'
@@ -254,6 +255,8 @@ export default async function AdminDashboardPage({
         completed={isTourCompleted(uiState, 'admin-dashboard')}
         toursEnabled={areToursEnabled(uiState)}
       />
+
+      {(totalCourses ?? 0) === 0 && <CourseArchitectCta />}
 
       {/* Getting Started Checklist — prominent for new users */}
       <div data-tour="admin-checklist">

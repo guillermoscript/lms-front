@@ -3,13 +3,14 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { CourseForm } from '@/components/teacher/course-form'
 import { Button } from '@/components/ui/button'
-import { IconArrowLeft } from '@tabler/icons-react'
+import { IconArrowLeft, IconSparkles } from '@tabler/icons-react'
 import Link from 'next/link'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 
 export default async function NewCoursePage() {
   const supabase = await createClient()
   const t = await getTranslations('dashboard.teacher.newCourse')
+  const tArchitect = await getTranslations('courseArchitect')
   const tenantId = await getCurrentTenantId()
 
   const userId = await getCurrentUserId()
@@ -35,11 +36,19 @@ export default async function NewCoursePage() {
         <span className="text-sm font-medium text-foreground">{t('title')}</span>
       </div>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {t('description')}
-        </p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {t('description')}
+          </p>
+        </div>
+        <Link href="/dashboard/teacher/courses/ai">
+          <Button size="sm" variant="outline" className="gap-2">
+            <IconSparkles className="h-3.5 w-3.5" />
+            {tArchitect('createWithAi')}
+          </Button>
+        </Link>
       </div>
 
       <CourseForm categories={categories || []} />

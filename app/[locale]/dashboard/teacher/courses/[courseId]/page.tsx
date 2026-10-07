@@ -36,6 +36,7 @@ import {
   IconChartBar,
   IconMessages,
 } from '@tabler/icons-react'
+import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
 import { LessonPreviewToggle } from '@/components/teacher/lesson-preview-toggle'
@@ -313,6 +314,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <AiEditSheet scope={{ type: 'course', courseId: course.course_id }} />
               <Link href={`/dashboard/teacher/courses/${courseId}/preview`} data-tour="course-preview">
                 <Button variant="outline" size="sm" className="gap-2">
                   <IconEye className="h-3.5 w-3.5" />

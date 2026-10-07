@@ -22,6 +22,7 @@ import {
 import * as motion from 'motion/react-client'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { Suspense } from 'react'
+import { CourseArchitectCta } from '@/components/teacher/course-architect/course-architect-cta'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { UnansweredQuestionsCard } from '@/components/community/unanswered-questions-card'
 import { PromptsToGradeCard } from '@/components/community/prompts-to-grade-card'
@@ -261,6 +262,8 @@ export default async function TeacherDashboard() {
       <Suspense fallback={null}>
         <PromptsToGradeCard tenantId={tenantId} courses={courses} />
       </Suspense>
+
+      {totalCourses === 0 && <CourseArchitectCta />}
 
       {/* Getting Started Checklist — shown until dismissed */}
       <OnboardingChecklist
