@@ -164,11 +164,19 @@ export async function POST(req: Request) {
       // 10. Run the speech pipeline (transcribe, then grade)
       // Bounded below `maxDuration`: if the platform killed the request mid-poll the row would stay
       // `processing` for good (retries 409). A timeout here lands in the catch, which resets it.
+      // The deadline also aborts the provider calls, so a retry cannot overlap a still-running paid run.
+      const controller = new AbortController()
       let deadline: ReturnType<typeof setTimeout> | undefined
       const evaluation = await Promise.race([
-        runSpeechPipeline(urlData.signedUrl, exerciseContext, providers, { supabase: adminClient }),
+        runSpeechPipeline(urlData.signedUrl, exerciseContext, providers, {
+          supabase: adminClient,
+          abortSignal: controller.signal,
+        }),
         new Promise<never>((_, reject) => {
-          deadline = setTimeout(() => reject(new AiProviderError({ upstreamStatus: 408 })), PIPELINE_BUDGET_MS)
+          deadline = setTimeout(() => {
+            controller.abort()
+            reject(new AiProviderError({ upstreamStatus: 408 }))
+          }, PIPELINE_BUDGET_MS)
         }),
       ]).finally(() => clearTimeout(deadline))
 

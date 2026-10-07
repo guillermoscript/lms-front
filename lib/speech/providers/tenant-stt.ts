@@ -19,6 +19,7 @@ export class TenantSttProvider implements STTProvider {
     const result = await this.transcriber.transcribe(audio, {
       language: config?.language,
       verbatim: config?.verbatim,
+      abortSignal: config?.abortSignal as AbortSignal | undefined,
     })
     return buildTranscriptionResult({
       text: result.text,

@@ -50,6 +50,7 @@ export class ModelCoachProvider implements SpeechCoach {
             { ...context, feedbackLanguageInstruction: feedbackLanguageInstruction(rubric?.feedback_language ?? '') },
             metrics
           ),
+      abortSignal: options?.abortSignal,
       prompt: `Student transcript:\n\n"${transcription.transcript}"`,
     })
 

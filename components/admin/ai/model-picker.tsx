@@ -71,13 +71,14 @@ export function ModelPicker({
   // Capability lookups run per model: keep them off the keystroke path.
   const suggestions = useMemo(() => modelsForKind(selected, kind), [selected, kind])
 
-  const visible = useMemo(() => {
+  const { visible, total } = useMemo(() => {
     const q = model.trim().toLowerCase()
     // Typing narrows the list; once a listed id is picked, show the whole list again.
-    if (!q || suggestions.some((m) => m.id.toLowerCase() === q)) return suggestions.slice(0, MAX_VISIBLE)
-    return suggestions
-      .filter((m) => m.id.toLowerCase().includes(q) || (m.label ?? '').toLowerCase().includes(q))
-      .slice(0, MAX_VISIBLE)
+    const matches =
+      !q || suggestions.some((m) => m.id.toLowerCase() === q)
+        ? suggestions
+        : suggestions.filter((m) => m.id.toLowerCase().includes(q) || (m.label ?? '').toLowerCase().includes(q))
+    return { visible: matches.slice(0, MAX_VISIBLE), total: matches.length }
   }, [suggestions, model])
   const visibleIds = useMemo(() => visible.map((m) => m.id), [visible])
 
@@ -147,6 +148,11 @@ export function ModelPicker({
                   </span>
                 </ComboboxItem>
               ))}
+              {total > visible.length && (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                  {t('default.truncated', { shown: visible.length, total })}
+                </p>
+              )}
             </ComboboxList>
           </ComboboxContent>
         </Combobox>

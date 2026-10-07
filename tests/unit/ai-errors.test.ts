@@ -45,6 +45,7 @@ import {
   classifyProviderError,
   handleAiError,
   isTransientAiError,
+  reportStreamError,
 } from '@/lib/ai/errors'
 
 /** Shaped like the AI SDK's APICallError. */
@@ -88,6 +89,24 @@ describe('classifyProviderError', () => {
   it('403 about model access is a model problem, not a key problem', () => {
     const err = classifyProviderError(apiCallError(403, 'Project does not have access to model gpt-9'))
     expect(err).toBeInstanceOf(AiModelUnsupportedError)
+  })
+
+  it('a bare 403 reads as key rejected but is not certain; a 401 or key-naming 403 is', () => {
+    const bare = classifyProviderError(apiCallError(403, 'Request blocked in your region')) as AiKeyInvalidError
+    expect(bare).toBeInstanceOf(AiKeyInvalidError)
+    expect(bare.certain).toBe(false)
+    expect((classifyProviderError(apiCallError(401)) as AiKeyInvalidError).certain).toBe(true)
+    expect((classifyProviderError(apiCallError(403, 'Invalid API key')) as AiKeyInvalidError).certain).toBe(true)
+  })
+
+  it('a mid-stream bare 403 does not disable the credential, a 401 does', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    adminMock.state.updates.length = 0
+    const ctx = { feature: 'tutor' as const, tenantId: 't1', userId: null, providerId: 'openai' as const }
+    await reportStreamError(apiCallError(403, 'Organization restricted'), ctx)
+    expect(adminMock.state.updates).toHaveLength(0)
+    await reportStreamError(apiCallError(401), ctx)
+    expect(adminMock.state.updates).toHaveLength(1)
   })
 
   it('a 401 from fetching an attachment does not disable the key', () => {

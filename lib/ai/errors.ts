@@ -61,9 +61,16 @@ export class AiNotConfiguredError extends AiError {
 
 /** The stored key was rejected by the provider (or marked invalid earlier). */
 export class AiKeyInvalidError extends AiError {
-  constructor(init: AiErrorInit = {}) {
+  /**
+   * The provider said the key itself is bad (401, or a 403 / 400 that names the key). A bare 403 may be an
+   * org, project or region restriction, so it is shown as "key rejected" but never disables the credential.
+   */
+  readonly certain: boolean
+
+  constructor(init: AiErrorInit & { certain?: boolean } = {}) {
     super('ai_key_invalid', 'The AI provider rejected the configured key', init)
     this.name = 'AiKeyInvalidError'
+    this.certain = init.certain ?? true
   }
 }
 
@@ -222,10 +229,11 @@ export function classifyProviderError(e: unknown, ctx: Pick<AiErrorInit, 'provid
   // Quota first: Anthropic reports a drained balance as 400, OpenAI as 429/402.
   if (QUOTA_RE.test(text) && status !== 401 && !KEY_RE.test(text)) return new AiProviderQuotaError(init)
 
-  if (status === 401) return new AiKeyInvalidError(init)
+  if (status === 401) return new AiKeyInvalidError({ ...init, certain: true })
   if (status === 403) {
     // "project does not have access to model" is a model problem, not a bad key
-    return MODEL_RE.test(text) ? new AiModelUnsupportedError(init) : new AiKeyInvalidError(init)
+    if (MODEL_RE.test(text)) return new AiModelUnsupportedError(init)
+    return new AiKeyInvalidError({ ...init, certain: KEY_RE.test(text) })
   }
   // Google, xAI and a few others answer a bad key with 400
   if ((status === 400 || status === undefined) && KEY_RE.test(text)) return new AiKeyInvalidError(init)
@@ -309,11 +317,16 @@ export async function handleAiError(e: unknown, o: HandleAiErrorOptions): Promis
     console.error('[ai]', o.feature, err.code)
   }
 
-  if (err.code === 'ai_key_invalid' && o.tenantId && providerId) {
+  if (isCertainKeyFailure(err) && o.tenantId && providerId) {
     await markCredentialInvalid(o.tenantId, providerId, o.feature, o.actorId ?? null)
   }
 
   return aiErrorResponse(err, o)
+}
+
+/** Only a provider-confirmed bad key may flip a credential to `invalid`. */
+function isCertainKeyFailure(err: AiError): boolean {
+  return err.code === 'ai_key_invalid' && (!(err instanceof AiKeyInvalidError) || err.certain)
 }
 
 /**
@@ -327,7 +340,7 @@ export async function reportStreamError(
 ): Promise<void> {
   const err = classifyProviderError(error, { feature: ctx.feature, providerId: ctx.providerId })
   console.error(`[ai] ${ctx.feature} stream error`, err.code, err.upstreamStatus ?? '-')
-  if (err.code === 'ai_key_invalid') {
+  if (isCertainKeyFailure(err)) {
     await markCredentialInvalid(ctx.tenantId, ctx.providerId, ctx.feature, ctx.userId)
   }
 }

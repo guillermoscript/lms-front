@@ -8288,6 +8288,7 @@
       "providerPlaceholder": "Choose a provider",
       "modelPlaceholder": "Choose or type a model",
       "noMatch": "No models match. Press save to use what you typed.",
+      "truncated": "Showing {shown} of {total}. Type to narrow the list.",
       "noModels": "No model list yet. Use “Refresh models” on the provider, or type a model id.",
       "noProviders": "Connect a provider above to choose a default model.",
       "save": "Save default",

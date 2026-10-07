@@ -48,11 +48,15 @@ export async function runSpeechPipeline(
   options?: SpeechCoachOptions
 ): Promise<SpeechEvaluation> {
   const rubric = exerciseContext.speechRubric
+  const signal = options?.abortSignal
   const bytes = await loadAudio(audio)
   // A learner is graded on their own wording, in a language we already know.
   const transcription = await providers.stt.transcribe(
     bytes,
-    rubric?.rubric_mode === 'language_learner' ? { language: rubric.target_language, verbatim: true } : undefined
+    {
+      ...(rubric?.rubric_mode === 'language_learner' ? { language: rubric.target_language, verbatim: true } : {}),
+      abortSignal: signal,
+    }
   )
   const evaluation = await providers.coach.evaluate(transcription, exerciseContext, options)
   return evaluation

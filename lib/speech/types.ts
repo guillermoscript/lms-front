@@ -84,6 +84,8 @@ export interface STTProvider {
 }
 
 export interface SpeechCoachOptions {
+  /** Aborts the provider calls (route deadline), so a timed-out run stops spending the school's key. */
+  abortSignal?: AbortSignal
   supabase?: import('@supabase/supabase-js').SupabaseClient
 }
 
