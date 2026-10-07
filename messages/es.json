@@ -8287,6 +8287,8 @@
       "model": "Modelo",
       "providerPlaceholder": "Elige un proveedor",
       "modelPlaceholder": "Elige o escribe un modelo",
+      "noMatch": "Ningún modelo coincide. Guarda para usar lo que escribiste.",
+      "noModels": "Aún no hay lista de modelos. Usa “Actualizar modelos” en el proveedor, o escribe un id.",
       "noProviders": "Conecta un proveedor arriba para elegir un modelo predeterminado.",
       "save": "Guardar predeterminado",
       "saving": "Guardando...",

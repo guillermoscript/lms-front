@@ -8287,6 +8287,8 @@
       "model": "Model",
       "providerPlaceholder": "Choose a provider",
       "modelPlaceholder": "Choose or type a model",
+      "noMatch": "No models match. Press save to use what you typed.",
+      "noModels": "No model list yet. Use “Refresh models” on the provider, or type a model id.",
       "noProviders": "Connect a provider above to choose a default model.",
       "save": "Save default",
       "saving": "Saving...",

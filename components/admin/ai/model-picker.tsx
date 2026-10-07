@@ -1,10 +1,17 @@
 'use client'
 
-import { useId } from 'react'
+import { useId, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { IconAlertTriangle } from '@tabler/icons-react'
 
-import { Input } from '@/components/ui/input'
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { Cap } from '@/lib/ai/capabilities'
@@ -35,8 +42,8 @@ interface ModelPickerProps {
 }
 
 /**
- * Provider select + model field. The model field is free text with the
- * provider's cached model list as suggestions (`<datalist>`), so a model that
+ * Provider select + model field. The model field is a searchable combobox over the
+ * provider's cached model list, with free text still accepted, so a model that
  * was released after the list was cached can still be typed in.
  */
 export function ModelPicker({
@@ -57,10 +64,18 @@ export function ModelPicker({
   const uid = useId()
   const providerId = `${uid}-provider`
   const modelId = `${uid}-model`
-  const listId = `${uid}-models`
 
   const selected = provider ? providers.find((p) => p.provider === provider) : undefined
-  const suggestions = modelsForKind(selected, kind)
+  // Capability lookups run per model: keep them off the keystroke path.
+  const suggestions = useMemo(() => modelsForKind(selected, kind), [selected, kind])
+
+  const visible = useMemo(() => {
+    const q = model.trim().toLowerCase()
+    // Typing narrows the list; once a listed id is picked, show the whole list again.
+    if (!q || suggestions.some((m) => m.id.toLowerCase() === q)) return suggestions
+    return suggestions.filter((m) => m.id.toLowerCase().includes(q) || (m.label ?? '').toLowerCase().includes(q))
+  }, [suggestions, model])
+  const visibleIds = useMemo(() => visible.map((m) => m.id), [visible])
 
   const items: Record<string, string> = {}
   if (allowEmpty) items[NONE] = placeholder ?? t('advanced.providerPlaceholder')
@@ -95,29 +110,42 @@ export function ModelPicker({
 
       <div className="space-y-1.5">
         <Label htmlFor={modelId}>{t('default.model')}</Label>
-        <Input
-          id={modelId}
-          value={model}
-          onChange={(e) => onChange({ provider, model: e.target.value })}
-          list={suggestions.length ? listId : undefined}
-          placeholder={modelPlaceholder ?? t('default.modelPlaceholder')}
+        <Combobox
+          items={visibleIds}
+          filter={null}
+          value={model || null}
+          inputValue={model}
+          onInputValueChange={(value) => onChange({ provider, model: value })}
+          onValueChange={(value: string | null) => onChange({ provider, model: value ?? '' })}
           disabled={disabled || !provider}
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          maxLength={200}
-          aria-invalid={blockedText ? true : undefined}
-          className="font-mono"
-        />
-        {suggestions.length > 0 && (
-          <datalist id={listId}>
-            {suggestions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label && m.label !== m.id ? m.label : undefined}
-              </option>
-            ))}
-          </datalist>
-        )}
+        >
+          <ComboboxInput
+            id={modelId}
+            placeholder={modelPlaceholder ?? t('default.modelPlaceholder')}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            maxLength={200}
+            aria-invalid={blockedText ? true : undefined}
+            className="w-full font-mono"
+            showTrigger={suggestions.length > 0}
+          />
+          <ComboboxContent>
+            <ComboboxEmpty>{suggestions.length ? t('default.noMatch') : t('default.noModels')}</ComboboxEmpty>
+            <ComboboxList>
+              {visible.map((m) => (
+                <ComboboxItem key={m.id} value={m.id}>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate font-mono text-xs">{m.id}</span>
+                    {m.label && m.label !== m.id && (
+                      <span className="truncate text-xs text-muted-foreground">{m.label}</span>
+                    )}
+                  </span>
+                </ComboboxItem>
+              ))}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       </div>
 
       {(blockedText || missing.length > 0) && (
