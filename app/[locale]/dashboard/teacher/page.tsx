@@ -431,50 +431,6 @@ export default async function TeacherDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {totalCourses === 0 && <CourseArchitectCta />}
-
-      {/* Getting Started Checklist — shown until dismissed */}
-      <OnboardingChecklist
-        storageKey={`teacher-${userId}`}
-        stateKey={checklistStateKey('teacher')}
-        dismissed={isChecklistDismissed(uiState, 'teacher')}
-        title={t('onboarding.title')}
-        subtitle={t('onboarding.subtitle')}
-        steps={[
-          {
-            id: 'create-course',
-            label: t('onboarding.createCourse'),
-            description: t('onboarding.createCourseDesc'),
-            href: '/dashboard/teacher/courses/new',
-            completed: totalCourses > 0,
-          },
-          {
-            id: 'add-lesson',
-            label: t('onboarding.addLesson'),
-            description: t('onboarding.addLessonDesc'),
-            href: courses[0] ? `/dashboard/teacher/courses/${courses[0].course_id}` : '/dashboard/teacher/courses/new',
-            completed: totalLessons > 0,
-          },
-          {
-            id: 'publish-course',
-            label: t('onboarding.publishCourse'),
-            description: t('onboarding.publishCourseDesc'),
-            href: courses[0] ? `/dashboard/teacher/courses/${courses[0].course_id}/settings` : '/dashboard/teacher/courses/new',
-            completed: courses.some(c => c.status === 'published'),
-          },
-        ]}
-      />
-
-      {/* Unanswered questions in the teacher's courses (#875) */}
-      <Suspense fallback={null}>
-        <UnansweredQuestionsCard tenantId={tenantId} courses={courses} />
-      </Suspense>
-
-      {/* Answers to graded discussion prompts waiting for a grade (#873) */}
-      <Suspense fallback={null}>
-        <PromptsToGradeCard tenantId={tenantId} courses={courses} />
-      </Suspense>
     </PageShell>
   )
 }
