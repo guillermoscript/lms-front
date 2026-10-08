@@ -47,7 +47,7 @@ const freeCourseSchool: PuckTemplate = {
         backgroundColor: '',
         alignment: 'center',
         overlayOpacity: 60,
-        minHeight: '560px',
+        minHeight: '500px',
       }),
       c('StatsBand', {
         heading: 'Our school in numbers',

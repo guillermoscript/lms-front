@@ -105,12 +105,32 @@ export function descendantIds(data: PageData, id: string): string[] {
   return out
 }
 
-/** Does a zone exist or can it be created (its parent block exists)? */
-export function zoneIsAddressable(data: PageData, zone: Zone): boolean {
+/**
+ * Does a zone exist or can it be created? A new zone needs its parent block on the page and,
+ * when `acceptsZone` is given, a parent type that renders a DropZone of that name: content
+ * put in `HeroBlock-x:main` would be saved but never shown.
+ */
+export function zoneIsAddressable(
+  data: PageData,
+  zone: Zone,
+  acceptsZone?: (type: string, zoneName: string) => boolean
+): boolean {
   if (zone === ROOT_ZONE) return true
   if (getZone(data, zone)) return true
   const parsed = parseZone(zone)
-  return !!parsed && parsed.parentId !== 'root' && !!findNode(data, parsed.parentId)
+  if (!parsed || parsed.parentId === 'root') return false
+  const parent = findNode(data, parsed.parentId)
+  if (!parent) return false
+  return acceptsZone ? acceptsZone(parent.item.type, parsed.zoneName) : true
+}
+
+/** Does a DropZone name match one of a block's declared names (`col-*` = `col-` + digits)? */
+export function zoneNameMatches(declared: readonly string[] | undefined, name: string): boolean {
+  return (declared ?? []).some((d) => {
+    if (!d.endsWith('*')) return d === name
+    const prefix = d.slice(0, -1)
+    return name.startsWith(prefix) && /^\d+$/.test(name.slice(prefix.length))
+  })
 }
 
 /** An empty page. */

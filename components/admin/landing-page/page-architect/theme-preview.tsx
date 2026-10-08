@@ -25,17 +25,20 @@ export function themePreviewVars(preview: ThemePreview, mode: 'light' | 'dark'):
   return { ...colours, ...deriveKitStructure(preview.preset) } as CSSProperties
 }
 
-/** Puck `overrides.preview`: wraps the canvas content in the previewed variables. */
+/**
+ * Puck `overrides.preview`: wraps the canvas content in the previewed variables. The wrapper
+ * is always rendered (`display: contents` without a preview) so toggling a preview never
+ * changes the element type and remounts every block under the canvas.
+ */
 export function ThemePreviewScope({ children }: { children?: ReactNode }) {
   const { themePreview } = usePageArchitectContext()
   const { resolvedTheme } = useTheme()
-  if (!themePreview) return <>{children}</>
   const mode = resolvedTheme === 'dark' ? 'dark' : 'light'
   return (
     <div
-      data-theme-preview={themePreview.preset}
-      className="min-h-full bg-background text-foreground"
-      style={themePreviewVars(themePreview, mode)}
+      data-theme-preview={themePreview?.preset}
+      className={themePreview ? 'min-h-full bg-background text-foreground' : 'contents'}
+      style={themePreview ? themePreviewVars(themePreview, mode) : undefined}
     >
       {children}
     </div>

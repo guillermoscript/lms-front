@@ -4,12 +4,13 @@
  * validation). Pure module: the server validators can share the same rule.
  */
 
-/** Schemes a landing-page link may use. Everything else (javascript:, data:, http:, …) is dropped. */
+/** Schemes a landing-page link may use. `http:` is upgraded to https; everything else (javascript:, data:, …) is dropped. */
 export const SAFE_HREF_SCHEMES: ReadonlySet<string> = new Set(['https', 'mailto', 'tel'])
 
 /**
  * Allowed: same-site paths (`/courses`), in-page anchors (`#faq`), and
- * `https:`, `mailto:`, `tel:` URLs. Anything else becomes `'#'`, including
+ * `https:`, `mailto:`, `tel:` URLs; `http://host…` and `www.host…` are upgraded to
+ * `https://`. Anything else becomes `'#'`, including
  * protocol-relative `//host` and `/\host` (browsers read the backslash as a
  * slash), bare relative paths, and schemes hidden behind whitespace or
  * control characters (`java\tscript:` — browsers strip those before parsing).
@@ -26,7 +27,12 @@ export function safeHref(href: unknown): string {
     return second === '/' || second === '\\' ? '#' : value
   }
   const scheme = /^([a-z][a-z0-9+.-]*):/.exec(compact)?.[1]
-  return scheme && SAFE_HREF_SCHEMES.has(scheme) ? value : '#'
+  if (scheme && SAFE_HREF_SCHEMES.has(scheme)) return value
+  // Links saved before this guard existed: upgrade `http:` and a bare `www.` domain to https
+  // instead of breaking them.
+  if (scheme === 'http' && /^http:\/\/[^/\\]/i.test(value)) return `https:${value.slice(5)}`
+  if (!scheme && /^www\.[a-z0-9-]+\.[a-z]/i.test(value)) return `https://${value}`
+  return '#'
 }
 
 /** `safeHref` for optional links: `undefined` stays `undefined` (no `href` attribute). */

@@ -39,12 +39,16 @@ export interface ManifestAiField {
   required?: boolean
   stream?: boolean
   ref?: AiFieldRef
+  /** `embed`: a video link or a pasted `<iframe>` snippet, not a plain link. */
+  urlKind?: 'embed'
 }
 
 export interface ManifestAi {
   instructions: string
   exclude?: boolean
   fields?: Record<string, ManifestAiField>
+  /** The block's DropZone names (`col-*` = `col-` + a number). None = it takes no children. */
+  zones?: string[]
 }
 
 export interface ManifestEntry {

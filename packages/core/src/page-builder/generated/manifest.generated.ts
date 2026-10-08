@@ -465,7 +465,12 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
         "borderRadius": "school"
       },
       "ai": {
-        "instructions": "Embedded YouTube/Vimeo video (https URL)."
+        "instructions": "Embedded YouTube/Vimeo video (https URL).",
+        "fields": {
+          "url": {
+            "urlKind": "embed"
+          }
+        }
       }
     },
     "Divider": {
@@ -795,7 +800,10 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
       },
       "ai": {
         "instructions": "Layout wrapper.",
-        "exclude": true
+        "exclude": true,
+        "zones": [
+          "content"
+        ]
       }
     },
     "Columns": {
@@ -890,7 +898,10 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
       },
       "ai": {
         "instructions": "Column layout.",
-        "exclude": true
+        "exclude": true,
+        "zones": [
+          "col-*"
+        ]
       }
     },
     "Container": {
@@ -970,7 +981,10 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
       },
       "ai": {
         "instructions": "Layout wrapper.",
-        "exclude": true
+        "exclude": true,
+        "zones": [
+          "content"
+        ]
       }
     },
     "Grid": {
@@ -1054,7 +1068,10 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
       },
       "ai": {
         "instructions": "Grid layout.",
-        "exclude": true
+        "exclude": true,
+        "zones": [
+          "cell-*"
+        ]
       }
     },
     "Card": {
@@ -1142,7 +1159,10 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
       },
       "ai": {
         "instructions": "Card wrapper.",
-        "exclude": true
+        "exclude": true,
+        "zones": [
+          "content"
+        ]
       }
     },
     "HeroBlock": {
@@ -1528,6 +1548,20 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
           "type": "custom",
           "label": "Curated Courses (leave empty for latest)"
         },
+        "curatedOnly": {
+          "type": "radio",
+          "label": "Only the picked courses",
+          "options": [
+            {
+              "label": "Yes",
+              "value": true
+            },
+            {
+              "label": "No",
+              "value": false
+            }
+          ]
+        },
         "maxItems": {
           "type": "number",
           "label": "Max Courses"
@@ -1753,6 +1787,7 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
         "title": "Our Courses",
         "subtitle": "Explore our catalog and start learning today.",
         "courseIds": [],
+        "curatedOnly": false,
         "maxItems": 6,
         "columns": "3",
         "showPrice": true,

@@ -215,7 +215,13 @@ describe('POST /api/landing/chat', () => {
     expect(system).toHaveLength(2)
     expect(String(system[0].content)).toContain('Page Architect')
     expect(String(system[1].content)).toContain('<tenant_data>')
-    expect(call.providerOptions).toMatchObject({ openai: { parallelToolCalls: false }, anthropic: { disableParallelToolUse: true } })
+    expect(call.providerOptions).toMatchObject({
+      openai: { parallelToolCalls: false },
+      anthropic: { disableParallelToolUse: true },
+      groq: { parallelToolCalls: false },
+      mistral: { parallelToolCalls: false },
+      xai: { parallelToolCalls: false },
+    })
   })
 
   it('402s a school without a key: no limiter, no page read, no usage increment', async () => {
@@ -287,6 +293,92 @@ describe('POST /api/landing/chat', () => {
     const preview = chunks.find((c) => c.type === 'data-theme-preview')
     expect(preview).toMatchObject({ transient: true })
     expect(parseThemePreview(preview?.data)).toEqual({ preset: 'estructura', primary: '#3A50B8' })
+  })
+
+  it('three parallel remove_block calls in one step: the third needs approval (approval tallies before any execute)', async () => {
+    const page = {
+      root: { props: {} },
+      content: [
+        { type: 'TextBlock', props: { id: 'a', content: 'A' } },
+        { type: 'TextBlock', props: { id: 'b', content: 'B' } },
+        { type: 'TextBlock', props: { id: 'c', content: 'C' } },
+      ],
+      zones: {},
+    }
+    state.model = new MockLanguageModelV4({
+      doStream: [
+        {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: 'stream-start', warnings: [] },
+              ...['a', 'b', 'c'].map((id) => ({ type: 'tool-call' as const, toolCallId: `r-${id}`, toolName: 'remove_block', input: JSON.stringify({ id }) })),
+              { type: 'finish', usage, finishReason: { unified: 'tool-calls', raw: 'tool_calls' } },
+            ],
+          }),
+        },
+      ] as never,
+    })
+    const chunks = await sseChunks(await post(body({ pageData: page })))
+    const approvals = chunks.filter((c) => c.type === 'tool-approval-request')
+    expect(approvals.map((c) => c.toolCallId)).toEqual(['r-c'])
+    const removed = chunks.filter((c) => c.type === 'data-page-op').map((c) => (c.data as { id: string }).id)
+    expect(removed).toEqual(['a', 'b'])
+  })
+
+  it('an add_block call the SDK rejects as invalid leaves no provisional block behind', async () => {
+    // "index":"0" parses for streaming but fails the tool schema, so execute never runs.
+    const input = '{"type":"HeroBlock","index":"0","props":{"title":"Hi there"}}'
+    state.model = new MockLanguageModelV4({
+      doStream: [
+        {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: 'stream-start', warnings: [] },
+              { type: 'tool-input-start', id: 'bad-1', toolName: 'add_block' },
+              { type: 'tool-input-delta', id: 'bad-1', delta: '{"type":"HeroBlock","index":"0","props":{"title":"Hi' },
+              { type: 'tool-input-delta', id: 'bad-1', delta: ' there"}}' },
+              { type: 'tool-input-end', id: 'bad-1' },
+              { type: 'tool-call', toolCallId: 'bad-1', toolName: 'add_block', input },
+              { type: 'finish', usage, finishReason: { unified: 'tool-calls', raw: 'tool_calls' } },
+            ],
+          }),
+        },
+        {
+          stream: simulateReadableStream({
+            chunks: [
+              { type: 'stream-start', warnings: [] },
+              { type: 'finish', usage, finishReason: { unified: 'stop', raw: 'stop' } },
+            ],
+          }),
+        },
+      ] as never,
+    })
+    const chunks = await sseChunks(await post(body()))
+    const ops = chunks.filter((c) => c.type === 'data-page-op').map((c) => c.data as { op: string; id: string })
+    const add = ops.find((o) => o.op === 'add')
+    expect(add).toBeTruthy()
+    expect(ops.at(-1)).toEqual({ op: 'remove', id: add!.id })
+  })
+
+  it('drops a tool call left without output from the history instead of failing the next request', async () => {
+    const messages = [
+      { id: 'u1', role: 'user', parts: [{ type: 'text', text: 'add a hero' }] },
+      {
+        id: 'a1',
+        role: 'assistant',
+        parts: [{ type: 'tool-add_block', toolCallId: 'x1', state: 'input-available', input: { type: 'HeroBlock', props: {} } }],
+      },
+      { id: 'u2', role: 'user', parts: [{ type: 'text', text: 'try again' }] },
+    ]
+    const model = state.model as MockLanguageModelV4
+    const res = await post(body({ messages }))
+    expect(res.status).toBe(200)
+    await res.text()
+    const prompt = model.doStreamCalls[0].prompt
+    const toolParts = prompt
+      .flatMap((m) => (Array.isArray(m.content) ? (m.content as Array<{ type: string }>) : []))
+      .filter((p) => p.type === 'tool-call')
+    expect(toolParts).toEqual([])
   })
 
   it('a capped history starts at a user message, on the client and on the server', async () => {

@@ -28,7 +28,12 @@ export interface OpsCatalog {
   has(type: string): boolean
   defaultProps(type: string): Record<string, unknown>
   fields(type: string): Record<string, ManifestField> | undefined
+  /** Does `type` render a DropZone named `zoneName`? Omitted = any zone of an existing block. */
+  acceptsZone?(type: string, zoneName: string): boolean
 }
+
+const zoneCheck = (catalog?: OpsCatalog) =>
+  catalog?.acceptsZone ? (type: string, name: string) => catalog.acceptsZone!(type, name) : undefined
 
 export interface ApplyOpsResult {
   data: PageData
@@ -60,7 +65,7 @@ export function applyOpInPlace(data: PageData, op: PageOp, catalog?: OpsCatalog)
     case 'add': {
       if (catalog && !catalog.has(op.type)) return `add: unknown block type "${op.type}"`
       if (findNode(data, op.id)) return `add: id "${op.id}" already exists`
-      if (!zoneIsAddressable(data, op.zone)) return `add: zone "${op.zone}" does not exist`
+      if (!zoneIsAddressable(data, op.zone, zoneCheck(catalog))) return `add: zone "${op.zone}" does not exist`
       const items = (getZone(data, op.zone) ?? []).slice()
       const index = clamp(op.index, 0, items.length)
       const fields = catalog?.fields(op.type)
@@ -97,7 +102,7 @@ export function applyOpInPlace(data: PageData, op: PageOp, catalog?: OpsCatalog)
     case 'move': {
       const node = findNode(data, op.id)
       if (!node) return `move: no block with id "${op.id}"`
-      if (!zoneIsAddressable(data, op.zone)) return `move: zone "${op.zone}" does not exist`
+      if (!zoneIsAddressable(data, op.zone, zoneCheck(catalog))) return `move: zone "${op.zone}" does not exist`
       const target = parseZone(op.zone)
       if (op.zone !== ROOT_ZONE && target) {
         if (target.parentId === op.id || descendantIds(data, op.id).includes(target.parentId)) {

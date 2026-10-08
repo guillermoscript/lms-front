@@ -71,8 +71,10 @@ export function usePageArchitect({ pageId, locale, onHistoryAbort }: UsePageArch
   })
 
   const [statusLabel, setStatusLabel] = useState<string | null>(null)
-  const [lastApplied, setLastApplied] = useState<number | null>(null)
+  const [lastApplied, setLastApplied] = useState<{ count: number; historyIndex: number } | null>(null)
   const turnRef = useRef<PageArchitectTurn | null>(null)
+  /** Puck's history index when the turn started: the pre-turn state (AI ops record no history). */
+  const turnStartIndex = useRef<number | null>(null)
   const openTurns = useRef(0)
 
   const transport = useMemo(
@@ -114,6 +116,7 @@ export function usePageArchitect({ pageId, locale, onHistoryAbort }: UsePageArch
       },
     })
     turnRef.current = turn
+    if (openTurns.current === 0) turnStartIndex.current = live.current.getPuck().history.index
     openTurns.current++
     setLastApplied(null)
     live.current.controller.setTurnActive(true)
@@ -130,7 +133,9 @@ export function usePageArchitect({ pageId, locale, onHistoryAbort }: UsePageArch
     if (openTurns.current === 0) live.current.controller.setTurnActive(false)
     setStatusLabel(null)
     if (result.committed) {
-      setLastApplied(result.applied)
+      // The turn's history entry is recorded by now (end() waits for it): the panel's Undo
+      // stays offered only while that entry is still the current one.
+      setLastApplied({ count: result.applied, historyIndex: live.current.getPuck().history.index })
       live.current.controller.onAiCommit()
     }
     if (result.abortedByHistory) live.current.onHistoryAbort?.()
@@ -164,12 +169,19 @@ export function usePageArchitect({ pageId, locale, onHistoryAbort }: UsePageArch
   }, [status, ensureTurn, endTurn])
 
   // A human undo/redo mid-turn: stop the stream, apply nothing more, commit nothing (A3).
+  // The turn recorded no history, so Puck's undo stepped back from the PRE-turn state and
+  // also reverted the admin's last edit; once it settles, land back on the pre-turn state.
   useEffect(() => {
     controller.setHistoryAbortHandler(() => {
       const turn = turnRef.current
       if (!turn) return
       turn.abortForeign()
       void stop()
+      const start = turnStartIndex.current
+      setTimeout(() => {
+        const history = live.current.getPuck().history
+        if (start !== null && start >= 0 && history.index < start && history.histories[start]) history.setHistoryIndex(start)
+      }, 0)
     })
     return () => controller.setHistoryAbortHandler(null)
   }, [controller, stop])
@@ -201,7 +213,9 @@ export function usePageArchitect({ pageId, locale, onHistoryAbort }: UsePageArch
     isBusy: status === 'submitted' || status === 'streaming',
     turnActive: controller.turnActive,
     statusLabel,
-    lastApplied,
+    /** Changes the last committed turn applied, while its history entry is current. */
+    lastApplied: lastApplied?.count ?? null,
+    lastAppliedHistoryIndex: lastApplied?.historyIndex ?? null,
     clearLastApplied: () => setLastApplied(null),
   }
 }

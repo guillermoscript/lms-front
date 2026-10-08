@@ -52,7 +52,7 @@ const homeTemplate: PuckTemplate = {
         primaryCtaHref: '/courses',
         secondaryCtaLabel: 'Explore Paths',
         secondaryCtaHref: '#paths',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '520px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '500px',
       }),
       c('StatsCounter', {
         useLiveStats: true,
@@ -215,7 +215,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about courses, tools, and building your portfolio.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -281,7 +281,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Get in Touch',
         subtitle: 'Questions about courses, mentorship, or your portfolio? We would love to help you start creating.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',

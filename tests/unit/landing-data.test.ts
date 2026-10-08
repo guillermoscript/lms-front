@@ -300,7 +300,7 @@ describe('getLandingProducts', () => {
   it('newest active products of this tenant, with linked courses and the right href', async () => {
     const products = await getLandingProducts(T)
     expect(products.map((p) => p.id)).toEqual(['40', '43'])
-    expect(products[0]).toMatchObject({ name: 'Solo', courseIds: ['1'], href: '/checkout?courseId=1', price: 49 })
+    expect(products[0]).toMatchObject({ name: 'Solo', courseIds: ['1'], href: '/checkout?courseId=1&productId=40', price: 49 })
     expect(products[1]).toMatchObject({ name: 'Bundle', courseIds: ['3', '4'], href: '/products/43' })
     assertSafeChains()
   })

@@ -26,11 +26,12 @@ export const BASE_ANNOTATIONS: AiAnnotations = {
   },
 
   // ── Structural/primitive blocks: for humans composing layouts, not AI sections ──
-  Section: { instructions: 'Layout wrapper.', exclude: true },
-  Container: { instructions: 'Layout wrapper.', exclude: true },
-  Columns: { instructions: 'Column layout.', exclude: true },
-  Grid: { instructions: 'Grid layout.', exclude: true },
-  Card: { instructions: 'Card wrapper.', exclude: true },
+  // `zones` must match each block's <DropZone zone=…> names (lib/puck/components/layout/).
+  Section: { instructions: 'Layout wrapper.', exclude: true, zones: ['content'] },
+  Container: { instructions: 'Layout wrapper.', exclude: true, zones: ['content'] },
+  Columns: { instructions: 'Column layout.', exclude: true, zones: ['col-*'] },
+  Grid: { instructions: 'Grid layout.', exclude: true, zones: ['cell-*'] },
+  Card: { instructions: 'Card wrapper.', exclude: true, zones: ['content'] },
   Spacer: { instructions: 'Vertical space.', exclude: true },
   Divider: { instructions: 'Horizontal rule.', exclude: true },
   IconBlock: { instructions: 'A single icon.', exclude: true },
@@ -45,7 +46,10 @@ export const BASE_ANNOTATIONS: AiAnnotations = {
   },
   Image: { instructions: 'Standalone image (https URL).' },
   ButtonBlock: { instructions: 'Standalone button; sections carry their own CTAs.', exclude: true },
-  Video: { instructions: 'Embedded YouTube/Vimeo video (https URL).' },
+  Video: {
+    instructions: 'Embedded YouTube/Vimeo video (https URL).',
+    fields: { url: { urlKind: 'embed' } },
+  },
 
   // ── Marketing / LMS sections (the AI mostly uses these) ──
   HeroBlock: {

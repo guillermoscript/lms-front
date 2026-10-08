@@ -1,4 +1,5 @@
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { LandingTestimonial, PuckMetadata } from '../../types'
 
@@ -27,7 +28,8 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
     reviewCount: '',
     avatarCount: 5,
   },
-  render: ({ text, reviewCount, avatarCount, puck }) => {
+  render: function SocialProofView({ text, reviewCount, avatarCount, puck }) {
+    const t = useTranslations('puck.render')
     // Real course reviews resolved server-side and handed in via metadata: the
     // rating (average), the review count and the avatar initials all come from
     // them. The school's own `reviewCount` text is the only manual fallback.
@@ -44,7 +46,7 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
       ? Math.round((rated.reduce((sum, tm) => sum + (tm.rating ?? 0), 0) / rated.length) * 10) / 10
       : null
     const displayReviewCount = live.length > 0
-      ? `Based on ${live.length} review${live.length === 1 ? '' : 's'}`
+      ? t('socialProofReviews', { count: live.length })
       : reviewCount
     const initials = live.length > 0
       ? live.slice(0, avatarCount).map((tm) => (tm.name?.trim()?.charAt(0) || '?').toUpperCase())
@@ -82,7 +84,7 @@ export const SocialProof: ComponentConfig<SocialProofProps> = {
                 </span>
               ))}
             </span>
-            <span className="sr-only">{displayRating} out of 5 stars</span>
+            <span className="sr-only">{t('socialProofRating', { rating: displayRating })}</span>
           </div>
         ) : null}
         {text ? (

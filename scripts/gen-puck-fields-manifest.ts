@@ -95,6 +95,7 @@ function pruneAnnotation(a: AiComponentAnnotation | undefined, fields: AnyFields
   if (!a) return undefined
   const out: AiComponentAnnotation = { instructions: a.instructions ?? '' }
   if (a.exclude) out.exclude = true
+  if (a.zones?.length) out.zones = [...a.zones]
   const aiFields = Object.entries(a.fields ?? {}).filter(([key]) => {
     const top = key.split('.')[0]
     if (fields[top]) return true

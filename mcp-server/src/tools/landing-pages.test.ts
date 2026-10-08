@@ -329,6 +329,14 @@ describe("create from a template → patch → publish", () => {
     const grid = page.content.find((b) => b.type === "CourseGrid");
     expect(grid?.props.courseIds).toEqual([{ id: "1" }]);
   });
+
+  it("a bundle that includes an archived course still creates its page, without that course", async () => {
+    plan = "pro";
+    db.product_courses.push({ product_id: 5, course_id: 3, tenant_id: TENANT });
+    const r = await call("lms_create_landing_page", { title: "Bundle", slug: "bundle", template_id: "product-bundle", bindings: { productId: 5 } });
+    expect(r.isError).toBeUndefined();
+    expect(pageData().content.find((b) => b.type === "CourseGrid")?.props.courseIds).toEqual([{ id: "1" }]);
+  });
 });
 
 describe("zones survive patches", () => {

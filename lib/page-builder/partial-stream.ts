@@ -538,6 +538,21 @@ export class InputStreams {
     s.push(text)
   }
 
+  /**
+   * End every stream still open and return the provisional blocks they placed. A stream
+   * left open after its step finished belongs to a call whose `execute` never ran (the SDK
+   * skips an invalid call, or one cut off by finishReason `length`), so its block is an orphan.
+   */
+  abandon(): string[] {
+    const ids: string[] = []
+    for (const s of this.streams.values()) {
+      const r = s.finish()
+      if (r.blockId) ids.push(r.blockId)
+    }
+    this.streams.clear()
+    return ids
+  }
+
   /** End a call's stream and return what it placed (null when it never streamed). */
   take(toolCallId: string): StreamResult | null {
     const s = this.streams.get(toolCallId)

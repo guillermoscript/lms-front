@@ -308,6 +308,12 @@ export function PuckEditor({
     onDataChangeRef.current = onDataChange
   })
   const onChange = useCallback((data: Data) => onDataChangeRef.current(data), [])
+  // Puck's onChange fires only on a change: fetch what the opened page binds but the
+  // server bundle (built for every page, capped) lacks, once on mount.
+  const initialDataRef = useRef(initialData)
+  useEffect(() => {
+    onDataChangeRef.current(initialDataRef.current)
+  }, [])
   const architectOnAction = architect.onAction
   const onAction = useCallback(
     (action: PuckAction) => {
@@ -317,13 +323,15 @@ export function PuckEditor({
     [architectOnAction, markDirty]
   )
 
-  // Unsaved work survives an accidental tab close only by asking.
+  // Unsaved work survives an accidental tab close only by asking. An AI turn in flight counts:
+  // its ops are applied but `dirty` is set only once the turn commits.
+  const unsaved = dirty || architect.value.turnActive
   useEffect(() => {
-    if (!dirty) return
+    if (!unsaved) return
     const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault()
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [dirty])
+  }, [unsaved])
 
   const persist = useCallback(
     async (data: Data, opts: { publish?: boolean; overwrite?: boolean } = {}) => {
@@ -411,7 +419,7 @@ export function PuckEditor({
   )
 
   const requestBack = useCallback(() => {
-    if (dirty) setLeaveOpen(true)
+    if (dirty || turnActiveRef.current) setLeaveOpen(true)
     else onBack(latestRef.current)
   }, [dirty, onBack])
 

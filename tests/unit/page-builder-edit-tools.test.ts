@@ -151,13 +151,14 @@ describe('edit tools', () => {
 
   it('duplicate_block copies a block (and its nested blocks) right after itself with fresh ids', () => {
     const page = base()
-    page.zones = { 'hero-1:col': [{ type: 'TextBlock', props: { id: 'n1', content: 'nested' } }] }
+    page.content[0] = { type: 'Section', props: { id: 'hero-1' } }
+    page.zones = { 'hero-1:content': [{ type: 'TextBlock', props: { id: 'n1', content: 'nested' } }] }
     const { ops, shadow, run } = setup(page)
     const res = run('duplicate_block', { id: 'hero-1' })
-    expect(res).toEqual({ ok: true, id: 'HeroBlock-n1' })
+    expect(res).toEqual({ ok: true, id: 'Section-n1' })
     expect(ops.map((o) => o.op)).toEqual(['add', 'add'])
-    expect(shadow.data.content[1].props.id).toBe('HeroBlock-n1')
-    expect(shadow.data.zones?.['HeroBlock-n1:col']?.[0].props).toMatchObject({ content: 'nested' })
+    expect(shadow.data.content[1].props.id).toBe('Section-n1')
+    expect(shadow.data.zones?.['Section-n1:content']?.[0].props).toMatchObject({ content: 'nested' })
   })
 
   it('set_page_meta writes updateRoot and refuses unknown keys or unsafe images', () => {
@@ -212,6 +213,18 @@ describe('resolvePlacement', () => {
     expect(resolvePlacement(data, { zone: 'ghost:col' })).toHaveProperty('error')
     expect(resolvePlacement(data, { zone: 'hero-1:col' })).toEqual({ zone: 'hero-1:col', index: 0 })
   })
+
+  it('with the catalog, a new zone must be one its parent block renders', () => {
+    const data = base()
+    data.content.push({ type: 'Section', props: { id: 'sec-1' } }, { type: 'Columns', props: { id: 'cols-1' } })
+    expect(resolvePlacement(data, { zone: 'hero-1:main' }, undefined, pageCatalog)).toHaveProperty('error')
+    expect(resolvePlacement(data, { zone: 'sec-1:main' }, undefined, pageCatalog)).toHaveProperty('error')
+    expect(resolvePlacement(data, { zone: 'sec-1:content' }, undefined, pageCatalog)).toEqual({ zone: 'sec-1:content', index: 0 })
+    expect(resolvePlacement(data, { zone: 'cols-1:col-2' }, undefined, pageCatalog)).toEqual({ zone: 'cols-1:col-2', index: 0 })
+    expect(resolvePlacement(data, { zone: 'cols-1:col-x' }, undefined, pageCatalog)).toHaveProperty('error')
+    const r = applyOps(data, [{ op: 'add', id: 'n', type: 'TextBlock', zone: 'hero-1:main', index: 0, props: {} }], pageCatalog)
+    expect(r.warnings[0]).toMatch(/zone "hero-1:main" does not exist/)
+  })
 })
 
 describe('tool labels', () => {
@@ -228,5 +241,49 @@ describe('tool labels', () => {
   it('the AI settings page names the reused landing_builder feature "Page builder"', () => {
     expect(en.aiSettings.features.landing_builder.name).toBe('Page builder')
     expect(es.aiSettings.features.landing_builder.name).toBe('Constructor de páginas')
+  })
+})
+
+describe('streamed add_block edge cases', () => {
+  const full = (): PageData => ({
+    root: { props: {} },
+    content: Array.from({ length: 40 }, (_, i) => ({ type: 'TextBlock', props: { id: `t${i}`, content: 'x' } })),
+    zones: {},
+  })
+
+  function streaming(page: PageData) {
+    const ops: PageOp[] = []
+    const shadow = new ShadowPage(page, pageCatalog)
+    const sink = new OpSink(shadow, (op) => ops.push(JSON.parse(JSON.stringify(op))))
+    let n = 0
+    const edit = createEditTools({ shadow, sink, refs: {}, idFactory: (t) => `${t}-n${++n}`, coalesceMs: 0 })
+    const tools = edit.tools as unknown as Record<string, AnyTool>
+    return { ops, shadow, edit, tools }
+  }
+
+  it('a streamed add on a page at the 40-section cap never places a provisional block, and execute refuses it', () => {
+    const { ops, shadow, edit, tools } = streaming(full())
+    edit.streams.start('s1')
+    edit.streams.delta('s1', '{"type":"TextBlock","props":{"content":"Hel')
+    expect(ops).toEqual([])
+    const res = tools.add_block.execute({ type: 'TextBlock', props: { content: 'Hello' } }, { toolCallId: 's1', messages: [] }) as Record<string, unknown>
+    expect(res.ok).toBe(false)
+    expect(shadow.topLevelCount).toBe(40)
+  })
+
+  it('sweepOrphans removes the provisional block of a call whose execute never ran', () => {
+    const { ops, shadow, edit } = streaming({ root: { props: {} }, content: [], zones: {} })
+    edit.streams.start('s1')
+    edit.streams.delta('s1', '{"type":"TextBlock","props":{"content":"Hel')
+    expect(shadow.topLevelCount).toBe(1)
+    expect(edit.sweepOrphans()).toEqual(['TextBlock-n1'])
+    expect(shadow.topLevelCount).toBe(0)
+    expect(ops.at(-1)).toEqual({ op: 'remove', id: 'TextBlock-n1' })
+  })
+
+  it('apply_template needs approval when an add in the same step has not executed yet', () => {
+    const { edit } = streaming({ root: { props: {} }, content: [], zones: {} })
+    expect(edit.toolApproval.add_block()).toBeUndefined()
+    expect(edit.toolApproval.apply_template()).toMatchObject({ type: 'user-approval' })
   })
 })

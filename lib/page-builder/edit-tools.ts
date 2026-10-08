@@ -13,7 +13,10 @@
  * either finalises it with one validated `update{props}` or removes it and returns the errors.
  *
  * Destructive calls go through AI SDK tool approval (`toolApproval`): `apply_template` on a
- * non-empty page, and `remove_block` once a turn would remove 3+ blocks.
+ * non-empty page, and `remove_block` once a turn would remove 3+ blocks. The SDK decides
+ * approval for every call of a step as it arrives but runs the executes only at the end of
+ * the step, so the approval functions keep their own tally (a step of five parallel
+ * `remove_block` calls must not all see an untouched page).
  */
 import { tool, type ToolApprovalStatus } from 'ai'
 import { z } from 'zod'
@@ -39,6 +42,7 @@ import {
   unknownRefIds,
   zoneIsAddressable,
   type IdFactory,
+  type OpsCatalog,
   type PageCatalog,
   type PageData,
   type PageOp,
@@ -138,12 +142,14 @@ export class OpSink {
 
 /**
  * Resolve where a block goes, ignoring `excludeId` (the block being placed). `after_id` wins
- * over `zone`/`index`; no position = the end of the zone (default the page).
+ * over `zone`/`index`; no position = the end of the zone (default the page). With a catalog,
+ * a new zone must be one its parent block renders.
  */
 export function resolvePlacement(
   data: PageData,
   pos: PositionInput,
-  excludeId?: string
+  excludeId?: string,
+  catalog?: OpsCatalog
 ): Placement | { error: string } {
   if (pos.after_id) {
     if (pos.after_id === excludeId) return { error: 'after_id cannot be the block itself' }
@@ -153,7 +159,8 @@ export function resolvePlacement(
     return { zone: node.zone, index: list.findIndex((i) => i.props.id === pos.after_id) + 1 }
   }
   const zone = pos.zone || ROOT_ZONE
-  if (!zoneIsAddressable(data, zone)) return { error: `zone "${zone}" does not exist (call get_page)` }
+  const accepts = catalog?.acceptsZone ? (type: string, name: string) => catalog.acceptsZone!(type, name) : undefined
+  if (!zoneIsAddressable(data, zone, accepts)) return { error: `zone "${zone}" does not exist (call get_page)` }
   const list = (getZone(data, zone) ?? []).filter((i) => i.props.id !== excludeId)
   const index = pos.index === undefined ? list.length : Math.max(0, Math.min(list.length, Math.floor(pos.index)))
   return { zone, index }
@@ -248,24 +255,35 @@ export function createEditTools(deps: EditToolsDeps) {
   const { shadow, sink, refs } = deps
   const catalog = shadow.catalog
   const idFactory = deps.idFactory ?? newBlockId
-  let removedThisTurn = 0
+  /** Every block id a remove_block call this turn asked for (cascade included), counted at approval AND at execute. */
+  const removalIds = new Set<string>()
+  /** A call that adds content was seen this turn (approval time), so the page is no longer "empty" for apply_template. */
+  let pendingContent = false
+  const maxTop = PAGE_LIMITS.maxTopLevelBlocks
 
   const target: StreamTarget = {
     catalog,
     newId: idFactory,
     resolve(position, excludeId) {
-      const p = resolvePlacement(shadow.data, position, excludeId)
+      const p = resolvePlacement(shadow.data, position, excludeId, catalog)
       return isError(p) ? null : p
     },
     locate(id) {
       const node = findNode(shadow.data, id)
       return node ? { zone: node.zone, index: node.index } : null
     },
-    emit: (op) => sink.stream(op),
+    emit: (op) => {
+      // A provisional block must not take the page past the section cap, even for a moment.
+      if (op.op === 'add' && op.zone === ROOT_ZONE && shadow.topLevelCount >= maxTop) return false
+      if (op.op === 'move' && op.zone === ROOT_ZONE && findNode(shadow.data, op.id)?.zone !== ROOT_ZONE && shadow.topLevelCount >= maxTop) {
+        return false
+      }
+      return sink.stream(op)
+    },
   }
   const streams = new InputStreams(target, { coalesceMs: deps.coalesceMs, now: deps.now })
 
-  const removalSize = (id: string): number => (findNode(shadow.data, id) ? 1 + descendantIds(shadow.data, id).length : 0)
+  const removalSet = (id: string): string[] => (findNode(shadow.data, id) ? [id, ...descendantIds(shadow.data, id)] : [])
 
   const bindingsFor = (b: { courseId?: string | number; productId?: string | number } | undefined) => {
     const errors: string[] = []
@@ -360,7 +378,7 @@ export function createEditTools(deps: EditToolsDeps) {
       }),
       execute: ({ presetId, after_id, index, zone, bindings }): Result => {
         if (!getPreset(presetId)) return fail(`unknown preset "${presetId}". Valid: ${PRESETS.map((p) => p.id).join(', ')}`)
-        const place = resolvePlacement(shadow.data, { after_id, index, zone })
+        const place = resolvePlacement(shadow.data, { after_id, index, zone }, undefined, catalog)
         if (isError(place)) return fail(place.error)
         const { bindings: b, errors } = bindingsFor(bindings)
         if (errors.length) return fail(errors)
@@ -398,11 +416,14 @@ export function createEditTools(deps: EditToolsDeps) {
         }
         const { type } = input
         const v = catalog.validateBlock(type, raw.props, { refs, mode: 'add' })
-        const place = resolvePlacement(shadow.data, input, provisional ?? undefined)
+        const place = resolvePlacement(shadow.data, input, provisional ?? undefined, catalog)
         const errors = [...v.errors]
         if (isError(place)) errors.push(place.error)
-        else if (!provisional && place.zone === ROOT_ZONE && shadow.topLevelCount >= PAGE_LIMITS.maxTopLevelBlocks) {
-          errors.push(`the page already has ${PAGE_LIMITS.maxTopLevelBlocks} sections`)
+        else if (place.zone === ROOT_ZONE) {
+          // The provisional block (when it sits on the page itself) is the one being placed.
+          const provAt = provisional ? findNode(shadow.data, provisional) : null
+          const others = shadow.topLevelCount - (provAt?.zone === ROOT_ZONE ? 1 : 0)
+          if (others >= maxTop) errors.push(`the page already has ${maxTop} sections`)
         }
         if (errors.length || isError(place)) {
           cleanup()
@@ -413,10 +434,16 @@ export function createEditTools(deps: EditToolsDeps) {
           const at = findNode(shadow.data, provisional)!
           if (at.zone !== place.zone || at.index !== place.index) {
             const w = sink.commit({ op: 'move', id: provisional, zone: place.zone, index: place.index })
-            if (w) return fail(w)
+            if (w) {
+              cleanup()
+              return fail(w)
+            }
           }
           const w = sink.commit({ op: 'update', id: provisional, props: v.props })
-          if (w) return fail(w)
+          if (w) {
+            cleanup()
+            return fail(w)
+          }
           return { ok: true, id: provisional }
         }
 
@@ -449,7 +476,7 @@ export function createEditTools(deps: EditToolsDeps) {
       execute: ({ id, after_id, index, zone }): Result => {
         const node = findNode(shadow.data, id)
         if (!node) return fail(`no block "${id}" on the page`)
-        const place = resolvePlacement(shadow.data, { after_id, index, zone: zone ?? (after_id ? undefined : node.zone) }, id)
+        const place = resolvePlacement(shadow.data, { after_id, index, zone: zone ?? (after_id ? undefined : node.zone) }, id, catalog)
         if (isError(place)) return fail(place.error)
         const w = sink.commit({ op: 'move', id, zone: place.zone, index: place.index })
         return w ? fail(w) : { ok: true, id, zone: place.zone, index: place.index }
@@ -460,12 +487,12 @@ export function createEditTools(deps: EditToolsDeps) {
       description: 'Remove a block and everything nested in it.',
       inputSchema: z.object({ id: z.string() }),
       execute: ({ id }): Result => {
-        const n = removalSize(id)
-        if (!n) return fail(`no block "${id}" on the page`)
+        const ids = removalSet(id)
+        if (!ids.length) return fail(`no block "${id}" on the page`)
         const w = sink.commit({ op: 'remove', id })
         if (w) return fail(w)
-        removedThisTurn += n
-        return { ok: true, removed: n }
+        for (const i of ids) removalIds.add(i)
+        return { ok: true, removed: ids.length }
       },
     }),
 
@@ -524,16 +551,39 @@ export function createEditTools(deps: EditToolsDeps) {
     }),
   }
 
-  const toolApproval = {
-    apply_template: (): ToolApprovalStatus =>
-      shadow.isEmpty ? undefined : { type: 'user-approval', reason: 'Replaces every block on the page' },
-    remove_block: (input: { id: string }): ToolApprovalStatus =>
-      removedThisTurn + removalSize(input.id) >= REMOVAL_APPROVAL_THRESHOLD
-        ? { type: 'user-approval', reason: 'Removes several blocks' }
-        : undefined,
+  /** Approval-time hook for a tool that adds content: never asks, only records it. */
+  const notesContent = (): ToolApprovalStatus => {
+    pendingContent = true
+    return undefined
   }
 
-  return { tools, toolApproval, streams }
+  const toolApproval = {
+    apply_template: (): ToolApprovalStatus => {
+      const needs = !shadow.isEmpty || pendingContent
+      pendingContent = true
+      return needs ? { type: 'user-approval', reason: 'Replaces every block on the page' } : undefined
+    },
+    remove_block: (input: { id: string }): ToolApprovalStatus => {
+      // Counted now, not at execute: the executes of a step run after every approval of it.
+      for (const i of removalSet(input.id)) removalIds.add(i)
+      return removalIds.size >= REMOVAL_APPROVAL_THRESHOLD ? { type: 'user-approval', reason: 'Removes several blocks' } : undefined
+    },
+    add_block: notesContent,
+    insert_preset: notesContent,
+    duplicate_block: notesContent,
+  }
+
+  /**
+   * Remove the provisional blocks of add_block calls whose execute never ran (an invalid
+   * call, a step cut off by its finish reason, an abort). Call after every step and at the end.
+   */
+  const sweepOrphans = (): string[] => {
+    const ids = streams.abandon()
+    for (const id of ids) if (findNode(shadow.data, id)) sink.commit({ op: 'remove', id }, true)
+    return ids
+  }
+
+  return { tools, toolApproval, streams, sweepOrphans }
 }
 
 export type EditTools = ReturnType<typeof createEditTools>['tools']

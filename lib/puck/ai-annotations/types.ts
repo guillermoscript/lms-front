@@ -25,6 +25,8 @@ export interface AiFieldAnnotation {
   stream?: boolean
   /** The value is (a list of) this tenant's ids, validated server side. */
   ref?: AiFieldRef
+  /** `embed`: a video link or a pasted `<iframe>` snippet (validated as such, never as a plain link). */
+  urlKind?: 'embed'
 }
 
 export interface AiComponentAnnotation {
@@ -34,6 +36,11 @@ export interface AiComponentAnnotation {
   exclude?: boolean
   /** Per-field guidance, keyed by field name (`items.title` for an array sub-field). */
   fields?: Record<string, AiFieldAnnotation>
+  /**
+   * The DropZone names the block renders (`col-*` = `col-` + a number). A block without
+   * them takes no children: ops into `<id>:<zone>` are refused.
+   */
+  zones?: string[]
 }
 
 /** `{ [ComponentName | '*']: annotation }`. */

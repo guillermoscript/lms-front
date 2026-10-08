@@ -47,7 +47,7 @@ const manifest: PageBuilderManifest = {
       category: null,
       fields: {},
       defaultProps: {},
-      ai: { instructions: 'layout', exclude: true },
+      ai: { instructions: 'layout', exclude: true, zones: ['left', 'middle', 'right', 'main'] },
     },
   },
 }
@@ -123,6 +123,13 @@ describe('applyOps', () => {
     )
     expect(warnings).toEqual([])
     expect(ids(data.zones!['cols-1:middle'])).toEqual(['hero-new'])
+  })
+
+  it('refuses a new zone its parent does not render (a Hero has no DropZone; Columns has no "side")', () => {
+    for (const zone of [zoneKey('hero-1', 'main'), zoneKey('cols-1', 'side')]) {
+      const { warnings } = applyOps(page(), [{ op: 'add', id: 'n', type: 'Hero', zone, index: 0, props: {} }], catalog)
+      expect(warnings[0]).toMatch(/does not exist/)
+    }
   })
 
   it('skips bad ops with a warning and keeps going', () => {

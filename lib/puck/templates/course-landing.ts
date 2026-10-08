@@ -16,6 +16,8 @@ import { c, type PuckTemplate } from './_shared'
  * - Header nav links point at the `anchorId`s set below, so they scroll on any locale.
  * - Tones alternate (default / muted / brand-tint / brand) for rhythm; colours still come from
  *   the school's theme.
+ * - No school-wide blocks under the course hero (SocialProof reads every review in the
+ *   school): the hero already shows THIS course's rating and review count.
  */
 
 const COURSE = '{{courseId}}'
@@ -40,11 +42,9 @@ function footer() {
     columns: [
       {
         title: '{{schoolName}}',
-        links: [
-          { label: 'All courses', href: '/courses' },
-          { label: 'Terms', href: '/terms' },
-          { label: 'Privacy', href: '/privacy' },
-        ],
+        // No legal links: /terms and /privacy are not routes, and a school's own legal pages
+        // live at /p/<slug> only once it creates them.
+        links: [{ label: 'All courses', href: '/courses' }],
       },
     ],
     socialLinks: [],
@@ -112,7 +112,6 @@ const courseLandingTemplate: PuckTemplate = {
         paddingY: 'xl',
         anchorId: 'top',
       }),
-      c('SocialProof', { text: '', reviewCount: '', avatarCount: 5 }),
       c('CourseOutcomes', {
         courseId: COURSE,
         title: 'What you’ll learn',

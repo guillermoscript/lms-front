@@ -130,9 +130,14 @@ export async function POST(req: Request) {
     })
 
     // 10. history → model messages, with the tools (B1: async, and approvals need the tools).
+    // A tool call left without output (Stop mid-step, a provider finish reason the SDK does
+    // not execute on) is dropped: providers refuse a tool call with no result.
     let modelMessages
     try {
-      modelMessages = await convertToModelMessages(trimHistory(rawMessages), { tools: agent.tools })
+      modelMessages = await convertToModelMessages(trimHistory(rawMessages), {
+        tools: agent.tools,
+        ignoreIncompleteToolCalls: true,
+      })
     } catch {
       return json(400, { code: 'invalid_messages' })
     }

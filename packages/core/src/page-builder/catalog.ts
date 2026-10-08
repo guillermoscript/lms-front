@@ -13,6 +13,7 @@
 import { z } from 'zod'
 import { normalizeId } from './ids'
 import type { OpsCatalog } from './apply-ops'
+import { zoneNameMatches } from './tree'
 import {
   PAGE_LIMITS,
   findUnsafeUrls,
@@ -79,6 +80,8 @@ export interface PageCatalog extends OpsCatalog, PageValidationCatalog {
   validateBlock(type: string, props: unknown, opts?: ValidateBlockOptions): BlockValidation
   /** Top-level text/textarea fields that may stream token by token. */
   streamableFields(type: string): string[]
+  /** Top-level keys holding a video link or iframe embed code (`ai.fields[key].urlKind: 'embed'`). */
+  embedKeys(type: string): ReadonlySet<string>
   /** Lenient whole-page validation (see validate.ts). */
   validatePage(data: unknown, opts?: ValidatePageOptions): PageValidation
   /** The compact block doc for system prompts and MCP. */
@@ -402,6 +405,20 @@ export function createCatalog(manifest: PageBuilderManifest): PageCatalog {
       .filter(([key, a]) => a.ref && !key.includes('.'))
       .map(([key, a]) => ({ key, ref: a.ref! }))
 
+  const embedCache = new Map<string, ReadonlySet<string>>()
+  const embedKeys = (type: string): ReadonlySet<string> => {
+    let keys = embedCache.get(type)
+    if (!keys) {
+      keys = new Set(
+        Object.entries(entry(type)?.ai?.fields ?? {})
+          .filter(([key, a]) => a.urlKind === 'embed' && !key.includes('.'))
+          .map(([key]) => key)
+      )
+      embedCache.set(type, keys)
+    }
+    return keys
+  }
+
   const catalog: PageCatalog = {
     manifest,
     types,
@@ -415,6 +432,8 @@ export function createCatalog(manifest: PageBuilderManifest): PageCatalog {
     defaultProps: (type) => entry(type)?.defaultProps ?? {},
     fields: (type) => entry(type)?.fields,
     refFields,
+    embedKeys,
+    acceptsZone: (type, zoneName) => zoneNameMatches(entry(type)?.ai?.zones, zoneName),
     propsSchema,
 
     validateBlock(type, props, opts = {}) {
@@ -433,10 +452,14 @@ export function createCatalog(manifest: PageBuilderManifest): PageCatalog {
       const errors: string[] = []
       const parsed = propsSchema(type)!.safeParse(normalized)
       if (!parsed.success) errors.push(...formatIssues(parsed.error))
-      for (const [path, value, kind] of findUnsafeUrls(normalized)) {
-        errors.push(
-          `${path}: unsafe ${kind === 'href' ? 'link (use /path, #anchor, https:, mailto: or tel:)' : 'image URL (use https:)'} "${value.slice(0, 80)}"`
-        )
+      for (const [path, value, kind] of findUnsafeUrls(normalized, { embedKeys: embedKeys(type) })) {
+        const hint =
+          kind === 'href'
+            ? 'link (use /path, #anchor, https:, mailto: or tel:)'
+            : kind === 'image'
+              ? 'image URL (use https:)'
+              : 'video (use an https video link or an <iframe> embed code with an https src)'
+        errors.push(`${path}: unsafe ${hint} "${value.slice(0, 80)}"`)
       }
       errors.push(...findBadColors(normalized))
       const anchor = normalized.anchorId

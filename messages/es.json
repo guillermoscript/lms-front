@@ -7106,9 +7106,12 @@
       "Teacher": "Profesor",
       "Live reviews": "Reseñas reales",
       "Manual quotes": "Citas manuales",
+      "Live teachers": "Profesores reales",
+      "Manual members": "Miembros manuales",
       "Minimum Rating": "Valoración mínima",
       "Max Reviews": "Máximo de reseñas",
-      "Pinned Plans": "Planes fijados"
+      "Pinned Plans": "Planes fijados",
+      "Only the picked courses": "Solo los cursos elegidos"
     },
     "render": {
       "logIn": "Iniciar sesión",
@@ -7149,7 +7152,8 @@
         "ProductGrid": "Productos",
         "InstructorCard": "Instructor",
         "EnrollCta": "Llamada a inscribirse",
-        "TestimonialGrid": "Testimonios"
+        "TestimonialGrid": "Testimonios",
+        "CourseGrid": "Cuadrícula de cursos"
       },
       "notice": {
         "unboundCourse": "Elige un curso en la barra lateral. Esta sección se completa sola con los datos del curso.",
@@ -7166,7 +7170,8 @@
         "manualQuotes": "Citas manuales: usa palabras reales de estudiantes reales, con su permiso.",
         "noAuthor": "El autor del curso no tiene nombre en su perfil. Esta sección no se muestra en la página publicada.",
         "unboundTeacher": "Elige un profesor en la barra lateral.",
-        "missingTeacher": "El profesor elegido ya no está activo en esta escuela. Esta sección no se muestra en la página publicada."
+        "missingTeacher": "El profesor elegido ya no está activo en esta escuela. Esta sección no se muestra en la página publicada.",
+        "noCuratedCourses": "Ninguno de los cursos elegidos está publicado. Esta sección queda oculta en la página pública hasta que uno lo esté (nunca muestra otros cursos)."
       },
       "picker": {
         "search": "Buscar…",
@@ -7200,7 +7205,8 @@
         "month": "mes",
         "quarter": "trimestre",
         "year": "año"
-      }
+      },
+      "anonymousStudent": "Un estudiante"
     },
     "templates": {
       "teamGrid": {
@@ -7226,8 +7232,8 @@
         "search": "Buscar…",
         "noMatches": "Sin resultados.",
         "noCourses": "Aún no tienes cursos. Puedes crear la página ahora y elegir el curso después en el editor.",
+        "publishedOnly": "Solo aparecen los cursos publicados. Publica un curso para crear su página.",
         "noProducts": "Aún no tienes productos activos. Puedes crear la página ahora y elegir el producto después en el editor.",
-        "draft": "Borrador",
         "free": "Gratis",
         "coursesCount": "{count, plural, one {# curso} other {# cursos}}",
         "create": "Crear página",

@@ -170,7 +170,7 @@ const COURSE_BLOCKS = new Set(['CourseHero', 'CourseOutcomes', 'CourseCurriculum
 
 describe('course and product templates (WP5)', () => {
   it.each([
-    ['course-landing', 'course', ['Header', 'CourseHero', 'SocialProof', 'CourseOutcomes', 'CourseCurriculum', 'InstructorCard', 'TestimonialGrid', 'CoursePricingCard', 'FaqAccordion', 'EnrollCta', 'Footer']],
+    ['course-landing', 'course', ['Header', 'CourseHero', 'CourseOutcomes', 'CourseCurriculum', 'InstructorCard', 'TestimonialGrid', 'CoursePricingCard', 'FaqAccordion', 'EnrollCta', 'Footer']],
     ['course-launch-short', 'course', ['Header', 'CourseHero', 'CourseOutcomes', 'CoursePricingCard', 'FaqSplit', 'Footer']],
     ['free-course-lead', 'course', ['Header', 'CourseHero', 'CourseCurriculum', 'EnrollCta', 'Footer']],
     ['product-bundle', 'product', ['Header', 'HeroBlock', 'CoursePricingCard', 'CourseGrid', 'TestimonialGrid', 'FaqAccordion', 'CtaBanner', 'Footer']],
@@ -353,5 +353,28 @@ describe('school bindings', () => {
     expect(slugFromTitle('Introducción a Python: ¡desde cero!')).toBe('introduccion-a-python-desde-cero')
     expect(slugFromTitle('  ***  ')).toBe('')
     expect(slugFromTitle('a'.repeat(80) + ' b').length).toBeLessThanOrEqual(60)
+  })
+})
+
+describe('every template and preset block passes the strict AI validation', () => {
+  // What a template ships must be something the AI (and MCP) could have written: a value the
+  // strict schema refuses (a minHeight the hero does not render, an undeclared prop) would
+  // make the agent's own update_block on that block fail, and renders as a silent fallback.
+  const bindings = { courseId: '7', productId: '3', logoUrl: 'https://cdn.example.com/logo.png', courseIds: ['7', '8'] }
+  const strict = (type: string, props: Record<string, unknown>) => {
+    const rest = Object.fromEntries(Object.entries(props).filter(([key]) => key !== 'id'))
+    return pageCatalog.validateBlock(type, rest, { mode: pageCatalog.isAllowed(type) ? 'add' : 'update' }).errors
+  }
+
+  it.each(PAGE_TEMPLATES.map((t) => [t.id, t] as const))('template %s', (_id, template) => {
+    const page = instantiateTemplate(template, { bindings })
+    const errors = allItems(page).flatMap(({ item }) => strict(item.type, item.props).map((e) => `${item.type}: ${e}`))
+    expect(errors).toEqual([])
+  })
+
+  it.each(PRESETS.map((p) => [p.id] as const))('preset %s', (presetId) => {
+    const ops = presetToOps(presetId, { zone: ROOT_ZONE, index: 0 }, { bindings })
+    const errors = ops.flatMap((op) => (op.op === 'add' ? strict(op.type, op.props).map((e) => `${op.type}: ${e}`) : []))
+    expect(errors).toEqual([])
   })
 })

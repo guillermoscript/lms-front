@@ -144,13 +144,18 @@ function Inner({ pageId, locale, onClose, className }: Props) {
     addToolApprovalResponse,
     isBusy,
     statusLabel,
-    lastApplied,
+    lastApplied: appliedCount,
+    lastAppliedHistoryIndex,
     clearLastApplied,
   } = arch
 
   const selectedId = usePuckSelector((s) => (typeof s.selectedItem?.props?.id === 'string' ? s.selectedItem.props.id : null))
   const selectedType = usePuckSelector((s) => s.selectedItem?.type ?? null)
   const pageKind = usePuckSelector((s) => inferPageKind(s.appState.data))
+  const historyIndex = usePuckSelector((s) => s.history.index)
+  // "Undo" reverts the AI turn only while its history entry is the current one: a manual
+  // edit (or an undo) after it moves the index, and the offer goes away.
+  const lastApplied = appliedCount !== null && historyIndex === lastAppliedHistoryIndex ? appliedCount : null
 
   const typeLabel = useMemo(
     () => (type: string) => {

@@ -250,16 +250,32 @@ async function tenantProfile(session: LmsSession): Promise<TenantProfile | null>
   return (data as TenantProfile | null) ?? null;
 }
 
-/** The bundle's courses, from this tenant's product_courses (never `.single()`). */
+/**
+ * The bundle's BINDABLE courses (published or draft, not deleted), from this tenant's
+ * product_courses (never `.single()`). An archived or deleted course in the bundle is left
+ * out: the page's ref check would refuse it, with an id the agent never passed.
+ */
 async function productCourseIds(session: LmsSession, productId: string): Promise<string[]> {
-  const { data, error } = await session
-    .getClient()
+  const client = session.getClient();
+  const { data, error } = await client
     .from("product_courses")
     .select("course_id")
     .eq("product_id", Number(productId))
     .eq("tenant_id", session.getTenantId());
   if (error) throw new Error(`Loading the product's courses: ${error.message}`);
-  return ((data ?? []) as { course_id: number }[]).map((r) => String(r.course_id));
+  const linked = [...new Set(((data ?? []) as { course_id: number }[]).map((r) => r.course_id))];
+  if (!linked.length) return [];
+  const { data: courses, error: courseError } = await client
+    .from("courses")
+    .select("course_id")
+    .eq("tenant_id", session.getTenantId())
+    .in("course_id", linked)
+    .in("status", ["published", "draft"])
+    .is("deleted_at", null);
+  if (courseError) throw new Error(`Loading the product's courses: ${courseError.message}`);
+  const bindable = new Set(((courses ?? []) as { course_id: number }[]).map((c) => c.course_id));
+  // Keep the bundle's own order.
+  return linked.filter((id) => bindable.has(id)).map(String);
 }
 
 /**

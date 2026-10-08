@@ -17,6 +17,10 @@ describe('safeHref', () => {
     ['mailto:hello@school.test', 'mailto:hello@school.test'],
     ['tel:+584121234567', 'tel:+584121234567'],
     ['  /pricing  ', '/pricing'],
+    // Links saved before the guard: upgraded, not broken.
+    ['http://instagram.com/school', 'https://instagram.com/school'],
+    ['HTTP://Example.com', 'https://Example.com'],
+    ['www.facebook.com/school', 'https://www.facebook.com/school'],
   ])('keeps %j', (input, expected) => {
     expect(safeHref(input)).toBe(expected)
   })
@@ -30,7 +34,8 @@ describe('safeHref', () => {
     '\u0000javascript:alert(1)',
     'data:text/html,<script>alert(1)</script>',
     'vbscript:msgbox(1)',
-    'http://example.com',
+    'http:/evil.example',
+    'http:\\\\evil.example',
     'ftp://example.com',
     '//evil.example',
     '/\\evil.example',

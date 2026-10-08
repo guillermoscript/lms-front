@@ -24,7 +24,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-204",
+            "id": "Header-tpl-203",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -43,7 +43,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-205",
+            "id": "HeroBlock-tpl-204",
             "title": "Welcome to Our Academy",
             "subtitle": "Start your learning journey today.",
             "primaryCtaLabel": "Get Started",
@@ -59,7 +59,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-206",
+            "id": "Footer-tpl-205",
             "description": "Welcome to our learning platform.",
             "columns": [],
             "socialLinks": [],
@@ -94,7 +94,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-207",
+            "id": "Header-tpl-206",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -121,7 +121,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-208",
+            "id": "HeroBlock-tpl-207",
             "title": "Master New Skills, Transform Your Career",
             "subtitle": "Expert-led courses designed for professionals who want to level up. Learn at your own pace with hands-on projects and AI-powered tutoring.",
             "primaryCtaLabel": "Browse Courses",
@@ -137,7 +137,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-209",
+            "id": "FeaturesGrid-tpl-208",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -186,7 +186,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-210",
+            "id": "CourseGrid-tpl-209",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -207,7 +207,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TestimonialGrid",
           "props": {
-            "id": "TestimonialGrid-tpl-211",
+            "id": "TestimonialGrid-tpl-210",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -243,7 +243,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-212",
+            "id": "CtaBlock-tpl-211",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -264,7 +264,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-213",
+            "id": "Footer-tpl-212",
             "description": "Your online academy for professional development and personal growth.",
             "columns": [
               {
@@ -338,7 +338,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-214",
+            "id": "Header-tpl-213",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -357,7 +357,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-215",
+            "id": "HeroBlock-tpl-214",
             "title": "Learn Without Limits",
             "subtitle": "High-quality courses for every skill level.",
             "primaryCtaLabel": "Explore Courses",
@@ -373,7 +373,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-216",
+            "id": "CourseGrid-tpl-215",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -394,7 +394,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-217",
+            "id": "FaqAccordion-tpl-216",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -424,7 +424,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-218",
+            "id": "CtaBlock-tpl-217",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -445,7 +445,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-219",
+            "id": "Footer-tpl-218",
             "description": "Simple, focused online learning.",
             "columns": [
               {
@@ -494,7 +494,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-220",
+            "id": "Header-tpl-219",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -517,7 +517,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-221",
+            "id": "HeroBlock-tpl-220",
             "title": "Level Up Your Skills",
             "subtitle": "Join a community of driven learners and build real-world projects.",
             "primaryCtaLabel": "Start Learning",
@@ -533,7 +533,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-222",
+            "id": "StatsCounter-tpl-221",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -550,7 +550,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-223",
+            "id": "CourseGrid-tpl-222",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -571,7 +571,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TeamGrid",
           "props": {
-            "id": "TeamGrid-tpl-224",
+            "id": "TeamGrid-tpl-223",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -589,7 +589,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-225",
+            "id": "CtaBlock-tpl-224",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -610,7 +610,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-226",
+            "id": "Footer-tpl-225",
             "description": "Creator Academy — learn, build, grow.",
             "columns": [
               {
@@ -667,7 +667,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-227",
+            "id": "Header-tpl-226",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -690,7 +690,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-228",
+            "id": "HeroBlock-tpl-227",
             "title": "Explore Our Complete Course Catalog",
             "subtitle": "Find the perfect course for your goals.",
             "primaryCtaLabel": "Browse All",
@@ -700,13 +700,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "350px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "CatalogBrowser",
           "props": {
-            "id": "CatalogBrowser-tpl-229",
+            "id": "CatalogBrowser-tpl-228",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -726,7 +726,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-230",
+            "id": "PricingTable-tpl-229",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -774,7 +774,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-231",
+            "id": "CtaBlock-tpl-230",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -795,7 +795,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-232",
+            "id": "Footer-tpl-231",
             "description": "Explore courses and start learning today.",
             "columns": [],
             "socialLinks": [],
@@ -830,7 +830,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-233",
+            "id": "Header-tpl-232",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -853,7 +853,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-234",
+            "id": "HeroBlock-tpl-233",
             "title": "About Us",
             "subtitle": "Our mission is to make quality education accessible to everyone.",
             "primaryCtaLabel": "",
@@ -863,13 +863,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "350px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "TextBlock",
           "props": {
-            "id": "TextBlock-tpl-235",
+            "id": "TextBlock-tpl-234",
             "content": "We started with a simple idea: everyone deserves access to high-quality education. Today, we serve thousands of students across the world with expert-led courses covering programming, design, data science, and more.\n\nOur team of experienced educators and technologists is passionate about building the best learning experience possible.",
             "alignment": "center",
             "color": "",
@@ -880,7 +880,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-236",
+            "id": "StatsCounter-tpl-235",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -897,7 +897,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TeamGrid",
           "props": {
-            "id": "TeamGrid-tpl-237",
+            "id": "TeamGrid-tpl-236",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -915,7 +915,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-238",
+            "id": "CtaBlock-tpl-237",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -936,7 +936,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-239",
+            "id": "Footer-tpl-238",
             "description": "Quality education, accessible to everyone.",
             "columns": [],
             "socialLinks": [],
@@ -969,7 +969,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-240",
+            "id": "Header-tpl-239",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -992,7 +992,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-241",
+            "id": "HeroBlock-tpl-240",
             "title": "Get in Touch",
             "subtitle": "We would love to hear from you.",
             "primaryCtaLabel": "",
@@ -1002,13 +1002,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "ContactForm",
           "props": {
-            "id": "ContactForm-tpl-242",
+            "id": "ContactForm-tpl-241",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1027,7 +1027,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-243",
+            "id": "FaqAccordion-tpl-242",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1057,7 +1057,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-244",
+            "id": "Footer-tpl-243",
             "description": "We are here to help. Reach out anytime.",
             "columns": [],
             "socialLinks": [],
@@ -1092,7 +1092,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-245",
+            "id": "Header-tpl-244",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1115,7 +1115,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-246",
+            "id": "HeroBlock-tpl-245",
             "title": "Frequently Asked Questions",
             "subtitle": "Find answers to common questions.",
             "primaryCtaLabel": "",
@@ -1125,13 +1125,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-247",
+            "id": "FaqAccordion-tpl-246",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1161,7 +1161,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-248",
+            "id": "FaqAccordion-tpl-247",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1191,7 +1191,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-249",
+            "id": "FaqAccordion-tpl-248",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1221,7 +1221,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-250",
+            "id": "CtaBlock-tpl-249",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1242,7 +1242,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-251",
+            "id": "Footer-tpl-250",
             "description": "Answers to your questions, all in one place.",
             "columns": [],
             "socialLinks": [],
@@ -1280,7 +1280,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-252",
+            "id": "Header-tpl-251",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1315,7 +1315,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-253",
+            "id": "HeroBlock-tpl-252",
             "title": "Learn to Code. Build Real Projects. Launch Your Career.",
             "subtitle": "From your first line of code to your first job — structured, hands-on courses in web development, Python, data science, and more.",
             "primaryCtaLabel": "Browse Courses",
@@ -1325,13 +1325,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 60,
-            "minHeight": "520px"
+            "minHeight": "500px"
           }
         },
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-254",
+            "id": "StatsCounter-tpl-253",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1348,7 +1348,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-255",
+            "id": "FeaturesGrid-tpl-254",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1397,7 +1397,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-256",
+            "id": "CourseGrid-tpl-255",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1418,7 +1418,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-257",
+            "id": "PricingTable-tpl-256",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1466,7 +1466,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TestimonialGrid",
           "props": {
-            "id": "TestimonialGrid-tpl-258",
+            "id": "TestimonialGrid-tpl-257",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1502,7 +1502,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-259",
+            "id": "FaqAccordion-tpl-258",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1540,7 +1540,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-260",
+            "id": "CtaBlock-tpl-259",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1561,7 +1561,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-261",
+            "id": "Footer-tpl-260",
             "description": "Learn to code with structured, project-based courses. From beginner to professional developer.",
             "columns": [
               {
@@ -1666,7 +1666,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-262",
+            "id": "Header-tpl-261",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1697,7 +1697,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-263",
+            "id": "HeroBlock-tpl-262",
             "title": "Our Mission: Make Coding Accessible to Everyone",
             "subtitle": "We believe anyone can learn to code. No CS degree required, no bootcamp pressure — just clear, structured courses and a supportive community.",
             "primaryCtaLabel": "",
@@ -1713,7 +1713,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TextBlock",
           "props": {
-            "id": "TextBlock-tpl-264",
+            "id": "TextBlock-tpl-263",
             "content": "CodeSchool was founded by developers who were frustrated with the state of online coding education. Most courses were either too shallow, too theoretical, or too expensive. We set out to build something different: a platform where you learn by building real projects, get feedback from real developers, and graduate with a portfolio — not just a certificate.\n\nToday, we serve over 12,000 students across 40+ countries. Our graduates work at startups, agencies, and tech companies around the world. But our mission stays the same: make quality coding education accessible to everyone, regardless of background or budget.",
             "alignment": "center",
             "color": "",
@@ -1724,7 +1724,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-265",
+            "id": "StatsCounter-tpl-264",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1741,7 +1741,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-266",
+            "id": "FeaturesGrid-tpl-265",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1780,7 +1780,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TeamGrid",
           "props": {
-            "id": "TeamGrid-tpl-267",
+            "id": "TeamGrid-tpl-266",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1798,7 +1798,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-268",
+            "id": "CtaBlock-tpl-267",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1819,7 +1819,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-269",
+            "id": "Footer-tpl-268",
             "description": "Learn to code with structured, project-based courses. From beginner to professional developer.",
             "columns": [
               {
@@ -1908,7 +1908,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-270",
+            "id": "Header-tpl-269",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1939,7 +1939,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-271",
+            "id": "HeroBlock-tpl-270",
             "title": "Frequently Asked Questions",
             "subtitle": "Everything you need to know about our courses, pricing, and platform.",
             "primaryCtaLabel": "",
@@ -1949,13 +1949,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-272",
+            "id": "FaqAccordion-tpl-271",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1989,7 +1989,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-273",
+            "id": "FaqAccordion-tpl-272",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2023,7 +2023,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-274",
+            "id": "FaqAccordion-tpl-273",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2057,7 +2057,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-275",
+            "id": "FaqAccordion-tpl-274",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2087,7 +2087,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-276",
+            "id": "CtaBlock-tpl-275",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2108,7 +2108,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-277",
+            "id": "Footer-tpl-276",
             "description": "Learn to code with structured, project-based courses.",
             "columns": [
               {
@@ -2190,7 +2190,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-278",
+            "id": "Header-tpl-277",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -2217,7 +2217,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-279",
+            "id": "HeroBlock-tpl-278",
             "title": "Get in Touch",
             "subtitle": "Have a question about our courses, pricing, or team plans? We are here to help.",
             "primaryCtaLabel": "",
@@ -2227,13 +2227,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "ContactForm",
           "props": {
-            "id": "ContactForm-tpl-280",
+            "id": "ContactForm-tpl-279",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2252,7 +2252,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-281",
+            "id": "FaqAccordion-tpl-280",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2286,7 +2286,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-282",
+            "id": "Footer-tpl-281",
             "description": "Learn to code with structured, project-based courses.",
             "columns": [
               {
@@ -2357,7 +2357,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-283",
+            "id": "Header-tpl-282",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -2388,7 +2388,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-284",
+            "id": "HeroBlock-tpl-283",
             "title": "Explore Our Courses",
             "subtitle": "From HTML basics to advanced system design — find the right course for your level and goals.",
             "primaryCtaLabel": "View All Courses",
@@ -2398,13 +2398,13 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "350px"
+            "minHeight": "400px"
           }
         },
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-285",
+            "id": "FeaturesGrid-tpl-284",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2443,7 +2443,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CatalogBrowser",
           "props": {
-            "id": "CatalogBrowser-tpl-286",
+            "id": "CatalogBrowser-tpl-285",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2463,7 +2463,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-287",
+            "id": "PricingTable-tpl-286",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2501,7 +2501,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-288",
+            "id": "CtaBlock-tpl-287",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2522,7 +2522,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-289",
+            "id": "Footer-tpl-288",
             "description": "Structured, project-based coding courses for every level.",
             "columns": [
               {
@@ -3308,7 +3308,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -3568,7 +3568,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 50,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -3768,7 +3768,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 60,
-            "minHeight": "520px"
+            "minHeight": "500px"
           }
         },
         {
@@ -4421,7 +4421,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -4681,7 +4681,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -4881,7 +4881,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 60,
-            "minHeight": "520px"
+            "minHeight": "500px"
           }
         },
         {
@@ -5539,7 +5539,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -5799,7 +5799,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -5999,7 +5999,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 60,
-            "minHeight": "520px"
+            "minHeight": "500px"
           }
         },
         {
@@ -6627,7 +6627,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -6887,7 +6887,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "320px"
+            "minHeight": "400px"
           }
         },
         {
@@ -7087,7 +7087,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "520px"
+            "minHeight": "500px"
           }
         },
         {
@@ -7745,7 +7745,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -8005,7 +8005,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundImage": "",
             "alignment": "center",
             "overlayOpacity": 55,
-            "minHeight": "300px"
+            "minHeight": "400px"
           }
         },
         {
@@ -8199,7 +8199,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "backgroundColor": "",
             "alignment": "center",
             "overlayOpacity": 60,
-            "minHeight": "560px"
+            "minHeight": "500px"
           }
         },
         {
@@ -8417,7 +8417,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     "blocks": [
       "Header",
       "CourseHero",
-      "SocialProof",
       "CourseOutcomes",
       "CourseCurriculum",
       "InstructorCard",
@@ -8487,18 +8486,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           }
         },
         {
-          "type": "SocialProof",
-          "props": {
-            "id": "SocialProof-tpl-169",
-            "text": "",
-            "reviewCount": "",
-            "avatarCount": 5
-          }
-        },
-        {
           "type": "CourseOutcomes",
           "props": {
-            "id": "CourseOutcomes-tpl-170",
+            "id": "CourseOutcomes-tpl-169",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8526,7 +8516,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseCurriculum",
           "props": {
-            "id": "CourseCurriculum-tpl-171",
+            "id": "CourseCurriculum-tpl-170",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "md",
@@ -8545,7 +8535,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "InstructorCard",
           "props": {
-            "id": "InstructorCard-tpl-172",
+            "id": "InstructorCard-tpl-171",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "md",
@@ -8563,7 +8553,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TestimonialGrid",
           "props": {
-            "id": "TestimonialGrid-tpl-173",
+            "id": "TestimonialGrid-tpl-172",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8584,7 +8574,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CoursePricingCard",
           "props": {
-            "id": "CoursePricingCard-tpl-174",
+            "id": "CoursePricingCard-tpl-173",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8615,7 +8605,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-175",
+            "id": "FaqAccordion-tpl-174",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "md",
@@ -8650,7 +8640,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "EnrollCta",
           "props": {
-            "id": "EnrollCta-tpl-176",
+            "id": "EnrollCta-tpl-175",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8669,7 +8659,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-177",
+            "id": "Footer-tpl-176",
             "description": "",
             "columns": [
               {
@@ -8678,14 +8668,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
                   {
                     "label": "All courses",
                     "href": "/courses"
-                  },
-                  {
-                    "label": "Terms",
-                    "href": "/terms"
-                  },
-                  {
-                    "label": "Privacy",
-                    "href": "/privacy"
                   }
                 ]
               }
@@ -8721,7 +8703,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-178",
+            "id": "Header-tpl-177",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -8749,7 +8731,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseHero",
           "props": {
-            "id": "CourseHero-tpl-179",
+            "id": "CourseHero-tpl-178",
             "paddingY": "xl",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8771,7 +8753,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseOutcomes",
           "props": {
-            "id": "CourseOutcomes-tpl-180",
+            "id": "CourseOutcomes-tpl-179",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8799,7 +8781,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CoursePricingCard",
           "props": {
-            "id": "CoursePricingCard-tpl-181",
+            "id": "CoursePricingCard-tpl-180",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8830,7 +8812,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqSplit",
           "props": {
-            "id": "FaqSplit-tpl-182",
+            "id": "FaqSplit-tpl-181",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8859,7 +8841,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-183",
+            "id": "Footer-tpl-182",
             "description": "",
             "columns": [
               {
@@ -8868,14 +8850,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
                   {
                     "label": "All courses",
                     "href": "/courses"
-                  },
-                  {
-                    "label": "Terms",
-                    "href": "/terms"
-                  },
-                  {
-                    "label": "Privacy",
-                    "href": "/privacy"
                   }
                 ]
               }
@@ -8910,7 +8884,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-184",
+            "id": "Header-tpl-183",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -8930,7 +8904,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseHero",
           "props": {
-            "id": "CourseHero-tpl-185",
+            "id": "CourseHero-tpl-184",
             "paddingY": "xl",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8952,7 +8926,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseCurriculum",
           "props": {
-            "id": "CourseCurriculum-tpl-186",
+            "id": "CourseCurriculum-tpl-185",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "md",
@@ -8971,7 +8945,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "EnrollCta",
           "props": {
-            "id": "EnrollCta-tpl-187",
+            "id": "EnrollCta-tpl-186",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -8990,7 +8964,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-188",
+            "id": "Footer-tpl-187",
             "description": "",
             "columns": [
               {
@@ -8999,14 +8973,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
                   {
                     "label": "All courses",
                     "href": "/courses"
-                  },
-                  {
-                    "label": "Terms",
-                    "href": "/terms"
-                  },
-                  {
-                    "label": "Privacy",
-                    "href": "/privacy"
                   }
                 ]
               }
@@ -9044,7 +9010,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-189",
+            "id": "Header-tpl-188",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -9072,7 +9038,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-190",
+            "id": "HeroBlock-tpl-189",
             "title": "Everything you need, in one bundle",
             "subtitle": "Replace with who this bundle is for and what they will be able to do after finishing it.",
             "primaryCtaLabel": "See the price",
@@ -9089,7 +9055,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CoursePricingCard",
           "props": {
-            "id": "CoursePricingCard-tpl-191",
+            "id": "CoursePricingCard-tpl-190",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9120,7 +9086,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-192",
+            "id": "CourseGrid-tpl-191",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9136,6 +9102,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
                 "id": "{{courseIds}}"
               }
             ],
+            "curatedOnly": true,
             "maxItems": 12,
             "columns": "3",
             "showPrice": false,
@@ -9145,7 +9112,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TestimonialGrid",
           "props": {
-            "id": "TestimonialGrid-tpl-193",
+            "id": "TestimonialGrid-tpl-192",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9166,7 +9133,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-194",
+            "id": "FaqAccordion-tpl-193",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "md",
@@ -9197,7 +9164,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBanner",
           "props": {
-            "id": "CtaBanner-tpl-195",
+            "id": "CtaBanner-tpl-194",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9217,7 +9184,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-196",
+            "id": "Footer-tpl-195",
             "description": "",
             "columns": [
               {
@@ -9226,14 +9193,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
                   {
                     "label": "All courses",
                     "href": "/courses"
-                  },
-                  {
-                    "label": "Terms",
-                    "href": "/terms"
-                  },
-                  {
-                    "label": "Privacy",
-                    "href": "/privacy"
                   }
                 ]
               }
@@ -9270,7 +9229,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-197",
+            "id": "Header-tpl-196",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -9298,7 +9257,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-198",
+            "id": "HeroBlock-tpl-197",
             "title": "Pricing",
             "subtitle": "Pick a plan for full access, or buy a single program.",
             "primaryCtaLabel": "See plans",
@@ -9315,7 +9274,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-199",
+            "id": "PricingTable-tpl-198",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9334,7 +9293,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "ProductGrid",
           "props": {
-            "id": "ProductGrid-tpl-200",
+            "id": "ProductGrid-tpl-199",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9354,7 +9313,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-201",
+            "id": "FaqAccordion-tpl-200",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "md",
@@ -9385,7 +9344,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-202",
+            "id": "CtaBlock-tpl-201",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -9407,7 +9366,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-203",
+            "id": "Footer-tpl-202",
             "description": "",
             "columns": [
               {
@@ -9416,14 +9375,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
                   {
                     "label": "All courses",
                     "href": "/courses"
-                  },
-                  {
-                    "label": "Terms",
-                    "href": "/terms"
-                  },
-                  {
-                    "label": "Privacy",
-                    "href": "/privacy"
                   }
                 ]
               }

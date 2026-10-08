@@ -75,6 +75,8 @@ const productBundleTemplate: PuckTemplate = {
         title: 'Courses in this bundle',
         subtitle: '',
         courseIds: [{ id: '{{courseIds}}' }],
+        // Only the bundle's own courses: unbound (or all drafts) hides it, never the catalog.
+        curatedOnly: true,
         maxItems: 12,
         columns: '3',
         showPrice: false,

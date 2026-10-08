@@ -214,7 +214,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about classes, levels, pricing, and certificates.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -280,7 +280,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Get in Touch',
         subtitle: 'Questions about levels, scheduling, or private lessons? We would love to help you start speaking.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',

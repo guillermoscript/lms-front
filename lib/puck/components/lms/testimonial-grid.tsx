@@ -110,7 +110,7 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
     // shows the written quotes; an unset source keeps the old live-else-items behaviour.
     const binding = resolveCourseBinding(puck?.metadata, courseId)
     const live = selectLiveTestimonials(puck?.metadata, { courseId, minRating, limit }).map((tm) => ({
-      name: tm.name,
+      name: tm.name || tc('anonymousStudent'),
       role: tm.courseTitle ?? '',
       quote: tm.quote,
       rating: tm.rating ?? 5,

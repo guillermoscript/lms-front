@@ -387,7 +387,8 @@ export async function getLandingCourseDetailsByIds(
         const profile = reviewerById.get(r.user_id)
         return {
           id: String(r.review_id),
-          name: profile?.full_name?.trim() || 'Student',
+          // No English placeholder here: the block shows a translated fallback.
+          name: profile?.full_name?.trim() || '',
           avatar: profile?.avatar_url ?? null,
           rating: r.rating ?? null,
           quote: r.review_text ?? '',
@@ -597,7 +598,7 @@ export async function getLandingTestimonials(tenantId: string): Promise<LandingT
     const profile = profileById.get(r.user_id)
     return {
       id: String(r.review_id),
-      name: profile?.full_name ?? 'Student',
+      name: profile?.full_name?.trim() || '',
       avatar: profile?.avatar_url ?? null,
       rating: r.rating ?? null,
       quote: r.review_text ?? '',
@@ -621,10 +622,14 @@ export async function getLandingTeachers(tenantId: string): Promise<LandingTeach
 
   const { data: profiles } = await admin.from('profiles').select(AUTHOR_COLUMNS).in('id', userIds)
 
-  return ((profiles ?? []) as ProfileRow[]).map((p) => ({
-    id: p.id,
-    name: p.full_name ?? 'Instructor',
-    avatar: p.avatar_url ?? null,
-    bio: p.bio ?? null,
-  }))
+  // A teacher with no name on their profile is left out: InstructorCard and TeamGrid hide
+  // rather than present an English "Instructor" placeholder as a person.
+  return ((profiles ?? []) as ProfileRow[])
+    .filter((p) => !!p.full_name?.trim())
+    .map((p) => ({
+      id: p.id,
+      name: p.full_name!.trim(),
+      avatar: p.avatar_url ?? null,
+      bio: p.bio ?? null,
+    }))
 }

@@ -38,12 +38,35 @@ import { JsonLd, organizationJsonLd } from "@/lib/structured-data";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
 import type { Data } from "@measured/puck";
 import { getLandingData } from "@/lib/puck/utils/landing-data";
+import { readRootMeta } from "@/lib/puck/utils/root-meta";
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: 'seo' })
+  // A school's published home page may carry SEO overrides on its Puck root (the editor
+  // offers them on every page); /p/[slug] reads them the same way.
+  const tenantId = await getCurrentTenantId()
+  if (tenantId !== DEFAULT_TENANT_ID) {
+    const { data: home } = await createAdminClient()
+      .from('landing_pages')
+      .select('puck_data')
+      .eq('tenant_id', tenantId)
+      .eq('slug', 'home')
+      .eq('is_published', true)
+      .maybeSingle()
+    const meta = readRootMeta(home?.puck_data)
+    if (meta.title || meta.description || meta.image) {
+      return buildPageMetadata({
+        title: meta.title ?? t('home.title'),
+        description: meta.description ?? t('defaultDescription'),
+        image: meta.image,
+        path: '/',
+        locale,
+      })
+    }
+  }
   return buildPageMetadata({ title: t('home.title'), description: t('defaultDescription'), path: '/', locale })
 }
 

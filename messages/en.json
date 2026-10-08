@@ -7106,9 +7106,12 @@
       "Teacher": "Teacher",
       "Live reviews": "Live reviews",
       "Manual quotes": "Manual quotes",
+      "Live teachers": "Live teachers",
+      "Manual members": "Manual members",
       "Minimum Rating": "Minimum Rating",
       "Max Reviews": "Max Reviews",
-      "Pinned Plans": "Pinned Plans"
+      "Pinned Plans": "Pinned Plans",
+      "Only the picked courses": "Only the picked courses"
     },
     "render": {
       "logIn": "Log in",
@@ -7149,7 +7152,8 @@
         "ProductGrid": "Products",
         "InstructorCard": "Instructor",
         "EnrollCta": "Enroll call-to-action",
-        "TestimonialGrid": "Testimonials"
+        "TestimonialGrid": "Testimonials",
+        "CourseGrid": "Course grid"
       },
       "notice": {
         "unboundCourse": "Pick a course in the sidebar. This section fills itself from the course.",
@@ -7166,7 +7170,8 @@
         "manualQuotes": "Manual quotes: use real words from real students, with their permission.",
         "noAuthor": "The course author has no name on their profile. This section is hidden on the live page.",
         "unboundTeacher": "Pick a teacher in the sidebar.",
-        "missingTeacher": "The selected teacher is no longer active at this school. This section is hidden on the live page."
+        "missingTeacher": "The selected teacher is no longer active at this school. This section is hidden on the live page.",
+        "noCuratedCourses": "None of the picked courses is published. This section is hidden on the live page until one is (it never falls back to other courses)."
       },
       "picker": {
         "search": "Search…",
@@ -7200,7 +7205,8 @@
         "month": "month",
         "quarter": "quarter",
         "year": "year"
-      }
+      },
+      "anonymousStudent": "A student"
     },
     "templates": {
       "teamGrid": {
@@ -7226,8 +7232,8 @@
         "search": "Search…",
         "noMatches": "No matches.",
         "noCourses": "You have no courses yet. You can create the page now and pick the course later in the editor.",
+        "publishedOnly": "Only published courses are listed. Publish a course to build its page.",
         "noProducts": "You have no active products yet. You can create the page now and pick the product later in the editor.",
-        "draft": "Draft",
         "free": "Free",
         "coursesCount": "{count, plural, one {# course} other {# courses}}",
         "create": "Create page",

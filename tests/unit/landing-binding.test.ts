@@ -3,7 +3,7 @@ import { includedCourses, resolveCourseBinding, resolveProductBinding } from '@/
 import type { LandingCourse, LandingCourseDetails, PuckMetadata } from '@/lib/puck/types'
 
 vi.mock('@/app/actions/admin/landing-course-details', () => ({ getLandingCourseDetails: vi.fn() }))
-const { idsToFetch, mergeLandingMetadata } = await import('@/components/admin/landing-page/use-landing-metadata')
+const { carryOverMetadata, idsToFetch, mergeLandingMetadata } = await import('@/components/admin/landing-page/use-landing-metadata')
 
 const c = (id: string, status: 'published' | 'draft' = 'published'): LandingCourse => ({
   id,
@@ -83,5 +83,15 @@ describe('useLandingMetadata helpers', () => {
     expect(merged.products!.map((p) => p.id)).toEqual(['40', '41'])
     // the input is not mutated
     expect(meta.courses!.map((x) => x.id)).toEqual(['1', '2'])
+  })
+
+  it('carryOverMetadata: a refreshed server bundle keeps what was fetched for unsaved bindings', () => {
+    const fetched = mergeLandingMetadata(meta, { courses: [c('42')], courseDetails: { '42': details('42') }, products: [] })
+    const refreshed: PuckMetadata = { ...meta, courses: [c('1')], courseDetails: { '1': details('1') } }
+    const next = carryOverMetadata(refreshed, fetched)
+    expect(next.courses!.map((x) => x.id)).toEqual(['1', '2', '42'])
+    expect(Object.keys(next.courseDetails!).sort()).toEqual(['1', '42', '9'])
+    // The new bundle wins where both have a value.
+    expect(next.courseDetails!['1']).toBe(refreshed.courseDetails!['1'])
   })
 })

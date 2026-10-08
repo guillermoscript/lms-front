@@ -52,7 +52,7 @@ const homeTemplate: PuckTemplate = {
         primaryCtaHref: '#contact',
         secondaryCtaLabel: 'See Programs',
         secondaryCtaHref: '/courses',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '500px',
       }),
       c('SocialProof', {
         text: '',
@@ -209,7 +209,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about the programs, coaching, and results.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Is This Right for Me?',
@@ -275,7 +275,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Book Your Free Strategy Call',
         subtitle: 'Tell us about your business and goals. We will map a clear next step on a no-pressure call — whether or not we work together.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '320px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Apply for a Call',

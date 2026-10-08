@@ -366,13 +366,12 @@ interface BindingOption {
   id: string
   title: string
   meta: string
-  draft: boolean
 }
 
 /**
  * Pick the course or product a bound template is for. The lists come from the picker
- * providers (`LandingPickerProviders`, fed from the page list's `landingData`), so drafts are
- * listed and flagged: a draft binding shows a notice in the editor and nothing publicly.
+ * providers (`LandingPickerProviders`, fed from the page list's `landingData`), which hold
+ * PUBLISHED courses only; the step says so, since a draft course cannot be picked here.
  */
 function BindingStep({
   kind,
@@ -398,14 +397,12 @@ function BindingStep({
         id: c.id,
         title: c.title,
         meta: formatMoney(c.price, c.currency, locale) ?? tT('free'),
-        draft: c.status === 'draft',
       }))
     }
     return products.map((p) => ({
       id: p.id,
       title: p.name,
       meta: [formatMoney(p.price, p.currency, locale) ?? tT('free'), tT('coursesCount', { count: p.courseIds.length })].join(' · '),
-      draft: false,
     }))
   }, [kind, courses, products, locale, tT])
 
@@ -464,16 +461,12 @@ function BindingStep({
                       <span className="block truncate text-sm font-medium">{o.title}</span>
                       <span className="block truncate text-xs text-muted-foreground">{o.meta}</span>
                     </span>
-                    {o.draft && (
-                      <Badge variant="outline" className="shrink-0 text-xs px-1.5 py-0">
-                        {tT('draft')}
-                      </Badge>
-                    )}
                   </button>
                 )
               })}
               {filtered.length === 0 && <p className="py-2 text-sm text-muted-foreground">{tT('noMatches')}</p>}
             </div>
+            {kind === 'course' && <p className="mt-3 text-xs text-muted-foreground">{tT('publishedOnly')}</p>}
           </>
         )}
       </div>

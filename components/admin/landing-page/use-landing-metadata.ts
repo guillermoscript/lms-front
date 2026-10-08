@@ -64,6 +64,20 @@ export function mergeLandingMetadata(prev: PuckMetadata, data: LandingBindingDat
   }
 }
 
+/**
+ * A new server bundle (router.refresh() after a theme Apply, a save…) over the metadata the
+ * editor already has. The server builds it from the SAVED pages only, so ids fetched for
+ * unsaved bindings since then are carried over; the new bundle wins where both have a value.
+ */
+export function carryOverMetadata(next: PuckMetadata, prev: PuckMetadata): PuckMetadata {
+  return {
+    ...next,
+    courses: unionById(next.courses, prev.courses),
+    products: unionById(next.products, prev.products),
+    courseDetails: { ...(prev.courseDetails ?? {}), ...(next.courseDetails ?? {}) },
+  }
+}
+
 /** Ids the page binds that the metadata does not cover yet. */
 export function idsToFetch(metadata: PuckMetadata, data: unknown) {
   const bound = collectBoundIds(data)
@@ -77,6 +91,8 @@ export function idsToFetch(metadata: PuckMetadata, data: unknown) {
 }
 
 export function useLandingMetadata(initial: LandingData | PuckMetadata, opts: UseLandingMetadataOptions = {}) {
+  // NOTE: call `onDataChange(initialPageData)` once on mount: the server bundle is built for
+  // every page of the school and capped, so the page being opened may bind ids it lacks.
   const { isAiTurnActive = false, debounceMs = 250 } = opts
   const fetcher: Fetcher = opts.fetcher ?? getLandingCourseDetails
 
@@ -91,25 +107,33 @@ export function useLandingMetadata(initial: LandingData | PuckMetadata, opts: Us
     fetcherRef.current = fetcher
   })
 
-  // A new server bundle (e.g. after router.refresh()) replaces the state.
-  const initialRef = useRef(initial)
-  useEffect(() => {
-    if (initialRef.current === initial) return
-    initialRef.current = initial
-    setMetadata({ ...initial })
-  }, [initial])
-
   const pendingRef = useRef<LandingBindingData[]>([])
+  /** A new server bundle that arrived during an AI turn (applied when it ends). */
+  const pendingInitialRef = useRef<PuckMetadata | null>(null)
   const requestedRef = useRef(new Set<string>())
   const queueRef = useRef({ courseIds: new Set<string>(), detailCourseIds: new Set<string>(), productIds: new Set<string>() })
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const flush = useCallback(() => {
-    if (activeRef.current || pendingRef.current.length === 0) return
+    if (activeRef.current) return
+    const next = pendingInitialRef.current
+    if (!next && pendingRef.current.length === 0) return
+    pendingInitialRef.current = null
     const batch = pendingRef.current
     pendingRef.current = []
-    setMetadata((prev) => batch.reduce(mergeLandingMetadata, prev))
+    setMetadata((prev) => batch.reduce(mergeLandingMetadata, next ? carryOverMetadata(next, prev) : prev))
   }, [])
+
+  // A new server bundle (e.g. after router.refresh()) is merged OVER what the editor has, so
+  // details fetched for unsaved bindings survive (their keys stay in requestedRef and would
+  // never be fetched again). Deferred like any merge while an AI turn runs.
+  const initialRef = useRef(initial)
+  useEffect(() => {
+    if (initialRef.current === initial) return
+    initialRef.current = initial
+    pendingInitialRef.current = { ...initial }
+    flush()
+  }, [initial, flush])
 
   // Turn ended → apply everything fetched during it in one merge.
   useEffect(() => {

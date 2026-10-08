@@ -38,12 +38,17 @@ export const PROPS_JSON_PROVIDERS: ReadonlySet<ProviderId> = new Set<ProviderId>
 
 /**
  * One tool call at a time (critique B4): parallel adds would race for the shadow's indexes.
- * Keys are provider names, so passing them all is harmless for the others.
+ * Keys are provider names, so passing them all is harmless for the others. Google, DeepSeek
+ * and OpenRouter have no such option; the edit tools stay correct under parallel calls
+ * (approval tallies at approval time, ops apply in execute order).
  */
 export function pageAgentProviderOptions() {
   return {
     openai: { parallelToolCalls: false },
     anthropic: { disableParallelToolUse: true },
+    groq: { parallelToolCalls: false },
+    mistral: { parallelToolCalls: false },
+    xai: { parallelToolCalls: false },
   }
 }
 
@@ -128,6 +133,16 @@ export function createPageAgent(input: CreatePageAgentInput) {
             experimental_telemetry: { functionId: 'page-architect' },
             stopWhen: stepCountIs(PAGE_AGENT_MAX_STEPS),
             abortSignal,
+            // Every execute of a step has run by now: a stream still open is an orphan.
+            onStepEnd: () => {
+              edit.sweepOrphans()
+            },
+            onEnd: () => {
+              edit.sweepOrphans()
+            },
+            onAbort: () => {
+              edit.sweepOrphans()
+            },
             onError: async ({ error }) => {
               // Name/code only; a rejected key flips the school's credential to invalid.
               await reportStreamError(error, {

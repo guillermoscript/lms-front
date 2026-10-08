@@ -60,6 +60,15 @@ describe('url rules', () => {
     }
   })
 
+  it('Video.url takes a video link or an iframe snippet with an https src, on the strict AI path too', () => {
+    for (const ok of ['https://youtu.be/abcdefghijk', '<iframe src="https://player.vimeo.com/video/1" allow="autoplay"></iframe>', '']) {
+      expect(pageCatalog.validateBlock('Video', { url: ok }).errors, ok).toEqual([])
+    }
+    for (const bad of ['<iframe src="javascript:alert(1)"></iframe>', '<iframe src="http://x.example/v"></iframe>', '<script>alert(1)</script>', 'javascript:alert(1)']) {
+      expect(pageCatalog.validateBlock('Video', { url: bad }).ok, bad).toBe(false)
+    }
+  })
+
   it('accepts hex colours or empty', () => {
     expect(isSafeColor('')).toBe(true)
     expect(isSafeColor('#3A50B8')).toBe(true)
@@ -99,11 +108,30 @@ describe('validatePage (lenient, critique C2)', () => {
   it('rejects unsafe URLs anywhere, including nested items and zones', () => {
     const data = page()
     data.content.push({ type: 'Header', props: { id: 'hd', navLinks: [{ label: 'x', href: 'javascript:alert(1)' }] } })
-    data.zones!['c1:column-0'].push({ type: 'Image', props: { id: 'img', src: 'data:image/png;base64,AA' } })
+    data.zones!['c1:column-0'].push({ type: 'Image', props: { id: 'img', src: 'javascript:alert(1)' } })
     const r = pageCatalog.validatePage(data)
     expect(r.errors).toHaveLength(2)
     expect(r.errors.join('\n')).toMatch(/navLinks\[0\]\.href: unsafe link/)
     expect(r.errors.join('\n')).toMatch(/src: unsafe image URL/)
+  })
+
+  it('is lenient on legacy URLs: http and bare-domain links, http/data images, Video embed code', () => {
+    const data = page()
+    data.content.push(
+      { type: 'Video', props: { id: 'v1', url: '<iframe src="https://www.youtube.com/embed/abcdefghijk"></iframe>' } },
+      { type: 'Header', props: { id: 'hd', navLinks: [{ label: 'x', href: 'http://old.example' }, { label: 'y', href: 'www.x.com' }] } },
+      { type: 'Image', props: { id: 'i1', src: 'http://127.0.0.1:54321/a.png' } },
+      { type: 'Image', props: { id: 'i2', src: 'data:image/png;base64,AA' } },
+    )
+    expect(pageCatalog.validatePage(data).errors).toEqual([])
+    for (const bad of ['//evil.example', 'vbscript:x', 'data:text/html,x', ' java\nscript:x']) {
+      const d = page()
+      d.content.push({ type: 'Header', props: { id: 'hd', navLinks: [{ label: 'x', href: bad }] } })
+      expect(pageCatalog.validatePage(d).ok, bad).toBe(false)
+    }
+    const evilVideo = page()
+    evilVideo.content.push({ type: 'Video', props: { id: 'v1', url: '<iframe src="javascript:alert(1)"></iframe>' } })
+    expect(pageCatalog.validatePage(evilVideo).errors.join()).toMatch(/url: unsafe video link or embed code/)
   })
 
   it('checks refs only when the tenant id sets are given', () => {

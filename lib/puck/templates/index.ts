@@ -339,7 +339,7 @@ const courseCatalogTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '350px',
+        minHeight: '400px',
       }),
       c('CatalogBrowser', {
         title: 'All Courses',
@@ -410,7 +410,7 @@ const aboutTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '350px',
+        minHeight: '400px',
       }),
       c('TextBlock', {
         content: 'We started with a simple idea: everyone deserves access to high-quality education. Today, we serve thousands of students across the world with expert-led courses covering programming, design, data science, and more.\n\nOur team of experienced educators and technologists is passionate about building the best learning experience possible.',
@@ -482,7 +482,7 @@ const contactTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '300px',
+        minHeight: '400px',
       }),
       c('ContactForm', {
         title: '',
@@ -543,7 +543,7 @@ const faqTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '300px',
+        minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -630,7 +630,7 @@ const codeSchoolHomeTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 60,
-        minHeight: '520px',
+        minHeight: '500px',
       }),
       c('StatsCounter', {
         useLiveStats: true,
@@ -849,7 +849,7 @@ const codeSchoolFaqTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '300px',
+        minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -953,7 +953,7 @@ const codeSchoolContactTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '300px',
+        minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',
@@ -1026,7 +1026,7 @@ const codeSchoolCatalogTemplate: PuckTemplate = {
         backgroundImage: '',
         alignment: 'center',
         overlayOpacity: 50,
-        minHeight: '350px',
+        minHeight: '400px',
       }),
       c('FeaturesGrid', {
         title: 'Learning Paths',

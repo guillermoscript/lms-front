@@ -133,11 +133,24 @@ describe('validateLandingPuckData (lenient page + ref ownership)', () => {
   it.each([
     ['javascript: link', hero('h1', { primaryCtaHref: 'javascript:alert(1)' })],
     ['protocol-relative link', hero('h1', { secondaryCtaHref: '//evil.example' })],
-    ['data: image', hero('h1', { backgroundImage: 'data:image/png;base64,AAAA' })],
+    ['data: link', hero('h1', { primaryCtaHref: 'data:text/html,<script>alert(1)</script>' })],
+    ['javascript: image', hero('h1', { backgroundImage: 'javascript:alert(1)' })],
+    ['Video embed code with a javascript: src', { type: 'Video', props: { id: 'v', url: '<iframe src="javascript:alert(1)"></iframe>' } }],
     ['unknown block type', { type: 'EvilBlock', props: { id: 'x' } }],
   ])('rejects a %s', async (_label, block) => {
     const result = await validateLandingPuckData(admin, T, pageOf(block))
     expect(result.ok).toBe(false)
+  })
+
+  it('accepts legacy values the editor allows: Video embed code, http: links and images, data: images', async () => {
+    const page = pageOf(
+      { type: 'Video', props: { id: 'v', url: '<iframe width="560" src="https://www.youtube.com/embed/abcdefghijk" frameborder="0"></iframe>' } },
+      { type: 'Video', props: { id: 'v2', url: 'https://youtu.be/abcdefghijk' } },
+      hero('h1', { primaryCtaHref: 'http://instagram.com/school', backgroundImage: 'http://127.0.0.1:54321/storage/v1/object/public/logo.png' }),
+      { type: 'Image', props: { id: 'img', src: 'data:image/png;base64,AAAA' } },
+      { type: 'Footer', props: { id: 'f', socialLinks: [{ platform: 'facebook', url: 'www.facebook.com/school' }] } },
+    )
+    await expect(validateLandingPuckData(admin, T, page)).resolves.toEqual({ ok: true })
   })
 
   it('rejects duplicate ids and a malformed page', async () => {
