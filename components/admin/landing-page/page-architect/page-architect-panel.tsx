@@ -65,6 +65,8 @@ export function inferPageKind(data: { content?: Array<{ type?: string }> } | und
 interface Props {
   pageId: string
   locale: 'en' | 'es'
+  /** The first message of a page started from a description; returns it once, then `null`. */
+  takeInitialPrompt?: () => string | null
   onClose: () => void
   className?: string
 }
@@ -122,7 +124,7 @@ function ApprovalCard({
   )
 }
 
-function Inner({ pageId, locale, onClose, className }: Props) {
+function Inner({ pageId, locale, takeInitialPrompt, onClose, className }: Props) {
   const t = useTranslations('pageArchitect.panel')
   const tLimits = useTranslations('aiChatLimits')
   const { textInput } = usePromptInputController()
@@ -182,6 +184,18 @@ function Inner({ pageId, locale, onClose, className }: Props) {
     },
     [getPuck, typeLabel]
   )
+
+  // A page started from "describe your page" opens with that description already sent. Puck
+  // remounts this tree once while it boots (and StrictMode replays effects), so the send waits
+  // until this instance has stayed mounted for a moment; the editor hands the prompt out once.
+  useEffect(() => {
+    if (!takeInitialPrompt) return
+    const timer = setTimeout(() => {
+      const text = takeInitialPrompt()
+      if (text) void sendMessage({ text })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [takeInitialPrompt, sendMessage])
 
   const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear, disabled: isBusy })
   const suggestions = [t(`suggestions.${pageKind}.one`), t(`suggestions.${pageKind}.two`), t(`suggestions.${pageKind}.three`)]

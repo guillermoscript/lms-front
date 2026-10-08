@@ -16,6 +16,7 @@
  *   `<oldParent>:<zone>` are re-keyed onto the new parent ids (the old clone forgot this).
  */
 import { newBlockId, type IdFactory } from './ids'
+import { localizeTemplateCopy, type TemplateLocale } from './template-i18n'
 import { ROOT_ZONE } from './ops'
 import { parseZone } from './tree'
 import type { PageData, PageItem } from './types'
@@ -25,7 +26,10 @@ export type TemplateBindingKey = (typeof TEMPLATE_BINDING_KEYS)[number]
 export const TEMPLATE_LIST_BINDING_KEYS = ['courseIds'] as const
 export type TemplateListBindingKey = (typeof TEMPLATE_LIST_BINDING_KEYS)[number]
 export type TemplateBindings = Partial<Record<TemplateBindingKey, string | number | null | undefined>> &
-  Partial<Record<TemplateListBindingKey, ReadonlyArray<string | number> | null | undefined>>
+  Partial<Record<TemplateListBindingKey, ReadonlyArray<string | number> | null | undefined>> & {
+    /** The page's language: template copy is translated into it before tokens are substituted. */
+    locale?: TemplateLocale | null
+  }
 
 /** Fallbacks for unbound tokens: ids and the logo resolve empty, the year is the current one. */
 export function defaultBindings(): Record<TemplateBindingKey, string> {
@@ -109,9 +113,12 @@ function substitute(value: unknown, b: ResolvedBindings): unknown {
   return value
 }
 
-/** Replace binding tokens anywhere in `value` (returns a copy). Unbound tokens use `defaultBindings()`. */
+/**
+ * Replace binding tokens anywhere in `value` (returns a copy). Unbound tokens use
+ * `defaultBindings()`. With `bindings.locale`, template copy is translated first.
+ */
 export function substituteBindings<T>(value: T, bindings?: TemplateBindings): T {
-  return substitute(value, resolveBindings(bindings)) as T
+  return substitute(localizeTemplateCopy(value, bindings?.locale), resolveBindings(bindings)) as T
 }
 
 /** Does `value` still contain any binding token? */

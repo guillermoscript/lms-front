@@ -51,10 +51,10 @@ function addBlockChunks(n: number, index: number): Chunk[] {
 }
 
 /** A whole turn: three blocks after the seeded hero, then a short reply. */
-function turnChunks(): Chunk[] {
+function turnChunks(offset = 1): Chunk[] {
   return [
     { type: 'start', messageId: `msg-e2e-${RUN}` },
-    ...ADDS.flatMap((_, n) => addBlockChunks(n, n + 1)),
+    ...ADDS.flatMap((_, n) => addBlockChunks(n, n + offset)),
     { type: 'start-step' },
     { type: 'text-start', id: 'txt-1' },
     { type: 'text-delta', id: 'txt-1', delta: 'Añadí un hero, las preguntas frecuentes y una llamada a la acción.' },
@@ -286,4 +286,42 @@ test.describe('Page Architect (mocked /api/landing/chat)', () => {
       expect(panel!.height).toBeGreaterThan(600)
     })
   }
+
+  test('"describe your page" creates an empty page and sends the description as the first message', async ({ page }) => {
+    const slug = `e2e-describe-${RUN}`
+    const prompt = `A landing page for Python for Beginners (${RUN})`
+    let requestBody: { messages?: Array<{ parts?: Array<{ text?: string }> }>; pageData?: { content?: unknown[] } } | null = null
+    await page.route(CHAT, async (route) => {
+      requestBody = route.request().postDataJSON()
+      await route.fulfill({ status: 200, headers: SSE_HEADERS, body: sse(turnChunks(0)) })
+    })
+    try {
+      await loginAsAdmin(page)
+      await page.goto(`${TENANT_BASE}/${LOCALE}/dashboard/admin/landing-page`, { waitUntil: 'domcontentloaded' })
+      const newPage = page.getByRole('button', { name: /new page/i }).first()
+      const dialog = page.getByRole('dialog')
+      await newPage.waitFor({ timeout: 60_000 })
+      for (let attempt = 0; attempt < 6 && !(await dialog.isVisible()); attempt++) {
+        await newPage.evaluate((el) => (el as HTMLElement).click())
+        await dialog.waitFor({ timeout: 5_000 }).catch(() => undefined)
+      }
+      await dialog.getByRole('radio', { name: /custom/i }).evaluate((el) => (el as HTMLElement).click())
+      await dialog.getByPlaceholder('my-page').fill(slug)
+      await dialog.getByRole('button', { name: /^next/i }).evaluate((el) => (el as HTMLElement).click())
+      const describe = page.getByTestId('template-picker-describe')
+      await describe.getByRole('textbox').fill(prompt)
+      await describe.getByRole('button', { name: /create with ai/i }).evaluate((el) => (el as HTMLElement).click())
+
+      // The editor opens on an empty page with the chat docked, and the AI builds it.
+      await expect(page.getByTestId('page-architect-panel')).toBeVisible({ timeout: 60_000 })
+      await expect.poll(() => outline(page), { timeout: 30_000 }).toEqual(ADDS.map((a) => a.id))
+      await expect(page.getByTestId('page-architect-panel')).toContainText(prompt)
+      expect(requestBody!.pageData?.content).toEqual([])
+      expect(requestBody!.messages?.at(-1)?.parts?.[0]?.text).toBe(prompt)
+      // An empty page asks nothing before building.
+      await expect(page.getByTestId('page-architect-approval')).toHaveCount(0)
+    } finally {
+      await getServiceRoleClient().from('landing_pages').delete().eq('tenant_id', CODE_ACADEMY_TENANT).eq('slug', slug)
+    }
+  })
 })

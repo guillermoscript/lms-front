@@ -6013,7 +6013,15 @@
       "choosePageTypeDescription": "Elige un tipo de página o ingresa una URL personalizada. Esto determina dónde será accesible la página.",
       "customSlug": "Personalizado",
       "customSlugDescription": "Ingresa tu propia URL",
-      "next": "Siguiente"
+      "next": "Siguiente",
+      "pageName": "Página {name}",
+      "describe": {
+        "title": "Describe tu página",
+        "body": "Cuéntale a la IA para qué es la página. La arma en vivo con tus cursos, productos y marca, y sigues editándola en el chat.",
+        "placeholder": "Ej.: Una landing para mi curso de Python para principiantes, con el temario, el precio y preguntas frecuentes",
+        "submit": "Crear con IA",
+        "orTemplate": "O empieza desde una plantilla"
+      }
     },
     "sectionPicker": {
       "title": "Agregar una Sección",

@@ -21,6 +21,7 @@ import type { LandingPage } from '@/app/actions/admin/landing-pages'
 import type { Data } from '@measured/puck'
 import type { LandingData } from '@/lib/puck/types'
 import { deepCloneWithFreshIds, type PuckTemplate, type TemplateBindings } from '@/lib/puck/templates'
+import { translateTemplateString } from '@lms/core/src/page-builder/template-i18n'
 import { schoolBindingsFromSettings } from '@/lib/puck/templates/school-bindings'
 import { LandingPickerProviders } from '@/lib/puck/utils/landing-pickers-context'
 import dynamic from 'next/dynamic'
@@ -62,7 +63,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 
 interface Props {
@@ -97,6 +98,7 @@ function pageUrl(slug: string): string {
 export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates, brandingSettings, landingData }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
+  const locale = useLocale() === 'es' ? 'es' : 'en'
   const [pages, setPages] = useState<LandingPage[]>(initialPages)
 
   // Sync server-provided pages after router.refresh() — render-time adjustment
@@ -108,6 +110,8 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
   }
 
   const [editingPage, setEditingPage] = useState<LandingPage | null>(null)
+  // The description a page was started from ("describe your page"): the editor's chat sends it.
+  const [initialPrompt, setInitialPrompt] = useState<string | undefined>(undefined)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
@@ -131,9 +135,11 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
   async function handleCreateFromTemplate(puckData: Data, templateName: string, slug: string, bindings: TemplateBindings) {
     // The picked course/product (from the picker) over the school's own name and logo, so a
     // template never ships `{{schoolName}}` tokens or the "Academy" fallback (critique D4).
-    const allBindings: TemplateBindings = { ...schoolBindingsFromSettings(brandingSettings), ...bindings }
+    // The template's copy is written in the admin's language (`locale` binding).
+    const allBindings: TemplateBindings = { ...schoolBindingsFromSettings(brandingSettings), ...bindings, locale }
+    const name = t('templatePicker.pageName', { name: translateTemplateString(templateName, locale) })
     const result = await withGuard('create', async () => {
-      return createLandingPage(`${templateName} Page`, deepCloneWithFreshIds(puckData, allBindings), slug)
+      return createLandingPage(name, deepCloneWithFreshIds(puckData, allBindings), slug)
     })
     if (!result) return
     setShowTemplatePicker(false)
@@ -145,6 +151,24 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
       setPages(prev => [result.data!, ...prev])
       setEditingPage(result.data!)
       toast.success(t('errors.createSuccess'))
+    }
+  }
+
+  /** An empty page whose first chat message is the admin's description: the AI builds it live. */
+  async function handleCreateFromPrompt(prompt: string, slug: string) {
+    const empty = { root: { props: {} }, content: [], zones: {} } as Data
+    // A short name from the description (the admin renames it later): first words, ≤ 40 chars.
+    const words = prompt.replace(/\s+/g, ' ').trim()
+    const name = words.length <= 40 ? words : `${words.slice(0, 40).replace(/\s+\S*$/, '')}…`
+    const result = await withGuard('create', () => createLandingPage(name, empty, slug))
+    if (!result) return
+    setShowTemplatePicker(false)
+    if (!result.success) {
+      toast.error(typeof result.error === 'string' ? result.error : t('errors.createFailed'))
+    } else if (result.data) {
+      setPages(prev => [result.data!, ...prev])
+      setInitialPrompt(prompt)
+      setEditingPage(result.data!)
     }
   }
 
@@ -218,11 +242,13 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         brandingSettings={brandingSettings}
         landingData={landingData}
         aiEnabled={plan !== 'free'}
+        initialPrompt={initialPrompt}
         // The editor guards unsaved work itself; it hands back the row it last saved so
         // reopening the page before the refresh lands never starts from stale data.
         onBack={(latest) => {
           if (latest) setPages(prev => prev.map(p => (p.id === latest.id ? latest : p)))
           router.refresh()
+          setInitialPrompt(undefined)
           setEditingPage(null)
         }}
       />
@@ -434,6 +460,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
           onClose={() => setShowTemplatePicker(false)}
           templates={templates}
           onSelect={handleCreateFromTemplate}
+          onDescribe={plan !== 'free' ? handleCreateFromPrompt : undefined}
           loading={isLoading}
         />
       </LandingPickerProviders>

@@ -209,7 +209,7 @@ export interface EditToolsDeps {
   /** This school's ids (ref validation). */
   refs: RefIdSets
   /** Template binding values from the business context. */
-  bindings?: Pick<TemplateBindings, 'schoolName' | 'logoUrl'>
+  bindings?: Pick<TemplateBindings, 'schoolName' | 'logoUrl' | 'locale'>
   /** A product's linked course ids (binds a product template's course list). */
   productCourseIds?: (productId: string) => string[] | undefined
   /** The block the admin has selected (marked in get_page). */

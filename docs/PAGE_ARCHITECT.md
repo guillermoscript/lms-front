@@ -142,6 +142,18 @@ tokens are filled. Course-focused templates: `course-landing`, `course-launch-sh
 `free-course-lead`, `product-bundle`, `pricing-page`. Presets (groups of sections) are
 `PRESETS` in `packages/core/src/page-builder/templates.ts`.
 
+**Language.** Templates are written in English; `bindings.locale` (`'en' | 'es'`) translates
+their copy before tokens are filled, from the exact-match dictionary
+`packages/core/src/page-builder/template-copy-es.ts`. The picker passes the admin's locale, the
+AI its page locale, MCP `bindings.locale`. Only copy keys are translated (`isCopyKey`: never
+hrefs, images, ids or select/radio values). `page-builder-template-i18n.test.ts` fails when a
+template string has no Spanish entry: add it to the dictionary when you change template copy.
+
+**Start from a description.** On paid plans the picker's template step offers "Describe your
+page": it creates an EMPTY page (so `apply_template` needs no approval) and the editor's chat
+sends the description as its first message. The editor hands the prompt out once
+(`takeInitialPrompt`), because Puck remounts the override tree while it boots.
+
 Data blocks (`CourseHero`, `CourseCurriculum`, `CourseOutcomes`, `CoursePricingCard`,
 `ProductGrid`, `InstructorCard`, plus bound `PricingTable`/`EnrollCta`/`TestimonialGrid`)
 render the school's real data from the ids they hold. Templates never contain invented prices,

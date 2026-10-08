@@ -227,6 +227,10 @@ export const BindingsSchema = z
     productId: bindingId.optional().describe("Product id for product templates (from lms_get_landing_context)"),
     schoolName: z.string().trim().min(1).max(120).optional().describe("Defaults to the school's name"),
     logoUrl: z.string().trim().max(500).optional().describe("https logo URL. Defaults to the school's logo"),
+    locale: z
+      .enum(["en", "es"])
+      .optional()
+      .describe("The page's language: the template's copy is written in it. Use 'es' for a Spanish-speaking school. Defaults to 'en'"),
   })
   .optional();
 
@@ -291,6 +295,7 @@ async function resolveBindings(session: LmsSession, input: BindingsInput): Promi
     courseIds: productId ? await productCourseIds(session, productId) : undefined,
     schoolName: input?.schoolName ?? profile?.name ?? undefined,
     logoUrl: input?.logoUrl ?? profile?.logo_url ?? undefined,
+    locale: input?.locale ?? "en",
   };
 }
 
@@ -334,7 +339,7 @@ export function landingBlocksDoc(): string {
     "Rules (the school's site is public; the page-building skill has the full list):",
     "- Never invent people, reviews, prices, student counts or stats. Facts come from bound blocks (CourseHero, CoursePricingCard, ProductGrid, PricingTable, InstructorCard, TestimonialGrid source live, stats with useLiveStats).",
     "- Ids (courseId, productIds, planIds…) only from lms_get_landing_context. Ids of other schools are refused.",
-    "- New page: lms_list_landing_templates → lms_create_landing_page({template_id, bindings}), then rewrite every visible text block into the school's language with update ops.",
+    "- New page: lms_list_landing_templates → lms_create_landing_page({template_id, bindings: {locale: 'es' | 'en', ...}}). The template copy arrives in that language; then tailor it to the school with update ops.",
     "- Existing page: lms_get_landing_page (outline + ids + updated_at) → lms_patch_landing_page with granular ops and expected_updated_at. Never rebuild a page the admin edited by hand.",
     "- Leave *Color props empty (the school theme applies) unless the admin asks.",
     "",
@@ -753,7 +758,7 @@ export function registerLandingPageTools(server: LmsServer, options: LandingTool
           props: await previewFor(session, row, warnings, lookup),
           metadata: LANDING_PREVIEW_RESULT_META,
           output: text(
-            `Created draft "${row.title}" (${publicPath(row.slug)}, page_id ${row.page_id})${template ? ` from template ${template.id}` : ""}.\nupdated_at: ${row.updated_at}\n\nOutline:\n${formatOutline(built.data)}\n\nNext: rewrite the template copy into the school's language and voice with lms_patch_landing_page (update ops), check the preview at ${previewPath(row.page_id)}, then publish with lms_publish_landing_page.${warningText}`
+            `Created draft "${row.title}" (${publicPath(row.slug)}, page_id ${row.page_id})${template ? ` from template ${template.id}` : ""}.\nupdated_at: ${row.updated_at}\n\nOutline:\n${formatOutline(built.data)}\n\nNext: tailor the template copy to the school's voice and facts with lms_patch_landing_page (update ops), check the preview at ${previewPath(row.page_id)}, then publish with lms_publish_landing_page.${warningText}`
           ),
         });
       } catch (err) {

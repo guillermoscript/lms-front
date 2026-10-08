@@ -89,7 +89,12 @@ export function createPageAgent(input: CreatePageAgentInput) {
     shadow,
     sink,
     refs: input.context.refs,
-    bindings: { schoolName: input.context.school.name, logoUrl: input.context.school.logoUrl ?? undefined },
+    bindings: {
+      schoolName: input.context.school.name,
+      logoUrl: input.context.school.logoUrl ?? undefined,
+      // Templates and presets land in the page's language.
+      locale: input.context.locale,
+    },
     productCourseIds: (id) => productCourses.get(id),
     selectedId: input.selectedId,
     emitThemePreview: (preview) => writer?.write({ type: 'data-theme-preview', data: preview, transient: true }),

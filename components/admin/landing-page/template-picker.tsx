@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   IconLoader2,
   IconArrowRight,
@@ -19,11 +20,13 @@ import {
   IconPackage,
   IconTags,
   IconSearch,
+  IconSparkles,
 } from '@tabler/icons-react'
 import type { Data } from '@measured/puck'
 import { useLocale, useTranslations } from 'next-intl'
 import { TEMPLATE_ITEM_KEYS, templateMessageKey } from '@/lib/puck/template-labels'
 import { templateBindingNeeds, type PuckTemplate, type TemplateBindings } from '@/lib/puck/templates'
+import { translateTemplateString } from '@lms/core/src/page-builder/template-i18n'
 import { productBindings, slugFromTitle } from '@/lib/puck/templates/school-bindings'
 import { useLandingCourses } from '@/lib/puck/utils/courses-context'
 import { useLandingProducts } from '@/lib/puck/utils/landing-pickers-context'
@@ -39,6 +42,11 @@ interface Props {
    * product's `courseIds`); the caller adds the school's own (`schoolName`, `logoUrl`).
    */
   onSelect: (puckData: Data, templateName: string, slug: string, bindings: TemplateBindings) => void
+  /**
+   * Start an empty page and hand `prompt` to the AI chat instead of picking a template.
+   * Omitted when the plan has no AI, which hides the option.
+   */
+  onDescribe?: (prompt: string, slug: string) => void
   loading?: boolean
 }
 
@@ -65,11 +73,13 @@ const TITLE_SLUG_TYPES = new Set<string>(['course', 'product'])
 
 type Step = 'slug' | 'template' | 'binding'
 
-export function TemplatePicker({ open, onClose, templates, onSelect, loading }: Props) {
+export function TemplatePicker({ open, onClose, templates, onSelect, onDescribe, loading }: Props) {
   const [step, setStep] = useState<Step>('slug')
   const [selectedSlug, setSelectedSlug] = useState<PresetSlug | 'custom'>('home')
   const [customSlug, setCustomSlug] = useState('')
   const [pending, setPending] = useState<PuckTemplate | null>(null)
+  const [prompt, setPrompt] = useState('')
+  const locale = useLocale() === 'es' ? 'es' : 'en'
   const t = useTranslations('landingPageBuilder.templatePicker')
   const tPageTypes = useTranslations('landingPageBuilder.pageTypes')
   const tT = useTranslations('puck.templates')
@@ -81,13 +91,15 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
     const item = TEMPLATE_ITEM_KEYS[tpl.id]
     if (item) return tT(`items.${item}.name` as Parameters<typeof tT>[0])
     const key = templateMessageKey(tpl.name)
-    return key ? tTemplates(`${key}.name` as Parameters<typeof tTemplates>[0]) : tpl.name
+    return key ? tTemplates(`${key}.name` as Parameters<typeof tTemplates>[0]) : translateTemplateString(tpl.name, locale)
   }
   const templateDescription = (tpl: PuckTemplate) => {
     const item = TEMPLATE_ITEM_KEYS[tpl.id]
     if (item) return tT(`items.${item}.description` as Parameters<typeof tT>[0])
     const key = templateMessageKey(tpl.name)
-    return key ? tTemplates(`${key}.description` as Parameters<typeof tTemplates>[0]) : tpl.description
+    return key
+      ? tTemplates(`${key}.description` as Parameters<typeof tTemplates>[0])
+      : translateTemplateString(tpl.description, locale)
   }
   const pageTypeLabel = (slug: PresetSlug) =>
     WP5_PAGE_TYPES.has(slug)
@@ -113,6 +125,7 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
     setSelectedSlug('home')
     setCustomSlug('')
     setPending(null)
+    setPrompt('')
   }
 
   function handleClose() {
@@ -129,6 +142,13 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
 
   function finish(tpl: PuckTemplate, bindings: TemplateBindings, boundTitle?: string) {
     onSelect(tpl.puck_data, tpl.name, resolveSlug(boundTitle), bindings)
+    reset()
+  }
+
+  function describe() {
+    const text = prompt.trim()
+    if (!text || !onDescribe) return
+    onDescribe(text, resolveSlug())
     reset()
   }
 
@@ -287,6 +307,44 @@ export function TemplatePicker({ open, onClose, templates, onSelect, loading }: 
 
           {step === 'template' && (
             <div className="flex-1 overflow-y-auto p-6 w-full min-h-0">
+              {onDescribe && (
+                <form
+                  className="mb-5 grid gap-2 rounded-lg border border-border bg-card p-4"
+                  data-testid="template-picker-describe"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    describe()
+                  }}
+                >
+                  <label htmlFor="template-picker-describe" className="flex items-center gap-2 text-sm font-medium">
+                    <IconSparkles className="size-4 text-muted-foreground" aria-hidden />
+                    {t('describe.title')}
+                  </label>
+                  <p className="text-xs text-muted-foreground">{t('describe.body')}</p>
+                  <Textarea
+                    id="template-picker-describe"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault()
+                        describe()
+                      }
+                    }}
+                    placeholder={t('describe.placeholder')}
+                    rows={3}
+                    maxLength={2000}
+                    className="resize-none text-sm"
+                  />
+                  <div className="flex justify-end">
+                    <Button type="submit" size="sm" className="gap-2" disabled={!prompt.trim() || !!loading}>
+                      {loading ? <IconLoader2 className="size-4 animate-spin" aria-hidden /> : <IconSparkles className="size-4" aria-hidden />}
+                      {t('describe.submit')}
+                    </Button>
+                  </div>
+                </form>
+              )}
+              {onDescribe && <p className="mb-3 text-xs font-medium text-muted-foreground">{t('describe.orTemplate')}</p>}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="list" aria-label={t('title')}>
                 {sorted.map((template) => {
                   const count = getComponentCount(template.puck_data)

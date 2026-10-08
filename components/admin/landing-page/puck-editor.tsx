@@ -65,6 +65,8 @@ interface Props {
   landingData: LandingData
   /** The AI assistant follows the existing plan gate (paid plans). */
   aiEnabled?: boolean
+  /** A first message for the AI chat ("describe your page"): the panel opens and sends it once. */
+  initialPrompt?: string
   /** Leave the editor; `latest` is the row after the last successful save/publish. */
   onBack: (latest: LandingPage | null) => void
 }
@@ -86,6 +88,8 @@ type ConflictChoice = 'reload' | 'overwrite' | 'cancel'
 interface EditorChrome {
   pageId: string
   locale: 'en' | 'es'
+  /** The "describe your page" message, handed out once (`null` after that). */
+  takeInitialPrompt: () => string | null
   status: 'draft' | 'published'
   saving: boolean
   dirty: boolean
@@ -253,6 +257,7 @@ function EditorShell({ children }: { children?: ReactNode }) {
         <PageArchitectPanel
           pageId={chrome.pageId}
           locale={chrome.locale}
+          takeInitialPrompt={chrome.takeInitialPrompt}
           onClose={() => chrome.setAiOpen(false)}
           className={cn(
             'relative z-10 w-full shrink-0 sm:w-[22rem]',
@@ -283,6 +288,7 @@ export function PuckEditor({
   brandingSettings,
   landingData,
   aiEnabled = true,
+  initialPrompt,
   onBack,
 }: Props) {
   const t = useTranslations('puck')
@@ -294,8 +300,18 @@ export function PuckEditor({
   const [status, setStatus] = useState(pageStatus)
   const [brandingOpen, setBrandingOpen] = useState(false)
   // Docked open where the canvas keeps room beside both Puck sidebars; one click away otherwise.
-  const [aiOpen, setAiOpen] = useState(() => aiEnabled && typeof window !== 'undefined' && window.innerWidth >= 1280)
+  const [aiOpen, setAiOpen] = useState(
+    () => aiEnabled && (!!initialPrompt || (typeof window !== 'undefined' && window.innerWidth >= 1280))
+  )
   const [dirty, setDirty] = useState(false)
+  // Lives here, above Puck's override tree (which remounts once while the editor boots), so
+  // the description is sent by exactly one panel instance.
+  const initialPromptRef = useRef(aiEnabled ? initialPrompt?.trim() || null : null)
+  const takeInitialPrompt = useCallback(() => {
+    const prompt = initialPromptRef.current
+    initialPromptRef.current = null
+    return prompt
+  }, [])
   const [conflict, setConflict] = useState<{ data: Data; publish: boolean } | null>(null)
   const [leaveOpen, setLeaveOpen] = useState(false)
 
@@ -448,6 +464,7 @@ export function PuckEditor({
     () => ({
       pageId,
       locale,
+      takeInitialPrompt,
       status,
       saving,
       dirty,
@@ -463,7 +480,7 @@ export function PuckEditor({
       setLeaveOpen,
       leave,
     }),
-    [pageId, locale, status, saving, dirty, aiEnabled, aiOpen, requestBack, save, conflict, resolveConflict, leaveOpen, leave]
+    [pageId, locale, takeInitialPrompt, status, saving, dirty, aiEnabled, aiOpen, requestBack, save, conflict, resolveConflict, leaveOpen, leave]
   )
 
   return (

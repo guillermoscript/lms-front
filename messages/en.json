@@ -6013,7 +6013,15 @@
       "choosePageTypeDescription": "Choose a page type or enter a custom URL slug. This determines where the page will be accessible.",
       "customSlug": "Custom",
       "customSlugDescription": "Enter your own slug",
-      "next": "Next"
+      "next": "Next",
+      "pageName": "{name} Page",
+      "describe": {
+        "title": "Describe your page",
+        "body": "Tell the AI what the page is for. It builds it live with your courses, products and branding, and you keep editing in the chat.",
+        "placeholder": "E.g. A landing page for my Python course for beginners, with the curriculum, pricing and FAQ",
+        "submit": "Create with AI",
+        "orTemplate": "Or start from a template"
+      }
     },
     "sectionPicker": {
       "title": "Add a Section",
