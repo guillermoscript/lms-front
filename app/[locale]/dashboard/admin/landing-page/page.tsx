@@ -25,7 +25,12 @@ export default async function LandingPageAdminPage() {
 
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []
-  const landingData = await getLandingData(tenantId)
+  // Resolve the ids every page binds (any of them may be opened in the editor); drafts are
+  // included, flagged, so the editor can say "publish this course" instead of going blank.
+  const landingData = await getLandingData(tenantId, {
+    puckData: pages.map((p) => p.puck_data),
+    includeDrafts: true,
+  })
 
   // Branding settings so the builder can edit logo/colors inline without leaving
   const settingsResult = await getAllSettingsByCategory()

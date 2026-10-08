@@ -14,6 +14,7 @@ export type { PuckTemplate }
 // ─── Blank Template ──────────────────────────────────────────────────────────
 
 const blankTemplate: PuckTemplate = {
+  id: 'blank',
   name: 'Blank',
   description: 'Start from scratch with an empty canvas.',
   category: 'general',
@@ -23,8 +24,8 @@ const blankTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [{ label: 'Courses', href: '/courses' }],
         ctaLabel: 'Enroll Now',
         ctaHref: '/courses',
@@ -48,7 +49,7 @@ const blankTemplate: PuckTemplate = {
         description: 'Welcome to our learning platform.',
         columns: [],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -58,6 +59,7 @@ const blankTemplate: PuckTemplate = {
 // ─── Modern Academy ──────────────────────────────────────────────────────────
 
 const modernAcademyTemplate: PuckTemplate = {
+  id: 'school-home',
   name: 'Modern Academy',
   description: 'A polished landing page with features, courses, testimonials, and CTA.',
   category: 'education',
@@ -67,8 +69,8 @@ const modernAcademyTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Courses', href: '/courses' },
           { label: 'About', href: '#about' },
@@ -140,7 +142,7 @@ const modernAcademyTemplate: PuckTemplate = {
           { title: 'Legal', links: [{ label: 'Terms', href: '/terms' }, { label: 'Privacy', href: '/privacy' }] },
         ],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -150,6 +152,7 @@ const modernAcademyTemplate: PuckTemplate = {
 // ─── Minimal ─────────────────────────────────────────────────────────────────
 
 const minimalTemplate: PuckTemplate = {
+  id: 'minimal',
   name: 'Minimal',
   description: 'A clean, simple landing page focused on courses.',
   category: 'general',
@@ -159,8 +162,8 @@ const minimalTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [{ label: 'Courses', href: '/courses' }],
         ctaLabel: 'Start Learning',
         ctaHref: '/courses',
@@ -213,7 +216,7 @@ const minimalTemplate: PuckTemplate = {
           { title: 'Links', links: [{ label: 'Courses', href: '/courses' }, { label: 'About', href: '#about' }] },
         ],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -223,6 +226,7 @@ const minimalTemplate: PuckTemplate = {
 // ─── Bold Creator ────────────────────────────────────────────────────────────
 
 const boldCreatorTemplate: PuckTemplate = {
+  id: 'bold-creator',
   name: 'Bold Creator',
   description: 'A high-energy page for solo creators and small teams.',
   category: 'creative',
@@ -232,8 +236,8 @@ const boldCreatorTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Creator Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Courses', href: '/courses' },
           { label: 'About', href: '#about' },
@@ -295,7 +299,7 @@ const boldCreatorTemplate: PuckTemplate = {
           { title: 'Company', links: [{ label: 'About', href: '#about' }, { label: 'Contact', href: '#contact' }] },
         ],
         socialLinks: [],
-        copyright: '© 2026 Creator Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -305,6 +309,7 @@ const boldCreatorTemplate: PuckTemplate = {
 // ─── Course Catalog ──────────────────────────────────────────────────────────
 
 const courseCatalogTemplate: PuckTemplate = {
+  id: 'course-catalog',
   name: 'Course Catalog',
   description: 'Showcase your full course catalog with pricing.',
   category: 'education',
@@ -314,8 +319,8 @@ const courseCatalogTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [{ label: 'Courses', href: '/courses' }, { label: 'Pricing', href: '#pricing' }],
         ctaLabel: 'Enroll',
         ctaHref: '/courses',
@@ -365,7 +370,7 @@ const courseCatalogTemplate: PuckTemplate = {
         description: 'Explore courses and start learning today.',
         columns: [],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -375,6 +380,7 @@ const courseCatalogTemplate: PuckTemplate = {
 // ─── About ───────────────────────────────────────────────────────────────────
 
 const aboutTemplate: PuckTemplate = {
+  id: 'about',
   name: 'About Us',
   description: 'Tell your story with team profiles and stats.',
   category: 'general',
@@ -384,8 +390,8 @@ const aboutTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [{ label: 'Home', href: '/' }, { label: 'Courses', href: '/courses' }],
         ctaLabel: 'Enroll',
         ctaHref: '/courses',
@@ -440,7 +446,7 @@ const aboutTemplate: PuckTemplate = {
         description: 'Quality education, accessible to everyone.',
         columns: [],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -450,6 +456,7 @@ const aboutTemplate: PuckTemplate = {
 // ─── Contact ─────────────────────────────────────────────────────────────────
 
 const contactTemplate: PuckTemplate = {
+  id: 'contact',
   name: 'Contact',
   description: 'Contact form with FAQ section.',
   category: 'general',
@@ -459,8 +466,8 @@ const contactTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [{ label: 'Home', href: '/' }, { label: 'Courses', href: '/courses' }],
         ctaLabel: '',
         ctaHref: '',
@@ -500,7 +507,7 @@ const contactTemplate: PuckTemplate = {
         description: 'We are here to help. Reach out anytime.',
         columns: [],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -510,6 +517,7 @@ const contactTemplate: PuckTemplate = {
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
 
 const faqTemplate: PuckTemplate = {
+  id: 'faq',
   name: 'FAQ',
   description: 'Comprehensive FAQ page with multiple categories.',
   category: 'general',
@@ -519,8 +527,8 @@ const faqTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [{ label: 'Home', href: '/' }, { label: 'Courses', href: '/courses' }],
         ctaLabel: '',
         ctaHref: '',
@@ -580,7 +588,7 @@ const faqTemplate: PuckTemplate = {
         description: 'Answers to your questions, all in one place.',
         columns: [],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -590,6 +598,7 @@ const faqTemplate: PuckTemplate = {
 // ─── Code School — Landing Page ──────────────────────────────────────────────
 
 const codeSchoolHomeTemplate: PuckTemplate = {
+  id: 'code-school-home',
   name: 'Code School — Home',
   description: 'Full landing page for coding bootcamps and programming schools.',
   category: 'code-school',
@@ -599,8 +608,8 @@ const codeSchoolHomeTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: '</> CodeSchool',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Courses', href: '/courses' },
           { label: 'Pricing', href: '#pricing' },
@@ -703,7 +712,7 @@ const codeSchoolHomeTemplate: PuckTemplate = {
           { platform: 'Twitter', url: '#' },
           { platform: 'Discord', url: '#' },
         ],
-        copyright: '© 2026 CodeSchool. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -713,6 +722,7 @@ const codeSchoolHomeTemplate: PuckTemplate = {
 // ─── Code School — About Us ─────────────────────────────────────────────────
 
 const codeSchoolAboutTemplate: PuckTemplate = {
+  id: 'code-school-about',
   name: 'Code School — About',
   description: 'About page for a coding school with team, mission, and stats.',
   category: 'code-school',
@@ -722,8 +732,8 @@ const codeSchoolAboutTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: '</> CodeSchool',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Home', href: '/' },
           { label: 'Courses', href: '/courses' },
@@ -802,7 +812,7 @@ const codeSchoolAboutTemplate: PuckTemplate = {
           { platform: 'Twitter', url: '#' },
           { platform: 'Discord', url: '#' },
         ],
-        copyright: '© 2026 CodeSchool. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -812,6 +822,7 @@ const codeSchoolAboutTemplate: PuckTemplate = {
 // ─── Code School — FAQ ──────────────────────────────────────────────────────
 
 const codeSchoolFaqTemplate: PuckTemplate = {
+  id: 'code-school-faq',
   name: 'Code School — FAQ',
   description: 'FAQ page for a coding school covering courses, pricing, and career support.',
   category: 'code-school',
@@ -821,8 +832,8 @@ const codeSchoolFaqTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: '</> CodeSchool',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Home', href: '/' },
           { label: 'Courses', href: '/courses' },
@@ -906,7 +917,7 @@ const codeSchoolFaqTemplate: PuckTemplate = {
           { platform: 'GitHub', url: '#' },
           { platform: 'Discord', url: '#' },
         ],
-        copyright: '© 2026 CodeSchool. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -916,6 +927,7 @@ const codeSchoolFaqTemplate: PuckTemplate = {
 // ─── Code School — Contact ──────────────────────────────────────────────────
 
 const codeSchoolContactTemplate: PuckTemplate = {
+  id: 'code-school-contact',
   name: 'Code School — Contact',
   description: 'Contact page for a coding school with form and common questions.',
   category: 'code-school',
@@ -925,8 +937,8 @@ const codeSchoolContactTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: '</> CodeSchool',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Home', href: '/' },
           { label: 'Courses', href: '/courses' },
@@ -977,7 +989,7 @@ const codeSchoolContactTemplate: PuckTemplate = {
           { platform: 'GitHub', url: '#' },
           { platform: 'Discord', url: '#' },
         ],
-        copyright: '© 2026 CodeSchool. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},
@@ -987,6 +999,7 @@ const codeSchoolContactTemplate: PuckTemplate = {
 // ─── Code School — Course Catalog ───────────────────────────────────────────
 
 const codeSchoolCatalogTemplate: PuckTemplate = {
+  id: 'code-school-courses',
   name: 'Code School — Courses',
   description: 'Course catalog page for a coding school with learning paths and pricing.',
   category: 'code-school',
@@ -996,8 +1009,8 @@ const codeSchoolCatalogTemplate: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logo: '',
-        logoText: '</> CodeSchool',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Home', href: '/' },
           { label: 'Pricing', href: '#pricing' },
@@ -1069,7 +1082,7 @@ const codeSchoolCatalogTemplate: PuckTemplate = {
           { platform: 'GitHub', url: '#' },
           { platform: 'Discord', url: '#' },
         ],
-        copyright: '© 2026 CodeSchool. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},

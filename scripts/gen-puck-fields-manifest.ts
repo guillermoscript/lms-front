@@ -8,14 +8,23 @@
  * and fail. This manifest is plain JSON with no React imports, so the catalog can import it
  * anywhere safely — while `lib/puck/config.ts` stays the single source of truth.
  *
- * Run: npx tsx scripts/gen-puck-fields-manifest.ts
- * Re-run whenever a component's fields change (add to a precommit/CI step).
+ * It ALSO emits, for the shared Page Architect core (`@lms/core` page-builder):
+ *   - packages/core/src/page-builder/generated/manifest.generated.ts — fields, defaultProps,
+ *     category and the folded `lib/puck/ai-annotations/` entries;
+ *   - packages/core/src/page-builder/generated/templates.generated.ts — every PUCK_TEMPLATE
+ *     with its id, pageType, block sequence and puck_data.
+ * Generated files are never hand-merged: after any merge, re-run this script.
+ *
+ * Run: npm run gen:puck-fields  (= npx tsx scripts/gen-puck-fields-manifest.ts)
+ * Re-run whenever a component's fields, an ai-annotation or a template changes.
  */
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { puckConfig } from '../lib/puck/config'
 import { COMPONENT_DESCRIPTIONS, EXCLUDED_COMPONENTS } from '../lib/json-render/catalog-meta'
 import { LANDING_PAGE_CRAFT_GUIDE } from '../lib/json-render/authoring-guide'
+import { AI_ANNOTATIONS, SHARED_FIELDS_KEY, type AiComponentAnnotation } from '../lib/puck/ai-annotations'
+import { PUCK_TEMPLATES } from '../lib/puck/templates'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFields = Record<string, any>
@@ -68,6 +77,9 @@ function pruneFields(fields: AnyFields): AnyFields {
     if (f.arrayFields && typeof f.arrayFields === 'object') {
       entry.arrayFields = pruneFields(f.arrayFields)
     }
+    if (f.defaultItemProps && typeof f.defaultItemProps === 'object') {
+      entry.defaultItemProps = JSON.parse(JSON.stringify(f.defaultItemProps))
+    }
     out[k] = entry
   }
   return out
@@ -108,3 +120,77 @@ writeFileSync(
     `export const LANDING_PAGE_CRAFT_GUIDE = ${JSON.stringify(LANDING_PAGE_CRAFT_GUIDE)}\n`
 )
 console.log(`Wrote MCP catalog meta → ${mcpMetaTarget}`)
+
+// ── Page Architect core (packages/core/src/page-builder/generated) ───────────────────
+// The shared page-builder core (web route, editor applier, MCP) reads the block vocabulary
+// and the templates from these two files. The manifest folds the AI annotation side-map
+// (lib/puck/ai-annotations/) into each entry; the `'*'` entry becomes `shared`.
+const CORE_GENERATED_DIR = resolve(__dirname, '../packages/core/src/page-builder/generated')
+
+function pruneAnnotation(a: AiComponentAnnotation | undefined, fields: AnyFields) {
+  if (!a) return undefined
+  const out: AiComponentAnnotation = { instructions: a.instructions ?? '' }
+  if (a.exclude) out.exclude = true
+  const aiFields = Object.entries(a.fields ?? {}).filter(([key]) => {
+    const top = key.split('.')[0]
+    if (fields[top]) return true
+    console.warn(`ai-annotations: ${key} is not a field of this block — ignored`)
+    return false
+  })
+  if (aiFields.length) out.fields = Object.fromEntries(aiFields)
+  return out
+}
+
+const coreComponents: Record<string, ManifestEntry & { ai?: AiComponentAnnotation }> = {}
+for (const [name, entry] of Object.entries(manifest)) {
+  const ai = pruneAnnotation(AI_ANNOTATIONS[name], entry.fields)
+  coreComponents[name] = ai ? { ...entry, ai } : entry
+}
+for (const name of Object.keys(AI_ANNOTATIONS)) {
+  if (name !== SHARED_FIELDS_KEY && !manifest[name]) console.warn(`ai-annotations: unknown block ${name} — ignored`)
+}
+const shared = AI_ANNOTATIONS[SHARED_FIELDS_KEY] ?? { instructions: '' }
+const rootDef = (puckConfig.root ?? {}) as { fields?: AnyFields; defaultProps?: AnyFields }
+const coreManifest = {
+  components: coreComponents,
+  shared: { instructions: shared.instructions ?? '', fields: shared.fields ?? {} },
+  // Page-level root props (SEO), validated by catalog.validateRoot for update_root.
+  root: {
+    fields: pruneFields(rootDef.fields ?? {}),
+    defaultProps: JSON.parse(JSON.stringify(rootDef.defaultProps ?? {})),
+  },
+}
+
+const coreManifestTarget = resolve(CORE_GENERATED_DIR, 'manifest.generated.ts')
+writeFileSync(
+  coreManifestTarget,
+  GENERATED_HEADER +
+    "import type { PageBuilderManifest } from '../types'\n\n" +
+    `export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = ${JSON.stringify(coreManifest, null, 2)}\n`
+)
+console.log(`Wrote core manifest → ${coreManifestTarget}`)
+
+const coreTemplates = PUCK_TEMPLATES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  category: t.category,
+  pageType: t.pageType,
+  sortOrder: t.sort_order,
+  blocks: t.puck_data.content.map((item) => item.type),
+  puck_data: JSON.parse(JSON.stringify(t.puck_data)),
+}))
+const templateIds = new Set<string>()
+for (const t of coreTemplates) {
+  if (!t.id || templateIds.has(t.id)) throw new Error(`Template "${t.name}" needs a unique id (got "${t.id}")`)
+  templateIds.add(t.id)
+}
+
+const coreTemplatesTarget = resolve(CORE_GENERATED_DIR, 'templates.generated.ts')
+writeFileSync(
+  coreTemplatesTarget,
+  GENERATED_HEADER +
+    "import type { PageTemplate } from '../types'\n\n" +
+    `export const PAGE_TEMPLATES: PageTemplate[] = ${JSON.stringify(coreTemplates, null, 2)}\n`
+)
+console.log(`Wrote ${coreTemplates.length} core templates → ${coreTemplatesTarget}`)

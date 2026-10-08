@@ -6941,7 +6941,13 @@
       "Header": "Encabezado",
       "Footer": "Pie de Página",
       "Navbar": "Barra de Navegación",
-      "BreadcrumbBlock": "Migas de Pan"
+      "BreadcrumbBlock": "Migas de Pan",
+      "CourseHero": "Portada del curso",
+      "CourseCurriculum": "Temario del curso",
+      "CourseOutcomes": "Resultados del curso",
+      "CoursePricingCard": "Tarjeta de precio",
+      "ProductGrid": "Cuadrícula de productos",
+      "InstructorCard": "Tarjeta de instructor"
     },
     "fieldLabels": {
       "Title": "Título",
@@ -7094,7 +7100,46 @@
       "Auto": "Auto",
       "Full Screen": "Pantalla Completa",
       "Hide on Mobile": "Ocultar en Móvil",
-      "Hide on Desktop": "Ocultar en Escritorio"
+      "Hide on Desktop": "Ocultar en Escritorio",
+      "Section Tone": "Tono de la sección",
+      "Muted": "Suave",
+      "Brand tint": "Tinte de marca",
+      "Brand": "Marca",
+      "Inverse": "Invertido",
+      "Section Alignment": "Alineación de la sección",
+      "Start": "Inicio",
+      "Anchor ID": "Ancla (ID)",
+      "Hide On": "Ocultar en",
+      "Mobile": "Móvil",
+      "Desktop": "Escritorio",
+      "SEO Title": "Título SEO",
+      "SEO Description": "Descripción SEO",
+      "Share Image URL": "URL de la imagen para compartir",
+      "Course": "Curso",
+      "Split": "Dividido",
+      "Centered": "Centrado",
+      "Eyebrow": "Antetítulo",
+      "Title Override": "Título personalizado",
+      "Subtitle Override": "Subtítulo personalizado",
+      "Show Stats": "Mostrar estadísticas",
+      "Max Lessons": "Máximo de lecciones",
+      "Show Preview Badges": "Mostrar vistas previas",
+      "Outcomes": "Resultados",
+      "Outcome": "Resultado",
+      "Product": "Producto",
+      "Products": "Productos",
+      "Features": "Características",
+      "Feature": "Característica",
+      "Guarantee": "Garantía",
+      "Max Items": "Máximo de elementos",
+      "Source": "Origen",
+      "Course author": "Autor del curso",
+      "Teacher": "Profesor",
+      "Live reviews": "Reseñas reales",
+      "Manual quotes": "Citas manuales",
+      "Minimum Rating": "Valoración mínima",
+      "Max Reviews": "Máximo de reseñas",
+      "Pinned Plans": "Planes fijados"
     },
     "render": {
       "logIn": "Iniciar sesión",
@@ -7125,6 +7170,68 @@
       "statCompletions": "Completados",
       "socialProofReviews": "Basado en {count, plural, one {# reseña} other {# reseñas}}",
       "socialProofRating": "{rating} de 5 estrellas"
+    },
+    "courseBlocks": {
+      "blocks": {
+        "CourseHero": "Portada del curso",
+        "CourseCurriculum": "Temario",
+        "CourseOutcomes": "Lo que aprenderás",
+        "CoursePricingCard": "Tarjeta de precio",
+        "ProductGrid": "Productos",
+        "InstructorCard": "Instructor",
+        "EnrollCta": "Llamada a inscribirse",
+        "TestimonialGrid": "Testimonios"
+      },
+      "notice": {
+        "unboundCourse": "Elige un curso en la barra lateral. Esta sección se completa sola con los datos del curso.",
+        "missingCourse": "El curso elegido ya no existe o no está publicado. Esta sección no se muestra en la página publicada.",
+        "draftCourse": "«{title}» es un borrador. Esta sección no se mostrará en la página publicada hasta que publiques el curso.",
+        "unboundProduct": "Elige un producto en la barra lateral.",
+        "missingProduct": "El producto elegido ya no está activo. Esta sección no se muestra en la página publicada.",
+        "unboundPricing": "Elige un curso o un producto en la barra lateral. El precio sale de ahí.",
+        "loading": "Cargando los datos del curso…",
+        "noLessons": "Este curso aún no tiene lecciones publicadas. La sección no se muestra en la página publicada hasta que las tenga.",
+        "noOutcomes": "Añade resultados o elige un curso con objetivos de aprendizaje. Mientras esté vacía, la sección no se muestra en la página publicada.",
+        "noProducts": "Aún no hay productos activos. La sección no se muestra en la página publicada hasta que publiques uno.",
+        "noReviews": "Aún no hay reseñas. Las reseñas reales de tus estudiantes aparecerán aquí solas; mientras tanto la sección no se muestra en la página publicada.",
+        "manualQuotes": "Citas manuales: usa palabras reales de estudiantes reales, con su permiso.",
+        "noAuthor": "El autor del curso no tiene nombre en su perfil. Esta sección no se muestra en la página publicada.",
+        "unboundTeacher": "Elige un profesor en la barra lateral.",
+        "missingTeacher": "El profesor elegido ya no está activo en esta escuela. Esta sección no se muestra en la página publicada."
+      },
+      "picker": {
+        "search": "Buscar…",
+        "clear": "Quitar",
+        "remove": "Eliminar",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "noMatches": "Sin resultados.",
+        "allPicked": "Ya está todo elegido.",
+        "unknown": "No disponible ({id})",
+        "noneAvailable": "Todavía no hay nada que elegir.",
+        "productsEmpty": "Sin productos fijados. La cuadrícula muestra tus productos activos más recientes.",
+        "productEmpty": "Ningún producto elegido.",
+        "plansEmpty": "Sin planes fijados. La tabla muestra todos tus planes.",
+        "teacherEmpty": "Ningún profesor elegido."
+      },
+      "free": "Gratis",
+      "lessons": "{count, plural, one {# lección} other {# lecciones}}",
+      "rating": "{rating} ({count, plural, one {# reseña} other {# reseñas}})",
+      "ratingSr": "{rating} de 5 estrellas",
+      "byAuthor": "Por {name}",
+      "enrollFree": "Inscríbete gratis",
+      "enrollPaid": "Inscríbete por {price}",
+      "buyNow": "Comprar ahora",
+      "previewBadge": "Vista previa gratis",
+      "moreLessons": "{count, plural, one {+# lección más} other {+# lecciones más}}",
+      "includesCount": "{count, plural, one {Incluye # curso} other {Incluye # cursos}}",
+      "interval": {
+        "day": "día",
+        "week": "semana",
+        "month": "mes",
+        "quarter": "trimestre",
+        "year": "año"
+      }
     }
   },
   "verification": {
@@ -8044,10 +8151,22 @@
     "createWithAi": "Crear con IA",
     "editWithAi": "Editar con IA",
     "editSheet": {
-      "course": { "title": "Edita este curso con IA", "description": "Pide cambios al curso, sus lecciones, ejercicios o exámenes." },
-      "lesson": { "title": "Edita esta lección con IA", "description": "Reescribe, amplía o reestructura esta lección." },
-      "exercise": { "title": "Edita este ejercicio con IA", "description": "Ajusta el enunciado, la dificultad o las respuestas de este ejercicio." },
-      "exam": { "title": "Edita este examen con IA", "description": "Agrega, reescribe o reequilibra las preguntas de este examen." }
+      "course": {
+        "title": "Edita este curso con IA",
+        "description": "Pide cambios al curso, sus lecciones, ejercicios o exámenes."
+      },
+      "lesson": {
+        "title": "Edita esta lección con IA",
+        "description": "Reescribe, amplía o reestructura esta lección."
+      },
+      "exercise": {
+        "title": "Edita este ejercicio con IA",
+        "description": "Ajusta el enunciado, la dificultad o las respuestas de este ejercicio."
+      },
+      "exam": {
+        "title": "Edita este examen con IA",
+        "description": "Agrega, reescribe o reequilibra las preguntas de este examen."
+      }
     },
     "cta": {
       "title": "Crea tu primer curso con IA",
@@ -8058,7 +8177,26 @@
     "chatTab": "Chat",
     "blueprintTab": "Esquema del curso",
     "placeholder": "Describe tu curso o pide un cambio…",
-    "approval": { "title": "Requiere aprobación", "approve": "Aprobar", "deny": "Rechazar", "approved": "Aprobado", "denied": "Rechazado", "price": "Precio", "fields": {"title": "Título", "name": "Nombre", "lesson_id": "Lección", "course_id": "Curso", "exercise_id": "Ejercicio", "exam_id": "Examen", "product_id": "Producto", "publish_at": "Publicar el", "scheduled_for": "Programado para"}, "action": "{verb} {entity}" },
+    "approval": {
+      "title": "Requiere aprobación",
+      "approve": "Aprobar",
+      "deny": "Rechazar",
+      "approved": "Aprobado",
+      "denied": "Rechazado",
+      "price": "Precio",
+      "fields": {
+        "title": "Título",
+        "name": "Nombre",
+        "lesson_id": "Lección",
+        "course_id": "Curso",
+        "exercise_id": "Ejercicio",
+        "exam_id": "Examen",
+        "product_id": "Producto",
+        "publish_at": "Publicar el",
+        "scheduled_for": "Programado para"
+      },
+      "action": "{verb} {entity}"
+    },
     "thinking": "Pensando…",
     "newChat": "Nuevo chat",
     "retry": "Reintentar",
@@ -8357,22 +8495,70 @@
       }
     },
     "features": {
-      "aristotle": { "name": "Tutor Aristóteles", "description": "El chat tutor del curso que los estudiantes abren desde un curso." },
-      "aristotle_summary": { "name": "Resúmenes de Aristóteles", "description": "Resume una sesión del tutor al cerrarse." },
-      "lesson_tutor": { "name": "Tutor de lección", "description": "El asistente de IA dentro de las tareas de lección con IA." },
-      "lesson_verifier": { "name": "Verificador de tarea de lección", "description": "Decide si un estudiante terminó una tarea de lección con IA." },
-      "checkpoint_grader": { "name": "Calificador de puntos de control", "description": "Califica respuestas cortas de los puntos de control en las lecciones." },
-      "exercise_coach": { "name": "Entrenador de ejercicios", "description": "Ayuda por chat mientras los estudiantes hacen un ejercicio." },
-      "exercise_grader": { "name": "Calificador de ejercicios", "description": "Califica ejercicios escritos y de artefacto con retroalimentación." },
-      "speech_coach": { "name": "Entrenador de habla", "description": "Da retroalimentación sobre ejercicios de habla grabados." },
-      "speech_stt": { "name": "Voz a texto", "description": "Transcribe las grabaciones de los estudiantes." },
-      "voice_conversation": { "name": "Conversación en vivo", "description": "Práctica de voz en tiempo real con un compañero de IA." },
-      "exam_grader": { "name": "Calificador de exámenes", "description": "Califica respuestas de texto libre en exámenes." },
-      "question_generator": { "name": "Generador de preguntas", "description": "Redacta preguntas de quiz a partir de una lección." },
-      "starter_course": { "name": "Curso inicial", "description": "Genera un primer curso para una escuela nueva." },
-      "course_architect": { "name": "Arquitecto de cursos", "description": "El agente que planifica y construye un curso junto al profesor." },
-      "landing_builder": { "name": "Constructor de landing", "description": "Genera páginas de aterrizaje a partir de una indicación." },
-      "image_generation": { "name": "Generación de imágenes", "description": "Crea imágenes de portada y de lecciones." }
+      "aristotle": {
+        "name": "Tutor Aristóteles",
+        "description": "El chat tutor del curso que los estudiantes abren desde un curso."
+      },
+      "aristotle_summary": {
+        "name": "Resúmenes de Aristóteles",
+        "description": "Resume una sesión del tutor al cerrarse."
+      },
+      "lesson_tutor": {
+        "name": "Tutor de lección",
+        "description": "El asistente de IA dentro de las tareas de lección con IA."
+      },
+      "lesson_verifier": {
+        "name": "Verificador de tarea de lección",
+        "description": "Decide si un estudiante terminó una tarea de lección con IA."
+      },
+      "checkpoint_grader": {
+        "name": "Calificador de puntos de control",
+        "description": "Califica respuestas cortas de los puntos de control en las lecciones."
+      },
+      "exercise_coach": {
+        "name": "Entrenador de ejercicios",
+        "description": "Ayuda por chat mientras los estudiantes hacen un ejercicio."
+      },
+      "exercise_grader": {
+        "name": "Calificador de ejercicios",
+        "description": "Califica ejercicios escritos y de artefacto con retroalimentación."
+      },
+      "speech_coach": {
+        "name": "Entrenador de habla",
+        "description": "Da retroalimentación sobre ejercicios de habla grabados."
+      },
+      "speech_stt": {
+        "name": "Voz a texto",
+        "description": "Transcribe las grabaciones de los estudiantes."
+      },
+      "voice_conversation": {
+        "name": "Conversación en vivo",
+        "description": "Práctica de voz en tiempo real con un compañero de IA."
+      },
+      "exam_grader": {
+        "name": "Calificador de exámenes",
+        "description": "Califica respuestas de texto libre en exámenes."
+      },
+      "question_generator": {
+        "name": "Generador de preguntas",
+        "description": "Redacta preguntas de quiz a partir de una lección."
+      },
+      "starter_course": {
+        "name": "Curso inicial",
+        "description": "Genera un primer curso para una escuela nueva."
+      },
+      "course_architect": {
+        "name": "Arquitecto de cursos",
+        "description": "El agente que planifica y construye un curso junto al profesor."
+      },
+      "landing_builder": {
+        "name": "Constructor de landing",
+        "description": "Genera páginas de aterrizaje a partir de una indicación."
+      },
+      "image_generation": {
+        "name": "Generación de imágenes",
+        "description": "Crea imágenes de portada y de lecciones."
+      }
     },
     "billing": {
       "title": "Facturación",

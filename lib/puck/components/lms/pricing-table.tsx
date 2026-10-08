@@ -1,10 +1,13 @@
 import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import type { LandingPlan, PuckMetadata } from '../../types'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { normalizeIntegerIdList } from '../../utils/collect-bound-ids'
+import { formatMoney } from '../../utils/format-money'
+import { PlanPickerField } from './product-picker-field'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 
 type PricingItem = {
   name: string
@@ -20,14 +23,45 @@ type PricingItem = {
 export type PricingTableProps = {
   title: string
   subtitle: string
+  // Pinned plans, in order ({ id }[], like CourseGrid.courseIds). Empty = every plan.
+  planIds?: { id: string }[]
+  showDescription?: boolean
   items: PricingItem[]
 } & SectionSpacingProps
+
+const KNOWN_INTERVALS = new Set(['day', 'week', 'month', 'quarter', 'year'])
+
+/** The live plans to show: pinned ids in order when any resolve, else all of them. */
+export function selectLivePlans(plans: LandingPlan[], planIds: unknown): LandingPlan[] {
+  const byId = new Map(plans.map((p) => [p.id, p]))
+  const pinned = normalizeIntegerIdList(planIds)
+    .map((id) => byId.get(id))
+    .filter((p): p is LandingPlan => !!p)
+  if (!pinned.length) return plans
+  // Re-pick the highlight inside the subset (middle of three or more).
+  return pinned.map((p, i) => ({ ...p, highlighted: pinned.length >= 3 && i === 1 }))
+}
 
 export const PricingTable: ComponentConfig<PricingTableProps> = {
   label: 'Pricing Table',
   fields: {
     title: { type: 'text', label: 'Title' },
     subtitle: { type: 'textarea', label: 'Subtitle' },
+    planIds: {
+      type: 'custom',
+      label: 'Pinned Plans',
+      render: ({ value, onChange }) => (
+        <PlanPickerField value={value as { id: string }[] | undefined} onChange={onChange} />
+      ),
+    },
+    showDescription: {
+      type: 'radio',
+      label: 'Show Description',
+      options: [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+      ],
+    },
     items: {
       type: 'array',
       label: 'Plans',
@@ -64,6 +98,8 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
   defaultProps: {
     title: 'Simple Pricing',
     subtitle: 'Choose the plan that fits your needs.',
+    planIds: [],
+    showDescription: true,
     items: [
       { name: 'Basic', price: '$19', period: '/month', description: 'For individuals', features: 'Access to all courses\nCommunity support\nCertificates', highlighted: false, ctaLabel: 'Start Free', ctaHref: '#' },
       { name: 'Pro', price: '$49', period: '/month', description: 'For professionals', features: 'Everything in Basic\nPriority support\n1-on-1 mentoring\nAdvanced courses', highlighted: true, ctaLabel: 'Get Pro', ctaHref: '#' },
@@ -71,42 +107,39 @@ export const PricingTable: ComponentConfig<PricingTableProps> = {
     ],
     ...sectionSpacingDefaults,
   },
-  render: function PricingTableView({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY, puck }) {
+  render: function PricingTableView({ title, subtitle, planIds, showDescription = true, items, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, puck }) {
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const tc = useTranslations('puck.courseBlocks')
+    const locale = useLocale()
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 
     // Real subscription plans resolved server-side and handed in via metadata. When present
     // (published pages, preview, editor with data) we render the tenant's actual plans;
     // otherwise fall back to the manually-entered items so the canvas is never empty.
-    const livePlans = ((puck?.metadata as PuckMetadata | undefined)?.plans ?? []) as LandingPlan[]
+    const livePlans = selectLivePlans(((puck?.metadata as PuckMetadata | undefined)?.plans ?? []) as LandingPlan[], planIds)
 
-    const formatPrice = (price: number | null, currency: string | null) => {
-      if (price == null || price === 0) return t('free')
-      try {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency || 'USD').toUpperCase(), maximumFractionDigits: 2 }).format(price)
-      } catch {
-        return `$${price}`
-      }
-    }
+    // Money in the page locale; a known cadence is translated, a raw "45 days" is kept.
+    const period = (interval: string | null) =>
+      interval ? `/${KNOWN_INTERVALS.has(interval) ? tc(`interval.${interval}`) : interval}` : ''
 
     const resolvedItems: PricingItem[] = livePlans.length > 0
       ? livePlans.map((p) => ({
           name: p.name,
-          price: formatPrice(p.price, p.currency),
-          period: p.interval ? `/${p.interval}` : '',
-          description: '',
+          price: formatMoney(p.price, p.currency, locale) ?? t('free'),
+          period: period(p.interval),
+          description: showDescription ? (p.description ?? '') : '',
           features: (p.features ?? []).join('\n'),
           highlighted: p.highlighted,
           ctaLabel: t('getStarted'),
           ctaHref: p.href || '#',
         }))
-      : (items ?? [])
+      : (items ?? []).map((item) => (showDescription ? item : { ...item, description: '' }))
 
     if (!resolvedItems.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="text-center">
             {title && (
               <h2 className="text-3xl font-bold text-foreground mb-3">{title}</h2>

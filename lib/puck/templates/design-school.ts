@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for design schools and creative course creators (UX/UI,
 // graphic design, illustration, motion). Pages: Home, About, FAQ, Contact.
 
-const LOGO = '🎨 Canvas'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Learn', links: [{ label: 'All Courses', href: '/courses' }, { label: 'Learning Paths', href: '#paths' }, { label: 'Pricing', href: '/pricing' }] },
   { title: 'Studio', links: [{ label: 'About', href: '#about' }, { label: 'Student Work', href: '#work' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Start Creating', ctaHref: '/courses',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Learn design by making real work. Project-based courses in UX/UI, graphic design, illustration, and motion.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'Instagram', url: '#' }, { platform: 'Dribbble', url: '#' }, { platform: 'Behance', url: '#' }],
-    copyright: '© 2026 Canvas Design School. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'design-school-home',
   name: 'Design School — Home',
   description: 'Landing page for design schools and creative course creators (UX/UI, graphic, illustration).',
   category: 'design',
@@ -132,6 +133,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'design-school-about',
   name: 'Design School — About',
   description: 'About page for a design school: mission, teaching approach, and mentors.',
   category: 'design',
@@ -198,6 +200,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'design-school-faq',
   name: 'Design School — FAQ',
   description: 'FAQ page for a design school covering courses, tools, portfolio, and pricing.',
   category: 'design',
@@ -264,6 +267,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'design-school-contact',
   name: 'Design School — Contact',
   description: 'Contact page for a design school with form and quick answers.',
   category: 'design',

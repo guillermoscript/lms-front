@@ -40,7 +40,8 @@ export default async function PreviewPage({ params, searchParams }: Props) {
     redirect('/dashboard/admin/landing-page')
   }
 
-  const landingData = await getLandingData(tenantId)
+  // Same data as the public render (drafts excluded) so the preview never shows more than the live page.
+  const landingData = await getLandingData(tenantId, { puckData })
 
   return (
     <div className="min-h-screen">

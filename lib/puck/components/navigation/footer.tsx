@@ -1,3 +1,4 @@
+import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 
@@ -92,7 +93,7 @@ export const Footer: ComponentConfig<FooterProps> = {
                   {socialLinks.map((s, i) => (
                     <a
                       key={i}
-                      href={s.url}
+                      href={safeHref(s.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-foreground text-sm no-underline transition-colors"
@@ -114,7 +115,7 @@ export const Footer: ComponentConfig<FooterProps> = {
                     {col.links.map((link, j) => (
                       <li key={j}>
                         <a
-                          href={link.href}
+                          href={safeHref(link.href)}
                           className="text-muted-foreground hover:text-foreground text-sm no-underline transition-colors truncate underline decoration-transparent hover:decoration-current underline-offset-4 transition-[text-decoration-color,color] duration-300"
                         >
                           {link.label}

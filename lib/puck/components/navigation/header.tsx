@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ButtonLink } from '../../utils/button-link'
+import { ButtonLink, safeHref } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { useState, useEffect, useCallback } from 'react'
@@ -153,7 +153,7 @@ export const Header: ComponentConfig<HeaderProps> = {
             {navLinks.map((link, i) => (
               <a
                 key={i}
-                href={link.href}
+                href={safeHref(link.href)}
                 className={cn(
                   'text-sm font-medium no-underline transition-colors truncate relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-current after:transition-transform motion-reduce:after:transition-none after:duration-300 hover:after:scale-x-100',
                   transparent

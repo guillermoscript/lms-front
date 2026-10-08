@@ -1,7 +1,7 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 import type { LandingTeacher, PuckMetadata } from '../../types'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type TeamMemberItem = {
@@ -48,8 +48,8 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
       { name: 'David Kim', role: 'AI Specialist', bio: 'Machine learning researcher and educator.', avatar: '' },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, members, accentColor, puck }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, subtitle, members, accentColor, puck }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 
     // Real tenant instructors resolved server-side and handed in via metadata. When present we
     // render actual teachers; otherwise fall back to placeholders so the canvas is never empty.
@@ -72,8 +72,8 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
         : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           {title && (
             <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>
           )}

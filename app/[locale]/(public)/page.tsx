@@ -90,7 +90,7 @@ export default async function LandingPage() {
         .eq('is_published', true)
         .maybeSingle()
       if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
-        const landingData = await getLandingData(tenantId)
+        const landingData = await getLandingData(tenantId, { puckData: customPage.puck_data })
         return (
           <>
             <JsonLd data={orgStructuredData} />

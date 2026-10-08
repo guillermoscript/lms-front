@@ -6,8 +6,8 @@ import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 
 type AnimatedStat = {
@@ -64,9 +64,9 @@ export const AnimatedStats: ComponentConfig<AnimatedStatsProps> = {
       { value: 98, prefix: '', suffix: '%', label: 'Completion rate' },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, heading, useLiveStats, items, puck }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, useLiveStats, items, puck }) => {
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 
     // Live stats resolved server-side and handed in via metadata. When present and not opted
     // out, count up the tenant's real Students/Courses/Completions; otherwise keep the
@@ -81,8 +81,8 @@ export const AnimatedStats: ComponentConfig<AnimatedStatsProps> = {
       : (items ?? [])
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           {heading && (
             <h2 className="mb-12 text-center text-3xl font-medium lg:text-4xl">{heading}</h2>
           )}

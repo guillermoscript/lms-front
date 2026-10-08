@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type FeatureItem = {
@@ -62,13 +62,13 @@ export const FeaturesGrid: ComponentConfig<FeaturesGridProps> = {
     accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, columns, accentColor, paddingY, paddingX, maxWidth, marginY }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ title, subtitle, items, columns, accentColor, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           <div className="text-center">
             {title && (
               <h2 className="text-3xl font-bold text-foreground mb-3">{title}</h2>

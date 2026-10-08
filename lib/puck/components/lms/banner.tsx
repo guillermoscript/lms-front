@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 export type BannerProps = {
@@ -42,15 +42,15 @@ export const Banner: ComponentConfig<BannerProps> = {
     style: 'info',
     accentColor: '',
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, text, style: bannerStyle, accentColor }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, text, style: bannerStyle, accentColor }) => {
     if (!text) return <></>
 
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     const role = bannerStyle === 'warning' || bannerStyle === 'urgent' ? 'alert' : 'status'
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           <div
             role={role}
             className={cn(

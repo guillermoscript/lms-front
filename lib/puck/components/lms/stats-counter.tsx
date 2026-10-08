@@ -2,7 +2,7 @@ import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { PuckMetadata } from '../../types'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type StatItem = {
@@ -64,9 +64,9 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
     accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: function StatsCounterView({ items, alignment, useLiveStats, accentColor, paddingY, paddingX, maxWidth, marginY, puck }) {
+  render: function StatsCounterView({ items, alignment, useLiveStats, accentColor, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, puck }) {
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 
     // Live stats resolved server-side and handed in via metadata. When present and not opted
     // out, render the tenant's real Students/Courses/Completions counts; otherwise keep the
@@ -84,8 +84,8 @@ export const StatsCounter: ComponentConfig<StatsCounterProps> = {
     if (!resolvedItems.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           <dl
             className={cn(
               'grid grid-cols-2 md:grid-cols-4 gap-8',

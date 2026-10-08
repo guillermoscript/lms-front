@@ -1,16 +1,23 @@
 import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
-import { useTranslations } from 'next-intl'
-import type { LandingCourse, PuckMetadata } from '../../types'
+import { useLocale, useTranslations } from 'next-intl'
+import { courseCheckoutHref, enrollCtaTarget } from '../../utils/checkout-href'
+import { formatMoney } from '../../utils/format-money'
+import { resolveCourseBinding } from './course/binding'
+import { BindingNotice } from './course/course-ui'
+import { useCourseNotice } from './course/use-course-notice'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 import { CoursePickerSingleField } from './course-picker-single-field'
+
+// The href rule lives in utils/checkout-href.ts (pure, unit-tested); re-exported for callers.
+export { courseCheckoutHref, enrollCtaTarget }
 
 export type EnrollCtaProps = {
   courseId: string
@@ -23,9 +30,11 @@ export type EnrollCtaProps = {
 /**
  * A single-course call-to-action band: headline, subtext, and an enroll button targeting ONE
  * course. The `courseId` is picked (single-select) from the tenant's real published courses;
- * the render resolves it against the live catalog (metadata.courses) and links to the
- * free-enroll deep link `/courses/{id}?enroll=1`. When no course is selected or it no longer
- * resolves, the band degrades to a generic "Browse courses" CTA linking to /courses.
+ * the render resolves it against the live metadata and links through `enrollCtaTarget`: a free
+ * course to `/courses/{id}?enroll=1`, a paid one to `/checkout?courseId=` (checkout routes a
+ * manual provider on). The label reflects the price. No course selected → a generic
+ * "Browse courses" CTA; a selected course that is gone or a draft → nothing on the live page
+ * (a notice in the editor).
  */
 export const EnrollCta: ComponentConfig<EnrollCtaProps> = {
   label: 'Enroll CTA',
@@ -47,25 +56,38 @@ export const EnrollCta: ComponentConfig<EnrollCtaProps> = {
     ...sectionSpacingDefaults,
     courseId: '',
     headline: 'Ready to start learning?',
-    subtext: 'Enroll now and get instant access — no cost, no credit card required.',
+    subtext: 'Join today and start with the first lesson.',
     buttonLabel: '',
     accentColor: '',
   },
-  render: function EnrollCtaView({ paddingY, paddingX, maxWidth, marginY, courseId, headline, subtext, buttonLabel, accentColor, puck }) {
+  render: function EnrollCtaView({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, courseId, headline, subtext, buttonLabel, accentColor, puck }) {
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const tc = useTranslations('puck.courseBlocks')
+    const locale = useLocale()
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 
-    // Resolve the targeted course against the live catalog. When it resolves, the button
-    // deep-links to the free-enroll flow; otherwise fall back to a generic catalog CTA.
-    const courses = ((puck?.metadata as PuckMetadata | undefined)?.courses ?? []) as LandingCourse[]
-    const course = courseId ? courses.find((c) => c.id === courseId) : undefined
+    // Resolve the targeted course against the live metadata (beyond the latest-24 window:
+    // getLandingData unions the ids the page references).
+    const binding = resolveCourseBinding(puck?.metadata, courseId)
+    const notice = useCourseNotice(binding)
+    if (binding.state === 'missing' || binding.state === 'draft') {
+      return puck?.isEditing ? <BindingNotice title={tc('blocks.EnrollCta')} message={notice} /> : <></>
+    }
 
-    const href = course ? `/courses/${course.id}?enroll=1` : '/courses'
-    const label = buttonLabel || (course ? t('enroll') : t('browseCourses'))
+    const course = binding.course
+    const target = enrollCtaTarget(course)
+    const href = target.href
+    const label =
+      buttonLabel ||
+      (target.label === 'browseCourses'
+        ? t('browseCourses')
+        : target.label === 'enrollFree'
+          ? tc('enrollFree')
+          : tc('enrollPaid', { price: formatMoney(course?.price, course?.currency, locale) ?? '' }))
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           <div className="rounded-card border border-border bg-[color-mix(in_srgb,var(--block-accent)_6%,var(--card))] px-6 py-12 text-center">
             {headline && (
               <h2 className="text-balance text-3xl font-semibold text-foreground lg:text-4xl">{headline}</h2>

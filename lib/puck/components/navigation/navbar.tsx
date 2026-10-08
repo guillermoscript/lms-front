@@ -1,3 +1,4 @@
+import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 
@@ -75,7 +76,7 @@ export const Navbar: ComponentConfig<NavbarProps> = {
           {links.map((link, i) => (
             <a
               key={i}
-              href={link.href}
+              href={safeHref(link.href)}
               className="text-muted-foreground hover:text-foreground text-sm font-medium no-underline transition-colors truncate relative after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-current after:transition-transform motion-reduce:after:transition-none after:duration-300 hover:after:scale-x-100"
             >
               {link.label}

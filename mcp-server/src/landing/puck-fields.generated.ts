@@ -1221,6 +1221,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "textarea",
             "label": "Description"
           }
+        },
+        "defaultItemProps": {
+          "icon": "⭐",
+          "title": "Feature",
+          "description": "Description"
         }
       },
       "columns": {
@@ -1348,6 +1353,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -1375,7 +1446,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingY": "lg",
       "paddingX": "md",
       "maxWidth": "xl",
-      "marginY": "none"
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "CourseGrid": {
@@ -1546,6 +1621,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -1559,7 +1700,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingY": "lg",
       "paddingX": "md",
       "maxWidth": "xl",
-      "marginY": "none"
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "PricingTable": {
@@ -1572,6 +1717,24 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "subtitle": {
         "type": "textarea",
         "label": "Subtitle"
+      },
+      "planIds": {
+        "type": "custom",
+        "label": "Pinned Plans"
+      },
+      "showDescription": {
+        "type": "radio",
+        "label": "Show Description",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
       },
       "items": {
         "type": "array",
@@ -1619,6 +1782,16 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Button URL"
           }
+        },
+        "defaultItemProps": {
+          "name": "Plan",
+          "price": "$29",
+          "period": "/month",
+          "description": "Perfect for getting started",
+          "features": "Feature 1\nFeature 2\nFeature 3",
+          "highlighted": false,
+          "ctaLabel": "Get Started",
+          "ctaHref": "#"
         }
       },
       "paddingY": {
@@ -1724,11 +1897,79 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
       "title": "Simple Pricing",
       "subtitle": "Choose the plan that fits your needs.",
+      "planIds": [],
+      "showDescription": true,
       "items": [
         {
           "name": "Basic",
@@ -1764,7 +2005,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingY": "lg",
       "paddingX": "md",
       "maxWidth": "xl",
-      "marginY": "none"
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "TestimonialGrid": {
@@ -1777,6 +2022,32 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "subtitle": {
         "type": "textarea",
         "label": "Subtitle"
+      },
+      "source": {
+        "type": "radio",
+        "label": "Source",
+        "options": [
+          {
+            "label": "Live reviews",
+            "value": "live"
+          },
+          {
+            "label": "Manual quotes",
+            "value": "manual"
+          }
+        ]
+      },
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "minRating": {
+        "type": "number",
+        "label": "Minimum Rating"
+      },
+      "limit": {
+        "type": "number",
+        "label": "Max Reviews"
       },
       "items": {
         "type": "array",
@@ -1798,6 +2069,12 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "number",
             "label": "Rating (1-5)"
           }
+        },
+        "defaultItemProps": {
+          "name": "Student name",
+          "role": "Course they took",
+          "quote": "Their words about what changed.",
+          "rating": 5
         }
       },
       "paddingY": {
@@ -1903,11 +2180,81 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
       "title": "What Our Students Say",
       "subtitle": "",
+      "source": "live",
+      "courseId": "",
+      "minRating": 4,
+      "limit": 6,
       "items": [
         {
           "name": "Student name",
@@ -1931,7 +2278,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingY": "lg",
       "paddingX": "md",
       "maxWidth": "xl",
-      "marginY": "none"
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "FaqAccordion": {
@@ -1957,6 +2308,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "textarea",
             "label": "Answer"
           }
+        },
+        "defaultItemProps": {
+          "question": "Question?",
+          "answer": "Answer here."
         }
       },
       "accentColor": {
@@ -2066,6 +2421,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -2089,7 +2510,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingY": "lg",
       "paddingX": "md",
       "maxWidth": "xl",
-      "marginY": "none"
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "StatsCounter": {
@@ -2115,6 +2540,12 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Suffix"
           }
+        },
+        "defaultItemProps": {
+          "value": "100",
+          "label": "Students",
+          "prefix": "",
+          "suffix": "+"
         }
       },
       "alignment": {
@@ -2252,6 +2683,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -2262,7 +2759,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingY": "lg",
       "paddingX": "md",
       "maxWidth": "xl",
-      "marginY": "none"
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "CtaBlock": {
@@ -2417,6 +2918,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -2424,6 +2991,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "Ready to Start Learning?",
       "subtitle": "Join thousands of students and start your journey today.",
       "primaryCtaLabel": "Get Started",
@@ -2580,6 +3151,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -2587,6 +3224,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "Contact Us",
       "subtitle": "Have a question? We would love to hear from you.",
       "email": "hello@school.com",
@@ -2617,6 +3258,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Link URL"
           }
+        },
+        "defaultItemProps": {
+          "src": "https://placehold.co/120x40/e2e8f0/64748b?text=Logo",
+          "alt": "Logo",
+          "url": ""
         }
       },
       "paddingY": {
@@ -2722,6 +3368,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -2729,6 +3441,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "Trusted By",
       "items": [
         {
@@ -2782,6 +3498,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Link URL"
           }
+        },
+        "defaultItemProps": {
+          "src": "https://placehold.co/120x40/e2e8f0/64748b?text=Logo",
+          "alt": "Logo",
+          "url": ""
         }
       },
       "reverse": {
@@ -2915,6 +3636,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -2922,6 +3709,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "Trusted By",
       "reverse": "false",
       "pauseOnHover": "true",
@@ -3006,6 +3797,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Label"
           }
+        },
+        "defaultItemProps": {
+          "value": "",
+          "label": ""
         }
       },
       "paddingY": {
@@ -3111,6 +3906,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -3118,6 +3979,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "heading": "Our platform in numbers",
       "subtitle": "A growing community of learners and educators building courses, tracking progress, and earning certificates every day.",
       "useLiveStats": true,
@@ -3196,6 +4061,12 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Label"
           }
+        },
+        "defaultItemProps": {
+          "value": 100,
+          "prefix": "",
+          "suffix": "",
+          "label": "Metric"
         }
       },
       "paddingY": {
@@ -3301,6 +4172,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -3308,6 +4245,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "heading": "Trusted by learners worldwide",
       "useLiveStats": true,
       "items": [
@@ -3351,6 +4292,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "textarea",
             "label": "Answer"
           }
+        },
+        "defaultItemProps": {
+          "question": "New question?",
+          "answer": "Answer goes here."
         }
       },
       "paddingY": {
@@ -3456,6 +4401,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -3463,6 +4474,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "heading": "Frequently Asked Questions",
       "items": [
         {
@@ -3610,6 +4625,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -3617,6 +4698,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "heading": "Start building your course today",
       "subtitle": "Join thousands of educators publishing on the platform.",
       "primaryLabel": "Get Started",
@@ -3769,6 +4854,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -3776,6 +4927,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "heading": "Everything you need to teach online",
       "body": "Build courses, track learner progress, run assessments, and issue certificates — all from one platform designed to get out of your way.",
       "imageUrl": "https://placehold.co/1207x929/e2e8f0/64748b?text=Feature",
@@ -3925,6 +5080,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -3932,6 +5153,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "text": "Welcome! Enrollment is now open for our new courses.",
       "style": "info",
       "accentColor": ""
@@ -3968,6 +5193,12 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Avatar URL"
           }
+        },
+        "defaultItemProps": {
+          "name": "Team Member",
+          "role": "Instructor",
+          "bio": "",
+          "avatar": ""
         }
       },
       "accentColor": {
@@ -4077,6 +5308,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -4084,6 +5381,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "Meet Our Team",
       "subtitle": "",
       "accentColor": "",
@@ -4132,6 +5433,11 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "Caption"
           }
+        },
+        "defaultItemProps": {
+          "src": "https://placehold.co/400x300/e2e8f0/64748b?text=Image",
+          "alt": "Gallery image",
+          "caption": ""
         }
       },
       "columns": {
@@ -4255,6 +5561,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -4262,6 +5634,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "",
       "images": [
         {
@@ -4446,6 +5822,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -4453,9 +5895,13 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "courseId": "",
       "headline": "Ready to start learning?",
-      "subtext": "Enroll now and get instant access — no cost, no credit card required.",
+      "subtext": "Join today and start with the first lesson.",
       "buttonLabel": "",
       "accentColor": ""
     }
@@ -4624,6 +6070,72 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "value": "xl"
           }
         ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
       }
     },
     "defaultProps": {
@@ -4631,12 +6143,1405 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
       "paddingX": "md",
       "maxWidth": "xl",
       "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none",
       "title": "Browse our catalog",
       "subtitle": "Find the right course and start learning today.",
       "columns": "3",
       "pageSize": 9,
       "showSearch": true,
       "showPriceFilter": true
+    }
+  },
+  "CourseHero": {
+    "category": "lms",
+    "fields": {
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "variant": {
+        "type": "radio",
+        "label": "Variant",
+        "options": [
+          {
+            "label": "Split",
+            "value": "split"
+          },
+          {
+            "label": "Centered",
+            "value": "centered"
+          }
+        ]
+      },
+      "eyebrow": {
+        "type": "text",
+        "label": "Eyebrow"
+      },
+      "titleOverride": {
+        "type": "text",
+        "label": "Title Override"
+      },
+      "subtitleOverride": {
+        "type": "textarea",
+        "label": "Subtitle Override"
+      },
+      "showPrice": {
+        "type": "radio",
+        "label": "Show Price",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "showStats": {
+        "type": "radio",
+        "label": "Show Stats",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "ctaLabel": {
+        "type": "text",
+        "label": "Button Label"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "courseId": "",
+      "variant": "split",
+      "eyebrow": "",
+      "titleOverride": "",
+      "subtitleOverride": "",
+      "showPrice": true,
+      "showStats": true,
+      "ctaLabel": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
+    }
+  },
+  "CourseCurriculum": {
+    "category": "lms",
+    "fields": {
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "maxLessons": {
+        "type": "number",
+        "label": "Max Lessons"
+      },
+      "showPreviewBadges": {
+        "type": "radio",
+        "label": "Show Preview Badges",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "courseId": "",
+      "title": "What’s inside",
+      "subtitle": "",
+      "maxLessons": 12,
+      "showPreviewBadges": true,
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "md",
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
+    }
+  },
+  "CourseOutcomes": {
+    "category": "lms",
+    "fields": {
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "items": {
+        "type": "array",
+        "label": "Outcomes",
+        "arrayFields": {
+          "text": {
+            "type": "text",
+            "label": "Outcome"
+          }
+        },
+        "defaultItemProps": {
+          "text": "A skill the student will have by the end"
+        }
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "courseId": "",
+      "title": "What you’ll learn",
+      "subtitle": "",
+      "items": [
+        {
+          "text": "Replace with the first thing a student will be able to do"
+        },
+        {
+          "text": "A second concrete skill, in plain words"
+        },
+        {
+          "text": "A third outcome: the result, not the topic"
+        }
+      ],
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
+    }
+  },
+  "CoursePricingCard": {
+    "category": "lms",
+    "fields": {
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "productId": {
+        "type": "custom",
+        "label": "Product"
+      },
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "features": {
+        "type": "array",
+        "label": "Features",
+        "arrayFields": {
+          "text": {
+            "type": "text",
+            "label": "Feature"
+          }
+        },
+        "defaultItemProps": {
+          "text": "What the price includes"
+        }
+      },
+      "guarantee": {
+        "type": "text",
+        "label": "Guarantee"
+      },
+      "ctaLabel": {
+        "type": "text",
+        "label": "Button Label"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "courseId": "",
+      "productId": "",
+      "title": "",
+      "subtitle": "",
+      "features": [
+        {
+          "text": "Replace with what the price includes"
+        },
+        {
+          "text": "One short line per benefit"
+        }
+      ],
+      "guarantee": "",
+      "ctaLabel": "",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
+    }
+  },
+  "ProductGrid": {
+    "category": "lms",
+    "fields": {
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "subtitle": {
+        "type": "textarea",
+        "label": "Subtitle"
+      },
+      "productIds": {
+        "type": "custom",
+        "label": "Products"
+      },
+      "maxItems": {
+        "type": "number",
+        "label": "Max Items"
+      },
+      "columns": {
+        "type": "select",
+        "label": "Columns",
+        "options": [
+          {
+            "label": "2",
+            "value": "2"
+          },
+          {
+            "label": "3",
+            "value": "3"
+          },
+          {
+            "label": "4",
+            "value": "4"
+          }
+        ]
+      },
+      "showDescription": {
+        "type": "radio",
+        "label": "Show Description",
+        "options": [
+          {
+            "label": "Yes",
+            "value": true
+          },
+          {
+            "label": "No",
+            "value": false
+          }
+        ]
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "title": "Programs",
+      "subtitle": "",
+      "productIds": [],
+      "maxItems": 6,
+      "columns": "3",
+      "showDescription": true,
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "xl",
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
+    }
+  },
+  "InstructorCard": {
+    "category": "lms",
+    "fields": {
+      "source": {
+        "type": "radio",
+        "label": "Source",
+        "options": [
+          {
+            "label": "Course author",
+            "value": "course"
+          },
+          {
+            "label": "Teacher",
+            "value": "teacher"
+          }
+        ]
+      },
+      "courseId": {
+        "type": "custom",
+        "label": "Course"
+      },
+      "teacherUserId": {
+        "type": "custom",
+        "label": "Teacher"
+      },
+      "title": {
+        "type": "text",
+        "label": "Title"
+      },
+      "paddingY": {
+        "type": "select",
+        "label": "Vertical Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "paddingX": {
+        "type": "select",
+        "label": "Horizontal Padding",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          }
+        ]
+      },
+      "maxWidth": {
+        "type": "select",
+        "label": "Content Width",
+        "options": [
+          {
+            "label": "Full",
+            "value": "full"
+          },
+          {
+            "label": "Small (640px)",
+            "value": "sm"
+          },
+          {
+            "label": "Medium (768px)",
+            "value": "md"
+          },
+          {
+            "label": "Large (1024px)",
+            "value": "lg"
+          },
+          {
+            "label": "XL (1280px)",
+            "value": "xl"
+          },
+          {
+            "label": "None",
+            "value": "none"
+          }
+        ]
+      },
+      "marginY": {
+        "type": "select",
+        "label": "Vertical Margin",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Small",
+            "value": "sm"
+          },
+          {
+            "label": "Medium",
+            "value": "md"
+          },
+          {
+            "label": "Large",
+            "value": "lg"
+          },
+          {
+            "label": "Extra Large",
+            "value": "xl"
+          }
+        ]
+      },
+      "tone": {
+        "type": "select",
+        "label": "Section Tone",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Muted",
+            "value": "muted"
+          },
+          {
+            "label": "Brand tint",
+            "value": "brand-tint"
+          },
+          {
+            "label": "Brand",
+            "value": "brand"
+          },
+          {
+            "label": "Inverse",
+            "value": "inverse"
+          }
+        ]
+      },
+      "align": {
+        "type": "radio",
+        "label": "Section Alignment",
+        "options": [
+          {
+            "label": "Default",
+            "value": "default"
+          },
+          {
+            "label": "Start",
+            "value": "start"
+          },
+          {
+            "label": "Center",
+            "value": "center"
+          }
+        ]
+      },
+      "anchorId": {
+        "type": "text",
+        "label": "Anchor ID"
+      },
+      "hideOn": {
+        "type": "select",
+        "label": "Hide On",
+        "options": [
+          {
+            "label": "None",
+            "value": "none"
+          },
+          {
+            "label": "Mobile",
+            "value": "mobile"
+          },
+          {
+            "label": "Desktop",
+            "value": "desktop"
+          }
+        ]
+      }
+    },
+    "defaultProps": {
+      "source": "course",
+      "courseId": "",
+      "teacherUserId": "",
+      "title": "Your instructor",
+      "paddingY": "lg",
+      "paddingX": "md",
+      "maxWidth": "md",
+      "marginY": "none",
+      "tone": "default",
+      "align": "default",
+      "anchorId": "",
+      "hideOn": "none"
     }
   },
   "Header": {
@@ -4662,6 +7567,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "URL"
           }
+        },
+        "defaultItemProps": {
+          "label": "Link",
+          "href": "#"
         }
       },
       "ctaLabel": {
@@ -4781,8 +7690,21 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
                 "type": "text",
                 "label": "URL"
               }
+            },
+            "defaultItemProps": {
+              "label": "Link",
+              "href": "#"
             }
           }
+        },
+        "defaultItemProps": {
+          "title": "Column",
+          "links": [
+            {
+              "label": "Link 1",
+              "href": "#"
+            }
+          ]
         }
       },
       "socialLinks": {
@@ -4797,6 +7719,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "URL"
           }
+        },
+        "defaultItemProps": {
+          "platform": "Twitter",
+          "url": "#"
         }
       },
       "copyright": {
@@ -4866,6 +7792,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "URL"
           }
+        },
+        "defaultItemProps": {
+          "label": "Link",
+          "href": "#"
         }
       },
       "sticky": {
@@ -4939,6 +7869,10 @@ export const PUCK_FIELDS_MANIFEST: Record<string, ManifestEntry> = {
             "type": "text",
             "label": "URL"
           }
+        },
+        "defaultItemProps": {
+          "label": "Page",
+          "href": "#"
         }
       },
       "separator": {

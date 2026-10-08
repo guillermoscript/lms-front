@@ -6941,7 +6941,13 @@
       "Header": "Header",
       "Footer": "Footer",
       "Navbar": "Navbar",
-      "BreadcrumbBlock": "Breadcrumb"
+      "BreadcrumbBlock": "Breadcrumb",
+      "CourseHero": "Course Hero",
+      "CourseCurriculum": "Course Curriculum",
+      "CourseOutcomes": "Course Outcomes",
+      "CoursePricingCard": "Course Pricing Card",
+      "ProductGrid": "Product Grid",
+      "InstructorCard": "Instructor Card"
     },
     "fieldLabels": {
       "Title": "Title",
@@ -7094,7 +7100,46 @@
       "Auto": "Auto",
       "Full Screen": "Full Screen",
       "Hide on Mobile": "Hide on Mobile",
-      "Hide on Desktop": "Hide on Desktop"
+      "Hide on Desktop": "Hide on Desktop",
+      "Section Tone": "Section Tone",
+      "Muted": "Muted",
+      "Brand tint": "Brand tint",
+      "Brand": "Brand",
+      "Inverse": "Inverse",
+      "Section Alignment": "Section Alignment",
+      "Start": "Start",
+      "Anchor ID": "Anchor ID",
+      "Hide On": "Hide On",
+      "Mobile": "Mobile",
+      "Desktop": "Desktop",
+      "SEO Title": "SEO Title",
+      "SEO Description": "SEO Description",
+      "Share Image URL": "Share Image URL",
+      "Course": "Course",
+      "Split": "Split",
+      "Centered": "Centered",
+      "Eyebrow": "Eyebrow",
+      "Title Override": "Title Override",
+      "Subtitle Override": "Subtitle Override",
+      "Show Stats": "Show Stats",
+      "Max Lessons": "Max Lessons",
+      "Show Preview Badges": "Show Preview Badges",
+      "Outcomes": "Outcomes",
+      "Outcome": "Outcome",
+      "Product": "Product",
+      "Products": "Products",
+      "Features": "Features",
+      "Feature": "Feature",
+      "Guarantee": "Guarantee",
+      "Max Items": "Max Items",
+      "Source": "Source",
+      "Course author": "Course author",
+      "Teacher": "Teacher",
+      "Live reviews": "Live reviews",
+      "Manual quotes": "Manual quotes",
+      "Minimum Rating": "Minimum Rating",
+      "Max Reviews": "Max Reviews",
+      "Pinned Plans": "Pinned Plans"
     },
     "render": {
       "logIn": "Log in",
@@ -7125,6 +7170,68 @@
       "statCompletions": "Completions",
       "socialProofReviews": "Based on {count, plural, one {# review} other {# reviews}}",
       "socialProofRating": "{rating} out of 5 stars"
+    },
+    "courseBlocks": {
+      "blocks": {
+        "CourseHero": "Course hero",
+        "CourseCurriculum": "Curriculum",
+        "CourseOutcomes": "Course outcomes",
+        "CoursePricingCard": "Pricing card",
+        "ProductGrid": "Products",
+        "InstructorCard": "Instructor",
+        "EnrollCta": "Enroll call-to-action",
+        "TestimonialGrid": "Testimonials"
+      },
+      "notice": {
+        "unboundCourse": "Pick a course in the sidebar. This section fills itself from the course.",
+        "missingCourse": "The selected course no longer exists or is not published. This section is hidden on the live page.",
+        "draftCourse": "“{title}” is a draft. This section stays hidden on the live page until you publish the course.",
+        "unboundProduct": "Pick a product in the sidebar.",
+        "missingProduct": "The selected product is no longer active. This section is hidden on the live page.",
+        "unboundPricing": "Pick a course or a product in the sidebar. The price comes from it.",
+        "loading": "Loading the course details…",
+        "noLessons": "This course has no published lessons yet. This section is hidden on the live page until it has some.",
+        "noOutcomes": "Add outcomes, or pick a course that has learning objectives. This section is hidden on the live page while it is empty.",
+        "noProducts": "No active products yet. This section is hidden on the live page until you publish one.",
+        "noReviews": "No reviews yet. Real student reviews appear here automatically; until then this section is hidden on the live page.",
+        "manualQuotes": "Manual quotes: use real words from real students, with their permission.",
+        "noAuthor": "The course author has no name on their profile. This section is hidden on the live page.",
+        "unboundTeacher": "Pick a teacher in the sidebar.",
+        "missingTeacher": "The selected teacher is no longer active at this school. This section is hidden on the live page."
+      },
+      "picker": {
+        "search": "Search…",
+        "clear": "Clear",
+        "remove": "Remove",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "noMatches": "No matches.",
+        "allPicked": "Everything is already picked.",
+        "unknown": "Unavailable ({id})",
+        "noneAvailable": "Nothing to pick yet.",
+        "productsEmpty": "No products pinned. The grid shows your newest active products.",
+        "productEmpty": "No product selected.",
+        "plansEmpty": "No plans pinned. The table shows all your plans.",
+        "teacherEmpty": "No teacher selected."
+      },
+      "free": "Free",
+      "lessons": "{count, plural, one {# lesson} other {# lessons}}",
+      "rating": "{rating} ({count, plural, one {# review} other {# reviews}})",
+      "ratingSr": "{rating} out of 5 stars",
+      "byAuthor": "By {name}",
+      "enrollFree": "Enroll for free",
+      "enrollPaid": "Enroll for {price}",
+      "buyNow": "Buy now",
+      "previewBadge": "Free preview",
+      "moreLessons": "{count, plural, one {+# more lesson} other {+# more lessons}}",
+      "includesCount": "{count, plural, one {Includes # course} other {Includes # courses}}",
+      "interval": {
+        "day": "day",
+        "week": "week",
+        "month": "month",
+        "quarter": "quarter",
+        "year": "year"
+      }
     }
   },
   "verification": {
@@ -8044,10 +8151,22 @@
     "createWithAi": "Create with AI",
     "editWithAi": "Edit with AI",
     "editSheet": {
-      "course": { "title": "Edit this course with AI", "description": "Ask for changes to the course, its lessons, exercises or exams." },
-      "lesson": { "title": "Edit this lesson with AI", "description": "Rewrite, expand or restructure this lesson." },
-      "exercise": { "title": "Edit this exercise with AI", "description": "Adjust the prompt, difficulty or answers of this exercise." },
-      "exam": { "title": "Edit this exam with AI", "description": "Add, rewrite or rebalance the questions of this exam." }
+      "course": {
+        "title": "Edit this course with AI",
+        "description": "Ask for changes to the course, its lessons, exercises or exams."
+      },
+      "lesson": {
+        "title": "Edit this lesson with AI",
+        "description": "Rewrite, expand or restructure this lesson."
+      },
+      "exercise": {
+        "title": "Edit this exercise with AI",
+        "description": "Adjust the prompt, difficulty or answers of this exercise."
+      },
+      "exam": {
+        "title": "Edit this exam with AI",
+        "description": "Add, rewrite or rebalance the questions of this exam."
+      }
     },
     "cta": {
       "title": "Build your first course with AI",
@@ -8058,7 +8177,26 @@
     "chatTab": "Chat",
     "blueprintTab": "Course outline",
     "placeholder": "Describe your course or ask for a change…",
-    "approval": { "title": "Approval needed", "approve": "Approve", "deny": "Deny", "approved": "Approved", "denied": "Denied", "price": "Price", "fields": {"title": "Title", "name": "Name", "lesson_id": "Lesson", "course_id": "Course", "exercise_id": "Exercise", "exam_id": "Exam", "product_id": "Product", "publish_at": "Publish at", "scheduled_for": "Scheduled for"}, "action": "{verb} {entity}" },
+    "approval": {
+      "title": "Approval needed",
+      "approve": "Approve",
+      "deny": "Deny",
+      "approved": "Approved",
+      "denied": "Denied",
+      "price": "Price",
+      "fields": {
+        "title": "Title",
+        "name": "Name",
+        "lesson_id": "Lesson",
+        "course_id": "Course",
+        "exercise_id": "Exercise",
+        "exam_id": "Exam",
+        "product_id": "Product",
+        "publish_at": "Publish at",
+        "scheduled_for": "Scheduled for"
+      },
+      "action": "{verb} {entity}"
+    },
     "thinking": "Thinking…",
     "newChat": "New chat",
     "retry": "Try again",
@@ -8357,22 +8495,70 @@
       }
     },
     "features": {
-      "aristotle": { "name": "Aristotle tutor", "description": "The course tutor chat that students open from a course." },
-      "aristotle_summary": { "name": "Aristotle summaries", "description": "Summarizes a tutor session when it closes." },
-      "lesson_tutor": { "name": "Lesson tutor", "description": "The AI helper inside AI lesson tasks." },
-      "lesson_verifier": { "name": "Lesson task checker", "description": "Decides whether a student finished an AI lesson task." },
-      "checkpoint_grader": { "name": "Checkpoint grader", "description": "Grades short checkpoint answers inside lessons." },
-      "exercise_coach": { "name": "Exercise coach", "description": "Chat help while students work on an exercise." },
-      "exercise_grader": { "name": "Exercise grader", "description": "Grades written and artifact exercises with feedback." },
-      "speech_coach": { "name": "Speaking coach", "description": "Gives feedback on recorded speaking exercises." },
-      "speech_stt": { "name": "Speech to text", "description": "Transcribes student recordings." },
-      "voice_conversation": { "name": "Live conversation", "description": "Real-time voice practice with an AI partner." },
-      "exam_grader": { "name": "Exam grader", "description": "Grades free-text exam answers." },
-      "question_generator": { "name": "Question generator", "description": "Drafts quiz questions from a lesson." },
-      "starter_course": { "name": "Starter course", "description": "Generates a first course for a new school." },
-      "course_architect": { "name": "Course architect", "description": "The agent that plans and builds a course with a teacher." },
-      "landing_builder": { "name": "Landing page builder", "description": "Generates landing pages from a prompt." },
-      "image_generation": { "name": "Image generation", "description": "Creates cover and lesson images." }
+      "aristotle": {
+        "name": "Aristotle tutor",
+        "description": "The course tutor chat that students open from a course."
+      },
+      "aristotle_summary": {
+        "name": "Aristotle summaries",
+        "description": "Summarizes a tutor session when it closes."
+      },
+      "lesson_tutor": {
+        "name": "Lesson tutor",
+        "description": "The AI helper inside AI lesson tasks."
+      },
+      "lesson_verifier": {
+        "name": "Lesson task checker",
+        "description": "Decides whether a student finished an AI lesson task."
+      },
+      "checkpoint_grader": {
+        "name": "Checkpoint grader",
+        "description": "Grades short checkpoint answers inside lessons."
+      },
+      "exercise_coach": {
+        "name": "Exercise coach",
+        "description": "Chat help while students work on an exercise."
+      },
+      "exercise_grader": {
+        "name": "Exercise grader",
+        "description": "Grades written and artifact exercises with feedback."
+      },
+      "speech_coach": {
+        "name": "Speaking coach",
+        "description": "Gives feedback on recorded speaking exercises."
+      },
+      "speech_stt": {
+        "name": "Speech to text",
+        "description": "Transcribes student recordings."
+      },
+      "voice_conversation": {
+        "name": "Live conversation",
+        "description": "Real-time voice practice with an AI partner."
+      },
+      "exam_grader": {
+        "name": "Exam grader",
+        "description": "Grades free-text exam answers."
+      },
+      "question_generator": {
+        "name": "Question generator",
+        "description": "Drafts quiz questions from a lesson."
+      },
+      "starter_course": {
+        "name": "Starter course",
+        "description": "Generates a first course for a new school."
+      },
+      "course_architect": {
+        "name": "Course architect",
+        "description": "The agent that plans and builds a course with a teacher."
+      },
+      "landing_builder": {
+        "name": "Landing page builder",
+        "description": "Generates landing pages from a prompt."
+      },
+      "image_generation": {
+        "name": "Image generation",
+        "description": "Creates cover and lesson images."
+      }
     },
     "billing": {
       "title": "Billing",

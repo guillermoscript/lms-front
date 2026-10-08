@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for solo creators, consultants, and coaching businesses
 // (marketing, entrepreneurship, freelancing). Pages: Home, About, FAQ, Contact.
 
-const LOGO = '🚀 Momentum'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Programs', links: [{ label: 'All Courses', href: '/courses' }, { label: 'Coaching', href: '#pricing' }, { label: 'Pricing', href: '/pricing' }] },
   { title: 'Company', links: [{ label: 'About', href: '#about' }, { label: 'Results', href: '#results' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Book a Free Call', ctaHref: '#contact',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Practical coaching and courses to grow your business, land clients, and build a brand that sells.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'LinkedIn', url: '#' }, { platform: 'YouTube', url: '#' }, { platform: 'Twitter', url: '#' }],
-    copyright: '© 2026 Momentum. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'business-coaching-home',
   name: 'Business Coaching — Home',
   description: 'High-conversion landing page for business, marketing, and entrepreneurship coaches.',
   category: 'business',
@@ -126,6 +127,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'business-coaching-about',
   name: 'Business Coaching — About',
   description: 'About page for a business coach: story, philosophy, and credentials.',
   category: 'business',
@@ -192,6 +194,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'business-coaching-faq',
   name: 'Business Coaching — FAQ',
   description: 'FAQ page for a business coach covering programs, format, results, and pricing.',
   category: 'business',
@@ -258,6 +261,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'business-coaching-contact',
   name: 'Business Coaching — Contact',
   description: 'Contact / book-a-call page for a business coach with form and quick answers.',
   category: 'business',

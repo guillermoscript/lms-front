@@ -2,7 +2,7 @@ import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { LandingCourse, PuckMetadata } from '../../types'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { CoursePickerField } from './course-picker-field'
 
 export type CourseGridProps = {
@@ -71,9 +71,9 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
     showDescription: true,
     ...sectionSpacingDefaults,
   },
-  render: function CourseGridView({ title, subtitle, courseIds, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, puck }) {
+  render: function CourseGridView({ title, subtitle, courseIds, maxItems, columns, showPrice, showDescription, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, puck }) {
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     if (maxItems <= 0) return <></>
 
     // Real catalog resolved server-side and handed in via metadata. When present
@@ -121,8 +121,8 @@ export const CourseGrid: ComponentConfig<CourseGridProps> = {
     }
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div>
             {title && (
               <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>

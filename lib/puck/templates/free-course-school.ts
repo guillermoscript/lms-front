@@ -12,6 +12,7 @@ import { c, type PuckTemplate } from './_shared'
  * picks the free course to feature. Extracted from the Free Academy demo page.
  */
 const freeCourseSchool: PuckTemplate = {
+  id: 'free-course-school',
   name: 'Free Course School',
   description: 'Lead with a free course. Live stats, courses, reviews, instructors and pricing — all auto-filled from your data.',
   category: 'education',
@@ -21,7 +22,8 @@ const freeCourseSchool: PuckTemplate = {
     root: { props: {} },
     content: [
       c('Header', {
-        logoText: 'Academy',
+        logo: '{{logoUrl}}',
+        logoText: '{{schoolName}}',
         navLinks: [
           { label: 'Free course', href: '/courses' },
           { label: 'Catalog', href: '#catalog' },
@@ -109,7 +111,7 @@ const freeCourseSchool: PuckTemplate = {
           { title: 'Legal', links: [{ label: 'Terms', href: '/terms' }, { label: 'Privacy', href: '/privacy' }] },
         ],
         socialLinks: [],
-        copyright: '© 2026 Academy. All rights reserved.',
+        copyright: '© {{year}} {{schoolName}}. All rights reserved.',
       }),
     ],
     zones: {},

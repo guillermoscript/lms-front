@@ -4,8 +4,8 @@ import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 
 export type CtaBannerProps = {
@@ -51,6 +51,10 @@ export const CtaBanner: ComponentConfig<CtaBannerProps> = {
     paddingX,
     maxWidth,
     marginY,
+    tone,
+    align,
+    anchorId,
+    hideOn,
     heading,
     subtitle,
     primaryLabel,
@@ -58,10 +62,10 @@ export const CtaBanner: ComponentConfig<CtaBannerProps> = {
     secondaryLabel,
     secondaryHref,
   }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="text-center">
             {heading && (
               <h2 className="text-balance text-4xl font-semibold lg:text-5xl">{heading}</h2>

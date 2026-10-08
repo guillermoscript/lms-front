@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for fitness coaches, yoga studios, and online wellness
 // programs. Pages: Home, About, FAQ, Contact.
 
-const LOGO = '💪 FitFlow'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Train', links: [{ label: 'All Programs', href: '/courses' }, { label: 'Pricing', href: '/pricing' }, { label: 'Free Class', href: '#' }] },
   { title: 'Studio', links: [{ label: 'About', href: '#about' }, { label: 'Our Coaches', href: '#about' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Start Free Week', ctaHref: '/courses',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Move better, feel stronger. On-demand and live workouts for every body and every level.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'Instagram', url: '#' }, { platform: 'TikTok', url: '#' }, { platform: 'YouTube', url: '#' }],
-    copyright: '© 2026 FitFlow. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'fitness-studio-home',
   name: 'Fitness Studio — Home',
   description: 'Landing page for fitness coaches, yoga studios, and online workout programs.',
   category: 'fitness',
@@ -131,6 +132,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'fitness-studio-about',
   name: 'Fitness Studio — About',
   description: 'About page for a fitness studio: mission, philosophy, and coaches.',
   category: 'fitness',
@@ -197,6 +199,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'fitness-studio-faq',
   name: 'Fitness Studio — FAQ',
   description: 'FAQ page for a fitness studio covering programs, equipment, pricing, and membership.',
   category: 'fitness',
@@ -263,6 +266,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'fitness-studio-contact',
   name: 'Fitness Studio — Contact',
   description: 'Contact page for a fitness studio with form and quick answers.',
   category: 'fitness',

@@ -3,8 +3,8 @@ import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 
 export type ContentFeatureProps = {
@@ -59,6 +59,10 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
     paddingX,
     maxWidth,
     marginY,
+    tone,
+    align,
+    anchorId,
+    hideOn,
     heading,
     body,
     imageUrl,
@@ -67,7 +71,7 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
     quote,
     quoteAuthor,
   }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     const image = imageUrl ? (
       <div className="relative mb-6 sm:mb-0">
         <div className="aspect-76/59 relative rounded-card bg-gradient-to-b from-muted to-transparent p-px">
@@ -91,8 +95,8 @@ export const ContentFeature: ComponentConfig<ContentFeatureProps> = {
     )
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="space-y-8 md:space-y-16">
             {heading && (
               <h2 className="relative z-10 max-w-xl text-4xl font-medium lg:text-5xl">{heading}</h2>

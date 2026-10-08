@@ -1,7 +1,11 @@
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import type { LandingTestimonial, PuckMetadata } from '../../types'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { CoursePickerSingleField } from './course-picker-single-field'
+import { resolveCourseBinding } from './course/binding'
+import { BindingNotice } from './course/course-ui'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 
 type TestimonialItem = {
   name: string
@@ -13,14 +17,56 @@ type TestimonialItem = {
 export type TestimonialGridProps = {
   title: string
   subtitle: string
+  // 'live' = real course reviews only (hidden publicly when there are none);
+  // 'manual' = the written `items`. Unset (pages saved before the field existed)
+  // keeps the old behaviour: live reviews when any, else the items.
+  source?: 'live' | 'manual'
+  courseId?: string
+  minRating?: number
+  limit?: number
   items: TestimonialItem[]
 } & SectionSpacingProps
+
+/**
+ * Pick the reviews a live TestimonialGrid shows: one course's reviews when
+ * `courseId` is bound (from courseDetails), else the school's recent reviews;
+ * at least `minRating` stars; at most `limit`.
+ */
+export function selectLiveTestimonials(
+  metadata: unknown,
+  opts: { courseId?: string; minRating?: number; limit?: number }
+): LandingTestimonial[] {
+  const meta = (metadata ?? {}) as PuckMetadata
+  const binding = resolveCourseBinding(meta, opts.courseId)
+  const pool =
+    binding.state === 'unbound' ? (meta.testimonials ?? []) : binding.state === 'ready' ? (binding.details?.reviews ?? []) : []
+  const min = Math.min(5, Math.max(1, Number(opts.minRating) || 1))
+  const limit = Math.min(12, Math.max(1, Math.floor(Number(opts.limit) || 6)))
+  return pool.filter((r) => (r.rating ?? 0) >= min && r.quote.trim()).slice(0, limit)
+}
 
 export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
   label: 'Testimonials',
   fields: {
     title: { type: 'text', label: 'Title' },
     subtitle: { type: 'textarea', label: 'Subtitle' },
+    source: {
+      type: 'radio',
+      label: 'Source',
+      options: [
+        { label: 'Live reviews', value: 'live' },
+        { label: 'Manual quotes', value: 'manual' },
+      ],
+    },
+    courseId: {
+      type: 'custom',
+      label: 'Course',
+      render: ({ value, onChange }) => (
+        <CoursePickerSingleField value={value as string | undefined} onChange={onChange} />
+      ),
+    },
+    minRating: { type: 'number', label: 'Minimum Rating', min: 1, max: 5 },
+    limit: { type: 'number', label: 'Max Reviews', min: 1, max: 12 },
     items: {
       type: 'array',
       label: 'Testimonials',
@@ -37,6 +83,10 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
   defaultProps: {
     title: 'What Our Students Say',
     subtitle: '',
+    source: 'live',
+    courseId: '',
+    minRating: 4,
+    limit: 6,
     // Placeholders, never invented people (#739, the same rule the stats blocks
     // follow since #724). These cards are what a school publishes if it drops the
     // block on a page and never edits it, and real course reviews (below) replace
@@ -51,37 +101,46 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
     ],
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, paddingY, paddingX, maxWidth, marginY, puck }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: function TestimonialGridView({ title, subtitle, source, courseId, minRating, limit, items, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, puck }) {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
+    const tc = useTranslations('puck.courseBlocks')
 
-    // Real course reviews resolved server-side and handed in via metadata. When present we
-    // render the tenant's actual testimonials; otherwise fall back to placeholders so the
-    // canvas is never empty.
-    const live = ((puck?.metadata as PuckMetadata | undefined)?.testimonials ?? []) as LandingTestimonial[]
-    const resolvedItems: TestimonialItem[] = live.length > 0
-      ? live.map((tm) => ({
-          name: tm.name,
-          role: tm.courseTitle ?? '',
-          quote: tm.quote,
-          rating: tm.rating ?? 5,
-        }))
-      : (items ?? [])
+    // Real course reviews resolved server-side and handed in via metadata — never invented
+    // people. 'live' shows only those (nothing publicly when there are none yet); 'manual'
+    // shows the written quotes; an unset source keeps the old live-else-items behaviour.
+    const binding = resolveCourseBinding(puck?.metadata, courseId)
+    const live = selectLiveTestimonials(puck?.metadata, { courseId, minRating, limit }).map((tm) => ({
+      name: tm.name,
+      role: tm.courseTitle ?? '',
+      quote: tm.quote,
+      rating: tm.rating ?? 5,
+    }))
+    const mode = source ?? (live.length > 0 ? 'live' : 'manual')
+    const resolvedItems: TestimonialItem[] = mode === 'live' ? live : (items ?? [])
 
-    if (!resolvedItems.length) return <></>
+    if (!resolvedItems.length) {
+      if (!puck?.isEditing) return <></>
+      const message =
+        binding.state === 'missing' || binding.state === 'draft' ? tc('notice.missingCourse') : tc('notice.noReviews')
+      return <BindingNotice title={tc('blocks.TestimonialGrid')} message={message} />
+    }
 
     const gridCols = resolvedItems.length <= 2
       ? 'grid-cols-1 md:grid-cols-2'
       : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div>
             {title && (
               <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>
             )}
             {subtitle && (
               <p className="text-center text-muted-foreground mb-10">{subtitle}</p>
+            )}
+            {puck?.isEditing && mode === 'manual' && (
+              <p role="note" className="mb-6 text-center text-xs text-muted-foreground">{tc('notice.manualQuotes')}</p>
             )}
             <div className={cn('grid gap-6', gridCols)}>
               {resolvedItems.map((item, i) => (
@@ -103,7 +162,7 @@ export const TestimonialGrid: ComponentConfig<TestimonialGridProps> = {
                         </span>
                       ))}
                     </span>
-                    <span className="sr-only">{item.rating} out of 5 stars</span>
+                    <span className="sr-only">{tc('ratingSr', { rating: item.rating })}</span>
                   </div>
                   <p className="italic leading-relaxed mb-4 text-[0.9375rem] text-foreground line-clamp-4">
                     &ldquo;{item.quote}&rdquo;

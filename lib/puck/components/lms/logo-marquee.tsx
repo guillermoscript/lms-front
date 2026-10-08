@@ -1,11 +1,12 @@
+import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
 import { Marquee } from '@/components/ui/marquee'
 import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 
 type LogoItem = {
@@ -76,13 +77,13 @@ export const LogoMarquee: ComponentConfig<LogoMarqueeProps> = {
       url: '',
     })),
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, items, reverse, pauseOnHover }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, items, reverse, pauseOnHover }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           {title && (
             <p className="text-center text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-8">
               {title}
@@ -102,7 +103,7 @@ export const LogoMarquee: ComponentConfig<LogoMarqueeProps> = {
                 return logo.url ? (
                   <a
                     key={i}
-                    href={logo.url}
+                    href={safeHref(logo.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mx-4 flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
