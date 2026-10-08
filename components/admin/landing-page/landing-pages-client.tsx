@@ -69,6 +69,8 @@ import { toast } from 'sonner'
 interface Props {
   pages: LandingPage[]
   plan: string
+  /** The school has a usable AI key (BYOK): gates "describe your page". */
+  aiConfigured?: boolean
   tenantId: string
   templates: PuckTemplate[]
   brandingSettings: Record<string, unknown>
@@ -95,7 +97,7 @@ function pageUrl(slug: string): string {
   return slug === 'home' ? '/' : `/p/${slug}`
 }
 
-export function LandingPagesClient({ pages: initialPages, plan, tenantId, templates, brandingSettings, landingData }: Props) {
+export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = false, tenantId, templates, brandingSettings, landingData }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
   const locale = useLocale() === 'es' ? 'es' : 'en'
@@ -460,7 +462,7 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
           onClose={() => setShowTemplatePicker(false)}
           templates={templates}
           onSelect={handleCreateFromTemplate}
-          onDescribe={plan !== 'free' ? handleCreateFromPrompt : undefined}
+          onDescribe={plan !== 'free' && aiConfigured ? handleCreateFromPrompt : undefined}
           loading={isLoading}
         />
       </LandingPickerProviders>

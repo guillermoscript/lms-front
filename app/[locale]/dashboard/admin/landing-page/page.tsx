@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { PUCK_TEMPLATES } from '@/lib/puck/templates'
 import { getLandingData } from '@/lib/puck/utils/landing-data'
 import { getTranslations } from 'next-intl/server'
+import { getTenantAiEnabled } from '@/lib/ai/ui-flags'
 
 export default async function LandingPageAdminPage() {
   const role = await getUserRole()
@@ -22,6 +23,9 @@ export default async function LandingPageAdminPage() {
   const supabase = createAdminClient()
   const { data: planResult } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
   const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
+
+  // "Describe your page" needs a working key; without one the picker offers templates only.
+  const aiConfigured = await getTenantAiEnabled()
 
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []
@@ -42,6 +46,7 @@ export default async function LandingPageAdminPage() {
         <LandingPagesClient
           pages={pages}
           plan={plan}
+          aiConfigured={aiConfigured}
           tenantId={tenantId}
           templates={PUCK_TEMPLATES}
           brandingSettings={brandingSettings}
