@@ -49,6 +49,13 @@ import {
   READINESS_CODE,
   READINESS_MESSAGE,
 } from '@/lib/payments/tenant-payment-readiness'
+import { assertSalesOpen } from '@/lib/billing/sales-gate'
+import {
+  isSalesBlockedError,
+  SALES_BLOCKED_CODE,
+  SALES_BLOCKED_MESSAGE,
+  SalesBlockedError,
+} from '@/lib/billing/sales-block-error'
 
 // Providers whose checkout this route owns. Stripe + manual have their own paths.
 const HANDLED: PaymentProvider[] = ['lemonsqueezy', 'solana', 'solana_subs', 'paypal', 'binance', 'binance_personal']
@@ -176,6 +183,23 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 },
       )
+    }
+
+    // Platform fee sales gate (#929, design 4.3): before any leftover handling,
+    // pending row or provider session. A first checkout carries no provider
+    // subscription id yet, so only a self-managed renewal (4.2a B) passes
+    // here; native renewals arrive by webhook and never reach this route.
+    try {
+      await assertSalesOpen(tenantId, {
+        kind: 'transaction',
+        userId: user.id,
+        productId: productId ?? null,
+        planId: planId ?? null,
+        paymentProvider: providerSlug,
+      })
+    } catch (err) {
+      if (!(err instanceof SalesBlockedError)) throw err
+      return NextResponse.json({ error: SALES_BLOCKED_MESSAGE, code: SALES_BLOCKED_CODE }, { status: 409 })
     }
 
     if (!HANDLED.includes(providerSlug as PaymentProvider)) {
@@ -406,6 +430,11 @@ export async function POST(req: NextRequest) {
       })
       .select('transaction_id')
       .single()
+
+    if (isSalesBlockedError(txError)) {
+      // The DB gate (LM003) won a race with the pre-check above.
+      return NextResponse.json({ error: SALES_BLOCKED_MESSAGE, code: SALES_BLOCKED_CODE }, { status: 409 })
+    }
 
     if (txError?.code === '23505') {
       // Lost a race with a concurrent checkout for the same item.

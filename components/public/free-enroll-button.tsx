@@ -7,6 +7,7 @@ import { IconLoader2 } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { enrollFree } from '@/app/[locale]/(public)/checkout/actions'
 import { Button } from '@/components/ui/button'
+import { SALES_BLOCKED_MESSAGE } from '@/lib/billing/sales-block-error'
 
 interface FreeEnrollProps {
   courseId: number
@@ -15,6 +16,7 @@ interface FreeEnrollProps {
 function useFreeEnrollment(courseId: number) {
   const router = useRouter()
   const t = useTranslations('coursePublicDetails.pricing')
+  const tFees = useTranslations('platformFees')
   const [isPending, startTransition] = useTransition()
 
   const enroll = useCallback(() => {
@@ -24,10 +26,12 @@ function useFreeEnrollment(courseId: number) {
         toast.success(t('enrollmentSuccess'))
         router.push(`/dashboard/student/courses/${courseId}`)
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : t('enrollmentError'))
+        const message = error instanceof Error ? error.message : null
+        // Platform fee sales block (#929): neutral, translated copy.
+        toast.error(message === SALES_BLOCKED_MESSAGE ? tFees('salesBlocked') : message || t('enrollmentError'))
       }
     })
-  }, [courseId, router, t])
+  }, [courseId, router, t, tFees])
 
   return { enroll, isPending }
 }

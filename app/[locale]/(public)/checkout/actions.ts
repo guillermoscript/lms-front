@@ -9,6 +9,8 @@ import { freeEnrollmentLimiter, getClientIp } from '@/lib/rate-limit';
 import { joinCurrentSchool } from '@/app/actions/join-school';
 import { findConflictingSubscription, PARALLEL_SUBSCRIPTION_MESSAGE } from '@/lib/payments/subscription-guard';
 import { getPaymentProvider, PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments';
+import { assertSalesOpen } from '@/lib/billing/sales-gate';
+import { isSalesBlockedError, SalesBlockedError } from '@/lib/billing/sales-block-error';
 
 /**
  * Mock checkout — creates a successful transaction.
@@ -57,6 +59,15 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
                 currency: string;
             };
 
+            // Platform fee sales gate (#929): refuse before writing anything.
+            // The row below carries the column default provider ('manual').
+            await assertSalesOpen(tenantId, {
+                kind: 'transaction',
+                userId,
+                productId: product.product_id,
+                paymentProvider: 'manual',
+            }, adminClient);
+
             // Create the transaction. The after_transaction_insert trigger
             // enrolls the user (entitlements + enrollment record) — no explicit
             // RPC call here, the trigger is the single enrollment path.
@@ -75,6 +86,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
                 .single();
 
             if (txError) {
+                if (isSalesBlockedError(txError)) throw new SalesBlockedError();
                 console.error("Transaction error:", txError);
                 throw new Error("Failed to create transaction: " + txError.message);
             }
@@ -105,6 +117,14 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
                 throw new Error(PARALLEL_SUBSCRIPTION_MESSAGE);
             }
 
+            // Platform fee sales gate (#929); a held-subscription renewal passes.
+            await assertSalesOpen(tenantId, {
+                kind: 'transaction',
+                userId,
+                planId: plan.plan_id,
+                paymentProvider: 'manual',
+            }, adminClient);
+
             // Create the transaction. The after_transaction_insert trigger
             // creates the subscription + entitlements (or extends an existing
             // subscription on renewal).
@@ -123,6 +143,7 @@ export async function enrollUser(courseId?: string, planId?: string, paymentMeth
                 .single();
 
             if (txError) {
+                if (isSalesBlockedError(txError)) throw new SalesBlockedError();
                 console.error("Transaction error:", txError);
                 throw new Error("Failed to create transaction: " + txError.message);
             }
@@ -208,6 +229,16 @@ export async function subscribeFree(planId?: string) {
             throw new Error(PARALLEL_SUBSCRIPTION_MESSAGE);
         }
 
+        // Platform fee sales gate (#929): grant_free_subscription inserts a
+        // zero-amount transaction (provider column default 'manual'). Before
+        // the membership join below so a refusal leaves no side effect.
+        await assertSalesOpen(tenantId, {
+            kind: 'transaction',
+            userId,
+            planId: numericPlanId,
+            paymentProvider: 'manual',
+        });
+
         // Signup-while-subscribing: join the school first (same as enrollFree).
         const { data: membership } = await supabase
             .from('tenant_users')
@@ -230,6 +261,7 @@ export async function subscribeFree(planId?: string) {
         });
 
         if (grantError) {
+            if (isSalesBlockedError(grantError)) throw new SalesBlockedError();
             console.error("Free subscription grant failed:", grantError);
             throw new Error("Failed to activate the plan. Please try again.");
         }
@@ -492,6 +524,14 @@ export async function enrollFree(courseId?: string) {
             throw new Error("This course is not free. Please use the paid enrollment flow.");
         }
 
+        // Platform fee sales gate (#929): no NEW free enrollment while blocked.
+        // Before the membership join below so a refusal leaves no side effect.
+        await assertSalesOpen(tenantId, {
+            kind: 'free_enrollment',
+            userId,
+            courseId: numericCourseId,
+        });
+
         // 3. A brand-new account (signup-while-enrolling) has no tenant
         // membership yet, which grant_free_entitlement requires. Join the
         // school first through the standard path (invitation- and
@@ -518,6 +558,7 @@ export async function enrollFree(courseId?: string) {
         });
 
         if (grantError) {
+            if (isSalesBlockedError(grantError)) throw new SalesBlockedError();
             console.error("Free entitlement grant failed:", grantError);
             throw new Error("Failed to enroll. Please try again.");
         }

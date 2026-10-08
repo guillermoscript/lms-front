@@ -6,7 +6,8 @@ import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { formatCurrency } from '@/lib/currency'
 import { formatDateTime } from '@/lib/format-date-time'
 import { getTenantTimeZone } from '@/lib/tenant-timezone'
-import { tenantBaseUrl, resolveDigestSettings } from '@/lib/notifications/daily-digest'
+import { tenantBaseUrl } from '@/lib/notifications/daily-digest'
+import { resolveTenantLocale } from '@/lib/i18n/tenant-locale'
 import {
   EXPIRABLE_MANUAL_REQUEST_STATUSES,
   MANUAL_REQUEST_REMINDER_LEAD_DAYS,
@@ -61,24 +62,6 @@ function itemNameFromRequest(request: RequestWithItemEmbeds | null): string {
   const product = Array.isArray(request?.product) ? request.product[0] : request?.product
   const plan = Array.isArray(request?.plan) ? request.plan[0] : request?.plan
   return product?.name || plan?.plan_name || 'your purchase'
-}
-
-/**
- * Best-effort per-tenant reading language. Nothing stores a per-student
- * locale, and a cron tick runs outside next-intl's request scope, so
- * `bestEffortLocaleOr()` (the pattern `app/actions/payment-requests.ts` uses)
- * would always resolve to its fallback here. `tenant_settings.daily_digest`
- * is the only per-tenant language signal that already exists — reused rather
- * than adding a second place a school sets its language.
- */
-async function resolveTenantLocale(admin: SupabaseClient, tenantId: string): Promise<'en' | 'es'> {
-  const { data } = await admin
-    .from('tenant_settings')
-    .select('setting_value')
-    .eq('tenant_id', tenantId)
-    .eq('setting_key', 'daily_digest')
-    .maybeSingle()
-  return resolveDigestSettings(data?.setting_value).locale
 }
 
 /**

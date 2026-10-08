@@ -21,6 +21,7 @@ import {
     PAYMENTS_NOT_CONNECTED_CODE,
     PAYMENTS_ONBOARDING_INCOMPLETE_CODE,
 } from '@/lib/payments/payment-readiness-codes';
+import { SALES_BLOCKED_CODE } from '@/lib/billing/sales-block-error';
 
 /** Readiness codes (#606) → translation keys under the `checkout` namespace. */
 const READINESS_MESSAGE_KEY: Record<string, string> = {
@@ -56,6 +57,7 @@ export function StripePaymentForm({
     hasManualFallback,
 }: StripePaymentFormProps) {
     const t = useTranslations('checkout');
+    const tFees = useTranslations('platformFees');
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [transactionId, setTransactionId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -84,7 +86,10 @@ export function StripePaymentForm({
                     // "still finishing setup" never reads as "contact the admin".
                     const localized = READINESS_MESSAGE_KEY[data.code as string];
                     throw new Error(
-                        localized ? t(localized) : data.error || t('stripe.initError'),
+                        // Platform fee sales block (#929): neutral, translated copy.
+                        data.code === SALES_BLOCKED_CODE
+                            ? tFees('salesBlocked')
+                            : localized ? t(localized) : data.error || t('stripe.initError'),
                     );
                 }
                 if (cancelled) return;
@@ -98,7 +103,7 @@ export function StripePaymentForm({
         return () => {
             cancelled = true;
         };
-    }, [productId, planId, t]);
+    }, [productId, planId, t, tFees]);
 
     const manualHref = productId
         ? `/checkout/manual?productId=${productId}`

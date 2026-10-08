@@ -9214,5 +9214,9 @@
         "reloadFailed": "Could not load the latest version."
       }
     }
+  },
+  "platformFees": {
+    "salesBlockedTitle": "Enrollment unavailable",
+    "salesBlocked": "This school isn't accepting new enrollments right now. Please try again later."
   }
 }

@@ -45,6 +45,12 @@ these routes.
   With the Vault secrets missing the job records a `cron_runs` row with
   `error` set and does nothing else, so an unconfigured environment is loud on
   the billing-health page rather than silently idle.
+- pg_cron is also **primary for `enforce-platform-fees`** (#929): job
+  `enforce-platform-fees-daily` at `0 5 * * *` calls
+  `public.invoke_cron_route('enforce-platform-fees')` (same Vault secrets);
+  GitHub's `0 6` slot is the fallback. Is it alive?
+  `select requested_at, status_code, response from public.cron_runs where route = 'enforce-platform-fees' order by requested_at desc limit 3;`
+  — the "Platform fee sweep" tile on `/platform/billing-health` shows the same.
 - pg_cron is the **only** scheduler for `send-pushes` (#835): job
   `send-pushes-every-minute` (`* * * * *`) calls
   `public.invoke_cron_route('send-pushes')`. GitHub cannot keep a one-minute
@@ -95,6 +101,7 @@ gh workflow enable cron.yml
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
 | `expire-platform-subscriptions` | `0 2` | No renewal reminders, no grace period, no downgrade to free: a school that stopped paying keeps its paid plan |
 | `enforce-plan-limits` | `0 3` | pg_cron is primary (#660); this is the fallback. If neither runs: a tenant that grows past its plan limits with no plan-change event is never cut off, a pending cutoff never completes, and no reminder email is ever sent |
+| `enforce-platform-fees` | `0 6` | pg_cron is primary (`0 5`, #929); this is the fallback. If neither runs: no monthly fee statement is issued, no reminder/overdue notice is sent and, in `enforce` mode, an overdue school is never paused (nor resumed — paying also resumes it synchronously once pay-now ships). See §2.1 |
 | `send-pushes` | every minute (pg_cron only) | No push notification reaches the mobile app. Pending rows older than a day are then marked sent without a push, so a long outage drops those pushes rather than flooding devices when it recovers |
 | `solana-pull` | **never** | See §5 |
 
@@ -118,6 +125,37 @@ way as any other route (§4):
 
 ```bash
 gh workflow run cron.yml -f route=expire-payment-requests
+```
+
+### 2.1 `enforce-platform-fees` (#929)
+
+Platform fee dunning for schools that collect sales directly (`manual`,
+`binance_personal`): design in `docs/PLATFORM_FEE_LEDGER_DESIGN.md` §3. Phases,
+each status-gated so the pg_cron + GitHub double fire is a no-op:
+
+1. **Close** — on/after the 1st (UTC), freezes last month's NON-FISCAL
+   statement per ledger currency (`platform_fee_statements`, unique per
+   tenant/currency/month), due the 4th 00:00 UTC, and emails the school admins.
+2. **Remind** — the day before `due_at`, open balance → email + `reminder_sent_at`.
+3. **Overdue** — stateless balance test → `tenant_fee_standing.state = overdue`.
+4. **Block** — only when `platform_fee_config.enforcement_mode = 'enforce'`:
+   overdue longer than `fee_grace_days` (7) and ≥ `min_blocking_balance` →
+   `blocked_at`. At most 25 tenants per run (`blockCapReached` in the body).
+   The default school is never blocked.
+5. **Recover** — nothing overdue / nothing owed →
+   `reevaluate_tenant_fee_standing()` clears the standing.
+
+Kill switch: `platform_fee_config.enforcement_mode` (`off` = no-op,
+`notify_only` = shipped default, emails and states only and **never** sets
+`blocked_at`, `enforce` = may block). `blocked_at` only refuses NEW sales and
+new free enrollments (SQLSTATE `LM003`); existing students keep access.
+
+```sql
+-- dry run first (writes nothing, lists would-act tenants under "actions"):
+--   curl -H "Authorization: Bearer $CRON_SECRET" "https://<app>/api/cron/enforce-platform-fees?dryRun=1"
+select enforcement_mode, fee_grace_days, min_blocking_balance from public.platform_fee_config;
+update public.platform_fee_config set enforcement_mode = 'notify_only';  -- emergency stop (as super admin)
+select state, count(*) from public.tenant_fee_standing group by 1;
 ```
 
 ---

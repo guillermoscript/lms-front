@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useTranslations } from 'next-intl';
+import { SALES_BLOCKED_CODE, SALES_BLOCKED_MESSAGE } from '@/lib/billing/sales-block-error';
 import {
     IconLoader2,
     IconCreditCard,
@@ -82,6 +83,7 @@ export function CheckoutForm({
     });
     const router = useRouter();
     const t = useTranslations('checkout');
+    const tFees = useTranslations('platformFees');
 
     // Provider-agnostic checkout (#280 Phase 4/5): Lemon Squeezy / PayPal /
     // Binance Pay = hosted redirect, Solana = QR + on-chain poll. Other
@@ -221,7 +223,10 @@ export function CheckoutForm({
             }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Checkout failed');
+        if (!res.ok) {
+            // Platform fee sales block (#929): neutral, translated copy.
+            throw new Error(data.code === SALES_BLOCKED_CODE ? tFees('salesBlocked') : data.error || 'Checkout failed');
+        }
         return data as {
             kind: string;
             url: string | null;
@@ -400,7 +405,12 @@ export function CheckoutForm({
                     }
                 }
             } catch (error) {
-                toast.error(t('toasts.error', { message: error instanceof Error ? error.message : String(error) }));
+                const message = error instanceof Error ? error.message : String(error);
+                // Server actions / payment requests refuse a blocked school with
+                // the English SALES_BLOCKED_MESSAGE; show the translated copy (#929).
+                toast.error(message === SALES_BLOCKED_MESSAGE
+                    ? tFees('salesBlocked')
+                    : t('toasts.error', { message }));
             }
         });
     };

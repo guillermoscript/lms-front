@@ -5,6 +5,7 @@ import {
   getAtRiskTenants,
   getLastPlanLimitSweep,
   getPlanConfigurationHealth,
+  getPlatformFeeHealth,
 } from '@/app/actions/platform/billing-health'
 import type { AtRiskReason } from '@/lib/billing/billing-health'
 import { platformCheckoutReasonLabel, providerLabel } from '@/lib/billing/plan-prices'
@@ -28,10 +29,11 @@ function reasonLabel(reason: AtRiskReason, cutoffActive: boolean): string {
 }
 
 export default async function PlatformBillingHealthPage() {
-  const [atRisk, planHealth, sweep] = await Promise.all([
+  const [atRisk, planHealth, sweep, feeHealth] = await Promise.all([
     getAtRiskTenants(),
     getPlanConfigurationHealth(),
     getLastPlanLimitSweep(),
+    getPlatformFeeHealth(),
   ])
 
   // The metric cards deliberately keep counting past-due tenants only, so the
@@ -245,6 +247,72 @@ export default async function PlatformBillingHealthPage() {
             {sweep.error && (
               <span className="text-destructive" data-testid="billing-health-sweep-error">
                 {sweep.error}
+              </span>
+            )}
+          </div>
+        </PlatformPanel>
+      </PlatformSection>
+
+      {/*
+        Platform fee enforcement (#929). Same cron_runs ledger as the plan-limit
+        sweep, plus the kill-switch mode and schools by fee standing, so "is
+        anyone paused, and could anyone be" is answerable without SQL.
+      */}
+      <PlatformSection
+        title="Platform fee sweep"
+        description="Last daily enforce-platform-fees run. Issues fee statements, sends reminders and, only in enforce mode, pauses new sales of overdue schools."
+        data-testid="billing-health-fee-sweep"
+        className="mb-8"
+      >
+        <PlatformPanel>
+          <div
+            className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 text-sm"
+            data-state={feeHealth.sweep.state}
+          >
+            <Badge
+              variant={
+                feeHealth.sweep.state === 'ok'
+                  ? 'secondary'
+                  : feeHealth.sweep.state === 'running'
+                    ? 'outline'
+                    : 'destructive'
+              }
+              data-testid="billing-health-fee-sweep-state"
+            >
+              {feeHealth.sweep.state === 'ok' && 'Healthy'}
+              {feeHealth.sweep.state === 'running' && 'Running'}
+              {feeHealth.sweep.state === 'failed' && 'Failed'}
+              {feeHealth.sweep.state === 'unconfigured' && 'Not configured'}
+              {feeHealth.sweep.state === 'never' && 'Never run'}
+            </Badge>
+            <span className="text-muted-foreground" data-testid="billing-health-fee-mode">
+              Mode: <strong className="text-foreground">{feeHealth.mode ?? 'unknown'}</strong>
+            </span>
+            <span className="text-muted-foreground" data-testid="billing-health-fee-standing">
+              {feeHealth.standing.reminded} reminded · {feeHealth.standing.overdue} overdue ·{' '}
+              <span className={cn(feeHealth.standing.blocked > 0 && 'text-destructive')}>
+                {feeHealth.standing.blocked} paused
+              </span>
+            </span>
+            {feeHealth.sweep.requestedAt && (
+              <span className="text-muted-foreground">
+                Last run {format(new Date(feeHealth.sweep.requestedAt), 'PPp')}
+                {feeHealth.sweep.statusCode !== null && ` · HTTP ${feeHealth.sweep.statusCode}`}
+              </span>
+            )}
+            {feeHealth.sweep.summary && (
+              <span className="text-muted-foreground">
+                {String(feeHealth.sweep.summary.statementsClosed ?? 0)} statements ·{' '}
+                {String(feeHealth.sweep.summary.overdue ?? 0)} newly overdue ·{' '}
+                {String(feeHealth.sweep.summary.blocked ?? 0)} paused ·{' '}
+                {String(feeHealth.sweep.summary.wouldBlock ?? 0)} would pause ·{' '}
+                {String(feeHealth.sweep.summary.unblocked ?? 0)} resumed ·{' '}
+                {String(feeHealth.sweep.summary.errors ?? 0)} errors
+              </span>
+            )}
+            {feeHealth.sweep.error && (
+              <span className="text-destructive" data-testid="billing-health-fee-sweep-error">
+                {feeHealth.sweep.error}
               </span>
             )}
           </div>
