@@ -29,7 +29,6 @@ import { useLocale, useTranslations } from 'next-intl'
 import { SCHOOL_CURRENCIES } from '@/lib/countries'
 import PaymentProviderRow from '@/components/admin/payment-provider-row'
 import SolanaWalletForm from '@/components/admin/solana-wallet-form'
-import BinancePersonalForm from '@/components/admin/binance-personal-form'
 import ManualPaymentAccountsEditor from '@/components/admin/manual-payment-accounts-editor'
 import {
   normalizeManualPaymentAccounts,
@@ -53,7 +52,7 @@ export default function PaymentSettingsForm({
   settings,
   connect,
   solanaWalletAddress,
-  binancePersonal,
+  binancePersonal: initialBinancePersonal,
 }: PaymentSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const tConnect = useTranslations('dashboard.admin.settings.sections.payment.connect')
@@ -64,7 +63,6 @@ export default function PaymentSettingsForm({
   // would refuse. Rails on a global platform account need no tenant setup.
   const stripeReady = Boolean(connect.accountId && connect.chargesEnabled)
   const solanaReady = Boolean(solanaWalletAddress)
-  const binancePersonalReady = Boolean(binancePersonal.payId && binancePersonal.hasCredentials)
 
   // Toggles are controlled rather than read off FormData at submit time: the
   // status pill, the warning state and the expand-on-enable config all have to
@@ -85,10 +83,15 @@ export default function PaymentSettingsForm({
   const setFlag = (key: keyof typeof flags) => (value: boolean) =>
     setFlags((prev) => ({ ...prev, [key]: value }))
 
-  // Credential sheets. The two credential editors are real <form> elements, so
-  // they cannot be nested inside this one — a Sheet portals them out of the DOM
-  // tree while keeping their trigger inside the provider row that needs them.
-  const [walletSheet, setWalletSheet] = useState<null | 'solana' | 'binance_personal'>(null)
+  // The Solana wallet editor is a real <form>, so it cannot be nested inside
+  // this one — a Sheet portals it out of the DOM tree while keeping its trigger
+  // inside the provider row that needs it.
+  const [walletSheet, setWalletSheet] = useState<null | 'solana'>(null)
+
+  // Binance Pay auto-verify (the `binance_personal` rail) is configured from the
+  // Binance card in the offline catalog: the Pay ID and read-only key are saved
+  // by the modal itself, the on/off flag rides this form's Save like the rest.
+  const [binanceWallet, setBinanceWallet] = useState(initialBinancePersonal)
 
   // Settings values are JSONB scalars (string | number | null), so each one is
   // coerced to the shape its input actually wants rather than trusted as-is.
@@ -279,21 +282,6 @@ export default function PaymentSettingsForm({
             onEnabledChange={setFlag('binance')}
             configured
           />
-
-          <PaymentProviderRow
-            provider="binance_personal"
-            name={t('payment.binancePersonal')}
-            description={t('payment.binancePersonalHint')}
-            enabled={flags.binancePersonal}
-            onEnabledChange={setFlag('binancePersonal')}
-            configured={binancePersonalReady}
-            setupHint={t('payment.setup.wallet')}
-            action={
-              <WalletButton onClick={() => setWalletSheet('binance_personal')}>
-                {binancePersonalReady ? t('payment.wallet.edit') : t('payment.wallet.add')}
-              </WalletButton>
-            }
-          />
         </ProviderGroup>
 
         {/* ── Offline ─────────────────────────────────────────────────── */}
@@ -334,6 +322,20 @@ export default function PaymentSettingsForm({
                 accounts={accounts}
                 onChange={setAccounts}
                 disabled={isSubmitting}
+                binance={{
+                  payId: binanceWallet.payId,
+                  hasCredentials: binanceWallet.hasCredentials,
+                  enabled: flags.binancePersonal,
+                }}
+                onBinanceChange={(change) => {
+                  setFlag('binancePersonal')(change.enabled)
+                  if (change.payId !== undefined || change.hasCredentials !== undefined) {
+                    setBinanceWallet((prev) => ({
+                      payId: change.payId !== undefined ? change.payId : prev.payId,
+                      hasCredentials: change.hasCredentials ?? prev.hasCredentials,
+                    }))
+                  }
+                }}
               />
 
               <div className="flex items-start justify-between gap-4">
@@ -433,24 +435,6 @@ export default function PaymentSettingsForm({
           </SheetHeader>
           <div className="px-4 pb-4">
             <SolanaWalletForm initialAddress={solanaWalletAddress} />
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet
-        open={walletSheet === 'binance_personal'}
-        onOpenChange={(open) => !open && setWalletSheet(null)}
-      >
-        <SheetContent side="right" className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>{t('payment.wallet.binanceTitle')}</SheetTitle>
-            <SheetDescription>{t('payment.wallet.binanceDesc')}</SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <BinancePersonalForm
-              initialPayId={binancePersonal.payId}
-              hasCredentials={binancePersonal.hasCredentials}
-            />
           </div>
         </SheetContent>
       </Sheet>
