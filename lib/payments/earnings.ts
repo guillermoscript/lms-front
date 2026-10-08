@@ -94,6 +94,45 @@ export interface EarningsTxn {
   usdAmount?: number | null
 }
 
+/** Columns the earnings page selects from `transactions` (raw DB shape). */
+export const EARNINGS_TXN_COLUMNS =
+  'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, product_id, plan_id, usd_amount'
+
+export interface TransactionRowForEarnings {
+  transaction_id: number
+  payment_provider: string | null
+  amount: number | string | null
+  refunded_amount: number | string | null
+  currency: string | null
+  school_percentage_snapshot: number | string | null
+  status: string | null
+  transaction_date: string | null
+  product_id: number | null
+  plan_id: number | null
+  /** #929 insert-time USD snapshot; must be carried so #928 reconciles with platform_fee_ledger(). */
+  usd_amount?: number | string | null
+}
+
+const numOrNull = (v: number | string | null | undefined) => (v == null ? null : Number(v))
+
+/** Maps a raw `transactions` row to an EarningsTxn; null when it cannot be counted. */
+export function earningsTxnFromRow(r: TransactionRowForEarnings): EarningsTxn | null {
+  if (!r.payment_provider || r.amount == null || !r.transaction_date) return null
+  return {
+    transactionId: r.transaction_id,
+    paymentProvider: r.payment_provider,
+    amount: Number(r.amount),
+    refundedAmount: numOrNull(r.refunded_amount),
+    currency: r.currency || 'usd',
+    schoolPercentageSnapshot: numOrNull(r.school_percentage_snapshot),
+    status: r.status as EarningsTxn['status'],
+    transactionDate: r.transaction_date,
+    productId: r.product_id,
+    planId: r.plan_id,
+    usdAmount: numOrNull(r.usd_amount),
+  }
+}
+
 export interface EarningsRow extends EarningsTxn {
   /** Upper-cased currency code; balances are grouped by it and never summed across. */
   currencyCode: string
