@@ -6936,6 +6936,9 @@ export type Database = {
           duplicate_settlement_at: string | null
           expired_at: string | null
           fee_bearer: string
+          fx_rate_date: string | null
+          fx_rate_source: string | null
+          fx_rate_to_usd: number | null
           payment_method: string | null
           payment_provider: string | null
           plan_id: number | null
@@ -6956,6 +6959,7 @@ export type Database = {
           tenant_id: string
           transaction_date: string
           transaction_id: number
+          usd_amount: number | null
           user_id: string | null
         }
         Insert: {
@@ -6965,6 +6969,9 @@ export type Database = {
           duplicate_settlement_at?: string | null
           expired_at?: string | null
           fee_bearer?: string
+          fx_rate_date?: string | null
+          fx_rate_source?: string | null
+          fx_rate_to_usd?: number | null
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
@@ -6985,6 +6992,7 @@ export type Database = {
           tenant_id?: string
           transaction_date?: string
           transaction_id?: number
+          usd_amount?: number | null
           user_id?: string | null
         }
         Update: {
@@ -6994,6 +7002,9 @@ export type Database = {
           duplicate_settlement_at?: string | null
           expired_at?: string | null
           fee_bearer?: string
+          fx_rate_date?: string | null
+          fx_rate_source?: string | null
+          fx_rate_to_usd?: number | null
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
@@ -7014,6 +7025,7 @@ export type Database = {
           tenant_id?: string
           transaction_date?: string
           transaction_id?: number
+          usd_amount?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -8099,7 +8111,15 @@ export type Database = {
       app_role: "admin" | "moderator" | "teacher" | "student"
       chat_types: "free_chat" | "q&a" | "exam_prep" | "course_convo"
       currency_type:
-        "usd" | "eur" | "mxn" | "cop" | "clp" | "pen" | "ars" | "brl"
+        | "usd"
+        | "eur"
+        | "mxn"
+        | "cop"
+        | "clp"
+        | "pen"
+        | "ars"
+        | "brl"
+        | "ves"
       difficulty_level: "easy" | "medium" | "hard"
       enrollement_status: "active" | "disabled"
       entitlement_source: "product" | "subscription" | "free" | "admin_grant"
@@ -8271,7 +8291,7 @@ export const Constants = {
       ],
       app_role: ["admin", "moderator", "teacher", "student"],
       chat_types: ["free_chat", "q&a", "exam_prep", "course_convo"],
-      currency_type: ["usd", "eur", "mxn", "cop", "clp", "pen", "ars", "brl"],
+      currency_type: ["usd", "eur", "mxn", "cop", "clp", "pen", "ars", "brl", "ves"],
       difficulty_level: ["easy", "medium", "hard"],
       enrollement_status: ["active", "disabled"],
       entitlement_source: ["product", "subscription", "free", "admin_grant"],

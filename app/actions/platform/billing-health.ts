@@ -260,12 +260,48 @@ export interface PlanLimitSweepStatus {
  */
 export async function getLastPlanLimitSweep(): Promise<PlanLimitSweepStatus> {
   await verifySuperAdmin()
-  const admin = createAdminClient()
+  return lastCronRun(createAdminClient(), 'enforce-plan-limits')
+}
 
+export interface PlatformFeeHealth {
+  /** Last `enforce-platform-fees` pg_cron run (#929). */
+  sweep: PlanLimitSweepStatus
+  /** platform_fee_config.enforcement_mode; null when it could not be read. */
+  mode: 'off' | 'notify_only' | 'enforce' | null
+  /** tenant_fee_standing rows by state. */
+  standing: Record<'ok' | 'reminded' | 'overdue' | 'blocked', number>
+}
+
+/**
+ * Platform fee enforcement at a glance (#929, design 4.4 "Super admin"): the
+ * kill-switch mode, schools by fee standing and the last cron run.
+ */
+export async function getPlatformFeeHealth(): Promise<PlatformFeeHealth> {
+  await verifySuperAdmin()
+  const admin = createAdminClient()
+  const [sweep, configRes, standingRes] = await Promise.all([
+    lastCronRun(admin, 'enforce-platform-fees'),
+    admin.from('platform_fee_config').select('enforcement_mode').eq('id', true).maybeSingle(),
+    admin.from('tenant_fee_standing').select('state'),
+  ])
+  const standing = { ok: 0, reminded: 0, overdue: 0, blocked: 0 }
+  for (const row of standingRes.data ?? []) {
+    const key = row.state as keyof typeof standing
+    if (key in standing) standing[key]++
+  }
+  const mode = (configRes.data?.enforcement_mode ?? null) as PlatformFeeHealth['mode']
+  return { sweep, mode, standing }
+}
+
+/** One route's latest `cron_runs` row (plan-limit sweep, platform fee sweep). */
+async function lastCronRun(
+  admin: ReturnType<typeof createAdminClient>,
+  route: string,
+): Promise<PlanLimitSweepStatus> {
   const { data: run } = await admin
     .from('cron_runs')
     .select('requested_at, completed_at, status_code, response, error')
-    .eq('route', 'enforce-plan-limits')
+    .eq('route', route)
     .order('requested_at', { ascending: false })
     .limit(1)
     .maybeSingle()

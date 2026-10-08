@@ -42,12 +42,37 @@ describe('D5: fee standing never gates course access', () => {
     expect(body).not.toMatch(FEE_OBJECTS)
   })
 
+  /**
+   * The sales gate (#929 step 4) must mention `entitlements` twice, both
+   * on the NEW-grant side: grant_free_entitlement() refuses a new free
+   * enrollment while blocked, and free_enrollment_allowed() reads whether the
+   * student ALREADY holds the course (so re-clicking stays allowed). Neither
+   * can revoke or edit an existing grant; the next test pins that down.
+   */
+  const NEW_GRANT_GATE_ONLY: Record<string, string> = {
+    '20261009110000_platform_fee_gate_929.sql': 'gates NEW free grants only (grant_free_entitlement)',
+  }
+
   it('no migration that touches the fee ledger redefines course access or entitlements', () => {
     const offenders = files.filter((f) => {
       const sql = read(f)
-      return FEE_OBJECTS.test(sql) && /has_course_access|\bentitlements\b/i.test(sql)
+      if (!FEE_OBJECTS.test(sql)) return false
+      if (/has_course_access/i.test(sql)) return true
+      return f in NEW_GRANT_GATE_ONLY ? false : /\bentitlements\b/i.test(sql)
     })
     expect(offenders).toEqual([])
+  })
+
+  it('the new-grant gate never revokes, edits or deletes an existing entitlement', () => {
+    for (const f of Object.keys(NEW_GRANT_GATE_ONLY)) {
+      const sql = read(f)
+      expect(sql, f).not.toMatch(/UPDATE\s+(?:public\.)?entitlements\b/i)
+      expect(sql, f).not.toMatch(/DELETE\s+FROM\s+(?:public\.)?entitlements\b/i)
+      expect(sql, f).not.toMatch(/\bON\s+(?:public\.)?entitlements\b/i)
+      // The only entitlement write is grant_free_entitlement's own INSERT,
+      // whose ON CONFLICT re-activates the caller's free grant (unchanged body).
+      expect(sql.match(/INSERT\s+INTO\s+(?:public\.)?entitlements\b/gi) ?? [], f).toHaveLength(1)
+    }
   })
 
   it('no entitlements policy, trigger or function body references fee standing', () => {

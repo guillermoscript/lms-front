@@ -6,6 +6,7 @@ import { PackageSearch, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getCurrentTenantId } from "@/lib/supabase/tenant";
+import { isSalesOpen } from "@/lib/billing/sales-gate";
 import { getSessionUser } from '@/lib/supabase/tenant'
 import { getSolanaSettlementOptions } from "@/app/actions/admin/settings";
 import { findConflictingSubscription } from "@/lib/payments/subscription-guard";
@@ -230,6 +231,33 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
             if (dbPlan.payment_provider === 'manual') {
                 redirect(`/checkout/manual?planId=${planId}`);
             }
+        }
+    }
+
+    // Platform fee sales block (#929, design 4.4): a neutral notice instead of
+    // any payment UI. Never reveals the school's fee debt. Fails open; the
+    // checkout routes and the DB trigger still decide at write time. A renewal
+    // of a plan the student already holds passes (same SQL predicate).
+    if (productId !== undefined || planId) {
+        const open = await isSalesOpen(tenantId, {
+            kind: 'transaction',
+            userId: user.id,
+            productId: productId ?? null,
+            planId: productId !== undefined ? null : planId ?? null,
+            paymentProvider: paymentProvider ?? 'manual',
+        });
+        if (!open) {
+            const tFees = await getTranslations('platformFees');
+            return (
+                <div className="min-h-screen bg-background">
+                    <div className="mx-auto max-w-xl px-4 py-12 sm:py-20 text-center">
+                        <h1 className="text-2xl font-bold tracking-tight">{tFees('salesBlockedTitle')}</h1>
+                        <p className="mt-4 text-sm text-muted-foreground" data-testid="checkout-sales-blocked">
+                            {tFees('salesBlocked')}
+                        </p>
+                    </div>
+                </div>
+            );
         }
     }
 

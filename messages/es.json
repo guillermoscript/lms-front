@@ -9214,5 +9214,9 @@
         "reloadFailed": "No se pudo cargar la última versión."
       }
     }
+  },
+  "platformFees": {
+    "salesBlockedTitle": "Inscripción no disponible",
+    "salesBlocked": "Esta escuela no está aceptando nuevas inscripciones en este momento. Inténtalo de nuevo más tarde."
   }
 }

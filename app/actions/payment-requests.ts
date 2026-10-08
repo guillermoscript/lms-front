@@ -28,6 +28,8 @@ import { paymentInstructionsTemplate } from '@/lib/email/templates/payment-instr
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
 import { getSchoolBrand } from '@/lib/themes/school-brand'
 import { formatCurrency } from '@/lib/currency'
+import { assertSalesOpen } from '@/lib/billing/sales-gate'
+import { isSalesBlockedError, SalesBlockedError } from '@/lib/billing/sales-block-error'
 import { formatDateTime } from '@/lib/format-date-time'
 import { getTenantTimeZone } from '@/lib/tenant-timezone'
 
@@ -285,6 +287,17 @@ async function insertPaymentRequest(data: PaymentRequestFormData) {
     paymentAmount = parseFloat(plan.price)
     paymentCurrency = plan.currency || 'usd'
   }
+
+  // Platform fee sales gate (#929), before any write. A manual request is
+  // settled later as a `manual` transaction, so it is checked as one: a renewal
+  // of a plan the student already holds on the manual rail passes (4.2a).
+  await assertSalesOpen(tenantId, {
+    kind: 'transaction',
+    userId,
+    productId: data.productId ?? null,
+    planId: data.productId ? null : data.planId ?? null,
+    paymentProvider: 'manual',
+  })
 
   // One open request per student per item (#754). A double-click or a retry
   // used to leave the admin with duplicate requests, and confirming the second
@@ -593,6 +606,17 @@ export async function completeAndEnroll(requestId: number) {
   // behalf of the student (uid() != user_id would fail with a regular client).
   const adminClient = await createAdminClient()
 
+  // Platform fee sales gate (#929). A request opened before the block (money
+  // already seen) and a held-subscription renewal both pass; the same SQL
+  // predicate decides in the INSERT trigger.
+  await assertSalesOpen(request.tenant_id, {
+    kind: 'transaction',
+    userId: request.user_id,
+    productId: request.product_id || null,
+    planId: request.plan_id || null,
+    paymentProvider: 'manual',
+  }, adminClient)
+
   // Create the transaction. The after_transaction_insert trigger handles
   // enrollment (entitlements + enrollment record / subscription) — the single
   // enrollment path shared with the Stripe webhook and mock checkout.
@@ -619,6 +643,7 @@ export async function completeAndEnroll(requestId: number) {
     .single()
 
   if (transactionError) {
+    if (isSalesBlockedError(transactionError)) throw new SalesBlockedError()
     console.error('Failed to create transaction:', transactionError)
     throw new Error('Failed to create transaction')
   }

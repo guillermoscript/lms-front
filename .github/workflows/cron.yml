@@ -41,6 +41,7 @@ on:
     - cron: '0 1 * * 1' # league-rollover (pg_cron also runs it Mondays 00:05; this is the fallback)
     - cron: '0 2 * * *' # expire-platform-subscriptions
     - cron: '0 3 * * *' # enforce-plan-limits
+    - cron: '0 6 * * *' # enforce-platform-fees (pg_cron runs it at 0 5; this is the fallback, #929)
   workflow_dispatch:
     inputs:
       route:
@@ -49,6 +50,7 @@ on:
         type: choice
         options:
           - enforce-plan-limits
+          - enforce-platform-fees
           - expire-platform-subscriptions
           - expire-subscriptions
           - daily-digest
@@ -98,6 +100,7 @@ jobs:
               '0 1 * * 1')    routes='league-rollover' ;;
               '0 2 * * *')    routes='expire-platform-subscriptions' ;;
               '0 3 * * *')    routes='enforce-plan-limits' ;;
+              '0 6 * * *')    routes='enforce-platform-fees' ;;
               *)
                 echo "::error::Schedule '${SCHEDULE:-}' has no route mapping. Add it to the case block in .github/workflows/cron.yml."
                 exit 1

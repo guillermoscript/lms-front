@@ -15,6 +15,13 @@ import {
   splitOrDefault,
 } from '@/lib/payments/product-charge'
 import { checkoutExpiryFrom } from '@/lib/payments/checkout-expiry'
+import { assertSalesOpen } from '@/lib/billing/sales-gate'
+import {
+  isSalesBlockedError,
+  SALES_BLOCKED_CODE,
+  SALES_BLOCKED_MESSAGE,
+  SalesBlockedError,
+} from '@/lib/billing/sales-block-error'
 import {
   inspectStripeCheckout,
   releaseStripeCheckout,
@@ -90,6 +97,23 @@ export async function POST(req: NextRequest) {
         },
         { status: 400 },
       )
+    }
+
+    // Platform fee sales gate (#929, design 4.3): before the Stripe customer
+    // call and the pending row, so a blocked school costs zero side effects.
+    // Native renewals arrive by webhook (with a provider subscription id) and
+    // never pass through here.
+    try {
+      await assertSalesOpen(tenantId, {
+        kind: 'transaction',
+        userId: user.id,
+        productId: productId ?? null,
+        planId: planId ?? null,
+        paymentProvider: 'stripe',
+      })
+    } catch (err) {
+      if (!(err instanceof SalesBlockedError)) throw err
+      return NextResponse.json({ error: SALES_BLOCKED_MESSAGE, code: SALES_BLOCKED_CODE }, { status: 409 })
     }
 
     // Get or create Stripe customer
@@ -331,6 +355,11 @@ export async function POST(req: NextRequest) {
       })
       .select('transaction_id')
       .single()
+
+    if (isSalesBlockedError(txError)) {
+      // The DB gate (LM003) won a race with the pre-check above.
+      return NextResponse.json({ error: SALES_BLOCKED_MESSAGE, code: SALES_BLOCKED_CODE }, { status: 409 })
+    }
 
     if (txError?.code === '23505') {
       // Lost a race: a concurrent request, or a webhook that settled the
