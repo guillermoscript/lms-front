@@ -7,7 +7,7 @@
  *      backfill-safe);
  *   2. the CHECK constraints reject anything but school | student;
  *   3. a transaction's bearer snapshot is frozen once written (an UPDATE that
- *      carries the column is neutralised, not failed);
+ *      changes it RAISES check_violation; one that leaves it alone succeeds);
  *   4. the checkout page shows the buyer the grossed-up amount the checkout
  *      routes charge, with the "includes the platform fee" note — and the
  *      listed price when the school bears it;
@@ -149,11 +149,19 @@ test.describe('Fee bearer (#927) — schema', () => {
     )
     expect(tx.fee_bearer).toBe('student')
 
+    // Changing it fails loudly — not a silent no-op that reports success.
     const { error } = await admin
       .from('transactions')
       .update({ fee_bearer: 'school' })
       .eq('transaction_id', tx.transaction_id)
-    expect(error).toBeNull()
+    expect(error?.code).toBe('23514') // check_violation
+
+    // An incidental update that does not change it (a webhook, a refund) passes.
+    const { error: incidental } = await admin
+      .from('transactions')
+      .update({ status: 'canceled', fee_bearer: 'student' })
+      .eq('transaction_id', tx.transaction_id)
+    expect(incidental).toBeNull()
 
     const { data: after } = await admin
       .from('transactions')

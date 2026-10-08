@@ -6,7 +6,7 @@ import { ProductCreationWizard } from '@/components/admin/product-creation-wizar
 import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
 import { ProductFeeBearerCard } from '@/components/admin/product-fee-bearer-card'
 import { canPassFeeToStudent, normalizeFeeBearer } from '@/lib/payments/fee-bearer'
-import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
+import { getTenantRevenueSplit, splitOrDefault } from '@/lib/payments/product-charge'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import type {
   ProductCreationPaymentProvider,
@@ -158,20 +158,16 @@ export default async function EditProductPage({ params }: PageProps) {
   }
 
   const { data: enabledProviders } = await getEnabledPaymentProviders()
-  const [{ data: tenant }, { data: revenueSplit }] = await Promise.all([
+  const [{ data: tenant }, revenueSplit] = await Promise.all([
     supabase
       .from('tenants')
       .select('stripe_account_id')
       .eq('id', tenantId)
       .single(),
-    supabase
-      .from('revenue_splits')
-      .select('platform_percentage')
-      .eq('tenant_id', tenantId)
-      .maybeSingle(),
+    getTenantRevenueSplit(tenantId),
   ])
-  // Same resolution the Stripe route charges with (0% is a real value, #605).
-  const platformPercentage = resolvePlatformPercentage(revenueSplit)
+  // The same split read the checkout routes charge with (lib/payments/product-charge.ts).
+  const platformPercentage = splitOrDefault(revenueSplit).platformPercentage
 
   return (
     <div className="min-h-screen bg-background">
@@ -209,6 +205,9 @@ export default async function EditProductPage({ params }: PageProps) {
 
         <div className="mt-8">
           <ProductFeeBearerCard
+            // Remount on a server refresh that changed any input, so the
+            // selection and breakdown never outlive the props they came from.
+            key={`${product.price}:${product.currency}:${product.fee_bearer}:${product.payment_provider}:${platformPercentage}`}
             productId={product.product_id}
             initialBearer={normalizeFeeBearer(product.fee_bearer)}
             price={Number(product.price)}

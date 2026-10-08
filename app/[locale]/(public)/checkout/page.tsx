@@ -14,8 +14,7 @@ import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/type
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
 import { pickCourseCheckoutProduct, type CourseProductLink } from "@/lib/puck/utils/checkout-href";
-import { chargedAmount, effectiveFeeBearer } from "@/lib/payments/fee-bearer";
-import { DEFAULT_SCHOOL_PERCENTAGE } from "@/lib/payments/payouts-owed";
+import { resolveProductCharge } from "@/lib/payments/product-charge";
 
 interface SearchParams {
     courseId?: string;
@@ -116,7 +115,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
             const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product_id, product:products(price, currency, payment_provider, description, status, fee_bearer)")
+                .select("product_id, product:products(tenant_id, price, currency, payment_provider, description, status, fee_bearer)")
                 .eq("course_id", courseId)
                 .eq("tenant_id", tenantId);
 
@@ -132,6 +131,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
             if (paidProductCourse?.product) {
                 const product = paidProductCourse.product as unknown as {
+                    tenant_id: string;
                     price: number | string;
                     currency: string | null;
                     payment_provider: string | null;
@@ -148,21 +148,15 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
                 }
 
-                // Fee bearer (#927): show the buyer the same grossed-up amount
-                // the checkout routes will charge. Same helper, same inputs
-                // (product + the tenant's current split), so display == charge.
-                const bearer = effectiveFeeBearer(product.fee_bearer, product.payment_provider || 'stripe');
-                if (bearer === 'student') {
-                    const { data: split } = await supabase
-                        .from('revenue_splits')
-                        .select('school_percentage')
-                        .eq('tenant_id', tenantId)
-                        .maybeSingle();
-                    const schoolPercentage = Number(split?.school_percentage ?? DEFAULT_SCHOOL_PERCENTAGE);
-                    const charged = chargedAmount(price, 100 - schoolPercentage, bearer, currency);
-                    feeIncluded = charged !== price;
-                    price = charged;
-                }
+                // Fee bearer (#927): show the buyer exactly what the checkout
+                // routes will charge — resolveProductCharge() is the one
+                // function all three use (split read for the PRODUCT's tenant
+                // on the service-role client, never the buyer's RLS view). A
+                // student-borne fee with no split on file throws rather than
+                // showing a guessed amount.
+                const charge = await resolveProductCharge(product, { expectedTenantId: tenantId });
+                feeIncluded = charge.feeIncluded;
+                price = charge.amount;
             }
         }
     } else if (planId) {

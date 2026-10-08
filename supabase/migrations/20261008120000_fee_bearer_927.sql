@@ -63,22 +63,31 @@ COMMENT ON COLUMN public.transactions.fee_bearer IS
   'Issue #927: who bore the platform fee on this sale, snapshotted at checkout and frozen afterwards. student = `amount` already includes the gross-up, so the school''s share (amount × school_percentage_snapshot) equals the listed price. Every sum still uses amount - refunded_amount.';
 
 -- 3. Frozen once written, like school_percentage_snapshot (#512): re-labelling a
---    historical sale would misreport what the buyer was charged and why. Restoring
---    OLD (rather than raising) keeps an incidental UPDATE that carries the column
---    — a webhook, a refund — from failing over it.
+--    historical sale would misreport what the buyer was charged and why.
+--
+--    RAISE rather than silently restoring OLD. Nothing in the app ever updates
+--    this column (it is written once, by the checkout insert), so any UPDATE
+--    that changes it is a bug or tampering and should fail where it can be
+--    seen — not report success while doing something else. Incidental updates
+--    are unaffected: supabase-js sends only the columns it sets, and the
+--    trigger's WHEN clause fires only when the value actually CHANGES, so a
+--    webhook or refund UPDATE that never mentions fee_bearer — or rewrites it
+--    with the same value — never reaches the function.
 CREATE OR REPLACE FUNCTION public.freeze_transaction_fee_bearer()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path TO 'public'
 AS $function$
 BEGIN
-  NEW.fee_bearer := OLD.fee_bearer;
-  RETURN NEW;
+  RAISE EXCEPTION 'transactions.fee_bearer is immutable once written (transaction %: % -> %)',
+    OLD.transaction_id, OLD.fee_bearer, NEW.fee_bearer
+    USING ERRCODE = 'check_violation',
+          HINT = 'fee_bearer is a checkout-time snapshot (issue #927); create a new transaction instead.';
 END;
 $function$;
 
 COMMENT ON FUNCTION public.freeze_transaction_fee_bearer() IS
-  'Issue #927: transactions.fee_bearer is a checkout-time snapshot and never changes afterwards.';
+  'Issue #927: transactions.fee_bearer is a checkout-time snapshot; any UPDATE that changes it raises check_violation.';
 
 DROP TRIGGER IF EXISTS before_transaction_fee_bearer_update ON public.transactions;
 CREATE TRIGGER before_transaction_fee_bearer_update

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,6 +37,7 @@ export function ProductFeeBearerCard({
 }: ProductFeeBearerCardProps) {
   const t = useTranslations('dashboard.admin.products.edit.feeBearer')
   const locale = useLocale()
+  const router = useRouter()
   const [bearer, setBearer] = useState<FeeBearer>(initialBearer)
   const [saved, setSaved] = useState<FeeBearer>(initialBearer)
   const [isPending, startTransition] = useTransition()
@@ -55,6 +57,10 @@ export function ProductFeeBearerCard({
       if (result.success) {
         setSaved(bearer)
         toast.success(t('saved'))
+        // Re-read the product (price, provider, split) on the server so the
+        // breakdown reflects what is stored now, not what this tab loaded with.
+        // The page keys this card on those inputs, so changed ones remount it.
+        router.refresh()
       } else {
         toast.error(t('saveError'))
       }
