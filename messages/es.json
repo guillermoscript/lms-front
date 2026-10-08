@@ -2490,6 +2490,57 @@
     "admin": {
       "title": "Panel de Administración",
       "welcome": "Gestiona tu plataforma LMS",
+      "earnings": {
+        "title": "Ingresos",
+        "description": "Ventas cobradas a través de la cuenta de la plataforma (PayPal, Lemon Squeezy, Binance Pay), tu parte tras la comisión y lo que aún se te debe pagar.",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
+        "stats": {
+          "owed": "Pendiente de pago",
+          "owedDesc": "Tu parte cobrada por la plataforma y aún no pagada",
+          "month": "Este mes",
+          "monthDesc": "{count, plural, one {# pago} other {# pagos}} este mes, tu parte",
+          "toConfirm": "Por confirmar",
+          "toConfirmLink": "Revisar solicitudes de pago"
+        },
+        "filters": {
+          "all": "Todos",
+          "payable": "Por pagar",
+          "pending": "Por confirmar",
+          "currency": "Moneda",
+          "allCurrencies": "Todas las monedas",
+          "from": "Desde",
+          "to": "Hasta",
+          "apply": "Aplicar"
+        },
+        "table": {
+          "title": "Ventas",
+          "headers": {
+            "product": "Producto / Orden",
+            "date": "Fecha",
+            "origin": "Origen",
+            "amount": "Monto",
+            "commission": "Comisión",
+            "net": "Ganancia neta",
+            "status": "Estado"
+          }
+        },
+        "status": {
+          "successful": "Pagado",
+          "pending": "Por confirmar",
+          "refunded": "Reembolsado"
+        },
+        "empty": {
+          "title": "Aún no hay ventas",
+          "description": "Las ventas cobradas a través de la cuenta de la plataforma aparecerán aquí."
+        },
+        "pagination": {
+          "label": "Paginación",
+          "page": "Página {page} de {total}",
+          "prev": "Anterior",
+          "next": "Siguiente"
+        }
+      },
       "payouts": {
         "title": "Pagos recibidos",
         "description": "Desembolsos a la cuenta de tu escuela, ya sea vía Stripe Connect o registrados manualmente por la plataforma.",
