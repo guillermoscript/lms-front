@@ -205,6 +205,25 @@ describe('POST /api/landing/chat', () => {
     expect(state.order).toEqual(['resolve:landing_builder:tools', 'limiter', 'page', 'usage'])
   })
 
+  it('a turn resumed after an approval continues the same assistant message (its id is reused)', async () => {
+    const res = await post(
+      body({
+        messages: [
+          { id: 'm1', role: 'user', parts: [{ type: 'text', text: 'Add a hero about coding' }] },
+          { id: 'a1', role: 'assistant', parts: [{ type: 'text', text: 'On it.' }] },
+        ],
+      })
+    )
+    const chunks = await sseChunks(res)
+    expect(chunks[0]).toMatchObject({ type: 'start', messageId: 'a1' })
+  })
+
+  it('a new turn (last message from the user) starts a new assistant message', async () => {
+    const chunks = await sseChunks(await post(body()))
+    expect(chunks[0].type).toBe('start')
+    expect(chunks[0].messageId).not.toBe('m1')
+  })
+
   it('sends the tools and both system messages to the model, with parallel tool calls off', async () => {
     const model = state.model as MockLanguageModelV4
     await (await post(body({ selectedId: 'x' }))).text()

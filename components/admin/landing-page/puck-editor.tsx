@@ -104,6 +104,13 @@ interface EditorChrome {
 
 const EditorChromeContext = createContext<EditorChrome | null>(null)
 
+/**
+ * Header button labels give way to their icons while the editor column is narrow (the docked
+ * chat takes 22rem), so Puck's header never grows wider than its column and pushes the fields
+ * sidebar under the chat. The label stays for screen readers, and `title` names it on hover.
+ */
+const COMPACT_LABEL = '@max-4xl/editor:sr-only'
+
 function useChrome(): EditorChrome {
   const value = useContext(EditorChromeContext)
   if (!value) throw new Error('useChrome must be used inside the landing-page editor')
@@ -136,9 +143,9 @@ function HeaderActions({ children }: { children: ReactNode }) {
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={chrome.requestBack} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={chrome.requestBack} className="gap-1.5" title={t('editor.back')}>
           <IconArrowLeft className="h-4 w-4" aria-hidden />
-          {t('editor.back')}
+          <span className={COMPACT_LABEL}>{t('editor.back')}</span>
         </Button>
         <Badge variant={chrome.status === 'published' ? 'default' : 'secondary'}>{t(`editor.status.${chrome.status}`)}</Badge>
         {chrome.dirty && (
@@ -148,9 +155,9 @@ function HeaderActions({ children }: { children: ReactNode }) {
           </span>
         )}
       </div>
-      <Button variant="outline" size="sm" onClick={chrome.openBranding} className="gap-1.5">
+      <Button variant="outline" size="sm" onClick={chrome.openBranding} className="gap-1.5" title={t('editor.branding')}>
         <IconPalette className="h-4 w-4" aria-hidden />
-        {t('editor.branding')}
+        <span className={COMPACT_LABEL}>{t('editor.branding')}</span>
       </Button>
       {chrome.aiEnabled && (
         <Button
@@ -162,7 +169,7 @@ function HeaderActions({ children }: { children: ReactNode }) {
           data-testid="page-architect-toggle"
         >
           <IconSparkles className="h-4 w-4" aria-hidden />
-          {tp('open')}
+          <span className={COMPACT_LABEL}>{tp('open')}</span>
         </Button>
       )}
       <Button
@@ -170,11 +177,11 @@ function HeaderActions({ children }: { children: ReactNode }) {
         size="sm"
         onClick={() => void chrome.save(getPuck().appState.data as Data)}
         disabled={chrome.saving || turnActive}
-        title={turnActive ? tp('editor.waitForAi') : undefined}
+        title={turnActive ? tp('editor.waitForAi') : t('editor.save')}
         className="gap-1.5"
       >
         <IconDeviceFloppy className="h-4 w-4" aria-hidden />
-        {chrome.saving ? t('editor.saving') : t('editor.save')}
+        <span className={COMPACT_LABEL}>{chrome.saving ? t('editor.saving') : t('editor.save')}</span>
       </Button>
       {children}
     </>
@@ -229,9 +236,18 @@ function EditorDialogs() {
 /** `overrides.puck` (critique A6): Puck's default layout + header, with the chat docked right. */
 function EditorShell({ children }: { children?: ReactNode }) {
   const chrome = useChrome()
+  const getPuck = useGetPuck()
+  const docked = chrome.aiEnabled && chrome.aiOpen
+  // The docked chat takes 22rem: fold the components drawer while it is open so the canvas keeps
+  // its width (the drawer stays one click away in Puck's header), unfold it when the chat closes.
+  useEffect(() => {
+    if (!chrome.aiEnabled) return
+    getPuck().dispatch({ type: 'setUi', ui: { leftSideBarVisible: !docked } })
+  }, [chrome.aiEnabled, docked, getPuck])
   return (
-    <div className="relative flex h-full min-h-0 w-full">
-      <div className="h-full min-w-0 flex-1">{children}</div>
+    <div className="relative flex h-full min-h-0 w-full" data-ai-docked={docked ? 'true' : undefined}>
+      {/* A size container: the header compacts to icons when the canvas column is narrow. */}
+      <div className="@container/editor h-full min-w-0 flex-1">{children}</div>
       {chrome.aiEnabled && (
         // Kept mounted while hidden, so closing the panel keeps the conversation and any turn.
         <PageArchitectPanel
@@ -239,7 +255,7 @@ function EditorShell({ children }: { children?: ReactNode }) {
           locale={chrome.locale}
           onClose={() => chrome.setAiOpen(false)}
           className={cn(
-            'w-full shrink-0 sm:w-[22rem]',
+            'relative z-10 w-full shrink-0 sm:w-[22rem]',
             'max-lg:absolute max-lg:inset-y-0 max-lg:right-0 max-lg:z-20 max-lg:shadow-xl',
             !chrome.aiOpen && 'hidden'
           )}

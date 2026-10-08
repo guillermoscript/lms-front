@@ -100,6 +100,10 @@ describe('edit tools', () => {
     expect(JSON.stringify(shadow.data)).not.toMatch(/\{\{\s*\w+\s*\}\}/)
     expect(shadow.data.content.some((i) => i.props.courseId === '7')).toBe(true)
     expect(JSON.stringify(shadow.data)).toContain('Acme Academy')
+    // The editor prompts the template ships come back as a to-do list for the model.
+    const rewrite = (res as { rewrite?: Array<{ id: string; type: string }> }).rewrite ?? []
+    expect(rewrite.map((b) => b.type)).toEqual(expect.arrayContaining(['CourseOutcomes', 'FaqAccordion', 'CoursePricingCard']))
+    expect(rewrite.every((b) => ids.includes(b.id))).toBe(true)
   })
 
   it('apply_template refuses another school\'s course and unknown templates', () => {
@@ -114,6 +118,12 @@ describe('edit tools', () => {
     expect(empty.approval.apply_template()).toBeUndefined()
     const full = setup()
     expect(full.approval.apply_template()).toMatchObject({ type: 'user-approval' })
+    expect(full.approval.apply_template({ templateId: 'course-landing', bindings: { courseId: '7' } })).toMatchObject({
+      type: 'user-approval',
+    })
+    // A call that cannot apply (live QA: the model passed a preset id) fails fast instead of asking.
+    expect(full.approval.apply_template({ templateId: 'course-hero-outcomes' })).toBeUndefined()
+    expect(full.approval.apply_template({ templateId: 'course-landing', bindings: { courseId: '999' } })).toBeUndefined()
 
     expect(full.approval.remove_block({ id: 'hero-1' })).toBeUndefined()
     full.run('remove_block', { id: 'hero-1' })

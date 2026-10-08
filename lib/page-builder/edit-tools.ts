@@ -248,6 +248,11 @@ export const EDIT_TOOL_NAMES = [
   'preview_theme',
 ] as const
 
+const TEMPLATE_IDS = listTemplates().map((t) => t.id) as [string, ...string[]]
+
+/** The editor prompts templates ship in place of claims (`lib/puck/templates`). */
+const PLACEHOLDER = /\bReplace with\b/
+
 /** A turn that removes this many blocks (cascade included) needs the admin's approval. */
 export const REMOVAL_APPROVAL_THRESHOLD = 3
 
@@ -345,7 +350,9 @@ export function createEditTools(deps: EditToolsDeps) {
       description:
         'Replace the WHOLE page with a template (fresh ids). Use on an empty page or when the admin asks for a new page; the admin must approve it on a non-empty page. Bind courseId for course templates and productId for product templates. Then rewrite its text in the page language with update_block.',
       inputSchema: z.object({
-        templateId: z.string(),
+        // An enum, not a free string: in live QA gpt-4.1-mini kept passing a PRESETS id
+        // (`course-hero-outcomes`) here; the provider now refuses anything but a template id.
+        templateId: z.enum(TEMPLATE_IDS).describe('A TEMPLATES id (never a PRESETS id; presets go to insert_preset).'),
         bindings: z
           .object({ courseId: z.string().optional(), productId: z.string().optional() })
           .optional(),
@@ -361,9 +368,20 @@ export function createEditTools(deps: EditToolsDeps) {
           const w = sink.commit(op)
           if (w) warnings.push(w)
         }
+        // Live QA: the model rewrote some blocks and left others, and editor prompts ("Replace
+        // with…") reached the public page. Name the blocks that still hold one as a to-do list.
+        const placeholders = shadow.data.content
+          .filter((i) => PLACEHOLDER.test(JSON.stringify(i.props)))
+          .map((i) => ({ id: i.props.id, type: i.type }))
         return {
           ok: true,
           blocks: shadow.data.content.map((i) => ({ id: i.props.id, type: i.type })),
+          ...(placeholders.length
+            ? {
+                rewrite: placeholders,
+                note: 'These blocks hold editor prompts ("Replace with…") that would show on the public page. Rewrite each with update_block in the page language, from real course facts (get_course), along with every English heading.',
+              }
+            : {}),
           ...(warnings.length ? { warnings } : {}),
         }
       },
@@ -558,7 +576,13 @@ export function createEditTools(deps: EditToolsDeps) {
   }
 
   const toolApproval = {
-    apply_template: (): ToolApprovalStatus => {
+    apply_template: (input?: {
+      templateId?: string
+      bindings?: { courseId?: string; productId?: string }
+    }): ToolApprovalStatus => {
+      // A call its execute refuses (unknown template, another school's id) runs straight to
+      // that error: never ask the admin to approve something that cannot apply.
+      if (input && (!getTemplate(input.templateId ?? '') || bindingsFor(input.bindings).errors.length)) return undefined
       const needs = !shadow.isEmpty || pendingContent
       pendingContent = true
       return needs ? { type: 'user-approval', reason: 'Replaces every block on the page' } : undefined

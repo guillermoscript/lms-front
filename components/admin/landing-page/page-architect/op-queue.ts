@@ -71,13 +71,16 @@ export class OpQueue {
   frames = 0
 
   constructor(options: OpQueueOptions) {
+    // `??`, not a spread over defaults: callers forward their own optional options, and an
+    // explicit `undefined` (PageArchitectTurn passes `raf: opts.raf`) must still get the default.
     this.opts = {
-      raf: defaultRaf,
-      typewriter: true,
-      typewriterMinChars: 40,
-      typewriterMaxFrames: 30,
-      typewriterMaxBacklog: 20,
-      ...options,
+      apply: options.apply,
+      onWarning: options.onWarning,
+      raf: options.raf ?? defaultRaf,
+      typewriter: options.typewriter ?? true,
+      typewriterMinChars: options.typewriterMinChars ?? 40,
+      typewriterMaxFrames: options.typewriterMaxFrames ?? 30,
+      typewriterMaxBacklog: options.typewriterMaxBacklog ?? 20,
     }
   }
 

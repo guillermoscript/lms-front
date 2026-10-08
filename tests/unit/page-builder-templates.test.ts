@@ -333,6 +333,10 @@ describe('school bindings', () => {
       schoolName: 'Escuela Sol',
       logoUrl: 'https://cdn.example/logo.png',
     })
+    // getAllSettingsByCategory wraps the stored `{ value }` once more.
+    expect(
+      schoolBindingsFromSettings({ site_name: { value: { value: 'Code Academy Pro' }, description: null } })
+    ).toEqual({ schoolName: 'Code Academy Pro' })
     expect(schoolBindingsFromSettings({ site_name: '', logo_url: { value: 'javascript:alert(1)' } })).toEqual({})
     expect(schoolBindingsFromSettings({ logo_url: '//evil.example/x.png' })).toEqual({})
     expect(schoolBindingsFromSettings({ logo_url: '/uploads/logo.png' })).toEqual({ logoUrl: '/uploads/logo.png' })

@@ -51,6 +51,16 @@ export function humanizeBlockType(type: string): string {
   return words.map((w, i) => (i === 0 ? w : w.toLowerCase())).join(' ')
 }
 
+/**
+ * A block that is no longer on the page (a later turn replaced it) still has a name: block ids
+ * are `<Type>-<suffix>` (server-assigned, and Puck's own), so earlier turns' lines keep saying
+ * "Updating Course hero" instead of "a block".
+ */
+export function typeFromId(id: string, typeLabel: (type: string) => string): string | null {
+  const match = /^([A-Z][A-Za-z0-9]*)-[A-Za-z0-9-]+$/.exec(id)
+  return match ? typeLabel(match[1]) : null
+}
+
 export function isFailedToolPart(part: ToolPartLike): boolean {
   if (part.state === 'output-error' || part.state === 'output-denied') return true
   const output = part.output as { ok?: unknown; isError?: unknown } | undefined
@@ -79,7 +89,7 @@ export function ToolLine({ part, blockLabel, typeLabel }: Props) {
     typeof input.type === 'string'
       ? typeLabel(input.type)
       : typeof input.id === 'string'
-        ? (blockLabel(input.id) ?? t('aBlock'))
+        ? (blockLabel(input.id) ?? typeFromId(input.id, typeLabel) ?? t('aBlock'))
         : t('aBlock')
   const key = (KNOWN_TOOLS as readonly string[]).includes(name) ? name : 'other'
   const label = t(`tools.${key}`, { block })

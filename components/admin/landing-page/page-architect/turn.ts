@@ -40,8 +40,11 @@ export class PageArchitectTurn {
   private readonly queue: OpQueue
   private ending: Promise<TurnResult> | null = null
   private foreignAbort = false
+  /** The block the admin had selected when the turn began (the applier selects as it works). */
+  private readonly selectedBefore: string | null
 
   constructor(private readonly opts: TurnOptions) {
+    this.selectedBefore = selectedBlockId(opts.getPuck())
     this.queue = new OpQueue({
       apply: (op) => applyOpToPuck(op, opts.getPuck),
       raf: opts.raf,
@@ -91,8 +94,19 @@ export class PageArchitectTurn {
     if (this.foreignAbort || applied === 0) {
       return { applied, committed: false, abortedByHistory: this.foreignAbort }
     }
-    dispatchOwn(this.opts.getPuck(), { type: 'setUi', ui: {}, recordHistory: true })
+    // The commit entry also hands the selection back: the applier selected each block it
+    // touched, and a selection left on the AI's last block would scope the admin's NEXT
+    // request to it ("this", the selected-block chip) without the admin ever choosing it.
+    const puck = this.opts.getPuck()
+    const itemSelector = this.selectedBefore ? (puck.getSelectorForId(this.selectedBefore) ?? null) : null
+    dispatchOwn(puck, { type: 'setUi', ui: { itemSelector }, recordHistory: true })
     await (this.opts.sleep ?? defaultSleep)(this.opts.commitDelayMs ?? 300)
     return { applied, committed: true, abortedByHistory: false }
   }
+}
+
+function selectedBlockId(puck: ReturnType<GetPuck>): string | null {
+  const selector = puck.appState.ui?.itemSelector
+  const id = selector ? puck.getItemBySelector(selector)?.props?.id : undefined
+  return typeof id === 'string' ? id : null
 }

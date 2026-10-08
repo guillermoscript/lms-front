@@ -74,3 +74,23 @@
 .editor :global([class*="_PuckLayout-inner_"]) {
   height: 100%;
 }
+
+/*
+ * Puck's DragDropContext wrapper sits between `.Puck` and `overrides.puck` with no height, so
+ * without this the layout grew to the page's full height: the whole editor (header, docked
+ * chat) scrolled away instead of the canvas scrolling inside its column.
+ */
+.editor :global(.Puck) > :global(div:not(#puck-portal-root)) {
+  height: 100%;
+}
+
+/*
+ * Docked chat: the editor box is 22rem narrower than the viewport Puck's media queries size its
+ * sidebars for. Keep the fields sidebar narrow so the canvas keeps its room (the components
+ * drawer is folded while the chat is open, see EditorShell).
+ */
+@media (min-width: 1024px) {
+  .editor :global([data-ai-docked="true"]) {
+    --puck-user-right-side-bar-width: 240px;
+  }
+}

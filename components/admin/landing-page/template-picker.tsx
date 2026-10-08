@@ -22,7 +22,7 @@ import {
 } from '@tabler/icons-react'
 import type { Data } from '@measured/puck'
 import { useLocale, useTranslations } from 'next-intl'
-import { templateMessageKey } from '@/lib/puck/template-labels'
+import { TEMPLATE_ITEM_KEYS, templateMessageKey } from '@/lib/puck/template-labels'
 import { templateBindingNeeds, type PuckTemplate, type TemplateBindings } from '@/lib/puck/templates'
 import { productBindings, slugFromTitle } from '@/lib/puck/templates/school-bindings'
 import { useLandingCourses } from '@/lib/puck/utils/courses-context'
@@ -62,13 +62,6 @@ const WP5_PAGE_TYPES = new Set<string>(['course', 'product', 'pricing'])
 const TITLE_SLUG_TYPES = new Set<string>(['course', 'product'])
 
 /** WP5 template id → key under `puck.templates.items`. */
-const TEMPLATE_ITEM_KEYS: Record<string, string> = {
-  'course-landing': 'courseLanding',
-  'course-launch-short': 'courseLaunchShort',
-  'free-course-lead': 'freeCourseLead',
-  'product-bundle': 'productBundle',
-  'pricing-page': 'pricingPage',
-}
 
 type Step = 'slug' | 'template' | 'binding'
 

@@ -116,6 +116,18 @@ describe('OpQueue batching', () => {
   })
 })
 
+describe('OpQueue defaults', () => {
+  // Live QA: PageArchitectTurn forwards `raf: opts.raf`, which is undefined in the editor; a
+  // spread over the defaults turned that into "this.opts.raf is not a function" on the first op.
+  it('an explicit undefined option still gets the default scheduler', async () => {
+    const rec = recorder()
+    const queue = new OpQueue({ apply: rec.apply, raf: undefined, typewriter: undefined })
+    queue.push(add('a'))
+    await queue.drain()
+    expect(rec.applied).toHaveLength(1)
+  })
+})
+
 describe('OpQueue drain / close', () => {
   it('drain() resolves only after every queued op applied', async () => {
     const frame = fakeRaf()

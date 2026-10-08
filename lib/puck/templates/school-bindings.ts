@@ -7,9 +7,14 @@ import type { TemplateBindings } from './_shared'
  * year, and a bundle's CourseGrid lists exactly the product's courses.
  */
 
-/** A `tenant_settings` value is stored either bare or as `{ value }`. */
+/**
+ * A `tenant_settings` value is stored either bare or as `{ value }`, and
+ * `getAllSettingsByCategory` wraps the stored value once more (`{ value: { value }, description }`),
+ * so unwrap every `{ value }` layer.
+ */
 function settingString(raw: unknown): string {
-  const v = raw && typeof raw === 'object' && 'value' in raw ? (raw as { value: unknown }).value : raw
+  let v = raw
+  for (let depth = 0; depth < 3 && v && typeof v === 'object' && 'value' in v; depth++) v = (v as { value: unknown }).value
   return typeof v === 'string' ? v.trim() : ''
 }
 

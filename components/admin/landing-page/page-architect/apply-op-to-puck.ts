@@ -152,9 +152,28 @@ function scrollToBlock(id: string): void {
   window.requestAnimationFrame(() => {
     const el = document.querySelector<HTMLElement>(`[data-puck-component="${CSS.escape(id)}"]`)
     if (!el) return
+    // Scroll only the canvas's own scroller, vertically. `scrollIntoView` also scrolls every
+    // ancestor (the canvas sideways, the window), which pushed the editor header out of view.
+    const scroller = nearestVerticalScroller(el)
+    if (!scroller) return
+    const box = el.getBoundingClientRect()
+    const view = scroller.getBoundingClientRect()
+    const margin = 16
+    let delta = 0
+    if (box.top < view.top || box.height > view.height) delta = box.top - view.top - margin
+    else if (box.bottom > view.bottom) delta = box.bottom - view.bottom + margin
+    if (delta === 0) return
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    el.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' })
+    scroller.scrollBy({ top: delta, behavior: reduce ? 'auto' : 'smooth' })
   })
+}
+
+function nearestVerticalScroller(el: HTMLElement): HTMLElement | null {
+  for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+    const overflowY = window.getComputedStyle(node).overflowY
+    if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) return node
+  }
+  return null
 }
 
 function clearSelection(puck: PuckApiLike): void {

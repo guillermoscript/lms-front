@@ -41,6 +41,7 @@ import { AiErrorNotice } from '@/components/ai/ai-error-notice'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
 import { isAiSetupErrorKind, parseAiChatError } from '@/lib/ai/chat-error'
 import { cn } from '@/lib/utils'
+import { TEMPLATE_ITEM_KEYS } from '@/lib/puck/template-labels'
 import { ThemePreviewBar } from './theme-preview'
 import { ToolLine, humanizeBlockType, toolNameOf, type ToolPartLike } from './tool-line'
 import { usePageArchitect } from './use-page-architect'
@@ -157,6 +158,14 @@ function Inner({ pageId, locale, onClose, className }: Props) {
   // edit (or an undo) after it moves the index, and the offer goes away.
   const lastApplied = appliedCount !== null && historyIndex === lastAppliedHistoryIndex ? appliedCount : null
 
+  // The approval card names the template the admin is asked about, never its raw id.
+  const tTemplates = useTranslations('puck.templates')
+  const templateLabel = (id: string) => {
+    const item = TEMPLATE_ITEM_KEYS[id]
+    if (item) return tTemplates(`items.${item}.name` as Parameters<typeof tTemplates>[0])
+    const words = id.replace(/-/g, ' ')
+    return words.charAt(0).toUpperCase() + words.slice(1)
+  }
   const typeLabel = useMemo(
     () => (type: string) => {
       const label = (getPuck().config.components[type] as { label?: unknown } | undefined)?.label
@@ -245,7 +254,7 @@ function Inner({ pageId, locale, onClose, className }: Props) {
                     const input = (p.input ?? {}) as Record<string, unknown>
                     const label =
                       typeof input.templateId === 'string'
-                        ? input.templateId
+                        ? templateLabel(input.templateId)
                         : typeof input.id === 'string'
                           ? (blockLabel(input.id) ?? input.id)
                           : name

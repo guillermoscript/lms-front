@@ -369,6 +369,31 @@ describe('PageArchitectTurn: one history entry per turn (critique A3/A4)', () =>
     expect(puck.data.content[0].props.title).toBe('T')
   })
 
+  it('the commit hands the selection back to the block the admin had selected (live QA)', async () => {
+    const puck = createFakePuck(page([hero('a'), hero('b')]))
+    puck.getPuck().dispatch({ type: 'setUi', ui: { itemSelector: { index: 1, zone: ROOT_ZONE } } } as never)
+    const turn = new PageArchitectTurn({ getPuck: puck.getPuck, raf, sleep, typewriter: false })
+    // The AI adds a block ABOVE the selection (shifting its index) and selects what it touches.
+    turn.push({ op: 'add', id: 'f', type: 'FaqAccordion', zone: ROOT_ZONE, index: 0, props: {} })
+    runFrames()
+    expect(puck.ui.itemSelector).toEqual({ index: 0, zone: ROOT_ZONE })
+    const ending = turn.end()
+    runFrames()
+    await ending
+    expect(puck.ui.itemSelector).toEqual({ index: 2, zone: ROOT_ZONE }) // 'b', at its new index
+  })
+
+  it('with nothing selected before the turn, the commit clears the AI\'s selection', async () => {
+    const puck = createFakePuck(page([hero('a')]))
+    const turn = new PageArchitectTurn({ getPuck: puck.getPuck, raf, sleep, typewriter: false })
+    turn.push({ op: 'add', id: 'f', type: 'FaqAccordion', zone: ROOT_ZONE, index: 1, props: {} })
+    runFrames()
+    const ending = turn.end()
+    runFrames()
+    await ending
+    expect(puck.ui.itemSelector).toBeNull()
+  })
+
   it('a chat-only turn (no ops applied) records nothing', async () => {
     const puck = createFakePuck(page([hero('a')]))
     const turn = new PageArchitectTurn({ getPuck: puck.getPuck, raf, sleep })

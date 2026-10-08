@@ -132,9 +132,10 @@ export async function POST(req: Request) {
     // 10. history → model messages, with the tools (B1: async, and approvals need the tools).
     // A tool call left without output (Stop mid-step, a provider finish reason the SDK does
     // not execute on) is dropped: providers refuse a tool call with no result.
+    const history = trimHistory(rawMessages)
     let modelMessages
     try {
-      modelMessages = await convertToModelMessages(trimHistory(rawMessages), {
+      modelMessages = await convertToModelMessages(history, {
         tools: agent.tools,
         ignoreIncompleteToolCalls: true,
       })
@@ -157,6 +158,10 @@ export async function POST(req: Request) {
       )
 
     const stream = createUIMessageStream<PageArchitectUIMessage>({
+      // A turn that resumes after a tool approval continues the SAME assistant message: the
+      // response must reuse its id, or the client starts a new message and the approved
+      // call's output finds no tool part to land on (the turn then ends in an error).
+      originalMessages: history as PageArchitectUIMessage[],
       execute: ({ writer }) => {
         const result = agent.stream({ model, messages: modelMessages, writer, abortSignal: req.signal })
         writer.merge(toUIMessageStream<typeof agent.tools, PageArchitectUIMessage>({ stream: result.stream, tools: agent.tools, onError }))
