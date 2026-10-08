@@ -234,7 +234,7 @@ export default function ApiTokensPage({ tokens, mcpUrl, schools }: ApiTokensPage
       </div>
 
       {/* Connect Claude (OAuth custom connector) */}
-      <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} tokensAvailable />
+      <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} />
 
       {/* Advanced: API token instructions */}
       <Card>

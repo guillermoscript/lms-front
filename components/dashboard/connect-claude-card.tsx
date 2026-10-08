@@ -22,12 +22,9 @@ interface ConnectClaudeCardProps {
   connectorUrl: string
   /** All the user's schools; with 2+ the card lists one connector per school. */
   schools?: ConnectSchool[]
-  /** Show the API-token fallback for headless CLI use (teachers/admins). */
-  tokensAvailable?: boolean
-  tokensHref?: string
 }
 
-export function ConnectClaudeCard({ connectorUrl, schools = [], tokensAvailable, tokensHref }: ConnectClaudeCardProps) {
+export function ConnectClaudeCard({ connectorUrl, schools = [] }: ConnectClaudeCardProps) {
   const t = useTranslations('components.connectClaude')
   const [copied, setCopied] = useState<string | null>(null)
   const multi = schools.length > 1
@@ -111,7 +108,7 @@ export function ConnectClaudeCard({ connectorUrl, schools = [], tokensAvailable,
             </div>
           </div>
         )}
-        <ConnectCliAgents connectorUrl={cliUrl} tokensAvailable={tokensAvailable} tokensHref={tokensHref} />
+        <ConnectCliAgents connectorUrl={cliUrl} />
       </CardContent>
     </Card>
   )

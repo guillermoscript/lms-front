@@ -4385,7 +4385,6 @@
       "apiTokens": {
         "title": "Connect AI Assistants",
         "description": "Connect Claude or other MCP clients to your LMS.",
-        "createToken": "Create Token",
         "howToConnect": {
           "title": "Advanced: API tokens (CLI and other MCP clients)",
           "description": "Use a token for clients that don't support OAuth sign-in.",
@@ -4718,10 +4717,7 @@
         "other": "Other",
         "otherHint": "Any agent that supports remote (HTTP) MCP servers: add this entry to its MCP config, then start its sign-in flow.",
         "antigravityHint": "Community-documented, not verified against our server yet: if sign-in doesn't start, check Antigravity's MCP docs.",
-        "copy": "Copied",
-        "tokenSummary": "No browser on this machine? Use an API token",
-        "tokenHint": "API tokens are for servers and CI. They never expire unless you set an expiry; revoke them any time.",
-        "createToken": "Create a token"
+        "copy": "Copied"
       }
     },
     "courseProgress": {
