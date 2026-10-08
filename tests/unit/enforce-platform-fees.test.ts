@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
 import {
+  parseDryRunParam,
   runPlatformFeeEnforcement,
   type FeeConfig,
   type FeeStanding,
@@ -379,5 +380,19 @@ describe('route', () => {
     const res = await GET(req)
     expect(res.status).toBe(401)
     vi.unstubAllEnvs()
+  })
+})
+
+describe('parseDryRunParam (fail safe)', () => {
+  const p = (q: string) => parseDryRunParam(new URLSearchParams(q))
+  it('treats any present value other than 0/false as a dry run', () => {
+    for (const q of ['dryRun', 'dryRun=', 'dryRun=1', 'dryRun=true', 'dryRun=TRUE', 'dryRun=True', 'dryRun=yes', 'dryRun=on']) {
+      expect(p(q), q).toBe(true)
+    }
+  })
+  it('runs for real only when absent or explicitly 0/false', () => {
+    for (const q of ['', 'other=1', 'dryRun=0', 'dryRun=false', 'dryRun=FALSE', 'dryRun= false ']) {
+      expect(p(q), q).toBe(false)
+    }
   })
 })

@@ -220,6 +220,18 @@ function statementLines(rows: FeeTxnRow[], opts: FeeLedgerOptions, ledgerCurrenc
   return { sources, fee, count }
 }
 
+/**
+ * Fail-safe reading of the route's `?dryRun` param: ANY present value other
+ * than an explicit `0`/`false` (case-insensitive, trimmed) is a dry run, so
+ * `?dryRun`, `?dryRun=TRUE` or `?dryRun=yes` can never write, email or block.
+ * Absent param → real run.
+ */
+export function parseDryRunParam(params: URLSearchParams): boolean {
+  if (!params.has('dryRun')) return false
+  const v = (params.get('dryRun') ?? '').trim().toLowerCase()
+  return v !== '0' && v !== 'false'
+}
+
 export async function runPlatformFeeEnforcement(store: FeeStore, opts: EnforcementOptions): Promise<EnforcementResult> {
   const now = opts.now ?? new Date()
   const nowIso = now.toISOString()

@@ -7,6 +7,7 @@ import { resolveTenantLocale } from '@/lib/i18n/tenant-locale'
 import { tenantBaseUrl } from '@/lib/notifications/daily-digest'
 import {
   createSupabaseFeeStore,
+  parseDryRunParam,
   runPlatformFeeEnforcement,
 } from '@/lib/billing/platform-fee-enforcement'
 
@@ -24,7 +25,8 @@ export const runtime = 'nodejs'
  * double fire is safe. The work lives in lib/billing/platform-fee-enforcement.ts.
  *
  * `?dryRun=1` returns the would-act set and writes nothing (required before
- * the first production enable).
+ * the first production enable). Fail safe: any present `dryRun` other than
+ * `0`/`false` is a dry run (parseDryRunParam).
  *
  * Scheduled by pg_cron (`enforce-platform-fees-daily`, 0 5 * * *, through
  * invoke_cron_route) with .github/workflows/cron.yml at 0 6 as the fallback.
@@ -45,8 +47,7 @@ async function run(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const dryRunParam = req.nextUrl.searchParams.get('dryRun')
-  const dryRun = dryRunParam === '1' || dryRunParam === 'true'
+  const dryRun = parseDryRunParam(req.nextUrl.searchParams)
 
   try {
     const store = createSupabaseFeeStore(getSupabaseAdmin(), {
@@ -75,7 +76,7 @@ async function run(req: NextRequest) {
  * does not check in.
  */
 export async function GET(req: NextRequest) {
-  if (req.nextUrl.searchParams.has('dryRun')) return run(req)
+  if (parseDryRunParam(req.nextUrl.searchParams)) return run(req)
   return Sentry.withMonitor('cron-enforce-platform-fees', () => run(req), {
     schedule: { type: 'crontab', value: '0 5 * * *' },
     checkinMargin: 120,
