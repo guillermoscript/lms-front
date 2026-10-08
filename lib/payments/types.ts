@@ -169,6 +169,19 @@ export interface ProviderCapabilities {
    * Gates `POST /api/billing/checkout` and, with it, `CreateCheckoutParams.hosted`.
    */
   supportsPlatformBillingCheckout: boolean
+  /**
+   * The school can pay its platform fee balance (#929, design 2.4) on this
+   * rail: a ONE-OFF payment of a server-derived amount, settled into the
+   * platform ledger (`platform_fee_payments`) — not a plan subscription.
+   * Gates `POST /api/billing/fees/checkout`.
+   *
+   * Stripe (hosted Checkout Session in `payment` mode) and `manual` (a
+   * `platform_payment_requests` row a super admin confirms) today. Binance Pay
+   * and Solana need their platform settle paths taught the fee kind first;
+   * Lemon Squeezy and PayPal are out of v1 (decided, Q6) — those schools pay
+   * via the manual rail.
+   */
+  supportsPlatformFeePayNow: boolean
   /** Provider can issue programmatic refunds. */
   supportsRefunds: boolean
   /** Provider is the legal seller and remits tax (Lemon Squeezy / Paddle). */
@@ -295,6 +308,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: false,
     supportsPlatformBillingCheckout: true,  // Checkout Sessions on the platform account (not Connect)
+    supportsPlatformFeePayNow: true, // one-off Checkout Session (mode: payment), #929
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -312,6 +326,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
     supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
+    supportsPlatformFeePayNow: false,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -329,6 +344,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
     supportsPlatformBillingCheckout: true, // Merchant of Record — hosted page, remits VAT for us
+    supportsPlatformFeePayNow: false,
     supportsRefunds: true,
     isMerchantOfRecord: true,
     selfManagedPeriod: false,
@@ -350,6 +366,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // carry a school→platform purchase, not that a redirect URL exists;
     // `CheckoutSession.kind` is what tells the caller how to present it.
     supportsPlatformBillingCheckout: true,
+    supportsPlatformFeePayNow: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -371,6 +388,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
     supportsPlatformBillingCheckout: false,
+    supportsPlatformFeePayNow: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -390,6 +408,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
     supportsPlatformBillingCheckout: false,      // settles via platform_payment_requests, no hosted page
+    supportsPlatformFeePayNow: true, // fee request a super admin confirms, #929
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -414,6 +433,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // (#610). Correlation rides in `passThroughInfo`, not in `merchantTradeNo`,
     // which is capped at 32 alphanumeric characters.
     supportsPlatformBillingCheckout: true,
+    supportsPlatformFeePayNow: false,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -437,6 +457,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
     supportsPlatformBillingCheckout: false,
+    supportsPlatformFeePayNow: false,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -517,6 +538,11 @@ export interface CreateCheckoutParams {
    */
   baseUrl?: string
   metadata?: Record<string, string>
+  /**
+   * Label of the single line item on a hosted ONE-OFF checkout (Stripe
+   * Checkout `price_data.product_data.name`), e.g. the platform fee pay-now.
+   */
+  lineItemName?: string
 }
 
 export interface CheckoutSession {
@@ -567,6 +593,13 @@ export type BillingEventType =
   | 'subscription.canceled'
   | 'subscription.expired'
   | 'refund.succeeded'
+  /**
+   * The provider took the money back through a chargeback (Stripe
+   * `charge.dispute.funds_withdrawn`). Only the platform fee ledger acts on it
+   * (#929: the fee payment is reversed); the student dispatcher has no case
+   * for it and the platform dispatcher drops it for anything else.
+   */
+  | 'payment.disputed'
 
 /**
  * The lifecycle state a subscription is in, as reported by the event that

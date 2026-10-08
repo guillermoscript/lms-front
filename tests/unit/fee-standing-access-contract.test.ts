@@ -43,14 +43,19 @@ describe('D5: fee standing never gates course access', () => {
   })
 
   /**
-   * The sales gate (#929 step 4) must mention `entitlements` twice, both
-   * on the NEW-grant side: grant_free_entitlement() refuses a new free
+   * The sales gate (#929 step 4, hardened in 20261009120000) mentions
+   * `entitlements` only on the NEW-grant side — grant_free_entitlement() and
+   * self_enroll_subscription_course() refuse a NEW grant while blocked, and
+   * free_enrollment_allowed() / subscription_enrollment_allowed() read whether
+   * the student ALREADY holds the course. Originally: grant_free_entitlement() refuses a new free
    * enrollment while blocked, and free_enrollment_allowed() reads whether the
    * student ALREADY holds the course (so re-clicking stays allowed). Neither
    * can revoke or edit an existing grant; the next test pins that down.
    */
   const NEW_GRANT_GATE_ONLY: Record<string, string> = {
     '20261009110000_platform_fee_gate_929.sql': 'gates NEW free grants only (grant_free_entitlement)',
+    '20261009120000_platform_fee_hardening_929.sql':
+      'gates NEW subscription course choices only (self_enroll_subscription_course); re-enrolling a held course stays allowed',
   }
 
   it('no migration that touches the fee ledger redefines course access or entitlements', () => {

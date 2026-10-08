@@ -73,16 +73,21 @@ export function isRequestOpen(
 export async function hasOpenPaymentRequest(
   admin: SupabaseClient,
   tenantId: string,
+  opts: { kind?: 'plan' | 'fee' } = {},
 ): Promise<boolean> {
+  // Plan requests and platform fee requests (#929) are separate promises: an
+  // open fee payment must not stop a school from changing plan, nor the
+  // reverse. `request_type` is nullable on old rows, which are all plan rows.
   const { data } = await admin
     .from('platform_payment_requests')
-    .select('request_id, status, expires_at')
+    .select('request_id, status, expires_at, request_type')
     .eq('tenant_id', tenantId)
     .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
     .order('created_at', { ascending: false })
     .limit(20)
 
-  return ((data as { status: string; expires_at: string | null }[] | null) || []).some((r) =>
-    isRequestOpen(r),
+  const wantFee = opts.kind === 'fee'
+  return ((data as { status: string; expires_at: string | null; request_type?: string | null }[] | null) || []).some(
+    (r) => (r.request_type === 'fee') === wantFee && isRequestOpen(r),
   )
 }

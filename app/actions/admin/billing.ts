@@ -17,6 +17,7 @@ import {
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
+import { confirmFeeRequest } from '@/lib/billing/platform-fee-admin'
 import {
   SwitchAlreadyPendingError,
   beginPlatformSubscriptionSwitch,
@@ -357,6 +358,15 @@ export async function confirmManualPayment(requestId: string) {
     .single()
 
   if (requestError || !request) throw new Error('Request not found')
+
+  // A platform fee payment (#929) is not a plan purchase: no limits, no
+  // switch, no access-cutoff reconcile. Its own transactional RPC credits the
+  // ledger, audits and re-evaluates the tenant's fee standing.
+  if (request.request_type === 'fee') {
+    const result = await confirmFeeRequest(adminClient, requestId, userId)
+    revalidatePath('/[locale]/platform/billing', 'page')
+    return { success: true, applied: result.applied, kind: 'fee' as const }
+  }
 
   // Only the analytics event below reads this; every write is the RPC's.
   // PostgREST types a narrowed embed as an array even though the FK is to-one.

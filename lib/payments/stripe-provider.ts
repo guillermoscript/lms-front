@@ -39,6 +39,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: false,
     supportsPlatformBillingCheckout: true,
+    supportsPlatformFeePayNow: true,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -539,6 +540,50 @@ export class StripePaymentProvider implements IPaymentProvider {
         }
       }
 
+      // Hosted ONE-OFF Checkout Session on the PLATFORM account: the school
+      // paying its platform fee balance (#929, design 2.4). No catalog price —
+      // the amount is derived server-side from the ledger, so it rides as
+      // `price_data`. `amount` is in the provider unit (cents), like the
+      // PaymentIntent branch below. The metadata is copied onto the
+      // PaymentIntent too, so refund / dispute events (which carry only the
+      // PaymentIntent) stay attributable.
+      if (params.hosted && params.mode === 'one_time') {
+        if (!Number.isInteger(params.amount) || params.amount <= 0) {
+          throw new Error('A hosted one-off Stripe checkout needs a positive integer amount in cents')
+        }
+        const metadata = { reference: params.reference, ...(params.metadata || {}) }
+        const session = await this.stripe.checkout.sessions.create({
+          mode: 'payment',
+          ...(params.providerCustomerId ? { customer: params.providerCustomerId } : {}),
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: params.currency.toLowerCase(),
+                unit_amount: params.amount,
+                product_data: { name: params.lineItemName || 'Payment' },
+              },
+            },
+          ],
+          success_url: params.successUrl,
+          cancel_url: params.cancelUrl,
+          metadata,
+          payment_intent_data: { metadata },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any)
+
+        if (!session.url) {
+          throw new Error('Stripe returned a checkout session with no URL')
+        }
+        return {
+          kind: 'redirect',
+          url: session.url,
+          reference: params.reference,
+          providerRef: session.id,
+          expiresAt: session.expires_at ? new Date(session.expires_at * 1000) : undefined,
+        }
+      }
+
       if (params.mode === 'subscription') {
         if (!params.providerCustomerId) {
           throw new Error('providerCustomerId is required for a Stripe subscription')
@@ -695,8 +740,28 @@ export class StripePaymentProvider implements IPaymentProvider {
       // metadata (tenant/plan/interval) rides on the session, so this is the
       // only event that can bind a brand-new subscription to a tenant.
       // One-time sessions are not modelled — the Connect route owns those.
-      case 'checkout.session.completed': {
-        if (obj.mode !== 'subscription') return null
+      case 'checkout.session.completed':
+      case 'checkout.session.async_payment_succeeded': {
+        // One-off platform fee pay-now (#929). Only OUR fee sessions are
+        // modelled; every other one-time session belongs to the Connect route.
+        // `payment_status` is 'paid' on completion for cards; a delayed method
+        // completes 'unpaid' and settles via async_payment_succeeded.
+        if (obj.mode === 'payment') {
+          if (obj.metadata?.kind !== 'platform_fee' || obj.payment_status !== 'paid') return null
+          const paymentIntent = typeof obj.payment_intent === 'string' ? obj.payment_intent : obj.payment_intent?.id
+          return {
+            type: 'payment.succeeded',
+            providerEventId: eventId,
+            providerPaymentId: paymentIntent ?? undefined,
+            providerCustomerId: customerId(obj),
+            reference: obj.metadata?.payment_id,
+            metadata: (obj.metadata ?? undefined) as Record<string, string> | undefined,
+            amount: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : undefined,
+            currency: typeof obj.currency === 'string' ? obj.currency.toLowerCase() : undefined,
+            raw: event,
+          }
+        }
+        if (event.type !== 'checkout.session.completed' || obj.mode !== 'subscription') return null
         const subscriptionId =
           typeof obj.subscription === 'string' ? obj.subscription : obj.subscription?.id
         if (!subscriptionId) return null
@@ -773,6 +838,17 @@ export class StripePaymentProvider implements IPaymentProvider {
           type: 'subscription.past_due',
           providerEventId: eventId,
           providerSubscriptionId: invoiceSubId(obj),
+          raw: event,
+        }
+      // A chargeback whose funds left the account. Its own event type so the
+      // student dispatcher (no case for it) is untouched; the platform loop
+      // reverses a matching fee payment (#929) and drops anything else.
+      case 'charge.dispute.funds_withdrawn':
+        return {
+          type: 'payment.disputed',
+          providerEventId: eventId,
+          providerPaymentId:
+            (typeof obj.payment_intent === 'string' ? obj.payment_intent : obj.payment_intent?.id) ?? undefined,
           raw: event,
         }
       case 'charge.refunded':

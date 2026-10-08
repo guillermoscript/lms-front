@@ -42,6 +42,14 @@ export function registerEnrollTools(server: LmsServer) {
             _course_id: input.course_id,
           });
 
+        // #929 fee sales gate: SQLSTATE LM003 ('sales_blocked:fees') while the
+        // school's sales are paused. Neutral copy — never the school's fee debt
+        // (design 4.4); re-enrolling a course already held is not refused.
+        if (error && (error.code === "LM003" || /sales_blocked/.test(error.message ?? ""))) {
+          return errorResult(
+            "This school isn't accepting new enrollments right now. Please try again later."
+          );
+        }
         // Surface the RPC's own message (e.g. "No active subscription covers
         // this course") — it already explains the failure to the student.
         if (error) return errorResult(error.message);
