@@ -20,11 +20,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { updateSettings } from '@/app/actions/admin/settings'
+import { setBinancePersonalCredentials, updateSettings } from '@/app/actions/admin/settings'
 import type { SettingsGroup } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { IconInfoCircle } from '@tabler/icons-react'
+import type { BinanceAutoVerifyChange } from '@/components/admin/manual-payment-method-dialog'
 import { useLocale, useTranslations } from 'next-intl'
 import { SCHOOL_CURRENCIES } from '@/lib/countries'
 import PaymentProviderRow from '@/components/admin/payment-provider-row'
@@ -56,6 +57,7 @@ export default function PaymentSettingsForm({
 }: PaymentSettingsFormProps) {
   const t = useTranslations('dashboard.admin.settings.form')
   const tConnect = useTranslations('dashboard.admin.settings.sections.payment.connect')
+  const tBinance = useTranslations('dashboard.admin.settings.form.binancePersonal')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Readiness per rail, mirroring what getEnabledProviders() will actually
@@ -92,6 +94,9 @@ export default function PaymentSettingsForm({
   // Binance card in the offline catalog: the Pay ID and read-only key are saved
   // by the modal itself, the on/off flag rides this form's Save like the rest.
   const [binanceWallet, setBinanceWallet] = useState(initialBinancePersonal)
+  // Pay ID + key typed in the modal, held until Save so nothing is persisted
+  // before the school commits the form.
+  const [pendingBinance, setPendingBinance] = useState<BinanceAutoVerifyChange['credentials'] | null>(null)
 
   // Settings values are JSONB scalars (string | number | null), so each one is
   // coerced to the shape its input actually wants rather than trusted as-is.
@@ -114,6 +119,7 @@ export default function PaymentSettingsForm({
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
+    let credentialsSaved: typeof pendingBinance = null
 
     try {
       const updatedSettings = {
@@ -137,15 +143,42 @@ export default function PaymentSettingsForm({
         manual_payment_accounts: { accounts: normalizeManualPaymentAccounts(accounts) },
       }
 
+      // Credentials first: a rejected key aborts before the flag/row are saved,
+      // so the school is never left with auto-verify on and no usable key.
+      if (pendingBinance && flags.binancePersonal) {
+        const creds = await setBinancePersonalCredentials(
+          pendingBinance.payId,
+          pendingBinance.apiKey,
+          pendingBinance.apiSecret,
+        )
+        if (!creds.success) {
+          throw new Error(creds.error || tBinance('error'))
+        }
+        credentialsSaved = pendingBinance
+      }
+
       const result = await updateSettings(updatedSettings)
 
-      if (result.success) {
-        toast.success(t('success'))
-      } else {
+      if (!result.success) {
         throw new Error(result.error)
       }
+      // Local state only changes once both writes landed.
+      if (credentialsSaved) {
+        setPendingBinance(null)
+        setBinanceWallet({ payId: credentialsSaved.payId, hasCredentials: true })
+      }
+      toast.success(t('success'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('error'))
+      const message = error instanceof Error ? error.message : t('error')
+      if (credentialsSaved) {
+        // The key is stored server-side already; reflect that so the form
+        // doesn't ask for it again, and say the rest was not saved.
+        setPendingBinance(null)
+        setBinanceWallet({ payId: credentialsSaved.payId, hasCredentials: true })
+        toast.error(`${tBinance('settingsNotSaved')} ${message}`)
+      } else {
+        toast.error(message)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -329,6 +362,8 @@ export default function PaymentSettingsForm({
                 }}
                 onBinanceChange={(change) => {
                   setFlag('binancePersonal')(change.enabled)
+                  if (!change.enabled) setPendingBinance(null)
+                  else if (change.credentials) setPendingBinance(change.credentials)
                   if (change.payId !== undefined || change.hasCredentials !== undefined) {
                     setBinanceWallet((prev) => ({
                       payId: change.payId !== undefined ? change.payId : prev.payId,

@@ -184,10 +184,14 @@ export function normalizeManualPaymentAccounts(value: unknown): ManualPaymentAcc
     if (!entry || typeof entry !== 'object') continue
     const row = entry as Record<string, unknown>
     let kind = isManualPaymentKind(row.kind) ? row.kind : null
+    let demoted = false
     // One row per preset: a second "Zelle" is a duplicate, not a second account
     // (custom rows are how a school lists two of the same thing).
     if (kind) {
-      if (seenKinds.has(kind)) kind = null
+      if (seenKinds.has(kind)) {
+        kind = null
+        demoted = true
+      }
       else seenKinds.add(kind)
     }
     // A preset row names itself; a custom row must, or it is unusable on both
@@ -206,7 +210,10 @@ export function normalizeManualPaymentAccounts(value: unknown): ManualPaymentAcc
       method,
       bank: field(row.bank),
       identifier: field(row.identifier),
-      email: field(row.email),
+      // The custom editor has no email input, so an email kept on a demoted
+      // duplicate would show to students with no way for the admin to see or
+      // change it. Drop it on demotion.
+      email: demoted ? null : field(row.email),
       holder: field(row.holder),
       document: field(row.document),
       note: noteField(row.note),

@@ -17,10 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  removeBinancePersonalCredentials,
-  setBinancePersonalCredentials,
-} from '@/app/actions/admin/settings'
+import { removeBinancePersonalCredentials } from '@/app/actions/admin/settings'
 import {
   MANUAL_KIND_FIELDS,
   normalizeManualPaymentAccounts,
@@ -43,6 +40,13 @@ export interface BinanceAutoVerifyChange {
   enabled: boolean
   payId?: string | null
   hasCredentials?: boolean
+  /**
+   * Binance Pay ID + read-only key typed in the dialog. Staged by the parent
+   * and written by the settings form's own Save, so cancelling the form never
+   * leaves credentials stored that the school did not commit. Empty key and
+   * secret mean "keep the stored ones".
+   */
+  credentials?: { payId: string; apiKey: string; apiSecret: string }
 }
 
 /** What the free-text "other account" modal asks for. */
@@ -162,18 +166,19 @@ function DialogBody({
     if (!validate()) return
     setSaving(true)
     try {
-      // Secrets first and on their own server action: the settings form that
-      // later saves this row never sees them, and a rejected key must not leave
-      // the school believing auto-verify is on.
+      // Nothing is written here: the Pay ID and key are staged in the parent and
+      // saved with the settings form, in the same click as the flag and the row,
+      // so Cancel / a failed save cannot leave half of this committed.
       if (kind === 'binance') {
         if (autoVerify) {
           const payId = (account.identifier ?? '').trim()
-          const result = await setBinancePersonalCredentials(payId, apiKey.trim(), apiSecret.trim())
-          if (!result.success) {
-            toast.error(tBinance('error'))
-            return
-          }
-          onBinanceChange({ enabled: true, payId, hasCredentials: true })
+          const key = apiKey.trim()
+          onBinanceChange({
+            enabled: true,
+            payId,
+            hasCredentials: binance.hasCredentials || key !== '',
+            credentials: { payId, apiKey: key, apiSecret: apiSecret.trim() },
+          })
         } else {
           onBinanceChange({ enabled: false })
         }
@@ -184,8 +189,6 @@ function DialogBody({
         return
       }
       onSave(clean)
-    } catch {
-      toast.error(tBinance('error'))
     } finally {
       setSaving(false)
     }
@@ -196,7 +199,7 @@ function DialogBody({
     try {
       const result = await removeBinancePersonalCredentials()
       if (!result.success) {
-        toast.error(t('binanceAuto.removeKeyError'))
+        toast.error(result.error || t('binanceAuto.removeKeyError'))
         return
       }
       toast.success(t('binanceAuto.keyRemoved'))

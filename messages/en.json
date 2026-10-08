@@ -3956,7 +3956,8 @@
             "apiSecretPlaceholder": "API secret",
             "unchangedPlaceholder": "••••••••  (unchanged)",
             "credentialsSaved": "Credentials saved. Leave blank to keep them, or enter new values to replace.",
-            "error": "Failed to save Binance Pay credentials"
+            "error": "Failed to save Binance Pay credentials",
+            "settingsNotSaved": "Binance credentials were saved, but the other settings were not. Try saving again."
           }
         },
         "mailer": {
