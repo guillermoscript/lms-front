@@ -5,6 +5,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import Link from 'next/link'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import { CourseArchitectWorkspace } from '@/components/teacher/course-architect/course-architect-workspace'
 
 export default async function CourseArchitectPage({
@@ -46,7 +47,9 @@ export default async function CourseArchitectPage({
                 <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
                 <p className="mt-0.5 text-sm text-muted-foreground">{t('description')}</p>
             </div>
-            <CourseArchitectWorkspace initialCourseId={courseId} tenantId={tenantId} locale={locale} />
+            <AiSetupGate whenOff="notice" audience="teacher">
+                <CourseArchitectWorkspace initialCourseId={courseId} tenantId={tenantId} locale={locale} />
+            </AiSetupGate>
         </div>
     )
 }

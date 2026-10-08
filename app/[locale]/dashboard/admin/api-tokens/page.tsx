@@ -1,9 +1,10 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenant } from '@/lib/supabase/tenant'
+import { getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { listMcpTokens } from '@/app/actions/mcp-tokens'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { getUserSchools } from '@/lib/mcp/user-schools'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
 
 export default async function AdminApiTokensPage() {
@@ -14,6 +15,8 @@ export default async function AdminApiTokensPage() {
 
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const { data: tokens } = await listMcpTokens()
+  const userId = await getCurrentUserId()
+  const schools = userId ? await getUserSchools(userId) : []
   const tenant = await getCurrentTenant()
   const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
   const mcpUrl = tenant?.slug
@@ -35,7 +38,7 @@ export default async function AdminApiTokensPage() {
       </header>
 
       <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-        <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} />
+        <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} schools={schools} />
       </main>
     </div>
   )

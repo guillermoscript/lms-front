@@ -1,8 +1,9 @@
 import { getUserRole } from '@/lib/supabase/get-user-role'
-import { getCurrentTenant } from '@/lib/supabase/tenant'
+import { getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
 import { listMcpTokens } from '@/app/actions/mcp-tokens'
 import { PageShell } from '@/components/dashboard/page-shell'
+import { getUserSchools } from '@/lib/mcp/user-schools'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
 
 export default async function TeacherApiTokensPage() {
@@ -12,6 +13,8 @@ export default async function TeacherApiTokensPage() {
   }
 
   const { data: tokens } = await listMcpTokens()
+  const userId = await getCurrentUserId()
+  const schools = userId ? await getUserSchools(userId) : []
   const tenant = await getCurrentTenant()
   const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
   const mcpUrl = tenant?.slug
@@ -20,7 +23,7 @@ export default async function TeacherApiTokensPage() {
 
   return (
     <PageShell variant="form">
-      <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} />
+      <ApiTokensPage tokens={tokens ?? []} mcpUrl={mcpUrl} schools={schools} />
     </PageShell>
   )
 }

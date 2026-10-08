@@ -18,6 +18,7 @@ import BreadcrumbComponent from '@/components/exercises/breadcrumb-component'
 import RelatedExercises from '@/components/exercises/related-exercises'
 import EssayExercise from '@/components/exercises/essay-exercise'
 import CodeExercise from '@/components/exercises/code-exercise'
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import ExerciseChat from '@/components/exercises/exercise-chat'
 
 const AudioExercise = dynamic(
@@ -311,6 +312,7 @@ export default async function ExercisePage({ params }: PageProps) {
     ) : null
 
     const chatComponent = (
+        <AiSetupGate whenOff="notice">
         <ExerciseChat
             apiEndpoint="/api/chat/exercises/student"
             exerciseId={exerciseId}
@@ -318,6 +320,7 @@ export default async function ExercisePage({ params }: PageProps) {
             isExerciseCompleted={isExerciseCompleted}
             profile={profile}
         />
+        </AiSetupGate>
     )
 
     // From `lg` up the page is a fixed shell — instructions pane, work pane —

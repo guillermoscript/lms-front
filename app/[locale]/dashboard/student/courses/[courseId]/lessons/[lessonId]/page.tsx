@@ -15,6 +15,7 @@ import type { UIMessage } from 'ai'
 import { Skeleton } from '@/components/ui/skeleton'
 import { rebuildLessonTaskToolParts } from '@/lib/ai/lesson-task-history'
 
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 const LessonAIChat = dynamic(
   () => import('@/components/student/lesson-ai-chat').then(m => m.LessonAIChat),
   {
@@ -445,12 +446,14 @@ export default async function LessonPage({ params }: PageProps) {
 
                   {/* Chat */}
                   <div className="sm:px-5 sm:pb-5">
+                    <AiSetupGate whenOff="notice">
                     <LessonAIChat
                       lessonId={lesson.id}
                       taskDescription={taskDescription}
                       initialMessages={initialMessages}
                       requirements={structuredRequirements?.requirements}
                     />
+                    </AiSetupGate>
                   </div>
                 </div>
               </section>

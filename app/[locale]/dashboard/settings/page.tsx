@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserSchools } from '@/lib/mcp/user-schools'
 import { createClient } from '@/lib/supabase/server'
 import { ProfileForm } from '@/components/student/profile-form'
 import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
@@ -40,6 +41,8 @@ export default async function DashboardSettingsPage() {
     ? `https://${tenant.slug}.${platformDomain}/api/mcp`
     : `https://${platformDomain}/api/mcp`
 
+  const schools = await getUserSchools(userId)
+
   const t = await getTranslations('dashboard.accountSettings')
 
   return (
@@ -70,7 +73,7 @@ export default async function DashboardSettingsPage() {
           </CardContent>
         </Card>
 
-        <ConnectClaudeCard connectorUrl={connectorUrl} />
+        <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} />
 
         <Link href="/dashboard/teacher/api-tokens">
           <Button variant="outline">{t('manageTokens')}</Button>

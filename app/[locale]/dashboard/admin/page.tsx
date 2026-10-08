@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { UsageMeter } from '@/components/admin/usage-meter'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import { CourseArchitectCta } from '@/components/teacher/course-architect/course-architect-cta'
 import { OnboardingChecklist } from '@/components/shared/onboarding-checklist'
 import { AdminDashboardTour } from '@/components/tours/admin-dashboard-tour'
@@ -261,7 +262,7 @@ export default async function AdminDashboardPage({
 
       {!aiEnabled && <AiKeyBanner />}
 
-      {(totalCourses ?? 0) === 0 && <CourseArchitectCta />}
+      {(totalCourses ?? 0) === 0 && <AiSetupGate><CourseArchitectCta /></AiSetupGate>}
 
       {/* Getting Started Checklist — prominent for new users */}
       <div data-tour="admin-checklist">
