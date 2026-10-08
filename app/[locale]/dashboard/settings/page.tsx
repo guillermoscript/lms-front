@@ -75,9 +75,6 @@ export default async function DashboardSettingsPage() {
 
         <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} />
 
-        <Link href="/dashboard/teacher/api-tokens">
-          <Button variant="outline">{t('manageTokens')}</Button>
-        </Link>
 
         <DeleteAccountCard />
       </div>

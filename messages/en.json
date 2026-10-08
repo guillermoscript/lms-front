@@ -256,8 +256,7 @@
       "accountTitle": "Account Details",
       "accountSubtitle": "Update your personal information",
       "preferencesTitle": "Preferences",
-      "preferencesSubtitle": "Personal settings for how the dashboard behaves",
-      "manageTokens": "Manage API tokens"
+      "preferencesSubtitle": "Personal settings for how the dashboard behaves"
     },
     "student": {
       "aiAssistant": {
@@ -2525,7 +2524,7 @@
         "notifications": "Notifications",
         "templates": "Templates",
         "tenants": "Tenants",
-        "apiTokens": "API Tokens",
+        "apiTokens": "Connect AI",
         "monetization": "Monetization",
         "appearance": "Appearance",
         "website": "Website"
@@ -4384,61 +4383,7 @@
       },
       "apiTokens": {
         "title": "Connect AI Assistants",
-        "description": "Connect Claude or other MCP clients to your LMS.",
-        "howToConnect": {
-          "title": "Advanced: API tokens (CLI and other MCP clients)",
-          "description": "Use a token for clients that don't support OAuth sign-in.",
-          "step1": "Create a token above and copy the config snippet.",
-          "step2": "Open your MCP client's configuration file.",
-          "step3": "Paste the config snippet and save.",
-          "step4": "Restart the client — you should see the LMS tools available."
-        },
-        "yourTokens": {
-          "title": "Your Tokens",
-          "empty": "No tokens yet. Create one to get started.",
-          "count": "{count} token",
-          "countPlural": "{count} tokens"
-        },
-        "token": {
-          "active": "Active",
-          "revoked": "Revoked",
-          "expired": "Expired",
-          "created": "Created {date}",
-          "lastUsed": "Last used {date}",
-          "expires": "Expires {date}"
-        },
-        "createDialog": {
-          "title": "Create API Token",
-          "description": "Generate a token for MCP client access.",
-          "nameLabel": "Token Name",
-          "namePlaceholder": "e.g., Claude Desktop",
-          "expirationLabel": "Expiration",
-          "expiration7d": "7 days",
-          "expiration30d": "30 days",
-          "expiration90d": "90 days",
-          "expirationNever": "Never",
-          "creating": "Creating...",
-          "create": "Create Token"
-        },
-        "revealDialog": {
-          "title": "Token Created",
-          "description": "Copy this token now. It won't be shown again.",
-          "configLabel": "Claude Desktop config",
-          "done": "Done"
-        },
-        "toasts": {
-          "created": "Token created successfully",
-          "revoked": "Token revoked",
-          "deleted": "Token deleted",
-          "createError": "Failed to create token",
-          "revokeError": "Failed to revoke token",
-          "deleteError": "Failed to delete token",
-          "nameRequired": "Please enter a token name"
-        },
-        "actions": {
-          "revoke": "Revoke token",
-          "delete": "Delete token"
-        }
+        "description": "Connect Claude or other MCP clients to your LMS."
       }
     }
   },
@@ -4604,7 +4549,7 @@
     "business": "Business",
     "revenue": "Revenue",
     "billing": "Billing",
-    "apiTokens": "API Tokens",
+    "apiTokens": "Connect AI",
     "aiSettings": "AI",
     "appearance": "Appearance",
     "pages": "Pages",
