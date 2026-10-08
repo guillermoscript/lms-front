@@ -9,12 +9,16 @@ import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
 import { formatByCurrency, formatMoney } from '@/lib/payments/format-money'
 import {
   buildEarningsView,
+  earningsTxnFromRow,
+  EARNINGS_TXN_COLUMNS,
   EARNINGS_PROVIDERS,
   PLATFORM_COLLECTED_PROVIDERS,
   SCHOOL_COLLECTED_PROVIDERS,
   type EarningsStatusFilter,
   type EarningsCollectorFilter,
   type RawSearchParams,
+  type EarningsTxn,
+  type TransactionRowForEarnings,
 } from '@/lib/payments/earnings'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { Button } from '@/components/ui/button'
@@ -78,10 +82,7 @@ export default async function AdminEarningsPage({
     fetchAllRows('transactions', (from, to) =>
       supabase
         .from('transactions')
-        .select(
-          'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, product_id, plan_id',
-          { count: 'exact' },
-        )
+        .select(EARNINGS_TXN_COLUMNS, { count: 'exact' })
         .eq('tenant_id', tenantId)
         .in('status', ['successful', 'refunded', 'pending'])
         .in('payment_provider', EARNINGS_PROVIDERS as string[])
@@ -112,20 +113,11 @@ export default async function AdminEarningsPage({
 
   const view = buildEarningsView({
     tenantId,
-    txns: txns
-      .filter((r) => r.payment_provider && r.amount != null && r.transaction_date)
-      .map((r) => ({
-        transactionId: r.transaction_id as number,
-        paymentProvider: r.payment_provider as string,
-        amount: Number(r.amount),
-        refundedAmount: r.refunded_amount == null ? null : Number(r.refunded_amount),
-        currency: r.currency || 'usd',
-        schoolPercentageSnapshot: r.school_percentage_snapshot == null ? null : Number(r.school_percentage_snapshot),
-        status: r.status as 'successful' | 'refunded' | 'pending',
-        transactionDate: r.transaction_date as string,
-        productId: r.product_id as number | null,
-        planId: r.plan_id as number | null,
-      })),
+    // usd_amount (#929) is in the select so a hyperinflation-currency sale
+    // lands in the same USD bucket here as in platform_fee_ledger().
+    txns: (txns as unknown as TransactionRowForEarnings[])
+      .map(earningsTxnFromRow)
+      .filter((r): r is EarningsTxn => r !== null),
     payouts: paid.map((p) => ({
       amount: Number(p.amount),
       currency: p.currency || 'usd',

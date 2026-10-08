@@ -13,9 +13,9 @@
  *    commission ACCRUES AS A DEBT the school owes the platform ("Por pagar a
  *    la plataforma", Guaybo model). This is the read-only first slice of the
  *    platform fee ledger designed in docs/PLATFORM_FEE_LEDGER_DESIGN.md (#929):
- *    `accrued` is derived from transactions, and there is no payments table
- *    yet, so `paid` is 0 and `netOwed = accrued` until wave 2 ships
- *    `platform_fee_payments`.
+ *    `accrued` is derived from transactions by the shared ledger arithmetic
+ *    (`lib/payments/platform-fee-owed.ts`); the page passes no payments yet,
+ *    so `paid` is 0 and `netOwed = accrued` until pay-now ships.
  *
  *  - PLATFORM-COLLECTED (`settlesToPlatformAccount: true` — PayPal, Lemon
  *    Squeezy, Binance Pay merchant). The platform holds 100% and owes the
@@ -47,6 +47,7 @@ import {
   netOfRefunds,
   roundMoney,
 } from '@/lib/payments/payouts-owed'
+import { computeFeeBalances, type FeePayment } from '@/lib/payments/platform-fee-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 
 export type Collector = 'school' | 'platform'
@@ -89,6 +90,47 @@ export interface EarningsTxn {
   transactionDate: string
   productId?: number | null
   planId?: number | null
+  /** transactions.usd_amount — insert-time USD snapshot for hyperinflation currencies (#929). */
+  usdAmount?: number | null
+}
+
+/** Columns the earnings page selects from `transactions` (raw DB shape). */
+export const EARNINGS_TXN_COLUMNS =
+  'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, product_id, plan_id, usd_amount'
+
+export interface TransactionRowForEarnings {
+  transaction_id: number
+  payment_provider: string | null
+  amount: number | string | null
+  refunded_amount: number | string | null
+  currency: string | null
+  school_percentage_snapshot: number | string | null
+  status: string | null
+  transaction_date: string | null
+  product_id: number | null
+  plan_id: number | null
+  /** #929 insert-time USD snapshot; must be carried so #928 reconciles with platform_fee_ledger(). */
+  usd_amount?: number | string | null
+}
+
+const numOrNull = (v: number | string | null | undefined) => (v == null ? null : Number(v))
+
+/** Maps a raw `transactions` row to an EarningsTxn; null when it cannot be counted. */
+export function earningsTxnFromRow(r: TransactionRowForEarnings): EarningsTxn | null {
+  if (!r.payment_provider || r.amount == null || !r.transaction_date) return null
+  return {
+    transactionId: r.transaction_id,
+    paymentProvider: r.payment_provider,
+    amount: Number(r.amount),
+    refundedAmount: numOrNull(r.refunded_amount),
+    currency: r.currency || 'usd',
+    schoolPercentageSnapshot: numOrNull(r.school_percentage_snapshot),
+    status: r.status as EarningsTxn['status'],
+    transactionDate: r.transaction_date,
+    productId: r.product_id,
+    planId: r.plan_id,
+    usdAmount: numOrNull(r.usd_amount),
+  }
 }
 
 export interface EarningsRow extends EarningsTxn {
@@ -173,7 +215,7 @@ export interface FeeDebtBalance {
   currency: string
   /** Commission accrued on school-collected sales, all time, net of refunds. */
   accrued: number
-  /** Fee payments received. Always 0 until the payments ledger ships (#929 wave 2). */
+  /** Succeeded `platform_fee_payments` (none are passed until pay-now ships, #929). */
   paid: number
   /** accrued - paid, 0 at or below half a cent. */
   netOwed: number
@@ -181,34 +223,28 @@ export interface FeeDebtBalance {
 }
 
 /**
- * What the school owes the platform, per currency. Mirrors the ledger design's
- * §2.2 balance with `paid = 0`. Rounded per row (already done in
- * `toEarningsRow`), then summed.
+ * What the school owes the platform, per ledger currency. Delegates to
+ * `computeFeeBalances` (`lib/payments/platform-fee-owed.ts`), the same function
+ * the #929 fee ledger uses, so this page and the ledger reconcile to the cent:
+ * per-row rounding, net of refunds, snapshot rate with the current split as the
+ * fallback for legacy rows, hyperinflation currencies (VES) in USD from the
+ * row's stored `usdAmount`, never summed across currencies.
+ *
+ * Fee bearer (#927) needs no filter here: `transactions.amount` is what the
+ * buyer paid, grossed up when the student bears the fee ($125 at 20%), and the
+ * platform's cut stays `(100 - school_percentage_snapshot)% x amount` ($25).
+ * The school owes that cut whoever the fee was charged to.
  */
-// Fee bearer (#927) needs no filter here: `transactions.amount` is what the
-// buyer paid, grossed up when the student bears the fee ($125 at 20%), and the
-// platform's cut stays `(100 - school_percentage_snapshot)% x amount` ($25).
-// The school owes that cut whoever the fee was charged to, so a student-borne
-// sale accrues exactly like a school-borne one.
-// TODO(#929): per the #929 design, hyperinflation currencies (VES) will later
-// be shown as the USD snapshot recorded at sale time. Not implemented here.
-export function accruePlatformFees(rows: readonly EarningsRow[]): FeeDebtBalance[] {
-  const by = new Map<string, FeeDebtBalance>()
-  for (const r of rows) {
-    if (r.collectedBy !== 'school' || !isCounted(r)) continue
-    let b = by.get(r.currencyCode)
-    if (!b) {
-      b = { currency: r.currencyCode, accrued: 0, paid: 0, netOwed: 0, sales: 0 }
-      by.set(r.currencyCode, b)
-    }
-    b.accrued = roundMoney(b.accrued + r.commission)
-    b.sales++
-  }
-  for (const b of by.values()) {
-    const owed = roundMoney(b.accrued - b.paid)
-    b.netOwed = owed > MONEY_EPSILON ? owed : 0
-  }
-  return Array.from(by.values()).sort((a, b) => a.currency.localeCompare(b.currency))
+export function accruePlatformFees(
+  rows: readonly EarningsRow[],
+  fallbackSchoolPercentage = DEFAULT_SCHOOL_PERCENTAGE,
+  payments: readonly FeePayment[] = [],
+): FeeDebtBalance[] {
+  return computeFeeBalances(
+    rows.filter((r) => r.collectedBy === 'school'),
+    payments,
+    { fallbackSchoolPercentage },
+  ).map(({ currency, accrued, paid, netOwed, sales }) => ({ currency, accrued, paid, netOwed, sales }))
 }
 
 export interface MonthTotals {
@@ -304,7 +340,7 @@ export function buildEarningsView(input: EarningsViewInput) {
         Date.parse(b.transactionDate) - Date.parse(a.transactionDate) || b.transactionId - a.transactionId,
     )
 
-  const feeDebt = accruePlatformFees(rows)
+  const feeDebt = accruePlatformFees(rows, input.schoolPercentage)
 
   // Platform owes the school: the same function and inputs getPayoutsOwed uses.
   const platformRows = rows.filter((r) => r.collectedBy === 'platform' && r.status !== 'pending')

@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { computeFeeBalances } from '@/lib/payments/platform-fee-owed'
 import { computeOwedBalances } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import {
   accruePlatformFees,
   buildEarningsView,
+  earningsTxnFromRow,
+  EARNINGS_TXN_COLUMNS,
   collectorOf,
   EARNINGS_PROVIDERS,
   filterEarnings,
@@ -238,5 +242,38 @@ describe('buildEarningsView (page assembly)', () => {
     const v = buildEarningsView(input({ txns: [], payouts: [], openRequests: 0 }))
     expect(v).toMatchObject({ feeDebt: [], platformOwes: {}, hasPlatformCollectedSales: false, currencies: [] })
     expect(v.page).toMatchObject({ items: [], page: 1, totalPages: 1 })
+  })
+})
+
+describe('raw transactions row → EarningsTxn (#929 usd_amount reconcile)', () => {
+  const raw = {
+    transaction_id: 9, payment_provider: 'manual', amount: '3650.00', refunded_amount: '1825.00', currency: 'ves',
+    school_percentage_snapshot: '80', status: 'successful', transaction_date: '2026-10-05T12:00:00Z',
+    product_id: 1, plan_id: null, usd_amount: '100.01',
+  }
+
+  it('selects and maps usd_amount', () => {
+    expect(EARNINGS_TXN_COLUMNS.split(',').map((c) => c.trim())).toContain('usd_amount')
+    expect(earningsTxnFromRow(raw)).toMatchObject({ usdAmount: 100.01, amount: 3650, refundedAmount: 1825, schoolPercentageSnapshot: 80 })
+    expect(earningsTxnFromRow({ ...raw, usd_amount: null })!.usdAmount).toBeNull()
+    expect(earningsTxnFromRow({ ...raw, payment_provider: null })).toBeNull()
+  })
+
+  it('a VES sale lands in the same USD bucket as the ledger, not a VES bucket', () => {
+    const txn = earningsTxnFromRow(raw)!
+    const v = buildEarningsView({
+      tenantId: 't1', txns: [txn], payouts: [], schoolPercentage: 80, openRequests: 0,
+      now: new Date('2026-10-20T00:00:00Z'), searchParams: {}, pageSize: 20,
+    })
+    const ledger = computeFeeBalances([txn], [], { fallbackSchoolPercentage: 80 })
+    expect(v.feeDebt.map((b) => b.currency)).toEqual(['USD'])
+    expect(v.feeDebt[0].netOwed).toBe(ledger[0].netOwed)
+    expect(v.feeDebt[0].netOwed).toBe(10) // 20% of 50.01 USD kept (100.01 × 1825/3650 = 50.005 → 50.01)
+  })
+
+  it('the earnings page selects through EARNINGS_TXN_COLUMNS and maps through earningsTxnFromRow', () => {
+    const src = readFileSync('app/[locale]/dashboard/admin/earnings/page.tsx', 'utf8')
+    expect(src).toContain('.select(EARNINGS_TXN_COLUMNS')
+    expect(src).toContain('.map(earningsTxnFromRow)')
   })
 })
