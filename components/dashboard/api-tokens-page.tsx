@@ -24,14 +24,15 @@ import {
 import { IconPlus, IconCopy, IconTrash, IconBan, IconCheck, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { createMcpToken, revokeMcpToken, deleteMcpToken, type McpToken } from '@/app/actions/mcp-tokens'
-import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
+import { ConnectClaudeCard, type ConnectSchool } from '@/components/dashboard/connect-claude-card'
 
 interface ApiTokensPageProps {
   tokens: McpToken[]
   mcpUrl: string
+  schools?: ConnectSchool[]
 }
 
-export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
+export default function ApiTokensPage({ tokens, mcpUrl, schools }: ApiTokensPageProps) {
   const t = useTranslations('dashboard.admin.apiTokens')
   const [createOpen, setCreateOpen] = useState(false)
   const [revealedToken, setRevealedToken] = useState<string | null>(null)
@@ -233,7 +234,7 @@ export default function ApiTokensPage({ tokens, mcpUrl }: ApiTokensPageProps) {
       </div>
 
       {/* Connect Claude (OAuth custom connector) */}
-      <ConnectClaudeCard connectorUrl={connectorUrl} />
+      <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} />
 
       {/* Advanced: API token instructions */}
       <Card>

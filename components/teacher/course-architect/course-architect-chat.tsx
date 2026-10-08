@@ -34,7 +34,8 @@ import {
 } from '@/components/ai-elements/confirmation'
 import { Shimmer } from '@/components/ai-elements/shimmer'
 import { useAiChatSubmit } from '@/hooks/use-ai-chat-submit'
-import { useAiChatErrorToast } from '@/components/ai/ai-error-notice'
+import { AiErrorNotice, useAiChatErrorToast } from '@/components/ai/ai-error-notice'
+import { parseAiChatError, isAiSetupErrorKind } from '@/lib/ai/chat-error'
 import type { ArchitectScope } from './scope'
 
 export interface ContentChange {
@@ -193,6 +194,8 @@ function Inner({ scope, locale, onContentChanged, className }: Props) {
     })
 
     const sendMessage = rawSend
+    const errorInfo = error ? parseAiChatError(error) : null
+    const setupError = errorInfo && isAiSetupErrorKind(errorInfo.kind) ? { ...errorInfo, kind: errorInfo.kind } : null
 
     const isLoading = status === 'submitted' || status === 'streaming'
     const onSubmit = useAiChatSubmit({ sendMessage, clearInput: textInput.clear })
@@ -263,7 +266,16 @@ function Inner({ scope, locale, onContentChanged, className }: Props) {
                         </Message>
                     )}
 
-                    {error && status === 'error' && (
+                    {error && status === 'error' && setupError && (
+                        <AiErrorNotice
+                            code={setupError.kind}
+                            canConfigure={setupError.canConfigure}
+                            settingsUrl={setupError.settingsUrl}
+                            audience="teacher"
+                        />
+                    )}
+
+                    {error && status === 'error' && !setupError && (
                         <div
                             role="alert"
                             className="flex items-center justify-between gap-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"

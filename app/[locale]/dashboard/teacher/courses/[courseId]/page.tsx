@@ -38,6 +38,7 @@ import {
   IconMessages,
 } from '@tabler/icons-react'
 import { ShareButton } from '@/components/teacher/share-button'
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { CourseStudentsTable } from '@/components/teacher/course-students-table'
 import { GenerateLessonsButton } from '@/components/teacher/generate-lessons-button'
@@ -308,7 +309,7 @@ export default async function CourseManagementPage({ params, searchParams }: Pag
             description={t('enrolledCount', { count: enrollments.length })}
             actions={
               <>
-                <AiEditSheet scope={{ type: 'course', courseId: course.course_id }} />
+                <AiSetupGate><AiEditSheet scope={{ type: 'course', courseId: course.course_id }} /></AiSetupGate>
                 {course.status === 'published' && (
                   <ShareButton path={`/courses/${course.course_id}`} title={course.title} />
                 )}
