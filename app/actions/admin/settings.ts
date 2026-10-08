@@ -169,6 +169,23 @@ const THEME_KEY_REFUSAL: SettingsResponse = {
 }
 
 /**
+ * `manual_payment_accounts` is a student-readable list the settings form
+ * normalises client-side only, so an MCP write or a stale client could store
+ * anything. Re-normalise it here so the stored shape is always the clean one.
+ */
+function normalizeAccountsSetting(
+  settings: Record<string, SettingValue>
+): Record<string, SettingValue> {
+  if (!('manual_payment_accounts' in settings)) return settings
+  return {
+    ...settings,
+    manual_payment_accounts: {
+      accounts: normalizeManualPaymentAccounts(settings.manual_payment_accounts),
+    },
+  }
+}
+
+/**
  * Update a setting by key (upsert into tenant_settings)
  */
 export async function updateSetting(
@@ -190,7 +207,7 @@ export async function updateSetting(
     // Same gate as updateSettings (#890): blank -> null, emails validated.
     const normalized = normalizeGeneralSettings({ [key]: value })
     if (!normalized.ok) return { success: false, error: 'invalid_email' }
-    value = normalized.settings[key]
+    value = normalizeAccountsSetting(normalized.settings)[key]
 
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
@@ -233,7 +250,7 @@ export async function updateSettings(
     // Optional contact emails: blank -> null, non-blank must be an address (#890).
     const normalized = normalizeGeneralSettings(settings)
     if (!normalized.ok) return { success: false, error: 'invalid_email' }
-    settings = normalized.settings
+    settings = normalizeAccountsSetting(normalized.settings)
 
     const tenantId = await getCurrentTenantId()
     const supabase = createAdminClient()
@@ -664,6 +681,42 @@ export async function getBinancePersonalStatus(): Promise<{
   } catch (error) {
     console.error('Error fetching Binance personal status:', error)
     return { success: false, payId: null, hasCredentials: false, error: 'Failed to fetch status' }
+  }
+}
+
+/**
+ * Delete this tenant's stored Binance Pay API key + secret (and Pay ID row).
+ *
+ * Turning the auto-verify toggle off leaves the encrypted credentials in place;
+ * this is the way for an admin to actually remove secrets at rest. Admin-only,
+ * scoped to the current tenant (the service-role client bypasses RLS).
+ */
+export async function removeBinancePersonalCredentials(): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    const role = await getUserRole()
+    if (role !== 'admin') {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const tenantId = await getCurrentTenantId()
+    const supabase = createAdminClient()
+
+    const { error } = await supabase
+      .from('tenant_payment_wallets')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('provider', 'binance_personal')
+
+    if (error) throw error
+
+    revalidatePath('/dashboard/admin/settings')
+    return { success: true }
+  } catch (error) {
+    console.error('Error removing Binance personal credentials:', error)
+    return { success: false, error: 'Failed to remove Binance Pay credentials' }
   }
 }
 

@@ -10,8 +10,11 @@ import {
 } from '@/components/ui/dialog'
 import { useLocale, useTranslations } from 'next-intl'
 import { formatCurrency } from '@/lib/currency'
+import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
-import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
+import { getManualPaymentAccounts, getManualPaymentInstructions } from '@/app/actions/admin/settings'
+import type { ManualPaymentAccount } from '@/lib/payments/manual-payment-accounts'
+import { ManualPaymentAccountsList } from './manual-payment-accounts-list'
 import { PaymentRequestForm } from './payment-request-form'
 
 interface ManualPaymentDialogProps {
@@ -37,6 +40,8 @@ export function ManualPaymentDialog({
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
   const [instructions, setInstructions] = useState<string>('')
+  const [accounts, setAccounts] = useState<ManualPaymentAccount[]>([])
+  const [accountsLoaded, setAccountsLoaded] = useState(false)
 
   // Load known identity + tenant instructions once the dialog opens.
   useEffect(() => {
@@ -66,9 +71,23 @@ export function ManualPaymentDialog({
       } catch {
         // Non-fatal — instructions are optional.
       }
+
+      try {
+        const list = await getManualPaymentAccounts()
+        if (!cancelled) setAccounts(list)
+      } catch {
+        // Non-fatal — the free-text instructions still show.
+      } finally {
+        if (!cancelled) setAccountsLoaded(true)
+      }
     })()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // Don't flash last open's list before the fresh one arrives.
+      setAccounts([])
+      setAccountsLoaded(false)
+    }
   }, [open])
 
   const locale = useLocale()
@@ -89,6 +108,15 @@ export function ManualPaymentDialog({
             })}
           </DialogDescription>
         </DialogHeader>
+
+        {accountsLoaded ? (
+          <ManualPaymentAccountsList accounts={accounts} className="mt-2" />
+        ) : (
+          <div className="mt-2 space-y-2" aria-hidden>
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        )}
 
         <PaymentRequestForm
           variant="dialog"
