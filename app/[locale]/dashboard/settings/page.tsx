@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getUserRole } from '@/lib/supabase/get-user-role'
@@ -10,7 +9,6 @@ import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
 import { ToursToggle } from '@/components/shared/tours-toggle'
 import { DeleteAccountCard } from '@/components/shared/delete-account-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { areToursEnabled } from '@/lib/ui-state-keys'
 

@@ -40,7 +40,7 @@ const TEACHER_PAGES: PageDef[] = [
   { name: 'Templates', path: '/dashboard/teacher/templates' },
   { name: 'Community', path: '/dashboard/teacher/community' },
   { name: 'Revenue', path: '/dashboard/teacher/revenue' },
-  { name: 'API Tokens', path: '/dashboard/teacher/api-tokens' },
+  { name: 'Connect AI', path: '/dashboard/teacher/api-tokens' },
 ]
 
 const ADMIN_PAGES: PageDef[] = [
@@ -63,7 +63,7 @@ const ADMIN_PAGES: PageDef[] = [
   { name: 'Appearance', path: '/dashboard/admin/appearance' },
   { name: 'Billing', path: '/dashboard/admin/billing' },
   { name: 'Landing Page', path: '/dashboard/admin/landing-page' },
-  { name: 'API Tokens', path: '/dashboard/admin/api-tokens' },
+  { name: 'Connect AI', path: '/dashboard/admin/api-tokens' },
 ]
 
 const PERSONAS: Persona[] = [
