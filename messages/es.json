@@ -4209,6 +4209,24 @@
           "back": "Volver a Productos",
           "details": {
             "description": "Los cambios en el precio o la moneda crearán un nuevo precio en Stripe."
+          },
+          "feeBearer": {
+            "title": "¿Quién paga la tarifa de la plataforma?",
+            "description": "Elige si la tarifa de la plataforma se descuenta de tus ganancias o se suma al precio que pagan tus estudiantes.",
+            "school": "Yo la asumo",
+            "schoolHint": "Los estudiantes pagan el precio publicado. La tarifa se descuenta de lo que recibes.",
+            "student": "Mis estudiantes la asumen",
+            "studentHint": "La tarifa se suma al pagar, así recibes el precio publicado completo.",
+            "price": "Precio del servicio",
+            "platformFee": "Tarifa de la plataforma ({percentage}%)",
+            "customerPays": "El cliente paga",
+            "youReceive": "Tú recibes",
+            "noFee": "Tu plan no tiene tarifa de plataforma, así que ambas opciones cobran lo mismo.",
+            "providerUnsupported": "Los pagos de este producto no llevan tarifa de plataforma o el proveedor fija el precio, así que aquí la escuela siempre la asume.",
+            "save": "Guardar",
+            "saved": "Configuración de tarifa guardada",
+            "saveError": "No se pudo guardar la configuración de tarifa",
+            "freeProduct": "Los productos gratuitos no tienen tarifa de plataforma."
           }
         },
         "form": {
@@ -5746,6 +5764,8 @@
     "product": "Producto",
     "free": "Gratis",
     "duration": "{days} días de acceso",
+    "priceUnavailable": "El precio de este curso no está disponible por ahora. Contacta a la escuela.",
+    "feeIncluded": "Incluye la tarifa de servicio de la plataforma",
     "secureCheckout": "Pago seguro",
     "included": "Qué incluye",
     "enrollment": {

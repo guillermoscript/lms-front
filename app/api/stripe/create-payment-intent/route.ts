@@ -7,7 +7,13 @@ import { toCents } from '@/lib/currency'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { getPaymentProvider } from '@/lib/payments'
-import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
+import { DEFAULT_FEE_BEARER, type FeeBearer } from '@/lib/payments/fee-bearer'
+import {
+  computeProductCharge,
+  FeeSplitUnavailableError,
+  getTenantRevenueSplit,
+  splitOrDefault,
+} from '@/lib/payments/product-charge'
 import { checkoutExpiryFrom } from '@/lib/payments/checkout-expiry'
 import {
   inspectStripeCheckout,
@@ -137,6 +143,16 @@ export async function POST(req: NextRequest) {
     let currency = 'usd'
     let planProviderPriceId: string | null = null
     let planPaymentProvider = 'stripe'
+    // Plans always leave the fee with the school (#927 is per product).
+    let feeBearer: FeeBearer = DEFAULT_FEE_BEARER
+    let platformPercentage: number
+
+    // The tenant's split, read on the service-role client with the tenant
+    // pinned (lib/payments/product-charge.ts). The buyer's user-scoped client
+    // sees nothing here when their JWT belongs to another school, which used to
+    // drop every such sale to the 20% fallback — and, with a student-borne fee,
+    // charge a different amount than the checkout page showed.
+    const split = await getTenantRevenueSplit(tenantId)
 
     if (planId) {
       const { data: plan, error } = await supabase
@@ -155,10 +171,11 @@ export async function POST(req: NextRequest) {
       itemName = plan.plan_name
       planProviderPriceId = plan.provider_price_id
       planPaymentProvider = plan.payment_provider || 'stripe'
+      platformPercentage = splitOrDefault(split).platformPercentage
     } else {
       const { data: product, error } = await supabase
         .from('products')
-        .select('price, name, currency')
+        .select('tenant_id, price, name, currency, fee_bearer')
         .eq('product_id', productId)
         .eq('tenant_id', tenantId)
         .single()
@@ -166,23 +183,38 @@ export async function POST(req: NextRequest) {
       if (error || !product) {
         return NextResponse.json({ error: 'Product not found' }, { status: 404 })
       }
+      if (product.tenant_id !== tenantId) {
+        return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+      }
+      // Fee bearer (#927): the same computeProductCharge() the checkout page
+      // displays with, so the buyer is charged exactly what they were shown.
+      // When the student bears the fee the amount is grossed up so the
+      // school's transfer (amount − application fee) equals the listed price.
+      // This route only charges through Stripe, whatever the product says.
+      let charge
+      try {
+        charge = computeProductCharge({ ...product, payment_provider: 'stripe' }, split)
+      } catch (err) {
+        if (err instanceof FeeSplitUnavailableError) {
+          console.error('[stripe/create-payment-intent]', err.message)
+          return NextResponse.json(
+            { error: 'This item cannot be purchased right now. Please contact the school.', code: err.code },
+            { status: 503 },
+          )
+        }
+        throw err
+      }
       currency = product.currency || 'usd'
-      amountMajor = Number(product.price)
+      amountMajor = charge.amount
       amount = toCents(amountMajor, currency)
       itemName = product.name
+      feeBearer = charge.feeBearer
+      platformPercentage = charge.platformPercentage
     }
 
-    // Get revenue split configuration for this tenant
-    const { data: split } = await supabase
-      .from('revenue_splits')
-      .select('platform_percentage')
-      .eq('tenant_id', tenantId)
-      .single()
-
-    // Calculate platform fee. `resolvePlatformPercentage`, not `|| 20`: a 0%
-    // fee is a real configuration — it is what Business and Enterprise pay for —
-    // and reading it as "unset" charged those schools 20% on every sale (#605).
-    const platformPercentage = resolvePlatformPercentage(split)
+    // Platform fee: the usual percentage of what is charged. A 0% split is a
+    // real configuration (Business/Enterprise, #605) and is kept as 0 — the
+    // percentage comes from getTenantRevenueSplit, which never reads 0 as unset.
     const platformFee = Math.round((amount * platformPercentage) / 100)
 
     const isNativeSubscription = !!(planId && planPaymentProvider === 'stripe' && planProviderPriceId)
@@ -291,6 +323,8 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: 'stripe',
         tenant_id: tenantId,
+        // #927: `amount` is already grossed up when this is 'student'.
+        fee_bearer: feeBearer,
         // Lets the stale-checkout cron release a card form nobody came back to
         // (#754); a returning buyer is handled by the leftover check above.
         checkout_expires_at: checkoutExpiryFrom(),

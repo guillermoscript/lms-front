@@ -52,6 +52,8 @@ interface CheckoutFormProps {
     paymentProvider?: string | null;
     /** One-time Solana settlement tokens this school offers (USDC and/or SOL). */
     solanaCurrencies?: ('usdc' | 'sol')[];
+    /** The price shown already includes the platform fee passed on to the buyer (#927). */
+    feeIncluded?: boolean;
 }
 
 export function CheckoutForm({
@@ -68,6 +70,7 @@ export function CheckoutForm({
     userEmail,
     paymentProvider,
     solanaCurrencies,
+    feeIncluded = false,
 }: CheckoutFormProps) {
     const [isPending, startTransition] = useTransition();
     const [paymentMethod, setPaymentMethod] = useState<'card' | 'offline'>('card');
@@ -421,9 +424,16 @@ export function CheckoutForm({
                         </p>
                     )}
                 </div>
-                <span className="shrink-0 text-2xl font-extrabold tabular-nums tracking-tight">
-                    {isFree ? t('free') : displayPrice}
-                </span>
+                <div className="shrink-0 text-right">
+                    <span className="text-2xl font-extrabold tabular-nums tracking-tight">
+                        {isFree ? t('free') : displayPrice}
+                    </span>
+                    {feeIncluded && !isFree && (
+                        <p className="mt-1 text-xs text-muted-foreground" data-testid="checkout-fee-included">
+                            {t('feeIncluded')}
+                        </p>
+                    )}
+                </div>
             </div>
 
             {/* Features list */}

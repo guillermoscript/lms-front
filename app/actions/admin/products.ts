@@ -12,6 +12,7 @@ import { getProductCreationReadiness } from '@/lib/admin/product-creation/valida
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
 import { evaluateSchoolActivation } from '@/lib/analytics/activation'
+import { isFeeBearer, type FeeBearer } from '@/lib/payments/fee-bearer'
 import type {
   ProductCreationWizardInput,
   ProductCreationWizardResult,
@@ -994,6 +995,58 @@ export async function restoreProduct(productId: number): Promise<ActionResult> {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to restore product'
+    }
+  }
+}
+
+/**
+ * Sets who bears the platform fee on a product's sales (issue #927).
+ *
+ * Only the setting is stored; the checkout routes derive the charged amount
+ * from it server-side (`lib/payments/fee-bearer.ts`), and each sale snapshots
+ * the bearer that applied on `transactions.fee_bearer`, so changing this never
+ * reprices a past sale.
+ */
+export async function updateProductFeeBearer(
+  productId: number,
+  feeBearer: FeeBearer,
+): Promise<ActionResult> {
+  try {
+    await verifyAdminAccess()
+
+    if (!productId) throw new Error('Product ID is required')
+    if (!isFeeBearer(feeBearer)) throw new Error('Invalid fee bearer')
+
+    const tenantId = await getCurrentTenantId()
+    const adminClient = createAdminClient()
+
+    const { data: product, error: fetchError } = await adminClient
+      .from('products')
+      .select('tenant_id')
+      .eq('product_id', productId)
+      .single()
+
+    if (fetchError || !product || product.tenant_id !== tenantId) {
+      throw new Error('Product not found or access denied')
+    }
+
+    const { error: updateError } = await adminClient
+      .from('products')
+      .update({ fee_bearer: feeBearer })
+      .eq('product_id', productId)
+      .eq('tenant_id', tenantId)
+
+    if (updateError) throw updateError
+
+    revalidatePath(`/dashboard/admin/products/${productId}/edit`)
+    revalidatePath('/dashboard/admin/products')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Update product fee bearer failed:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update fee bearer',
     }
   }
 }

@@ -14,6 +14,7 @@ import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/type
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
 import { pickCourseCheckoutProduct, type CourseProductLink } from "@/lib/puck/utils/checkout-href";
+import { FeeSplitUnavailableError, resolveProductCharge } from "@/lib/payments/product-charge";
 
 interface SearchParams {
     courseId?: string;
@@ -98,6 +99,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     let durationDays: number | undefined = undefined;
     let features: string | null = null;
     let paymentProvider: string | null = null;
+    let feeIncluded = false;
 
     if (courseId) {
         const { data: course } = await supabase
@@ -113,7 +115,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
             const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product_id, product:products(price, currency, payment_provider, description, status)")
+                .select("product_id, product:products(tenant_id, price, currency, payment_provider, description, status, fee_bearer)")
                 .eq("course_id", courseId)
                 .eq("tenant_id", tenantId);
 
@@ -129,10 +131,12 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
             if (paidProductCourse?.product) {
                 const product = paidProductCourse.product as unknown as {
+                    tenant_id: string;
                     price: number | string;
                     currency: string | null;
                     payment_provider: string | null;
                     description: string | null;
+                    fee_bearer?: string | null;
                 };
                 price = Number(product.price);
                 currency = product.currency?.toUpperCase() || 'USD';
@@ -143,6 +147,31 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 if (product.payment_provider === 'manual') {
                     redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
                 }
+
+                // Fee bearer (#927): show the buyer exactly what the checkout
+                // routes will charge — resolveProductCharge() is the one
+                // function all three use (split read for the PRODUCT's tenant
+                // on the service-role client, never the buyer's RLS view). A
+                // student-borne fee with no split on file throws rather than
+                // showing a guessed amount.
+                let charge: Awaited<ReturnType<typeof resolveProductCharge>>;
+                try {
+                    charge = await resolveProductCharge(product, { expectedTenantId: tenantId });
+                } catch (err) {
+                    if (!(err instanceof FeeSplitUnavailableError)) throw err;
+                    return (
+                        <div className="min-h-screen bg-background">
+                            <div className="mx-auto max-w-xl px-4 py-12 sm:py-20 text-center">
+                                <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+                                <p className="mt-4 text-sm text-muted-foreground" data-testid="checkout-price-unavailable">
+                                    {t('priceUnavailable')}
+                                </p>
+                            </div>
+                        </div>
+                    );
+                }
+                feeIncluded = charge.feeIncluded;
+                price = charge.amount;
             }
         }
     } else if (planId) {
@@ -243,6 +272,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     userEmail={userEmail}
                     paymentProvider={paymentProvider}
                     solanaCurrencies={solanaCurrencies}
+                    feeIncluded={feeIncluded}
                 />
             </div>
         </div>
