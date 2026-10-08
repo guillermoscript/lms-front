@@ -3956,7 +3956,8 @@
             "apiSecretPlaceholder": "Secreto API",
             "unchangedPlaceholder": "••••••••  (sin cambios)",
             "credentialsSaved": "Credenciales guardadas. Déjalo en blanco para conservarlas o introduce nuevos valores para reemplazarlas.",
-            "error": "No se pudieron guardar las credenciales de Binance Pay"
+            "error": "No se pudieron guardar las credenciales de Binance Pay",
+            "settingsNotSaved": "Las credenciales de Binance se guardaron, pero los demás ajustes no. Intenta guardar de nuevo."
           }
         },
         "mailer": {

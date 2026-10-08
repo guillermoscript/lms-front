@@ -119,6 +119,7 @@ export default function PaymentSettingsForm({
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
+    let credentialsSaved: typeof pendingBinance = null
 
     try {
       const updatedSettings = {
@@ -153,19 +154,31 @@ export default function PaymentSettingsForm({
         if (!creds.success) {
           throw new Error(creds.error || tBinance('error'))
         }
-        setPendingBinance(null)
-        setBinanceWallet({ payId: pendingBinance.payId, hasCredentials: true })
+        credentialsSaved = pendingBinance
       }
 
       const result = await updateSettings(updatedSettings)
 
-      if (result.success) {
-        toast.success(t('success'))
-      } else {
+      if (!result.success) {
         throw new Error(result.error)
       }
+      // Local state only changes once both writes landed.
+      if (credentialsSaved) {
+        setPendingBinance(null)
+        setBinanceWallet({ payId: credentialsSaved.payId, hasCredentials: true })
+      }
+      toast.success(t('success'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('error'))
+      const message = error instanceof Error ? error.message : t('error')
+      if (credentialsSaved) {
+        // The key is stored server-side already; reflect that so the form
+        // doesn't ask for it again, and say the rest was not saved.
+        setPendingBinance(null)
+        setBinanceWallet({ payId: credentialsSaved.payId, hasCredentials: true })
+        toast.error(`${tBinance('settingsNotSaved')} ${message}`)
+      } else {
+        toast.error(message)
+      }
     } finally {
       setIsSubmitting(false)
     }

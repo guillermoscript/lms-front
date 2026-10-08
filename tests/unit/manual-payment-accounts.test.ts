@@ -53,6 +53,16 @@ describe('normalizeManualPaymentAccounts', () => {
     expect(out.map((a) => a.kind)).toEqual(['zelle', null])
   })
 
+  it('nulls the email on a demoted duplicate preset but keeps it on the kept row', () => {
+    const out = normalizeManualPaymentAccounts([
+      { kind: 'zelle', method: 'Zelle', email: 'a@b.co' },
+      { kind: 'zelle', method: 'Zelle 2', email: 'c@d.co' },
+    ])
+    expect(out[0].email).toBe('a@b.co')
+    expect(out[1].kind).toBeNull()
+    expect(out[1].email).toBeNull()
+  })
+
   it('keeps ids unique when kinds are demoted or ids repeat', () => {
     const out = normalizeManualPaymentAccounts([
       { id: 'preset-zelle', kind: 'zelle', method: 'Zelle', email: 'a@b.co' },
