@@ -25,6 +25,7 @@ import {
   type ContentSort
 } from '@/lib/teacher-content-list'
 import { cn } from '@/lib/utils'
+import { ShareButton } from './share-button'
 
 interface ContentRow extends ContentListItem {
   content: ReactNode
@@ -93,6 +94,13 @@ export function ContentListExplorer(props: Props) {
             )}
           >
             <div className="min-w-0 flex-1 h-full">{item.content}</div>
+            {props.kind !== 'courses' && item.status === 'published' && (
+              <ShareButton
+                iconOnly
+                title={item.title}
+                path={`/dashboard/student/courses/${props.courseId}/${props.kind}/${item.id}`}
+              />
+            )}
             {props.kind !== 'courses' && (
               <BulkContentRowActions
                 id={item.id}
