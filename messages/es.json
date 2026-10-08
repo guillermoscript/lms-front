@@ -2511,7 +2511,7 @@
         "stats": {
           "owedToPlatform": "Por pagar a la plataforma",
           "owedToPlatformDesc": "Comisión de {count, plural, =0 {ninguna venta} one {# venta} other {# ventas}} cobradas directamente por ti, descontando reembolsos",
-          "owedToPlatformNote": "Pagar este saldo desde aquí llegará en una próxima versión; por ahora no se cobra ni se bloquea nada.",
+          "owedToPlatformNote": "Neto de los pagos de comisión que ya hiciste. Consulta Comisiones de la plataforma más abajo para pagarlo.",
           "month": "Este mes, todas las ventas (UTC)",
           "monthDesc": "Tu neto de {count, plural, one {# venta} other {# ventas}}, cobradas por ti o por la plataforma · comisión {commission}. No es el monto por pagar de arriba, que solo cubre ventas cobradas por ti.",
           "openRequests": "Solicitudes de pago abiertas",
@@ -2556,7 +2556,8 @@
             "school": "Tú",
             "platform": "Plataforma"
           },
-          "footnote": "El monto descuenta reembolsos. La comisión usa el reparto vigente cuando ocurrió cada venta. Las ventas por confirmar y las reembolsadas por completo no cuentan en ningún saldo."
+          "footnote": "El monto descuenta reembolsos. La comisión usa el reparto vigente cuando ocurrió cada venta. Las ventas por confirmar y las reembolsadas por completo no cuentan en ningún saldo.",
+          "fxRate": "1 {currency} = {rate} USD ({source})"
         },
         "status": {
           "successful": "Pagada",
@@ -4860,7 +4861,11 @@
       "schoolsTitle": "Tus escuelas",
       "schoolsHint": "Cada escuela tiene su propio conector y tu rol allí define las herramientas: los estudiantes tienen sus herramientas de aprendizaje, los profesores y admins la gestión de cursos.",
       "copySchool": "Copiar URL del conector de {school}",
-      "roles": { "student": "Estudiante", "teacher": "Profesor", "admin": "Admin" }
+      "roles": {
+        "student": "Estudiante",
+        "teacher": "Profesor",
+        "admin": "Admin"
+      }
     },
     "courseProgress": {
       "progress": "Progreso",
@@ -6141,6 +6146,118 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Volver a mi escuela",
       "logout": "Cerrar sesión"
+    },
+    "fees": {
+      "title": "Comisiones de la plataforma",
+      "description": "Comisión que esta escuela debe por las ventas que cobró directamente. Cada acción queda auditada.",
+      "standing": "Situación",
+      "state": {
+        "ok": "Al día",
+        "reminded": "Recordada",
+        "overdue": "Vencida",
+        "blocked": "Bloqueada"
+      },
+      "overdueSince": "Vencida desde",
+      "blockedAt": "Bloqueada el",
+      "exempt": "Exenta del bloqueo",
+      "exemptYes": "Sí: {reason}",
+      "exemptNo": "No",
+      "lastEvaluated": "Última evaluación",
+      "never": "Nunca",
+      "balances": "Saldos",
+      "noBalances": "Aún no hay ventas con comisión.",
+      "balanceHeaders": {
+        "currency": "Moneda",
+        "accrued": "Generado",
+        "paid": "Pagado",
+        "owed": "Adeudado",
+        "overpaid": "Crédito"
+      },
+      "openRequests": "Solicitudes de transferencia abiertas",
+      "noOpenRequests": "No hay solicitudes de transferencia abiertas.",
+      "payments": "Pagos",
+      "noPayments": "No hay pagos registrados.",
+      "paymentHeaders": {
+        "date": "Fecha",
+        "provider": "Vía",
+        "status": "Estado",
+        "amount": "Monto",
+        "note": "Nota"
+      },
+      "audit": "Registro de auditoría",
+      "noAudit": "Aún no hay acciones en el libro.",
+      "auditActions": {
+        "request_confirmed": "Transferencia confirmada",
+        "offline_recorded": "Pago externo registrado",
+        "waived": "Condonado",
+        "payment_reversed": "Pago revertido",
+        "exemption_set": "Exención activada",
+        "exemption_cleared": "Exención retirada"
+      },
+      "automated": "automático",
+      "statements": "Estados de cuenta",
+      "noStatements": "No se han emitido estados de cuenta.",
+      "confirm": {
+        "trigger": "Confirmar recibido",
+        "title": "¿Confirmar esta transferencia?",
+        "body": "Acredita {amount} al saldo de comisiones de la escuela. No se puede deshacer, solo revertir con un motivo.",
+        "submit": "Confirmar",
+        "success": "Transferencia confirmada.",
+        "replay": "Ya estaba confirmada."
+      },
+      "record": {
+        "trigger": "Registrar pago o condonación",
+        "title": "Registrar pago o condonación",
+        "kind": "Tipo",
+        "kinds": {
+          "offline": "Pago externo (dinero recibido)",
+          "waiver": "Condonación (dar de baja)"
+        },
+        "currency": "Moneda",
+        "amount": "Monto",
+        "reason": "Motivo",
+        "reasonPlaceholder": "Por qué, para la auditoría",
+        "reference": "Referencia (opcional)",
+        "submit": "Registrar",
+        "success": "Registrado."
+      },
+      "reverse": {
+        "trigger": "Revertir",
+        "title": "¿Revertir este pago?",
+        "body": "Elimina el crédito de {amount} (transferencia rechazada, registro erróneo). La escuela vuelve a deberlo.",
+        "reason": "Motivo",
+        "submit": "Revertir pago",
+        "success": "Pago revertido."
+      },
+      "exemption": {
+        "set": "Eximir del bloqueo",
+        "clear": "Retirar exención",
+        "titleSet": "¿Eximir a esta escuela de la pausa de ventas?",
+        "titleClear": "¿Retirar la exención de esta escuela?",
+        "bodySet": "Los recordatorios se siguen enviando, pero las ventas nunca se pausan. Una pausa activa se levanta ahora.",
+        "bodyClear": "La escuela puede volver a pausarse en la próxima evaluación si está vencida.",
+        "reason": "Motivo",
+        "submit": "Guardar",
+        "success": "Exención actualizada."
+      },
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "errors": {
+        "invalid_amount": "Ingresa un monto positivo con hasta 2 decimales.",
+        "invalid_currency": "Usa un código de moneda de 3 letras.",
+        "reason_required": "Agrega un motivo (al menos 3 caracteres).",
+        "invalid_kind": "Elige una opción válida.",
+        "invalid_id": "Ese registro no existe.",
+        "forbidden": "Solo los superadministradores pueden hacer esto.",
+        "not_found": "No encontrado.",
+        "conflict": "Ese registro cambió. Actualiza e inténtalo de nuevo.",
+        "not_settled": "Solo se pueden revertir pagos acreditados.",
+        "internal": "Algo salió mal.",
+        "generic": "Algo salió mal."
+      },
+      "feeRequest": "Comisión de la plataforma",
+      "viewStatement": "Ver",
+      "backToSchool": "Volver a la escuela"
     }
   },
   "platformPricing": {
@@ -8066,7 +8183,11 @@
     "schoolLabel": "Conectar con la escuela",
     "schoolPlaceholder": "Elige una escuela",
     "schoolHint": "Elige la escuela a conectar. La aplicación solo verá los datos de esa escuela.",
-    "roles": { "student": "Estudiante", "teacher": "Profesor", "admin": "Admin" },
+    "roles": {
+      "student": "Estudiante",
+      "teacher": "Profesor",
+      "admin": "Admin"
+    },
     "deny": "Denegar",
     "denying": "Denegando...",
     "approve": "Aprobar",
@@ -9217,6 +9338,140 @@
   },
   "platformFees": {
     "salesBlockedTitle": "Inscripción no disponible",
-    "salesBlocked": "Esta escuela no está aceptando nuevas inscripciones en este momento. Inténtalo de nuevo más tarde."
+    "salesBlocked": "Esta escuela no está aceptando nuevas inscripciones en este momento. Inténtalo de nuevo más tarde.",
+    "banner": {
+      "remindedTitle": "Comisiones de la plataforma por vencer",
+      "remindedBody": "{amount} vence el {date} (UTC).",
+      "remindedBodyNoDate": "{amount} vence pronto.",
+      "overdueTitle": "Comisiones de la plataforma vencidas",
+      "overdueBody": "{amount} está vencido.",
+      "overdueBodyBlockOn": "{amount} está vencido. Las nuevas ventas e inscripciones se pausan el {date} (UTC) si no se paga.",
+      "blockedTitle": "Nuevas ventas pausadas",
+      "blockedBody": "Hay {amount} en comisiones de la plataforma sin pagar, así que las nuevas ventas e inscripciones están pausadas. Los estudiantes actuales conservan su acceso. Al pagar, las ventas se reanudan al instante.",
+      "action": "Revisar y pagar"
+    },
+    "card": {
+      "title": "Comisiones de la plataforma",
+      "description": "Comisión de las ventas que cobraste directamente (transferencia bancaria, Binance personal). La plataforma nunca recibió ese dinero, así que su parte es un saldo que nos pagas.",
+      "owed": "Debes",
+      "owedHint": "Una cifra por moneda. Las monedas nunca se suman entre sí.",
+      "nothingOwed": "Nada pendiente",
+      "nothingOwedDesc": "Estás al día.",
+      "overpaid": "Crédito {amount}",
+      "overpaidNote": "Pagaste más de lo que debes. El crédito se aplica a comisiones futuras; si tu escuela deja de vender, lo liquidamos contigo directamente.",
+      "accruedPaid": "Generado {accrued} · pagado {paid}",
+      "state": {
+        "ok": "Al día",
+        "reminded": "Por vencer",
+        "overdue": "Vencido",
+        "blocked": "Ventas pausadas"
+      },
+      "exempt": "Exenta de la pausa de ventas",
+      "notifyOnly": "Solo recordatorios: todavía no se pausan las ventas por comisiones impagas.",
+      "payNow": "Pagar ahora",
+      "openRequest": "Transferencia de {amount} esperando nuestra confirmación (solicitada el {date}).",
+      "underReview": "{count, plural, one {# pago está} other {# pagos están}} en revisión. Lo acreditamos una vez verificado.",
+      "paymentReturned": "Gracias. Tu pago se está procesando y el saldo se actualiza en cuanto el proveedor lo confirme.",
+      "loadError": "No pudimos cargar tu saldo de comisiones de la plataforma.",
+      "retry": "Reintentar",
+      "timezone": "Las fechas están en UTC.",
+      "converted": {
+        "title": "Ventas convertidas",
+        "line": "{count, plural, one {# venta} other {# ventas}} en {currency}: {sales} contabilizadas como {usd}",
+        "rate": "1 {currency} = {rate} USD · {source} · {date}",
+        "unknownSource": "fuente no registrada",
+        "note": "Convertidas a USD con la tasa del día de cada venta, y nunca reconvertidas después."
+      },
+      "statements": {
+        "title": "Estados de cuenta mensuales",
+        "empty": "Aún no hay estados de cuenta. Se emite uno el día 1 de cada mes en que debas comisiones.",
+        "period": "{start} – {end}",
+        "due": "Vence {date}",
+        "view": "Ver estado de cuenta {number}",
+        "status": {
+          "paid": "Pagado",
+          "due": "Pendiente",
+          "overdue": "Vencido"
+        }
+      }
+    },
+    "payNow": {
+      "title": "Pagar comisiones de la plataforma",
+      "description": "Paga todo o parte de lo que debes. Si las ventas estaban pausadas, se reanudan al instante.",
+      "currency": "Moneda",
+      "amountLabel": "Monto ({currency})",
+      "amountHint": "Debes {amount}. Puedes pagar una parte ahora.",
+      "rail": "Método de pago",
+      "rails": {
+        "stripe": "Tarjeta",
+        "manual": "Transferencia bancaria"
+      },
+      "railHints": {
+        "stripe": "Paga ahora con tarjeta. Solo saldos en USD.",
+        "manual": "Registra una transferencia. La confirmamos manualmente, normalmente en 2 días hábiles."
+      },
+      "cardUnavailable": "El pago con tarjeta solo está disponible para saldos en USD de al menos $0.50. Usa una transferencia bancaria.",
+      "bankReference": "Referencia de la transferencia (opcional)",
+      "bankReferenceHint": "Si ya enviaste la transferencia, agrega su referencia para que podamos identificarla.",
+      "notes": "Notas (opcional)",
+      "cancel": "Cancelar",
+      "submit": "Pagar {amount}",
+      "submitting": "Iniciando…",
+      "redirecting": "Abriendo el pago…",
+      "nothingToPay": "No hay nada que pagar en este momento.",
+      "instructions": {
+        "title": "Transferencia registrada",
+        "body": "Registramos tu transferencia de {amount}. Enviaremos los datos bancarios de la plataforma a tu contacto de facturación. Cuando confirmemos que llegó el dinero, tu saldo se actualiza.",
+        "reference": "ID de la solicitud",
+        "expires": "Esta solicitud sigue abierta hasta el {date} (UTC).",
+        "done": "Listo"
+      },
+      "errors": {
+        "unsupported_rail": "Este método de pago no se puede usar para comisiones de la plataforma.",
+        "currency_not_supported_on_rail": "Solo los saldos en USD se pueden pagar con tarjeta. Paga otras monedas por transferencia bancaria.",
+        "nothing_owed": "No hay nada que pagar en esta moneda.",
+        "invalid_amount": "Ingresa un monto mayor que cero, con hasta 2 decimales.",
+        "amount_above_balance": "Es más de lo que debes.",
+        "amount_below_minimum": "Los pagos con tarjeta empiezan en $0.50. Paga montos menores por transferencia bancaria.",
+        "fee_request_open": "Ya tienes una transferencia esperando confirmación.",
+        "provider_unavailable": "Este método de pago no está disponible ahora.",
+        "provider_error": "No pudimos iniciar el pago. Inténtalo de nuevo.",
+        "forbidden": "Solo los administradores de la escuela pueden pagar comisiones de la plataforma.",
+        "unauthorized": "Tu sesión expiró. Inicia sesión de nuevo.",
+        "generic": "Algo salió mal. Inténtalo de nuevo."
+      }
+    },
+    "statement": {
+      "title": "Estado de cuenta de comisiones de la plataforma",
+      "nonFiscal": "Estado de cuenta, no es una factura fiscal",
+      "number": "Estado de cuenta",
+      "school": "Escuela",
+      "period": "Período",
+      "issued": "Emitido",
+      "due": "Vence",
+      "status": "Estado",
+      "ledgerCurrency": "Moneda",
+      "salesTitle": "Ventas cobradas directamente",
+      "headers": {
+        "currency": "Moneda de la venta",
+        "count": "Ventas",
+        "sales": "Ventas, netas de reembolsos",
+        "fee": "Comisión"
+      },
+      "convertedNote": "Convertidas a USD al momento de la venta: {usd}",
+      "rate": "1 {currency} = {rate} USD ({source})",
+      "unknownSource": "fuente no registrada",
+      "noLines": "Sin líneas de ventas.",
+      "feeTotal": "Comisión del período",
+      "txnCount": "{count, plural, one {# venta} other {# ventas}}",
+      "priorAdjustment": "Ajuste de períodos anteriores",
+      "paymentsAtClose": "Pagos recibidos (al cierre)",
+      "closingBalance": "Saldo al cierre",
+      "utcNote": "Todas las fechas están en UTC. Las cifras quedan fijas al cierre del período; los reembolsos posteriores aparecen como crédito en un estado de cuenta posterior.",
+      "disclaimer": "Este estado de cuenta resume la comisión de la plataforma adeudada por las ventas que tu escuela cobró directamente. No es una factura fiscal y no tiene valor tributario.",
+      "print": "Imprimir",
+      "back": "Volver a ingresos",
+      "notFound": "Estado de cuenta no encontrado"
+    }
   }
 }

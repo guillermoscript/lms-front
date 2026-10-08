@@ -2511,7 +2511,7 @@
         "stats": {
           "owedToPlatform": "Owed to the platform",
           "owedToPlatformDesc": "Commission on {count, plural, =0 {no sales} one {# sale} other {# sales}} paid directly to you, net of refunds",
-          "owedToPlatformNote": "Paying this balance from here arrives in a later release; nothing is charged or blocked yet.",
+          "owedToPlatformNote": "Net of the fee payments you've made. See Platform fees below to pay it.",
           "month": "This month, all sales (UTC)",
           "monthDesc": "Your net from {count, plural, one {# sale} other {# sales}}, collected by you or the platform · commission {commission}. Not the amount owed above, which covers only sales paid to you.",
           "openRequests": "Open payment requests",
@@ -2556,7 +2556,8 @@
             "school": "You",
             "platform": "Platform"
           },
-          "footnote": "Amount is net of refunds. Commission uses the split in effect when each sale happened. Sales to confirm and fully refunded sales do not count toward any balance."
+          "footnote": "Amount is net of refunds. Commission uses the split in effect when each sale happened. Sales to confirm and fully refunded sales do not count toward any balance.",
+          "fxRate": "1 {currency} = {rate} USD ({source})"
         },
         "status": {
           "successful": "Paid",
@@ -4979,7 +4980,11 @@
       "schoolsTitle": "Your schools",
       "schoolsHint": "Each school has its own connector and your role there decides the tools: students get their own learning tools, teachers and admins get course management.",
       "copySchool": "Copy connector URL for {school}",
-      "roles": { "student": "Student", "teacher": "Teacher", "admin": "Admin" }
+      "roles": {
+        "student": "Student",
+        "teacher": "Teacher",
+        "admin": "Admin"
+      }
     },
     "courseProgress": {
       "progress": "Progress",
@@ -6141,6 +6146,118 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Back to my school",
       "logout": "Log out"
+    },
+    "fees": {
+      "title": "Platform fees",
+      "description": "Commission this school owes on sales it collected directly. Every action is audited.",
+      "standing": "Standing",
+      "state": {
+        "ok": "OK",
+        "reminded": "Reminded",
+        "overdue": "Overdue",
+        "blocked": "Blocked"
+      },
+      "overdueSince": "Overdue since",
+      "blockedAt": "Blocked at",
+      "exempt": "Exempt from block",
+      "exemptYes": "Yes: {reason}",
+      "exemptNo": "No",
+      "lastEvaluated": "Last evaluated",
+      "never": "Never",
+      "balances": "Balances",
+      "noBalances": "No fee-bearing sales yet.",
+      "balanceHeaders": {
+        "currency": "Currency",
+        "accrued": "Accrued",
+        "paid": "Paid",
+        "owed": "Owed",
+        "overpaid": "Credit"
+      },
+      "openRequests": "Open transfer requests",
+      "noOpenRequests": "No open transfer requests.",
+      "payments": "Payments",
+      "noPayments": "No payments recorded.",
+      "paymentHeaders": {
+        "date": "Date",
+        "provider": "Rail",
+        "status": "Status",
+        "amount": "Amount",
+        "note": "Note"
+      },
+      "audit": "Audit trail",
+      "noAudit": "No ledger actions yet.",
+      "auditActions": {
+        "request_confirmed": "Transfer confirmed",
+        "offline_recorded": "Offline payment recorded",
+        "waived": "Waived",
+        "payment_reversed": "Payment reversed",
+        "exemption_set": "Exemption set",
+        "exemption_cleared": "Exemption cleared"
+      },
+      "automated": "automated",
+      "statements": "Statements",
+      "noStatements": "No statements issued.",
+      "confirm": {
+        "trigger": "Confirm received",
+        "title": "Confirm this transfer?",
+        "body": "Credit {amount} to the school's fee balance. This can't be undone, only reversed with a reason.",
+        "submit": "Confirm",
+        "success": "Transfer confirmed.",
+        "replay": "Already confirmed."
+      },
+      "record": {
+        "trigger": "Record payment or waiver",
+        "title": "Record payment or waiver",
+        "kind": "Type",
+        "kinds": {
+          "offline": "Offline payment (money received)",
+          "waiver": "Waiver (write off)"
+        },
+        "currency": "Currency",
+        "amount": "Amount",
+        "reason": "Reason",
+        "reasonPlaceholder": "Why, for the audit trail",
+        "reference": "Reference (optional)",
+        "submit": "Record",
+        "success": "Recorded."
+      },
+      "reverse": {
+        "trigger": "Reverse",
+        "title": "Reverse this payment?",
+        "body": "Removes the {amount} credit (bounced transfer, mistaken entry). The school owes it again.",
+        "reason": "Reason",
+        "submit": "Reverse payment",
+        "success": "Payment reversed."
+      },
+      "exemption": {
+        "set": "Exempt from block",
+        "clear": "End exemption",
+        "titleSet": "Exempt this school from the sales pause?",
+        "titleClear": "End this school's exemption?",
+        "bodySet": "Reminders still go out, but sales are never paused. An active pause is lifted now.",
+        "bodyClear": "The school can be paused again at the next evaluation if it is overdue.",
+        "reason": "Reason",
+        "submit": "Save",
+        "success": "Exemption updated."
+      },
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "errors": {
+        "invalid_amount": "Enter a positive amount with up to 2 decimals.",
+        "invalid_currency": "Use a 3-letter currency code.",
+        "reason_required": "Add a reason (at least 3 characters).",
+        "invalid_kind": "Pick a valid option.",
+        "invalid_id": "That record doesn't exist.",
+        "forbidden": "Only super admins can do this.",
+        "not_found": "Not found.",
+        "conflict": "That record changed. Refresh and try again.",
+        "not_settled": "Only credited payments can be reversed.",
+        "internal": "Something went wrong.",
+        "generic": "Something went wrong."
+      },
+      "feeRequest": "Platform fee",
+      "viewStatement": "View",
+      "backToSchool": "Back to school"
     }
   },
   "platformPricing": {
@@ -8066,7 +8183,11 @@
     "schoolLabel": "Connect to school",
     "schoolPlaceholder": "Choose a school",
     "schoolHint": "Pick the school to connect. The application will only see that school's data.",
-    "roles": { "student": "Student", "teacher": "Teacher", "admin": "Admin" },
+    "roles": {
+      "student": "Student",
+      "teacher": "Teacher",
+      "admin": "Admin"
+    },
     "deny": "Deny",
     "denying": "Denying...",
     "approve": "Approve",
@@ -9217,6 +9338,140 @@
   },
   "platformFees": {
     "salesBlockedTitle": "Enrollment unavailable",
-    "salesBlocked": "This school isn't accepting new enrollments right now. Please try again later."
+    "salesBlocked": "This school isn't accepting new enrollments right now. Please try again later.",
+    "banner": {
+      "remindedTitle": "Platform fees due soon",
+      "remindedBody": "{amount} is due on {date} (UTC).",
+      "remindedBodyNoDate": "{amount} is due soon.",
+      "overdueTitle": "Platform fees overdue",
+      "overdueBody": "{amount} is past due.",
+      "overdueBodyBlockOn": "{amount} is past due. New sales and enrollments pause on {date} (UTC) unless it's paid.",
+      "blockedTitle": "New sales paused",
+      "blockedBody": "{amount} in platform fees is unpaid, so new sales and enrollments are paused. Current students keep their access. Paying resumes sales right away.",
+      "action": "Review and pay"
+    },
+    "card": {
+      "title": "Platform fees",
+      "description": "Commission on sales you collected directly (bank transfer, personal Binance). The platform never held that money, so its share is a balance you pay us.",
+      "owed": "You owe",
+      "owedHint": "One figure per currency. Currencies are never added together.",
+      "nothingOwed": "Nothing owed",
+      "nothingOwedDesc": "You're all paid up.",
+      "overpaid": "Credit {amount}",
+      "overpaidNote": "You've paid more than you owe. The credit is used against future fees; if your school stops selling, we settle it with you directly.",
+      "accruedPaid": "Accrued {accrued} · paid {paid}",
+      "state": {
+        "ok": "Up to date",
+        "reminded": "Due soon",
+        "overdue": "Overdue",
+        "blocked": "Sales paused"
+      },
+      "exempt": "Exempt from the sales pause",
+      "notifyOnly": "Reminders only: sales are not paused for unpaid fees yet.",
+      "payNow": "Pay now",
+      "openRequest": "Transfer of {amount} waiting for our confirmation (requested {date}).",
+      "underReview": "{count, plural, one {# payment is} other {# payments are}} under review. We credit it once it's checked.",
+      "paymentReturned": "Thanks. Your payment is being processed and your balance updates as soon as the provider confirms it.",
+      "loadError": "We couldn't load your platform fee balance.",
+      "retry": "Retry",
+      "timezone": "Dates are in UTC.",
+      "converted": {
+        "title": "Converted sales",
+        "line": "{count, plural, one {# sale} other {# sales}} in {currency}: {sales} counted as {usd}",
+        "rate": "1 {currency} = {rate} USD · {source} · {date}",
+        "unknownSource": "source not recorded",
+        "note": "Converted to USD at the rate on the day of each sale, and never re-converted later."
+      },
+      "statements": {
+        "title": "Monthly statements",
+        "empty": "No statements yet. One is issued on the 1st of each month you owe fees.",
+        "period": "{start} – {end}",
+        "due": "Due {date}",
+        "view": "View statement {number}",
+        "status": {
+          "paid": "Paid",
+          "due": "Due",
+          "overdue": "Overdue"
+        }
+      }
+    },
+    "payNow": {
+      "title": "Pay platform fees",
+      "description": "Pay all or part of what you owe. Paying resumes sales right away if they were paused.",
+      "currency": "Currency",
+      "amountLabel": "Amount ({currency})",
+      "amountHint": "You owe {amount}. You can pay part of it now.",
+      "rail": "Payment method",
+      "rails": {
+        "stripe": "Card",
+        "manual": "Bank transfer"
+      },
+      "railHints": {
+        "stripe": "Pay now by card. USD balances only.",
+        "manual": "Register a transfer. We confirm it by hand, usually within 2 business days."
+      },
+      "cardUnavailable": "Card payment is only available for USD balances of at least $0.50. Use a bank transfer.",
+      "bankReference": "Transfer reference (optional)",
+      "bankReferenceHint": "If you've already sent the transfer, add its reference so we can match it.",
+      "notes": "Notes (optional)",
+      "cancel": "Cancel",
+      "submit": "Pay {amount}",
+      "submitting": "Starting…",
+      "redirecting": "Opening checkout…",
+      "nothingToPay": "There's nothing to pay right now.",
+      "instructions": {
+        "title": "Transfer registered",
+        "body": "We registered your transfer of {amount}. We'll email the platform's bank details to your billing contact. Once we confirm the money arrived, your balance updates.",
+        "reference": "Request ID",
+        "expires": "This request stays open until {date} (UTC).",
+        "done": "Done"
+      },
+      "errors": {
+        "unsupported_rail": "This payment method can't be used for platform fees.",
+        "currency_not_supported_on_rail": "Only USD balances can be paid by card. Pay other currencies by bank transfer.",
+        "nothing_owed": "There's nothing to pay in this currency.",
+        "invalid_amount": "Enter an amount greater than zero, with up to 2 decimals.",
+        "amount_above_balance": "That's more than you owe.",
+        "amount_below_minimum": "Card payments start at $0.50. Pay smaller amounts by bank transfer.",
+        "fee_request_open": "You already have a transfer waiting for confirmation.",
+        "provider_unavailable": "This payment method isn't available right now.",
+        "provider_error": "We couldn't start the checkout. Try again.",
+        "forbidden": "Only school admins can pay platform fees.",
+        "unauthorized": "Your session expired. Sign in again.",
+        "generic": "Something went wrong. Try again."
+      }
+    },
+    "statement": {
+      "title": "Platform fee statement",
+      "nonFiscal": "Statement, not a tax invoice",
+      "number": "Statement",
+      "school": "School",
+      "period": "Period",
+      "issued": "Issued",
+      "due": "Due",
+      "status": "Status",
+      "ledgerCurrency": "Currency",
+      "salesTitle": "Sales collected directly",
+      "headers": {
+        "currency": "Sale currency",
+        "count": "Sales",
+        "sales": "Sales, net of refunds",
+        "fee": "Commission"
+      },
+      "convertedNote": "Converted to USD at sale time: {usd}",
+      "rate": "1 {currency} = {rate} USD ({source})",
+      "unknownSource": "source not recorded",
+      "noLines": "No sales lines.",
+      "feeTotal": "Commission for the period",
+      "txnCount": "{count, plural, one {# sale} other {# sales}}",
+      "priorAdjustment": "Adjustment from earlier periods",
+      "paymentsAtClose": "Payments received (as of close)",
+      "closingBalance": "Balance as of close",
+      "utcNote": "All dates are in UTC. Figures are frozen at the close of the period; refunds made later appear as credit on a later statement.",
+      "disclaimer": "This statement summarises the platform commission owed on sales your school collected directly. It is not a tax invoice and has no fiscal value.",
+      "print": "Print",
+      "back": "Back to earnings",
+      "notFound": "Statement not found"
+    }
   }
 }

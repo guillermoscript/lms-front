@@ -277,3 +277,29 @@ describe('raw transactions row → EarningsTxn (#929 usd_amount reconcile)', () 
     expect(src).toContain('.map(earningsTxnFromRow)')
   })
 })
+
+describe('#929 fee payments and frozen FX on the earnings page', () => {
+  const raw = {
+    transaction_id: 10, payment_provider: 'manual', amount: '3650.00', refunded_amount: null, currency: 'ves',
+    school_percentage_snapshot: '80', status: 'successful', transaction_date: '2026-10-05T12:00:00Z',
+    product_id: 1, plan_id: null, usd_amount: '100.00', fx_rate_to_usd: '0.0273973', fx_rate_source: 'bcv',
+  }
+
+  it('selects and maps the stored rate and source', () => {
+    const cols = EARNINGS_TXN_COLUMNS.split(',').map((c) => c.trim())
+    expect(cols).toEqual(expect.arrayContaining(['fx_rate_to_usd', 'fx_rate_source']))
+    expect(earningsTxnFromRow(raw)).toMatchObject({ fxRateToUsd: 0.0273973, fxRateSource: 'bcv' })
+    expect(earningsTxnFromRow({ ...raw, fx_rate_to_usd: null, fx_rate_source: null })).toMatchObject({ fxRateToUsd: null, fxRateSource: null })
+  })
+
+  it('succeeded fee payments reduce what the school owes, same as the ledger', () => {
+    const txn = earningsTxnFromRow(raw)!
+    const view = (feePayments?: { amount: number; currency: string; status: string }[]) =>
+      buildEarningsView({
+        tenantId: 't1', txns: [txn], payouts: [], schoolPercentage: 80, openRequests: 0, feePayments,
+        now: new Date('2026-10-20T00:00:00Z'), searchParams: {}, pageSize: 20,
+      })
+    expect(view().feeDebt[0].netOwed).toBe(20)
+    expect(view([{ amount: 5, currency: 'USD', status: 'succeeded' }, { amount: 9, currency: 'USD', status: 'pending' }]).feeDebt[0].netOwed).toBe(15)
+  })
+})
