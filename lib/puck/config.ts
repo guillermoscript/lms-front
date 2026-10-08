@@ -42,12 +42,20 @@ import { ImageGallery } from './components/lms/image-gallery'
 import { SocialProof } from './components/lms/social-proof'
 import { EnrollCta } from './components/lms/enroll-cta'
 import { CatalogBrowser } from './components/lms/catalog-browser'
+// Data-bound course / product blocks (Page Architect WP3)
+import { courseBlocks, COURSE_BLOCK_NAMES } from './components/lms/course'
 
 // Navigation
 import { Header } from './components/navigation/header'
 import { Footer } from './components/navigation/footer'
 import { Navbar } from './components/navigation/navbar'
 import { BreadcrumbBlock } from './components/navigation/breadcrumb-block'
+
+// Page-level SEO fields on `root` (metaTitle / metaDescription / ogImage),
+// read by the public /p/[slug] metadata through readRootMeta().
+import { rootMetaFields, rootMetaDefaults } from './utils/root-meta'
+
+const rootConfig = { fields: rootMetaFields, defaultProps: rootMetaDefaults }
 
 const componentDefinitions = {
   // Primitives
@@ -90,6 +98,7 @@ const componentDefinitions = {
   SocialProof,
   EnrollCta,
   CatalogBrowser,
+  ...courseBlocks,
   // Navigation
   Header,
   Footer,
@@ -139,6 +148,7 @@ const categoryDefinitions = {
       'SocialProof',
       'EnrollCta',
       'CatalogBrowser',
+      ...COURSE_BLOCK_NAMES,
     ] as string[],
   },
   navigation: {
@@ -209,6 +219,7 @@ export function createPuckConfig(t: Translator): Config {
   return {
     categories: translatedCategories,
     components: translatedComponents,
+    root: { ...rootConfig, fields: translateFields(rootConfig.fields, t) },
   }
 }
 
@@ -233,4 +244,5 @@ export const puckConfig: Config = {
     },
   },
   components: componentDefinitions,
+  root: rootConfig,
 }

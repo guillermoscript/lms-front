@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { PUCK_TEMPLATES } from '@/lib/puck/templates'
 import { getLandingData } from '@/lib/puck/utils/landing-data'
 import { getTranslations } from 'next-intl/server'
+import { getTenantAiEnabled } from '@/lib/ai/ui-flags'
 
 export default async function LandingPageAdminPage() {
   const role = await getUserRole()
@@ -21,11 +22,19 @@ export default async function LandingPageAdminPage() {
   // Check plan
   const supabase = createAdminClient()
   const { data: planResult } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
-  const plan = (planResult as any)?.plan ?? 'free'
+  const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
+
+  // "Describe your page" needs a working key; without one the picker offers templates only.
+  const aiConfigured = await getTenantAiEnabled()
 
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []
-  const landingData = await getLandingData(tenantId)
+  // Resolve the ids every page binds (any of them may be opened in the editor); drafts are
+  // included, flagged, so the editor can say "publish this course" instead of going blank.
+  const landingData = await getLandingData(tenantId, {
+    puckData: pages.map((p) => p.puck_data),
+    includeDrafts: true,
+  })
 
   // Branding settings so the builder can edit logo/colors inline without leaving
   const settingsResult = await getAllSettingsByCategory()
@@ -37,6 +46,7 @@ export default async function LandingPageAdminPage() {
         <LandingPagesClient
           pages={pages}
           plan={plan}
+          aiConfigured={aiConfigured}
           tenantId={tenantId}
           templates={PUCK_TEMPLATES}
           brandingSettings={brandingSettings}

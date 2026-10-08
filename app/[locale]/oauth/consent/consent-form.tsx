@@ -4,13 +4,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 
 export interface TenantMembership {
   tenantId: string
@@ -64,19 +58,30 @@ export function ConsentForm({ authorizationId, memberships, defaultTenantId }: C
     <div className="space-y-4">
       {memberships.length > 1 && (
         <div className="space-y-2">
-          <Label htmlFor="consent-tenant">{t("schoolLabel")}</Label>
-          <Select value={tenantId} onValueChange={(v) => v && setTenantId(v)}>
-            <SelectTrigger id="consent-tenant" className="w-full">
-              <SelectValue placeholder={t("schoolPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {memberships.map((m) => (
-                <SelectItem key={m.tenantId} value={m.tenantId}>
-                  {m.name} ({m.role})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label id="consent-tenant-label">{t("schoolLabel")}</Label>
+          <div role="radiogroup" aria-labelledby="consent-tenant-label" className="grid gap-2">
+            {memberships.map((m) => {
+              const selected = m.tenantId === tenantId
+              return (
+                <button
+                  key={m.tenantId}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setTenantId(m.tenantId)}
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors",
+                    selected ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+                  )}
+                >
+                  <span className="min-w-0 truncate font-medium">{m.name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {t.has(`roles.${m.role}`) ? t(`roles.${m.role}`) : m.role}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
           <p className="text-xs text-muted-foreground">{t("schoolHint")}</p>
         </div>
       )}

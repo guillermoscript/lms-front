@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for solo creators, consultants, and coaching businesses
 // (marketing, entrepreneurship, freelancing). Pages: Home, About, FAQ, Contact.
 
-const LOGO = '🚀 Momentum'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Programs', links: [{ label: 'All Courses', href: '/courses' }, { label: 'Coaching', href: '#pricing' }, { label: 'Pricing', href: '/pricing' }] },
   { title: 'Company', links: [{ label: 'About', href: '#about' }, { label: 'Results', href: '#results' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Book a Free Call', ctaHref: '#contact',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Practical coaching and courses to grow your business, land clients, and build a brand that sells.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'LinkedIn', url: '#' }, { platform: 'YouTube', url: '#' }, { platform: 'Twitter', url: '#' }],
-    copyright: '© 2026 Momentum. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'business-coaching-home',
   name: 'Business Coaching — Home',
   description: 'High-conversion landing page for business, marketing, and entrepreneurship coaches.',
   category: 'business',
@@ -51,7 +52,7 @@ const homeTemplate: PuckTemplate = {
         primaryCtaHref: '#contact',
         secondaryCtaLabel: 'See Programs',
         secondaryCtaHref: '/courses',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '500px',
       }),
       c('SocialProof', {
         text: '',
@@ -126,6 +127,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'business-coaching-about',
   name: 'Business Coaching — About',
   description: 'About page for a business coach: story, philosophy, and credentials.',
   category: 'business',
@@ -169,12 +171,8 @@ const aboutTemplate: PuckTemplate = {
       c('TeamGrid', {
         title: 'The Team',
         subtitle: 'Coaches and specialists who support your growth.',
-        members: [
-          { name: 'Jordan Reyes', role: 'Founder & Lead Coach', bio: 'Built and sold two companies. Coached 3,500+ founders over 12 years.', avatar: '' },
-          { name: 'Tara Mbeki', role: 'Marketing Coach', bio: 'Helps clients build lead engines that bring in customers on autopilot.', avatar: '' },
-          { name: 'Sam Whitfield', role: 'Sales Coach', bio: 'Former enterprise sales leader. Teaches authentic, high-conversion selling.', avatar: '' },
-          { name: 'Lily Chen', role: 'Operations Coach', bio: 'Systems specialist who turns busy founders into calm CEOs.', avatar: '' },
-        ],
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Let’s Build Something That Lasts',
@@ -192,6 +190,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'business-coaching-faq',
   name: 'Business Coaching — FAQ',
   description: 'FAQ page for a business coach covering programs, format, results, and pricing.',
   category: 'business',
@@ -210,7 +209,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about the programs, coaching, and results.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Is This Right for Me?',
@@ -258,6 +257,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'business-coaching-contact',
   name: 'Business Coaching — Contact',
   description: 'Contact / book-a-call page for a business coach with form and quick answers.',
   category: 'business',
@@ -275,7 +275,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Book Your Free Strategy Call',
         subtitle: 'Tell us about your business and goals. We will map a clear next step on a no-pressure call — whether or not we work together.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '320px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Apply for a Call',

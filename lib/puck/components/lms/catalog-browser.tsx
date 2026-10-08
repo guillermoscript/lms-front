@@ -4,8 +4,8 @@ import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 import { CatalogBrowserView, type CatalogCard } from './catalog-browser-view'
 
@@ -66,8 +66,8 @@ export const CatalogBrowser: ComponentConfig<CatalogBrowserProps> = {
     showSearch: true,
     showPriceFilter: true,
   },
-  render: ({ title, subtitle, columns, pageSize, showSearch, showPriceFilter, paddingY, paddingX, maxWidth, marginY, puck }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ title, subtitle, columns, pageSize, showSearch, showPriceFilter, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, puck }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 
     // Real catalog resolved server-side and handed in via metadata. When present we render the
     // tenant's actual published courses; otherwise fall back to placeholders so the canvas is
@@ -95,8 +95,8 @@ export const CatalogBrowser: ComponentConfig<CatalogBrowserProps> = {
         }))
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           {title && (
             <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>
           )}

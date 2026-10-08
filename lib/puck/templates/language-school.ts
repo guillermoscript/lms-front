@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for language academies (English, Spanish, French…). LATAM-
 // and English-market friendly. Pages: Home, About, FAQ, Contact.
 
-const LOGO = '🗣️ LinguaSchool'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Learn', links: [{ label: 'All Courses', href: '/courses' }, { label: 'Pricing', href: '/pricing' }, { label: 'Placement Test', href: '#' }] },
   { title: 'School', links: [{ label: 'About', href: '#about' }, { label: 'Our Teachers', href: '#about' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Start Free Trial', ctaHref: '/courses',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Speak a new language with confidence. Live classes, native teachers, real conversation practice.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'Instagram', url: '#' }, { platform: 'YouTube', url: '#' }, { platform: 'Facebook', url: '#' }],
-    copyright: '© 2026 LinguaSchool. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'language-school-home',
   name: 'Language School — Home',
   description: 'Landing page for language academies: levels, native teachers, conversation practice, and pricing.',
   category: 'language-school',
@@ -131,6 +132,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'language-school-about',
   name: 'Language School — About',
   description: 'About page for a language academy: mission, teaching method, and teachers.',
   category: 'language-school',
@@ -173,13 +175,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Our Teachers',
-        subtitle: 'Native speakers and certified language educators who love what they do.',
-        members: [
-          { name: 'Emma Wilson', role: 'Head of English', bio: 'CELTA-certified, 10+ years teaching English to professionals across Latin America.', avatar: '' },
-          { name: 'Diego Martínez', role: 'Head of Spanish', bio: 'Native from Madrid. Specializes in conversational fluency and exam preparation.', avatar: '' },
-          { name: 'Claire Dubois', role: 'Head of French', bio: 'Paris-born teacher passionate about culture-driven language learning.', avatar: '' },
-          { name: 'Marco Rossi', role: 'Curriculum Lead', bio: 'Applied linguist who designs our CEFR-aligned learning paths.', avatar: '' },
-        ],
+        subtitle: 'The teachers you will learn with.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Come Learn With Us',
@@ -197,6 +195,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'language-school-faq',
   name: 'Language School — FAQ',
   description: 'FAQ page for a language academy covering levels, classes, pricing, and certificates.',
   category: 'language-school',
@@ -215,7 +214,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about classes, levels, pricing, and certificates.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -263,6 +262,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'language-school-contact',
   name: 'Language School — Contact',
   description: 'Contact page for a language academy with form and quick answers.',
   category: 'language-school',
@@ -280,7 +280,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Get in Touch',
         subtitle: 'Questions about levels, scheduling, or private lessons? We would love to help you start speaking.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 50, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',

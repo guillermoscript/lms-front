@@ -2,7 +2,7 @@ import { useId } from 'react'
 import type { ComponentConfig } from '@measured/puck'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 
 export type ContactFormProps = {
   title: string
@@ -40,13 +40,13 @@ export const ContactForm: ComponentConfig<ContactFormProps> = {
     showPhone: false,
     showMessage: true,
   },
-  render: function ContactFormView({ paddingY, paddingX, maxWidth, marginY, title, subtitle, showPhone, showMessage }) {
+  render: function ContactFormView({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, subtitle, showPhone, showMessage }) {
     const id = useId()
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="max-w-[640px] mx-auto">
             {title && (
               <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>

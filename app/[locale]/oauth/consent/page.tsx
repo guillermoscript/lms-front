@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { ConsentForm, type TenantMembership } from "./consent-form"
 
 export default async function OAuthConsentPage({
@@ -11,6 +12,7 @@ export default async function OAuthConsentPage({
 }) {
   const { authorization_id } = await searchParams
   const t = await getTranslations("oauthConsent")
+  const tRoles = (role: string) => (t.has(`roles.${role}`) ? t(`roles.${role}`) : role)
 
   if (!authorization_id) {
     return (
@@ -67,7 +69,12 @@ export default async function OAuthConsentPage({
       t("unknownSchool"),
   }))
 
+  // Preselect the school the connector URL belongs to: when the consent page is
+  // served from a school's subdomain, that school wins (if the user is a member).
+  // Otherwise fall back to the school the user last worked in.
+  const hostTenantId = (await headers()).get("x-tenant-id") ?? undefined
   const currentTenantId =
+    memberships.find((m) => m.tenantId === hostTenantId)?.tenantId ??
     (user.app_metadata?.tenant_id as string | undefined) ??
     memberships[0]?.tenantId
   const currentTenant = memberships.find((m) => m.tenantId === currentTenantId)
@@ -133,7 +140,7 @@ export default async function OAuthConsentPage({
 
         <div className="mb-4 rounded-md border border-warning/30 bg-warning/10 p-3">
           <p className="text-xs text-warning">
-            {t("signedInAs")} <strong>{user.email}</strong> ({currentTenant?.role ?? globalRole})
+            {t("signedInAs")} <strong>{user.email}</strong> ({tRoles(currentTenant?.role ?? globalRole)})
             {currentTenant && memberships.length === 1 && (
               <> {t("connectingTo")} <strong>{currentTenant.name}</strong></>
             )}. {t("explain")}

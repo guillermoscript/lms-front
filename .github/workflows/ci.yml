@@ -16,6 +16,12 @@ on:
         default: "desktop-chromium"
         required: false
 
+# A newer push to the same PR/branch supersedes the run in flight. Scheduled and
+# manual runs get their own group so they never cancel (or get cancelled by) PRs.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest

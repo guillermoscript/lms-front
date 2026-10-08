@@ -144,6 +144,41 @@ function present(p: ProductRow, courseIds: number[]) {
   };
 }
 
+/**
+ * The product listing behind lms_list_products, shared with lms_get_landing_context:
+ * tenant-filtered rows plus their linked course ids (never `.single()` on product_courses).
+ */
+export async function listProductsForSession(
+  session: LmsSession,
+  opts: { status: "active" | "inactive" | "all"; limit: number; offset: number }
+): Promise<{ products: ReturnType<typeof present>[]; rows: ProductRow[]; links: Record<number, number[]> }> {
+  let q = session
+    .getClient()
+    .from("products")
+    .select(PRODUCT_COLUMNS)
+    .eq("tenant_id", session.getTenantId())
+    .order("product_id", { ascending: false })
+    .range(opts.offset, opts.offset + opts.limit - 1);
+  if (opts.status !== "all") q = q.eq("status", opts.status);
+  const { data, error } = await q;
+  if (error) throw new Error(`Listing products: ${error.message}`);
+  const rows = (data ?? []) as ProductRow[];
+
+  const links: Record<number, number[]> = {};
+  if (rows.length) {
+    const { data: pc } = await session
+      .getClient()
+      .from("product_courses")
+      .select("product_id, course_id")
+      .eq("tenant_id", session.getTenantId())
+      .in("product_id", rows.map((r) => r.product_id));
+    for (const l of (pc ?? []) as { product_id: number; course_id: number }[]) {
+      (links[l.product_id] ??= []).push(l.course_id);
+    }
+  }
+  return { products: rows.map((r) => present(r, links[r.product_id] ?? [])), rows, links };
+}
+
 const line = (p: ProductRow) =>
   `- **${p.name}** (ID: ${p.product_id}) ${p.price} ${p.currency.toUpperCase()} via ${p.payment_provider} [${p.status}]`;
 
@@ -162,33 +197,7 @@ export function registerProductTools(server: LmsServer) {
         const session = LmsSession.fromContext(ctx);
         const denied = requireAdmin(session);
         if (denied) return errorResult(denied);
-        const { status, limit, offset } = listProductsInput.parse(input);
-
-        let q = session
-          .getClient()
-          .from("products")
-          .select(PRODUCT_COLUMNS)
-          .eq("tenant_id", session.getTenantId())
-          .order("product_id", { ascending: false })
-          .range(offset, offset + limit - 1);
-        if (status !== "all") q = q.eq("status", status);
-        const { data, error } = await q;
-        if (error) return errorResult(`Listing products: ${error.message}`);
-        const rows = (data ?? []) as ProductRow[];
-
-        const links: Record<number, number[]> = {};
-        if (rows.length) {
-          const { data: pc } = await session
-            .getClient()
-            .from("product_courses")
-            .select("product_id, course_id")
-            .eq("tenant_id", session.getTenantId())
-            .in("product_id", rows.map((r) => r.product_id));
-          for (const l of (pc ?? []) as { product_id: number; course_id: number }[]) {
-            (links[l.product_id] ??= []).push(l.course_id);
-          }
-        }
-        const products = rows.map((r) => present(r, links[r.product_id] ?? []));
+        const { products, rows, links } = await listProductsForSession(session, listProductsInput.parse(input));
         return ok(
           { products, count: products.length },
           rows.length

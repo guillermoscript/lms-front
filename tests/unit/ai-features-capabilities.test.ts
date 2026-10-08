@@ -40,6 +40,12 @@ describe('AI_FEATURES', () => {
     }
   })
 
+  it('landing_builder is the tool-calling Page Architect agent, with no parent to inherit a structured-output model from', () => {
+    expect(AI_FEATURES.landing_builder).toMatchObject({ kind: 'language', needs: { tools: true }, area: 'admin', longRunning: true })
+    expect(AI_FEATURES.landing_builder.needs?.structured).toBeUndefined()
+    expect(featureChain('landing_builder')).toEqual(['landing_builder'])
+  })
+
   it('restricts speech, voice and image to the agreed providers', () => {
     expect(AI_FEATURES.speech_stt.providers).toEqual(['assemblyai', 'openai', 'groq'])
     expect(AI_FEATURES.voice_conversation.providers).toEqual(['openai', 'xai', 'google'])

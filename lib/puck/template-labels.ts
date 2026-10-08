@@ -54,3 +54,12 @@ export function templateMessageKey(name: string | null | undefined): string | nu
 
 /** Every key this map can produce — used by the catalogue test. */
 export const TEMPLATE_MESSAGE_KEYS = Object.values(TEMPLATE_KEYS)
+
+/** Template id → key under `puck.templates.items` (the course-focused templates, by id). */
+export const TEMPLATE_ITEM_KEYS: Record<string, string> = {
+  'course-landing': 'courseLanding',
+  'course-launch-short': 'courseLaunchShort',
+  'free-course-lead': 'freeCourseLead',
+  'product-bundle': 'productBundle',
+  'pricing-page': 'pricingPage',
+}

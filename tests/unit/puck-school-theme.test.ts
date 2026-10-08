@@ -5,11 +5,14 @@ import { NextIntlClientProvider } from 'next-intl'
 import { Render, type Data, type Config } from '@measured/puck'
 import { puckConfig } from '@/lib/puck/config'
 import { accentVars } from '@/lib/puck/utils/accent-color'
-import manifest from '@/lib/json-render/puck-fields.generated.json'
-import { specToPuckData } from '@/lib/json-render/to-puck'
+import { ROOT_ZONE, applyOps, emptyPage, pageCatalog } from '@lms/core'
 import messages from '@/messages/en.json'
 
-const DEFAULT_PROPS_BY_TYPE = { Image: manifest.Image.defaultProps }
+/** An AI `add` op, applied the way the editor and MCP apply it (defaultProps merged first). */
+function aiAddImage(props: Record<string, unknown>) {
+  const { data } = applyOps(emptyPage(), [{ op: 'add', id: 'image', type: 'Image', zone: ROOT_ZONE, index: 0, props }], pageCatalog)
+  return data.content[0].props as Record<string, unknown>
+}
 
 function renderBlocks(content: Data['content']) {
   const children = createElement<{ config: Config; data: Data }>(Render<Config>, {
@@ -34,11 +37,9 @@ describe('school defaults and saved page overrides', () => {
     expect(overridden).not.toContain('hover:shadow')
   })
 
-  it('AI bridge defaults inherit school corners and preserve requested overrides', () => {
-    const defaults = specToPuckData({root:'image', elements:{image:{type:'Image',props:{src:'/image.jpg'}}}}, DEFAULT_PROPS_BY_TYPE)
-    expect(defaults.content[0].props.borderRadius).toBe('school')
-    const custom = specToPuckData({root:'image', elements:{image:{type:'Image',props:{src:'/image.jpg',borderRadius:'0'}}}}, DEFAULT_PROPS_BY_TYPE)
-    expect(custom.content[0].props.borderRadius).toBe('0')
+  it('AI-added blocks inherit school corners and preserve requested overrides', () => {
+    expect(aiAddImage({ src: '/image.jpg' }).borderRadius).toBe('school')
+    expect(aiAddImage({ src: '/image.jpg', borderRadius: '0' }).borderRadius).toBe('0')
   })
 
   it('uses readable school text independently from the filled brand accent', () => {

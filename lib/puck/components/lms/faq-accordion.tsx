@@ -1,5 +1,5 @@
 import type { ComponentConfig } from '@measured/puck'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type FaqItem = {
@@ -42,13 +42,13 @@ export const FaqAccordion: ComponentConfig<FaqAccordionProps> = {
     accentColor: '',
     ...sectionSpacingDefaults,
   },
-  render: ({ title, subtitle, items, accentColor, paddingY, paddingX, maxWidth, marginY }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ title, subtitle, items, accentColor, paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           <div className="max-w-3xl mx-auto">
             {title && (
               <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>

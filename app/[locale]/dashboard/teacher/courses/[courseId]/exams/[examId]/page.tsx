@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getTranslations } from 'next-intl/server'
 import { redirect, notFound } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { ExamBuilderSkeleton } from '../_builder-skeleton'
@@ -69,7 +70,7 @@ export default async function EditExamPage({ params }: PageProps) {
 
   return (
     <PageShell variant="form">
-      <AiEditSheet scope={{ type: 'exam', examId: parseInt(examId), courseId: parseInt(courseId) }} className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 gap-2 bg-background shadow-md" />
+      <AiSetupGate><AiEditSheet scope={{ type: 'exam', examId: parseInt(examId), courseId: parseInt(courseId) }} className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 gap-2 bg-background shadow-md" /></AiSetupGate>
       <ExamBuilder
         courseId={parseInt(courseId)}
         courseTitle={course.title}

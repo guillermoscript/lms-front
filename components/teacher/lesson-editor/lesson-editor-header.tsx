@@ -17,6 +17,7 @@ import {
 import { VersionHistorySheet } from '../version-history-sheet'
 import { cn } from '@/lib/utils'
 import { useLessonEditor } from './lesson-editor-context'
+import { ShareButton } from '../share-button'
 import { LessonEditorActions } from './lesson-editor-actions'
 
 export function LessonEditorHeader() {
@@ -96,6 +97,18 @@ export function LessonEditorHeader() {
               contentId={initialData.id}
               currentSnapshot={formData as unknown as Record<string, unknown>}
               onRestore={() => router.refresh()}
+            />
+          )}
+
+          {initialData && (
+            <ShareButton
+              path={
+                formData.is_preview
+                  ? `/courses/${courseId}/lessons/${initialData.id}`
+                  : `/dashboard/student/courses/${courseId}/lessons/${initialData.id}`
+              }
+              title={formData.title || courseTitle}
+              iconOnly
             />
           )}
 

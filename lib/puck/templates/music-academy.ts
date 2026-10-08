@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for music schools and online instrument/vocal teachers.
 // Pages: Home, About, FAQ, Contact.
 
-const LOGO = '🎵 Crescendo'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Learn', links: [{ label: 'All Courses', href: '/courses' }, { label: 'Instruments', href: '#instruments' }, { label: 'Pricing', href: '/pricing' }] },
   { title: 'Academy', links: [{ label: 'About', href: '#about' }, { label: 'Our Teachers', href: '#about' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Book Free Lesson', ctaHref: '/courses',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Learn to play the music you love. Step-by-step courses and live lessons for every instrument and level.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'YouTube', url: '#' }, { platform: 'Instagram', url: '#' }, { platform: 'Spotify', url: '#' }],
-    copyright: '© 2026 Crescendo Music Academy. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'music-academy-home',
   name: 'Music Academy — Home',
   description: 'Landing page for music schools and online instrument or vocal teachers.',
   category: 'music',
@@ -51,7 +52,7 @@ const homeTemplate: PuckTemplate = {
         primaryCtaHref: '/courses',
         secondaryCtaLabel: 'Explore Instruments',
         secondaryCtaHref: '#instruments',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '500px',
       }),
       c('StatsCounter', {
         useLiveStats: true,
@@ -132,6 +133,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'music-academy-about',
   name: 'Music Academy — About',
   description: 'About page for a music academy: mission, approach, and teachers.',
   category: 'music',
@@ -174,13 +176,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Teachers',
-        subtitle: 'Performing musicians who love to teach.',
-        members: [
-          { name: 'Nina Alvarez', role: 'Founder & Guitar', bio: 'Touring guitarist turned educator with 15 years of teaching experience.', avatar: '' },
-          { name: 'David Okafor', role: 'Piano & Theory', bio: 'Conservatory-trained pianist who makes music theory finally make sense.', avatar: '' },
-          { name: 'Mia Sørensen', role: 'Voice', bio: 'Professional vocalist specializing in technique, range, and stage confidence.', avatar: '' },
-          { name: 'Leo Bianchi', role: 'Drums & Rhythm', bio: 'Session drummer who has played hundreds of shows across every genre.', avatar: '' },
-        ],
+        subtitle: 'The teachers behind our lessons.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Start Making Music Today',
@@ -198,6 +196,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'music-academy-faq',
   name: 'Music Academy — FAQ',
   description: 'FAQ page for a music academy covering instruments, lessons, pricing, and equipment.',
   category: 'music',
@@ -216,7 +215,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about lessons, instruments, and pricing.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -264,6 +263,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'music-academy-contact',
   name: 'Music Academy — Contact',
   description: 'Contact page for a music academy with form and quick answers.',
   category: 'music',
@@ -281,7 +281,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Get in Touch',
         subtitle: 'Questions about instruments, live lessons, or plans? We would love to help you start playing.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',

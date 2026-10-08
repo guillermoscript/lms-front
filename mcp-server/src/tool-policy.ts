@@ -117,6 +117,12 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   "lms_update_landing_page",
   "lms_publish_landing_page",
   "lms_unpublish_landing_page",
+  // Page Architect parity (WP6): op patches, templates/presets and the business
+  // context (which lists products and plans, themselves admin-only).
+  "lms_patch_landing_page",
+  "lms_list_landing_templates",
+  "lms_insert_landing_preset",
+  "lms_get_landing_context",
   // Community moderation (#896) — admin only, as on the web (verifyAdminAccess)
   // and in RLS (community_flags / community_user_mutes / tenant_users admin
   // policies). Teachers keep grading prompts (lms_get_prompt_grading_roster,
@@ -146,6 +152,9 @@ const TEACHER_DENY_TOOLS = new Set<string>([
   "lms_update_product",
   "lms_archive_product",
   "lms_restore_product",
+  // The school's subscription plans (what students subscribe to) — admin only,
+  // like products.
+  "lms_list_plans",
 ]);
 
 export function isToolAllowedForRole(

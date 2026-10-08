@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for fitness coaches, yoga studios, and online wellness
 // programs. Pages: Home, About, FAQ, Contact.
 
-const LOGO = '💪 FitFlow'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Train', links: [{ label: 'All Programs', href: '/courses' }, { label: 'Pricing', href: '/pricing' }, { label: 'Free Class', href: '#' }] },
   { title: 'Studio', links: [{ label: 'About', href: '#about' }, { label: 'Our Coaches', href: '#about' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Start Free Week', ctaHref: '/courses',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Move better, feel stronger. On-demand and live workouts for every body and every level.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'Instagram', url: '#' }, { platform: 'TikTok', url: '#' }, { platform: 'YouTube', url: '#' }],
-    copyright: '© 2026 FitFlow. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'fitness-studio-home',
   name: 'Fitness Studio — Home',
   description: 'Landing page for fitness coaches, yoga studios, and online workout programs.',
   category: 'fitness',
@@ -51,7 +52,7 @@ const homeTemplate: PuckTemplate = {
         primaryCtaHref: '/courses',
         secondaryCtaLabel: 'See Programs',
         secondaryCtaHref: '#programs',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '520px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 60, minHeight: '500px',
       }),
       c('StatsCounter', {
         useLiveStats: true,
@@ -131,6 +132,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'fitness-studio-about',
   name: 'Fitness Studio — About',
   description: 'About page for a fitness studio: mission, philosophy, and coaches.',
   category: 'fitness',
@@ -173,13 +175,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Coaches',
-        subtitle: 'Certified, encouraging, and genuinely in your corner.',
-        members: [
-          { name: 'Maya Torres', role: 'Founder & Head Coach', bio: 'Former group-fitness instructor with 12 years of experience and a passion for accessible fitness.', avatar: '' },
-          { name: 'Andre Smith', role: 'Strength Coach', bio: 'NASM-certified. Specializes in progressive strength training for all levels.', avatar: '' },
-          { name: 'Lena Park', role: 'Yoga & Mobility', bio: 'RYT-500 yoga teacher focused on flexibility, breath, and recovery.', avatar: '' },
-          { name: 'Carlos Vega', role: 'HIIT & Conditioning', bio: 'High-energy coach who makes tough workouts feel fun and achievable.', avatar: '' },
-        ],
+        subtitle: 'The coaches who will guide your training.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Train With Us This Week',
@@ -197,6 +195,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'fitness-studio-faq',
   name: 'Fitness Studio — FAQ',
   description: 'FAQ page for a fitness studio covering programs, equipment, pricing, and membership.',
   category: 'fitness',
@@ -215,7 +214,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know before your first workout.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -263,6 +262,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'fitness-studio-contact',
   name: 'Fitness Studio — Contact',
   description: 'Contact page for a fitness studio with form and quick answers.',
   category: 'fitness',
@@ -280,7 +280,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Get in Touch',
         subtitle: 'Questions about programs, coaching, or membership? We are here to help you start strong.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',

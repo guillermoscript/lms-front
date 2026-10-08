@@ -55,7 +55,9 @@ export const AI_FEATURES: Record<AiFeature, AiFeatureDef> = {
   question_generator: { kind: 'object', needs: { structured: true }, area: 'teacher' },
   starter_course: { kind: 'object', needs: { structured: true }, area: 'admin', longRunning: true },
   course_architect: { kind: 'language', needs: { tools: true }, area: 'teacher', longRunning: true },
-  landing_builder: { kind: 'object', needs: { structured: true }, area: 'admin', longRunning: true },
+  // Page Architect: the chat agent that edits a landing page through tools (live ops). The id
+  // stays `landing_builder` so existing per-school model mappings carry over (no migration).
+  landing_builder: { kind: 'language', needs: { tools: true }, area: 'admin', longRunning: true },
   image_generation: { kind: 'image', providers: ['openai', 'google'], area: 'teacher' },
 }
 

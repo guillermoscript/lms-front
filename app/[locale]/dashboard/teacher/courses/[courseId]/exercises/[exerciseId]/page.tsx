@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import dynamic from 'next/dynamic'
+import { AiSetupGate } from '@/components/ai/ai-setup-gate'
 import { AiEditSheet } from '@/components/teacher/course-architect/ai-edit-sheet'
 import { PageHeader, PageHeaderSkeleton, PageShell } from '@/components/dashboard/page-shell'
 import { ExerciseBuilderSkeleton } from '../_builder-skeleton'
@@ -86,7 +87,7 @@ export default async function EditExercisePage({ params }: PageProps) {
       <PageHeader
         back={{ href: `/dashboard/teacher/courses/${courseId}/exercises`, label: course.title }}
         title={tEx('updateExercise')}
-        actions={<AiEditSheet scope={{ type: 'exercise', exerciseId: exercise.id, courseId: parseInt(courseId) }} />}
+        actions={<AiSetupGate><AiEditSheet scope={{ type: 'exercise', exerciseId: exercise.id, courseId: parseInt(courseId) }} /></AiSetupGate>}
       />
 
       <ExerciseBuilder

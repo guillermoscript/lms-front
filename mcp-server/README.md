@@ -23,7 +23,7 @@ implementation.
 
 ## What it exposes
 
-- **127 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), lessons, exercises, exams, analytics,
+- **132 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
   `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
@@ -111,10 +111,12 @@ implementation.
   Issue button per awaiting student calling `lms_issue_certificate` — disabled
   while the course has no active template, since nothing could be issued).
 - **3 resource templates:** `course://{id}`, `lesson://{id}`, `exam://{id}`.
-- **1 Agent Skill** over the Skills over MCP extension (`skills/list`,
+- **2 Agent Skills** over the Skills over MCP extension (`skills/list`,
   `skills/get`): `teach` — a stateful teaching-workspace workflow
   (from [mattpocock/skills](https://github.com/mattpocock/skills)), served from
-  `skills/teach/`.
+  `skills/teach/`; and `page-building` — the platform rules and workflow for
+  building school landing pages with the `lms_*_landing_*` tools
+  (`skills/page-building/`).
 - **12 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course, generate-remediation-exercises,
   socratic-tutor, drill-coach, explain-my-mistake, exam-prep-session,

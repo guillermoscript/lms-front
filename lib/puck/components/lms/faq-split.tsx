@@ -3,8 +3,8 @@ import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 
 type FaqItem = {
@@ -59,11 +59,11 @@ export const FaqSplit: ComponentConfig<FaqSplitProps> = {
       },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, heading, items }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, items }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="grid gap-y-12 lg:[grid-template-columns:1fr_auto] lg:gap-x-16">
             {heading && (
               <div className="text-center lg:text-left">

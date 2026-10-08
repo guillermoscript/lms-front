@@ -11,6 +11,8 @@ const sectionSchema = z.object({
   items: z.array(z.string()),
   itemCount: z.number(),
   color: z.string().nullable(), // explicit block backgroundColor/accentColor override
+  // Data-bound blocks (CourseHero, ProductGrid…): what they are wired to, e.g. "Course: Intro".
+  binding: z.string().nullable().optional(),
 });
 
 export const propsSchema = z.object({

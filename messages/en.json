@@ -911,6 +911,19 @@
           "archived": "Archived"
         }
       },
+      "share": {
+        "share": "Share",
+        "shareTitle": "Share {title}",
+        "whatsapp": "WhatsApp",
+        "x": "X (Twitter)",
+        "facebook": "Facebook",
+        "linkedin": "LinkedIn",
+        "telegram": "Telegram",
+        "email": "Email",
+        "more": "More options…",
+        "copyLink": "Copy link",
+        "copied": "Link copied"
+      },
       "manageCourse": {
         "notFound": "Course not found",
         "notFoundDesc": "This course doesn't exist or you don't have access to it.",
@@ -4748,11 +4761,15 @@
       "title": "Connect Claude",
       "description": "Add the LMS as a custom connector — no token needed, you sign in with your LMS account.",
       "urlLabel": "Connector URL",
-      "step1": "Copy the connector URL above.",
-      "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector.",
-      "step3": "Paste the URL and click Add.",
-      "step4": "When Claude asks to authorize, sign in with your LMS account and approve — the LMS tools appear in your chats.",
-      "copied": "Connector URL copied"
+      "step1": "Copy your school's connector URL above (one per school).",
+      "step2": "In Claude (claude.ai or the desktop app), open Settings → Connectors → Add custom connector, and name it after the school.",
+      "step3": "Paste the URL and click Add. To use another school, repeat with that school's URL.",
+      "step4": "When Claude asks to authorize, sign in, check the school and role shown, then approve — the LMS tools appear in your chats.",
+      "copied": "Connector URL copied",
+      "schoolsTitle": "Your schools",
+      "schoolsHint": "Each school has its own connector and your role there decides the tools: students get their own learning tools, teachers and admins get course management.",
+      "copySchool": "Copy connector URL for {school}",
+      "roles": { "student": "Student", "teacher": "Teacher", "admin": "Admin" }
     },
     "courseProgress": {
       "progress": "Progress",
@@ -6091,7 +6108,15 @@
       "choosePageTypeDescription": "Choose a page type or enter a custom URL slug. This determines where the page will be accessible.",
       "customSlug": "Custom",
       "customSlugDescription": "Enter your own slug",
-      "next": "Next"
+      "next": "Next",
+      "pageName": "{name} Page",
+      "describe": {
+        "title": "Describe your page",
+        "body": "Tell the AI what the page is for. It builds it live with your courses, products and branding, and you keep editing in the chat.",
+        "placeholder": "E.g. A landing page for my Python course for beginners, with the curriculum, pricing and FAQ",
+        "submit": "Create with AI",
+        "orTemplate": "Or start from a template"
+      }
     },
     "sectionPicker": {
       "title": "Add a Section",
@@ -6968,37 +6993,6 @@
         "published": "published"
       }
     },
-    "ai": {
-      "button": "Generate with AI",
-      "title": "Generate page with AI",
-      "description": "Describe your landing page and AI will build it from your blocks. You can edit everything afterwards.",
-      "placeholder": "e.g. A landing page for my beginner Spanish course with a hero, key stats, testimonials, and a sign-up call to action.",
-      "example": "Example",
-      "replaceWarning": "This replaces the current page content. Your saved version is unaffected until you save.",
-      "generate": "Generate",
-      "generating": "Generating...",
-      "buildingCount": "Building… {count} sections so far",
-      "cancel": "Cancel",
-      "generated": "Generated a page with {count} blocks",
-      "empty": "AI returned an empty page. Try a more detailed description.",
-      "failed": "Generation failed. Please try again.",
-      "builtPage": "Built a {count, plural, one {# section} other {# sections}} page. Select any block and tell me how to refine it, or ask me to change the whole page.",
-      "updatedBlock": "Updated the {block}. Want another change?",
-      "errorPlan": "The landing-page AI assistant requires a paid plan.",
-      "errorRateLimit": "Too many requests. Please wait a moment and try again.",
-      "errorInvalid": "The AI returned a page that didn't match the available blocks. Please try again.",
-      "chatTitle": "AI Assistant",
-      "chatDescription": "Chat to build and refine your page. Select a block to edit just that block.",
-      "pageContext": "Editing the whole page",
-      "editingContext": "Editing the selected {type} block",
-      "editingBlock": "Updating the {type}…",
-      "emptyChatTitle": "Describe your page",
-      "emptyChatHint": "Try: “A landing page for a beginner Spanish course.” Then click any block on the canvas and ask me to tweak just that one.",
-      "composerPage": "Describe or change the whole page…",
-      "composerBlock": "Tell me how to change the {type}…",
-      "send": "Send",
-      "undoHint": "Changes apply instantly — press Cmd/Ctrl+Z to undo."
-    },
     "categories": {
       "primitives": "Primitives",
       "layout": "Layout",
@@ -7046,7 +7040,13 @@
       "Header": "Header",
       "Footer": "Footer",
       "Navbar": "Navbar",
-      "BreadcrumbBlock": "Breadcrumb"
+      "BreadcrumbBlock": "Breadcrumb",
+      "CourseHero": "Course Hero",
+      "CourseCurriculum": "Course Curriculum",
+      "CourseOutcomes": "Course Outcomes",
+      "CoursePricingCard": "Course Pricing Card",
+      "ProductGrid": "Product Grid",
+      "InstructorCard": "Instructor Card"
     },
     "fieldLabels": {
       "Title": "Title",
@@ -7199,7 +7199,49 @@
       "Auto": "Auto",
       "Full Screen": "Full Screen",
       "Hide on Mobile": "Hide on Mobile",
-      "Hide on Desktop": "Hide on Desktop"
+      "Hide on Desktop": "Hide on Desktop",
+      "Section Tone": "Section Tone",
+      "Muted": "Muted",
+      "Brand tint": "Brand tint",
+      "Brand": "Brand",
+      "Inverse": "Inverse",
+      "Section Alignment": "Section Alignment",
+      "Start": "Start",
+      "Anchor ID": "Anchor ID",
+      "Hide On": "Hide On",
+      "Mobile": "Mobile",
+      "Desktop": "Desktop",
+      "SEO Title": "SEO Title",
+      "SEO Description": "SEO Description",
+      "Share Image URL": "Share Image URL",
+      "Course": "Course",
+      "Split": "Split",
+      "Centered": "Centered",
+      "Eyebrow": "Eyebrow",
+      "Title Override": "Title Override",
+      "Subtitle Override": "Subtitle Override",
+      "Show Stats": "Show Stats",
+      "Max Lessons": "Max Lessons",
+      "Show Preview Badges": "Show Preview Badges",
+      "Outcomes": "Outcomes",
+      "Outcome": "Outcome",
+      "Product": "Product",
+      "Products": "Products",
+      "Features": "Features",
+      "Feature": "Feature",
+      "Guarantee": "Guarantee",
+      "Max Items": "Max Items",
+      "Source": "Source",
+      "Course author": "Course author",
+      "Teacher": "Teacher",
+      "Live reviews": "Live reviews",
+      "Manual quotes": "Manual quotes",
+      "Live teachers": "Live teachers",
+      "Manual members": "Manual members",
+      "Minimum Rating": "Minimum Rating",
+      "Max Reviews": "Max Reviews",
+      "Pinned Plans": "Pinned Plans",
+      "Only the picked courses": "Only the picked courses"
     },
     "render": {
       "logIn": "Log in",
@@ -7230,6 +7272,128 @@
       "statCompletions": "Completions",
       "socialProofReviews": "Based on {count, plural, one {# review} other {# reviews}}",
       "socialProofRating": "{rating} out of 5 stars"
+    },
+    "courseBlocks": {
+      "blocks": {
+        "CourseHero": "Course hero",
+        "CourseCurriculum": "Curriculum",
+        "CourseOutcomes": "Course outcomes",
+        "CoursePricingCard": "Pricing card",
+        "ProductGrid": "Products",
+        "InstructorCard": "Instructor",
+        "EnrollCta": "Enroll call-to-action",
+        "TestimonialGrid": "Testimonials",
+        "CourseGrid": "Course grid"
+      },
+      "notice": {
+        "unboundCourse": "Pick a course in the sidebar. This section fills itself from the course.",
+        "missingCourse": "The selected course no longer exists or is not published. This section is hidden on the live page.",
+        "draftCourse": "“{title}” is a draft. This section stays hidden on the live page until you publish the course.",
+        "unboundProduct": "Pick a product in the sidebar.",
+        "missingProduct": "The selected product is no longer active. This section is hidden on the live page.",
+        "unboundPricing": "Pick a course or a product in the sidebar. The price comes from it.",
+        "loading": "Loading the course details…",
+        "noLessons": "This course has no published lessons yet. This section is hidden on the live page until it has some.",
+        "noOutcomes": "Add outcomes, or pick a course that has learning objectives. This section is hidden on the live page while it is empty.",
+        "noProducts": "No active products yet. This section is hidden on the live page until you publish one.",
+        "noReviews": "No reviews yet. Real student reviews appear here automatically; until then this section is hidden on the live page.",
+        "manualQuotes": "Manual quotes: use real words from real students, with their permission.",
+        "noAuthor": "The course author has no name on their profile. This section is hidden on the live page.",
+        "unboundTeacher": "Pick a teacher in the sidebar.",
+        "missingTeacher": "The selected teacher is no longer active at this school. This section is hidden on the live page.",
+        "noCuratedCourses": "None of the picked courses is published. This section is hidden on the live page until one is (it never falls back to other courses)."
+      },
+      "picker": {
+        "search": "Search…",
+        "clear": "Clear",
+        "remove": "Remove",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "noMatches": "No matches.",
+        "allPicked": "Everything is already picked.",
+        "unknown": "Unavailable ({id})",
+        "noneAvailable": "Nothing to pick yet.",
+        "productsEmpty": "No products pinned. The grid shows your newest active products.",
+        "productEmpty": "No product selected.",
+        "plansEmpty": "No plans pinned. The table shows all your plans.",
+        "teacherEmpty": "No teacher selected."
+      },
+      "free": "Free",
+      "lessons": "{count, plural, one {# lesson} other {# lessons}}",
+      "rating": "{rating} ({count, plural, one {# review} other {# reviews}})",
+      "ratingSr": "{rating} out of 5 stars",
+      "byAuthor": "By {name}",
+      "enrollFree": "Enroll for free",
+      "enrollPaid": "Enroll for {price}",
+      "buyNow": "Buy now",
+      "previewBadge": "Free preview",
+      "moreLessons": "{count, plural, one {+# more lesson} other {+# more lessons}}",
+      "includesCount": "{count, plural, one {Includes # course} other {Includes # courses}}",
+      "interval": {
+        "day": "day",
+        "week": "week",
+        "month": "month",
+        "quarter": "quarter",
+        "year": "year"
+      },
+      "anonymousStudent": "A student"
+    },
+    "templates": {
+      "teamGrid": {
+        "title": "Team",
+        "noTeachers": "No teachers yet. Your school’s teachers appear here automatically; until then this section is hidden on the live page.",
+        "noMembers": "Add team members in the sidebar. This section is hidden on the live page while it is empty.",
+        "manualMembers": "Manual members: list real people from your school, with their permission."
+      },
+      "pageTypes": {
+        "course": "Course page",
+        "product": "Product page",
+        "pricing": "Pricing"
+      },
+      "pageTypeHints": {
+        "course": "Sells one course",
+        "product": "Sells one product"
+      },
+      "binding": {
+        "chooseCourse": "Which course is this page for?",
+        "chooseCourseDescription": "The title, price, lessons, instructor and reviews come from this course.",
+        "chooseProduct": "Which product is this page for?",
+        "chooseProductDescription": "The price and the included courses come from this product.",
+        "search": "Search…",
+        "noMatches": "No matches.",
+        "noCourses": "You have no courses yet. You can create the page now and pick the course later in the editor.",
+        "publishedOnly": "Only published courses are listed. Publish a course to build its page.",
+        "noProducts": "You have no active products yet. You can create the page now and pick the product later in the editor.",
+        "free": "Free",
+        "coursesCount": "{count, plural, one {# course} other {# courses}}",
+        "create": "Create page",
+        "skip": "Skip for now",
+        "back": "Back",
+        "pageUrl": "Page URL: {url}"
+      },
+      "items": {
+        "courseLanding": {
+          "name": "Course Landing",
+          "description": "A full sales page for one course: hero, outcomes, curriculum, instructor, reviews, price and FAQ."
+        },
+        "courseLaunchShort": {
+          "name": "Course Launch",
+          "description": "A short launch page for one course: centered hero, outcomes, price and FAQ."
+        },
+        "freeCourseLead": {
+          "name": "Free Course",
+          "description": "A lead page for a free course: hero, the lesson list and an enroll band."
+        },
+        "productBundle": {
+          "name": "Course Bundle",
+          "description": "Sell a product that bundles several courses: hero, price card, included courses, reviews and FAQ."
+        },
+        "pricingPage": {
+          "name": "Pricing",
+          "description": "All your plans and products on one page, with an FAQ and a closing call to action."
+        }
+      },
+      "sections": "{count, plural, one {# section} other {# sections}}"
     }
   },
   "verification": {
@@ -7673,7 +7837,8 @@
     "explain": "This will let the application access your LMS data — teachers and admins get course management, students get their own learning tools.",
     "schoolLabel": "Connect to school",
     "schoolPlaceholder": "Choose a school",
-    "schoolHint": "The application will only see this school's data.",
+    "schoolHint": "Pick the school to connect. The application will only see that school's data.",
+    "roles": { "student": "Student", "teacher": "Teacher", "admin": "Admin" },
     "deny": "Deny",
     "denying": "Denying...",
     "approve": "Approve",
@@ -8149,10 +8314,22 @@
     "createWithAi": "Create with AI",
     "editWithAi": "Edit with AI",
     "editSheet": {
-      "course": { "title": "Edit this course with AI", "description": "Ask for changes to the course, its lessons, exercises or exams." },
-      "lesson": { "title": "Edit this lesson with AI", "description": "Rewrite, expand or restructure this lesson." },
-      "exercise": { "title": "Edit this exercise with AI", "description": "Adjust the prompt, difficulty or answers of this exercise." },
-      "exam": { "title": "Edit this exam with AI", "description": "Add, rewrite or rebalance the questions of this exam." }
+      "course": {
+        "title": "Edit this course with AI",
+        "description": "Ask for changes to the course, its lessons, exercises or exams."
+      },
+      "lesson": {
+        "title": "Edit this lesson with AI",
+        "description": "Rewrite, expand or restructure this lesson."
+      },
+      "exercise": {
+        "title": "Edit this exercise with AI",
+        "description": "Adjust the prompt, difficulty or answers of this exercise."
+      },
+      "exam": {
+        "title": "Edit this exam with AI",
+        "description": "Add, rewrite or rebalance the questions of this exam."
+      }
     },
     "cta": {
       "title": "Build your first course with AI",
@@ -8163,7 +8340,26 @@
     "chatTab": "Chat",
     "blueprintTab": "Course outline",
     "placeholder": "Describe your course or ask for a change…",
-    "approval": { "title": "Approval needed", "approve": "Approve", "deny": "Deny", "approved": "Approved", "denied": "Denied", "price": "Price", "fields": {"title": "Title", "name": "Name", "lesson_id": "Lesson", "course_id": "Course", "exercise_id": "Exercise", "exam_id": "Exam", "product_id": "Product", "publish_at": "Publish at", "scheduled_for": "Scheduled for"}, "action": "{verb} {entity}" },
+    "approval": {
+      "title": "Approval needed",
+      "approve": "Approve",
+      "deny": "Deny",
+      "approved": "Approved",
+      "denied": "Denied",
+      "price": "Price",
+      "fields": {
+        "title": "Title",
+        "name": "Name",
+        "lesson_id": "Lesson",
+        "course_id": "Course",
+        "exercise_id": "Exercise",
+        "exam_id": "Exam",
+        "product_id": "Product",
+        "publish_at": "Publish at",
+        "scheduled_for": "Scheduled for"
+      },
+      "action": "{verb} {entity}"
+    },
     "thinking": "Thinking…",
     "newChat": "New chat",
     "retry": "Try again",
@@ -8462,22 +8658,70 @@
       }
     },
     "features": {
-      "aristotle": { "name": "Aristotle tutor", "description": "The course tutor chat that students open from a course." },
-      "aristotle_summary": { "name": "Aristotle summaries", "description": "Summarizes a tutor session when it closes." },
-      "lesson_tutor": { "name": "Lesson tutor", "description": "The AI helper inside AI lesson tasks." },
-      "lesson_verifier": { "name": "Lesson task checker", "description": "Decides whether a student finished an AI lesson task." },
-      "checkpoint_grader": { "name": "Checkpoint grader", "description": "Grades short checkpoint answers inside lessons." },
-      "exercise_coach": { "name": "Exercise coach", "description": "Chat help while students work on an exercise." },
-      "exercise_grader": { "name": "Exercise grader", "description": "Grades written and artifact exercises with feedback." },
-      "speech_coach": { "name": "Speaking coach", "description": "Gives feedback on recorded speaking exercises." },
-      "speech_stt": { "name": "Speech to text", "description": "Transcribes student recordings." },
-      "voice_conversation": { "name": "Live conversation", "description": "Real-time voice practice with an AI partner." },
-      "exam_grader": { "name": "Exam grader", "description": "Grades free-text exam answers." },
-      "question_generator": { "name": "Question generator", "description": "Drafts quiz questions from a lesson." },
-      "starter_course": { "name": "Starter course", "description": "Generates a first course for a new school." },
-      "course_architect": { "name": "Course architect", "description": "The agent that plans and builds a course with a teacher." },
-      "landing_builder": { "name": "Landing page builder", "description": "Generates landing pages from a prompt." },
-      "image_generation": { "name": "Image generation", "description": "Creates cover and lesson images." }
+      "aristotle": {
+        "name": "Aristotle tutor",
+        "description": "The course tutor chat that students open from a course."
+      },
+      "aristotle_summary": {
+        "name": "Aristotle summaries",
+        "description": "Summarizes a tutor session when it closes."
+      },
+      "lesson_tutor": {
+        "name": "Lesson tutor",
+        "description": "The AI helper inside AI lesson tasks."
+      },
+      "lesson_verifier": {
+        "name": "Lesson task checker",
+        "description": "Decides whether a student finished an AI lesson task."
+      },
+      "checkpoint_grader": {
+        "name": "Checkpoint grader",
+        "description": "Grades short checkpoint answers inside lessons."
+      },
+      "exercise_coach": {
+        "name": "Exercise coach",
+        "description": "Chat help while students work on an exercise."
+      },
+      "exercise_grader": {
+        "name": "Exercise grader",
+        "description": "Grades written and artifact exercises with feedback."
+      },
+      "speech_coach": {
+        "name": "Speaking coach",
+        "description": "Gives feedback on recorded speaking exercises."
+      },
+      "speech_stt": {
+        "name": "Speech to text",
+        "description": "Transcribes student recordings."
+      },
+      "voice_conversation": {
+        "name": "Live conversation",
+        "description": "Real-time voice practice with an AI partner."
+      },
+      "exam_grader": {
+        "name": "Exam grader",
+        "description": "Grades free-text exam answers."
+      },
+      "question_generator": {
+        "name": "Question generator",
+        "description": "Drafts quiz questions from a lesson."
+      },
+      "starter_course": {
+        "name": "Starter course",
+        "description": "Generates a first course for a new school."
+      },
+      "course_architect": {
+        "name": "Course architect",
+        "description": "The agent that plans and builds a course with a teacher."
+      },
+      "landing_builder": {
+        "name": "Page builder",
+        "description": "The chat agent that builds and edits your website pages with you, block by block."
+      },
+      "image_generation": {
+        "name": "Image generation",
+        "description": "Creates cover and lesson images."
+      }
     },
     "billing": {
       "title": "Billing",
@@ -8613,5 +8857,134 @@
       "admin": "If you are the only admin of a school, make someone else an admin first."
     },
     "final": "Deleting your account can't be undone. To learn again later, create a new account."
+  },
+  "pageArchitect": {
+    "panel": {
+      "title": "Page Architect",
+      "subtitle": "Describe a change. The AI edits this page live.",
+      "open": "AI",
+      "close": "Close AI panel",
+      "newChat": "New chat",
+      "placeholder": "Ask for a change, e.g. “Make the hero more direct”",
+      "placeholderSelected": "What should change in the selected block?",
+      "send": "Send",
+      "stop": "Stop",
+      "thinking": "Thinking…",
+      "working": "Working on your page…",
+      "locked": "Editing is paused while the AI works",
+      "aBlock": "a block",
+      "selected": "Selected: {block}",
+      "clearSelection": "Clear selection",
+      "examples": "Example requests",
+      "applied": "{count, plural, one {# change applied} other {# changes applied}}. One undo reverts the whole turn.",
+      "undo": "Undo",
+      "undoStopped": "You undid a change while the AI was working, so the AI stopped.",
+      "error": "Something went wrong. Try again.",
+      "retry": "Retry",
+      "toolFailed": "{label} (not applied)",
+      "tools": {
+        "get_page": "Reading the page",
+        "list_templates": "Browsing templates",
+        "apply_template": "Applying a template",
+        "insert_preset": "Inserting ready-made sections",
+        "add_block": "Building {block}",
+        "update_block": "Updating {block}",
+        "move_block": "Moving {block}",
+        "remove_block": "Removing {block}",
+        "duplicate_block": "Duplicating {block}",
+        "set_page_meta": "Updating the page title and description",
+        "preview_theme": "Previewing a theme",
+        "list_courses": "Looking up your courses",
+        "get_course": "Reading a course",
+        "list_products": "Looking up your products",
+        "list_plans": "Looking up your plans",
+        "get_school_profile": "Reading your school profile",
+        "other": "Working"
+      },
+      "approval": {
+        "title": "Confirm change",
+        "applyTemplate": "Replace every block on this page with a template?",
+        "removeBlocks": "Remove these blocks from the page?",
+        "generic": "Allow this change?",
+        "approve": "Allow",
+        "deny": "Don’t allow",
+        "approved": "Allowed: {label}",
+        "denied": "Not allowed: {label}"
+      },
+      "theme": {
+        "title": "Theme preview",
+        "body": "Previewing {theme} with {color} on the canvas. Nothing is saved yet.",
+        "customNote": "A custom colour needs a plan with custom branding.",
+        "apply": "Apply theme",
+        "applying": "Applying…",
+        "discard": "Discard",
+        "applied": "Theme applied to your school.",
+        "failed": "Could not apply the theme."
+      },
+      "empty": {
+        "new": {
+          "title": "Start with a sentence",
+          "body": "Say what the page is for. The AI starts from a template, fills it with your real courses and prices, and you watch it build."
+        },
+        "home": {
+          "title": "Improve your home page",
+          "body": "Ask for a change to the whole page, or select a block first to change just that one."
+        },
+        "course": {
+          "title": "Sell this course better",
+          "body": "The course blocks show live data. Ask the AI to sharpen the copy, reorder sections or add proof."
+        },
+        "product": {
+          "title": "Shape this product page",
+          "body": "Ask for clearer benefits, a better structure or a stronger call to action."
+        },
+        "pricing": {
+          "title": "Make pricing easy to choose",
+          "body": "Ask the AI to explain the plans, add a FAQ or highlight the best value."
+        }
+      },
+      "suggestions": {
+        "new": {
+          "one": "Create a landing page for my newest course",
+          "two": "Build a home page for my school",
+          "three": "Make a pricing page with my plans and a FAQ"
+        },
+        "home": {
+          "one": "Make the hero more direct",
+          "two": "Add a section with my most popular courses",
+          "three": "Rewrite the page in a warmer tone"
+        },
+        "course": {
+          "one": "Make the hero promise clearer",
+          "two": "Add a FAQ about the course",
+          "three": "Move the pricing card higher"
+        },
+        "product": {
+          "one": "Explain what is included more clearly",
+          "two": "Add a short FAQ",
+          "three": "Make the call to action stronger"
+        },
+        "pricing": {
+          "one": "Highlight the best-value plan",
+          "two": "Add a FAQ about billing",
+          "three": "Add a short intro above the plans"
+        }
+      },
+      "editor": {
+        "unsaved": "Unsaved changes",
+        "waitForAi": "Wait for the AI to finish before saving.",
+        "unsavedTitle": "Leave without saving?",
+        "unsavedBody": "This page has changes that are not saved, including any the AI made. They will be lost.",
+        "stay": "Stay",
+        "leave": "Leave without saving",
+        "conflictTitle": "This page changed somewhere else",
+        "conflictBody": "It was saved in another tab or by an AI agent after you opened it. Reload that version, or overwrite it with yours.",
+        "cancel": "Cancel",
+        "reload": "Reload theirs",
+        "overwrite": "Overwrite with mine",
+        "reloaded": "Loaded the latest saved version. Undo brings yours back.",
+        "reloadFailed": "Could not load the latest version."
+      }
+    }
   }
 }

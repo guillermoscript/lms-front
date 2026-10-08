@@ -1,3 +1,4 @@
+import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
 
@@ -59,7 +60,7 @@ export const BreadcrumbBlock: ComponentConfig<BreadcrumbBlockProps> = {
                   <span className="text-foreground font-medium truncate" aria-current={isLast ? 'page' : undefined}>{item.label}</span>
                 ) : (
                   <a
-                    href={item.href}
+                    href={safeHref(item.href)}
                     className="text-muted-foreground hover:text-foreground no-underline transition-colors truncate"
                   >
                     {item.label}

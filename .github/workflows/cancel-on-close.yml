@@ -1,0 +1,30 @@
+name: Cancel runs on PR close
+
+# Once a PR is merged or closed, its in-flight runs are dead weight: a merge
+# re-runs CI on master anyway. Cancels queued/running runs of the PR's branch.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    # Fork PR tokens are read-only; nothing to cancel there.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Cancel in-flight runs for the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          for status in queued in_progress; do
+            gh run list --repo "$GITHUB_REPOSITORY" --branch "$BRANCH" --status "$status" \
+              --json databaseId,event --jq '.[] | select(.event == "pull_request" or .event == "push") | .databaseId' |
+            while read -r id; do
+              echo "cancelling $id"
+              gh run cancel "$id" --repo "$GITHUB_REPOSITORY" || true
+            done
+          done

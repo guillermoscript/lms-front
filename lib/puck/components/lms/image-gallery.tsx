@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 
 type GalleryImage = {
   src: string
@@ -55,13 +55,13 @@ export const ImageGallery: ComponentConfig<ImageGalleryProps> = {
     })),
     columns: '3',
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, images, columns }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, images, columns }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     if (!images.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           {title && (
             <h2 className="text-3xl font-bold text-center text-foreground mb-8">{title}</h2>
           )}

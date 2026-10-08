@@ -3,26 +3,8 @@ import type { Data, Config } from '@measured/puck'
 // The Puck data stored in the DB
 export type PuckData = Data
 
-// Props types for our custom components
-export interface StyleProps {
-  backgroundColor?: string
-  backgroundImage?: string
-  backgroundGradient?: string
-  overlayOpacity?: number
-  paddingTop?: string
-  paddingBottom?: string
-  paddingLeft?: string
-  paddingRight?: string
-  marginTop?: string
-  marginBottom?: string
-  borderRadius?: string
-  borderWidth?: string
-  borderColor?: string
-  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
-  hideOnMobile?: boolean
-  hideOnDesktop?: boolean
-}
-
+// Props types for our custom components. Section style tokens (tone, align,
+// anchorId, hideOn) live on the shared section layer: lib/puck/utils/section-style.ts.
 export interface LinkProps {
   label: string
   href: string
@@ -47,6 +29,50 @@ export interface LandingCourse {
   image: string | null
   price: number | null // null = free (no active priced product)
   currency: string | null
+  // 'draft' only ever reaches the editor / AI tools (includeDrafts). A draft
+  // binding renders nothing publicly; the editor shows a notice instead.
+  status: 'published' | 'draft'
+}
+
+// A lesson title row for CourseCurriculum. Never carries lesson content.
+export interface LandingLesson {
+  id: string
+  title: string
+  sequence: number | null
+  isPreview: boolean
+}
+
+// The course author, from `profiles` (real data only — no invented credentials).
+export interface LandingAuthor {
+  id: string
+  name: string | null
+  avatar: string | null
+  bio: string | null
+}
+
+// Base course fields + the extras the course blocks need. Resolved only for the
+// ids a page actually references (lib/puck/utils/collect-bound-ids.ts).
+export interface LandingCourseDetails extends LandingCourse {
+  objectives: string[]
+  lessons: LandingLesson[]
+  lessonCount: number
+  author: LandingAuthor | null
+  rating: { avg: number | null; count: number }
+  reviews: LandingTestimonial[]
+  // Whether the school lets logged-out visitors open preview lessons (#799).
+  previewEnabled: boolean
+}
+
+// An active product (ProductGrid, CoursePricingCard).
+export interface LandingProduct {
+  id: string
+  name: string
+  description: string | null
+  image: string | null
+  price: number | null
+  currency: string | null
+  courseIds: string[] // linked courses (product_courses), as strings
+  href: string // /checkout?courseId= for a one-course product, else /products/{id}
 }
 
 // A subscription plan (PricingTable).
@@ -57,6 +83,7 @@ export interface LandingPlan {
   currency: string | null
   interval: string | null // 'month' | 'year' | null (one-off)
   features: string[]
+  description: string | null
   href: string // where the CTA sends the buyer
   highlighted: boolean
 }
@@ -93,6 +120,9 @@ export interface LandingData {
   stats: LandingStats
   testimonials: LandingTestimonial[]
   teachers: LandingTeacher[]
+  products: LandingProduct[]
+  // Keyed by course id (string). Only the ids the page references.
+  courseDetails: Record<string, LandingCourseDetails>
 }
 
 // Shared metadata passed to <Puck> / <Render>, readable in a component's

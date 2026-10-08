@@ -1,175 +1,115 @@
 ---
 name: ai-landing-builder
 description: >-
-  How the AI landing-page builder works in this LMS — the json-render → Puck pipeline that lets
-  creators generate a full landing page from a sentence and then refine it by hand in the Puck
-  editor. Use this skill whenever the task touches AI page generation, the "Generate with AI"
-  button, the json-render catalog/spec/bridge, the Puck landing-page blocks, or the
-  /api/landing/generate route — including adding a new block type, debugging a generated page
-  that renders blank/crashes, changing what the AI is allowed to emit, fixing OpenAI
-  structured-output schema errors in this area, or regenerating the puck-fields manifest. Reach
-  for it even when the user just says "the landing page generator", "the AI page thing", or
-  names one of the lib/json-render files, since the pipeline has several non-obvious invariants
-  that are easy to break without it.
+  How the AI landing-page builder (Page Architect) works in this LMS — the chat panel docked in
+  the Puck editor, the /api/landing/chat agent route and its tools, the op protocol and shared
+  core (`@lms/core` page-builder: ops, applyOps, catalog, validatePage, templates, presets), the
+  AI annotation side-map, the data-bound course blocks, landing templates, the save-path
+  validation and the MCP landing tools. Use this skill whenever the task touches AI page
+  building, the editor's AI chat panel, `lib/page-builder/`, `lib/puck/ai-annotations/`, the
+  Puck landing-page blocks, landing templates, `npm run gen:puck-fields`, or the
+  lms_*_landing_* MCP tools — including adding a new block type, debugging a block that renders
+  blank/crashes, changing what the AI is allowed to emit, or a streamed edit that lands in the
+  wrong place. Reach for it even when the user just says "the landing page generator", "the AI
+  page thing" or "Page Architect", since the pipeline has several non-obvious invariants that
+  are easy to break without it.
 ---
 
-# AI Landing-Page Builder (json-render → Puck)
+# AI Landing-Page Builder (Page Architect)
 
-## The one idea
+Full guide: `docs/PAGE_ARCHITECT.md` (how it works, op protocol, tools, MCP tools, adding a
+block, testing). Design history: `docs/PAGE_ARCHITECT_DESIGN.md` (its "Critique & corrections"
+win over its body). Why each invariant exists: `references/gotchas.md`.
 
-A creator types a sentence → an LLM generates a **json-render spec** constrained to *our* block
-vocabulary → we validate it → bridge it to **Puck `Data`** → it opens in the **existing Puck
-editor** for human drag-and-drop refinement → saved to `landing_pages.puck_data`.
+The AI edits the live page through a small **op protocol**: each tool call is validated on the
+server, applied to a shadow copy, streamed to the editor as a transient `data-page-op` part and
+applied there with ONE undo step per turn. Save is explicit and is the security boundary.
 
-**One vocabulary, two flows.** The blocks the AI can emit are the *same* blocks a human edits in
-Puck. That's the whole point: AI solves the blank-page problem, Puck handles "let me just tweak
-this one thing." Every block you wrap for Puck automatically becomes generatable by the AI, and
-vice-versa. Decision recorded in `docs/adr/0001-json-render-puck-landing-builder.md`.
-
-```
-creator sentence
-   │  POST /api/landing/generate
-   ▼  landingCatalog.prompt() + LANDING_AUTHORING_GUIDE  ── constrains the LLM to our blocks
-LLM → array spec  { root, elements:[{id,type,propsJson,children}] }
-   │  arraySpecToSpec() → normalizeSpec()                ── fold to map, fill required fields
-   │  landingCatalog.validate()                          ── REJECT unknown components/props
-   ▼  specToPuckData(spec, DEFAULT_PROPS_BY_TYPE)        ── the bridge (backfills defaults)
-Puck Data  ──▶  dispatch({type:'setData'})  ──▶  opens live in the Puck editor
-   ▼  saved to landing_pages.puck_data
-```
-
-**A third flow (July 2026): MCP tools.** The MCP server exposes the same pipeline to external AI
-agents via 8 admin-only tools (`lms_get_landing_blocks`, `lms_list/get/create/update_landing_page`,
-`lms_publish/unpublish/delete_landing_page` in `mcp-server/src/tools/landing-pages.ts`). Because
-mcp-server is built/deployed standalone (Docker context = `./mcp-server`), it cannot import
-`lib/json-render/*`; instead `npm run gen:puck-fields` ALSO emits generated mirrors into
-`mcp-server/src/landing/` (`puck-fields.generated.ts` + `catalog-meta.generated.ts` from
-`catalog-meta.ts`/`LANDING_PAGE_CRAFT_GUIDE`), and `mcp-server/src/landing/{from-puck-fields,to-puck}.ts`
-are kept-in-sync copies of the same-named lib files. **After changing any Puck block or the
-descriptions, re-run `npm run gen:puck-fields` — it updates both surfaces.** If you edit
-`lib/json-render/from-puck-fields.ts` or `to-puck.ts`, apply the same change to the mcp-server copy.
-
-## Map of the system
+## Map
 
 | File | Role |
 |---|---|
-| `lib/puck/config.ts` | **Single source of truth.** All Puck blocks (`ComponentConfig`) + categories. |
-| `lib/puck/components/**` | The block implementations (`fields`, `defaultProps`, `render`). |
-| `scripts/gen-puck-fields-manifest.ts` | Codegen: reads `puckConfig`, emits the JSON manifest. |
-| `lib/json-render/puck-fields.generated.json` | **Generated** pure-data manifest (`fields` + `defaultProps` + category). Never hand-edit. |
-| `lib/json-render/from-puck-fields.ts` | `puckFieldsToZod()` — turns a block's Puck `fields` into a Zod schema. |
-| `lib/json-render/catalog.ts` | Builds the json-render catalog from the manifest. Exports `landingCatalog`, `CATALOG_COMPONENT_NAMES`, `DEFAULT_PROPS_BY_TYPE`. Holds `EXCLUDED` + `DESCRIPTIONS`. |
-| `lib/json-render/authoring-guide.ts` | `LANDING_AUTHORING_GUIDE` — the landing-specific prompt suffix (output shape + how to build a good page). Shared by the route and the test script. |
-| `lib/json-render/to-puck.ts` | The bridge: `arraySpecToSpec`, `normalizeSpec`, `specToPuckData`. |
-| `app/api/landing/generate/route.ts` | The endpoint: auth + tenant scope → `streamText`/`generateText` + `Output.object` on the school's own model (`createTenantAi`, feature `landing_builder`) → validate → Puck Data. |
-| `components/admin/landing-page/generate-with-ai.tsx` | The "Generate with AI" button + dialog; injects via `dispatch({type:'setData'})`. |
-| `scripts/json-render-live-test.ts` | Offline end-to-end test with a REAL model call on YOUR OWN OpenAI key (`JSON_RENDER_TEST_OPENAI_KEY`). |
+| `packages/core/src/page-builder/` | Shared core, exported from `@lms/core`. Pure TS + zod, React-free. Used by the web route, the editor applier, the save actions and mcp-server. |
+| `…/ops.ts` | `PageOp` zod: `add`, `update` (+`appends`), `updateRoot`, `move`, `remove`, `reset`. `ROOT_ZONE = 'root:default-zone'`. `PageBuilderDataParts` (`page-op`, `turn-status`, `theme-preview`). |
+| `…/apply-ops.ts` | `applyOps(data, ops, catalog) → {data, warnings, applied}` (bad ops skip with a warning), `applyOpInPlace`, `expandDuplicate`, `subtreeToAddOps`. |
+| `…/tree.ts` | THE zone accessor (`getZone`/`setZone`/`zoneKeys`/`findNode`/`descendantIds`). |
+| `…/appends.ts`, `array-defaults.ts` | Text streaming (`items[2].title` → tail) and array-item backfill. |
+| `…/catalog.ts` | `pageCatalog`: strict `validateBlock`/`validateRoot`, `promptDoc()`, `streamableFields`, `jsonSchema`. |
+| `…/validate.ts` | Lenient `validatePage`, URL/colour rules, `PAGE_LIMITS`, ref-id checks. |
+| `…/bindings.ts`, `templates.ts` | `deepCloneWithFreshIds`, binding substitution, `instantiateTemplate`, `templateToOps`, `PRESETS`, `presetToOps`. |
+| `…/outline.ts` | `formatOutline` — the compact page view for the model. |
+| `…/generated/{manifest,templates}.generated.ts` | **Generated** by `npm run gen:puck-fields`. Never hand-edit or hand-merge. |
+| `lib/puck/ai-annotations/` | The AI side-map: `base.ts`, `course-blocks.ts`, `style.ts`, merged in `index.ts`. `'*'` = shared section fields. |
+| `lib/puck/templates/` | Templates (stable `id`, `pageType`, bindings). `school-bindings.ts` = school name/logo bindings. |
+| `lib/page-builder/` | Server agent: `agent.ts`, `edit-tools.ts` (`ShadowPage`, `OpSink`, tools, approvals), `partial-stream.ts` (streamed `add_block`), `context.ts` + `data-tools.ts` (server-only, tenant-filtered), `system-prompt.ts`. |
+| `app/api/landing/chat/route.ts` | The route. Feature `landing_builder` (needs `tools`), BYOK only, paid plans only. |
+| `components/admin/landing-page/page-architect/` | Panel, `useChat` hook, `PageArchitectTurn`, `OpQueue`, `applyOpToPuck`, theme preview. |
+| `app/actions/admin/landing-pages.ts`, `landing-page-validation.ts` | Save path: lenient `validatePage` + ref ownership + `updated_at` compare-and-swap. |
+| `mcp-server/src/tools/landing-pages.ts`, `src/landing/page-builder.ts` | MCP tools on the same core; agent ops → core ops; all-or-nothing patches with `updated_at` CAS. |
+| `scripts/gen-puck-fields-manifest.ts` | Codegen from `lib/puck/config.ts` + annotations + templates into the core generated files. |
 
-## Critical invariants — read before editing anything here
+## Invariants
 
-These are the non-obvious rules the pipeline depends on. Breaking one usually produces a blank
-page, a render crash, or a build failure that's hard to trace back. Full explanations and the
-"why" behind each are in `references/gotchas.md` — read it whenever you touch the spec schema,
-the catalog, the bridge, or the route.
+1. **Never import `lib/puck/config.ts` (or `@measured/puck`) server-side or in `packages/core`.**
+   It bundles the client editor tree into the server build and breaks `npm run build`. Server
+   code reads the generated manifest; `ai-annotations` is pure data.
+2. **Array props need a populated array in `defaultProps`** and a `?? []` guard in `render`.
+   `add` ops merge `{...defaultProps, ...props}` (core `applyOps` and `applyOpToPuck`), and
+   Puck's `Render` does not reliably backfill top-level defaults.
+3. **No `duplicate` on the wire.** Puck's `duplicate` mints its own id and `replace` refuses an
+   id change, so the server expands a duplicate into `add` ops. Block ids are server-assigned
+   `<Type>-<random>`; ids a model proposes are ignored.
+4. **One zone accessor.** Everything that reads or writes a zone goes through `tree.ts`
+   (`content` for `root:default-zone`, `zones["<parentId>:<zone>"]` otherwise).
+5. **Two validators, on purpose.** `validateBlock` is STRICT for AI input (unknown/excluded
+   types, unknown props, enums, URL schemes, `#hex` colours, ref ids, 32 KB). `validatePage` is
+   LENIENT for whole pages and ignores unknown props, so legacy pages stay editable. The
+   security boundary is the SAVE path (`updateLandingPage`/`createLandingPage`/MCP writes), not
+   the chat route.
+6. **Links** are `/path`, `#anchor`, `https:`, `mailto:`, `tel:` (never `//`, `javascript:`,
+   `data:`); **images** are `https:` or `/`-relative. URL fields are found by key name
+   (`*href`, `url`, `src`, `logo`, `avatar`, `*image`, `imageUrl`…), at any depth.
+7. **Ref fields** (`ai.ref: course|product|plan|courseList|productList|planList`) take a
+   string/number or a `{id}[]`/`string[]` list; compare through `normalizeRefIds`. Ids must
+   belong to the school (checked on the AI path and on save).
+8. **Templates** use bindings `{{courseId}}`, `{{productId}}`, `{{courseIds}}` (a lone list
+   entry expands into one entry per id), `{{schoolName}}`, `{{year}}`, `{{logoUrl}}`. Always
+   instantiate through core (`instantiateTemplate`/`templateToOps`/`deepCloneWithFreshIds`):
+   fresh ids, DropZone keys re-keyed, tokens substituted. A raw `puck_data` copy leaks
+   `{{schoolName}}` into the page. Never put invented prices, reviews, people or figures in a
+   template.
+9. **The catalog prompt doc has a budget** (≤6500 chars, `tests/unit/page-builder-catalog.test.ts`).
+   One short instruction sentence per block; shared section fields are described once under `'*'`.
+10. **After any block, annotation or template change, run `npm run gen:puck-fields`**, and
+    again after every merge. The catalog/templates tests fail when the generated files are stale.
+11. **Editor ops never record history.** Every op dispatches with `recordHistory:false`; the
+    turn writes ONE recorded entry at the end. Resolve a block's selector by id right before
+    each dispatch (indexes move). Keep Puck props (`overrides`, `onAction`, `permissions`…)
+    referentially stable, or Puck rebuilds its store mid-turn.
+12. **Route check order:** auth → admin → plan → resolve model (402/424/422) → limiter → body →
+    page size/shape → JWT tenant → page row → history → `checkAiChatUsage` (it increments, so
+    it is last) → stream. History is capped at 20 messages and must start with a user message.
 
-1. **Never import `lib/puck/config.ts` into a server context** (the API route or the catalog).
-   It bundles the client Puck editor tree (`DropZone` from `@measured/puck`) into the server
-   build and breaks `npm run build`. The catalog imports the *generated JSON manifest* instead.
-   That's the entire reason the manifest exists.
+## Adding a block
 
-2. **The LLM spec must be an ARRAY, not a keyed map, and every field is required.** OpenAI's
-   structured-output mode rejects `z.record(...)` (it compiles to `propertyNames`) and rejects
-   `.optional()` (strict mode requires every key in `required`). So the schema is
-   `elements: z.array(z.object({ id, type, propsJson, children }))` — props are a **JSON
-   string** (`propsJson`) parsed server-side, and `children` is required (use `[]`).
-
-3. **Validation is `landingCatalog.validate(spec)`** returning `{success, error}` (a ZodError) —
-   NOT the documented `validateSpec(spec, {catalog})`, which doesn't exist in our version.
-
-4. **`defineCatalog(schema, {components, actions: {}})` requires the `actions` key** even if
-   empty, or it's a TS error.
-
-5. **`normalizeSpec()` must run before validating.** Every json-render element requires
-   `children` and `visible`; LLMs omit them, so `normalizeSpec` fills `children:[]`,
-   `visible:true`.
-
-6. **`specToPuckData` backfills `DEFAULT_PROPS_BY_TYPE`.** Puck's `Render` does NOT reliably
-   apply a block's `defaultProps` for top-level props, so a block that maps over an array the
-   AI omitted will crash on `items.length`. The bridge merges `{...defaults, ...aiProps}` so
-   every block always has its arrays. **Consequence: every array-based block MUST declare a
-   populated array in its `defaultProps`.**
-
-7. **The bridge tolerates a misstructured root.** LLMs often name a `root` id that doesn't exist
-   or make `HeroBlock` the parent of the other sections. `specToPuckData` only honors a typeless
-   container root; otherwise it flattens all elements in array order. Don't "simplify" this
-   away — it's what stops a valid-but-misstructured spec rendering as an empty/1-block page.
-
-## Adding a new block (so the AI can generate it)
-
-The naming and prop shapes stay **identical** between the Puck block and the catalog — that's
-what keeps the bridge a trivial pass-through. Steps:
-
-1. **Write the Puck block** as a `ComponentConfig` in `lib/puck/components/**` (follow an
-   existing one, e.g. `lms/stats-band.tsx`). Register it in `lib/puck/config.ts`
-   (`components` + the right `categories` array).
-   - If it has any **array prop** (`items`, `members`, `images`, …), give it a **populated
-     `defaultProps`** for that array, and guard the render (`const safe = items ?? []`). This is
-     invariant #6 — without it the block crashes when the AI omits the array.
-   - For internal links use `next/link` `<Link>`. The project `Button` is `@base-ui/react` and
-     has **no `asChild`** — wrap `<Link><Button/></Link>`, never `<button>` inside `<a>`.
-2. **Regenerate the manifest:** `npm run gen:puck-fields`. This re-emits
-   `puck-fields.generated.json` with the new block's fields + defaultProps. The catalog and the
-   defaults backfill pick it up automatically.
-3. **Add an AI description** for it in the `DESCRIPTIONS` map in `lib/json-render/catalog.ts`
-   (one sentence on when the AI should use it). Without one it still works but gets a generic
-   note. If it's a structural/primitive block humans use to compose layouts but the AI should
-   not emit as a page section, add its name to `EXCLUDED` instead.
-4. **(Optional) Tune the flow.** If it should appear in the default page flow, mention it in
-   `LANDING_AUTHORING_GUIDE` (`lib/json-render/authoring-guide.ts`).
-5. **Verify:** `npx tsc --noEmit` (0 errors) and run the live test below.
-
-## Testing
-
-**Fast, offline, real model call** (proves the exact logic the button runs, minus HTTP/auth):
-```bash
-npx tsx scripts/json-render-live-test.ts "A landing page for <whatever>"
-```
-Requires `JSON_RENDER_TEST_OPENAI_KEY` (your own OpenAI key; the platform holds none) in `.env.local`. It prints the generated block list, runs
-`catalog.validate`, and dumps the Puck `Data`. A healthy run shows 6–9 blocks opening with
-HeroBlock and closing with CtaBanner.
-
-**Full UI flow** (admin only): in the Puck editor, click **Generate with AI** → type a prompt →
-the result injects live via `dispatch({type:'setData'})`. The landing builder has **no plan
-gate** and the editor is admin-only — a student session is redirected by `proxy.ts`.
-
-**After saving/publishing**, view via the admin preview route
-`/dashboard/admin/landing-page/preview/<pageId>` (it renders `PuckPageRenderer` without the
-public tenant gate). Note: the **default tenant** (`00000000-…-0001`) can publish a Home page
-that never renders on the public site — the public route hard-skips the default tenant; real
-tenants on subdomains are unaffected.
+See `docs/PAGE_ARCHITECT.md` "Adding a block": write the Puck block (populated array defaults),
+add an annotation, `npm run gen:puck-fields`, run the catalog test, and resolve/validate any
+data ids it binds.
 
 ## Debugging cheatsheet
 
-- **Generated page is blank / fewer blocks than expected** → the root was misstructured and the
-  flatten fallback isn't catching it, OR `children` nesting swallowed siblings. Inspect the raw
-  spec (the live-test script prints it) and check `specToPuckData`'s key-selection logic.
-- **`Cannot read properties of undefined (reading 'length')` in `<render>`** → an array-based
-  block got `undefined`. Confirm that block has a populated array in `defaultProps`, the
-  manifest was regenerated, and the caller passes `DEFAULT_PROPS_BY_TYPE` to `specToPuckData`.
-- **`Invalid schema for response_format … 'propertyNames' is not permitted`** → a `z.record`
-  crept into the `generateObject` schema. Use the array + `propsJson` shape (invariant #2).
-- **`… 'required' is required to be … including every key`** → a `.optional()` in the schema;
-  strict mode forbids it. Make the field required (use `[]`/`""` defaults instead).
+- **`Cannot read properties of undefined (reading 'length')` in `render`** → an array block got
+  `undefined`: add a populated array to `defaultProps`, guard with `?? []`, regenerate.
 - **`npm run build` fails resolving `@measured/puck` / `rsc.mjs`** → something server-side
-  imported `lib/puck/config.ts`. Route it through the generated manifest instead (invariant #1).
-- **Catalog/backfill out of sync with a block** → you changed a block's `fields`/`defaultProps`
-  but didn't `npm run gen:puck-fields`. The manifest is a derived artifact; regenerate it.
-
-## Production-readiness backlog (not yet done)
-
-If asked "what's left to ship this": rate-limiting + plan-gating on `/api/landing/generate`
-(each call is a paid model call, currently ungated); per-component `?? []` guards as
-defense-in-depth beyond the backfill; an error boundary around `PuckPageRenderer`; hook
-`npm run gen:puck-fields` into precommit/CI so the manifest can't go stale; streaming
-(`streamObject`) to replace the ~10s blank wait; and `$state` data-binding to wire `CourseGrid`
-/ pricing to the tenant's real courses (the future unlock json-render was chosen for).
+  imported `lib/puck/config.ts` (invariant 1).
+- **AI says a block type/prop does not exist, or the catalog test fails** → stale generated
+  files: `npm run gen:puck-fields`.
+- **A streamed block lands in the wrong place or an op is skipped** → check the dev console
+  for `[page-architect]` warnings (unknown id/zone/type); compare the server's shadow ops in
+  `page-builder-chat-route`/`page-builder-edit-tools` tests.
+- **Save fails with `invalid`** → `summarizeValidationErrors` lists the block; a course/product/
+  plan id from another school or a malformed id is refused, a missing id passes.
+- **Save fails with `conflict`** → someone (or an MCP agent) saved since the editor loaded;
+  the editor offers reload or overwrite.
+- **402/424/422 from `/api/landing/chat`** → the school has no key / an invalid key / a model
+  without tool calling for `landing_builder` in `/dashboard/admin/settings/ai`.

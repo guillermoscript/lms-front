@@ -3,6 +3,7 @@ import { getCurrentTenantId, getCurrentTenant } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PuckPageRenderer } from '@/components/public/landing-page/puck-page-renderer'
 import { getLandingData } from '@/lib/puck/utils/landing-data'
+import { readRootMeta } from '@/lib/puck/utils/root-meta'
 import { ogImageUrl } from '@/lib/seo'
 import type { Metadata } from 'next'
 import type { Data } from '@measured/puck'
@@ -38,15 +39,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const result = await getPageData(slug)
   if (!result) return {}
 
-  const rootProps = (result.page.puck_data as { root?: { props?: Record<string, string | undefined> } })?.root?.props
+  // SEO overrides authored on the page's Puck root (config.root fields), sanitised.
+  const meta = readRootMeta(result.page.puck_data)
   const title =
-    rootProps?.metaTitle ||
+    meta.title ||
     result.page.title ||
     slug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
-  const description = rootProps?.metaDescription || undefined
-  const image =
-    rootProps?.ogImage ||
-    ogImageUrl({ title, subtitle: description, site: result.tenant.name })
+  const description = meta.description
+  const image = meta.image || ogImageUrl({ title, subtitle: description, site: result.tenant.name })
 
   return {
     title,
@@ -70,6 +70,6 @@ export default async function CustomPage({ params }: PageProps) {
   const result = await getPageData(slug)
   if (!result) notFound()
 
-  const landingData = await getLandingData(result.tenantId)
+  const landingData = await getLandingData(result.tenantId, { puckData: result.page.puck_data })
   return <PuckPageRenderer data={result.page.puck_data as unknown as Data} landingData={landingData} />
 }

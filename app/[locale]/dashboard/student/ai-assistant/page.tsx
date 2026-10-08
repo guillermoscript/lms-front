@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server'
-import { getCurrentTenant } from '@/lib/supabase/tenant'
+import { getCurrentTenant, getCurrentUserId } from '@/lib/supabase/tenant'
+import { getUserSchools } from '@/lib/mcp/user-schools'
 import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
@@ -13,11 +14,14 @@ export default async function StudentAiAssistantPage() {
     ? `https://${tenant.slug}.${platformDomain}/api/mcp`
     : `https://${platformDomain}/api/mcp`
 
+  const userId = await getCurrentUserId()
+  const schools = userId ? await getUserSchools(userId) : []
+
   return (
     <PageShell variant="reading">
       <PageHeader title={t('title')} description={t('subtitle')} />
 
-      <ConnectClaudeCard connectorUrl={connectorUrl} />
+      <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} />
 
       <Card>
         <CardHeader>

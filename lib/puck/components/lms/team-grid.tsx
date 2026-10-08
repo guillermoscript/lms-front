@@ -1,7 +1,9 @@
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
+import { BindingNotice } from './course/course-ui'
 import type { LandingTeacher, PuckMetadata } from '../../types'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 type TeamMemberItem = {
@@ -14,6 +16,10 @@ type TeamMemberItem = {
 export type TeamGridProps = {
   title: string
   subtitle: string
+  // 'live' = the school's real teachers only (hidden publicly when there are none);
+  // 'manual' = the written `members`. Unset (pages saved before the field existed)
+  // keeps the old behaviour: live teachers when any, else the members.
+  source?: 'live' | 'manual'
   members: TeamMemberItem[]
   accentColor: string
 } & SectionSpacingProps
@@ -23,6 +29,14 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
   fields: {
     title: { type: 'text', label: 'Title' },
     subtitle: { type: 'textarea', label: 'Subtitle' },
+    source: {
+      type: 'radio',
+      label: 'Source',
+      options: [
+        { label: 'Live teachers', value: 'live' },
+        { label: 'Manual members', value: 'manual' },
+      ],
+    },
     members: {
       type: 'array',
       label: 'Members',
@@ -32,7 +46,7 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
         bio: { type: 'textarea', label: 'Bio' },
         avatar: { type: 'text', label: 'Avatar URL' },
       },
-      defaultItemProps: { name: 'Team Member', role: 'Instructor', bio: '', avatar: '' },
+      defaultItemProps: { name: 'Team member name', role: 'Their role', bio: '', avatar: '' },
     },
     accentColor: accentColorField,
     ...sectionSpacingFields,
@@ -42,28 +56,37 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
     title: 'Meet Our Team',
     subtitle: '',
     accentColor: '',
+    source: 'live',
+    // Placeholders, never invented people (the TestimonialGrid rule, #739): named
+    // instructors with fabricated credentials ("10+ years", "Former Google
+    // engineer") were what a school published if it never edited the block. They
+    // only show in 'manual' mode, and read as a prompt to the editor.
     members: [
-      { name: 'Alex Johnson', role: 'Lead Instructor', bio: 'Full-stack developer with 10+ years of experience.', avatar: '' },
-      { name: 'Sarah Chen', role: 'Course Designer', bio: 'Expert in curriculum development and instructional design.', avatar: '' },
-      { name: 'David Kim', role: 'AI Specialist', bio: 'Machine learning researcher and educator.', avatar: '' },
+      { name: 'Team member name', role: 'Their role', bio: 'Replace with a short, true bio: what they teach and what they have actually done.', avatar: '' },
+      { name: 'Team member name', role: 'Their role', bio: 'Use real people from your school, with their permission.', avatar: '' },
     ],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, members, accentColor, puck }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: function TeamGridView({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, subtitle, source, members, accentColor, puck }) {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
+    const t = useTranslations('puck.templates.teamGrid')
 
-    // Real tenant instructors resolved server-side and handed in via metadata. When present we
-    // render actual teachers; otherwise fall back to placeholders so the canvas is never empty.
-    const live = ((puck?.metadata as PuckMetadata | undefined)?.teachers ?? []) as LandingTeacher[]
-    const resolvedMembers: TeamMemberItem[] = live.length > 0
-      ? live.map((teacher) => ({
-          name: teacher.name,
-          role: '',
-          bio: teacher.bio ?? '',
-          avatar: teacher.avatar ?? '',
-        }))
-      : (members ?? [])
+    // Real tenant teachers resolved server-side and handed in via metadata — never invented
+    // people. 'live' shows only those (nothing publicly when there are none yet); 'manual'
+    // shows the written members; an unset source keeps the old live-else-members behaviour.
+    const live: TeamMemberItem[] = (((puck?.metadata as PuckMetadata | undefined)?.teachers ?? []) as LandingTeacher[])
+      .map((teacher) => ({
+        name: teacher.name,
+        role: '',
+        bio: teacher.bio ?? '',
+        avatar: teacher.avatar ?? '',
+      }))
+    const mode = source ?? (live.length > 0 ? 'live' : 'manual')
+    const resolvedMembers: TeamMemberItem[] = mode === 'live' ? live : (members ?? [])
 
-    if (!resolvedMembers.length) return <></>
+    if (!resolvedMembers.length) {
+      if (!puck?.isEditing) return <></>
+      return <BindingNotice title={t('title')} message={mode === 'live' ? t('noTeachers') : t('noMembers')} />
+    }
 
     const gridCols = resolvedMembers.length <= 2
       ? 'grid-cols-1 md:grid-cols-2'
@@ -72,13 +95,16 @@ export const TeamGrid: ComponentConfig<TeamGridProps> = {
         : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           {title && (
             <h2 className="text-3xl font-bold text-center text-foreground mb-3">{title}</h2>
           )}
           {subtitle && (
             <p className="text-center text-muted-foreground mb-10">{subtitle}</p>
+          )}
+          {puck?.isEditing && mode === 'manual' && (
+            <p role="note" className="mb-6 text-center text-xs text-muted-foreground">{t('manualMembers')}</p>
           )}
           <div className={cn('grid gap-8', gridCols)}>
             {resolvedMembers.map((m, i) => (
