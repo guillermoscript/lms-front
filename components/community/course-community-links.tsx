@@ -27,7 +27,7 @@ export async function CourseCommunityLinks({ courses }: { courses: CommunityCour
           <Link
             href={`/${locale}/dashboard/student/courses/${course.courseId}/community`}
             title={course.title}
-            className="inline-flex h-10 max-w-full items-center rounded-button px-3 text-sm ring-1 ring-border transition-colors hover:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex h-8 max-w-full items-center rounded-full bg-muted/50 px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="truncate">{course.title}</span>
           </Link>
@@ -37,14 +37,14 @@ export async function CourseCommunityLinks({ courses }: { courses: CommunityCour
   )
 
   return (
-    <nav aria-labelledby="course-community-links-label" data-testid="course-community-links" className="mt-3">
-      <p id="course-community-links-label" className="mb-2 text-xs font-medium text-muted-foreground">
+    <nav aria-labelledby="course-community-links-label" data-testid="course-community-links" className="space-y-2">
+      <p id="course-community-links-label" className="text-xs font-medium text-muted-foreground">
         {t('schoolLinksLabel')}
       </p>
       {list(visible)}
       {folded.length > 0 && (
         <details className="group mt-2">
-          <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-button px-2 text-sm font-medium transition-colors hover:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-button px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
             <IconChevronDown
               aria-hidden="true"
               className="size-4 text-muted-foreground motion-safe:transition-transform group-open:rotate-180"

@@ -67,7 +67,7 @@ export function CommunityUnread({ role }: { role: ViewerRole }) {
   return (
     <section
       aria-labelledby="community-unread-heading"
-      className="mb-6 rounded-lg border bg-card"
+      className="rounded-xl border bg-card"
       data-testid="community-unread"
     >
       <div className="flex items-center justify-between gap-3 border-b px-3 py-2">

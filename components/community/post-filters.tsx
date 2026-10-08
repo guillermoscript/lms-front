@@ -103,7 +103,7 @@ export function PostFilters({
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1 flex-wrap" role="group" aria-label={t('filters.byAuthor')}>
         {roleFilters.map((filter) => (
           <button
             key={filter.value ?? 'all-roles'}

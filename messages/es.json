@@ -347,6 +347,20 @@
           }
         },
         "purchases": {
+          "list": {
+            "search": "Buscar",
+            "searchPlaceholder": "Buscar compras…",
+            "allStatuses": "Todos los estados",
+            "sort": "Ordenar por",
+            "newest": "Más recientes primero",
+            "oldest": "Más antiguas primero",
+            "amountHigh": "Monto: mayor a menor",
+            "amountLow": "Monto: menor a mayor",
+            "results": "Mostrando {count} de {total}",
+            "reset": "Borrar filtros",
+            "noMatches": "No hay compras que coincidan",
+            "noMatchesHint": "Prueba otra búsqueda o borra los filtros."
+          },
           "sectionTitle": "Historial de compras",
           "empty": "Aún no tienes compras.",
           "unknownItem": "Elemento desconocido",
@@ -524,6 +538,12 @@
         }
       },
       "courses": {
+        "search": "Buscar",
+        "status": "Estado",
+        "results": "Mostrando {count} de {total}",
+        "reset": "Limpiar filtros",
+        "noMatches": "No hay cursos que coincidan",
+        "noMatchesHint": "Prueba otro título o limpia los filtros.",
         "title": "Mis Cursos",
         "enrolledMessage": "Estás inscrito en {count, plural, one {# curso} other {# cursos}}",
         "startJourney": "Comienza tu viaje de aprendizaje inscribiéndote en cursos",
@@ -597,6 +617,20 @@
         "subtitle": "Usa tus monedas ganadas para obtener recompensas"
       },
       "progress": {
+        "list": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar cursos…",
+          "status": "Estado",
+          "sort": "Ordenar por",
+          "all": "Todos los cursos",
+          "recent": "Inscripción reciente",
+          "progress": "Mayor progreso",
+          "title": "Título A–Z",
+          "results": "Mostrando {count} de {total}",
+          "reset": "Borrar filtros",
+          "noMatches": "Ningún curso coincide",
+          "noMatchesHint": "Prueba con otro título o borra los filtros."
+        },
         "title": "Reporte de Progreso",
         "subtitle": "Sigue tu progreso de aprendizaje en todos los cursos",
         "overallStats": "Estadísticas Generales",
@@ -620,6 +654,18 @@
         "untitledPrompt": "Tema de discusión"
       },
       "certificates": {
+        "list": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar por título del curso…",
+          "sort": "Ordenar por",
+          "newest": "Más recientes",
+          "oldest": "Más antiguos",
+          "title": "Curso A–Z",
+          "results": "Mostrando {count} de {total}",
+          "reset": "Borrar filtros",
+          "noMatches": "Ningún certificado coincide",
+          "noMatchesHint": "Prueba con otro título de curso o borra los filtros."
+        },
         "title": "Mis Certificados",
         "subtitle": "Ve y comparte tus certificados obtenidos",
         "noCertificates": "Sin Certificados Aún",
@@ -632,6 +678,20 @@
         "statsLatest": "Más Reciente"
       },
       "payments": {
+        "list": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar por producto o plan…",
+          "status": "Estado",
+          "sort": "Ordenar por",
+          "all": "Todos los estados",
+          "newest": "Más recientes primero",
+          "oldest": "Más antiguos primero",
+          "amount": "Monto (mayor a menor)",
+          "results": "Mostrando {count} de {total}",
+          "reset": "Borrar filtros",
+          "noMatches": "No hay solicitudes que coincidan",
+          "noMatchesHint": "Prueba otra búsqueda o borra los filtros."
+        },
         "title": "Solicitudes de Pago",
         "subtitle": "Rastrea tus solicitudes de pago manual e instrucciones",
         "infoMessage": "La escuela revisará tu solicitud y publicará aquí las instrucciones de pago. Recibirás una notificación cuando estén listas.",
@@ -4974,6 +5034,24 @@
         "platinum": "Platino"
       },
       "store": {
+        "list": {
+          "search": "Buscar",
+          "searchPlaceholder": "Buscar recompensas…",
+          "category": "Categoría",
+          "allCategories": "Todas las categorías",
+          "availability": "Disponibilidad",
+          "all": "Todos los artículos",
+          "affordable": "Me alcanza",
+          "sort": "Ordenar por",
+          "sortDefault": "Destacados",
+          "priceAsc": "Precio: menor a mayor",
+          "priceDesc": "Precio: mayor a menor",
+          "name": "Nombre A–Z",
+          "results": "Mostrando {count} de {total}",
+          "reset": "Borrar filtros",
+          "noMatches": "Ningún artículo coincide",
+          "noMatchesHint": "Prueba otra búsqueda o borra los filtros."
+        },
         "title": "Tienda de Puntos",
         "subtitle": "Canjea tus monedas por recompensas y mejoras",
         "balance": "Tu Saldo",
@@ -5233,6 +5311,23 @@
     }
   },
   "courseDetails": {
+    "lessonsDone": "{done}/{total} lecciones",
+    "completedLabel": "Completada",
+    "list": {
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar lecciones…",
+      "status": "Estado",
+      "sort": "Ordenar por",
+      "all": "Todas las lecciones",
+      "pending": "Sin completar",
+      "completed": "Completadas",
+      "order": "Orden del curso",
+      "title": "Título A–Z",
+      "results": "Mostrando {count} de {total}",
+      "reset": "Borrar filtros",
+      "noMatches": "Ninguna lección coincide",
+      "noMatchesHint": "Prueba otro título o borra los filtros."
+    },
     "backToLearning": "Volver a Mi Aprendizaje",
     "instructor": "Instructor:",
     "unknownInstructor": "Instructor Desconocido",
@@ -6651,6 +6746,19 @@
       "tapToRecord": "Grabar"
     },
     "list": {
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar ejercicios…",
+      "status": "Estado",
+      "statusAll": "Todos los ejercicios",
+      "statusPending": "Sin completar",
+      "sort": "Ordenar por",
+      "sortDefault": "Orden predeterminado",
+      "sortTitle": "Título A–Z",
+      "sortDifficulty": "Dificultad",
+      "results": "Mostrando {count} de {total}",
+      "reset": "Borrar filtros",
+      "noMatches": "No hay ejercicios que coincidan",
+      "noMatchesHint": "Prueba otra búsqueda o borra los filtros.",
       "title": "Zona de Práctica",
       "subtitle": "Desafíate con actividades interactivas y tareas de programación.",
       "breadcrumb": {
@@ -6765,6 +6873,20 @@
   },
   "exams": {
     "list": {
+      "search": "Buscar",
+      "searchPlaceholder": "Buscar exámenes…",
+      "status": "Estado",
+      "sort": "Ordenar por",
+      "statusAll": "Todos los exámenes",
+      "statusNotStarted": "Sin iniciar",
+      "statusSubmitted": "Pendiente de calificación",
+      "statusCompleted": "Completados",
+      "sortOrder": "Orden del curso",
+      "sortTitle": "Título A–Z",
+      "results": "Mostrando {count} de {total}",
+      "reset": "Borrar filtros",
+      "noMatches": "No hay exámenes coincidentes",
+      "noMatchesHint": "Prueba otro título o borra los filtros.",
       "title": "Evaluaciones",
       "subtitle": "Demuestra tu conocimiento y obtén tu certificación.",
       "progress": "Progreso de Completado",
@@ -7213,6 +7335,7 @@
       "discussions": "Discusiones",
       "polls": "Encuestas",
       "milestones": "Logros",
+      "byAuthor": "Autor",
       "byTeachers": "De Profesores",
       "byStudents": "De Estudiantes",
       "questions": "Preguntas",

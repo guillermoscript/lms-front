@@ -5,29 +5,17 @@ import { formatCurrency } from '@/lib/currency'
 import { formatDateTime as formatInZone } from '@/lib/format-date-time'
 import { getTenantTimeZone } from '@/lib/tenant-timezone'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Link from 'next/link'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
-import {
-  IconReceipt,
-  IconAlertCircle,
-  IconClock,
-  IconCheck,
-  IconX,
-  IconMail,
-  IconCreditCard,
-  IconInfoCircle,
-} from '@tabler/icons-react'
-import { CancelPaymentButton } from '@/components/student/cancel-payment-button'
+import { IconReceipt, IconInfoCircle } from '@tabler/icons-react'
+import { PaymentsExplorer, type PaymentRow } from '@/components/student/payments-explorer'
 import {
   PostRegistrationSteps,
   type PostRegistrationStep,
 } from '@/components/student/post-registration-steps'
-import { StudentProofUpload } from './student-proof-upload'
 
 export default async function StudentPaymentsPage() {
   const supabase = createAdminClient()
@@ -123,57 +111,22 @@ export default async function StudentPaymentsPage() {
     })
     .filter((entry) => entry.steps.length > 0)
 
-  // Get status badge variant
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return {
-          variant: 'secondary' as const,
-          icon: <IconClock className="w-3 h-3" />,
-          label: t('status.pending'),
-        }
-      case 'contacted':
-        return {
-          variant: 'default' as const,
-          icon: <IconMail className="w-3 h-3" />,
-          label: t('status.contacted'),
-        }
-      case 'payment_received':
-        return {
-          variant: 'default' as const,
-          icon: <IconCreditCard className="w-3 h-3" />,
-          label: t('status.paymentReceived'),
-        }
-      case 'completed':
-        return {
-          variant: 'default' as const,
-          icon: <IconCheck className="w-3 h-3" />,
-          label: t('status.completed'),
-        }
-      case 'cancelled':
-        return {
-          variant: 'destructive' as const,
-          icon: <IconX className="w-3 h-3" />,
-          label: t('status.cancelled'),
-        }
-      default:
-        return {
-          variant: 'secondary' as const,
-          icon: <IconAlertCircle className="w-3 h-3" />,
-          label: status,
-        }
-    }
-  }
-
-  const formatDate = (dateString: string) =>
-    formatInZone(dateString, { locale, timeZone, precision: 'date' })
-  const formatDateTime = (dateString: string) => formatInZone(dateString, { locale, timeZone })
-  const formatAmount = (amount: string | number | null, currency: string | null) =>
-    formatCurrency(Number(amount ?? 0), currency || 'usd', locale)
-
-  const canCancel = (status: string) => {
-    return status === 'pending' || status === 'contacted'
-  }
+  const rows: PaymentRow[] = (paymentRequests || []).map((request) => ({
+    requestId: request.request_id,
+    itemName: itemName(request),
+    status: request.status,
+    createdAt: request.created_at,
+    amountValue: Number(request.payment_amount ?? 0),
+    amountText: formatCurrency(
+      Number(request.payment_amount ?? 0),
+      request.payment_currency || 'usd',
+      locale
+    ),
+    dateText: formatInZone(request.created_at, { locale, timeZone, precision: 'date' }),
+    dateTimeText: formatInZone(request.created_at, { locale, timeZone }),
+    hasInstructions: !!request.payment_instructions,
+    proofUrl: request.proof_url,
+  }))
 
   return (
     <PageShell variant="form" data-testid="payments-page">
@@ -222,139 +175,7 @@ export default async function StudentPaymentsPage() {
             />
           ))}
 
-          {/* Desktop View: Table */}
-          <Card className="hidden md:block">
-            <CardHeader>
-              <CardTitle>{t('tableTitle')}</CardTitle>
-              <CardDescription>
-                {t('tableDescription', { count: paymentRequests.length })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('table.product')}</TableHead>
-                    <TableHead>{t('table.amount')}</TableHead>
-                    <TableHead>{t('table.status')}</TableHead>
-                    <TableHead>{t('table.date')}</TableHead>
-                    <TableHead>{t('table.actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paymentRequests.map((request) => {
-                    const statusBadge = getStatusBadge(request.status)
-
-                    return (
-                      <TableRow key={request.request_id}>
-                        <TableCell className="font-medium max-w-[200px] truncate">{itemName(request)}</TableCell>
-                        <TableCell>
-                          {formatAmount(request.payment_amount, request.payment_currency)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusBadge.variant} className="gap-1">
-                            {statusBadge.icon}
-                            {statusBadge.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(request.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {request.payment_instructions && (
-                              <Link href={`/dashboard/student/payments/${request.request_id}`}>
-                                <Button size="sm" variant="outline">
-                                  {t('viewDetails')}
-                                </Button>
-                              </Link>
-                            )}
-                            {request.proof_url ? (
-                              <a href={request.proof_url} target="_blank" rel="noopener noreferrer">
-                                <Button size="sm" variant="ghost">
-                                  {t('viewProof')}
-                                </Button>
-                              </a>
-                            ) : canCancel(request.status) ? (
-                              <StudentProofUpload requestId={request.request_id} />
-                            ) : null}
-                            {canCancel(request.status) && (
-                              <CancelPaymentButton requestId={request.request_id} />
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Mobile View: Cards */}
-          <div className="md:hidden space-y-4">
-            {paymentRequests.map((request) => {
-              const statusBadge = getStatusBadge(request.status)
-
-              return (
-                <Card key={request.request_id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base truncate">{itemName(request)}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {formatDateTime(request.created_at)}
-                        </CardDescription>
-                      </div>
-                      <Badge variant={statusBadge.variant} className="gap-1">
-                        {statusBadge.icon}
-                        {statusBadge.label}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t('amount')}:</span>
-                      <span className="font-semibold">
-                        {formatAmount(request.payment_amount, request.payment_currency)}
-                      </span>
-                    </div>
-
-                    {request.payment_instructions && (
-                      <Alert>
-                        <IconInfoCircle className="h-4 w-4" />
-                        <AlertDescription className="text-xs">
-                          {t('instructionsAvailable')}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-
-                    <div className="flex gap-2 pt-2">
-                      {request.payment_instructions && (
-                        <Link href={`/dashboard/student/payments/${request.request_id}`} className="flex-1">
-                          <Button size="sm" variant="outline" className="w-full">
-                            {t('viewDetails')}
-                          </Button>
-                        </Link>
-                      )}
-                      {request.proof_url ? (
-                        <a href={request.proof_url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost">
-                            {t('viewProof')}
-                          </Button>
-                        </a>
-                      ) : canCancel(request.status) ? (
-                        <StudentProofUpload requestId={request.request_id} />
-                      ) : null}
-                      {canCancel(request.status) && (
-                        <CancelPaymentButton requestId={request.request_id} />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+          <PaymentsExplorer rows={rows} />
         </div>
       )}
     </PageShell>

@@ -1,8 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { EnrolledCourseCard } from '@/components/student/enrolled-course-card'
-import { CourseFilters } from '@/components/student/course-filters'
+import { MyCoursesExplorer } from '@/components/student/my-courses-explorer'
 import { Button } from '@/components/ui/button'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { IconBook2, IconSparkles, IconCertificate, IconArrowRight } from '@tabler/icons-react'
@@ -42,18 +41,9 @@ type EnrichedEnrollment = {
   }
 }
 
-interface PageProps {
-  searchParams: Promise<{
-    status?: 'all' | 'in_progress' | 'completed' | 'not_started'
-    sort?: 'recent' | 'title' | 'progress'
-    search?: string
-  }>
-}
-
-export default async function MyCoursesPage({ searchParams }: PageProps) {
+export default async function MyCoursesPage() {
   const tenantId = await getCurrentTenantId()
   const supabase = createAdminClient()
-  const params = await searchParams
 
   const userId = await getCurrentUserId()
   if (!userId) {
@@ -172,38 +162,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     }
   })
 
-  // Count by status for filter pills
-  const counts = {
-    all: processedEnrollments.length,
-    in_progress: processedEnrollments.filter(e => e.course.progress > 0 && e.course.progress < 100).length,
-    completed: processedEnrollments.filter(e => e.course.progress === 100).length,
-    not_started: processedEnrollments.filter(e => e.course.progress === 0).length,
-  }
-
-  const filteredEnrollments = processedEnrollments.filter(enrollment => {
-    if (params.status && params.status !== 'all') {
-      if (params.status === 'completed' && enrollment.course.progress < 100) return false
-      if (params.status === 'in_progress' && (enrollment.course.progress === 0 || enrollment.course.progress === 100)) return false
-      if (params.status === 'not_started' && enrollment.course.progress > 0) return false
-    }
-
-    if (params.search) {
-      const search = params.search.toLowerCase()
-      return (
-        enrollment.course.title.toLowerCase().includes(search) ||
-        enrollment.course.description?.toLowerCase().includes(search)
-      )
-    }
-
-    return true
-  })
-
-  if (params.sort === 'title') {
-    filteredEnrollments.sort((a, b) => a.course.title.localeCompare(b.course.title))
-  } else if (params.sort === 'progress') {
-    filteredEnrollments.sort((a, b) => b.course.progress - a.course.progress)
-  }
-
   // Fetch certificate count for the banner
   const { count: certificateCount } = await supabase
     .from('certificates')
@@ -213,7 +171,6 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
     .is('revoked_at', null)
 
   const hasEnrollments = enrichedEnrollments.length > 0
-  const hasFilteredEnrollments = filteredEnrollments.length > 0
 
   return (
     <PageShell variant="wide" data-testid="student-courses-page">
@@ -255,33 +212,7 @@ export default async function MyCoursesPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <>
-          {/* Filters */}
-          <CourseFilters
-            currentStatus={params.status || 'all'}
-            currentSort={params.sort || 'recent'}
-            currentSearch={params.search || ''}
-            counts={counts}
-          />
-
-          {/* Course List */}
-          {!hasFilteredEnrollments ? (
-            <div className="rounded-2xl border border-dashed p-12 text-center">
-              <p className="text-sm text-muted-foreground">
-                {t('noFilterMatch')}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {filteredEnrollments.map((enrollment) => (
-                <EnrolledCourseCard
-                  key={enrollment.enrollment_id}
-                  enrollment={enrollment}
-                  userId={userId}
-                  access={enrollment.access}
-                />
-              ))}
-            </div>
-          )}
+          <MyCoursesExplorer enrollments={processedEnrollments} userId={userId} />
         </>
       )}
       {/* Certificates Banner */}

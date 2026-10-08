@@ -7,6 +7,11 @@ export default function Loading() {
     <PageShell skeleton>
       <PageHeaderSkeleton back />
       <div className="space-y-5 sm:space-y-6">
+        <div className="flex flex-wrap items-end gap-3">
+          <Skeleton className="h-9 min-w-0 flex-1 basis-48" />
+          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-9 w-40" />
+        </div>
         <div className="flex flex-wrap gap-2">
           {[20, 28, 24, 28].map((w, i) => (
             <Skeleton key={i} className="h-8 rounded-full" style={{ width: `${w * 4}px` }} />
