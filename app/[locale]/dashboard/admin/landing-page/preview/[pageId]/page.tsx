@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Data } from '@measured/puck'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -35,12 +36,13 @@ export default async function PreviewPage({ params, searchParams }: Props) {
     redirect('/dashboard/admin/landing-page')
   }
 
-  const puckData = page.puck_data as any
+  const puckData = page.puck_data as unknown as Data | null
   if (!puckData || typeof puckData !== 'object') {
     redirect('/dashboard/admin/landing-page')
   }
 
-  const landingData = await getLandingData(tenantId)
+  // Same data as the public render (drafts excluded) so the preview never shows more than the live page.
+  const landingData = await getLandingData(tenantId, { puckData })
 
   return (
     <div className="min-h-screen">

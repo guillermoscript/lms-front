@@ -115,6 +115,7 @@ const STRINGS = {
     // scaffolding, not content, so they follow the reader's language.
     placeholderHeadline: "Hero headline",
     placeholderItems: ["Question one", "Question two"],
+    boundTo: "Live data · ",
   },
   es: {
     loading: "Cargando la página…",
@@ -130,6 +131,7 @@ const STRINGS = {
     footerHint: (path: string) => `${path} · ajústala visualmente en Panel → Página de destino`,
     placeholderHeadline: "Titular principal",
     placeholderItems: ["Pregunta uno", "Pregunta dos"],
+    boundTo: "Datos reales · ",
   },
 };
 
@@ -442,7 +444,15 @@ function LandingPagePreview() {
           ) : (
             <div className="flex flex-col gap-2">
               {sections.map((section, i) => (
-                <SectionCard key={i} section={section} brand={brand_color} />
+                <div key={i}>
+                  <SectionCard section={section} brand={brand_color} />
+                  {section.binding && (
+                    <div className="mt-1 truncate px-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {t.boundTo}
+                      {section.binding}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}

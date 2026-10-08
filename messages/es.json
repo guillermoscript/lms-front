@@ -6108,7 +6108,15 @@
       "choosePageTypeDescription": "Elige un tipo de página o ingresa una URL personalizada. Esto determina dónde será accesible la página.",
       "customSlug": "Personalizado",
       "customSlugDescription": "Ingresa tu propia URL",
-      "next": "Siguiente"
+      "next": "Siguiente",
+      "pageName": "Página {name}",
+      "describe": {
+        "title": "Describe tu página",
+        "body": "Cuéntale a la IA para qué es la página. La arma en vivo con tus cursos, productos y marca, y sigues editándola en el chat.",
+        "placeholder": "Ej.: Una landing para mi curso de Python para principiantes, con el temario, el precio y preguntas frecuentes",
+        "submit": "Crear con IA",
+        "orTemplate": "O empieza desde una plantilla"
+      }
     },
     "sectionPicker": {
       "title": "Agregar una Sección",
@@ -6985,37 +6993,6 @@
         "published": "publicado"
       }
     },
-    "ai": {
-      "button": "Generar con IA",
-      "title": "Generar página con IA",
-      "description": "Describe tu página de aterrizaje y la IA la construirá con tus bloques. Podrás editar todo después.",
-      "placeholder": "p. ej. Una página para mi curso de español para principiantes con un hero, estadísticas, testimonios y una llamada a la acción para registrarse.",
-      "example": "Ejemplo",
-      "replaceWarning": "Esto reemplaza el contenido actual de la página. Tu versión guardada no se ve afectada hasta que guardes.",
-      "generate": "Generar",
-      "generating": "Generando...",
-      "buildingCount": "Construyendo… {count} secciones hasta ahora",
-      "cancel": "Cancelar",
-      "generated": "Se generó una página con {count} bloques",
-      "empty": "La IA devolvió una página vacía. Prueba con una descripción más detallada.",
-      "failed": "La generación falló. Inténtalo de nuevo.",
-      "builtPage": "Creé una página de {count, plural, one {# sección} other {# secciones}}. Selecciona cualquier bloque y dime cómo refinarlo, o pídeme que cambie toda la página.",
-      "updatedBlock": "Actualicé el {block}. ¿Quieres hacer otro cambio?",
-      "errorPlan": "El asistente de IA para páginas de aterrizaje requiere un plan de pago.",
-      "errorRateLimit": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
-      "errorInvalid": "La IA devolvió una página que no coincide con los bloques disponibles. Inténtalo de nuevo.",
-      "chatTitle": "Asistente IA",
-      "chatDescription": "Chatea para construir y refinar tu página. Selecciona un bloque para editar solo ese bloque.",
-      "pageContext": "Editando toda la página",
-      "editingContext": "Editando el bloque de {type} seleccionado",
-      "editingBlock": "Actualizando {type}…",
-      "emptyChatTitle": "Describe tu página",
-      "emptyChatHint": "Prueba: «Una página para un curso de español para principiantes.» Luego haz clic en cualquier bloque del lienzo y pídeme que ajuste solo ese.",
-      "composerPage": "Describe o cambia toda la página…",
-      "composerBlock": "Dime cómo cambiar {type}…",
-      "send": "Enviar",
-      "undoHint": "Los cambios se aplican al instante — presiona Cmd/Ctrl+Z para deshacer."
-    },
     "categories": {
       "primitives": "Primitivos",
       "layout": "Diseño",
@@ -7063,7 +7040,13 @@
       "Header": "Encabezado",
       "Footer": "Pie de Página",
       "Navbar": "Barra de Navegación",
-      "BreadcrumbBlock": "Migas de Pan"
+      "BreadcrumbBlock": "Migas de Pan",
+      "CourseHero": "Portada del curso",
+      "CourseCurriculum": "Temario del curso",
+      "CourseOutcomes": "Resultados del curso",
+      "CoursePricingCard": "Tarjeta de precio",
+      "ProductGrid": "Cuadrícula de productos",
+      "InstructorCard": "Tarjeta de instructor"
     },
     "fieldLabels": {
       "Title": "Título",
@@ -7216,7 +7199,49 @@
       "Auto": "Auto",
       "Full Screen": "Pantalla Completa",
       "Hide on Mobile": "Ocultar en Móvil",
-      "Hide on Desktop": "Ocultar en Escritorio"
+      "Hide on Desktop": "Ocultar en Escritorio",
+      "Section Tone": "Tono de la sección",
+      "Muted": "Suave",
+      "Brand tint": "Tinte de marca",
+      "Brand": "Marca",
+      "Inverse": "Invertido",
+      "Section Alignment": "Alineación de la sección",
+      "Start": "Inicio",
+      "Anchor ID": "Ancla (ID)",
+      "Hide On": "Ocultar en",
+      "Mobile": "Móvil",
+      "Desktop": "Escritorio",
+      "SEO Title": "Título SEO",
+      "SEO Description": "Descripción SEO",
+      "Share Image URL": "URL de la imagen para compartir",
+      "Course": "Curso",
+      "Split": "Dividido",
+      "Centered": "Centrado",
+      "Eyebrow": "Antetítulo",
+      "Title Override": "Título personalizado",
+      "Subtitle Override": "Subtítulo personalizado",
+      "Show Stats": "Mostrar estadísticas",
+      "Max Lessons": "Máximo de lecciones",
+      "Show Preview Badges": "Mostrar vistas previas",
+      "Outcomes": "Resultados",
+      "Outcome": "Resultado",
+      "Product": "Producto",
+      "Products": "Productos",
+      "Features": "Características",
+      "Feature": "Característica",
+      "Guarantee": "Garantía",
+      "Max Items": "Máximo de elementos",
+      "Source": "Origen",
+      "Course author": "Autor del curso",
+      "Teacher": "Profesor",
+      "Live reviews": "Reseñas reales",
+      "Manual quotes": "Citas manuales",
+      "Live teachers": "Profesores reales",
+      "Manual members": "Miembros manuales",
+      "Minimum Rating": "Valoración mínima",
+      "Max Reviews": "Máximo de reseñas",
+      "Pinned Plans": "Planes fijados",
+      "Only the picked courses": "Solo los cursos elegidos"
     },
     "render": {
       "logIn": "Iniciar sesión",
@@ -7247,6 +7272,128 @@
       "statCompletions": "Completados",
       "socialProofReviews": "Basado en {count, plural, one {# reseña} other {# reseñas}}",
       "socialProofRating": "{rating} de 5 estrellas"
+    },
+    "courseBlocks": {
+      "blocks": {
+        "CourseHero": "Portada del curso",
+        "CourseCurriculum": "Temario",
+        "CourseOutcomes": "Lo que aprenderás",
+        "CoursePricingCard": "Tarjeta de precio",
+        "ProductGrid": "Productos",
+        "InstructorCard": "Instructor",
+        "EnrollCta": "Llamada a inscribirse",
+        "TestimonialGrid": "Testimonios",
+        "CourseGrid": "Cuadrícula de cursos"
+      },
+      "notice": {
+        "unboundCourse": "Elige un curso en la barra lateral. Esta sección se completa sola con los datos del curso.",
+        "missingCourse": "El curso elegido ya no existe o no está publicado. Esta sección no se muestra en la página publicada.",
+        "draftCourse": "«{title}» es un borrador. Esta sección no se mostrará en la página publicada hasta que publiques el curso.",
+        "unboundProduct": "Elige un producto en la barra lateral.",
+        "missingProduct": "El producto elegido ya no está activo. Esta sección no se muestra en la página publicada.",
+        "unboundPricing": "Elige un curso o un producto en la barra lateral. El precio sale de ahí.",
+        "loading": "Cargando los datos del curso…",
+        "noLessons": "Este curso aún no tiene lecciones publicadas. La sección no se muestra en la página publicada hasta que las tenga.",
+        "noOutcomes": "Añade resultados o elige un curso con objetivos de aprendizaje. Mientras esté vacía, la sección no se muestra en la página publicada.",
+        "noProducts": "Aún no hay productos activos. La sección no se muestra en la página publicada hasta que publiques uno.",
+        "noReviews": "Aún no hay reseñas. Las reseñas reales de tus estudiantes aparecerán aquí solas; mientras tanto la sección no se muestra en la página publicada.",
+        "manualQuotes": "Citas manuales: usa palabras reales de estudiantes reales, con su permiso.",
+        "noAuthor": "El autor del curso no tiene nombre en su perfil. Esta sección no se muestra en la página publicada.",
+        "unboundTeacher": "Elige un profesor en la barra lateral.",
+        "missingTeacher": "El profesor elegido ya no está activo en esta escuela. Esta sección no se muestra en la página publicada.",
+        "noCuratedCourses": "Ninguno de los cursos elegidos está publicado. Esta sección queda oculta en la página pública hasta que uno lo esté (nunca muestra otros cursos)."
+      },
+      "picker": {
+        "search": "Buscar…",
+        "clear": "Quitar",
+        "remove": "Eliminar",
+        "moveUp": "Subir",
+        "moveDown": "Bajar",
+        "noMatches": "Sin resultados.",
+        "allPicked": "Ya está todo elegido.",
+        "unknown": "No disponible ({id})",
+        "noneAvailable": "Todavía no hay nada que elegir.",
+        "productsEmpty": "Sin productos fijados. La cuadrícula muestra tus productos activos más recientes.",
+        "productEmpty": "Ningún producto elegido.",
+        "plansEmpty": "Sin planes fijados. La tabla muestra todos tus planes.",
+        "teacherEmpty": "Ningún profesor elegido."
+      },
+      "free": "Gratis",
+      "lessons": "{count, plural, one {# lección} other {# lecciones}}",
+      "rating": "{rating} ({count, plural, one {# reseña} other {# reseñas}})",
+      "ratingSr": "{rating} de 5 estrellas",
+      "byAuthor": "Por {name}",
+      "enrollFree": "Inscríbete gratis",
+      "enrollPaid": "Inscríbete por {price}",
+      "buyNow": "Comprar ahora",
+      "previewBadge": "Vista previa gratis",
+      "moreLessons": "{count, plural, one {+# lección más} other {+# lecciones más}}",
+      "includesCount": "{count, plural, one {Incluye # curso} other {Incluye # cursos}}",
+      "interval": {
+        "day": "día",
+        "week": "semana",
+        "month": "mes",
+        "quarter": "trimestre",
+        "year": "año"
+      },
+      "anonymousStudent": "Un estudiante"
+    },
+    "templates": {
+      "teamGrid": {
+        "title": "Equipo",
+        "noTeachers": "Aún no hay profesores. Los profesores de tu escuela aparecen aquí automáticamente; mientras tanto, esta sección está oculta en la página publicada.",
+        "noMembers": "Añade miembros del equipo en la barra lateral. Esta sección está oculta en la página publicada mientras esté vacía.",
+        "manualMembers": "Miembros manuales: incluye personas reales de tu escuela, con su permiso."
+      },
+      "pageTypes": {
+        "course": "Página de curso",
+        "product": "Página de producto",
+        "pricing": "Precios"
+      },
+      "pageTypeHints": {
+        "course": "Vende un curso",
+        "product": "Vende un producto"
+      },
+      "binding": {
+        "chooseCourse": "¿Para qué curso es esta página?",
+        "chooseCourseDescription": "El título, el precio, las lecciones, el instructor y las reseñas salen de este curso.",
+        "chooseProduct": "¿Para qué producto es esta página?",
+        "chooseProductDescription": "El precio y los cursos incluidos salen de este producto.",
+        "search": "Buscar…",
+        "noMatches": "Sin resultados.",
+        "noCourses": "Aún no tienes cursos. Puedes crear la página ahora y elegir el curso después en el editor.",
+        "publishedOnly": "Solo aparecen los cursos publicados. Publica un curso para crear su página.",
+        "noProducts": "Aún no tienes productos activos. Puedes crear la página ahora y elegir el producto después en el editor.",
+        "free": "Gratis",
+        "coursesCount": "{count, plural, one {# curso} other {# cursos}}",
+        "create": "Crear página",
+        "skip": "Omitir por ahora",
+        "back": "Atrás",
+        "pageUrl": "URL de la página: {url}"
+      },
+      "items": {
+        "courseLanding": {
+          "name": "Página de curso",
+          "description": "Una página de venta completa para un curso: portada, resultados, temario, instructor, reseñas, precio y preguntas frecuentes."
+        },
+        "courseLaunchShort": {
+          "name": "Lanzamiento de curso",
+          "description": "Una página breve de lanzamiento: portada centrada, resultados, precio y preguntas frecuentes."
+        },
+        "freeCourseLead": {
+          "name": "Curso gratuito",
+          "description": "Una página de captación para un curso gratuito: portada, la lista de lecciones y una franja de inscripción."
+        },
+        "productBundle": {
+          "name": "Paquete de cursos",
+          "description": "Vende un producto que agrupa varios cursos: portada, precio, cursos incluidos, reseñas y preguntas frecuentes."
+        },
+        "pricingPage": {
+          "name": "Precios",
+          "description": "Todos tus planes y productos en una página, con preguntas frecuentes y una llamada final a la acción."
+        }
+      },
+      "sections": "{count, plural, one {# sección} other {# secciones}}"
     }
   },
   "verification": {
@@ -8167,10 +8314,22 @@
     "createWithAi": "Crear con IA",
     "editWithAi": "Editar con IA",
     "editSheet": {
-      "course": { "title": "Edita este curso con IA", "description": "Pide cambios al curso, sus lecciones, ejercicios o exámenes." },
-      "lesson": { "title": "Edita esta lección con IA", "description": "Reescribe, amplía o reestructura esta lección." },
-      "exercise": { "title": "Edita este ejercicio con IA", "description": "Ajusta el enunciado, la dificultad o las respuestas de este ejercicio." },
-      "exam": { "title": "Edita este examen con IA", "description": "Agrega, reescribe o reequilibra las preguntas de este examen." }
+      "course": {
+        "title": "Edita este curso con IA",
+        "description": "Pide cambios al curso, sus lecciones, ejercicios o exámenes."
+      },
+      "lesson": {
+        "title": "Edita esta lección con IA",
+        "description": "Reescribe, amplía o reestructura esta lección."
+      },
+      "exercise": {
+        "title": "Edita este ejercicio con IA",
+        "description": "Ajusta el enunciado, la dificultad o las respuestas de este ejercicio."
+      },
+      "exam": {
+        "title": "Edita este examen con IA",
+        "description": "Agrega, reescribe o reequilibra las preguntas de este examen."
+      }
     },
     "cta": {
       "title": "Crea tu primer curso con IA",
@@ -8181,7 +8340,26 @@
     "chatTab": "Chat",
     "blueprintTab": "Esquema del curso",
     "placeholder": "Describe tu curso o pide un cambio…",
-    "approval": { "title": "Requiere aprobación", "approve": "Aprobar", "deny": "Rechazar", "approved": "Aprobado", "denied": "Rechazado", "price": "Precio", "fields": {"title": "Título", "name": "Nombre", "lesson_id": "Lección", "course_id": "Curso", "exercise_id": "Ejercicio", "exam_id": "Examen", "product_id": "Producto", "publish_at": "Publicar el", "scheduled_for": "Programado para"}, "action": "{verb} {entity}" },
+    "approval": {
+      "title": "Requiere aprobación",
+      "approve": "Aprobar",
+      "deny": "Rechazar",
+      "approved": "Aprobado",
+      "denied": "Rechazado",
+      "price": "Precio",
+      "fields": {
+        "title": "Título",
+        "name": "Nombre",
+        "lesson_id": "Lección",
+        "course_id": "Curso",
+        "exercise_id": "Ejercicio",
+        "exam_id": "Examen",
+        "product_id": "Producto",
+        "publish_at": "Publicar el",
+        "scheduled_for": "Programado para"
+      },
+      "action": "{verb} {entity}"
+    },
     "thinking": "Pensando…",
     "newChat": "Nuevo chat",
     "retry": "Reintentar",
@@ -8480,22 +8658,70 @@
       }
     },
     "features": {
-      "aristotle": { "name": "Tutor Aristóteles", "description": "El chat tutor del curso que los estudiantes abren desde un curso." },
-      "aristotle_summary": { "name": "Resúmenes de Aristóteles", "description": "Resume una sesión del tutor al cerrarse." },
-      "lesson_tutor": { "name": "Tutor de lección", "description": "El asistente de IA dentro de las tareas de lección con IA." },
-      "lesson_verifier": { "name": "Verificador de tarea de lección", "description": "Decide si un estudiante terminó una tarea de lección con IA." },
-      "checkpoint_grader": { "name": "Calificador de puntos de control", "description": "Califica respuestas cortas de los puntos de control en las lecciones." },
-      "exercise_coach": { "name": "Entrenador de ejercicios", "description": "Ayuda por chat mientras los estudiantes hacen un ejercicio." },
-      "exercise_grader": { "name": "Calificador de ejercicios", "description": "Califica ejercicios escritos y de artefacto con retroalimentación." },
-      "speech_coach": { "name": "Entrenador de habla", "description": "Da retroalimentación sobre ejercicios de habla grabados." },
-      "speech_stt": { "name": "Voz a texto", "description": "Transcribe las grabaciones de los estudiantes." },
-      "voice_conversation": { "name": "Conversación en vivo", "description": "Práctica de voz en tiempo real con un compañero de IA." },
-      "exam_grader": { "name": "Calificador de exámenes", "description": "Califica respuestas de texto libre en exámenes." },
-      "question_generator": { "name": "Generador de preguntas", "description": "Redacta preguntas de quiz a partir de una lección." },
-      "starter_course": { "name": "Curso inicial", "description": "Genera un primer curso para una escuela nueva." },
-      "course_architect": { "name": "Arquitecto de cursos", "description": "El agente que planifica y construye un curso junto al profesor." },
-      "landing_builder": { "name": "Constructor de landing", "description": "Genera páginas de aterrizaje a partir de una indicación." },
-      "image_generation": { "name": "Generación de imágenes", "description": "Crea imágenes de portada y de lecciones." }
+      "aristotle": {
+        "name": "Tutor Aristóteles",
+        "description": "El chat tutor del curso que los estudiantes abren desde un curso."
+      },
+      "aristotle_summary": {
+        "name": "Resúmenes de Aristóteles",
+        "description": "Resume una sesión del tutor al cerrarse."
+      },
+      "lesson_tutor": {
+        "name": "Tutor de lección",
+        "description": "El asistente de IA dentro de las tareas de lección con IA."
+      },
+      "lesson_verifier": {
+        "name": "Verificador de tarea de lección",
+        "description": "Decide si un estudiante terminó una tarea de lección con IA."
+      },
+      "checkpoint_grader": {
+        "name": "Calificador de puntos de control",
+        "description": "Califica respuestas cortas de los puntos de control en las lecciones."
+      },
+      "exercise_coach": {
+        "name": "Entrenador de ejercicios",
+        "description": "Ayuda por chat mientras los estudiantes hacen un ejercicio."
+      },
+      "exercise_grader": {
+        "name": "Calificador de ejercicios",
+        "description": "Califica ejercicios escritos y de artefacto con retroalimentación."
+      },
+      "speech_coach": {
+        "name": "Entrenador de habla",
+        "description": "Da retroalimentación sobre ejercicios de habla grabados."
+      },
+      "speech_stt": {
+        "name": "Voz a texto",
+        "description": "Transcribe las grabaciones de los estudiantes."
+      },
+      "voice_conversation": {
+        "name": "Conversación en vivo",
+        "description": "Práctica de voz en tiempo real con un compañero de IA."
+      },
+      "exam_grader": {
+        "name": "Calificador de exámenes",
+        "description": "Califica respuestas de texto libre en exámenes."
+      },
+      "question_generator": {
+        "name": "Generador de preguntas",
+        "description": "Redacta preguntas de quiz a partir de una lección."
+      },
+      "starter_course": {
+        "name": "Curso inicial",
+        "description": "Genera un primer curso para una escuela nueva."
+      },
+      "course_architect": {
+        "name": "Arquitecto de cursos",
+        "description": "El agente que planifica y construye un curso junto al profesor."
+      },
+      "landing_builder": {
+        "name": "Constructor de páginas",
+        "description": "El agente de chat que crea y edita contigo las páginas de tu sitio, bloque a bloque."
+      },
+      "image_generation": {
+        "name": "Generación de imágenes",
+        "description": "Crea imágenes de portada y de lecciones."
+      }
     },
     "billing": {
       "title": "Facturación",
@@ -8631,5 +8857,134 @@
       "admin": "Si eres el único administrador de una escuela, nombra a otra persona administradora primero."
     },
     "final": "Eliminar tu cuenta no se puede deshacer. Para volver a aprender más adelante, crea una cuenta nueva."
+  },
+  "pageArchitect": {
+    "panel": {
+      "title": "Page Architect",
+      "subtitle": "Describe un cambio. La IA edita esta página en vivo.",
+      "open": "IA",
+      "close": "Cerrar panel de IA",
+      "newChat": "Nuevo chat",
+      "placeholder": "Pide un cambio, p. ej. “Haz el hero más directo”",
+      "placeholderSelected": "¿Qué debe cambiar en el bloque seleccionado?",
+      "send": "Enviar",
+      "stop": "Detener",
+      "thinking": "Pensando…",
+      "working": "Trabajando en tu página…",
+      "locked": "La edición está en pausa mientras trabaja la IA",
+      "aBlock": "un bloque",
+      "selected": "Seleccionado: {block}",
+      "clearSelection": "Quitar selección",
+      "examples": "Ejemplos de peticiones",
+      "applied": "{count, plural, one {# cambio aplicado} other {# cambios aplicados}}. Un solo deshacer revierte todo el turno.",
+      "undo": "Deshacer",
+      "undoStopped": "Deshiciste un cambio mientras la IA trabajaba, así que la IA se detuvo.",
+      "error": "Algo salió mal. Inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "toolFailed": "{label} (no se aplicó)",
+      "tools": {
+        "get_page": "Leyendo la página",
+        "list_templates": "Revisando plantillas",
+        "apply_template": "Aplicando una plantilla",
+        "insert_preset": "Insertando secciones listas",
+        "add_block": "Construyendo {block}",
+        "update_block": "Actualizando {block}",
+        "move_block": "Moviendo {block}",
+        "remove_block": "Quitando {block}",
+        "duplicate_block": "Duplicando {block}",
+        "set_page_meta": "Actualizando el título y la descripción de la página",
+        "preview_theme": "Previsualizando un tema",
+        "list_courses": "Buscando tus cursos",
+        "get_course": "Leyendo un curso",
+        "list_products": "Buscando tus productos",
+        "list_plans": "Buscando tus planes",
+        "get_school_profile": "Leyendo el perfil de tu escuela",
+        "other": "Trabajando"
+      },
+      "approval": {
+        "title": "Confirmar cambio",
+        "applyTemplate": "¿Reemplazar todos los bloques de esta página con una plantilla?",
+        "removeBlocks": "¿Quitar estos bloques de la página?",
+        "generic": "¿Permitir este cambio?",
+        "approve": "Permitir",
+        "deny": "No permitir",
+        "approved": "Permitido: {label}",
+        "denied": "No permitido: {label}"
+      },
+      "theme": {
+        "title": "Vista previa del tema",
+        "body": "Previsualizando {theme} con {color} en el lienzo. Aún no se guarda nada.",
+        "customNote": "Un color personalizado requiere un plan con marca personalizada.",
+        "apply": "Aplicar tema",
+        "applying": "Aplicando…",
+        "discard": "Descartar",
+        "applied": "Tema aplicado a tu escuela.",
+        "failed": "No se pudo aplicar el tema."
+      },
+      "empty": {
+        "new": {
+          "title": "Empieza con una frase",
+          "body": "Di para qué es la página. La IA parte de una plantilla, la llena con tus cursos y precios reales, y la ves construirse."
+        },
+        "home": {
+          "title": "Mejora tu página de inicio",
+          "body": "Pide un cambio para toda la página, o selecciona un bloque antes para cambiar solo ese."
+        },
+        "course": {
+          "title": "Vende mejor este curso",
+          "body": "Los bloques del curso muestran datos en vivo. Pide a la IA mejorar el texto, reordenar secciones o añadir pruebas sociales."
+        },
+        "product": {
+          "title": "Da forma a esta página de producto",
+          "body": "Pide beneficios más claros, una mejor estructura o una llamada a la acción más fuerte."
+        },
+        "pricing": {
+          "title": "Haz que elegir plan sea fácil",
+          "body": "Pide a la IA explicar los planes, añadir preguntas frecuentes o destacar la mejor opción."
+        }
+      },
+      "suggestions": {
+        "new": {
+          "one": "Crea una página de venta para mi curso más reciente",
+          "two": "Construye una página de inicio para mi escuela",
+          "three": "Haz una página de precios con mis planes y preguntas frecuentes"
+        },
+        "home": {
+          "one": "Haz el hero más directo",
+          "two": "Añade una sección con mis cursos más populares",
+          "three": "Reescribe la página con un tono más cercano"
+        },
+        "course": {
+          "one": "Aclara la promesa del hero",
+          "two": "Añade preguntas frecuentes sobre el curso",
+          "three": "Sube la tarjeta de precio"
+        },
+        "product": {
+          "one": "Explica mejor qué incluye",
+          "two": "Añade unas preguntas frecuentes breves",
+          "three": "Haz más fuerte la llamada a la acción"
+        },
+        "pricing": {
+          "one": "Destaca el plan con mejor valor",
+          "two": "Añade preguntas frecuentes sobre la facturación",
+          "three": "Añade una breve introducción sobre los planes"
+        }
+      },
+      "editor": {
+        "unsaved": "Cambios sin guardar",
+        "waitForAi": "Espera a que la IA termine antes de guardar.",
+        "unsavedTitle": "¿Salir sin guardar?",
+        "unsavedBody": "Esta página tiene cambios sin guardar, incluidos los que hizo la IA. Se perderán.",
+        "stay": "Quedarme",
+        "leave": "Salir sin guardar",
+        "conflictTitle": "Esta página cambió en otro lugar",
+        "conflictBody": "Se guardó en otra pestaña o la guardó un agente de IA después de que la abriste. Recarga esa versión o sobrescríbela con la tuya.",
+        "cancel": "Cancelar",
+        "reload": "Recargar la suya",
+        "overwrite": "Sobrescribir con la mía",
+        "reloaded": "Se cargó la última versión guardada. Deshacer recupera la tuya.",
+        "reloadFailed": "No se pudo cargar la última versión."
+      }
+    }
   }
 }

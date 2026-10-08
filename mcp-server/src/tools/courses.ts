@@ -26,6 +26,46 @@ async function categoryOutsideTenant(
   return data ? null : `Category ${categoryId} not found in this school (see lms_list_course_categories).`;
 }
 
+/**
+ * The course listing behind lms_list_courses, shared with lms_get_landing_context.
+ * Tenant-filtered; non-admins only see courses they author.
+ */
+export async function listCoursesForSession(
+  session: LmsSession,
+  opts: { limit: number; offset: number; status?: string; statuses?: string[]; excludeDeleted?: boolean }
+) {
+  let query = session
+    .getClient()
+    .from("courses")
+    .select(
+      "course_id, title, description, status, tags, created_at, updated_at, lessons(count), enrollments(count)",
+      { count: "exact" }
+    )
+    .eq("tenant_id", session.getTenantId())
+    .order("created_at", { ascending: false })
+    .range(opts.offset, opts.offset + opts.limit - 1);
+
+  if (!session.isAdmin()) query = query.eq("author_id", session.getUserId());
+  if (opts.status) query = query.eq("status", opts.status);
+  if (opts.statuses?.length) query = query.in("status", opts.statuses);
+  if (opts.excludeDeleted) query = query.is("deleted_at", null);
+
+  const { data, error, count } = await query;
+  if (error) throw new Error(`Listing courses: ${error.message}`);
+  const courses = (data ?? []).map((c) => ({
+    id: c.course_id as number,
+    title: c.title as string,
+    description: c.description as string | null,
+    status: c.status as string,
+    tags: c.tags,
+    lesson_count: (c.lessons as any)?.[0]?.count ?? 0,
+    enrollment_count: (c.enrollments as any)?.[0]?.count ?? 0,
+    created_at: c.created_at as string,
+    updated_at: c.updated_at as string,
+  }));
+  return { courses, total: count ?? 0 };
+}
+
 export function registerCourseTools(server: LmsServer) {
   // ── lms_list_courses ────────────────────────────────────────────────────────
   server.tool(
@@ -63,32 +103,10 @@ export function registerCourseTools(server: LmsServer) {
       }
 
       try {
-        const supabase = session.getClient();
         const { status, limit, offset } = input;
+        const { courses, total } = await listCoursesForSession(session, { limit, offset, status });
 
-        let query = supabase
-          .from("courses")
-          .select(
-            "course_id, title, description, status, tags, created_at, updated_at, lessons(count), enrollments(count)",
-            { count: "exact" }
-          )
-          .eq("tenant_id", session.getTenantId())
-          .order("created_at", { ascending: false })
-          .range(offset, offset + limit - 1);
-
-        if (!session.isAdmin()) {
-          query = query.eq("author_id", session.getUserId());
-        }
-        if (status) {
-          query = query.eq("status", status);
-        }
-
-        const { data, error, count } = await query;
-        if (error) return errorResult(`Listing courses: ${error.message}`);
-
-        const total = count ?? 0;
-
-        if (!data || data.length === 0) {
+        if (courses.length === 0) {
           return widget({
             props: {
               status: status ?? "all",
@@ -104,18 +122,6 @@ export function registerCourseTools(server: LmsServer) {
             output: text("No courses found."),
           });
         }
-
-        const courses = data.map((c) => ({
-          id: c.course_id,
-          title: c.title,
-          description: c.description,
-          status: c.status,
-          tags: c.tags,
-          lesson_count: (c.lessons as any)?.[0]?.count ?? 0,
-          enrollment_count: (c.enrollments as any)?.[0]?.count ?? 0,
-          created_at: c.created_at,
-          updated_at: c.updated_at,
-        }));
 
         return widget({
           props: {

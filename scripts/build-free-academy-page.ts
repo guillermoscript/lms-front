@@ -9,8 +9,9 @@
  * Run: npx tsx --env-file=.env.local scripts/build-free-academy-page.ts
  */
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { PAGE_BUILDER_MANIFEST } from '../packages/core/src/page-builder/generated/manifest.generated'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -42,8 +43,7 @@ async function resolveFreeCourseId(): Promise<string> {
   return String(first.course_id)
 }
 
-const manifest = JSON.parse(readFileSync(resolve('lib/json-render/puck-fields.generated.json'), 'utf8'))
-const defaults = (type: string): Record<string, unknown> => ({ ...(manifest[type]?.defaultProps ?? {}) })
+const defaults = (type: string): Record<string, unknown> => ({ ...(PAGE_BUILDER_MANIFEST.components[type]?.defaultProps ?? {}) })
 
 // The page: [blockType, overrides]. Order = render order.
 const buildBlocks = (FREE_COURSE_ID: string): Array<[string, Record<string, unknown>]> => [

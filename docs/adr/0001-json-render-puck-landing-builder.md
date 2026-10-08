@@ -1,6 +1,6 @@
 # ADR 0001 — json-render as the AI generation layer for the Puck landing builder
 
-- **Status:** Accepted (proof-of-concept implemented)
+- **Status:** Superseded (2026-10) by Page Architect — see `docs/PAGE_ARCHITECT.md`. The json-render generator, `/api/landing/generate` and `lib/json-render/` were removed.
 - **Date:** 2026-06-06
 - **Supersedes the open question in:** `docs/AI_LANDING_PAGE_GENERATION.md` ("would need to be adapted to generate Puck-compatible `puck_data`")
 - **Related:** `LANDING_PAGE_BUILDER.md`, `lib/puck/config.ts`

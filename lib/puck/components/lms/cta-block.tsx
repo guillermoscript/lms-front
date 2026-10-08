@@ -1,7 +1,7 @@
 import { ButtonLink } from '../../utils/button-link'
 import type { ComponentConfig } from '@measured/puck'
 import { cn } from '@/lib/utils'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 import { accentColorField, accentVars } from '../../utils/accent-color'
 
 export type CtaBlockProps = {
@@ -53,13 +53,13 @@ export const CtaBlock: ComponentConfig<CtaBlockProps> = {
     style: 'gradient',
     accentColor: '',
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, subtitle, primaryCtaLabel, primaryCtaHref, secondaryCtaLabel, secondaryCtaHref, style: ctaStyle, accentColor }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, subtitle, primaryCtaLabel, primaryCtaHref, secondaryCtaLabel, secondaryCtaHref, style: ctaStyle, accentColor }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     const isGradient = ctaStyle === 'gradient'
 
     return (
-      <div className={sectionOuterClass(spacing)} style={accentVars(accentColor)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing, accentVars(accentColor))}>
           <div
             className={cn(
               'px-8 py-12 rounded-card text-center',

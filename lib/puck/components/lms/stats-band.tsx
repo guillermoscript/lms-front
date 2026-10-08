@@ -5,8 +5,8 @@ import {
   type SectionSpacingProps,
   sectionSpacingFields,
   sectionSpacingDefaults,
-  sectionOuterClass,
-  sectionInnerClass,
+  sectionOuterProps,
+  sectionInnerProps,
 } from '../../utils/section-spacing'
 
 type Stat = {
@@ -69,9 +69,11 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
     // types its own, and the grid hides itself while there is nothing to show.
     items: [],
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, heading, subtitle, useLiveStats, items, puck }) => {
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, subtitle, useLiveStats, items, puck }) => {
+    // Puck mounts `render` as a component, so hooks are safe here.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const t = useTranslations('puck.render')
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     // Guard against a missing array: AI-generated specs (and Puck's Render path, which does
     // not always backfill defaultProps for top-level array props) can deliver `items` as
     // undefined/null. Default to [] so the block degrades gracefully instead of crashing.
@@ -96,8 +98,8 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
     if (!safeItems.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="space-y-8 md:space-y-16">
             {(heading || subtitle) && (
               <div className="relative z-10 mx-auto max-w-xl space-y-6 text-center">

@@ -59,3 +59,38 @@
   background-color: var(--background);
   color: var(--foreground);
 }
+
+/*
+ * Fit Puck into the editor box instead of the viewport: its layout is 100dvh tall by default,
+ * and the docked Page Architect panel (overrides.puck) sits beside it at full height.
+ */
+.editor :global(.Puck) {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor :global([class*="_PuckLayout_"]),
+.editor :global([class*="_PuckLayout-inner_"]) {
+  height: 100%;
+}
+
+/*
+ * Puck's DragDropContext wrapper sits between `.Puck` and `overrides.puck` with no height, so
+ * without this the layout grew to the page's full height: the whole editor (header, docked
+ * chat) scrolled away instead of the canvas scrolling inside its column.
+ */
+.editor :global(.Puck) > :global(div:not(#puck-portal-root)) {
+  height: 100%;
+}
+
+/*
+ * Docked chat: the editor box is 22rem narrower than the viewport Puck's media queries size its
+ * sidebars for. Keep the fields sidebar narrow so the canvas keeps its room (the components
+ * drawer is folded while the chat is open, see EditorShell).
+ */
+@media (min-width: 1024px) {
+  .editor :global([data-ai-docked="true"]) {
+    --puck-user-right-side-bar-width: 240px;
+  }
+}

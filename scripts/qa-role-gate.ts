@@ -1,7 +1,7 @@
 /**
- * QA-only: prove /api/landing/generate role gating end-to-end.
- * anon → 401 · student → 403 · admin (empty body) → 400 "messages required",
- * which proves the admin passed the role + plan gates without invoking the AI.
+ * QA-only: prove /api/landing/chat (Page Architect) role gating end-to-end.
+ * anon → 401 · student → 403 · admin (empty body) → 400 `invalid_body`, or 402 when the school
+ * has no AI key — either proves the admin passed the role + plan gates without invoking the AI.
  * Sends the session as @supabase/ssr cookies so the server client picks it up.
  */
 import { createClient } from '@supabase/supabase-js'
@@ -27,7 +27,7 @@ async function callAs(email: string | null, body: unknown): Promise<number> {
       ? `sb-${ref}-auth-token=${chunks[0]}`
       : chunks.map((c, i) => `sb-${ref}-auth-token.${i}=${c}`).join('; ')
   }
-  const res = await fetch(`${APP}/api/landing/generate`, {
+  const res = await fetch(`${APP}/api/landing/chat`, {
     method: 'POST',
     headers: { ...(cookie ? { Cookie: cookie } : {}), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -36,13 +36,13 @@ async function callAs(email: string | null, body: unknown): Promise<number> {
 }
 
 async function main() {
-  const msg = { messages: [{ role: 'user', content: 'test' }] }
+  const msg = { pageId: 'x', messages: [{ id: 'm1', role: 'user', parts: [{ type: 'text', text: 'test' }] }] }
   const anonStatus = await callAs(null, msg)
   const student = await callAs('student@freeacademy.com', msg)
   const admin = await callAs('admin@freeacademy.com', { messages: [] })
   console.log({ anonStatus, student, admin })
-  const ok = anonStatus === 401 && student === 403 && admin === 400
-  console.log(ok ? '✅ role gate works (anon 401, student 403, admin passes gates → 400 empty-body)' : '❌ unexpected statuses')
+  const ok = anonStatus === 401 && student === 403 && (admin === 400 || admin === 402)
+  console.log(ok ? '✅ role gate works (anon 401, student 403, admin passes gates → 400 empty-body / 402 no key)' : '❌ unexpected statuses')
   process.exit(ok ? 0 : 1)
 }
 main().catch((e) => { console.error('❌', e.message); process.exit(1) })

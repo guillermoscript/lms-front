@@ -1,5 +1,6 @@
+import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
-import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterClass, sectionInnerClass } from '../../utils/section-spacing'
+import { type SectionSpacingProps, sectionSpacingFields, sectionSpacingDefaults, sectionOuterProps, sectionInnerProps } from '../../utils/section-spacing'
 
 type LogoItem = {
   src: string
@@ -37,13 +38,13 @@ export const LogoCloud: ComponentConfig<LogoCloudProps> = {
       url: '',
     })),
   },
-  render: ({ paddingY, paddingX, maxWidth, marginY, title, items }) => {
-    const spacing = { paddingY, paddingX, maxWidth, marginY }
+  render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, title, items }) => {
+    const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     if (!items.length) return <></>
 
     return (
-      <div className={sectionOuterClass(spacing)}>
-        <div className={sectionInnerClass(spacing)}>
+      <div {...sectionOuterProps(spacing)}>
+        <div {...sectionInnerProps(spacing)}>
           <div className="text-center">
             {title && (
               <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-8">
@@ -63,7 +64,7 @@ export const LogoCloud: ComponentConfig<LogoCloudProps> = {
                 return logo.url ? (
                   <a
                     key={i}
-                    href={logo.url}
+                    href={safeHref(logo.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded transition-colors motion-reduce:transition-none duration-300"

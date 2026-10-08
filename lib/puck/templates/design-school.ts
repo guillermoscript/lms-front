@@ -4,7 +4,7 @@ import { c, type PuckTemplate } from './_shared'
 // Multi-page pack for design schools and creative course creators (UX/UI,
 // graphic design, illustration, motion). Pages: Home, About, FAQ, Contact.
 
-const LOGO = '🎨 Canvas'
+const LOGO = '{{schoolName}}'
 const FOOTER_COLUMNS = [
   { title: 'Learn', links: [{ label: 'All Courses', href: '/courses' }, { label: 'Learning Paths', href: '#paths' }, { label: 'Pricing', href: '/pricing' }] },
   { title: 'Studio', links: [{ label: 'About', href: '#about' }, { label: 'Student Work', href: '#work' }, { label: 'Contact', href: '#contact' }] },
@@ -13,7 +13,7 @@ const FOOTER_COLUMNS = [
 
 function header(navLinks: { label: string; href: string }[]) {
   return c('Header', {
-    logo: '', logoText: LOGO, navLinks,
+    logo: '{{logoUrl}}', logoText: LOGO, navLinks,
     ctaLabel: 'Start Creating', ctaHref: '/courses',
     showLogin: true, sticky: true, transparent: false,
   })
@@ -24,11 +24,12 @@ function footer() {
     description: 'Learn design by making real work. Project-based courses in UX/UI, graphic design, illustration, and motion.',
     columns: FOOTER_COLUMNS,
     socialLinks: [{ platform: 'Instagram', url: '#' }, { platform: 'Dribbble', url: '#' }, { platform: 'Behance', url: '#' }],
-    copyright: '© 2026 Canvas Design School. All rights reserved.',
+    copyright: '© {{year}} {{schoolName}}. All rights reserved.',
   })
 }
 
 const homeTemplate: PuckTemplate = {
+  id: 'design-school-home',
   name: 'Design School — Home',
   description: 'Landing page for design schools and creative course creators (UX/UI, graphic, illustration).',
   category: 'design',
@@ -51,7 +52,7 @@ const homeTemplate: PuckTemplate = {
         primaryCtaHref: '/courses',
         secondaryCtaLabel: 'Explore Paths',
         secondaryCtaHref: '#paths',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '520px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '500px',
       }),
       c('StatsCounter', {
         useLiveStats: true,
@@ -132,6 +133,7 @@ const homeTemplate: PuckTemplate = {
 }
 
 const aboutTemplate: PuckTemplate = {
+  id: 'design-school-about',
   name: 'Design School — About',
   description: 'About page for a design school: mission, teaching approach, and mentors.',
   category: 'design',
@@ -174,13 +176,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Mentors',
-        subtitle: 'Working designers who love to teach.',
-        members: [
-          { name: 'Priya Nair', role: 'Founder & UX Lead', bio: 'Former product designer at a major tech company. 12 years shipping real products.', avatar: '' },
-          { name: 'Tomás Herrera', role: 'Graphic Design Mentor', bio: 'Brand and identity designer with an award-winning studio background.', avatar: '' },
-          { name: 'Hana Kim', role: 'Illustration Mentor', bio: 'Freelance illustrator whose work has appeared in major publications.', avatar: '' },
-          { name: 'Felix Bauer', role: 'Motion Mentor', bio: 'Motion designer for studios and brands, specializing in UI animation.', avatar: '' },
-        ],
+        subtitle: 'The mentors who teach our courses.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Come Make Something Great',
@@ -198,6 +196,7 @@ const aboutTemplate: PuckTemplate = {
 }
 
 const faqTemplate: PuckTemplate = {
+  id: 'design-school-faq',
   name: 'Design School — FAQ',
   description: 'FAQ page for a design school covering courses, tools, portfolio, and pricing.',
   category: 'design',
@@ -216,7 +215,7 @@ const faqTemplate: PuckTemplate = {
         title: 'Frequently Asked Questions',
         subtitle: 'Everything you need to know about courses, tools, and building your portfolio.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('FaqAccordion', {
         title: 'Getting Started',
@@ -264,6 +263,7 @@ const faqTemplate: PuckTemplate = {
 }
 
 const contactTemplate: PuckTemplate = {
+  id: 'design-school-contact',
   name: 'Design School — Contact',
   description: 'Contact page for a design school with form and quick answers.',
   category: 'design',
@@ -281,7 +281,7 @@ const contactTemplate: PuckTemplate = {
         title: 'Get in Touch',
         subtitle: 'Questions about courses, mentorship, or your portfolio? We would love to help you start creating.',
         primaryCtaLabel: '', primaryCtaHref: '', secondaryCtaLabel: '', secondaryCtaHref: '',
-        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '300px',
+        backgroundImage: '', alignment: 'center', overlayOpacity: 55, minHeight: '400px',
       }),
       c('ContactForm', {
         title: 'Send Us a Message',

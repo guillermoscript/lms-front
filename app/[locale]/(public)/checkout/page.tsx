@@ -13,11 +13,15 @@ import { SubscriptionConflictNotice } from "@/components/public/subscription-con
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/types";
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
+import { pickCourseCheckoutProduct, type CourseProductLink } from "@/lib/puck/utils/checkout-href";
 
 interface SearchParams {
     courseId?: string;
+    /** The product the landing page advertised (optional; honoured only when it sells this course). */
+    productId?: string;
     planId?: string;
 }
+
 
 // A checkout page carries whatever course/plan the shopper picked and
 // nothing worth indexing — title only, kept out of search (#799).
@@ -45,8 +49,11 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
         getSessionUser(),
     ]);
     const { courseId, planId } = searchParams;
+    const requestedProductId = searchParams.productId && /^\d+$/.test(searchParams.productId) ? searchParams.productId : undefined;
     if (!user) {
-        const returnUrl = encodeURIComponent(`/checkout?${courseId ? `courseId=${courseId}` : `planId=${planId}`}`);
+        const returnUrl = encodeURIComponent(
+            `/checkout?${courseId ? `courseId=${courseId}${requestedProductId ? `&productId=${requestedProductId}` : ''}` : `planId=${planId}`}`
+        );
         redirect(`/auth/login?next=${returnUrl}`);
     }
 
@@ -106,14 +113,14 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
             const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product_id, product:products(price, currency, payment_provider, description)")
+                .select("product_id, product:products(price, currency, payment_provider, description, status)")
                 .eq("course_id", courseId)
                 .eq("tenant_id", tenantId);
 
-            const paidProductCourse = productCourses?.find(({ product }) => {
-                const candidate = product as unknown as { price: number | string } | null;
-                return candidate !== null && Number(candidate.price) > 0;
-            });
+            const paidProductCourse = pickCourseCheckoutProduct(
+                productCourses as unknown as CourseProductLink[] | null,
+                requestedProductId
+            );
             // No paid product linked → this is a free course; enrollment, not
             // a purchase. Route to the one-click flow regardless of provider.
             if (!paidProductCourse) {
