@@ -3,7 +3,8 @@ import { getTranslations } from 'next-intl/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { PaymentRequestForm } from '@/components/student/payment-request-form'
-import { getManualPaymentInstructions } from '@/app/actions/admin/settings'
+import { ManualPaymentAccountsList } from '@/components/student/manual-payment-accounts-list'
+import { getManualPaymentAccounts, getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { findConflictingSubscription } from '@/lib/payments/subscription-guard'
 import { SubscriptionConflictNotice } from '@/components/public/subscription-conflict-notice'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
@@ -146,7 +147,10 @@ export default async function ManualCheckoutPage(props: {
 
   const userEmail = user.email || ''
   const userName = profile?.full_name || ''
-  const instructions = await getManualPaymentInstructions()
+  const [instructions, paymentAccounts] = await Promise.all([
+    getManualPaymentInstructions(),
+    getManualPaymentAccounts(),
+  ])
 
   const formattedPrice = new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -229,6 +233,8 @@ export default async function ManualCheckoutPage(props: {
                   </p>
                 </div>
               )}
+
+              <ManualPaymentAccountsList accounts={paymentAccounts} />
 
               {/* Trust signals */}
               <div className="mt-8 flex items-center gap-4 text-xs text-muted-foreground">

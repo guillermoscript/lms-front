@@ -3735,8 +3735,6 @@
             "manualInstructions": "Manual / Offline Payment Instructions",
             "manualInstructionsPlaceholder": "e.g. Bank transfer to account 1234-5678 (Bank XYZ). Include your email as the reference and upload the receipt.",
             "manualInstructionsHint": "Shown to students up front when they request an offline payment (bank transfer, cash, etc.). Leave blank to hide.",
-            "binancePersonal": "Binance Pay (personal account)",
-            "binancePersonalHint": "Crypto sent straight to your own Binance Pay ID. Students transfer manually and we confirm it using your read-only API key.",
             "manual": "Bank transfer & offline payment",
             "manualHint": "Bank transfer, cash, or any offline arrangement. The student uploads proof of payment and you confirm it by hand.",
             "alwaysAvailable": "Always available",
@@ -3777,16 +3775,11 @@
               "add": "Add details",
               "edit": "Edit details",
               "solanaTitle": "Solana receiving wallet",
-              "solanaDesc": "The address students pay into. One address covers both one-time purchases and subscriptions.",
-              "binanceTitle": "Binance Pay credentials",
-              "binanceDesc": "Your Pay ID and a read-only API key. We use the key only to confirm incoming transfers — it can't move funds."
+              "solanaDesc": "The address students pay into. One address covers both one-time purchases and subscriptions."
             },
             "accounts": {
-              "title": "Accounts you accept payments into",
-              "hint": "Students see these at checkout and pick the one they paid into, so you know which statement to open.",
-              "empty": "No accounts yet. Add the bank account, wallet or phone number students should send money to.",
-              "accountNumber": "Account {number}",
-              "add": "Add account",
+              "title": "Offline payment methods",
+              "hint": "Set up the methods you accept. Students see them at checkout and pick the one they paid into, so you know which account to check.",
               "remove": "Remove",
               "fields": {
                 "method": "Method",
@@ -3803,6 +3796,121 @@
                 "holder": "Name on the account",
                 "document": "ID or tax number",
                 "note": "Anything else the student should know"
+              },
+              "configure": "Set up",
+              "edit": "Edit",
+              "configured": "Configured",
+              "cancel": "Cancel",
+              "save": "Save",
+              "unsavedHint": "Changes here are saved with the Save Changes button at the bottom of the page.",
+              "limitReached": "You can list up to {max} accounts. Remove one to add another.",
+              "other": {
+                "title": "Other accounts",
+                "hint": "Bank transfers or any method not listed above.",
+                "add": "Add other account",
+                "dialogTitle": "Other account",
+                "dialogDescription": "Describe the account in your own words."
+              },
+              "errors": {
+                "required": "This field is required",
+                "apiCredentials": "Enter both the API key and the API secret.",
+                "invalidEmail": "Enter a valid email address",
+                "invalidPhone": "Enter a valid phone number (7 to 15 digits)",
+                "invalidDocument": "Enter a valid ID, e.g. V-12345678"
+              },
+              "binanceAuto": {
+                "title": "Verify payments automatically",
+                "hint": "Optional. Connect a read-only API key and we confirm incoming Binance Pay transfers for you.",
+                "codeNote": "Students are asked to include their payment code in the Binance Pay note. Unmatched payments stay pending for you to confirm.",
+                "offNote": "Turning this off stops automatic checks. Your stored key stays encrypted until you remove it.",
+                "removeKey": "Remove stored key",
+                "keyRemoved": "Stored Binance key removed",
+                "removeKeyError": "Could not remove the stored key",
+                "saveNote": "The key is stored when you save here. Click Save Changes on the page to turn automatic checks on."
+              },
+              "kinds": {
+                "zelle": {
+                  "name": "Zelle",
+                  "description": "Receive US dollars by email.",
+                  "fields": {
+                    "email": "Zelle email",
+                    "holder": "Account holder",
+                    "note": "Extra instructions"
+                  },
+                  "placeholders": {
+                    "email": "payments@yourschool.com",
+                    "holder": "Name on the account",
+                    "note": "Anything else the student should know"
+                  }
+                },
+                "binance": {
+                  "name": "Binance",
+                  "description": "Receive USDT through Binance Pay.",
+                  "fields": {
+                    "email": "Binance email",
+                    "identifier": "Binance Pay ID",
+                    "note": "Extra instructions"
+                  },
+                  "placeholders": {
+                    "email": "payments@yourschool.com",
+                    "identifier": "e.g. 123456789",
+                    "note": "Anything else the student should know"
+                  }
+                },
+                "paypal": {
+                  "name": "PayPal",
+                  "description": "Receive payments to your PayPal account.",
+                  "fields": {
+                    "email": "PayPal email",
+                    "note": "Extra instructions"
+                  },
+                  "placeholders": {
+                    "email": "payments@yourschool.com",
+                    "note": "Anything else the student should know"
+                  }
+                },
+                "zinli": {
+                  "name": "Zinli",
+                  "description": "Receive payments to your Zinli wallet.",
+                  "fields": {
+                    "email": "Zinli email",
+                    "holder": "Account holder",
+                    "note": "Extra instructions"
+                  },
+                  "placeholders": {
+                    "email": "payments@yourschool.com",
+                    "holder": "Name on the account",
+                    "note": "Anything else the student should know"
+                  }
+                },
+                "cash": {
+                  "name": "Cash",
+                  "description": "Collect in person or by hand delivery.",
+                  "fields": {
+                    "note": "Instructions"
+                  },
+                  "placeholders": {
+                    "note": "Where, when and who the student should hand the cash to"
+                  }
+                },
+                "pago_movil": {
+                  "name": "Pago Móvil",
+                  "description": "Mobile bank transfer.",
+                  "fields": {
+                    "bank": "Bank",
+                    "identifier": "Phone number",
+                    "document": "ID number (cédula / RIF)",
+                    "holder": "Account holder",
+                    "note": "Extra instructions"
+                  },
+                  "placeholders": {
+                    "bank": "Bank name or code",
+                    "identifier": "0412-1234567",
+                    "document": "V-12345678",
+                    "holder": "Name on the account",
+                    "note": "Anything else the student should know"
+                  }
+                }
               }
             }
           },
@@ -3842,19 +3950,13 @@
           },
           "binancePersonal": {
             "keyWarning": "Use a READ-ONLY API key with withdrawals disabled and IP restrictions enabled. Never paste a key that can move funds.",
-            "payIdLabel": "Binance Pay ID",
-            "payIdPlaceholder": "e.g. 123456789",
-            "payIdHint": "Your Binance Pay ID — students send payments to this account.",
             "apiKeyLabel": "API Key",
             "apiKeyPlaceholder": "Read-only API key",
             "apiSecretLabel": "API Secret",
             "apiSecretPlaceholder": "API secret",
             "unchangedPlaceholder": "••••••••  (unchanged)",
             "credentialsSaved": "Credentials saved. Leave blank to keep them, or enter new values to replace.",
-            "success": "Binance Pay credentials saved",
-            "error": "Failed to save Binance Pay credentials",
-            "saving": "Saving...",
-            "save": "Save"
+            "error": "Failed to save Binance Pay credentials"
           }
         },
         "mailer": {
@@ -5742,6 +5844,22 @@
         "step2": "Receive payment instructions via email (bank transfer, invoice, etc.)",
         "step3": "Complete the payment using your preferred method",
         "step4": "Get instant access once payment is confirmed"
+      },
+      "accounts": {
+        "title": "Send your payment to",
+        "fields": {
+          "bank": "Bank",
+          "identifier": "Account / number",
+          "email": "Email",
+          "holder": "Account holder",
+          "document": "ID number",
+          "note": "Instructions",
+          "binancePayId": "Binance Pay ID",
+          "phone": "Phone"
+        },
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyLabel": "Copy {field}"
       }
     }
   },
