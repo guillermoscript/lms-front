@@ -5747,6 +5747,7 @@ export type Database = {
           created_at: string | null
           currency: Database["public"]["Enums"]["currency_type"] | null
           description: string | null
+          fee_bearer: string
           image: string | null
           name: string
           payment_provider: string | null
@@ -5761,6 +5762,7 @@ export type Database = {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
+          fee_bearer?: string
           image?: string | null
           name: string
           payment_provider?: string | null
@@ -5775,6 +5777,7 @@ export type Database = {
           created_at?: string | null
           currency?: Database["public"]["Enums"]["currency_type"] | null
           description?: string | null
+          fee_bearer?: string
           image?: string | null
           name?: string
           payment_provider?: string | null
@@ -6932,6 +6935,7 @@ export type Database = {
           currency: Database["public"]["Enums"]["currency_type"] | null
           duplicate_settlement_at: string | null
           expired_at: string | null
+          fee_bearer: string
           payment_method: string | null
           payment_provider: string | null
           plan_id: number | null
@@ -6960,6 +6964,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_type"] | null
           duplicate_settlement_at?: string | null
           expired_at?: string | null
+          fee_bearer?: string
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null
@@ -6988,6 +6993,7 @@ export type Database = {
           currency?: Database["public"]["Enums"]["currency_type"] | null
           duplicate_settlement_at?: string | null
           expired_at?: string | null
+          fee_bearer?: string
           payment_method?: string | null
           payment_provider?: string | null
           plan_id?: number | null

@@ -30,6 +30,7 @@ import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
 import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
+import { chargedAmount, DEFAULT_FEE_BEARER, effectiveFeeBearer } from '@/lib/payments/fee-bearer'
 import { checkoutExpiresAt, isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
 import { reconcilePayPalCheckout } from '@/lib/payments/paypal-reconcile'
 import {
@@ -93,6 +94,8 @@ export async function POST(req: NextRequest) {
     let itemName: string
     let providerSlug: string
     let providerPriceId = ''
+    // Plans always leave the fee with the school (#927 is per product).
+    let productFeeBearer: unknown = DEFAULT_FEE_BEARER
     const mode: CreateCheckoutParams['mode'] = planId ? 'subscription' : 'one_time'
 
     if (planId) {
@@ -113,7 +116,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: product, error } = await supabase
         .from('products')
-        .select('price, name, currency, provider_price_id, payment_provider')
+        .select('price, name, currency, provider_price_id, payment_provider, fee_bearer')
         .eq('product_id', productId)
         .eq('tenant_id', tenantId)
         .single()
@@ -125,7 +128,23 @@ export async function POST(req: NextRequest) {
       itemName = product.name
       providerSlug = product.payment_provider || 'stripe'
       providerPriceId = product.provider_price_id || ''
+      productFeeBearer = product.fee_bearer
     }
+
+    // Fee bearer (#927). Read the tenant's CURRENT split up front — the same
+    // value snapshotted onto the transaction below — because when the student
+    // bears the fee the charged amount is grossed up from it, and every figure
+    // derived from `amountMajor` afterwards (Solana settlement base, the
+    // provider session, the transaction row) must carry the grossed-up number.
+    // Server-derived from products + revenue_splits; nothing from the request.
+    const { data: revenueSplit } = await createAdminClient()
+      .from('revenue_splits')
+      .select('school_percentage')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    const schoolPercentageSnapshot = revenueSplit?.school_percentage ?? DEFAULT_SCHOOL_PERCENTAGE
+    const feeBearer = effectiveFeeBearer(productFeeBearer, providerSlug)
+    amountMajor = chargedAmount(amountMajor, 100 - Number(schoolPercentageSnapshot), feeBearer, currency)
 
     // Connected-account readiness gate (#606). A no-op for every rail this
     // route currently handles — none of them `requiresConnectedAccount`, so the
@@ -293,13 +312,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { data: revenueSplit } = await adminClient
-      .from('revenue_splits')
-      .select('school_percentage')
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
-    const schoolPercentageSnapshot = revenueSplit?.school_percentage ?? DEFAULT_SCHOOL_PERCENTAGE
-
     // 1. Pending transaction — our correlation id (transaction_id) round-trips
     //    back on the webhook (LS) or the verify endpoint (Solana).
     //
@@ -332,6 +344,9 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: providerSlug,
         school_percentage_snapshot: schoolPercentageSnapshot,
+        // Who bore the platform fee (#927): `amount` above is already grossed
+        // up when this is 'student'. Frozen by the DB once written.
+        fee_bearer: feeBearer,
         // Local TTL for hosted rails only (#624). Without it an abandoned
         // redirect leaves this pending row inside transactions_unique_product /
         // transactions_unique_plan forever, and the buyer can never retry.

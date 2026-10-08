@@ -4,6 +4,9 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
 import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
+import { ProductFeeBearerCard } from '@/components/admin/product-fee-bearer-card'
+import { canPassFeeToStudent, normalizeFeeBearer } from '@/lib/payments/fee-bearer'
+import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import type {
   ProductCreationPaymentProvider,
@@ -155,11 +158,20 @@ export default async function EditProductPage({ params }: PageProps) {
   }
 
   const { data: enabledProviders } = await getEnabledPaymentProviders()
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('stripe_account_id')
-    .eq('id', tenantId)
-    .single()
+  const [{ data: tenant }, { data: revenueSplit }] = await Promise.all([
+    supabase
+      .from('tenants')
+      .select('stripe_account_id')
+      .eq('id', tenantId)
+      .single(),
+    supabase
+      .from('revenue_splits')
+      .select('platform_percentage')
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+  ])
+  // Same resolution the Stripe route charges with (0% is a real value, #605).
+  const platformPercentage = resolvePlatformPercentage(revenueSplit)
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,6 +206,17 @@ export default async function EditProductPage({ params }: PageProps) {
           enabledProviders={enabledProviders}
           stripeConnected={Boolean(tenant?.stripe_account_id)}
         />
+
+        <div className="mt-8">
+          <ProductFeeBearerCard
+            productId={product.product_id}
+            initialBearer={normalizeFeeBearer(product.fee_bearer)}
+            price={Number(product.price)}
+            currency={product.currency || 'usd'}
+            platformPercentage={platformPercentage}
+            providerSupportsStudentBearer={canPassFeeToStudent(product.payment_provider || 'stripe')}
+          />
+        </div>
 
       </main>
     </div>

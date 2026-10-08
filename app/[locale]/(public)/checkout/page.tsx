@@ -14,6 +14,8 @@ import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/type
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
 import { pickCourseCheckoutProduct, type CourseProductLink } from "@/lib/puck/utils/checkout-href";
+import { chargedAmount, effectiveFeeBearer } from "@/lib/payments/fee-bearer";
+import { DEFAULT_SCHOOL_PERCENTAGE } from "@/lib/payments/payouts-owed";
 
 interface SearchParams {
     courseId?: string;
@@ -98,6 +100,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     let durationDays: number | undefined = undefined;
     let features: string | null = null;
     let paymentProvider: string | null = null;
+    let feeIncluded = false;
 
     if (courseId) {
         const { data: course } = await supabase
@@ -113,7 +116,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
             const { data: productCourses } = await supabase
                 .from("product_courses")
-                .select("product_id, product:products(price, currency, payment_provider, description, status)")
+                .select("product_id, product:products(price, currency, payment_provider, description, status, fee_bearer)")
                 .eq("course_id", courseId)
                 .eq("tenant_id", tenantId);
 
@@ -133,6 +136,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     currency: string | null;
                     payment_provider: string | null;
                     description: string | null;
+                    fee_bearer?: string | null;
                 };
                 price = Number(product.price);
                 currency = product.currency?.toUpperCase() || 'USD';
@@ -142,6 +146,22 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
 
                 if (product.payment_provider === 'manual') {
                     redirect(`/checkout/manual?productId=${productId}&courseId=${courseId}`);
+                }
+
+                // Fee bearer (#927): show the buyer the same grossed-up amount
+                // the checkout routes will charge. Same helper, same inputs
+                // (product + the tenant's current split), so display == charge.
+                const bearer = effectiveFeeBearer(product.fee_bearer, product.payment_provider || 'stripe');
+                if (bearer === 'student') {
+                    const { data: split } = await supabase
+                        .from('revenue_splits')
+                        .select('school_percentage')
+                        .eq('tenant_id', tenantId)
+                        .maybeSingle();
+                    const schoolPercentage = Number(split?.school_percentage ?? DEFAULT_SCHOOL_PERCENTAGE);
+                    const charged = chargedAmount(price, 100 - schoolPercentage, bearer, currency);
+                    feeIncluded = charged !== price;
+                    price = charged;
                 }
             }
         }
@@ -243,6 +263,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     userEmail={userEmail}
                     paymentProvider={paymentProvider}
                     solanaCurrencies={solanaCurrencies}
+                    feeIncluded={feeIncluded}
                 />
             </div>
         </div>

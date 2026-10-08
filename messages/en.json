@@ -4281,6 +4281,24 @@
           "back": "Back to Products",
           "details": {
             "description": "Changes to price or currency will create a new Stripe price."
+          },
+          "feeBearer": {
+            "title": "Who pays the platform fee?",
+            "description": "Choose whether the platform fee comes out of your earnings or is added to the price your students pay.",
+            "school": "I absorb it",
+            "schoolHint": "Students pay the listed price. The fee is deducted from what you receive.",
+            "student": "My students pay it",
+            "studentHint": "The fee is added at checkout, so you receive the full listed price.",
+            "price": "Service price",
+            "platformFee": "Platform fee ({percentage}%)",
+            "customerPays": "Customer pays",
+            "youReceive": "You receive",
+            "noFee": "Your plan has no platform fee, so both options charge the same.",
+            "providerUnsupported": "Payments for this product don't carry a platform fee, or are priced by the provider, so the school always absorbs it here.",
+            "save": "Save",
+            "saved": "Fee setting saved",
+            "saveError": "Could not save the fee setting",
+            "freeProduct": "Free products have no platform fee."
           }
         },
         "form": {
@@ -5643,6 +5661,7 @@
     "product": "Product",
     "free": "Free",
     "duration": "{days} days access",
+    "feeIncluded": "Includes the platform service fee",
     "secureCheckout": "Secure checkout",
     "included": "What's included",
     "enrollment": {

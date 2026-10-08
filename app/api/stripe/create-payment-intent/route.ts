@@ -8,6 +8,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { getPaymentProvider } from '@/lib/payments'
 import { resolvePlatformPercentage } from '@/lib/payments/revenue-share'
+import { chargedAmount, DEFAULT_FEE_BEARER, effectiveFeeBearer } from '@/lib/payments/fee-bearer'
 import { checkoutExpiryFrom } from '@/lib/payments/checkout-expiry'
 import {
   inspectStripeCheckout,
@@ -137,6 +138,8 @@ export async function POST(req: NextRequest) {
     let currency = 'usd'
     let planProviderPriceId: string | null = null
     let planPaymentProvider = 'stripe'
+    // Plans always leave the fee with the school (#927 is per product).
+    let productFeeBearer: unknown = DEFAULT_FEE_BEARER
 
     if (planId) {
       const { data: plan, error } = await supabase
@@ -158,7 +161,7 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: product, error } = await supabase
         .from('products')
-        .select('price, name, currency')
+        .select('price, name, currency, fee_bearer')
         .eq('product_id', productId)
         .eq('tenant_id', tenantId)
         .single()
@@ -170,6 +173,7 @@ export async function POST(req: NextRequest) {
       amountMajor = Number(product.price)
       amount = toCents(amountMajor, currency)
       itemName = product.name
+      productFeeBearer = product.fee_bearer
     }
 
     // Get revenue split configuration for this tenant
@@ -183,6 +187,16 @@ export async function POST(req: NextRequest) {
     // fee is a real configuration — it is what Business and Enterprise pay for —
     // and reading it as "unset" charged those schools 20% on every sale (#605).
     const platformPercentage = resolvePlatformPercentage(split)
+
+    // Fee bearer (#927): when the student bears the fee, gross the charge up so
+    // the school's transfer (amount − application fee) equals the listed price.
+    // Derived from the tenant-scoped product row + revenue_splits, never the
+    // request. The fee below is then the usual percentage of what is charged.
+    const feeBearer = effectiveFeeBearer(productFeeBearer, 'stripe')
+    if (feeBearer === 'student') {
+      amountMajor = chargedAmount(amountMajor, platformPercentage, feeBearer, currency)
+      amount = toCents(amountMajor, currency)
+    }
     const platformFee = Math.round((amount * platformPercentage) / 100)
 
     const isNativeSubscription = !!(planId && planPaymentProvider === 'stripe' && planProviderPriceId)
@@ -291,6 +305,8 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: 'stripe',
         tenant_id: tenantId,
+        // #927: `amount` is already grossed up when this is 'student'.
+        fee_bearer: feeBearer,
         // Lets the stale-checkout cron release a card form nobody came back to
         // (#754); a returning buyer is handled by the leftover check above.
         checkout_expires_at: checkoutExpiryFrom(),
