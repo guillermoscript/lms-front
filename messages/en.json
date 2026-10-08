@@ -851,6 +851,19 @@
           "archived": "Archived"
         }
       },
+      "share": {
+        "share": "Share",
+        "shareTitle": "Share {title}",
+        "whatsapp": "WhatsApp",
+        "x": "X (Twitter)",
+        "facebook": "Facebook",
+        "linkedin": "LinkedIn",
+        "telegram": "Telegram",
+        "email": "Email",
+        "more": "More options…",
+        "copyLink": "Copy link",
+        "copied": "Link copied"
+      },
       "manageCourse": {
         "notFound": "Course not found",
         "notFoundDesc": "This course doesn't exist or you don't have access to it.",
