@@ -77,8 +77,21 @@ export type PageOpKind = PageOp['op']
 
 export const PAGE_OP_KINDS: readonly PageOpKind[] = ['add', 'update', 'updateRoot', 'move', 'remove', 'reset']
 
-/** Custom data parts on the page-builder UI message stream (`data-page-op`, `data-turn-status`). */
+/**
+ * A live theme preview (critique E4): a kit theme id and a `#RRGGBB` brand colour. The editor
+ * re-scopes the canvas's CSS variables to it; nothing is saved until the admin applies it.
+ */
+export interface ThemePreview {
+  preset: string
+  primary: string
+}
+
+/**
+ * Custom data parts on the page-builder UI message stream (`data-page-op`, `data-turn-status`,
+ * `data-theme-preview`).
+ */
 export type PageBuilderDataParts = {
   'page-op': PageOp
   'turn-status': { label: string; toolCallId?: string; error?: string }
+  'theme-preview': ThemePreview
 }

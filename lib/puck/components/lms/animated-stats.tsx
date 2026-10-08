@@ -65,6 +65,8 @@ export const AnimatedStats: ComponentConfig<AnimatedStatsProps> = {
     ],
   },
   render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, useLiveStats, items, puck }) => {
+    // Puck mounts `render` as a component, so hooks are safe here.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
 

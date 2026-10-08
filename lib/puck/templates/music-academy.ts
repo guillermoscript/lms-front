@@ -176,13 +176,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Teachers',
-        subtitle: 'Performing musicians who love to teach.',
-        members: [
-          { name: 'Nina Alvarez', role: 'Founder & Guitar', bio: 'Touring guitarist turned educator with 15 years of teaching experience.', avatar: '' },
-          { name: 'David Okafor', role: 'Piano & Theory', bio: 'Conservatory-trained pianist who makes music theory finally make sense.', avatar: '' },
-          { name: 'Mia Sørensen', role: 'Voice', bio: 'Professional vocalist specializing in technique, range, and stage confidence.', avatar: '' },
-          { name: 'Leo Bianchi', role: 'Drums & Rhythm', bio: 'Session drummer who has played hundreds of shows across every genre.', avatar: '' },
-        ],
+        subtitle: 'The teachers behind our lessons.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Start Making Music Today',

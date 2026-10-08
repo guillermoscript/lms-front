@@ -5,11 +5,15 @@ import { musicAcademyTemplates } from './music-academy'
 import { businessCoachingTemplates } from './business-coaching'
 import { designSchoolTemplates } from './design-school'
 import { freeCourseSchoolTemplates } from './free-course-school'
+import { courseTemplates } from './course-landing'
+import { productTemplates } from './product-page'
+import { pricingTemplates } from './pricing-page'
 
 // Re-export shared helpers so existing importers (`@/lib/puck/templates`)
 // keep working unchanged.
 export { deepCloneWithFreshIds }
-export type { PuckTemplate }
+export { templateBindingNeeds } from './_shared'
+export type { PuckTemplate, PageType, TemplateBindings, TemplateBindingNeeds } from './_shared'
 
 // ─── Blank Template ──────────────────────────────────────────────────────────
 
@@ -276,12 +280,9 @@ const boldCreatorTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Instructors',
-        subtitle: 'Learn from industry experts with real-world experience.',
-        members: [
-          { name: 'Alex Johnson', role: 'Lead Instructor', bio: 'Full-stack developer with 10+ years of experience.', avatar: '' },
-          { name: 'Sarah Chen', role: 'Course Designer', bio: 'Expert in curriculum development.', avatar: '' },
-          { name: 'David Kim', role: 'AI Specialist', bio: 'Machine learning researcher and educator.', avatar: '' },
-        ],
+        subtitle: 'The people who teach our courses.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Ready to Get Started?',
@@ -426,12 +427,8 @@ const aboutTemplate: PuckTemplate = {
       c('TeamGrid', {
         title: 'Our Team',
         subtitle: 'The people behind the platform.',
-        members: [
-          { name: 'Alex Johnson', role: 'CEO & Founder', bio: 'Former Google engineer turned education evangelist.', avatar: '' },
-          { name: 'Sarah Chen', role: 'Head of Content', bio: 'Curriculum designer with 15 years in EdTech.', avatar: '' },
-          { name: 'David Kim', role: 'CTO', bio: 'Built scalable platforms at AWS and Stripe.', avatar: '' },
-          { name: 'Maria Lopez', role: 'Community Lead', bio: 'Connecting students with mentors worldwide.', avatar: '' },
-        ],
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Join Our Community',
@@ -783,13 +780,9 @@ const codeSchoolAboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet the Team',
-        subtitle: 'Developers and educators building the future of coding education.',
-        members: [
-          { name: 'Marcus Chen', role: 'Founder & Lead Instructor', bio: 'Former senior engineer at GitHub. 12+ years building web applications.', avatar: '' },
-          { name: 'Elena Rodriguez', role: 'Head of Curriculum', bio: 'CS professor turned EdTech builder. Designed curricula for 3 universities.', avatar: '' },
-          { name: 'James Park', role: 'CTO', bio: 'Built scalable systems at Stripe and Vercel. Passionate about developer tools.', avatar: '' },
-          { name: 'Sofia Andersen', role: 'Community Manager', bio: 'Connects students with mentors and runs our Discord community of 5,000+ developers.', avatar: '' },
-        ],
+        subtitle: 'The people who build and teach our courses.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Ready to Start Your Coding Journey?',
@@ -1112,4 +1105,8 @@ export const PUCK_TEMPLATES: PuckTemplate[] = [
   ...businessCoachingTemplates,
   ...designSchoolTemplates,
   ...freeCourseSchoolTemplates,
+  // Bound to one course / product (WP5): the picker asks for it.
+  ...courseTemplates,
+  ...productTemplates,
+  ...pricingTemplates,
 ]

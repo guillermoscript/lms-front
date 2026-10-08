@@ -171,12 +171,8 @@ const aboutTemplate: PuckTemplate = {
       c('TeamGrid', {
         title: 'The Team',
         subtitle: 'Coaches and specialists who support your growth.',
-        members: [
-          { name: 'Jordan Reyes', role: 'Founder & Lead Coach', bio: 'Built and sold two companies. Coached 3,500+ founders over 12 years.', avatar: '' },
-          { name: 'Tara Mbeki', role: 'Marketing Coach', bio: 'Helps clients build lead engines that bring in customers on autopilot.', avatar: '' },
-          { name: 'Sam Whitfield', role: 'Sales Coach', bio: 'Former enterprise sales leader. Teaches authentic, high-conversion selling.', avatar: '' },
-          { name: 'Lily Chen', role: 'Operations Coach', bio: 'Systems specialist who turns busy founders into calm CEOs.', avatar: '' },
-        ],
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Let’s Build Something That Lasts',

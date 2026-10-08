@@ -7,7 +7,7 @@
  * approved drafts are saved by the saveApprovedQuestions server action as
  * draft exercises.
  *
- * Guard order (same as /api/landing/generate): auth → tenant → role →
+ * Guard order (same as /api/landing/chat): auth → tenant → role →
  * ownership → resolve the school's model (BYOK) → rate limit → generate.
  * Fail before spending tokens; a missing key never costs a rate-limit slot.
  */
@@ -31,8 +31,7 @@ const MIN_QUESTIONS = 5
 const MAX_QUESTIONS = 10
 
 // OpenAI strict structured output rejects `.optional()` and z.record, so every
-// field is always present: [] / -1 are the "not applicable" sentinels (see
-// app/api/landing/generate/route.ts for the same constraint).
+// field is always present: [] / -1 are the "not applicable" sentinels.
 const generationSchema = z.object({
   questions: z
     .array(

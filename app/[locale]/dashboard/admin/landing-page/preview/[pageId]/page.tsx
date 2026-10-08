@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { Data } from '@measured/puck'
 import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -35,7 +36,7 @@ export default async function PreviewPage({ params, searchParams }: Props) {
     redirect('/dashboard/admin/landing-page')
   }
 
-  const puckData = page.puck_data as any
+  const puckData = page.puck_data as unknown as Data | null
   if (!puckData || typeof puckData !== 'object') {
     redirect('/dashboard/admin/landing-page')
   }

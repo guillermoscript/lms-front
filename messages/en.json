@@ -6863,37 +6863,6 @@
         "published": "published"
       }
     },
-    "ai": {
-      "button": "Generate with AI",
-      "title": "Generate page with AI",
-      "description": "Describe your landing page and AI will build it from your blocks. You can edit everything afterwards.",
-      "placeholder": "e.g. A landing page for my beginner Spanish course with a hero, key stats, testimonials, and a sign-up call to action.",
-      "example": "Example",
-      "replaceWarning": "This replaces the current page content. Your saved version is unaffected until you save.",
-      "generate": "Generate",
-      "generating": "Generating...",
-      "buildingCount": "Building… {count} sections so far",
-      "cancel": "Cancel",
-      "generated": "Generated a page with {count} blocks",
-      "empty": "AI returned an empty page. Try a more detailed description.",
-      "failed": "Generation failed. Please try again.",
-      "builtPage": "Built a {count, plural, one {# section} other {# sections}} page. Select any block and tell me how to refine it, or ask me to change the whole page.",
-      "updatedBlock": "Updated the {block}. Want another change?",
-      "errorPlan": "The landing-page AI assistant requires a paid plan.",
-      "errorRateLimit": "Too many requests. Please wait a moment and try again.",
-      "errorInvalid": "The AI returned a page that didn't match the available blocks. Please try again.",
-      "chatTitle": "AI Assistant",
-      "chatDescription": "Chat to build and refine your page. Select a block to edit just that block.",
-      "pageContext": "Editing the whole page",
-      "editingContext": "Editing the selected {type} block",
-      "editingBlock": "Updating the {type}…",
-      "emptyChatTitle": "Describe your page",
-      "emptyChatHint": "Try: “A landing page for a beginner Spanish course.” Then click any block on the canvas and ask me to tweak just that one.",
-      "composerPage": "Describe or change the whole page…",
-      "composerBlock": "Tell me how to change the {type}…",
-      "send": "Send",
-      "undoHint": "Changes apply instantly — press Cmd/Ctrl+Z to undo."
-    },
     "categories": {
       "primitives": "Primitives",
       "layout": "Layout",
@@ -7232,6 +7201,63 @@
         "quarter": "quarter",
         "year": "year"
       }
+    },
+    "templates": {
+      "teamGrid": {
+        "title": "Team",
+        "noTeachers": "No teachers yet. Your school’s teachers appear here automatically; until then this section is hidden on the live page.",
+        "noMembers": "Add team members in the sidebar. This section is hidden on the live page while it is empty.",
+        "manualMembers": "Manual members: list real people from your school, with their permission."
+      },
+      "pageTypes": {
+        "course": "Course page",
+        "product": "Product page",
+        "pricing": "Pricing"
+      },
+      "pageTypeHints": {
+        "course": "Sells one course",
+        "product": "Sells one product"
+      },
+      "binding": {
+        "chooseCourse": "Which course is this page for?",
+        "chooseCourseDescription": "The title, price, lessons, instructor and reviews come from this course.",
+        "chooseProduct": "Which product is this page for?",
+        "chooseProductDescription": "The price and the included courses come from this product.",
+        "search": "Search…",
+        "noMatches": "No matches.",
+        "noCourses": "You have no courses yet. You can create the page now and pick the course later in the editor.",
+        "noProducts": "You have no active products yet. You can create the page now and pick the product later in the editor.",
+        "draft": "Draft",
+        "free": "Free",
+        "coursesCount": "{count, plural, one {# course} other {# courses}}",
+        "create": "Create page",
+        "skip": "Skip for now",
+        "back": "Back",
+        "pageUrl": "Page URL: {url}"
+      },
+      "items": {
+        "courseLanding": {
+          "name": "Course Landing",
+          "description": "A full sales page for one course: hero, outcomes, curriculum, instructor, reviews, price and FAQ."
+        },
+        "courseLaunchShort": {
+          "name": "Course Launch",
+          "description": "A short launch page for one course: centered hero, outcomes, price and FAQ."
+        },
+        "freeCourseLead": {
+          "name": "Free Course",
+          "description": "A lead page for a free course: hero, the lesson list and an enroll band."
+        },
+        "productBundle": {
+          "name": "Course Bundle",
+          "description": "Sell a product that bundles several courses: hero, price card, included courses, reviews and FAQ."
+        },
+        "pricingPage": {
+          "name": "Pricing",
+          "description": "All your plans and products on one page, with an FAQ and a closing call to action."
+        }
+      },
+      "sections": "{count, plural, one {# section} other {# sections}}"
     }
   },
   "verification": {
@@ -8552,8 +8578,8 @@
         "description": "The agent that plans and builds a course with a teacher."
       },
       "landing_builder": {
-        "name": "Landing page builder",
-        "description": "Generates landing pages from a prompt."
+        "name": "Page builder",
+        "description": "The chat agent that builds and edits your website pages with you, block by block."
       },
       "image_generation": {
         "name": "Image generation",
@@ -8694,5 +8720,134 @@
       "admin": "If you are the only admin of a school, make someone else an admin first."
     },
     "final": "Deleting your account can't be undone. To learn again later, create a new account."
+  },
+  "pageArchitect": {
+    "panel": {
+      "title": "Page Architect",
+      "subtitle": "Describe a change. The AI edits this page live.",
+      "open": "AI",
+      "close": "Close AI panel",
+      "newChat": "New chat",
+      "placeholder": "Ask for a change, e.g. “Make the hero more direct”",
+      "placeholderSelected": "What should change in the selected block?",
+      "send": "Send",
+      "stop": "Stop",
+      "thinking": "Thinking…",
+      "working": "Working on your page…",
+      "locked": "Editing is paused while the AI works",
+      "aBlock": "a block",
+      "selected": "Selected: {block}",
+      "clearSelection": "Clear selection",
+      "examples": "Example requests",
+      "applied": "{count, plural, one {# change applied} other {# changes applied}}. One undo reverts the whole turn.",
+      "undo": "Undo",
+      "undoStopped": "You undid a change while the AI was working, so the AI stopped.",
+      "error": "Something went wrong. Try again.",
+      "retry": "Retry",
+      "toolFailed": "{label} (not applied)",
+      "tools": {
+        "get_page": "Reading the page",
+        "list_templates": "Browsing templates",
+        "apply_template": "Applying a template",
+        "insert_preset": "Inserting ready-made sections",
+        "add_block": "Building {block}",
+        "update_block": "Updating {block}",
+        "move_block": "Moving {block}",
+        "remove_block": "Removing {block}",
+        "duplicate_block": "Duplicating {block}",
+        "set_page_meta": "Updating the page title and description",
+        "preview_theme": "Previewing a theme",
+        "list_courses": "Looking up your courses",
+        "get_course": "Reading a course",
+        "list_products": "Looking up your products",
+        "list_plans": "Looking up your plans",
+        "get_school_profile": "Reading your school profile",
+        "other": "Working"
+      },
+      "approval": {
+        "title": "Confirm change",
+        "applyTemplate": "Replace every block on this page with a template?",
+        "removeBlocks": "Remove these blocks from the page?",
+        "generic": "Allow this change?",
+        "approve": "Allow",
+        "deny": "Don’t allow",
+        "approved": "Allowed: {label}",
+        "denied": "Not allowed: {label}"
+      },
+      "theme": {
+        "title": "Theme preview",
+        "body": "Previewing {theme} with {color} on the canvas. Nothing is saved yet.",
+        "customNote": "A custom colour needs a plan with custom branding.",
+        "apply": "Apply theme",
+        "applying": "Applying…",
+        "discard": "Discard",
+        "applied": "Theme applied to your school.",
+        "failed": "Could not apply the theme."
+      },
+      "empty": {
+        "new": {
+          "title": "Start with a sentence",
+          "body": "Say what the page is for. The AI starts from a template, fills it with your real courses and prices, and you watch it build."
+        },
+        "home": {
+          "title": "Improve your home page",
+          "body": "Ask for a change to the whole page, or select a block first to change just that one."
+        },
+        "course": {
+          "title": "Sell this course better",
+          "body": "The course blocks show live data. Ask the AI to sharpen the copy, reorder sections or add proof."
+        },
+        "product": {
+          "title": "Shape this product page",
+          "body": "Ask for clearer benefits, a better structure or a stronger call to action."
+        },
+        "pricing": {
+          "title": "Make pricing easy to choose",
+          "body": "Ask the AI to explain the plans, add a FAQ or highlight the best value."
+        }
+      },
+      "suggestions": {
+        "new": {
+          "one": "Create a landing page for my newest course",
+          "two": "Build a home page for my school",
+          "three": "Make a pricing page with my plans and a FAQ"
+        },
+        "home": {
+          "one": "Make the hero more direct",
+          "two": "Add a section with my most popular courses",
+          "three": "Rewrite the page in a warmer tone"
+        },
+        "course": {
+          "one": "Make the hero promise clearer",
+          "two": "Add a FAQ about the course",
+          "three": "Move the pricing card higher"
+        },
+        "product": {
+          "one": "Explain what is included more clearly",
+          "two": "Add a short FAQ",
+          "three": "Make the call to action stronger"
+        },
+        "pricing": {
+          "one": "Highlight the best-value plan",
+          "two": "Add a FAQ about billing",
+          "three": "Add a short intro above the plans"
+        }
+      },
+      "editor": {
+        "unsaved": "Unsaved changes",
+        "waitForAi": "Wait for the AI to finish before saving.",
+        "unsavedTitle": "Leave without saving?",
+        "unsavedBody": "This page has changes that are not saved, including any the AI made. They will be lost.",
+        "stay": "Stay",
+        "leave": "Leave without saving",
+        "conflictTitle": "This page changed somewhere else",
+        "conflictBody": "It was saved in another tab or by an AI agent after you opened it. Reload that version, or overwrite it with yours.",
+        "cancel": "Cancel",
+        "reload": "Reload theirs",
+        "overwrite": "Overwrite with mine",
+        "reloaded": "Loaded the latest saved version. Undo brings yours back.",
+        "reloadFailed": "Could not load the latest version."
+      }
+    }
   }
 }

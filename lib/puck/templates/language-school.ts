@@ -175,13 +175,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Our Teachers',
-        subtitle: 'Native speakers and certified language educators who love what they do.',
-        members: [
-          { name: 'Emma Wilson', role: 'Head of English', bio: 'CELTA-certified, 10+ years teaching English to professionals across Latin America.', avatar: '' },
-          { name: 'Diego Martínez', role: 'Head of Spanish', bio: 'Native from Madrid. Specializes in conversational fluency and exam preparation.', avatar: '' },
-          { name: 'Claire Dubois', role: 'Head of French', bio: 'Paris-born teacher passionate about culture-driven language learning.', avatar: '' },
-          { name: 'Marco Rossi', role: 'Curriculum Lead', bio: 'Applied linguist who designs our CEFR-aligned learning paths.', avatar: '' },
-        ],
+        subtitle: 'The teachers you will learn with.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Come Learn With Us',

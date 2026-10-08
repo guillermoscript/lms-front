@@ -157,6 +157,43 @@ export const PRESETS: readonly SectionPreset[] = [
     templateId: 'contact',
     blocks: ['ContactForm', 'FaqAccordion'],
   },
+  // Course-oriented presets (WP5). Their course blocks carry `{{courseId}}`: pass
+  // `bindings: { courseId }`, or they insert unbound and show the editor's "pick a course" notice.
+  {
+    id: 'course-hero-outcomes',
+    name: 'Course hero + outcomes',
+    description: 'A course hero followed by what the student will learn.',
+    templateId: 'course-landing',
+    blocks: ['CourseHero', 'CourseOutcomes'],
+  },
+  {
+    id: 'course-curriculum-instructor',
+    name: 'Curriculum + instructor',
+    description: 'The lesson list followed by the course author.',
+    templateId: 'course-landing',
+    blocks: ['CourseCurriculum', 'InstructorCard'],
+  },
+  {
+    id: 'course-pricing-faq',
+    name: 'Course pricing + FAQ',
+    description: 'A course price card followed by an FAQ.',
+    templateId: 'course-landing',
+    blocks: ['CoursePricingCard', 'FaqAccordion'],
+  },
+  {
+    id: 'course-reviews-enroll',
+    name: 'Course reviews + enroll',
+    description: 'Real reviews of the course followed by an enroll band.',
+    templateId: 'course-landing',
+    blocks: ['TestimonialGrid', 'EnrollCta'],
+  },
+  {
+    id: 'bundle-pricing-courses',
+    name: 'Bundle price + courses',
+    description: 'A product price card followed by the courses it includes.',
+    templateId: 'product-bundle',
+    blocks: ['CoursePricingCard', 'CourseGrid'],
+  },
 ]
 
 export function getPreset(id: string): SectionPreset | undefined {

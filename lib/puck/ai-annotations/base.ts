@@ -86,7 +86,7 @@ export const BASE_ANNOTATIONS: AiAnnotations = {
     instructions: 'Thin announcement banner near the top.',
   },
   TeamGrid: {
-    instructions: 'Real team members the user named; no invented credentials.',
+    instructions: 'Live teachers; "manual" only for people the user named.',
   },
   ImageGallery: { instructions: 'Gallery of images.' },
   SocialProof: { instructions: 'Ratings/counts strip. Real figures only.' },

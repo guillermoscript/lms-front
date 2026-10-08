@@ -86,8 +86,9 @@ const freeCourseSchool: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet your instructors',
-        subtitle: 'Learn from people who have done the work.',
+        subtitle: 'The people who teach our courses.',
         accentColor: '',
+        source: 'live',
         members: [],
       }),
       c('PricingTable', {

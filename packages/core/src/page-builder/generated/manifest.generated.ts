@@ -5314,6 +5314,20 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
           "type": "textarea",
           "label": "Subtitle"
         },
+        "source": {
+          "type": "radio",
+          "label": "Source",
+          "options": [
+            {
+              "label": "Live teachers",
+              "value": "live"
+            },
+            {
+              "label": "Manual members",
+              "value": "manual"
+            }
+          ]
+        },
         "members": {
           "type": "array",
           "label": "Members",
@@ -5336,8 +5350,8 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
             }
           },
           "defaultItemProps": {
-            "name": "Team Member",
-            "role": "Instructor",
+            "name": "Team member name",
+            "role": "Their role",
             "bio": "",
             "avatar": ""
           }
@@ -5529,29 +5543,24 @@ export const PAGE_BUILDER_MANIFEST: PageBuilderManifest = {
         "title": "Meet Our Team",
         "subtitle": "",
         "accentColor": "",
+        "source": "live",
         "members": [
           {
-            "name": "Alex Johnson",
-            "role": "Lead Instructor",
-            "bio": "Full-stack developer with 10+ years of experience.",
+            "name": "Team member name",
+            "role": "Their role",
+            "bio": "Replace with a short, true bio: what they teach and what they have actually done.",
             "avatar": ""
           },
           {
-            "name": "Sarah Chen",
-            "role": "Course Designer",
-            "bio": "Expert in curriculum development and instructional design.",
-            "avatar": ""
-          },
-          {
-            "name": "David Kim",
-            "role": "AI Specialist",
-            "bio": "Machine learning researcher and educator.",
+            "name": "Team member name",
+            "role": "Their role",
+            "bio": "Use real people from your school, with their permission.",
             "avatar": ""
           }
         ]
       },
       "ai": {
-        "instructions": "Real team members the user named; no invented credentials."
+        "instructions": "Live teachers; \"manual\" only for people the user named."
       }
     },
     "ImageGallery": {

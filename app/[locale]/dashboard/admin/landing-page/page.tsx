@@ -21,7 +21,7 @@ export default async function LandingPageAdminPage() {
   // Check plan
   const supabase = createAdminClient()
   const { data: planResult } = await supabase.rpc('get_plan_features', { _tenant_id: tenantId })
-  const plan = (planResult as any)?.plan ?? 'free'
+  const plan = (planResult as { plan?: string } | null)?.plan ?? 'free'
 
   const pagesResult = await getLandingPages(tenantId)
   const pages = pagesResult.success ? (pagesResult.data ?? []) : []

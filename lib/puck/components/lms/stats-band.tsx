@@ -70,6 +70,8 @@ export const StatsBand: ComponentConfig<StatsBandProps> = {
     items: [],
   },
   render: ({ paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn, heading, subtitle, useLiveStats, items, puck }) => {
+    // Puck mounts `render` as a component, so hooks are safe here.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const t = useTranslations('puck.render')
     const spacing = { paddingY, paddingX, maxWidth, marginY, tone, align, anchorId, hideOn }
     // Guard against a missing array: AI-generated specs (and Puck's Render path, which does

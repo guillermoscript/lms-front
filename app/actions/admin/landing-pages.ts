@@ -6,8 +6,18 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
 import type { Data } from '@measured/puck'
+import { summarizeValidationErrors, validateLandingPuckData } from './landing-page-validation'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+/**
+ * The result of a write that carries `puck_data`. `conflict`: the page was saved elsewhere
+ * (another tab, an MCP agent) after `expectedUpdatedAt`; `invalid`: the save-path validation
+ * refused the page (`details` lists every problem).
+ */
+export type SaveLandingPageResult =
+  | { success: true; data: LandingPage }
+  | { success: false; error: string; code?: 'conflict' | 'invalid' | 'not_found'; details?: string[] }
 
 export interface LandingPage {
   id: string        // mapped from page_id
@@ -217,21 +227,27 @@ export async function createLandingPage(
   name: string,
   puckData?: Data,
   slug?: string
-): Promise<ActionResult<LandingPage>> {
+): Promise<SaveLandingPageResult> {
   try {
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
     const adminClient = createAdminClient()
 
     const nameError = validateName(name)
-    if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+    if (nameError) return { success: false, error: nameError }
 
     const pageSlug = sanitizeSlug(slug)
     const slugError = validateSlug(pageSlug)
-    if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+    if (slugError) return { success: false, error: slugError }
+
+    const page = puckData ?? DEFAULT_PUCK_DATA
+    const check = await validateLandingPuckData(adminClient, tenantId, page)
+    if (!check.ok) {
+      return { success: false, error: summarizeValidationErrors(check.errors), code: 'invalid', details: check.errors }
+    }
 
     const limitError = await checkFreePlanPageLimit(adminClient, tenantId)
-    if (limitError) return { success: false, error: limitError } as ActionResult<LandingPage>
+    if (limitError) return { success: false, error: limitError }
 
     const { data, error } = await adminClient
       .from('landing_pages')
@@ -239,7 +255,7 @@ export async function createLandingPage(
         tenant_id: tenantId,
         title: name.trim().slice(0, MAX_NAME_LENGTH),
         slug: pageSlug,
-        puck_data: puckData ?? DEFAULT_PUCK_DATA,
+        puck_data: page,
         is_published: false,
       })
       .select()
@@ -248,14 +264,24 @@ export async function createLandingPage(
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
     return { success: true, data: mapRow(data) }
   } catch (err) {
-    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) }
   }
+}
+
+export interface UpdateLandingPageOptions {
+  /**
+   * Compare-and-swap (critique F4): the `updated_at` the caller last saw. The write only lands
+   * when the row still has it, so an MCP agent or another tab can't be silently overwritten.
+   * `null`/omitted writes unconditionally (the editor's explicit "Overwrite").
+   */
+  expectedUpdatedAt?: string | null
 }
 
 export async function updateLandingPage(
   id: string,
-  updates: { name?: string; slug?: string; puck_data?: Data }
-): Promise<ActionResult<LandingPage>> {
+  updates: { name?: string; slug?: string; puck_data?: Data },
+  options: UpdateLandingPageOptions = {}
+): Promise<SaveLandingPageResult> {
   try {
     await verifyAdminAccess()
     const tenantId = await getCurrentTenantId()
@@ -263,7 +289,7 @@ export async function updateLandingPage(
 
     if (updates.name !== undefined) {
       const nameError = validateName(updates.name)
-      if (nameError) return { success: false, error: nameError } as ActionResult<LandingPage>
+      if (nameError) return { success: false, error: nameError }
     }
 
     // Verify ownership
@@ -271,7 +297,8 @@ export async function updateLandingPage(
       .from('landing_pages')
       .select('tenant_id')
       .eq('page_id', id)
-      .single()
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
     if (!existing || existing.tenant_id !== tenantId) throw new Error('Access denied')
 
     const sanitized: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -281,24 +308,37 @@ export async function updateLandingPage(
     if (updates.slug) {
       const pageSlug = sanitizeSlug(updates.slug)
       const slugError = validateSlug(pageSlug)
-      if (slugError) return { success: false, error: slugError } as ActionResult<LandingPage>
+      if (slugError) return { success: false, error: slugError }
       sanitized.slug = pageSlug
     }
-    if (updates.puck_data) {
+    if (updates.puck_data !== undefined) {
+      // The security boundary for AI- and hand-edited pages alike (critique C1).
+      const check = await validateLandingPuckData(adminClient, tenantId, updates.puck_data)
+      if (!check.ok) {
+        return { success: false, error: summarizeValidationErrors(check.errors), code: 'invalid', details: check.errors }
+      }
       sanitized.puck_data = updates.puck_data
     }
 
-    const { data, error } = await adminClient
+    let query = adminClient
       .from('landing_pages')
       .update(sanitized)
       .eq('page_id', id)
-      .select()
-      .single()
+      .eq('tenant_id', tenantId)
+    if (options.expectedUpdatedAt) query = query.eq('updated_at', options.expectedUpdatedAt)
+    const { data, error } = await query.select()
     if (error) throw error
+    // No row back = the CAS predicate missed (or the page vanished): never report success.
+    const row = Array.isArray(data) ? data[0] : null
+    if (!row) {
+      return options.expectedUpdatedAt
+        ? { success: false, error: 'This page was changed somewhere else after you opened it.', code: 'conflict' }
+        : { success: false, error: 'Landing page not found', code: 'not_found' }
+    }
     revalidatePath('/[locale]/dashboard/admin/landing-page', 'page')
-    return { success: true, data: mapRow(data) }
+    return { success: true, data: mapRow(row) }
   } catch (err) {
-    return { success: false, error: friendlyDbError(err) } as ActionResult<LandingPage>
+    return { success: false, error: friendlyDbError(err) }
   }
 }
 

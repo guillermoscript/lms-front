@@ -20,7 +20,9 @@ import {
 import type { LandingPage } from '@/app/actions/admin/landing-pages'
 import type { Data } from '@measured/puck'
 import type { LandingData } from '@/lib/puck/types'
-import { deepCloneWithFreshIds } from '@/lib/puck/templates'
+import { deepCloneWithFreshIds, type PuckTemplate, type TemplateBindings } from '@/lib/puck/templates'
+import { schoolBindingsFromSettings } from '@/lib/puck/templates/school-bindings'
+import { LandingPickerProviders } from '@/lib/puck/utils/landing-pickers-context'
 import dynamic from 'next/dynamic'
 
 const PuckEditor = dynamic(
@@ -62,15 +64,6 @@ import {
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-
-interface PuckTemplate {
-  name: string
-  description?: string
-  category: string
-  puck_data: Data
-  sort_order: number
-  pageType: string
-}
 
 interface Props {
   pages: LandingPage[]
@@ -135,9 +128,12 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
     }
   }, [])
 
-  async function handleCreateFromTemplate(puckData: Data, templateName: string, slug?: string) {
+  async function handleCreateFromTemplate(puckData: Data, templateName: string, slug: string, bindings: TemplateBindings) {
+    // The picked course/product (from the picker) over the school's own name and logo, so a
+    // template never ships `{{schoolName}}` tokens or the "Academy" fallback (critique D4).
+    const allBindings: TemplateBindings = { ...schoolBindingsFromSettings(brandingSettings), ...bindings }
     const result = await withGuard('create', async () => {
-      return createLandingPage(`${templateName} Page`, deepCloneWithFreshIds(puckData), slug)
+      return createLandingPage(`${templateName} Page`, deepCloneWithFreshIds(puckData, allBindings), slug)
     })
     if (!result) return
     setShowTemplatePicker(false)
@@ -218,10 +214,14 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
         pageName={editingPage.name}
         pageStatus={editingPage.status}
         initialData={editingPage.puck_data || { root: { props: {} }, content: [], zones: {} }}
+        initialUpdatedAt={editingPage.updated_at}
         brandingSettings={brandingSettings}
         landingData={landingData}
         aiEnabled={plan !== 'free'}
-        onBack={() => {
+        // The editor guards unsaved work itself; it hands back the row it last saved so
+        // reopening the page before the refresh lands never starts from stale data.
+        onBack={(latest) => {
+          if (latest) setPages(prev => prev.map(p => (p.id === latest.id ? latest : p)))
           router.refresh()
           setEditingPage(null)
         }}
@@ -427,13 +427,16 @@ export function LandingPagesClient({ pages: initialPages, plan, tenantId, templa
           )}
         </>
 
-      <TemplatePicker
-        open={showTemplatePicker}
-        onClose={() => setShowTemplatePicker(false)}
-        templates={templates}
-        onSelect={handleCreateFromTemplate}
-        loading={isLoading}
-      />
+      {/* The picker's course/product binding step reads the lists from these providers. */}
+      <LandingPickerProviders metadata={landingData}>
+        <TemplatePicker
+          open={showTemplatePicker}
+          onClose={() => setShowTemplatePicker(false)}
+          templates={templates}
+          onSelect={handleCreateFromTemplate}
+          loading={isLoading}
+        />
+      </LandingPickerProviders>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>

@@ -175,13 +175,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Coaches',
-        subtitle: 'Certified, encouraging, and genuinely in your corner.',
-        members: [
-          { name: 'Maya Torres', role: 'Founder & Head Coach', bio: 'Former group-fitness instructor with 12 years of experience and a passion for accessible fitness.', avatar: '' },
-          { name: 'Andre Smith', role: 'Strength Coach', bio: 'NASM-certified. Specializes in progressive strength training for all levels.', avatar: '' },
-          { name: 'Lena Park', role: 'Yoga & Mobility', bio: 'RYT-500 yoga teacher focused on flexibility, breath, and recovery.', avatar: '' },
-          { name: 'Carlos Vega', role: 'HIIT & Conditioning', bio: 'High-energy coach who makes tough workouts feel fun and achievable.', avatar: '' },
-        ],
+        subtitle: 'The coaches who will guide your training.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Train With Us This Week',

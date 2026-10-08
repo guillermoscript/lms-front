@@ -24,7 +24,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-167",
+            "id": "Header-tpl-204",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -43,7 +43,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-168",
+            "id": "HeroBlock-tpl-205",
             "title": "Welcome to Our Academy",
             "subtitle": "Start your learning journey today.",
             "primaryCtaLabel": "Get Started",
@@ -59,7 +59,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-169",
+            "id": "Footer-tpl-206",
             "description": "Welcome to our learning platform.",
             "columns": [],
             "socialLinks": [],
@@ -94,7 +94,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-170",
+            "id": "Header-tpl-207",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -121,7 +121,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-171",
+            "id": "HeroBlock-tpl-208",
             "title": "Master New Skills, Transform Your Career",
             "subtitle": "Expert-led courses designed for professionals who want to level up. Learn at your own pace with hands-on projects and AI-powered tutoring.",
             "primaryCtaLabel": "Browse Courses",
@@ -137,7 +137,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-172",
+            "id": "FeaturesGrid-tpl-209",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -186,7 +186,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-173",
+            "id": "CourseGrid-tpl-210",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -207,7 +207,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TestimonialGrid",
           "props": {
-            "id": "TestimonialGrid-tpl-174",
+            "id": "TestimonialGrid-tpl-211",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -243,7 +243,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-175",
+            "id": "CtaBlock-tpl-212",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -264,7 +264,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-176",
+            "id": "Footer-tpl-213",
             "description": "Your online academy for professional development and personal growth.",
             "columns": [
               {
@@ -338,7 +338,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-177",
+            "id": "Header-tpl-214",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -357,7 +357,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-178",
+            "id": "HeroBlock-tpl-215",
             "title": "Learn Without Limits",
             "subtitle": "High-quality courses for every skill level.",
             "primaryCtaLabel": "Explore Courses",
@@ -373,7 +373,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-179",
+            "id": "CourseGrid-tpl-216",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -394,7 +394,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-180",
+            "id": "FaqAccordion-tpl-217",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -424,7 +424,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-181",
+            "id": "CtaBlock-tpl-218",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -445,7 +445,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-182",
+            "id": "Footer-tpl-219",
             "description": "Simple, focused online learning.",
             "columns": [
               {
@@ -494,7 +494,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-183",
+            "id": "Header-tpl-220",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -517,7 +517,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-184",
+            "id": "HeroBlock-tpl-221",
             "title": "Level Up Your Skills",
             "subtitle": "Join a community of driven learners and build real-world projects.",
             "primaryCtaLabel": "Start Learning",
@@ -533,7 +533,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-185",
+            "id": "StatsCounter-tpl-222",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -550,7 +550,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-186",
+            "id": "CourseGrid-tpl-223",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -571,7 +571,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TeamGrid",
           "props": {
-            "id": "TeamGrid-tpl-187",
+            "id": "TeamGrid-tpl-224",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -581,33 +581,15 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet Your Instructors",
-            "subtitle": "Learn from industry experts with real-world experience.",
-            "members": [
-              {
-                "name": "Alex Johnson",
-                "role": "Lead Instructor",
-                "bio": "Full-stack developer with 10+ years of experience.",
-                "avatar": ""
-              },
-              {
-                "name": "Sarah Chen",
-                "role": "Course Designer",
-                "bio": "Expert in curriculum development.",
-                "avatar": ""
-              },
-              {
-                "name": "David Kim",
-                "role": "AI Specialist",
-                "bio": "Machine learning researcher and educator.",
-                "avatar": ""
-              }
-            ]
+            "subtitle": "The people who teach our courses.",
+            "source": "live",
+            "members": []
           }
         },
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-188",
+            "id": "CtaBlock-tpl-225",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -628,7 +610,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-189",
+            "id": "Footer-tpl-226",
             "description": "Creator Academy — learn, build, grow.",
             "columns": [
               {
@@ -685,7 +667,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-190",
+            "id": "Header-tpl-227",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -708,7 +690,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-191",
+            "id": "HeroBlock-tpl-228",
             "title": "Explore Our Complete Course Catalog",
             "subtitle": "Find the perfect course for your goals.",
             "primaryCtaLabel": "Browse All",
@@ -724,7 +706,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CatalogBrowser",
           "props": {
-            "id": "CatalogBrowser-tpl-192",
+            "id": "CatalogBrowser-tpl-229",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -744,7 +726,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-193",
+            "id": "PricingTable-tpl-230",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -792,7 +774,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-194",
+            "id": "CtaBlock-tpl-231",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -813,7 +795,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-195",
+            "id": "Footer-tpl-232",
             "description": "Explore courses and start learning today.",
             "columns": [],
             "socialLinks": [],
@@ -848,7 +830,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-196",
+            "id": "Header-tpl-233",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -871,7 +853,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-197",
+            "id": "HeroBlock-tpl-234",
             "title": "About Us",
             "subtitle": "Our mission is to make quality education accessible to everyone.",
             "primaryCtaLabel": "",
@@ -887,7 +869,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TextBlock",
           "props": {
-            "id": "TextBlock-tpl-198",
+            "id": "TextBlock-tpl-235",
             "content": "We started with a simple idea: everyone deserves access to high-quality education. Today, we serve thousands of students across the world with expert-led courses covering programming, design, data science, and more.\n\nOur team of experienced educators and technologists is passionate about building the best learning experience possible.",
             "alignment": "center",
             "color": "",
@@ -898,7 +880,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-199",
+            "id": "StatsCounter-tpl-236",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -915,7 +897,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TeamGrid",
           "props": {
-            "id": "TeamGrid-tpl-200",
+            "id": "TeamGrid-tpl-237",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -926,38 +908,14 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "hideOn": "none",
             "title": "Our Team",
             "subtitle": "The people behind the platform.",
-            "members": [
-              {
-                "name": "Alex Johnson",
-                "role": "CEO & Founder",
-                "bio": "Former Google engineer turned education evangelist.",
-                "avatar": ""
-              },
-              {
-                "name": "Sarah Chen",
-                "role": "Head of Content",
-                "bio": "Curriculum designer with 15 years in EdTech.",
-                "avatar": ""
-              },
-              {
-                "name": "David Kim",
-                "role": "CTO",
-                "bio": "Built scalable platforms at AWS and Stripe.",
-                "avatar": ""
-              },
-              {
-                "name": "Maria Lopez",
-                "role": "Community Lead",
-                "bio": "Connecting students with mentors worldwide.",
-                "avatar": ""
-              }
-            ]
+            "source": "live",
+            "members": []
           }
         },
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-201",
+            "id": "CtaBlock-tpl-238",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -978,7 +936,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-202",
+            "id": "Footer-tpl-239",
             "description": "Quality education, accessible to everyone.",
             "columns": [],
             "socialLinks": [],
@@ -1011,7 +969,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-203",
+            "id": "Header-tpl-240",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1034,7 +992,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-204",
+            "id": "HeroBlock-tpl-241",
             "title": "Get in Touch",
             "subtitle": "We would love to hear from you.",
             "primaryCtaLabel": "",
@@ -1050,7 +1008,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "ContactForm",
           "props": {
-            "id": "ContactForm-tpl-205",
+            "id": "ContactForm-tpl-242",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1069,7 +1027,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-206",
+            "id": "FaqAccordion-tpl-243",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1099,7 +1057,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-207",
+            "id": "Footer-tpl-244",
             "description": "We are here to help. Reach out anytime.",
             "columns": [],
             "socialLinks": [],
@@ -1134,7 +1092,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-208",
+            "id": "Header-tpl-245",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1157,7 +1115,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-209",
+            "id": "HeroBlock-tpl-246",
             "title": "Frequently Asked Questions",
             "subtitle": "Find answers to common questions.",
             "primaryCtaLabel": "",
@@ -1173,7 +1131,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-210",
+            "id": "FaqAccordion-tpl-247",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1203,7 +1161,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-211",
+            "id": "FaqAccordion-tpl-248",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1233,7 +1191,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-212",
+            "id": "FaqAccordion-tpl-249",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1263,7 +1221,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-213",
+            "id": "CtaBlock-tpl-250",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1284,7 +1242,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-214",
+            "id": "Footer-tpl-251",
             "description": "Answers to your questions, all in one place.",
             "columns": [],
             "socialLinks": [],
@@ -1322,7 +1280,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-215",
+            "id": "Header-tpl-252",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1357,7 +1315,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-216",
+            "id": "HeroBlock-tpl-253",
             "title": "Learn to Code. Build Real Projects. Launch Your Career.",
             "subtitle": "From your first line of code to your first job — structured, hands-on courses in web development, Python, data science, and more.",
             "primaryCtaLabel": "Browse Courses",
@@ -1373,7 +1331,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-217",
+            "id": "StatsCounter-tpl-254",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1390,7 +1348,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-218",
+            "id": "FeaturesGrid-tpl-255",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1439,7 +1397,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CourseGrid",
           "props": {
-            "id": "CourseGrid-tpl-219",
+            "id": "CourseGrid-tpl-256",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1460,7 +1418,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-220",
+            "id": "PricingTable-tpl-257",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1508,7 +1466,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TestimonialGrid",
           "props": {
-            "id": "TestimonialGrid-tpl-221",
+            "id": "TestimonialGrid-tpl-258",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1544,7 +1502,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-222",
+            "id": "FaqAccordion-tpl-259",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1582,7 +1540,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-223",
+            "id": "CtaBlock-tpl-260",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1603,7 +1561,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-224",
+            "id": "Footer-tpl-261",
             "description": "Learn to code with structured, project-based courses. From beginner to professional developer.",
             "columns": [
               {
@@ -1708,7 +1666,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-225",
+            "id": "Header-tpl-262",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -1739,7 +1697,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-226",
+            "id": "HeroBlock-tpl-263",
             "title": "Our Mission: Make Coding Accessible to Everyone",
             "subtitle": "We believe anyone can learn to code. No CS degree required, no bootcamp pressure — just clear, structured courses and a supportive community.",
             "primaryCtaLabel": "",
@@ -1755,7 +1713,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TextBlock",
           "props": {
-            "id": "TextBlock-tpl-227",
+            "id": "TextBlock-tpl-264",
             "content": "CodeSchool was founded by developers who were frustrated with the state of online coding education. Most courses were either too shallow, too theoretical, or too expensive. We set out to build something different: a platform where you learn by building real projects, get feedback from real developers, and graduate with a portfolio — not just a certificate.\n\nToday, we serve over 12,000 students across 40+ countries. Our graduates work at startups, agencies, and tech companies around the world. But our mission stays the same: make quality coding education accessible to everyone, regardless of background or budget.",
             "alignment": "center",
             "color": "",
@@ -1766,7 +1724,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "StatsCounter",
           "props": {
-            "id": "StatsCounter-tpl-228",
+            "id": "StatsCounter-tpl-265",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1783,7 +1741,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-229",
+            "id": "FeaturesGrid-tpl-266",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1822,7 +1780,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "TeamGrid",
           "props": {
-            "id": "TeamGrid-tpl-230",
+            "id": "TeamGrid-tpl-267",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1832,39 +1790,15 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet the Team",
-            "subtitle": "Developers and educators building the future of coding education.",
-            "members": [
-              {
-                "name": "Marcus Chen",
-                "role": "Founder & Lead Instructor",
-                "bio": "Former senior engineer at GitHub. 12+ years building web applications.",
-                "avatar": ""
-              },
-              {
-                "name": "Elena Rodriguez",
-                "role": "Head of Curriculum",
-                "bio": "CS professor turned EdTech builder. Designed curricula for 3 universities.",
-                "avatar": ""
-              },
-              {
-                "name": "James Park",
-                "role": "CTO",
-                "bio": "Built scalable systems at Stripe and Vercel. Passionate about developer tools.",
-                "avatar": ""
-              },
-              {
-                "name": "Sofia Andersen",
-                "role": "Community Manager",
-                "bio": "Connects students with mentors and runs our Discord community of 5,000+ developers.",
-                "avatar": ""
-              }
-            ]
+            "subtitle": "The people who build and teach our courses.",
+            "source": "live",
+            "members": []
           }
         },
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-231",
+            "id": "CtaBlock-tpl-268",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -1885,7 +1819,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-232",
+            "id": "Footer-tpl-269",
             "description": "Learn to code with structured, project-based courses. From beginner to professional developer.",
             "columns": [
               {
@@ -1974,7 +1908,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-233",
+            "id": "Header-tpl-270",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -2005,7 +1939,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-234",
+            "id": "HeroBlock-tpl-271",
             "title": "Frequently Asked Questions",
             "subtitle": "Everything you need to know about our courses, pricing, and platform.",
             "primaryCtaLabel": "",
@@ -2021,7 +1955,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-235",
+            "id": "FaqAccordion-tpl-272",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2055,7 +1989,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-236",
+            "id": "FaqAccordion-tpl-273",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2089,7 +2023,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-237",
+            "id": "FaqAccordion-tpl-274",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2123,7 +2057,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-238",
+            "id": "FaqAccordion-tpl-275",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2153,7 +2087,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-239",
+            "id": "CtaBlock-tpl-276",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2174,7 +2108,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-240",
+            "id": "Footer-tpl-277",
             "description": "Learn to code with structured, project-based courses.",
             "columns": [
               {
@@ -2256,7 +2190,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-241",
+            "id": "Header-tpl-278",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -2283,7 +2217,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-242",
+            "id": "HeroBlock-tpl-279",
             "title": "Get in Touch",
             "subtitle": "Have a question about our courses, pricing, or team plans? We are here to help.",
             "primaryCtaLabel": "",
@@ -2299,7 +2233,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "ContactForm",
           "props": {
-            "id": "ContactForm-tpl-243",
+            "id": "ContactForm-tpl-280",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2318,7 +2252,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FaqAccordion",
           "props": {
-            "id": "FaqAccordion-tpl-244",
+            "id": "FaqAccordion-tpl-281",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2352,7 +2286,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-245",
+            "id": "Footer-tpl-282",
             "description": "Learn to code with structured, project-based courses.",
             "columns": [
               {
@@ -2423,7 +2357,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Header",
           "props": {
-            "id": "Header-tpl-246",
+            "id": "Header-tpl-283",
             "logo": "{{logoUrl}}",
             "logoText": "{{schoolName}}",
             "navLinks": [
@@ -2454,7 +2388,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "HeroBlock",
           "props": {
-            "id": "HeroBlock-tpl-247",
+            "id": "HeroBlock-tpl-284",
             "title": "Explore Our Courses",
             "subtitle": "From HTML basics to advanced system design — find the right course for your level and goals.",
             "primaryCtaLabel": "View All Courses",
@@ -2470,7 +2404,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "FeaturesGrid",
           "props": {
-            "id": "FeaturesGrid-tpl-248",
+            "id": "FeaturesGrid-tpl-285",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2509,7 +2443,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CatalogBrowser",
           "props": {
-            "id": "CatalogBrowser-tpl-249",
+            "id": "CatalogBrowser-tpl-286",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2529,7 +2463,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "PricingTable",
           "props": {
-            "id": "PricingTable-tpl-250",
+            "id": "PricingTable-tpl-287",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2567,7 +2501,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "CtaBlock",
           "props": {
-            "id": "CtaBlock-tpl-251",
+            "id": "CtaBlock-tpl-288",
             "paddingY": "lg",
             "paddingX": "md",
             "maxWidth": "xl",
@@ -2588,7 +2522,7 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
         {
           "type": "Footer",
           "props": {
-            "id": "Footer-tpl-252",
+            "id": "Footer-tpl-289",
             "description": "Structured, project-based coding courses for every level.",
             "columns": [
               {
@@ -3208,33 +3142,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet Our Teachers",
-            "subtitle": "Native speakers and certified language educators who love what they do.",
-            "members": [
-              {
-                "name": "Emma Wilson",
-                "role": "Head of English",
-                "bio": "CELTA-certified, 10+ years teaching English to professionals across Latin America.",
-                "avatar": ""
-              },
-              {
-                "name": "Diego Martínez",
-                "role": "Head of Spanish",
-                "bio": "Native from Madrid. Specializes in conversational fluency and exam preparation.",
-                "avatar": ""
-              },
-              {
-                "name": "Claire Dubois",
-                "role": "Head of French",
-                "bio": "Paris-born teacher passionate about culture-driven language learning.",
-                "avatar": ""
-              },
-              {
-                "name": "Marco Rossi",
-                "role": "Curriculum Lead",
-                "bio": "Applied linguist who designs our CEFR-aligned learning paths.",
-                "avatar": ""
-              }
-            ]
+            "subtitle": "The teachers you will learn with.",
+            "source": "live",
+            "members": []
           }
         },
         {
@@ -4345,33 +4255,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet Your Coaches",
-            "subtitle": "Certified, encouraging, and genuinely in your corner.",
-            "members": [
-              {
-                "name": "Maya Torres",
-                "role": "Founder & Head Coach",
-                "bio": "Former group-fitness instructor with 12 years of experience and a passion for accessible fitness.",
-                "avatar": ""
-              },
-              {
-                "name": "Andre Smith",
-                "role": "Strength Coach",
-                "bio": "NASM-certified. Specializes in progressive strength training for all levels.",
-                "avatar": ""
-              },
-              {
-                "name": "Lena Park",
-                "role": "Yoga & Mobility",
-                "bio": "RYT-500 yoga teacher focused on flexibility, breath, and recovery.",
-                "avatar": ""
-              },
-              {
-                "name": "Carlos Vega",
-                "role": "HIIT & Conditioning",
-                "bio": "High-energy coach who makes tough workouts feel fun and achievable.",
-                "avatar": ""
-              }
-            ]
+            "subtitle": "The coaches who will guide your training.",
+            "source": "live",
+            "members": []
           }
         },
         {
@@ -5487,33 +5373,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet Your Teachers",
-            "subtitle": "Performing musicians who love to teach.",
-            "members": [
-              {
-                "name": "Nina Alvarez",
-                "role": "Founder & Guitar",
-                "bio": "Touring guitarist turned educator with 15 years of teaching experience.",
-                "avatar": ""
-              },
-              {
-                "name": "David Okafor",
-                "role": "Piano & Theory",
-                "bio": "Conservatory-trained pianist who makes music theory finally make sense.",
-                "avatar": ""
-              },
-              {
-                "name": "Mia Sørensen",
-                "role": "Voice",
-                "bio": "Professional vocalist specializing in technique, range, and stage confidence.",
-                "avatar": ""
-              },
-              {
-                "name": "Leo Bianchi",
-                "role": "Drums & Rhythm",
-                "bio": "Session drummer who has played hundreds of shows across every genre.",
-                "avatar": ""
-              }
-            ]
+            "subtitle": "The teachers behind our lessons.",
+            "source": "live",
+            "members": []
           }
         },
         {
@@ -6144,14 +6006,6 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
           "type": "SocialProof",
           "props": {
             "id": "SocialProof-tpl-96",
-            "paddingY": "lg",
-            "paddingX": "md",
-            "maxWidth": "xl",
-            "marginY": "none",
-            "tone": "default",
-            "align": "default",
-            "anchorId": "",
-            "hideOn": "none",
             "text": "",
             "reviewCount": "",
             "avatarCount": 5
@@ -6608,32 +6462,8 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "hideOn": "none",
             "title": "The Team",
             "subtitle": "Coaches and specialists who support your growth.",
-            "members": [
-              {
-                "name": "Jordan Reyes",
-                "role": "Founder & Lead Coach",
-                "bio": "Built and sold two companies. Coached 3,500+ founders over 12 years.",
-                "avatar": ""
-              },
-              {
-                "name": "Tara Mbeki",
-                "role": "Marketing Coach",
-                "bio": "Helps clients build lead engines that bring in customers on autopilot.",
-                "avatar": ""
-              },
-              {
-                "name": "Sam Whitfield",
-                "role": "Sales Coach",
-                "bio": "Former enterprise sales leader. Teaches authentic, high-conversion selling.",
-                "avatar": ""
-              },
-              {
-                "name": "Lily Chen",
-                "role": "Operations Coach",
-                "bio": "Systems specialist who turns busy founders into calm CEOs.",
-                "avatar": ""
-              }
-            ]
+            "source": "live",
+            "members": []
           }
         },
         {
@@ -7749,33 +7579,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet Your Mentors",
-            "subtitle": "Working designers who love to teach.",
-            "members": [
-              {
-                "name": "Priya Nair",
-                "role": "Founder & UX Lead",
-                "bio": "Former product designer at a major tech company. 12 years shipping real products.",
-                "avatar": ""
-              },
-              {
-                "name": "Tomás Herrera",
-                "role": "Graphic Design Mentor",
-                "bio": "Brand and identity designer with an award-winning studio background.",
-                "avatar": ""
-              },
-              {
-                "name": "Hana Kim",
-                "role": "Illustration Mentor",
-                "bio": "Freelance illustrator whose work has appeared in major publications.",
-                "avatar": ""
-              },
-              {
-                "name": "Felix Bauer",
-                "role": "Motion Mentor",
-                "bio": "Motion designer for studios and brands, specializing in UI animation.",
-                "avatar": ""
-              }
-            ]
+            "subtitle": "The mentors who teach our courses.",
+            "source": "live",
+            "members": []
           }
         },
         {
@@ -8504,8 +8310,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             "anchorId": "",
             "hideOn": "none",
             "title": "Meet your instructors",
-            "subtitle": "Learn from people who have done the work.",
+            "subtitle": "The people who teach our courses.",
             "accentColor": "",
+            "source": "live",
             "members": []
           }
         },
@@ -8594,6 +8401,1035 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
             ],
             "socialLinks": [],
             "copyright": "© {{year}} {{schoolName}}. All rights reserved."
+          }
+        }
+      ],
+      "zones": {}
+    }
+  },
+  {
+    "id": "course-landing",
+    "name": "Course Landing",
+    "description": "A full sales page for one course: hero, outcomes, curriculum, instructor, reviews, price and FAQ.",
+    "category": "course",
+    "pageType": "course",
+    "sortOrder": 70,
+    "blocks": [
+      "Header",
+      "CourseHero",
+      "SocialProof",
+      "CourseOutcomes",
+      "CourseCurriculum",
+      "InstructorCard",
+      "TestimonialGrid",
+      "CoursePricingCard",
+      "FaqAccordion",
+      "EnrollCta",
+      "Footer"
+    ],
+    "puck_data": {
+      "root": {
+        "props": {}
+      },
+      "content": [
+        {
+          "type": "Header",
+          "props": {
+            "id": "Header-tpl-167",
+            "logo": "{{logoUrl}}",
+            "logoText": "{{schoolName}}",
+            "navLinks": [
+              {
+                "label": "Curriculum",
+                "href": "#curriculum"
+              },
+              {
+                "label": "Instructor",
+                "href": "#instructor"
+              },
+              {
+                "label": "Pricing",
+                "href": "#pricing"
+              },
+              {
+                "label": "FAQ",
+                "href": "#faq"
+              }
+            ],
+            "ctaLabel": "Enroll",
+            "ctaHref": "#pricing",
+            "showLogin": true,
+            "showLanguageSwitcher": true,
+            "sticky": true,
+            "transparent": false
+          }
+        },
+        {
+          "type": "CourseHero",
+          "props": {
+            "id": "CourseHero-tpl-168",
+            "paddingY": "xl",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "top",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "variant": "split",
+            "eyebrow": "",
+            "titleOverride": "",
+            "subtitleOverride": "",
+            "showPrice": true,
+            "showStats": true,
+            "ctaLabel": ""
+          }
+        },
+        {
+          "type": "SocialProof",
+          "props": {
+            "id": "SocialProof-tpl-169",
+            "text": "",
+            "reviewCount": "",
+            "avatarCount": 5
+          }
+        },
+        {
+          "type": "CourseOutcomes",
+          "props": {
+            "id": "CourseOutcomes-tpl-170",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "outcomes",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "title": "What you’ll learn",
+            "subtitle": "",
+            "items": [
+              {
+                "text": "Replace with the first thing a student will be able to do"
+              },
+              {
+                "text": "A second concrete skill, in plain words"
+              },
+              {
+                "text": "A third outcome: the result, not the topic"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CourseCurriculum",
+          "props": {
+            "id": "CourseCurriculum-tpl-171",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "md",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "curriculum",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "title": "Curriculum",
+            "subtitle": "",
+            "maxLessons": 12,
+            "showPreviewBadges": true
+          }
+        },
+        {
+          "type": "InstructorCard",
+          "props": {
+            "id": "InstructorCard-tpl-172",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "md",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "instructor",
+            "hideOn": "none",
+            "source": "course",
+            "courseId": "{{courseId}}",
+            "teacherUserId": "",
+            "title": "Your instructor"
+          }
+        },
+        {
+          "type": "TestimonialGrid",
+          "props": {
+            "id": "TestimonialGrid-tpl-173",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "reviews",
+            "hideOn": "none",
+            "title": "What students say",
+            "subtitle": "",
+            "source": "live",
+            "courseId": "{{courseId}}",
+            "minRating": 4,
+            "limit": 6,
+            "items": []
+          }
+        },
+        {
+          "type": "CoursePricingCard",
+          "props": {
+            "id": "CoursePricingCard-tpl-174",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "brand-tint",
+            "align": "default",
+            "anchorId": "pricing",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "productId": "",
+            "title": "Start today",
+            "subtitle": "",
+            "features": [
+              {
+                "text": "Every lesson in the course"
+              },
+              {
+                "text": "Learn at your own pace"
+              },
+              {
+                "text": "Replace with anything else the price includes"
+              }
+            ],
+            "guarantee": "",
+            "ctaLabel": ""
+          }
+        },
+        {
+          "type": "FaqAccordion",
+          "props": {
+            "id": "FaqAccordion-tpl-175",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "md",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "faq",
+            "hideOn": "none",
+            "title": "Frequently asked questions",
+            "subtitle": "",
+            "items": [
+              {
+                "question": "How long do I have access?",
+                "answer": "Replace with your access policy, for example how long the lessons stay available after you enroll."
+              },
+              {
+                "question": "Do I need any prior experience?",
+                "answer": "Replace with who the course is for and what a student should know before starting."
+              },
+              {
+                "question": "How is the course delivered?",
+                "answer": "Replace with the format: video lessons, exercises, live sessions, at your own pace or on a schedule."
+              },
+              {
+                "question": "What if I have questions while learning?",
+                "answer": "Replace with how students get help: comments on each lesson, a community, or email."
+              }
+            ],
+            "accentColor": ""
+          }
+        },
+        {
+          "type": "EnrollCta",
+          "props": {
+            "id": "EnrollCta-tpl-176",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "brand",
+            "align": "default",
+            "anchorId": "enroll",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "headline": "Ready to start?",
+            "subtext": "Enroll now and open the first lesson today.",
+            "buttonLabel": "",
+            "accentColor": ""
+          }
+        },
+        {
+          "type": "Footer",
+          "props": {
+            "id": "Footer-tpl-177",
+            "description": "",
+            "columns": [
+              {
+                "title": "{{schoolName}}",
+                "links": [
+                  {
+                    "label": "All courses",
+                    "href": "/courses"
+                  },
+                  {
+                    "label": "Terms",
+                    "href": "/terms"
+                  },
+                  {
+                    "label": "Privacy",
+                    "href": "/privacy"
+                  }
+                ]
+              }
+            ],
+            "socialLinks": [],
+            "copyright": "© {{year}} {{schoolName}}"
+          }
+        }
+      ],
+      "zones": {}
+    }
+  },
+  {
+    "id": "course-launch-short",
+    "name": "Course Launch",
+    "description": "A short launch page for one course: centered hero, outcomes, price and FAQ.",
+    "category": "course",
+    "pageType": "course",
+    "sortOrder": 71,
+    "blocks": [
+      "Header",
+      "CourseHero",
+      "CourseOutcomes",
+      "CoursePricingCard",
+      "FaqSplit",
+      "Footer"
+    ],
+    "puck_data": {
+      "root": {
+        "props": {}
+      },
+      "content": [
+        {
+          "type": "Header",
+          "props": {
+            "id": "Header-tpl-178",
+            "logo": "{{logoUrl}}",
+            "logoText": "{{schoolName}}",
+            "navLinks": [
+              {
+                "label": "What you’ll learn",
+                "href": "#outcomes"
+              },
+              {
+                "label": "Pricing",
+                "href": "#pricing"
+              },
+              {
+                "label": "FAQ",
+                "href": "#faq"
+              }
+            ],
+            "ctaLabel": "Enroll",
+            "ctaHref": "#pricing",
+            "showLogin": true,
+            "showLanguageSwitcher": true,
+            "sticky": true,
+            "transparent": false
+          }
+        },
+        {
+          "type": "CourseHero",
+          "props": {
+            "id": "CourseHero-tpl-179",
+            "paddingY": "xl",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "top",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "variant": "centered",
+            "eyebrow": "",
+            "titleOverride": "",
+            "subtitleOverride": "",
+            "showPrice": true,
+            "showStats": true,
+            "ctaLabel": ""
+          }
+        },
+        {
+          "type": "CourseOutcomes",
+          "props": {
+            "id": "CourseOutcomes-tpl-180",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "outcomes",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "title": "What you’ll learn",
+            "subtitle": "",
+            "items": [
+              {
+                "text": "Replace with the first thing a student will be able to do"
+              },
+              {
+                "text": "A second concrete skill, in plain words"
+              },
+              {
+                "text": "A third outcome: the result, not the topic"
+              }
+            ]
+          }
+        },
+        {
+          "type": "CoursePricingCard",
+          "props": {
+            "id": "CoursePricingCard-tpl-181",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "pricing",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "productId": "",
+            "title": "Join the launch",
+            "subtitle": "",
+            "features": [
+              {
+                "text": "Every lesson in the course"
+              },
+              {
+                "text": "Learn at your own pace"
+              },
+              {
+                "text": "Replace with anything else the price includes"
+              }
+            ],
+            "guarantee": "",
+            "ctaLabel": ""
+          }
+        },
+        {
+          "type": "FaqSplit",
+          "props": {
+            "id": "FaqSplit-tpl-182",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "faq",
+            "hideOn": "none",
+            "heading": "Questions",
+            "items": [
+              {
+                "question": "How long do I have access?",
+                "answer": "Replace with your access policy, for example how long the lessons stay available after you enroll."
+              },
+              {
+                "question": "Do I need any prior experience?",
+                "answer": "Replace with who the course is for and what a student should know before starting."
+              },
+              {
+                "question": "How is the course delivered?",
+                "answer": "Replace with the format: video lessons, exercises, live sessions, at your own pace or on a schedule."
+              }
+            ]
+          }
+        },
+        {
+          "type": "Footer",
+          "props": {
+            "id": "Footer-tpl-183",
+            "description": "",
+            "columns": [
+              {
+                "title": "{{schoolName}}",
+                "links": [
+                  {
+                    "label": "All courses",
+                    "href": "/courses"
+                  },
+                  {
+                    "label": "Terms",
+                    "href": "/terms"
+                  },
+                  {
+                    "label": "Privacy",
+                    "href": "/privacy"
+                  }
+                ]
+              }
+            ],
+            "socialLinks": [],
+            "copyright": "© {{year}} {{schoolName}}"
+          }
+        }
+      ],
+      "zones": {}
+    }
+  },
+  {
+    "id": "free-course-lead",
+    "name": "Free Course",
+    "description": "A lead page for a free course: hero, the lesson list and an enroll band.",
+    "category": "course",
+    "pageType": "course",
+    "sortOrder": 72,
+    "blocks": [
+      "Header",
+      "CourseHero",
+      "CourseCurriculum",
+      "EnrollCta",
+      "Footer"
+    ],
+    "puck_data": {
+      "root": {
+        "props": {}
+      },
+      "content": [
+        {
+          "type": "Header",
+          "props": {
+            "id": "Header-tpl-184",
+            "logo": "{{logoUrl}}",
+            "logoText": "{{schoolName}}",
+            "navLinks": [
+              {
+                "label": "Lessons",
+                "href": "#curriculum"
+              }
+            ],
+            "ctaLabel": "Start free",
+            "ctaHref": "#enroll",
+            "showLogin": true,
+            "showLanguageSwitcher": true,
+            "sticky": true,
+            "transparent": false
+          }
+        },
+        {
+          "type": "CourseHero",
+          "props": {
+            "id": "CourseHero-tpl-185",
+            "paddingY": "xl",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "top",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "variant": "split",
+            "eyebrow": "",
+            "titleOverride": "",
+            "subtitleOverride": "",
+            "showPrice": true,
+            "showStats": true,
+            "ctaLabel": ""
+          }
+        },
+        {
+          "type": "CourseCurriculum",
+          "props": {
+            "id": "CourseCurriculum-tpl-186",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "md",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "curriculum",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "title": "Lessons",
+            "subtitle": "",
+            "maxLessons": 20,
+            "showPreviewBadges": true
+          }
+        },
+        {
+          "type": "EnrollCta",
+          "props": {
+            "id": "EnrollCta-tpl-187",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "brand",
+            "align": "default",
+            "anchorId": "enroll",
+            "hideOn": "none",
+            "courseId": "{{courseId}}",
+            "headline": "Start learning today",
+            "subtext": "Create your account and open the first lesson.",
+            "buttonLabel": "",
+            "accentColor": ""
+          }
+        },
+        {
+          "type": "Footer",
+          "props": {
+            "id": "Footer-tpl-188",
+            "description": "",
+            "columns": [
+              {
+                "title": "{{schoolName}}",
+                "links": [
+                  {
+                    "label": "All courses",
+                    "href": "/courses"
+                  },
+                  {
+                    "label": "Terms",
+                    "href": "/terms"
+                  },
+                  {
+                    "label": "Privacy",
+                    "href": "/privacy"
+                  }
+                ]
+              }
+            ],
+            "socialLinks": [],
+            "copyright": "© {{year}} {{schoolName}}"
+          }
+        }
+      ],
+      "zones": {}
+    }
+  },
+  {
+    "id": "product-bundle",
+    "name": "Course Bundle",
+    "description": "Sell a product that bundles several courses: hero, price card, included courses, reviews and FAQ.",
+    "category": "product",
+    "pageType": "product",
+    "sortOrder": 73,
+    "blocks": [
+      "Header",
+      "HeroBlock",
+      "CoursePricingCard",
+      "CourseGrid",
+      "TestimonialGrid",
+      "FaqAccordion",
+      "CtaBanner",
+      "Footer"
+    ],
+    "puck_data": {
+      "root": {
+        "props": {}
+      },
+      "content": [
+        {
+          "type": "Header",
+          "props": {
+            "id": "Header-tpl-189",
+            "logo": "{{logoUrl}}",
+            "logoText": "{{schoolName}}",
+            "navLinks": [
+              {
+                "label": "Courses",
+                "href": "#courses"
+              },
+              {
+                "label": "Pricing",
+                "href": "#pricing"
+              },
+              {
+                "label": "FAQ",
+                "href": "#faq"
+              }
+            ],
+            "ctaLabel": "Get the bundle",
+            "ctaHref": "#pricing",
+            "showLogin": true,
+            "showLanguageSwitcher": true,
+            "sticky": true,
+            "transparent": false
+          }
+        },
+        {
+          "type": "HeroBlock",
+          "props": {
+            "id": "HeroBlock-tpl-190",
+            "title": "Everything you need, in one bundle",
+            "subtitle": "Replace with who this bundle is for and what they will be able to do after finishing it.",
+            "primaryCtaLabel": "See the price",
+            "primaryCtaHref": "#pricing",
+            "secondaryCtaLabel": "What’s included",
+            "secondaryCtaHref": "#courses",
+            "backgroundImage": "",
+            "backgroundColor": "",
+            "alignment": "center",
+            "overlayOpacity": 50,
+            "minHeight": "500px"
+          }
+        },
+        {
+          "type": "CoursePricingCard",
+          "props": {
+            "id": "CoursePricingCard-tpl-191",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "brand-tint",
+            "align": "default",
+            "anchorId": "pricing",
+            "hideOn": "none",
+            "courseId": "",
+            "productId": "{{productId}}",
+            "title": "One price, every course",
+            "subtitle": "",
+            "features": [
+              {
+                "text": "Every course in the bundle"
+              },
+              {
+                "text": "Learn at your own pace"
+              },
+              {
+                "text": "Replace with anything else the price includes"
+              }
+            ],
+            "guarantee": "",
+            "ctaLabel": ""
+          }
+        },
+        {
+          "type": "CourseGrid",
+          "props": {
+            "id": "CourseGrid-tpl-192",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "courses",
+            "hideOn": "none",
+            "title": "Courses in this bundle",
+            "subtitle": "",
+            "courseIds": [
+              {
+                "id": "{{courseIds}}"
+              }
+            ],
+            "maxItems": 12,
+            "columns": "3",
+            "showPrice": false,
+            "showDescription": true
+          }
+        },
+        {
+          "type": "TestimonialGrid",
+          "props": {
+            "id": "TestimonialGrid-tpl-193",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "reviews",
+            "hideOn": "none",
+            "title": "What students say",
+            "subtitle": "",
+            "source": "live",
+            "courseId": "",
+            "minRating": 4,
+            "limit": 6,
+            "items": []
+          }
+        },
+        {
+          "type": "FaqAccordion",
+          "props": {
+            "id": "FaqAccordion-tpl-194",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "md",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "faq",
+            "hideOn": "none",
+            "title": "Frequently asked questions",
+            "subtitle": "",
+            "items": [
+              {
+                "question": "What is included in the bundle?",
+                "answer": "Replace with a short summary. The full course list is shown above, straight from your catalog."
+              },
+              {
+                "question": "How long do I have access?",
+                "answer": "Replace with your access policy for the courses in this bundle."
+              },
+              {
+                "question": "In what order should I take the courses?",
+                "answer": "Replace with the path you recommend, or say they can be taken in any order."
+              }
+            ],
+            "accentColor": ""
+          }
+        },
+        {
+          "type": "CtaBanner",
+          "props": {
+            "id": "CtaBanner-tpl-195",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "brand",
+            "align": "default",
+            "anchorId": "",
+            "hideOn": "none",
+            "heading": "Ready to start?",
+            "subtitle": "Get every course in the bundle with one purchase.",
+            "primaryLabel": "Get the bundle",
+            "primaryHref": "#pricing",
+            "secondaryLabel": "",
+            "secondaryHref": ""
+          }
+        },
+        {
+          "type": "Footer",
+          "props": {
+            "id": "Footer-tpl-196",
+            "description": "",
+            "columns": [
+              {
+                "title": "{{schoolName}}",
+                "links": [
+                  {
+                    "label": "All courses",
+                    "href": "/courses"
+                  },
+                  {
+                    "label": "Terms",
+                    "href": "/terms"
+                  },
+                  {
+                    "label": "Privacy",
+                    "href": "/privacy"
+                  }
+                ]
+              }
+            ],
+            "socialLinks": [],
+            "copyright": "© {{year}} {{schoolName}}"
+          }
+        }
+      ],
+      "zones": {}
+    }
+  },
+  {
+    "id": "pricing-page",
+    "name": "Pricing",
+    "description": "All your plans and products on one page, with an FAQ and a closing call to action.",
+    "category": "pricing",
+    "pageType": "pricing",
+    "sortOrder": 74,
+    "blocks": [
+      "Header",
+      "HeroBlock",
+      "PricingTable",
+      "ProductGrid",
+      "FaqAccordion",
+      "CtaBlock",
+      "Footer"
+    ],
+    "puck_data": {
+      "root": {
+        "props": {}
+      },
+      "content": [
+        {
+          "type": "Header",
+          "props": {
+            "id": "Header-tpl-197",
+            "logo": "{{logoUrl}}",
+            "logoText": "{{schoolName}}",
+            "navLinks": [
+              {
+                "label": "Courses",
+                "href": "/courses"
+              },
+              {
+                "label": "Plans",
+                "href": "#pricing"
+              },
+              {
+                "label": "FAQ",
+                "href": "#faq"
+              }
+            ],
+            "ctaLabel": "Browse courses",
+            "ctaHref": "/courses",
+            "showLogin": true,
+            "showLanguageSwitcher": true,
+            "sticky": true,
+            "transparent": false
+          }
+        },
+        {
+          "type": "HeroBlock",
+          "props": {
+            "id": "HeroBlock-tpl-198",
+            "title": "Pricing",
+            "subtitle": "Pick a plan for full access, or buy a single program.",
+            "primaryCtaLabel": "See plans",
+            "primaryCtaHref": "#pricing",
+            "secondaryCtaLabel": "See programs",
+            "secondaryCtaHref": "#programs",
+            "backgroundImage": "",
+            "backgroundColor": "",
+            "alignment": "center",
+            "overlayOpacity": 50,
+            "minHeight": "auto"
+          }
+        },
+        {
+          "type": "PricingTable",
+          "props": {
+            "id": "PricingTable-tpl-199",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "pricing",
+            "hideOn": "none",
+            "title": "Plans",
+            "subtitle": "",
+            "planIds": [],
+            "showDescription": true,
+            "items": []
+          }
+        },
+        {
+          "type": "ProductGrid",
+          "props": {
+            "id": "ProductGrid-tpl-200",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "muted",
+            "align": "default",
+            "anchorId": "programs",
+            "hideOn": "none",
+            "title": "Programs",
+            "subtitle": "",
+            "productIds": [],
+            "maxItems": 6,
+            "columns": "3",
+            "showDescription": true
+          }
+        },
+        {
+          "type": "FaqAccordion",
+          "props": {
+            "id": "FaqAccordion-tpl-201",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "md",
+            "marginY": "none",
+            "tone": "default",
+            "align": "default",
+            "anchorId": "faq",
+            "hideOn": "none",
+            "title": "Frequently asked questions",
+            "subtitle": "",
+            "items": [
+              {
+                "question": "What is the difference between a plan and a single course?",
+                "answer": "Replace with how your school sells: a plan opens the courses it covers while it is active; a single course or bundle is bought once."
+              },
+              {
+                "question": "Can I cancel a plan?",
+                "answer": "Replace with your cancellation policy."
+              },
+              {
+                "question": "Which payment methods do you accept?",
+                "answer": "Replace with the payment methods your school accepts."
+              }
+            ],
+            "accentColor": ""
+          }
+        },
+        {
+          "type": "CtaBlock",
+          "props": {
+            "id": "CtaBlock-tpl-202",
+            "paddingY": "lg",
+            "paddingX": "md",
+            "maxWidth": "xl",
+            "marginY": "none",
+            "tone": "brand-tint",
+            "align": "default",
+            "anchorId": "",
+            "hideOn": "none",
+            "title": "Not sure where to start?",
+            "subtitle": "Browse the catalog and open a course to see what it covers.",
+            "primaryCtaLabel": "Browse courses",
+            "primaryCtaHref": "/courses",
+            "secondaryCtaLabel": "",
+            "secondaryCtaHref": "",
+            "style": "default",
+            "accentColor": ""
+          }
+        },
+        {
+          "type": "Footer",
+          "props": {
+            "id": "Footer-tpl-203",
+            "description": "",
+            "columns": [
+              {
+                "title": "{{schoolName}}",
+                "links": [
+                  {
+                    "label": "All courses",
+                    "href": "/courses"
+                  },
+                  {
+                    "label": "Terms",
+                    "href": "/terms"
+                  },
+                  {
+                    "label": "Privacy",
+                    "href": "/privacy"
+                  }
+                ]
+              }
+            ],
+            "socialLinks": [],
+            "copyright": "© {{year}} {{schoolName}}"
           }
         }
       ],

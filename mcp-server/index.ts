@@ -23,6 +23,7 @@ import { registerLandingPageTools } from "./src/tools/landing-pages.js";
 import { registerCertificateTools } from "./src/tools/certificates.js";
 import { registerCommunityTools } from "./src/tools/community.js";
 import { registerProductTools } from "./src/tools/products.js";
+import { registerPlanTools } from "./src/tools/plans.js";
 import { registerImageTools } from "./src/tools/images.js";
 import { registerSchoolTools } from "./src/tools/school.js";
 import { registerNotificationTools } from "./src/tools/notifications.js";
@@ -51,7 +52,7 @@ const baseConfig = {
   description:
     "Manage courses, lessons, exercises, exams, and analytics for the LMS. Teachers and admins get management tools; students get self-scoped learning tools.",
   instructions:
-    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Admins can also draft school landing pages: lms_get_landing_blocks for the block vocabulary, then lms_create_landing_page (draft) and lms_publish_landing_page. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. Certificates: students use lms_my_certificates and lms_get_certificate_eligibility; teachers/admins use lms_list_course_certificates for a course's roster (it can issue) plus lms_get_certificate_template / lms_set_certificate_template — a course with no active template issues no certificates at all, which is the usual reason none appear. Community: everyone uses lms_list_community_posts / lms_get_community_post to read the feeds, lms_create_community_post (post_type 'question' to ask) and lms_create_community_comment (a top-level comment answers a question or discussion prompt), lms_accept_community_answer, lms_list_discussion_prompts, lms_report_community_content and lms_block_community_member; teachers/admins grade graded prompts with lms_get_prompt_grading_roster + lms_grade_prompt_answer; admins see reports, mutes and bans (lms_list_community_reports, lms_mute_community_member, lms_list_banned_members). All actions are scoped to the caller's tenant and enforced by row-level security.",
+    "Teachers/admins: use lms_list_courses to browse courses (renders a dashboard widget), lms_get_course for a course detail widget, lms_get_lesson to preview lesson content, and lms_list_exam_submissions to review student submissions. Admins can also build school landing pages: lms_get_landing_context for the ids to bind, lms_list_landing_templates, then lms_create_landing_page (draft from a template), lms_get_landing_page for the outline, lms_patch_landing_page for granular edits (lms_get_landing_blocks documents blocks and ops; the page-building skill has the rules), and lms_publish_landing_page. Students: use lms_my_learning for the learning dashboard, lms_view_lesson to read a lesson, lms_complete_lesson to mark it done, lms_my_exam_results for scores and feedback, lms_my_gamification for XP/achievements, and lms_browse_catalog to discover courses. Certificates: students use lms_my_certificates and lms_get_certificate_eligibility; teachers/admins use lms_list_course_certificates for a course's roster (it can issue) plus lms_get_certificate_template / lms_set_certificate_template — a course with no active template issues no certificates at all, which is the usual reason none appear. Community: everyone uses lms_list_community_posts / lms_get_community_post to read the feeds, lms_create_community_post (post_type 'question' to ask) and lms_create_community_comment (a top-level comment answers a question or discussion prompt), lms_accept_community_answer, lms_list_discussion_prompts, lms_report_community_content and lms_block_community_member; teachers/admins grade graded prompts with lms_get_prompt_grading_roster + lms_grade_prompt_answer; admins see reports, mutes and bans (lms_list_community_reports, lms_mute_community_member, lms_list_banned_members). All actions are scoped to the caller's tenant and enforced by row-level security.",
   // Serve the conventional `skills/` directory over the Skills over MCP
   // extension (skills/list, skills/get). `true` makes the directory a hard
   // requirement rather than best-effort discovery.
@@ -131,6 +132,7 @@ if (demoWidgetsEnabled()) {
   registerCommunityTools(server);
   registerSchoolTools(server);
   registerProductTools(server);
+  registerPlanTools(server);
   registerImageTools(server);
   registerNotificationTools(server);
 }

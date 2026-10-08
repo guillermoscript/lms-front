@@ -176,13 +176,9 @@ const aboutTemplate: PuckTemplate = {
       }),
       c('TeamGrid', {
         title: 'Meet Your Mentors',
-        subtitle: 'Working designers who love to teach.',
-        members: [
-          { name: 'Priya Nair', role: 'Founder & UX Lead', bio: 'Former product designer at a major tech company. 12 years shipping real products.', avatar: '' },
-          { name: 'Tomás Herrera', role: 'Graphic Design Mentor', bio: 'Brand and identity designer with an award-winning studio background.', avatar: '' },
-          { name: 'Hana Kim', role: 'Illustration Mentor', bio: 'Freelance illustrator whose work has appeared in major publications.', avatar: '' },
-          { name: 'Felix Bauer', role: 'Motion Mentor', bio: 'Motion designer for studios and brands, specializing in UI animation.', avatar: '' },
-        ],
+        subtitle: 'The mentors who teach our courses.',
+        source: 'live',
+        members: [],
       }),
       c('CtaBlock', {
         title: 'Come Make Something Great',
