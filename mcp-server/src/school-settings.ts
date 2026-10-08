@@ -128,8 +128,65 @@ export function normalizeAssetUrl(raw: string): { ok: true; value: string } | { 
   }
 }
 
-/** `tenant_settings.setting_value` — always `{ value }` or `{ enabled }`. */
-export type SettingValue = { value?: string | number | null; enabled?: boolean };
+// ─── Manual payment accounts (lib/payments/manual-payment-accounts.ts, #802) ─
+
+export interface ManualPaymentAccount {
+  id: string;
+  method: string;
+  bank: string | null;
+  identifier: string | null;
+  holder: string | null;
+  document: string | null;
+  note: string | null;
+}
+
+const MAX_ACCOUNTS = 12;
+const MAX_FIELD = 120;
+
+function accountField(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  return trimmed ? trimmed.slice(0, MAX_FIELD) : null;
+}
+
+/**
+ * Mirror of root `normalizeManualPaymentAccounts`: trims/caps every field,
+ * drops entries without a method, caps the list. Accepts the bare array or
+ * the stored `{ accounts: [...] }` shape.
+ */
+export function normalizeManualPaymentAccounts(value: unknown): ManualPaymentAccount[] {
+  const raw = Array.isArray(value)
+    ? value
+    : Array.isArray((value as { accounts?: unknown } | null)?.accounts)
+      ? (value as { accounts: unknown[] }).accounts
+      : [];
+
+  const accounts: ManualPaymentAccount[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as Record<string, unknown>;
+    const method = accountField(row.method);
+    if (!method) continue;
+    accounts.push({
+      id: accountField(row.id) || `${accounts.length + 1}`,
+      method,
+      bank: accountField(row.bank),
+      identifier: accountField(row.identifier),
+      holder: accountField(row.holder),
+      document: accountField(row.document),
+      note: accountField(row.note),
+    });
+    if (accounts.length >= MAX_ACCOUNTS) break;
+  }
+  return accounts;
+}
+
+/** `tenant_settings.setting_value` — `{ value }`, `{ enabled }` or `{ accounts }`. */
+export type SettingValue = {
+  value?: string | number | null;
+  enabled?: boolean;
+  accounts?: ManualPaymentAccount[];
+};
 
 /** What `lms_update_school_settings` accepts — every field optional. */
 export interface SchoolSettingsInput {
@@ -148,6 +205,8 @@ export interface SchoolSettingsInput {
   free_preview_enabled?: boolean;
   max_enrollments_per_user?: number;
   enrollment_expiration_days?: number;
+  /** Raw list (or `{ accounts }`); stored normalized as `{ accounts }`. */
+  manual_payment_accounts?: unknown;
 }
 
 const BOOLEAN_KEYS = [
@@ -235,6 +294,12 @@ export function buildSettingsRows(
       return { ok: false, error: `${key} must be a whole number ≥ 0 (0 = no limit).` };
     }
     out[key] = { value };
+  }
+
+  if (input.manual_payment_accounts !== undefined) {
+    out.manual_payment_accounts = {
+      accounts: normalizeManualPaymentAccounts(input.manual_payment_accounts),
+    };
   }
 
   return { ok: true, settings: out };

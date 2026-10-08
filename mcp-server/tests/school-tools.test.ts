@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as rootCountries from "../../lib/countries";
 import * as rootGeneral from "../../lib/settings/general-settings";
+import * as rootAccounts from "../../lib/payments/manual-payment-accounts";
 
 type Result = { data?: unknown; error?: unknown; count?: number | null };
 type Op = [string, ...unknown[]];
@@ -230,6 +231,44 @@ describe("settings helpers mirror the app (lib/countries, lib/settings/general-s
       expect(mine.ok, JSON.stringify(input)).toBe(root.ok);
       if (mine.ok && root.ok) expect(mine.settings, JSON.stringify(input)).toEqual(root.settings);
     }
+  });
+});
+
+describe("manual payment accounts mirror the app (#930)", () => {
+  const long = "x".repeat(300);
+  const cases: unknown[] = [
+    [],
+    null,
+    "junk",
+    { accounts: [{ method: " Zelle ", identifier: "a@b.co" }] },
+    [{ method: "Pago   Móvil", bank: "B", document: "V-1", note: "n" }, { bank: "no method" }, 5, null],
+    [{ method: long, id: long }],
+    Array.from({ length: 20 }, (_, i) => ({ method: `m${i}` })),
+    [{ method: "A", id: "keep" }, { method: "B" }],
+  ];
+
+  it("normalizer matches root", () => {
+    for (const c of cases) {
+      expect(settingsLib.normalizeManualPaymentAccounts(c), JSON.stringify(c)).toEqual(
+        rootAccounts.normalizeManualPaymentAccounts(c)
+      );
+    }
+  });
+
+  it("buildSettingsRows stores the normalized { accounts } wrapper", () => {
+    const out = settingsLib.buildSettingsRows({
+      manual_payment_accounts: [{ method: " Zelle ", identifier: "a@b.co" }, { bank: "x" }, "junk"],
+    });
+    expect(out).toEqual({
+      ok: true,
+      settings: {
+        manual_payment_accounts: {
+          accounts: [
+            { id: "1", method: "Zelle", bank: null, identifier: "a@b.co", holder: null, document: null, note: null },
+          ],
+        },
+      },
+    });
   });
 });
 
