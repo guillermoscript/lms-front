@@ -6,6 +6,27 @@ Read first: `lib/payments/payouts-owed.ts` (arithmetic + carry-forward rules),
 `app/api/cron/expire-platform-subscriptions/route.ts` (cron pattern),
 `docs/CRON_RUNBOOK.md`, `lib/billing/access-cutoff.ts` (what we must NOT copy).
 
+## Summary for non-engineers
+
+- **What the debt is.** When a student pays the school directly (bank transfer, personal Binance), the platform never sees the money, so it cannot keep its commission. That commission becomes a balance the school owes the platform, like a tab. Sales paid through the platform (Stripe etc.) are not part of it: the commission is already taken.
+- **When it is due.** Each month is closed on the 1st and a statement (also the invoice) is issued. It is due 3 days later. The school can also pay any amount earlier, daily or weekly.
+- **What happens if unpaid.** Reminder the day before, overdue notice at the due date, then after a grace period (proposed 7 days, owner decides) the school is "blocked": it cannot take NEW sales or new enrollments until the balance is paid. Paying unblocks it right away.
+- **What blocking means.** Only new purchases and new enrollments stop. Admins and teachers keep working (courses, grading, community).
+- **What is never blocked.** Students who already paid keep full access to their courses. Payments already in flight still complete. Existing automatic subscription renewals keep working. The school can always pay its balance.
+- **Safety.** First release only sends notices, it does not block ("notify only"). Blocking is switched on by the platform owner after a dry run.
+
+## Reference model: Guaybo
+
+Source: https://docs.guaybo.com/es/comisiones. Summary of how they do it, and what this design does with each point.
+
+| Guaybo behavior | This design |
+|---|---|
+| Commission accrues as a balance owed on sales paid directly to the creator (platform never holds the money) | **Adopts.** Fee ledger on `NOT bearsPlatformFee` rails (2.1). |
+| Payable daily or weekly, not only at month end | **Adopts.** Partial/early pay-now allowed (2.4, Q7). |
+| Due 3 days after month close | **Adopts.** `due_at = period_end + 3 days` (2.3). |
+| Unpaid => account "moroso" and ALL product sales blocked until settled | **Adopts, softened.** Blocks new sales only after an extra grace (proposed 7 days, Q6; Guaybo blocks at due), a minimum blocking balance, and a `notify_only` rollout. Existing students never lose access (4.2). |
+| Commissions are non-reversible on refunds | **Deviates.** Fees are netted against refunds, consistent with all other money sums (#547) (D3, Q1). |
+
 ## 0. Problem
 
 On rails where the buyer pays the school directly (`manual`, `binance_personal`:
@@ -31,7 +52,7 @@ owes the platform. Same arithmetic discipline.
 | D6 | Currency | Accrue per currency. Automated pay-now = USD only (platform billing is `expectedCurrency: 'usd'`). Other currencies: manual rail. Open Q2. |
 | D7 | Scheduler | Route `/api/cron/enforce-platform-fees`, **pg_cron primary** via `invoke_cron_route`, `cron.yml` fallback (same shape as `enforce-plan-limits`). |
 | D8 | Single block signal | `tenant_fee_standing.blocked_at`. One column decides (lesson of `cancel_at_period_end`, #545). |
-| D9 | Renewals while blocked | Allow renewal of a subscription the buyer already holds live; block everything else. Open Q3. |
+| D9 | Renewals while blocked | Exempt ONLY native-provider renewals matched to a live subscription (4.2a). Crypto/manual renewals (no subscription object) count as new sales while blocked. Open Q3. |
 
 ## 2. Ledger
 
@@ -132,14 +153,14 @@ Timeline (UTC; period = calendar month):
 | 1st | 0. Close | For each tenant+currency with `accrued(<= period_end) > EPS` and no statement for the month: insert statement (unique key = idempotent), allocate `invoice_number`, email "statement issued, due in 3 days". Skip if balance already <= EPS after payments. |
 | due-1 | 1. Reminder | Open balance, `reminder_sent_at IS NULL` => email + stamp, standing `reminded`. |
 | due (1st+3) | 2. Overdue | Balance > EPS and `now > due_at` => standing `overdue`, `overdue_since`, overdue email + stamp. |
-| due + FEE_GRACE_DAYS | 3. Block | `overdue` and `now > overdue_since + FEE_GRACE_DAYS` and balance >= `min_blocking_balance` => set `blocked_at`, "sales paused" email. Proposed `FEE_GRACE_DAYS = 7` (reuse the platform's `GRACE_DAYS` value; Guaybo blocks at due). Open Q6. |
+| due + FEE_GRACE_DAYS | 3. Block | `overdue` and `now > overdue_since + FEE_GRACE_DAYS` and balance >= `min_blocking_balance` => set `blocked_at`, "sales paused" email. `FEE_GRACE_DAYS` is NEW policy, proposed 7 (Guaybo blocks at due). Note: `GRACE_DAYS = 7` in `expire-platform-subscriptions` is only the renewal-reminder horizon (and the length of its downgrade window), not a precedent for a post-due grace; do not import it. Open Q6. |
 | any | 4. Recover | Standing not `ok` and balance <= EPS => clear `blocked_at`, `overdue_since`, state `ok`, "sales resumed" email. Also runs synchronously on payment settle (2.4). |
 
 Decision uses the stateless test (D4): re-derive the balance every run; stamps only control emails. A bad statement row can therefore never block a school whose live balance is paid.
 
 Safety rails (this job can stop revenue, so):
 - Dry-run query param `?dryRun=1` returns the would-act set, writes nothing. Required before first prod enable.
-- Kill switch: platform setting `platform_fee_enforcement` = `off | notify_only | enforce`; ship as `notify_only`. `blocked_at` is only written in `enforce`.
+- Kill switch: stored in a new single-row table `platform_fee_config` (`id boolean PK DEFAULT true CHECK (id)`, `enforcement_mode text CHECK IN ('off','notify_only','enforce') DEFAULT 'notify_only'`, `updated_by`, `updated_at`), created in the wave-2 migration (the repo has no generic platform settings table). Read via admin client in the cron and by `is_tenant_sales_blocked` (returns false unless `enforce`); written only by super admin (RLS: super admin SELECT/UPDATE, no other grants). Env var rejected: flipping it needs a redeploy, too slow for a kill switch. Ship as `notify_only`. `blocked_at` is only written in `enforce`.
 - Hard cap per run on newly blocked tenants (e.g. 25); excess logged to Sentry — a bug cannot block the whole platform in one tick.
 - Never block a tenant whose platform subscription is the free plan with zero fee-bearing sales ever (balance is 0 anyway), and never block super-admin/platform tenant.
 - Sentry cron monitor slug `cron-enforce-platform-fees` as in `cron.yml`.
@@ -164,20 +185,29 @@ failure never becomes money-without-service.
 
 New `transactions` INSERT for a tenant with `blocked_at IS NOT NULL`, and new
 self-enrollment of free offerings (`useEnrollment`/`enroll_user` for `amount = 0`).
-Subject to D9, a renewal (plan the buyer already holds with a live status in
-`BLOCKING_SUBSCRIPTION_STATUSES` = active/renewed/past_due) is allowed.
+Subject to D9, native-provider renewals matching 4.2a are allowed.
 
 ### 4.2 What is NEVER blocked or revoked
 
 - `has_course_access()` and `entitlements` — must not reference `tenant_fee_standing`. This is NOT `access_cutoff_at`: that mechanism (`lib/billing/access-cutoff.ts`, `tenants.access_cutoff_at` read by `has_course_access`) deliberately revokes access for over-limit tenants. Copying it would lock out paying students. A contract unit test greps the `has_course_access` definition (latest migration) and fails if it mentions fee standing.
 - Settlement of any row that already exists: webhooks/polls/manual confirm that UPDATE a `pending` transaction to `successful`, and `enroll_user()` called from them. A student who paid at 23:59 before the block is enrolled normally. The gate is on INSERT, not on `enroll_user`.
-- Existing subscriptions' renewals via native providers (Stripe/LS/PayPal webhooks) — they insert transactions server-side from webhooks; the DB trigger exempts rows created by the provider-webhook path (distinguished by an existing `provider_subscription_id` owned by a live subscription), see risk R3.
+- Native-provider subscription renewals (Stripe/LS/PayPal webhooks), exempted by the precise rule in 4.2a.
 - The school's own platform billing (plan checkout, fee pay-now). Paying must always work.
 - Teachers/admins authoring, student progress, exams, community.
 
+### 4.2a Renewal exemption (exact rule)
+
+The trigger on `transactions` INSERT skips the block iff ALL hold, checked in SQL against rows, never against caller-supplied flags or settings:
+
+1. `NEW.plan_id IS NOT NULL` and `NEW.product_id IS NULL`.
+2. `NEW.provider_subscription_id IS NOT NULL`.
+3. A `subscriptions` row exists with `tenant_id = NEW.tenant_id`, `user_id = NEW.user_id`, `plan_id = NEW.plan_id`, `provider_subscription_id = NEW.provider_subscription_id` and `subscription_status IN ('active','renewed','past_due')` (live set; `canceled`/`expired` are not).
+
+Why this is not a bypass vector: `authenticated` has no INSERT grant on `transactions` (#538), so only server code (admin client / SECURITY DEFINER) can insert, and `provider_subscription_id` on a live `subscriptions` row is itself written only server-side from provider-verified events. A buyer cannot get a first purchase through this path because rule 3 requires a pre-existing live subscription created BEFORE the block (new subscriptions cannot be created while blocked, as their first transaction is a plain insert). Crypto rails and manual have no `provider_subscription_id`, so they never match and are blocked like new sales; that is the conservative choice (each period is a fresh payment, nothing is owed to the buyer) and the school unblocks by paying. The `app.bypass_fee_block` setting remains operator/seed only. Test: a Stripe webhook renewal lands while blocked; same insert with a forged/non-matching `provider_subscription_id` is refused with `LM003`.
+
 ### 4.3 Enforcement layers
 
-1. **DB backstop** (authoritative, like #658): `BEFORE INSERT` trigger on `transactions` calls `is_tenant_sales_blocked(NEW.tenant_id)` and raises SQLSTATE `LM002`, message `sales_blocked`. Plus the same in the self-enroll path. Map with `isSalesBlockedError()` in `lib/billing/sales-block-error.ts` (never match message strings), like `isPlanLimitError`. `SET app.bypass_fee_block = 'on'` for operators/seed only.
+1. **DB backstop** (authoritative, like #658): `BEFORE INSERT` trigger on `transactions` calls `is_tenant_sales_blocked(NEW.tenant_id)` and raises SQLSTATE `LM003`, message `sales_blocked`. (`LM001` = plan limit, `LM002` = tenant ban `lib/tenant/ban.ts` #892; repo and migrations grep shows no other `LM###`, so `LM003` is next free. Re-grep at implementation time.) Plus the same in the self-enroll path. Map with `isSalesBlockedError()` in `lib/billing/sales-block-error.ts` (never match message strings), like `isPlanLimitError`. `SET app.bypass_fee_block = 'on'` for operators/seed only.
 2. **App pre-check** for a nicer message and to avoid creating provider sessions: `assertSalesOpen(tenantId)` called first in `app/api/payments/checkout`, `app/api/stripe/create-payment-intent`, `app/actions/payment-requests.ts`, the PayPal/Solana/Binance-personal start routes, and the enroll path. Unlike `findConflictingSubscription` (fail closed), this pre-check fails OPEN on a query error: unknown state must not stop sales. The DB trigger is the authoritative layer and reads one PK row.
 3. Reads: `is_tenant_sales_blocked` is a STABLE SECURITY DEFINER SQL function on a PK lookup; cheap on the checkout path.
 
@@ -186,7 +216,11 @@ Check order (CLAUDE.md AI-route ethos applied): auth => access => role => sales 
 ### 4.4 UX
 
 - Student on a blocked school: neutral "this school isn't accepting new enrollments right now" on buy/enroll buttons. Do not reveal the fee debt to students.
-- Admin: banner + balance card (hosted on #928 earnings page, plus a slim banner on `dashboard/admin/page.tsx`) with state, due date, amount, Pay-now, invoice link; en/es strings.
+- Admin: banner + balance card (hosted on #928 earnings page, plus a slim banner on `dashboard/admin/page.tsx`) with state, due date, amount, Pay-now, invoice link.
+- **i18n (en/es):** all copy in `messages/en.json` + `messages/es.json` under a new `platformFees` namespace (banner per state `reminded/overdue/blocked`, balance card labels, pay-now, overpaid note, student neutral message). Amounts via `Intl.NumberFormat` with the locale; dates in UTC with the zone stated (R10). Emails (statement issued, reminder, overdue, sales paused, sales resumed) get en/es templates chosen by the recipient admin's locale, falling back to `en`. A unit test asserts en/es key parity for the namespace.
+- **Loading:** balance card renders a skeleton (fixed height, no layout shift) while the ledger query runs; banner renders nothing until standing is known (never flashes a wrong state).
+- **Error:** ledger/standing query failure shows an inline "could not load your balance, retry" in the card and NO banner (fail open, consistent with the pre-check); pay-now failure shows a toast with the localized error and leaves the button re-enabled; a settle mismatch (7) shows "payment under review" rather than a credit. Email send failure is swallowed and logged (never aborts a transition) and the stamp is not set, so the next run retries.
+- **Empty:** zero balance shows "nothing owed", no banner.
 - Super admin: extend `platform/billing-health` with counts by state and last cron run; manual "mark paid"/"waive" actions (waive = payment row `provider='waiver'`, `recorded_by`, note — keeps ledger append-only).
 
 ## 5. Risks and mitigations
@@ -195,7 +229,7 @@ Check order (CLAUDE.md AI-route ethos applied): auth => access => role => sales 
 |----|------|------------|
 | R1 | Cron bug blocks paying schools | Stateless re-derivation, kill switch `notify_only` default, dryRun, per-run block cap, min blocking balance, Playwright lifecycle spec. |
 | R2 | Block revokes student access | Gate on INSERT only; contract test on `has_course_access`; lifecycle spec asserts an enrolled student still opens a course while blocked. |
-| R3 | Trigger blocks provider-driven renewals or webhooks | Exempt renewal path (D9); trigger scoped to INSERT of pending/new rows; add spec that a Stripe webhook renewal still lands. Needs careful review of every `transactions` insert site (admin client list). |
+| R3 | Trigger blocks provider-driven renewals or webhooks | Exact exemption 4.2a (row-based, no caller flags); trigger scoped to INSERT; add spec that a Stripe webhook renewal still lands. Needs careful review of every `transactions` insert site (admin client list). |
 | R4 | Double count: platform already took fee in flight (Stripe Connect, PayPal, Solana) | Eligibility is `NOT bearsPlatformFee` AND #927 snapshot. Unit test enumerates all providers in `PROVIDER_CAPABILITIES` and asserts the eligible set. |
 | R5 | Refund after fee paid | Net of refunds; carry-forward; `overpaid` reported; no clawback (same as `payouts-owed`). |
 | R6 | Float residue / permanent $0.00 balance | `roundMoney` per row; `MONEY_EPSILON` compare; payments NUMERIC(10,2). |
@@ -213,10 +247,10 @@ Unit (`tests/unit/`):
 - `enforce-platform-fees.test.ts` (shape of `expire-platform-subscriptions.test.ts`): each phase status-gated and idempotent on re-run, email failure swallowed, dryRun writes nothing, `notify_only` never sets `blocked_at`, block cap, 401 without bearer.
 - `sales-block-error.test.ts`; contract test for `has_course_access` not referencing fee standing; contract test that every `transactions` insert site calls `assertSalesOpen` (like `plan-feature-gate-contract.test.ts`).
 
-Playwright `platform-fee-lifecycle.spec.ts` (dedicated tenant + hidden plan via `tests/playwright/utils/plan-gate-fixtures.ts`; never move seeded tenants; `--workers=1`; `lvh.me`):
+Playwright `platform-fee-lifecycle.spec.ts` (needs its OWN dedicated tenant, created with the helpers in `tests/playwright/utils/plan-gate-fixtures.ts` plus a hidden `platform_plans` row, because standing is per-tenant state and the spec backdates transactions and flips `tenant_fee_standing`; never move the seeded tenants; set `platform_fee_config.enforcement_mode` per test and restore `notify_only` in teardown; `--workers=1`; `lvh.me`):
 1. Seed fee-bearing manual transactions (backdate `transaction_date`, set `school_percentage_snapshot`) => balance card shows expected USD figure.
 2. Run cron after month boundary (backdate rows, since the route has no clock param) => statement + invoice exist; admin sees due date.
-3. Advance stamps past due+grace => cron blocks; new student checkout and free enroll refused with `LM002`/friendly page; **a student with a live entitlement still opens their course**; an in-flight pending manual request confirmed by the admin still enrolls.
+3. Advance stamps past due+grace => cron blocks; new student checkout and free enroll refused with `LM003`/friendly page; **a student with a live entitlement still opens their course**; an in-flight pending manual request confirmed by the admin still enrolls.
 4. Pay via manual rail: super admin confirms fee request => standing returns `ok` immediately, checkout works again.
 5. Partial pay keeps blocked above threshold; full pay unblocks; overpay shows `overpaid`.
 6. `notify_only` mode: emails/state but never blocks.
@@ -237,11 +271,9 @@ Models after `access-cutoff-lifecycle.spec.ts`, `platform-billing-manual-lifecyc
 
 1. Fees refundable (netted, recommended) or non-refundable like Guaybo?
 2. Non-USD sales: accrue in original currency and pay manually (recommended), or convert to USD at sale time using `settlement_*`?
-3. Should a blocked school's students be able to renew existing subscriptions (recommended yes)?
+3. Native-provider subscription renewals stay allowed while blocked (4.2a, recommended); crypto/manual renewals blocked. OK?
 4. Platform legal entity, tax id and numbering requirements for fee invoices (per country)?
 5. Lemon Squeezy / PayPal: acceptable to omit from fee pay-now v1?
-6. Grace: block at due date (Guaybo) or due + 7 days (recommended)? Minimum blocking balance value?
+6. Grace: block at due date (Guaybo) or due + 7 days (recommended; new policy)? Minimum blocking balance value?
 7. Pay-now: allow partial/daily payments (recommended, matches Guaybo) or only full statements?
 8. Dormant tenants with long-unpaid balance and no sales: only notices + super-admin tooling, no automatic collection or deletion (recommended)?
-9. Epic #931 unresolved: Binance appears both as manual entry and as auto-verify rail with Pay ID in two places; which transaction `payment_provider` slug does the ledger key on (`manual` vs `binance_personal`)? The eligibility matrix handles both, but the UI copy should be settled first.
-10. #930 (MCP settings writes do not normalize `manual_payment_accounts`) is unrelated to the ledger but affects fee-bearer reads if MCP-written account data is malformed; confirm #930 lands before relying on it.
