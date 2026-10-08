@@ -19,6 +19,11 @@
  *  - a CUSTOM row (`kind` null): the original free-text row. Every row written
  *    before the catalog existed is one of these and keeps working untouched.
  *
+ * MCP mirror: `mcp-server/src/school-settings.ts` re-implements
+ * `normalizeManualPaymentAccounts` (the mcp-server image cannot import `lib/`).
+ * Change the normalizer here and update the mirror too;
+ * `mcp-server/tests/school-tools.test.ts` compares the two and fails on drift.
+ *
  * Secrets never live here. This blob is student-readable (checkout shows it), so
  * the Binance read-only API key goes to `tenant_payment_wallets`, encrypted.
  */

@@ -130,29 +130,71 @@ export function normalizeAssetUrl(raw: string): { ok: true; value: string } | { 
 
 // ─── Manual payment accounts (lib/payments/manual-payment-accounts.ts, #802) ─
 
+export const MANUAL_PAYMENT_KINDS = [
+  "zelle",
+  "binance",
+  "paypal",
+  "zinli",
+  "cash",
+  "pago_movil",
+] as const;
+
+export type ManualPaymentKind = (typeof MANUAL_PAYMENT_KINDS)[number];
+
 export interface ManualPaymentAccount {
   id: string;
+  kind: ManualPaymentKind | null;
   method: string;
   bank: string | null;
   identifier: string | null;
+  email: string | null;
   holder: string | null;
   document: string | null;
   note: string | null;
 }
 
+/** Brand names stored in `method` when a preset row has none of its own. */
+const MANUAL_KIND_METHOD: Record<ManualPaymentKind, string> = {
+  zelle: "Zelle",
+  binance: "Binance",
+  paypal: "PayPal",
+  zinli: "Zinli",
+  cash: "Cash",
+  pago_movil: "Pago Móvil",
+};
+
 const MAX_ACCOUNTS = 12;
 const MAX_FIELD = 120;
+const MAX_NOTE = 500;
 
-function accountField(value: unknown): string | null {
+function isManualPaymentKind(value: unknown): value is ManualPaymentKind {
+  return typeof value === "string" && (MANUAL_PAYMENT_KINDS as readonly string[]).includes(value);
+}
+
+function accountField(value: unknown, max = MAX_FIELD): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim().replace(/\s+/g, " ");
-  return trimmed ? trimmed.slice(0, MAX_FIELD) : null;
+  return trimmed ? trimmed.slice(0, max) : null;
+}
+
+function noteField(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = value
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/[ \t]+/g, " "))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return cleaned ? cleaned.slice(0, MAX_NOTE) : null;
 }
 
 /**
- * Mirror of root `normalizeManualPaymentAccounts`: trims/caps every field,
- * drops entries without a method, caps the list. Accepts the bare array or
- * the stored `{ accounts: [...] }` shape.
+ * Mirror of root `normalizeManualPaymentAccounts` (#802, catalog #926): kinds,
+ * preset ids, notes, unique ids. Only the known keys are copied, so any extra
+ * field (api_key, credentials, ...) is dropped. Accepts the bare array or the
+ * stored `{ accounts: [...] }` shape. Keep in sync with the root file; the
+ * parity test in tests/school-tools.test.ts fails on drift.
  */
 export function normalizeManualPaymentAccounts(value: unknown): ManualPaymentAccount[] {
   const raw = Array.isArray(value)
@@ -162,19 +204,42 @@ export function normalizeManualPaymentAccounts(value: unknown): ManualPaymentAcc
       : [];
 
   const accounts: ManualPaymentAccount[] = [];
+  const seenKinds = new Set<ManualPaymentKind>();
+  const seenIds = new Set<string>();
+  const reserved = new Set<string>();
+  for (const entry of raw) {
+    const id = entry && typeof entry === "object" ? accountField((entry as Record<string, unknown>).id) : null;
+    if (id) reserved.add(id);
+  }
+  const freshId = () => {
+    let n = accounts.length + 1;
+    while (seenIds.has(`acct-${n}`) || reserved.has(`acct-${n}`)) n++;
+    return `acct-${n}`;
+  };
   for (const entry of raw) {
     if (!entry || typeof entry !== "object") continue;
     const row = entry as Record<string, unknown>;
-    const method = accountField(row.method);
+    let kind = isManualPaymentKind(row.kind) ? row.kind : null;
+    if (kind) {
+      if (seenKinds.has(kind)) kind = null;
+      else seenKinds.add(kind);
+    }
+    const method = accountField(row.method) ?? (kind ? MANUAL_KIND_METHOD[kind] : null);
     if (!method) continue;
+    const stored = accountField(row.id);
+    let id = stored || (kind ? `preset-${kind}` : null);
+    if (!id || seenIds.has(id) || (!kind && id.startsWith("preset-"))) id = freshId();
+    seenIds.add(id);
     accounts.push({
-      id: accountField(row.id) || `${accounts.length + 1}`,
+      id,
+      kind,
       method,
       bank: accountField(row.bank),
       identifier: accountField(row.identifier),
+      email: accountField(row.email),
       holder: accountField(row.holder),
       document: accountField(row.document),
-      note: accountField(row.note),
+      note: noteField(row.note),
     });
     if (accounts.length >= MAX_ACCOUNTS) break;
   }
