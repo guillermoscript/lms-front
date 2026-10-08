@@ -119,6 +119,8 @@ describe('filterEarnings', () => {
   })
 })
 
+type Msgs = { dashboard: { admin: { earnings: { stats: { month: string } } } } }
+
 describe('month (UTC)', () => {
   it('month starts at 00:00 UTC on the 1st regardless of host zone', () => {
     expect(new Date(utcMonthStart(new Date('2026-10-31T23:30:00-05:00'))).toISOString()).toBe('2026-11-01T00:00:00.000Z')
@@ -201,6 +203,21 @@ describe('buildEarningsView (page assembly)', () => {
     expect(v.currencies).toEqual(['EUR', 'USD'])
     expect(v.page.total).toBe(6)
     expect(v.page.items.map((r) => r.transactionId)).not.toContain(7)
+  })
+
+  it('month scope spans both collectors while the debt is school-collected only', () => {
+    const v = buildEarningsView(input())
+    const debtSales = v.feeDebt.reduce((n, b) => n + b.sales, 0)
+    expect(v.month.count).toBeGreaterThan(0)
+    expect(debtSales).toBeGreaterThan(0)
+    expect(v.month.count).not.toBe(debtSales) // different scopes, different counts
+  })
+
+  it('month card label names its scope in en and es', async () => {
+    const en = (await import('../../messages/en.json')).default as unknown as Msgs
+    const es = (await import('../../messages/es.json')).default as unknown as Msgs
+    expect(en.dashboard.admin.earnings.stats.month).toMatch(/all sales/i)
+    expect(es.dashboard.admin.earnings.stats.month).toMatch(/todas las ventas/i)
   })
 
   it('applies query filters and pagination, newest first', () => {

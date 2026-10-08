@@ -2512,8 +2512,8 @@
           "owedToPlatform": "Por pagar a la plataforma",
           "owedToPlatformDesc": "Comisión de {count, plural, =0 {ninguna venta} one {# venta} other {# ventas}} cobradas directamente por ti, descontando reembolsos",
           "owedToPlatformNote": "Pagar este saldo desde aquí llegará en una próxima versión; por ahora no se cobra ni se bloquea nada.",
-          "month": "Este mes (UTC)",
-          "monthDesc": "Tu neto de {count, plural, one {# venta} other {# ventas}} · comisión {commission}",
+          "month": "Este mes, todas las ventas (UTC)",
+          "monthDesc": "Tu neto de {count, plural, one {# venta} other {# ventas}}, cobradas por ti o por la plataforma · comisión {commission}. No es el monto por pagar de arriba, que solo cubre ventas cobradas por ti.",
           "openRequests": "Solicitudes de pago abiertas",
           "openRequestsDesc": "Nuevas y esperando el pago (instrucciones enviadas)",
           "openRequestsLink": "Revisar solicitudes abiertas"

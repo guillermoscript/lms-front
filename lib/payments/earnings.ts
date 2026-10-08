@@ -185,6 +185,10 @@ export interface FeeDebtBalance {
  * §2.2 balance with `paid = 0`. Rounded per row (already done in
  * `toEarningsRow`), then summed.
  */
+// TODO(#927): once feat/fee-bearer-927 (`transactions.fee_bearer`) merges,
+// accrual must also filter on that column, not only `collectedBy`.
+// TODO(#929): per the #929 design, hyperinflation currencies (VES) will later
+// be shown as the USD snapshot recorded at sale time. Not implemented here.
 export function accruePlatformFees(rows: readonly EarningsRow[]): FeeDebtBalance[] {
   const by = new Map<string, FeeDebtBalance>()
   for (const r of rows) {
@@ -214,7 +218,11 @@ export interface MonthTotals {
   count: number
 }
 
-/** Counted rows dated in `now`'s UTC calendar month. */
+/**
+ * Scope differs from `accruePlatformFees`: this covers BOTH collectors
+ * (platform- and school-collected), while the debt covers school-collected
+ * only. The page labels the month card accordingly.
+ * Counted rows dated in `now`'s UTC calendar month. */
 export function monthTotals(rows: readonly EarningsRow[], now: Date): MonthTotals {
   const start = utcMonthStart(now)
   const out: MonthTotals = { sales: {}, commission: {}, net: {}, count: 0 }
