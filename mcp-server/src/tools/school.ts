@@ -143,6 +143,13 @@ export const updateSchoolSettingsInput = z.object({
     .describe("Lessons marked as free previews are readable without enrolling"),
   max_enrollments_per_user: z.number().int().min(0).optional().describe("0 = no limit"),
   enrollment_expiration_days: z.number().int().min(0).optional().describe("0 = never expires"),
+  manual_payment_accounts: z
+    .array(z.unknown())
+    .max(50)
+    .optional()
+    .describe(
+      "Replaces the school's whole list of offline payment accounts (max 12 kept). Each item: { kind?: zelle|binance|paypal|zinli|cash|pago_movil, method, bank, identifier, email, holder, document, note }. Unknown fields are dropped; never put API keys or passwords here, students can read this list"
+    ),
 });
 
 export const updateSchoolSettingsOutput = z.object({
@@ -402,7 +409,7 @@ export function registerSchoolTools(server: LmsServer) {
     {
       name: "lms_update_school_settings",
       description:
-        "Update the school's general and enrollment settings, country and default currency. Only the fields you pass change. Setting a country fills the currency from it only when the school has none yet — an existing currency is never overwritten. The theme is set with lms_set_school_theme; payment providers, credentials and email (SMTP) settings stay in the dashboard. Admin only.",
+        "Update the school's general and enrollment settings, country and default currency. Only the fields you pass change. Setting a country fills the currency from it only when the school has none yet — an existing currency is never overwritten. The theme is set with lms_set_school_theme; manual_payment_accounts replaces the whole offline-payment account list (normalized, secrets never stored). Payment provider credentials and email (SMTP) settings stay in the dashboard. Admin only.",
       inputSchema: updateSchoolSettingsInput,
       outputSchema: updateSchoolSettingsOutput,
       annotations: {
