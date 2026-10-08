@@ -5764,6 +5764,7 @@
     "product": "Product",
     "free": "Free",
     "duration": "{days} days access",
+    "priceUnavailable": "This course price is not available right now. Please contact the school.",
     "feeIncluded": "Includes the platform service fee",
     "secureCheckout": "Secure checkout",
     "included": "What's included",

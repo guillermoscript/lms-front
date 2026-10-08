@@ -32,6 +32,7 @@ const PRICE = 100
 let courseId: number
 let productId: number
 let schoolPercentage = 80
+let createdSplit = false
 
 function must<T>(res: { data: T; error: { message: string } | null }, what: string): NonNullable<T> {
   if (res.error || res.data == null) throw new Error(`${what}: ${res.error?.message ?? 'no data'}`)
@@ -63,6 +64,18 @@ test.beforeAll(async () => {
     .eq('tenant_id', CODE_ACADEMY_TENANT)
     .maybeSingle()
   schoolPercentage = Number(split?.school_percentage ?? 80)
+  // The split row is created lazily (first confirmed manual payment), and a
+  // student-borne fee refuses to price without one — so the fixture owns it.
+  if (!split) {
+    must(
+      await admin
+        .from('revenue_splits')
+        .insert({ tenant_id: CODE_ACADEMY_TENANT, platform_percentage: 100 - schoolPercentage, school_percentage: schoolPercentage })
+        .select('tenant_id'),
+      'seed revenue split',
+    )
+    createdSplit = true
+  }
 
   courseId = must(
     await admin
@@ -107,6 +120,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   const admin = getServiceRoleClient()
+  if (createdSplit) await admin.from('revenue_splits').delete().eq('tenant_id', CODE_ACADEMY_TENANT)
   if (productId) {
     await admin.from('transactions').delete().eq('product_id', productId)
     await admin.from('products').delete().eq('product_id', productId)

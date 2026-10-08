@@ -5764,6 +5764,7 @@
     "product": "Producto",
     "free": "Gratis",
     "duration": "{days} días de acceso",
+    "priceUnavailable": "El precio de este curso no está disponible por ahora. Contacta a la escuela.",
     "feeIncluded": "Incluye la tarifa de servicio de la plataforma",
     "secureCheckout": "Pago seguro",
     "included": "Qué incluye",

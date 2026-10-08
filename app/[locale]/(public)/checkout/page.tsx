@@ -14,7 +14,7 @@ import { PROVIDER_CAPABILITIES, type PaymentProvider } from "@/lib/payments/type
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
 import { pickCourseCheckoutProduct, type CourseProductLink } from "@/lib/puck/utils/checkout-href";
-import { resolveProductCharge } from "@/lib/payments/product-charge";
+import { FeeSplitUnavailableError, resolveProductCharge } from "@/lib/payments/product-charge";
 
 interface SearchParams {
     courseId?: string;
@@ -154,7 +154,22 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                 // on the service-role client, never the buyer's RLS view). A
                 // student-borne fee with no split on file throws rather than
                 // showing a guessed amount.
-                const charge = await resolveProductCharge(product, { expectedTenantId: tenantId });
+                let charge: Awaited<ReturnType<typeof resolveProductCharge>>;
+                try {
+                    charge = await resolveProductCharge(product, { expectedTenantId: tenantId });
+                } catch (err) {
+                    if (!(err instanceof FeeSplitUnavailableError)) throw err;
+                    return (
+                        <div className="min-h-screen bg-background">
+                            <div className="mx-auto max-w-xl px-4 py-12 sm:py-20 text-center">
+                                <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+                                <p className="mt-4 text-sm text-muted-foreground" data-testid="checkout-price-unavailable">
+                                    {t('priceUnavailable')}
+                                </p>
+                            </div>
+                        </div>
+                    );
+                }
                 feeIncluded = charge.feeIncluded;
                 price = charge.amount;
             }
