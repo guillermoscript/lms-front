@@ -4598,6 +4598,7 @@
         "oauthHint": "Ejecuta esto y aprueba en el navegador la primera vez. Revisa la escuela y el rol que se muestran.",
         "other": "Otro",
         "otherHint": "Cualquier agente que soporte servidores MCP remotos (HTTP): agrega esta entrada a su configuración MCP y inicia su flujo de inicio de sesión.",
+        "antigravityHint": "Documentado por la comunidad, aún no verificado con nuestro servidor: si no inicia el acceso, revisa los docs MCP de Antigravity.",
         "copy": "Copiado",
         "tokenSummary": "¿Sin navegador en esta máquina? Usa un token de API",
         "tokenHint": "Los tokens de API son para servidores y CI. No vencen salvo que definas una fecha; revócalos cuando quieras.",

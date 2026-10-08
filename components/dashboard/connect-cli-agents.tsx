@@ -61,22 +61,60 @@ export function ConnectCliAgents({ connectorUrl, tokensAvailable = false, tokens
   const tokenUrl = `${connectorUrl}/cli`
   const copy = t('copy')
 
-  const claudeCode = `claude mcp add --transport http ${name} ${connectorUrl}\nclaude mcp login ${name}`
-  const codex = `codex mcp add ${name} --url ${connectorUrl}\ncodex mcp login ${name}`
-  const generic = JSON.stringify({ mcpServers: { [name]: { type: 'http', url: connectorUrl } } }, null, 2)
+  const json = (value: unknown) => JSON.stringify(value, null, 2)
+  const tokenEnv = 'export LMS_MCP_TOKEN="<your token>"\n'
 
-  const claudeCodeToken = `export LMS_MCP_TOKEN="<your token>"\nclaude mcp add --transport http ${name} ${tokenUrl} \\\n  --header "Authorization: Bearer $LMS_MCP_TOKEN"`
-  const codexToken = `export LMS_MCP_TOKEN="<your token>"\n\n# ~/.codex/config.toml\n[mcp_servers.${name}]\nurl = "${tokenUrl}"\nbearer_token_env_var = "LMS_MCP_TOKEN"`
-  const genericToken = JSON.stringify(
-    { mcpServers: { [name]: { type: 'http', url: tokenUrl, headers: { Authorization: 'Bearer ${LMS_MCP_TOKEN}' } } } },
-    null,
-    2,
-  )
-
-  const tabs = [
-    { id: 'claude-code', label: 'Claude Code', login: claudeCode, token: claudeCodeToken },
-    { id: 'codex', label: 'Codex', login: codex, token: codexToken },
-    { id: 'other', label: t('other'), login: generic, token: genericToken },
+  // Per-agent: the sign-in setup (OAuth, preferred) and the headless token
+  // fallback (null where the agent has no safe way to read the token from env).
+  const tabs: { id: string; label: string; login: string; token: string | null }[] = [
+    {
+      id: 'claude-code',
+      label: 'Claude Code',
+      login: `claude mcp add --transport http ${name} ${connectorUrl}\nclaude mcp login ${name}`,
+      token: `${tokenEnv}claude mcp add --transport http ${name} ${tokenUrl} \\\n  --header "Authorization: Bearer $LMS_MCP_TOKEN"`,
+    },
+    {
+      id: 'codex',
+      label: 'Codex',
+      login: `codex mcp add ${name} --url ${connectorUrl}\ncodex mcp login ${name}`,
+      token: `${tokenEnv}\n# ~/.codex/config.toml\n[mcp_servers.${name}]\nurl = "${tokenUrl}"\nbearer_token_env_var = "LMS_MCP_TOKEN"`,
+    },
+    {
+      id: 'gemini',
+      label: 'Gemini CLI',
+      login: `gemini mcp add --transport http ${name} ${connectorUrl}\n# then, inside gemini:\n/mcp auth ${name}`,
+      token: `${tokenEnv}gemini mcp add --transport http ${name} ${tokenUrl} \\\n  --header "Authorization: Bearer $LMS_MCP_TOKEN"`,
+    },
+    {
+      id: 'cursor',
+      label: 'Cursor',
+      login: `// ~/.cursor/mcp.json\n${json({ mcpServers: { [name]: { url: connectorUrl } } })}`,
+      token: `// ~/.cursor/mcp.json\n${json({ mcpServers: { [name]: { url: tokenUrl, headers: { Authorization: 'Bearer ${env:LMS_MCP_TOKEN}' } } } })}`,
+    },
+    {
+      id: 'vscode',
+      label: 'VS Code',
+      login: `// .vscode/mcp.json\n${json({ servers: { [name]: { type: 'http', url: connectorUrl } } })}`,
+      token: null,
+    },
+    {
+      id: 'opencode',
+      label: 'OpenCode',
+      login: `// opencode.json\n${json({ $schema: 'https://opencode.ai/config.json', mcp: { [name]: { type: 'remote', url: connectorUrl, oauth: {} } } })}\n\nopencode mcp auth ${name}`,
+      token: `${tokenEnv}// opencode.json\n${json({ mcp: { [name]: { type: 'remote', url: tokenUrl, oauth: false, headers: { Authorization: 'Bearer {env:LMS_MCP_TOKEN}' } } } })}`,
+    },
+    {
+      id: 'antigravity',
+      label: 'Antigravity (agy)',
+      login: `// ~/.gemini/antigravity/mcp_config.json\n${json({ mcpServers: { [name]: { serverUrl: connectorUrl, oauth: {} } } })}\n\n# then, inside agy:\n/mcp`,
+      token: null,
+    },
+    {
+      id: 'other',
+      label: t('other'),
+      login: json({ mcpServers: { [name]: { type: 'http', url: connectorUrl } } }),
+      token: json({ mcpServers: { [name]: { type: 'http', url: tokenUrl, headers: { Authorization: 'Bearer ${LMS_MCP_TOKEN}' } } } }),
+    },
   ]
 
   return (
@@ -86,7 +124,7 @@ export function ConnectCliAgents({ connectorUrl, tokensAvailable = false, tokens
         <p className="mt-0.5 text-xs text-muted-foreground">{t('description')}</p>
       </div>
       <Tabs defaultValue="claude-code">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap justify-start">
           {tabs.map((tab) => (
             <TabsTrigger key={tab.id} value={tab.id}>
               {tab.label}
@@ -95,9 +133,9 @@ export function ConnectCliAgents({ connectorUrl, tokensAvailable = false, tokens
         </TabsList>
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id} className="space-y-3">
-            <p className="text-xs text-muted-foreground">{t(tab.id === 'other' ? 'otherHint' : 'oauthHint')}</p>
+            <p className="text-xs text-muted-foreground">{t(tab.id === 'other' || tab.id === 'antigravity' ? `${tab.id}Hint` : 'oauthHint')}</p>
             <Snippet code={tab.login} label={copy} />
-            {tokensAvailable && (
+            {tokensAvailable && tab.token && (
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground">{t('tokenSummary')}</summary>
                 <div className="mt-2 space-y-2">
