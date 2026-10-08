@@ -29,7 +29,14 @@ import type { CreateCheckoutParams, PaymentProvider } from '@/lib/payments/types
 import { getSolUsdPrice, usdToLamports } from '@/lib/payments/sol-price'
 import { getSolanaSettlementOptions } from '@/app/actions/admin/settings'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
-import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
+import { DEFAULT_FEE_BEARER, type FeeBearer } from '@/lib/payments/fee-bearer'
+import {
+  computeProductCharge,
+  FeeSplitUnavailableError,
+  getTenantRevenueSplit,
+  pendingCheckoutMatches,
+  splitOrDefault,
+} from '@/lib/payments/product-charge'
 import { checkoutExpiresAt, isHostedCheckoutProvider } from '@/lib/payments/checkout-expiry'
 import { reconcilePayPalCheckout } from '@/lib/payments/paypal-reconcile'
 import {
@@ -93,6 +100,14 @@ export async function POST(req: NextRequest) {
     let itemName: string
     let providerSlug: string
     let providerPriceId = ''
+    // Plans always leave the fee with the school (#927 is per product).
+    let feeBearer: FeeBearer = DEFAULT_FEE_BEARER
+    // The tenant's CURRENT split, snapshotted onto the transaction below (#496)
+    // and — when the student bears the fee — the input the charge is grossed up
+    // from. Service-role read with the tenant pinned (lib/payments/product-charge.ts),
+    // the same one the checkout page displays with, so display == charge.
+    const split = await getTenantRevenueSplit(tenantId)
+    let schoolPercentageSnapshot = splitOrDefault(split).schoolPercentage
     const mode: CreateCheckoutParams['mode'] = planId ? 'subscription' : 'one_time'
 
     if (planId) {
@@ -113,18 +128,37 @@ export async function POST(req: NextRequest) {
     } else {
       const { data: product, error } = await supabase
         .from('products')
-        .select('price, name, currency, provider_price_id, payment_provider')
+        .select('tenant_id, price, name, currency, provider_price_id, payment_provider, fee_bearer')
         .eq('product_id', productId)
         .eq('tenant_id', tenantId)
         .single()
-      if (error || !product) {
+      if (error || !product || product.tenant_id !== tenantId) {
         return NextResponse.json({ error: 'Product not found' }, { status: 404 })
       }
-      amountMajor = Number(product.price)
+      // Fee bearer (#927): when the student bears the fee the amount is grossed
+      // up, and every figure derived from `amountMajor` below (Solana
+      // settlement base, the provider session, the transaction row) carries the
+      // grossed-up number. Server-derived from products + revenue_splits only.
+      let charge
+      try {
+        charge = computeProductCharge(product, split)
+      } catch (err) {
+        if (err instanceof FeeSplitUnavailableError) {
+          console.error('[payments/checkout]', err.message)
+          return NextResponse.json(
+            { error: 'This item cannot be purchased right now. Please contact the school.', code: err.code },
+            { status: 503 },
+          )
+        }
+        throw err
+      }
+      amountMajor = charge.amount
       currency = product.currency || 'usd'
       itemName = product.name
       providerSlug = product.payment_provider || 'stripe'
       providerPriceId = product.provider_price_id || ''
+      feeBearer = charge.feeBearer
+      schoolPercentageSnapshot = charge.schoolPercentage
     }
 
     // Connected-account readiness gate (#606). A no-op for every rail this
@@ -247,29 +281,47 @@ export async function POST(req: NextRequest) {
     // migration a safe lever — drop the trigger and this path still snapshots.
     const adminClient = createAdminClient()
 
-    // The buyer's own leftover PayPal checkout for this same item (#479). A
-    // buyer who pressed "Cancel and return" on PayPal's page — or closed the
-    // tab — left a `pending` row inside transactions_unique_product /
-    // transactions_unique_plan, and every retry died on the insert below with a
-    // generic 500 until the 24h TTL lapsed (seen live). Ask PayPal what became
+    // The buyer's own leftover checkout for this same item, on ANY rail.
+    //
+    // PayPal (#479): a buyer who pressed "Cancel and return" on PayPal's page —
+    // or closed the tab — left a `pending` row inside transactions_unique_product
+    // / transactions_unique_plan, and every retry died on the insert below with
+    // a generic 500 until the 24h TTL lapsed (seen live). Ask PayPal what became
     // of it: a dead checkout is released here, a paid one is settled, and one
     // still in flight is reported instead of double-charging.
-    if (providerSlug === 'paypal') {
+    //
+    // Every rail (#927 review): a leftover is NEVER continued on stale terms.
+    // Its stored amount / currency / fee bearer are compared with the charge
+    // just computed (pendingCheckoutMatches, the hosted-rail counterpart of
+    // stripeCheckoutMatches), so an admin flipping the fee bearer or the split
+    // changing mid-checkout cannot carry the old amount into a new session. A
+    // Binance / Solana / Lemon Squeezy leftover cannot be released from here —
+    // we cannot prove no money is in motion (an unverified on-chain transfer
+    // still settles against its pending row) — so it is reported with a 409 and
+    // left to its TTL / reconciler rather than dying on the unique index.
+    {
       let leftoverQuery = adminClient
         .from('transactions')
-        .select('transaction_id, provider_checkout_id, plan_id')
+        .select('transaction_id, provider_checkout_id, plan_id, payment_provider, amount, currency, fee_bearer')
         .eq('user_id', user.id)
         .eq('tenant_id', tenantId)
         .eq('status', 'pending')
-        .eq('payment_provider', 'paypal')
         .limit(1)
       leftoverQuery = planId
         ? leftoverQuery.eq('plan_id', planId).is('product_id', null)
         : leftoverQuery.eq('product_id', productId).is('plan_id', null)
-      const { data: leftover } = await leftoverQuery.maybeSingle()
+      const { data: leftover, error: leftoverError } = await leftoverQuery.maybeSingle()
+
+      if (leftoverError) {
+        console.error('[payments/checkout] leftover checkout lookup failed:', leftoverError)
+        return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
+      }
 
       if (leftover) {
-        const outcome = await reconcilePayPalCheckout(adminClient, leftover)
+        const termsMatch = pendingCheckoutMatches(leftover, { amount: amountMajor, currency, feeBearer })
+        const outcome = leftover.payment_provider === 'paypal'
+          ? await reconcilePayPalCheckout(adminClient, leftover)
+          : null
         if (outcome === 'settled') {
           return NextResponse.json(
             { error: 'This purchase already went through.', code: 'ALREADY_PAID', transactionId: leftover.transaction_id },
@@ -277,8 +329,18 @@ export async function POST(req: NextRequest) {
           )
         }
         if (outcome !== 'dead') {
+          if (!termsMatch) {
+            console.warn(
+              `[payments/checkout] leftover tx ${leftover.transaction_id} is on outdated terms (stored ${leftover.amount} ${leftover.currency} / ${leftover.fee_bearer}, now ${amountMajor} ${currency} / ${feeBearer}); not continuing it`,
+            )
+          }
           return NextResponse.json(
-            { error: 'Your previous PayPal payment for this item is still processing. Try again in a few minutes.', code: 'CHECKOUT_IN_FLIGHT' },
+            {
+              error: termsMatch
+                ? 'Your previous payment for this item is still processing. Try again in a few minutes.'
+                : 'The price of this item changed while a previous checkout was open. Try again once that checkout expires.',
+              code: 'CHECKOUT_IN_FLIGHT',
+            },
             { status: 409 },
           )
         }
@@ -292,13 +354,6 @@ export async function POST(req: NextRequest) {
           .eq('status', 'pending')
       }
     }
-
-    const { data: revenueSplit } = await adminClient
-      .from('revenue_splits')
-      .select('school_percentage')
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
-    const schoolPercentageSnapshot = revenueSplit?.school_percentage ?? DEFAULT_SCHOOL_PERCENTAGE
 
     // 1. Pending transaction — our correlation id (transaction_id) round-trips
     //    back on the webhook (LS) or the verify endpoint (Solana).
@@ -332,6 +387,9 @@ export async function POST(req: NextRequest) {
         status: 'pending',
         payment_provider: providerSlug,
         school_percentage_snapshot: schoolPercentageSnapshot,
+        // Who bore the platform fee (#927): `amount` above is already grossed
+        // up when this is 'student'. Frozen by the DB once written.
+        fee_bearer: feeBearer,
         // Local TTL for hosted rails only (#624). Without it an abandoned
         // redirect leaves this pending row inside transactions_unique_product /
         // transactions_unique_plan forever, and the buyer can never retry.
@@ -348,6 +406,14 @@ export async function POST(req: NextRequest) {
       })
       .select('transaction_id')
       .single()
+
+    if (txError?.code === '23505') {
+      // Lost a race with a concurrent checkout for the same item.
+      return NextResponse.json(
+        { error: 'A payment for this item is already in progress. Try again in a few minutes.', code: 'CHECKOUT_IN_FLIGHT' },
+        { status: 409 },
+      )
+    }
 
     if (txError || !transaction) {
       console.error('[payments/checkout] transaction insert failed:', txError)

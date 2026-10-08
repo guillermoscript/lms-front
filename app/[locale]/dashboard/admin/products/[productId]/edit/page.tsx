@@ -4,6 +4,9 @@ import { getTranslations } from 'next-intl/server'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { ProductCreationWizard } from '@/components/admin/product-creation-wizard'
 import { getEnabledPaymentProviders } from '@/app/actions/admin/settings'
+import { ProductFeeBearerCard } from '@/components/admin/product-fee-bearer-card'
+import { canPassFeeToStudent, normalizeFeeBearer } from '@/lib/payments/fee-bearer'
+import { getTenantRevenueSplit, splitOrDefault } from '@/lib/payments/product-charge'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import type {
   ProductCreationPaymentProvider,
@@ -155,11 +158,16 @@ export default async function EditProductPage({ params }: PageProps) {
   }
 
   const { data: enabledProviders } = await getEnabledPaymentProviders()
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('stripe_account_id')
-    .eq('id', tenantId)
-    .single()
+  const [{ data: tenant }, revenueSplit] = await Promise.all([
+    supabase
+      .from('tenants')
+      .select('stripe_account_id')
+      .eq('id', tenantId)
+      .single(),
+    getTenantRevenueSplit(tenantId),
+  ])
+  // The same split read the checkout routes charge with (lib/payments/product-charge.ts).
+  const platformPercentage = splitOrDefault(revenueSplit).platformPercentage
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,6 +202,20 @@ export default async function EditProductPage({ params }: PageProps) {
           enabledProviders={enabledProviders}
           stripeConnected={Boolean(tenant?.stripe_account_id)}
         />
+
+        <div className="mt-8">
+          <ProductFeeBearerCard
+            // Remount on a server refresh that changed any input, so the
+            // selection and breakdown never outlive the props they came from.
+            key={`${product.price}:${product.currency}:${product.fee_bearer}:${product.payment_provider}:${platformPercentage}`}
+            productId={product.product_id}
+            initialBearer={normalizeFeeBearer(product.fee_bearer)}
+            price={Number(product.price)}
+            currency={product.currency || 'usd'}
+            platformPercentage={platformPercentage}
+            providerSupportsStudentBearer={canPassFeeToStudent(product.payment_provider || 'stripe')}
+          />
+        </div>
 
       </main>
     </div>

@@ -124,6 +124,8 @@ function makeUserSupabase() {
 
 function makeAdminClient() {
   return makeClient(({ table, op, values, filters }) => {
+    // The split is read on the admin client with the tenant pinned (#927 review).
+    if (table === 'revenue_splits') return { data: state.revenueSplit, error: null }
     if (table !== 'transactions') return { data: null, error: null }
     if (op === 'select') return { data: state.leftover, error: null }
     if (op === 'insert') {
@@ -198,9 +200,9 @@ beforeEach(() => {
   tracked.length = 0
   state.profile = { stripe_customer_id: 'cus_1', full_name: 'Buyer' }
   state.tenantRow = { stripe_account_id: 'acct_1' }
-  state.productRow = { price: 50, name: 'Course', currency: 'usd' }
+  state.productRow = { tenant_id: TENANT, price: 50, name: 'Course', currency: 'usd' }
   state.planRow = null
-  state.revenueSplit = { platform_percentage: 20 }
+  state.revenueSplit = { tenant_id: TENANT, platform_percentage: 20, school_percentage: 80 }
   state.leftover = null
   state.insertResult = { transaction_id: 100 }
   state.insertError = null

@@ -3821,8 +3821,6 @@
             "manualInstructions": "Instrucciones de Pago Manual / Offline",
             "manualInstructionsPlaceholder": "ej. Transferencia bancaria a la cuenta 1234-5678 (Banco XYZ). Incluye tu correo como referencia y sube el comprobante.",
             "manualInstructionsHint": "Se muestra a los estudiantes por adelantado cuando solicitan un pago offline (transferencia, efectivo, etc.). Déjalo en blanco para ocultarlo.",
-            "binancePersonal": "Binance Pay (cuenta personal)",
-            "binancePersonalHint": "Cripto enviada directo a tu propio Pay ID de Binance. Los estudiantes transfieren manualmente y lo confirmamos con tu clave API de solo lectura.",
             "manual": "Transferencia bancaria y pago offline",
             "manualHint": "Transferencia bancaria, efectivo o cualquier arreglo offline. El estudiante sube el comprobante de pago y tú lo confirmas a mano.",
             "alwaysAvailable": "Siempre disponible",
@@ -3863,17 +3861,12 @@
               "add": "Agregar datos",
               "edit": "Editar datos",
               "solanaTitle": "Billetera receptora de Solana",
-              "solanaDesc": "La dirección a la que pagan los estudiantes. Una sola dirección cubre pagos únicos y suscripciones.",
-              "binanceTitle": "Credenciales de Binance Pay",
-              "binanceDesc": "Tu Pay ID y una clave API de solo lectura. Usamos la clave solo para confirmar transferencias entrantes — no puede mover fondos."
+              "solanaDesc": "La dirección a la que pagan los estudiantes. Una sola dirección cubre pagos únicos y suscripciones."
             },
             "accounts": {
-              "title": "Cuentas donde recibes los pagos",
-              "hint": "Los estudiantes las ven al pagar y eligen en cuál depositaron, así sabes qué cuenta revisar.",
-              "empty": "Todavía no hay cuentas. Agrega la cuenta, billetera o número de teléfono al que deben enviarte el dinero.",
-              "accountNumber": "Cuenta {number}",
-              "add": "Agregar cuenta",
-              "remove": "Eliminar",
+              "title": "Métodos de pago manuales",
+              "hint": "Configura los métodos que aceptas. Los estudiantes los ven al pagar y eligen en cuál depositaron, así sabes qué cuenta revisar.",
+              "remove": "Quitar",
               "fields": {
                 "method": "Método",
                 "bank": "Banco",
@@ -3889,6 +3882,121 @@
                 "holder": "Nombre del titular",
                 "document": "Cédula o RIF",
                 "note": "Algo más que el estudiante deba saber"
+              },
+              "configure": "Configurar",
+              "edit": "Editar",
+              "configured": "Configurado",
+              "cancel": "Cancelar",
+              "save": "Guardar",
+              "unsavedHint": "Los cambios se guardan con el botón Guardar Cambios al final de la página.",
+              "limitReached": "Puedes listar hasta {max} cuentas. Quita una para agregar otra.",
+              "other": {
+                "title": "Otras cuentas",
+                "hint": "Transferencias bancarias o cualquier método que no esté en la lista.",
+                "add": "Agregar otra cuenta",
+                "dialogTitle": "Otra cuenta",
+                "dialogDescription": "Describe la cuenta con tus propias palabras."
+              },
+              "errors": {
+                "required": "Este campo es obligatorio",
+                "apiCredentials": "Ingresa la clave API y el secreto API.",
+                "invalidEmail": "Ingresa un correo válido",
+                "invalidPhone": "Ingresa un teléfono válido (7 a 15 dígitos)",
+                "invalidDocument": "Ingresa una cédula válida, p. ej. V-12345678"
+              },
+              "binanceAuto": {
+                "title": "Verificar pagos automáticamente",
+                "hint": "Opcional. Conecta una clave API de solo lectura y confirmamos por ti las transferencias recibidas por Binance Pay.",
+                "codeNote": "Se le pide al estudiante incluir su código de pago en la nota de Binance Pay. Los pagos sin coincidencia quedan pendientes para que los confirmes.",
+                "offNote": "Al desactivarlo se detienen las verificaciones automáticas. Tu clave guardada sigue cifrada hasta que la quites.",
+                "removeKey": "Quitar clave guardada",
+                "keyRemoved": "Clave de Binance eliminada",
+                "removeKeyError": "No se pudo quitar la clave guardada",
+                "saveNote": "La clave se guarda al guardar aquí. Haz clic en Guardar Cambios en la página para activar las verificaciones automáticas."
+              },
+              "kinds": {
+                "zelle": {
+                  "name": "Zelle",
+                  "description": "Recibe dólares por correo electrónico.",
+                  "fields": {
+                    "email": "Correo de Zelle",
+                    "holder": "Titular de la cuenta",
+                    "note": "Instrucciones adicionales"
+                  },
+                  "placeholders": {
+                    "email": "pagos@tuescuela.com",
+                    "holder": "Nombre del titular",
+                    "note": "Algo más que el estudiante deba saber"
+                  }
+                },
+                "binance": {
+                  "name": "Binance",
+                  "description": "Recibe USDT con Binance Pay.",
+                  "fields": {
+                    "email": "Correo de Binance",
+                    "identifier": "Binance Pay ID",
+                    "note": "Instrucciones adicionales"
+                  },
+                  "placeholders": {
+                    "email": "pagos@tuescuela.com",
+                    "identifier": "p. ej. 123456789",
+                    "note": "Algo más que el estudiante deba saber"
+                  }
+                },
+                "paypal": {
+                  "name": "PayPal",
+                  "description": "Recibe pagos en tu cuenta de PayPal.",
+                  "fields": {
+                    "email": "Correo de PayPal",
+                    "note": "Instrucciones adicionales"
+                  },
+                  "placeholders": {
+                    "email": "pagos@tuescuela.com",
+                    "note": "Algo más que el estudiante deba saber"
+                  }
+                },
+                "zinli": {
+                  "name": "Zinli",
+                  "description": "Recibe pagos en tu billetera Zinli.",
+                  "fields": {
+                    "email": "Correo de Zinli",
+                    "holder": "Titular de la cuenta",
+                    "note": "Instrucciones adicionales"
+                  },
+                  "placeholders": {
+                    "email": "pagos@tuescuela.com",
+                    "holder": "Nombre del titular",
+                    "note": "Algo más que el estudiante deba saber"
+                  }
+                },
+                "cash": {
+                  "name": "Efectivo",
+                  "description": "Cobra en persona o con entrega en mano.",
+                  "fields": {
+                    "note": "Instrucciones"
+                  },
+                  "placeholders": {
+                    "note": "Dónde, cuándo y a quién debe entregar el efectivo el estudiante"
+                  }
+                },
+                "pago_movil": {
+                  "name": "Pago Móvil",
+                  "description": "Transferencia bancaria móvil.",
+                  "fields": {
+                    "bank": "Banco",
+                    "identifier": "Número de teléfono",
+                    "document": "Cédula / RIF",
+                    "holder": "Titular de la cuenta",
+                    "note": "Instrucciones adicionales"
+                  },
+                  "placeholders": {
+                    "bank": "Nombre o código del banco",
+                    "identifier": "0412-1234567",
+                    "document": "V-12345678",
+                    "holder": "Nombre del titular",
+                    "note": "Algo más que el estudiante deba saber"
+                  }
+                }
               }
             }
           },
@@ -3928,19 +4036,14 @@
           },
           "binancePersonal": {
             "keyWarning": "Usa una clave API de SOLO LECTURA con los retiros deshabilitados y restricciones de IP activadas. Nunca pegues una clave que pueda mover fondos.",
-            "payIdLabel": "Binance Pay ID",
-            "payIdPlaceholder": "p. ej. 123456789",
-            "payIdHint": "Tu Binance Pay ID — los estudiantes envían los pagos a esta cuenta.",
             "apiKeyLabel": "Clave API",
             "apiKeyPlaceholder": "Clave API de solo lectura",
             "apiSecretLabel": "Secreto API",
             "apiSecretPlaceholder": "Secreto API",
             "unchangedPlaceholder": "••••••••  (sin cambios)",
             "credentialsSaved": "Credenciales guardadas. Déjalo en blanco para conservarlas o introduce nuevos valores para reemplazarlas.",
-            "success": "Credenciales de Binance Pay guardadas",
             "error": "No se pudieron guardar las credenciales de Binance Pay",
-            "saving": "Guardando...",
-            "save": "Guardar"
+            "settingsNotSaved": "Las credenciales de Binance se guardaron, pero los demás ajustes no. Intenta guardar de nuevo."
           }
         },
         "mailer": {
@@ -4192,6 +4295,24 @@
           "back": "Volver a Productos",
           "details": {
             "description": "Los cambios en el precio o la moneda crearán un nuevo precio en Stripe."
+          },
+          "feeBearer": {
+            "title": "¿Quién paga la tarifa de la plataforma?",
+            "description": "Elige si la tarifa de la plataforma se descuenta de tus ganancias o se suma al precio que pagan tus estudiantes.",
+            "school": "Yo la asumo",
+            "schoolHint": "Los estudiantes pagan el precio publicado. La tarifa se descuenta de lo que recibes.",
+            "student": "Mis estudiantes la asumen",
+            "studentHint": "La tarifa se suma al pagar, así recibes el precio publicado completo.",
+            "price": "Precio del servicio",
+            "platformFee": "Tarifa de la plataforma ({percentage}%)",
+            "customerPays": "El cliente paga",
+            "youReceive": "Tú recibes",
+            "noFee": "Tu plan no tiene tarifa de plataforma, así que ambas opciones cobran lo mismo.",
+            "providerUnsupported": "Los pagos de este producto no llevan tarifa de plataforma o el proveedor fija el precio, así que aquí la escuela siempre la asume.",
+            "save": "Guardar",
+            "saved": "Configuración de tarifa guardada",
+            "saveError": "No se pudo guardar la configuración de tarifa",
+            "freeProduct": "Los productos gratuitos no tienen tarifa de plataforma."
           }
         },
         "form": {
@@ -5732,6 +5853,8 @@
     "product": "Producto",
     "free": "Gratis",
     "duration": "{days} días de acceso",
+    "priceUnavailable": "El precio de este curso no está disponible por ahora. Contacta a la escuela.",
+    "feeIncluded": "Incluye la tarifa de servicio de la plataforma",
     "secureCheckout": "Pago seguro",
     "included": "Qué incluye",
     "enrollment": {
@@ -5831,6 +5954,22 @@
         "step2": "Recibe instrucciones de pago por correo (transferencia bancaria, factura, etc.)",
         "step3": "Completa el pago usando tu método preferido",
         "step4": "Obtén acceso instantáneo una vez confirmado el pago"
+      },
+      "accounts": {
+        "title": "Envía tu pago a",
+        "fields": {
+          "bank": "Banco",
+          "identifier": "Cuenta / número",
+          "email": "Correo",
+          "holder": "Titular",
+          "document": "Cédula / RIF",
+          "note": "Instrucciones",
+          "binancePayId": "Binance Pay ID",
+          "phone": "Teléfono"
+        },
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "copyLabel": "Copiar {field}"
       }
     }
   },

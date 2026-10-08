@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as rootCountries from "../../lib/countries";
 import * as rootGeneral from "../../lib/settings/general-settings";
+import * as rootAccounts from "../../lib/payments/manual-payment-accounts";
 
 type Result = { data?: unknown; error?: unknown; count?: number | null };
 type Op = [string, ...unknown[]];
@@ -230,6 +231,94 @@ describe("settings helpers mirror the app (lib/countries, lib/settings/general-s
       expect(mine.ok, JSON.stringify(input)).toBe(root.ok);
       if (mine.ok && root.ok) expect(mine.settings, JSON.stringify(input)).toEqual(root.settings);
     }
+  });
+});
+
+describe("manual payment accounts mirror the app (#930)", () => {
+  const long = "x".repeat(300);
+  const cases: unknown[] = [
+    [],
+    null,
+    "junk",
+    { accounts: [{ method: " Zelle ", identifier: "a@b.co" }] },
+    [{ method: "Pago   Móvil", bank: "B", document: "V-1", note: "n" }, { bank: "no method" }, 5, null],
+    [{ method: long, id: long }],
+    Array.from({ length: 20 }, (_, i) => ({ method: `m${i}` })),
+    [{ method: "A", id: "keep" }, { method: "B" }],
+    [{ kind: "zelle", email: "a@b.co" }, { kind: "zelle", method: "Zelle 2" }, { kind: "cash", note: "a\r\n\n\n\nb   c" }],
+    [{ kind: "nope", method: "X" }, { kind: "pago_movil" }, { method: "A", id: "acct-1" }, { method: "B" }],
+    [{ method: "A", id: "dup" }, { method: "B", id: "dup" }, { kind: "paypal", method: "C", id: "preset-zelle" }],
+    [{ method: "A", id: "preset-zelle" }],
+    [{ method: "A", note: "n".repeat(900), api_key: "sk_live_x", credentials: { secret: "s" } }],
+  ];
+
+  it("normalizer matches root", () => {
+    for (const c of cases) {
+      expect(settingsLib.normalizeManualPaymentAccounts(c), JSON.stringify(c)).toEqual(
+        rootAccounts.normalizeManualPaymentAccounts(c)
+      );
+    }
+  });
+
+  it("buildSettingsRows stores the normalized { accounts } wrapper", () => {
+    const out = settingsLib.buildSettingsRows({
+      manual_payment_accounts: [{ method: " Zelle ", identifier: "a@b.co" }, { bank: "x" }, "junk"],
+    });
+    expect(out).toEqual({
+      ok: true,
+      settings: {
+        manual_payment_accounts: {
+          accounts: [
+            {
+              id: "acct-1", kind: null, method: "Zelle", bank: null, identifier: "a@b.co",
+              email: null, holder: null, document: null, note: null,
+            },
+          ],
+        },
+      },
+    });
+  });
+});
+
+describe("manual payment accounts never persist secrets or duplicate ids (#930)", () => {
+  const dirty = [
+    {
+      kind: "binance",
+      method: "Binance",
+      identifier: "123",
+      api_key: "sk_live_abc",
+      apiKey: "k",
+      secret: "s",
+      password: "p",
+      credentials: { token: "t" },
+      extra: "x",
+    },
+  ];
+
+  it("drops api_key / credentials / secret-like extra fields", () => {
+    const [account] = settingsLib.normalizeManualPaymentAccounts(dirty);
+    expect(Object.keys(account).sort()).toEqual(
+      ["bank", "document", "email", "holder", "id", "identifier", "kind", "method", "note"]
+    );
+    const json = JSON.stringify(account);
+    for (const leak of ["sk_live_abc", "api_key", "apiKey", "password", "credentials", "token"]) {
+      expect(json).not.toContain(leak);
+    }
+  });
+
+  it("keeps ids unique and never lets a custom row hold a preset id", () => {
+    const out = settingsLib.normalizeManualPaymentAccounts([
+      { method: "A", id: "dup" },
+      { method: "B", id: "dup" },
+      { method: "C" },
+      { kind: "zelle", method: "Z" },
+      { kind: "zelle", method: "Z2" },
+    ]);
+    const ids = out.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(out[3].id).toBe("preset-zelle");
+    expect(out[4].kind).toBeNull();
+    expect(out[4].id.startsWith("preset-")).toBe(false);
   });
 });
 
@@ -542,6 +631,36 @@ describe("lms_update_school_settings", () => {
     });
     const r = await run({ country: "MX" });
     expect(r.structuredContent).toEqual({ updated_keys: [], country: "MX", currency_filled: null });
+  });
+
+  it("normalizes manual_payment_accounts through the tool and stores no secrets", async () => {
+    fake = makeFake({
+      tenant_settings: [{ data: [{ setting_key: "manual_payment_accounts" }] }],
+    });
+    const r = await run({
+      manual_payment_accounts: [
+        { kind: "binance", method: "Binance", identifier: "99", api_key: "sk_live_zzz", secret: "s" },
+        { method: "Dup", id: "preset-binance" },
+        { bank: "no method" },
+      ],
+    });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent).toMatchObject({ updated_keys: ["manual_payment_accounts"] });
+    const upsert = fake.calls.find((c) => c.table === "tenant_settings")!;
+    const op = upsert.ops.find((o) => o[0] === "upsert")!;
+    const rows = op[1] as { setting_key: string; setting_value: { accounts: { id: string }[] } }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0].setting_key).toBe("manual_payment_accounts");
+    const accounts = rows[0].setting_value.accounts;
+    expect(accounts).toHaveLength(2);
+    expect(new Set(accounts.map((a) => a.id)).size).toBe(2);
+    expect(JSON.stringify(rows)).not.toMatch(/sk_live_zzz|api_key|"secret"/);
+  });
+
+  it("accepts manual_payment_accounts in the input schema", () => {
+    expect(
+      school.updateSchoolSettingsInput.safeParse({ manual_payment_accounts: [{ anything: 1 }] }).success
+    ).toBe(true);
   });
 
   it("refuses an empty update and an unknown country before touching the database", async () => {
