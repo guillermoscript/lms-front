@@ -1,73 +1,219 @@
 import { describe, it, expect } from 'vitest'
 import { computeOwedBalances } from '@/lib/payments/payouts-owed'
-import { filterEarnings, monthTotals, paginate, toEarningsRow, type EarningsTxn } from '@/lib/payments/earnings'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import {
+  accruePlatformFees,
+  buildEarningsView,
+  collectorOf,
+  EARNINGS_PROVIDERS,
+  filterEarnings,
+  monthTotals,
+  paginate,
+  parseEarningsQuery,
+  PLATFORM_COLLECTED_PROVIDERS,
+  SCHOOL_COLLECTED_PROVIDERS,
+  toEarningsRow,
+  utcMonthStart,
+  type EarningsRow,
+  type EarningsTxn,
+  type EarningsViewInput,
+} from '@/lib/payments/earnings'
 
 const base: EarningsTxn = {
-  transactionId: 1, paymentProvider: 'paypal', amount: 100, refundedAmount: 0, currency: 'usd',
+  transactionId: 1, paymentProvider: 'manual', amount: 100, refundedAmount: 0, currency: 'usd',
   schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-10-05T12:00:00Z',
 }
+const row = (over: Partial<EarningsTxn> = {}) => toEarningsRow({ ...base, ...over }) as EarningsRow
+const allFilters = { status: 'all' as const, collector: 'all' as const, currency: null, from: null, to: null }
 
-describe('earnings', () => {
+describe('provider scope (capability map, never applies_to_providers)', () => {
+  it('school-collected = every rail where the platform takes no fee in flight', () => {
+    for (const p of Object.keys(PROVIDER_CAPABILITIES) as PaymentProvider[]) {
+      expect(SCHOOL_COLLECTED_PROVIDERS.includes(p)).toBe(!PROVIDER_CAPABILITIES[p].bearsPlatformFee)
+    }
+    expect([...SCHOOL_COLLECTED_PROVIDERS].sort()).toEqual(['binance_personal', 'manual'])
+  })
+
+  it('platform-collected = settles to the platform account; Stripe and Solana are out of scope', () => {
+    expect([...PLATFORM_COLLECTED_PROVIDERS].sort()).toEqual(['binance', 'lemonsqueezy', 'paypal'])
+    for (const p of ['stripe', 'solana', 'solana_subs']) {
+      expect(EARNINGS_PROVIDERS).not.toContain(p)
+      expect(collectorOf(p)).toBeNull()
+    }
+  })
+
+  it('the two sets are disjoint, so no sale is counted in both directions', () => {
+    expect(SCHOOL_COLLECTED_PROVIDERS.filter((p) => PLATFORM_COLLECTED_PROVIDERS.includes(p))).toEqual([])
+  })
+})
+
+describe('toEarningsRow', () => {
   it('splits commission and net using the snapshot, net of partial refunds', () => {
-    const r = toEarningsRow({ ...base, refundedAmount: 20 })
-    expect(r.kept).toBe(80)
-    expect(r.net).toBe(64)
-    expect(r.commission).toBe(16)
+    const r = row({ refundedAmount: 20 })
+    expect(r).toMatchObject({ kept: 80, net: 64, commission: 16, collectedBy: 'school', currencyCode: 'USD' })
   })
 
-  it('falls back to default split without a snapshot', () => {
-    expect(toEarningsRow({ ...base, schoolPercentageSnapshot: null }).net).toBe(80)
+  it('falls back to the given split without a snapshot', () => {
+    expect(row({ schoolPercentageSnapshot: null }).net).toBe(80)
+    expect(toEarningsRow({ ...base, schoolPercentageSnapshot: null }, 90)!.commission).toBe(10)
   })
 
-  it('sum of row nets reconciles with computeOwedBalances grossOwed', () => {
-    const txns: EarningsTxn[] = [
-      { ...base, transactionId: 1, amount: 33.33, schoolPercentageSnapshot: 80 },
-      { ...base, transactionId: 2, amount: 10.1, schoolPercentageSnapshot: 90, refundedAmount: 0.05 },
-      { ...base, transactionId: 3, amount: 50, status: 'refunded', refundedAmount: 50 },
-    ]
-    const rows = txns.map((t) => toEarningsRow(t))
-    const sum = rows.filter((r) => r.status === 'successful').reduce((s, r) => s + r.net, 0)
-    const [owed] = computeOwedBalances(
-      [{ tenantId: 't', tenantName: 'T', schoolPercentage: 80 }],
-      txns.map((t) => ({
-        tenantId: 't',
-        paymentProvider: t.paymentProvider,
-        amount: t.amount,
-        refundedAmount: t.refundedAmount,
-        currency: t.currency,
-        schoolPercentageSnapshot: t.schoolPercentageSnapshot,
-        status: t.status as 'successful' | 'refunded',
-        transactionDate: t.transactionDate,
-      })),
-      [],
+  it('rounds per row so .99 prices leave no residue', () => {
+    const r = row({ amount: 49.99 })
+    expect(r.net).toBe(39.99)
+    expect(r.commission).toBe(10)
+    expect(Math.round((r.net + r.commission) * 100)).toBe(4999)
+  })
+
+  it('returns null for a provider outside both scopes', () => {
+    expect(toEarningsRow({ ...base, paymentProvider: 'stripe' })).toBeNull()
+  })
+})
+
+describe('accruePlatformFees (debt the school owes the platform)', () => {
+  it('sums commission on school-collected, counted rows only, per currency', () => {
+    const debt = accruePlatformFees([
+      row({ transactionId: 1 }), // 20
+      row({ transactionId: 2, paymentProvider: 'binance_personal', amount: 50 }), // 10
+      row({ transactionId: 3, refundedAmount: 40 }), // 12
+      row({ transactionId: 4, status: 'refunded', refundedAmount: 100 }), // 0, excluded
+      row({ transactionId: 5, refundedAmount: 100 }), // successful but fully refunded, excluded
+      row({ transactionId: 6, status: 'pending' }), // not settled
+      row({ transactionId: 7, paymentProvider: 'paypal' }), // platform collected, other direction
+      row({ transactionId: 8, currency: 'eur', amount: 10 }), // 2 EUR
+    ])
+    expect(debt).toEqual([
+      { currency: 'EUR', accrued: 2, paid: 0, netOwed: 2, sales: 1 },
+      { currency: 'USD', accrued: 42, paid: 0, netOwed: 42, sales: 3 },
+    ])
+  })
+
+  it('is empty without school-collected sales', () => {
+    expect(accruePlatformFees([row({ paymentProvider: 'paypal' })])).toEqual([])
+  })
+})
+
+describe('filterEarnings', () => {
+  const rows = [
+    row({ transactionId: 1 }),
+    row({ transactionId: 2, status: 'pending' }),
+    row({ transactionId: 3, currency: 'eur', transactionDate: '2026-09-01T00:00:00Z' }),
+    row({ transactionId: 4, status: 'refunded', refundedAmount: 100 }),
+    row({ transactionId: 5, refundedAmount: 100 }),
+    row({ transactionId: 6, refundedAmount: 10, paymentProvider: 'paypal' }),
+  ]
+  const ids = (rs: EarningsRow[]) => rs.map((r) => r.transactionId)
+
+  it('"counted" excludes pending and fully refunded rows (either shape)', () => {
+    expect(ids(filterEarnings(rows, { ...allFilters, status: 'counted' }))).toEqual([1, 3, 6])
+  })
+  it('"pending" and "refunded"', () => {
+    expect(ids(filterEarnings(rows, { ...allFilters, status: 'pending' }))).toEqual([2])
+    expect(ids(filterEarnings(rows, { ...allFilters, status: 'refunded' }))).toEqual([4, 5, 6])
+  })
+  it('collector, currency and UTC-inclusive dates', () => {
+    expect(ids(filterEarnings(rows, { ...allFilters, collector: 'platform' }))).toEqual([6])
+    expect(ids(filterEarnings(rows, { ...allFilters, currency: 'eur' }))).toEqual([3])
+    expect(ids(filterEarnings(rows, { ...allFilters, from: '2026-10-05', to: '2026-10-05' }))).toEqual([1, 2, 4, 5, 6])
+    expect(ids(filterEarnings(rows, { ...allFilters, to: '2026-09-01' }))).toEqual([3])
+  })
+})
+
+describe('month (UTC)', () => {
+  it('month starts at 00:00 UTC on the 1st regardless of host zone', () => {
+    expect(new Date(utcMonthStart(new Date('2026-10-31T23:30:00-05:00'))).toISOString()).toBe('2026-11-01T00:00:00.000Z')
+  })
+
+  it('totals counted rows in this UTC month, per currency, both collectors', () => {
+    const m = monthTotals(
+      [
+        row({ transactionId: 1 }),
+        row({ transactionId: 2, status: 'pending' }),
+        row({ transactionId: 3, transactionDate: '2026-09-30T23:59:59Z' }),
+        row({ transactionId: 4, paymentProvider: 'paypal', schoolPercentageSnapshot: 90 }),
+        row({ transactionId: 5, refundedAmount: 100 }),
+      ],
+      new Date('2026-10-08T00:00:00Z'),
     )
-    expect(Math.round(sum * 100)).toBe(Math.round(owed.balances[0].grossOwed * 100))
+    expect(m).toEqual({ sales: { USD: 200 }, commission: { USD: 30 }, net: { USD: 170 }, count: 2 })
   })
+})
 
-  it('filters by status, currency and dates', () => {
-    const rows = [
-      toEarningsRow(base),
-      toEarningsRow({ ...base, transactionId: 2, status: 'pending' }),
-      toEarningsRow({ ...base, transactionId: 3, currency: 'eur', transactionDate: '2026-09-01T00:00:00Z' }),
-    ]
-    const f = { status: 'all' as const, currency: null, from: null, to: null }
-    expect(filterEarnings(rows, { ...f, status: 'pending' })).toHaveLength(1)
-    expect(filterEarnings(rows, { ...f, status: 'payable' })).toHaveLength(2)
-    expect(filterEarnings(rows, { ...f, currency: 'EUR' })).toHaveLength(1)
-    expect(filterEarnings(rows, { ...f, from: '2026-10-01', to: '2026-10-05' })).toHaveLength(2)
-  })
-
-  it('month total counts only successful rows this month, per currency', () => {
-    const rows = [
-      toEarningsRow(base),
-      toEarningsRow({ ...base, transactionId: 2, status: 'pending' }),
-      toEarningsRow({ ...base, transactionId: 3, transactionDate: '2026-09-30T00:00:00Z' }),
-    ]
-    expect(monthTotals(rows, new Date('2026-10-08T00:00:00Z'))).toEqual({ byCurrency: { USD: 80 }, count: 1 })
-  })
-
+describe('paginate / parseEarningsQuery', () => {
   it('paginates and clamps', () => {
-    const p = paginate([1, 2, 3, 4, 5], 9, 2)
-    expect(p).toMatchObject({ page: 3, totalPages: 3, items: [5] })
+    expect(paginate([1, 2, 3, 4, 5], 9, 2)).toMatchObject({ page: 3, totalPages: 3, items: [5] })
+  })
+  it('drops unknown values', () => {
+    expect(
+      parseEarningsQuery({ status: 'payable', collector: 'x', currency: 'jpy', from: '2026-13-40', to: '2026-10-01', page: '2' }, ['USD']),
+    ).toEqual({ status: 'all', collector: 'all', currency: null, from: null, to: '2026-10-01', page: 2 })
+  })
+})
+
+describe('buildEarningsView (page assembly)', () => {
+  const input = (over: Partial<EarningsViewInput> = {}): EarningsViewInput => ({
+    tenantId: 't1',
+    txns: [
+      { ...base, transactionId: 1, amount: 49.99 },
+      { ...base, transactionId: 2, paymentProvider: 'binance_personal', amount: 30, transactionDate: '2026-09-15T00:00:00Z' },
+      { ...base, transactionId: 3, status: 'pending' },
+      { ...base, transactionId: 4, status: 'refunded', refundedAmount: 100 },
+      { ...base, transactionId: 5, paymentProvider: 'paypal', amount: 200, schoolPercentageSnapshot: 90 },
+      { ...base, transactionId: 6, paymentProvider: 'lemonsqueezy', amount: 20, currency: 'eur' },
+      { ...base, transactionId: 7, paymentProvider: 'stripe', amount: 999 },
+    ],
+    payouts: [{ amount: 50, currency: 'usd', coveredThrough: '2026-10-01T00:00:00Z' }],
+    schoolPercentage: 80,
+    openRequests: 3,
+    now: new Date('2026-10-08T12:00:00Z'),
+    searchParams: {},
+    pageSize: 4,
+    ...over,
+  })
+
+  it('debt is commission on direct sales only, per currency, with paid = 0', () => {
+    const v = buildEarningsView(input())
+    // 49.99 → 10.00 commission ; 30 → 6.00
+    expect(v.feeDebt).toEqual([{ currency: 'USD', accrued: 16, paid: 0, netOwed: 16, sales: 2 }])
+    expect(v.hasSchoolCollectedSales).toBe(true)
+  })
+
+  it('platform-owes side equals computeOwedBalances over platform-collected rows minus payouts, never netted with the debt', () => {
+    const v = buildEarningsView(input())
+    const [owed] = computeOwedBalances(
+      [{ tenantId: 't1', tenantName: '', schoolPercentage: 80 }],
+      [
+        { tenantId: 't1', paymentProvider: 'paypal', amount: 200, currency: 'USD', schoolPercentageSnapshot: 90, status: 'successful', transactionDate: base.transactionDate, refundedAmount: 0 },
+        { tenantId: 't1', paymentProvider: 'lemonsqueezy', amount: 20, currency: 'EUR', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: base.transactionDate, refundedAmount: 0 },
+      ],
+      [{ tenantId: 't1', amount: 50, currency: 'USD', coveredThrough: '2026-10-01T00:00:00Z' }],
+    )
+    const expected = Object.fromEntries(owed.balances.map((b) => [b.currency, b.netOwed]))
+    expect(v.platformOwes).toEqual(expected)
+    expect(v.platformOwes).toEqual({ USD: 130, EUR: 16 })
+  })
+
+  it('this month, open requests, currencies, and Stripe never listed', () => {
+    const v = buildEarningsView(input())
+    expect(v.month.count).toBe(3) // 1, 5, 6 — #2 is September, #3 pending, #4 refunded
+    expect(v.month.net).toEqual({ USD: 219.99, EUR: 16 })
+    expect(v.openRequests).toBe(3)
+    expect(v.currencies).toEqual(['EUR', 'USD'])
+    expect(v.page.total).toBe(6)
+    expect(v.page.items.map((r) => r.transactionId)).not.toContain(7)
+  })
+
+  it('applies query filters and pagination, newest first', () => {
+    const v = buildEarningsView(input({ searchParams: { status: 'counted', collector: 'school' } }))
+    expect(v.page.items.map((r) => r.transactionId)).toEqual([1, 2])
+    const p2 = buildEarningsView(input({ searchParams: { page: '2' } }))
+    expect(p2.page).toMatchObject({ page: 2, totalPages: 2 })
+    expect(p2.page.items.map((r) => r.transactionId)).toEqual([1, 2])
+  })
+
+  it('empty tenant renders zeros, not errors', () => {
+    const v = buildEarningsView(input({ txns: [], payouts: [], openRequests: 0 }))
+    expect(v).toMatchObject({ feeDebt: [], platformOwes: {}, hasPlatformCollectedSales: false, currencies: [] })
+    expect(v.page).toMatchObject({ items: [], page: 1, totalPages: 1 })
   })
 })

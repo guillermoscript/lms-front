@@ -13,12 +13,21 @@ import { Button } from '@/components/ui/button'
 import { AdminBreadcrumb } from '@/components/admin/admin-breadcrumb'
 import { IconArrowLeft } from '@tabler/icons-react'
 
+/** Statuses an admin still has to act on: new, or instructions sent and awaiting the money. */
+const OPEN_STATUSES = new Set(['pending', 'contacted'])
+const TABS = ['open', 'pending', 'contacted', 'payment_received', 'completed', 'all'] as const
+
 export default async function PaymentRequestsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>
+  searchParams: Promise<{ tab?: string | string[] }>
 }) {
   const { locale } = await params
+  const tabParam = (await searchParams).tab
+  const requestedTab = Array.isArray(tabParam) ? tabParam[0] : tabParam
+  const initialTab = (TABS as readonly string[]).includes(requestedTab ?? '') ? requestedTab! : 'pending'
   const t = await getTranslations('dashboard.admin.paymentRequests')
   const tBreadcrumbs = await getTranslations('dashboard.admin.breadcrumbs')
   const supabase = createAdminClient()
@@ -74,6 +83,8 @@ export default async function PaymentRequestsPage({
   const contactedCount = requests.filter(r => r.status === 'contacted').length
   const paymentReceivedCount = requests.filter(r => r.status === 'payment_received').length
   const completedCount = requests.filter(r => r.status === 'completed').length
+  // Same definition the earnings page's "Open payment requests" card counts.
+  const openRequests = requests.filter(r => OPEN_STATUSES.has(r.status))
 
   // Calculate total revenue from completed requests
   const totalRevenue = requests
@@ -147,8 +158,11 @@ export default async function PaymentRequestsPage({
         </div>
 
         {/* Tabs for filtering by status */}
-        <Tabs defaultValue="pending" className="space-y-4">
+        <Tabs defaultValue={initialTab} className="space-y-4">
           <TabsList>
+            <TabsTrigger value="open">
+              {t('tabs.open', { count: openRequests.length })}
+            </TabsTrigger>
             <TabsTrigger value="pending">
               {t('tabs.pending', { count: pendingCount })}
             </TabsTrigger>
@@ -165,6 +179,10 @@ export default async function PaymentRequestsPage({
               {t('tabs.all', { count: requests.length })}
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="open" className="space-y-4">
+            <PaymentRequestsTable requests={openRequests} timeZone={timeZone} />
+          </TabsContent>
 
           <TabsContent value="pending" className="space-y-4">
             <PaymentRequestsTable

@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** Mirrors earnings/page.tsx: header, three summary cards, filtered table. */
+/** Mirrors earnings/page.tsx: header, scope note, three summary cards, filtered table. */
 export default function Loading() {
   return (
     <div className="min-h-screen bg-background" aria-busy="true">
@@ -11,8 +11,13 @@ export default function Loading() {
           <Skeleton className="mt-1 h-4 w-64" />
         </div>
       </header>
-      <main className="mx-auto container px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 grid gap-3 md:grid-cols-3">
+      <main className="mx-auto container space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="space-y-2 rounded-xl border p-4">
+          <Skeleton className="h-3 w-full max-w-xl" />
+          <Skeleton className="h-3 w-full max-w-lg" />
+          <Skeleton className="h-3 w-64" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="space-y-2 rounded-xl border p-5">
               <Skeleton className="h-3 w-24" />
@@ -32,6 +37,7 @@ export default function Loading() {
                 <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-4 w-20" />
                 <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-14" />
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-4 w-16" />
