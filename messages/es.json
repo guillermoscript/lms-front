@@ -4590,7 +4590,19 @@
       "schoolsTitle": "Tus escuelas",
       "schoolsHint": "Cada escuela tiene su propio conector y tu rol allí define las herramientas: los estudiantes tienen sus herramientas de aprendizaje, los profesores y admins la gestión de cursos.",
       "copySchool": "Copiar URL del conector de {school}",
-      "roles": { "student": "Estudiante", "teacher": "Profesor", "admin": "Admin" }
+      "roles": { "student": "Estudiante", "teacher": "Profesor", "admin": "Admin" },
+      "cli": {
+        "title": "Conecta un agente de terminal",
+        "description": "Claude Code, Codex y otros agentes inician sesión con tu cuenta del LMS en el navegador — sin copiar tokens.",
+        "schoolLabel": "Escuela a conectar",
+        "oauthHint": "Ejecuta esto y aprueba en el navegador la primera vez. Revisa la escuela y el rol que se muestran.",
+        "other": "Otro",
+        "otherHint": "Cualquier agente que soporte servidores MCP remotos (HTTP): agrega esta entrada a su configuración MCP y inicia su flujo de inicio de sesión.",
+        "copy": "Copiado",
+        "tokenSummary": "¿Sin navegador en esta máquina? Usa un token de API",
+        "tokenHint": "Los tokens de API son para servidores y CI. No vencen salvo que definas una fecha; revócalos cuando quieras.",
+        "createToken": "Crear un token"
+      }
     },
     "courseProgress": {
       "progress": "Progreso",

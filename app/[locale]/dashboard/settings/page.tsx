@@ -73,7 +73,7 @@ export default async function DashboardSettingsPage() {
           </CardContent>
         </Card>
 
-        <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} />
+        <ConnectClaudeCard connectorUrl={connectorUrl} schools={schools} tokensAvailable tokensHref="/dashboard/teacher/api-tokens" />
 
         <Link href="/dashboard/teacher/api-tokens">
           <Button variant="outline">{t('manageTokens')}</Button>

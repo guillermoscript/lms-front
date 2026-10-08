@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+import { ConnectCliAgents } from '@/components/dashboard/connect-cli-agents'
 
 export interface ConnectSchool {
   tenantId: string
@@ -20,12 +22,16 @@ interface ConnectClaudeCardProps {
   connectorUrl: string
   /** All the user's schools; with 2+ the card lists one connector per school. */
   schools?: ConnectSchool[]
+  /** Show the API-token fallback for headless CLI use (teachers/admins). */
+  tokensAvailable?: boolean
+  tokensHref?: string
 }
 
-export function ConnectClaudeCard({ connectorUrl, schools = [] }: ConnectClaudeCardProps) {
+export function ConnectClaudeCard({ connectorUrl, schools = [], tokensAvailable, tokensHref }: ConnectClaudeCardProps) {
   const t = useTranslations('components.connectClaude')
   const [copied, setCopied] = useState<string | null>(null)
   const multi = schools.length > 1
+  const [cliUrl, setCliUrl] = useState(connectorUrl)
 
   const copyConnectorUrl = async (url: string) => {
     await navigator.clipboard.writeText(url)
@@ -83,6 +89,29 @@ export function ConnectClaudeCard({ connectorUrl, schools = [] }: ConnectClaudeC
           <li>{t('step3')}</li>
           <li>{t('step4')}</li>
         </ol>
+        {multi && (
+          <div className="space-y-1.5 border-t pt-4">
+            <Label className="text-xs text-muted-foreground block">{t('cli.schoolLabel')}</Label>
+            <div role="radiogroup" className="flex flex-wrap gap-2">
+              {schools.map((s) => (
+                <button
+                  key={s.tenantId}
+                  type="button"
+                  role="radio"
+                  aria-checked={cliUrl === s.connectorUrl}
+                  onClick={() => setCliUrl(s.connectorUrl)}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-xs transition-colors',
+                    cliUrl === s.connectorUrl ? 'border-primary bg-primary/5 font-medium' : 'hover:bg-muted/50',
+                  )}
+                >
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <ConnectCliAgents connectorUrl={cliUrl} tokensAvailable={tokensAvailable} tokensHref={tokensHref} />
       </CardContent>
     </Card>
   )

@@ -4709,7 +4709,19 @@
       "schoolsTitle": "Your schools",
       "schoolsHint": "Each school has its own connector and your role there decides the tools: students get their own learning tools, teachers and admins get course management.",
       "copySchool": "Copy connector URL for {school}",
-      "roles": { "student": "Student", "teacher": "Teacher", "admin": "Admin" }
+      "roles": { "student": "Student", "teacher": "Teacher", "admin": "Admin" },
+      "cli": {
+        "title": "Connect a CLI agent",
+        "description": "Claude Code, Codex and other agents sign in with your LMS account in the browser — no token to copy.",
+        "schoolLabel": "School to connect",
+        "oauthHint": "Run these, then approve in the browser the first time. Check the school and role shown.",
+        "other": "Other",
+        "otherHint": "Any agent that supports remote (HTTP) MCP servers: add this entry to its MCP config, then start its sign-in flow.",
+        "copy": "Copied",
+        "tokenSummary": "No browser on this machine? Use an API token",
+        "tokenHint": "API tokens are for servers and CI. They never expire unless you set an expiry; revoke them any time.",
+        "createToken": "Create a token"
+      }
     },
     "courseProgress": {
       "progress": "Progress",
