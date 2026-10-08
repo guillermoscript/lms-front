@@ -2490,6 +2490,91 @@
     "admin": {
       "title": "Panel de Administración",
       "welcome": "Gestiona tu plataforma LMS",
+      "earnings": {
+        "title": "Ganancias",
+        "description": "Tus ventas, la comisión de la plataforma en cada una y lo que se deben tú y la plataforma.",
+        "accessDenied": "Acceso denegado",
+        "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
+        "scope": {
+          "school": "Pagadas directamente a ti ({providers}): la plataforma no cobra su comisión al momento del pago, así que se acumula como un monto que debes a la plataforma.",
+          "platform": "Cobradas por la plataforma ({providers}): la plataforma retiene su comisión y te debe el resto, que paga manualmente.",
+          "excluded": "Las ventas con Stripe y Solana no aparecen: la comisión se cobra dentro del mismo pago, así que nadie le debe nada a nadie.",
+          "timezone": "Las fechas, los filtros de fecha y \"este mes\" usan UTC."
+        },
+        "providers": {
+          "manual": "Manual / transferencia",
+          "binance_personal": "Binance Pay ID",
+          "paypal": "PayPal",
+          "lemonsqueezy": "Lemon Squeezy",
+          "binance": "Binance Pay"
+        },
+        "stats": {
+          "owedToPlatform": "Por pagar a la plataforma",
+          "owedToPlatformDesc": "Comisión de {count, plural, =0 {ninguna venta} one {# venta} other {# ventas}} cobradas directamente por ti, descontando reembolsos",
+          "owedToPlatformNote": "Pagar este saldo desde aquí llegará en una próxima versión; por ahora no se cobra ni se bloquea nada.",
+          "month": "Este mes, todas las ventas (UTC)",
+          "monthDesc": "Tu neto de {count, plural, one {# venta} other {# ventas}}, cobradas por ti o por la plataforma · comisión {commission}. No es el monto por pagar de arriba, que solo cubre ventas cobradas por ti.",
+          "openRequests": "Solicitudes de pago abiertas",
+          "openRequestsDesc": "Nuevas y esperando el pago (instrucciones enviadas)",
+          "openRequestsLink": "Revisar solicitudes abiertas"
+        },
+        "platformOwes": {
+          "title": "La plataforma te debe",
+          "desc": "Tu parte de las ventas cobradas por la plataforma ({providers}), menos los pagos ya enviados. Se liquida por separado; nunca se compensa con lo que debes."
+        },
+        "filters": {
+          "statusLabel": "Filtrar por estado",
+          "all": "Todas",
+          "counted": "Cuentan en saldos",
+          "pending": "Por confirmar",
+          "refunded": "Reembolsadas",
+          "collector": "Cobrada por",
+          "collectors": {
+            "all": "Cualquiera",
+            "school": "Tú (directo)",
+            "platform": "Plataforma"
+          },
+          "currency": "Moneda",
+          "allCurrencies": "Todas las monedas",
+          "from": "Desde",
+          "to": "Hasta",
+          "apply": "Aplicar"
+        },
+        "table": {
+          "title": "Ventas",
+          "headers": {
+            "product": "Producto / Orden",
+            "date": "Fecha",
+            "origin": "Método",
+            "collectedBy": "Cobrada por",
+            "amount": "Monto",
+            "commission": "Comisión",
+            "net": "Tu neto",
+            "status": "Estado"
+          },
+          "collectedBy": {
+            "school": "Tú",
+            "platform": "Plataforma"
+          },
+          "footnote": "El monto descuenta reembolsos. La comisión usa el reparto vigente cuando ocurrió cada venta. Las ventas por confirmar y las reembolsadas por completo no cuentan en ningún saldo."
+        },
+        "status": {
+          "successful": "Pagada",
+          "partiallyRefunded": "Reembolso parcial",
+          "pending": "Por confirmar",
+          "refunded": "Reembolsada"
+        },
+        "empty": {
+          "title": "No hay ventas aquí",
+          "description": "Aquí aparecerán las ventas pagadas directamente a ti o cobradas por la plataforma."
+        },
+        "pagination": {
+          "label": "Paginación",
+          "page": "Página {page} de {total}",
+          "prev": "Anterior",
+          "next": "Siguiente"
+        }
+      },
       "payouts": {
         "title": "Pagos recibidos",
         "description": "Desembolsos a la cuenta de tu escuela, ya sea vía Stripe Connect o registrados manualmente por la plataforma.",
@@ -3095,6 +3180,7 @@
           "completedTotal": "${amount} en total"
         },
         "tabs": {
+          "open": "Abiertas ({count})",
           "pending": "Pendientes ({count})",
           "contacted": "Contactados ({count})",
           "received": "Pago Recibido ({count})",
@@ -4585,7 +4671,9 @@
           "subscriptions": "Suscripciones",
           "subscriptionsDesc": "Suscripciones activas, canceladas y expiradas",
           "paymentRequests": "Solicitudes de Pago",
-          "paymentRequestsDesc": "Transferencias bancarias y otros pagos manuales"
+          "paymentRequestsDesc": "Transferencias bancarias y otros pagos manuales",
+          "earnings": "Ganancias",
+          "earningsDesc": "Comisión por venta y lo que debes a la plataforma"
         }
       },
       "common": {
@@ -4682,6 +4770,7 @@
     "plans": "Planes",
     "subscriptions": "Suscripciones",
     "paymentRequests": "Solicitudes de Pago",
+    "earnings": "Ganancias",
     "payouts": "Pagos Recibidos",
     "invoices": "Facturas",
     "myPayments": "Mis Pagos",

@@ -230,6 +230,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('subscriptions'), href: "/dashboard/admin/subscriptions" },
                         { title: t('transactions'), href: "/dashboard/admin/transactions" },
                         { title: t('paymentRequests'), href: "/dashboard/admin/payment-requests" },
+                        { title: t('earnings'), href: "/dashboard/admin/earnings" },
                         { title: t('revenue'), href: "/dashboard/admin/revenue" },
                         { title: t('payouts'), href: "/dashboard/admin/payouts" },
                         { title: t('invoices'), href: "/dashboard/admin/invoices" },

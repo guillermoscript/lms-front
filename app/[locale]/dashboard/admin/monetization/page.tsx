@@ -20,6 +20,7 @@ import {
   IconCrown,
   IconFileInvoice,
   IconArrowRight,
+  IconCoin,
 } from '@tabler/icons-react'
 
 export default async function MonetizationPage() {
@@ -113,6 +114,12 @@ export default async function MonetizationPage() {
       description: t('nav.paymentRequestsDesc'),
       href: '/dashboard/admin/payment-requests',
       icon: IconFileInvoice,
+    },
+    {
+      title: t('nav.earnings'),
+      description: t('nav.earningsDesc'),
+      href: '/dashboard/admin/earnings',
+      icon: IconCoin,
     },
   ]
 

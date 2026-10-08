@@ -2490,6 +2490,91 @@
     "admin": {
       "title": "Admin Dashboard",
       "welcome": "Manage your LMS platform",
+      "earnings": {
+        "title": "Earnings",
+        "description": "Your sales, the platform commission on each one, and what is owed between you and the platform.",
+        "accessDenied": "Access denied",
+        "accessDeniedDesc": "You must be a school admin to view this page.",
+        "scope": {
+          "school": "Paid directly to you ({providers}): the platform does not take its commission at payment time, so it adds up as an amount you owe the platform.",
+          "platform": "Collected by the platform ({providers}): the platform keeps its commission and owes you the rest, paid out manually.",
+          "excluded": "Stripe and Solana sales are not listed: the commission is taken inside the payment, so nothing is owed either way.",
+          "timezone": "Dates, date filters and \"this month\" use UTC."
+        },
+        "providers": {
+          "manual": "Manual / bank transfer",
+          "binance_personal": "Binance Pay ID",
+          "paypal": "PayPal",
+          "lemonsqueezy": "Lemon Squeezy",
+          "binance": "Binance Pay"
+        },
+        "stats": {
+          "owedToPlatform": "Owed to the platform",
+          "owedToPlatformDesc": "Commission on {count, plural, =0 {no sales} one {# sale} other {# sales}} paid directly to you, net of refunds",
+          "owedToPlatformNote": "Paying this balance from here arrives in a later release; nothing is charged or blocked yet.",
+          "month": "This month, all sales (UTC)",
+          "monthDesc": "Your net from {count, plural, one {# sale} other {# sales}}, collected by you or the platform · commission {commission}. Not the amount owed above, which covers only sales paid to you.",
+          "openRequests": "Open payment requests",
+          "openRequestsDesc": "New and awaiting payment (instructions sent)",
+          "openRequestsLink": "Review open requests"
+        },
+        "platformOwes": {
+          "title": "The platform owes you",
+          "desc": "Your share of sales collected by the platform ({providers}), minus payouts already sent. Settled separately; never offset against what you owe."
+        },
+        "filters": {
+          "statusLabel": "Filter by status",
+          "all": "All",
+          "counted": "Counted in balances",
+          "pending": "To confirm",
+          "refunded": "Refunded",
+          "collector": "Collected by",
+          "collectors": {
+            "all": "Anyone",
+            "school": "You (direct)",
+            "platform": "Platform"
+          },
+          "currency": "Currency",
+          "allCurrencies": "All currencies",
+          "from": "From",
+          "to": "To",
+          "apply": "Apply"
+        },
+        "table": {
+          "title": "Sales",
+          "headers": {
+            "product": "Product / Order",
+            "date": "Date",
+            "origin": "Method",
+            "collectedBy": "Collected by",
+            "amount": "Amount",
+            "commission": "Commission",
+            "net": "Your net",
+            "status": "Status"
+          },
+          "collectedBy": {
+            "school": "You",
+            "platform": "Platform"
+          },
+          "footnote": "Amount is net of refunds. Commission uses the split in effect when each sale happened. Sales to confirm and fully refunded sales do not count toward any balance."
+        },
+        "status": {
+          "successful": "Paid",
+          "partiallyRefunded": "Partly refunded",
+          "pending": "To confirm",
+          "refunded": "Refunded"
+        },
+        "empty": {
+          "title": "No sales here",
+          "description": "Sales paid directly to you or collected by the platform will appear here."
+        },
+        "pagination": {
+          "label": "Pagination",
+          "page": "Page {page} of {total}",
+          "prev": "Previous",
+          "next": "Next"
+        }
+      },
       "payouts": {
         "title": "Payouts",
         "description": "Disbursements to your school account, whether via Stripe Connect or recorded manually by the platform.",
@@ -3096,6 +3181,7 @@
         },
         "tabs": {
           "all": "All ({count})",
+          "open": "Open ({count})",
           "pending": "Pending ({count})",
           "contacted": "Contacted ({count})",
           "received": "Received ({count})",
@@ -4020,7 +4106,9 @@
           "subscriptions": "Subscriptions",
           "subscriptionsDesc": "Active, cancelled, and expired student subscriptions",
           "paymentRequests": "Payment Requests",
-          "paymentRequestsDesc": "Bank transfer and other manual payment requests"
+          "paymentRequestsDesc": "Bank transfer and other manual payment requests",
+          "earnings": "Earnings",
+          "earningsDesc": "Commission per sale and what you owe the platform"
         }
       },
       "notifications": {
@@ -4800,6 +4888,7 @@
     "plans": "Plans",
     "subscriptions": "Subscriptions",
     "paymentRequests": "Payment Requests",
+    "earnings": "Earnings",
     "payouts": "Payouts",
     "invoices": "Invoices",
     "myPayments": "My Payments",
