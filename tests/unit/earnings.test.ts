@@ -88,6 +88,12 @@ describe('accruePlatformFees (debt the school owes the platform)', () => {
     ])
   })
 
+  it('accrues a student-borne (grossed-up) sale on the amount the buyer paid', () => {
+    // $100 listed, student bears a 20% fee -> charged $125, platform keeps $25.
+    const debt = accruePlatformFees([row({ transactionId: 9, amount: 125 })])
+    expect(debt).toEqual([{ currency: 'USD', accrued: 25, paid: 0, netOwed: 25, sales: 1 }])
+  })
+
   it('is empty without school-collected sales', () => {
     expect(accruePlatformFees([row({ paymentProvider: 'paypal' })])).toEqual([])
   })

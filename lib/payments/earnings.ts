@@ -185,8 +185,11 @@ export interface FeeDebtBalance {
  * §2.2 balance with `paid = 0`. Rounded per row (already done in
  * `toEarningsRow`), then summed.
  */
-// TODO(#927): once feat/fee-bearer-927 (`transactions.fee_bearer`) merges,
-// accrual must also filter on that column, not only `collectedBy`.
+// Fee bearer (#927) needs no filter here: `transactions.amount` is what the
+// buyer paid, grossed up when the student bears the fee ($125 at 20%), and the
+// platform's cut stays `(100 - school_percentage_snapshot)% x amount` ($25).
+// The school owes that cut whoever the fee was charged to, so a student-borne
+// sale accrues exactly like a school-borne one.
 // TODO(#929): per the #929 design, hyperinflation currencies (VES) will later
 // be shown as the USD snapshot recorded at sale time. Not implemented here.
 export function accruePlatformFees(rows: readonly EarningsRow[]): FeeDebtBalance[] {
