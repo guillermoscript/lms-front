@@ -2,10 +2,10 @@
 
 import type { ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import type { PlatformBankAccountDetails } from '@/lib/billing/platform-bank-accounts'
+import type { PlatformBankAccountView } from '@/lib/billing/platform-bank-accounts'
 import { CopyButton } from './copy-button'
 
-type BankField = 'bankName' | 'accountHolder' | 'accountNumber' | 'accountType' | 'routingNumber' | 'swiftCode'
+type BankField = 'bankName' | 'accountHolder' | 'accountNumber' | 'accountType' | 'routingOrSwift'
 
 /** Row order and which values are worth a copy button. Labels are UI-owned (en/es), never data. */
 const BANK_FIELDS: readonly { key: BankField; copy: boolean; mono: boolean }[] = [
@@ -13,8 +13,7 @@ const BANK_FIELDS: readonly { key: BankField; copy: boolean; mono: boolean }[] =
   { key: 'accountHolder', copy: true, mono: false },
   { key: 'accountNumber', copy: true, mono: true },
   { key: 'accountType', copy: false, mono: false },
-  { key: 'routingNumber', copy: true, mono: true },
-  { key: 'swiftCode', copy: true, mono: true },
+  { key: 'routingOrSwift', copy: true, mono: true },
 ]
 
 function DetailRow({ label, value, mono, copy }: { label: string; value: string; mono: boolean; copy: boolean }) {
@@ -30,10 +29,11 @@ function DetailRow({ label, value, mono, copy }: { label: string; value: string;
   )
 }
 
-function AccountRows({ account, currency }: { account: PlatformBankAccountDetails; currency: string }) {
+function AccountRows({ account, currency }: { account: PlatformBankAccountView; currency: string }) {
   const tb = useTranslations('platformFees.payNow.bank')
   return (
     <>
+      <p className="text-xs font-medium">{account.label}</p>
       <dl className="space-y-1.5" data-testid="fee-bank-account">
         {BANK_FIELDS.map(({ key, copy, mono }) => {
           const value = account[key]
@@ -69,11 +69,11 @@ function AccountRows({ account, currency }: { account: PlatformBankAccountDetail
  * Compose a `<TransferReference>` (or anything else) as children.
  */
 export function BankTransferDetails({
-  account,
+  accounts,
   currency,
   children,
 }: {
-  account: PlatformBankAccountDetails | null
+  accounts: readonly PlatformBankAccountView[]
   /** The balance currency being paid (a USD fallback account says so). */
   currency: string
   children?: ReactNode
@@ -82,8 +82,12 @@ export function BankTransferDetails({
   return (
     <div className="space-y-3 rounded-lg border bg-muted/40 p-3 text-sm" data-testid="fee-bank-details">
       <p className="font-medium">{tb('title')}</p>
-      {account ? (
-        <AccountRows account={account} currency={currency} />
+      {accounts.length > 0 ? (
+        accounts.map((account) => (
+          <div key={account.id} className="space-y-1.5 border-t pt-2 first:border-t-0 first:pt-0" data-testid="fee-bank-block">
+            <AccountRows account={account} currency={currency} />
+          </div>
+        ))
       ) : (
         <p className="text-muted-foreground" data-testid="fee-bank-fallback">{tb('fallback')}</p>
       )}

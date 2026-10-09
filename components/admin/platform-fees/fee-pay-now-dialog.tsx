@@ -20,7 +20,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatMoney } from '@/lib/payments/format-money'
 import { feeErrorKey, parsePayNowAmount, type FeeRail, type PayNowBucket } from '@/lib/billing/platform-fee-view'
 import { withRequestSuffix } from '@/lib/billing/platform-fee-reference'
-import type { PlatformBankAccountDetails } from '@/lib/billing/platform-bank-accounts'
+import type { PlatformBankAccountView } from '@/lib/billing/platform-bank-accounts'
+import { selectBankAccountsFor } from '@/lib/billing/platform-bank-account-select'
 import { BankTransferDetails, TransferReference } from './bank-transfer-details'
 import { OpenRequestNotice, type OpenFeeRequest } from './open-request-notice'
 
@@ -39,8 +40,6 @@ const KNOWN_ERRORS = [
   'unauthorized',
 ] as const
 
-type BankAccounts = Record<string, PlatformBankAccountDetails | null>
-
 interface RegisteredTransfer {
   requestId: string
   amount: number
@@ -51,13 +50,13 @@ interface RegisteredTransfer {
 /** Variant 1: the transfer was registered — where to send it and what to quote. */
 function TransferRegistered({
   transfer,
-  account,
+  accounts,
   tenantReference,
   onDone,
 }: {
   transfer: RegisteredTransfer
-  account: PlatformBankAccountDetails | null
-  tenantReference: string | null
+  accounts: readonly PlatformBankAccountView[]
+  tenantReference: string
   onDone: () => void
 }) {
   const t = useTranslations('platformFees.payNow')
@@ -67,7 +66,7 @@ function TransferRegistered({
       <DialogHeader>
         <DialogTitle>{t('instructions.title')}</DialogTitle>
         <DialogDescription>
-          {t(account ? 'instructions.bodyWithDetails' : 'instructions.body', {
+          {t(accounts.length > 0 ? 'instructions.bodyWithDetails' : 'instructions.body', {
             amount: formatMoney(transfer.amount, transfer.currency, locale),
           })}
         </DialogDescription>
@@ -76,7 +75,7 @@ function TransferRegistered({
         <dt className="text-muted-foreground">{t('instructions.reference')}</dt>
         <dd className="break-all font-mono text-xs">{transfer.requestId}</dd>
       </dl>
-      <BankTransferDetails account={account} currency={transfer.currency}>
+      <BankTransferDetails accounts={accounts} currency={transfer.currency}>
         <TransferReference value={withRequestSuffix(tenantReference, transfer.requestId)} />
       </BankTransferDetails>
       {transfer.expiresAt ? (
@@ -103,8 +102,8 @@ function PayNowForm({
   onCancel,
 }: {
   buckets: PayNowBucket[]
-  bankAccounts: BankAccounts
-  tenantReference: string | null
+  bankAccounts: readonly PlatformBankAccountView[]
+  tenantReference: string
   openRequest: OpenFeeRequest | null
   onRegistered: (transfer: RegisteredTransfer) => void
   onCancel: () => void
@@ -253,8 +252,8 @@ function PayNowForm({
 
         {pendingTransfer ? (
           <OpenRequestNotice request={pendingTransfer}>
-            <BankTransferDetails account={bankAccounts[pendingTransfer.currency] ?? null} currency={pendingTransfer.currency}>
-              <TransferReference value={withRequestSuffix(tenantReference, pendingTransfer.requestId)} />
+            <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, pendingTransfer.currency)} currency={pendingTransfer.currency}>
+              <TransferReference value={withRequestSuffix(tenantReference, pendingTransfer.id)} />
             </BankTransferDetails>
           </OpenRequestNotice>
         ) : (
@@ -280,7 +279,7 @@ function PayNowForm({
 
             {rail === 'manual' ? (
               <>
-                <BankTransferDetails account={bankAccounts[bucket.currency] ?? null} currency={bucket.currency}>
+                <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, bucket.currency)} currency={bucket.currency}>
                   {tenantReference ? <TransferReference value={tenantReference} /> : null}
                 </BankTransferDetails>
                 <div className="space-y-1.5">
@@ -350,10 +349,10 @@ export function FeePayNowDialog({
   openRequest,
 }: {
   buckets: PayNowBucket[]
-  /** Platform account per currency, server-selected from `platform_bank_accounts`; null = none configured. */
-  bankAccounts: BankAccounts
-  /** `FEES-<SLUG>`: the reference to quote on the transfer, known before submit. */
-  tenantReference: string | null
+  /** Active platform accounts relevant to the payable currencies, server-selected. */
+  bankAccounts: readonly PlatformBankAccountView[]
+  /** `FEES-<SLUG>` (empty when unknown): the reference to quote on the transfer. */
+  tenantReference: string
   /** A transfer already waiting for confirmation. */
   openRequest: OpenFeeRequest | null
 }) {
@@ -379,7 +378,7 @@ export function FeePayNowDialog({
           {registered ? (
             <TransferRegistered
               transfer={registered}
-              account={bankAccounts[registered.currency] ?? null}
+              accounts={selectBankAccountsFor(bankAccounts, registered.currency)}
               tenantReference={tenantReference}
               onDone={() => setOpen(false)}
             />

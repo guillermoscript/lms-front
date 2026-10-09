@@ -7,10 +7,10 @@ import { formatMoney } from '@/lib/payments/format-money'
 
 /** Only what the notice renders (serialized from the server card). */
 export interface OpenFeeRequest {
-  requestId: string
+  id: string
   amount: number
   currency: string
-  createdAt: string
+  requestedAt: string
 }
 
 /**
@@ -21,7 +21,7 @@ export interface OpenFeeRequest {
 export function OpenRequestNotice({ request, children }: { request: OpenFeeRequest; children?: ReactNode }) {
   const t = useTranslations('platformFees.payNow')
   const locale = useLocale()
-  const date = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(request.createdAt))
+  const date = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(request.requestedAt))
   return (
     <div className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm" role="status" data-testid="fee-pay-now-open-request">
       <p className="flex gap-2">

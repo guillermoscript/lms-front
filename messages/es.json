@@ -9512,6 +9512,7 @@
           "accountNumber": "Número de cuenta",
           "accountType": "Tipo de cuenta",
           "routingNumber": "Número de ruta / sucursal",
+          "routingOrSwift": "Ruta / SWIFT",
           "swiftCode": "SWIFT / BIC",
           "extraInstructions": "Instrucciones adicionales"
         },

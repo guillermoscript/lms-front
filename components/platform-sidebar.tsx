@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   IconAlertTriangle,
+  IconBuildingBank,
   IconBuildingStore,
   IconExternalLink,
   IconLayoutDashboard,
@@ -96,6 +97,7 @@ export function PlatformSidebar({ pendingBillingCount = 0, atRiskCount = 0, ...p
       labelKey: 'groups.configure',
       items: [
         { titleKey: 'plans', href: '/platform/plans', icon: IconBuildingStore },
+        { titleKey: 'bankAccounts', href: '/platform/bank-accounts', icon: IconBuildingBank },
       ],
     },
   ]
