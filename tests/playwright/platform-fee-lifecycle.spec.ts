@@ -11,9 +11,12 @@
  *      page, transactions INSERT, free self-enroll) is refused with the neutral
  *      sales_blocked UX / LM003, while a held subscription's renewal and an
  *      existing student's course access still pass.
- *   4. Manual pay-now (admin bank-transfer request → super admin confirms)
- *      clears the balance and lifts the block immediately.
- *   5. The default tenant is never blocked, however overdue.
+ *   4. A super admin adds the platform's USD bank account in
+ *      /platform/bank-accounts (the tenant fee panel warns while none exists).
+ *   5. Manual pay-now (admin bank-transfer request, shown that account and a
+ *      FEES-<SLUG> reference → super admin confirms) clears the balance and
+ *      lifts the block immediately; a second transfer is refused up front.
+ *   6. The default tenant is never blocked, however overdue.
  *
  * `platform_fee_config.enforcement_mode` is set to `enforce` here and restored
  * to its original value in afterAll; every row this file creates is removed,
@@ -57,11 +60,15 @@ const EXPECTED_OWED = 15
 type StandingRow = Record<string, unknown> & { tenant_id: string }
 
 let originalMode: string | null = null
+/** Active bank accounts that existed before this file; deactivated so the "none configured" state is testable, restored after. */
+let bankAccountsBefore: string[] = []
+const BANK_ACCOUNT_NUMBER = 'E2E929000123'
 let standingBefore: StandingRow[] = []
 let statementsBefore = new Set<string>()
 
 let paidCourseId: number
 let stripeCourseId: number
+let openManualProductId: number
 let freeCourseId: number
 let heldPlanId: number
 let otherPlanId: number
@@ -176,6 +183,13 @@ test.describe('platform fee lifecycle (#929)', () => {
     const { data: stmts } = await admin.from('platform_fee_statements').select('statement_id')
     statementsBefore = new Set((stmts ?? []).map((s) => s.statement_id as string))
 
+    const { data: activeAccounts } = await admin.from('platform_bank_accounts').select('id').eq('is_active', true)
+    bankAccountsBefore = (activeAccounts ?? []).map((a) => a.id as string)
+    if (bankAccountsBefore.length) {
+      await admin.from('platform_bank_accounts').update({ is_active: false }).in('id', bankAccountsBefore)
+    }
+    await admin.from('platform_bank_accounts').delete().eq('account_number', BANK_ACCOUNT_NUMBER)
+
     await destroyQaTenant(admin, QA)
     await upsertTinyPlan(admin, QA.planSlug, { max_courses: 10, max_students: -1 })
     await createQaTenant(admin, QA, 'free')
@@ -190,6 +204,9 @@ test.describe('platform fee lifecycle (#929)', () => {
 
     const manualProductId = await insertProduct(admin, 'E2E #929 manual product', OVERDUE_SALE, 'manual', paidCourseId)
     await insertProduct(admin, 'E2E #929 card product', 30, 'stripe', stripeCourseId)
+    // A second, never-bought manual product: the student has no renewal exemption on it.
+    const openManualCourseId = await insertCourse(admin, QA.id, 'E2E #929 unbought manual course')
+    openManualProductId = await insertProduct(admin, 'E2E #929 unbought manual product', 25, 'manual', openManualCourseId)
 
     heldPlanId = await insertPlan(admin, 'E2E #929 held plan', CURRENT_SALE)
     otherPlanId = await insertPlan(admin, 'E2E #929 other plan', 40)
@@ -223,6 +240,16 @@ test.describe('platform fee lifecycle (#929)', () => {
   test.afterAll(async () => {
     const admin = getAdmin()
     if (originalMode) await setMode(admin, originalMode)
+
+    // The bank account this file created (and its platform-scoped audit rows), then restore the previous ones.
+    const { data: created } = await admin.from('platform_bank_accounts').select('id').eq('account_number', BANK_ACCOUNT_NUMBER)
+    for (const row of created ?? []) {
+      await admin.from('platform_fee_audit_log').delete().is('tenant_id', null).eq('details->>bank_account_id', row.id)
+      await admin.from('platform_bank_accounts').delete().eq('id', row.id)
+    }
+    if (bankAccountsBefore.length) {
+      await admin.from('platform_bank_accounts').update({ is_active: true }).in('id', bankAccountsBefore)
+    }
 
     // Undo whatever the cron wrote for OTHER tenants during this file.
     const { data: after } = await admin.from('tenant_fee_standing').select('tenant_id').neq('tenant_id', QA.id)
@@ -355,6 +382,52 @@ test.describe('platform fee lifecycle (#929)', () => {
     )
     // Never reveals the school's fee debt to the student.
     await expect(page.getByText(/platform fee|overdue/i)).toHaveCount(0)
+
+    // The bank-transfer request page shows the same notice, not a submit form.
+    await page.goto(`${QA_BASE}/${LOCALE}/checkout/manual?productId=${openManualProductId}`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('checkout-sales-blocked')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: /submit request/i })).toHaveCount(0)
+    await expect(page.getByText(/platform fee|overdue/i)).toHaveCount(0)
+  })
+
+  test('super admin adds the platform bank account; the fee panel stops warning', async ({ page }) => {
+    test.setTimeout(120_000)
+    await login(page, SEEDED.owner.email, SEEDED.owner.password, BASE)
+    await page.goto(`${BASE}/${LOCALE}/platform/tenants/${QA.id}`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('tenant-fee-no-bank-account')).toBeVisible({ timeout: 30_000 })
+
+    await page.goto(`${BASE}/${LOCALE}/platform/bank-accounts`, { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('bank-account-add-btn').first().click()
+    const form = page.getByTestId('bank-account-dialog')
+    await expect(form).toBeVisible()
+    await form.getByTestId('bank-account-label').fill('E2E #929 USD')
+    await form.getByTestId('bank-account-currency').fill('usd')
+    await form.getByTestId('bank-account-bankName').fill('E2E Bank')
+    await form.getByTestId('bank-account-accountHolder').fill('LMS Platform Inc')
+    await form.getByTestId('bank-account-accountNumber').fill(BANK_ACCOUNT_NUMBER)
+    await form.getByTestId('bank-account-swiftCode').fill('bofa us 3n')
+    await form.getByTestId('bank-account-save').click()
+    await expect(form).toBeHidden({ timeout: 30_000 })
+    await expect(page.getByTestId('bank-account-row').filter({ hasText: BANK_ACCOUNT_NUMBER })).toBeVisible({ timeout: 30_000 })
+
+    const admin = getAdmin()
+    const { data: row } = await admin
+      .from('platform_bank_accounts')
+      .select('id, currency, swift_code, is_active')
+      .eq('account_number', BANK_ACCOUNT_NUMBER)
+      .single()
+    expect(row).toMatchObject({ currency: 'USD', swift_code: 'BOFAUS3N', is_active: true })
+    const { data: audit } = await admin
+      .from('platform_fee_audit_log')
+      .select('action, details')
+      .is('tenant_id', null)
+      .eq('details->>bank_account_id', row!.id)
+    expect(audit?.map((a) => a.action)).toEqual(['bank_account_created'])
+    expect(JSON.stringify(audit)).not.toContain(BANK_ACCOUNT_NUMBER)
+
+    await page.goto(`${BASE}/${LOCALE}/platform/tenants/${QA.id}`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('tenant-fee-panel')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('tenant-fee-no-bank-account')).toHaveCount(0)
   })
 
   test('admin requests a bank-transfer pay-now for the full balance', async ({ page }) => {
@@ -370,8 +443,17 @@ test.describe('platform fee lifecycle (#929)', () => {
     const manualRail = dialog.getByTestId('fee-pay-now-rail-manual')
     if (await manualRail.count()) await manualRail.click()
     await expect(dialog.getByTestId('fee-pay-now-amount')).toHaveValue('15.00')
+    // The platform account configured above, as labelled rows (not the emailed-later fallback).
+    const details = dialog.getByTestId('fee-bank-details')
+    await expect(details).toContainText(BANK_ACCOUNT_NUMBER)
+    await expect(details).toContainText('LMS Platform Inc')
+    await expect(details).toContainText('BOFAUS3N')
+    await expect(dialog.getByTestId('fee-bank-fallback')).toHaveCount(0)
+    await expect(dialog.getByTestId('fee-bank-reference')).toHaveText('FEES-QA-FEE-LIFECYCLE')
     await dialog.getByTestId('fee-pay-now-submit').click()
     await expect(dialog.getByTestId('fee-pay-now-instructions')).toBeVisible({ timeout: 30_000 })
+    await expect(dialog.getByTestId('fee-bank-details')).toContainText(BANK_ACCOUNT_NUMBER)
+    await expect(dialog.getByTestId('fee-bank-reference')).toHaveText(/^FEES-QA-FEE-LIFECYCLE-[0-9A-F]{8}$/)
 
     const admin = getAdmin()
     const { data: req } = await admin
@@ -383,6 +465,16 @@ test.describe('platform fee lifecycle (#929)', () => {
     expect(Number(req!.amount)).toBe(EXPECTED_OWED)
     // An open request does NOT pause the block (design 3.3).
     expect(await isBlocked(admin, QA.id)).toBe(true)
+
+    // A second transfer is refused up front (no 409 round trip): the dialog shows the open one instead.
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByTestId('fee-balance-card').getByTestId('fee-pay-now-btn').click()
+    const again = page.getByTestId('fee-pay-now-dialog')
+    if (await again.getByTestId('fee-pay-now-rail-manual').count()) await again.getByTestId('fee-pay-now-rail-manual').click()
+    await expect(again.getByTestId('fee-pay-now-open-request')).toBeVisible({ timeout: 30_000 })
+    await expect(again.getByTestId('fee-pay-now-submit')).toBeDisabled()
   })
 
   test('super admin confirms the transfer: balance cleared and sales resume at once', async ({ page, request }) => {

@@ -13,7 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeFeeBalances, type FeeBalance, type FeeLedgerOptions } from '@/lib/payments/platform-fee-owed'
 import { loadFeeConfig, loadTenantFeeLedger, type EnforcementMode } from '@/lib/billing/platform-fee-enforcement'
 import { statementStatus, type FeeStatementStatus } from '@/lib/billing/platform-fee-statement'
-import { OPEN_REQUEST_STATUSES } from '@/lib/billing/payment-request-ttl'
+import { isRequestOpen, OPEN_REQUEST_STATUSES } from '@/lib/billing/payment-request-ttl'
 import {
   describeFeeBanner,
   payNowBuckets,
@@ -81,13 +81,12 @@ export async function loadSchoolFeeAccount(
       .limit(6),
     admin
       .from('platform_payment_requests')
-      .select('request_id, amount, currency, status, created_at')
+      .select('request_id, amount, currency, status, created_at, expires_at')
       .eq('tenant_id', tenantId)
       .eq('request_type', 'fee')
       .in('status', OPEN_REQUEST_STATUSES as unknown as string[])
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(20),
     admin
       .from('platform_fee_payments')
       .select('payment_id', { count: 'exact', head: true })
@@ -122,7 +121,9 @@ export async function loadSchoolFeeAccount(
     }
   })
 
-  const req = requestRes.data
+  // Same openness test as the checkout route's 409 (expired transfers are not open).
+  const req = ((requestRes.data ?? []) as { request_id: string; amount: number; currency: string; status: string; created_at: string; expires_at: string | null }[])
+    .find((r) => isRequestOpen(r, now))
   return {
     balances,
     standing: toStanding(standingRes.data as Record<string, unknown> | null),

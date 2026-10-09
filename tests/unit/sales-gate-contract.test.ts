@@ -320,6 +320,17 @@ describe('fee sales gate contract (#929)', () => {
     expect(sites.length).toBeGreaterThanOrEqual(10)
   })
 
+  it('the manual checkout page shows the neutral notice to a blocked school (no form)', () => {
+    const page = readFileSync(join(root, 'app/[locale]/checkout/manual/page.tsx'), 'utf8')
+    const gate = page.indexOf('isSalesOpen(')
+    expect(gate).toBeGreaterThan(-1)
+    expect(page).toContain('data-testid="checkout-sales-blocked"')
+    expect(page).toContain("tFees('salesBlocked')")
+    // Before the request form is rendered, and never mentions fees/debt.
+    expect(gate).toBeLessThan(page.indexOf('<PaymentRequestForm'))
+    expect(page.slice(gate, page.indexOf('<PaymentRequestForm'))).not.toMatch(/overdue|debt|owe/i)
+  })
+
   it('every SQL function that inserts into transactions is classified', () => {
     // A new one must either be pre-gated at its call sites (it is, via
     // SALE_RPCS) or be listed in NOT_A_NEW_SALE with a reason.

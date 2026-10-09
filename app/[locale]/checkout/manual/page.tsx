@@ -7,6 +7,7 @@ import { ManualPaymentAccountsList } from '@/components/student/manual-payment-a
 import { getManualPaymentAccounts, getManualPaymentInstructions } from '@/app/actions/admin/settings'
 import { findConflictingSubscription } from '@/lib/payments/subscription-guard'
 import { SubscriptionConflictNotice } from '@/components/public/subscription-conflict-notice'
+import { isSalesOpen } from '@/lib/billing/sales-gate'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { IconShieldCheck, IconLock } from '@tabler/icons-react'
 import type { Metadata } from 'next'
@@ -136,6 +137,30 @@ export default async function ManualCheckoutPage(props: {
     itemPrice = parseFloat(product.price)
     itemCurrency = product.currency || 'usd'
     formProductId = product.product_id
+  }
+
+  // Platform fee sales block (#929, design 4.4): same neutral notice as
+  // /checkout instead of a form the action would refuse. Fails open; the
+  // action's assertSalesOpen and the DB trigger still decide at write time.
+  const open = await isSalesOpen(tenantId, {
+    kind: 'transaction',
+    userId: user.id,
+    productId: formProductId ?? null,
+    planId: formProductId ? null : formPlanId ?? null,
+    paymentProvider: 'manual',
+  })
+  if (!open) {
+    const tFees = await getTranslations('platformFees')
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-xl px-4 py-12 text-center sm:py-20">
+          <h1 className="text-2xl font-bold tracking-tight">{tFees('salesBlockedTitle')}</h1>
+          <p className="mt-4 text-sm text-muted-foreground" data-testid="checkout-sales-blocked">
+            {tFees('salesBlocked')}
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Get user profile for pre-filling the form

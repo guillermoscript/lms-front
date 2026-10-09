@@ -6145,7 +6145,8 @@
       "plans": "Plans",
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Back to my school",
-      "logout": "Log out"
+      "logout": "Log out",
+      "bankAccounts": "Bank accounts"
     },
     "fees": {
       "title": "Platform fees",
@@ -6257,7 +6258,84 @@
       },
       "feeRequest": "Platform fee",
       "viewStatement": "View",
-      "backToSchool": "Back to school"
+      "backToSchool": "Back to school",
+      "noBankAccount": "No platform bank account is configured. Schools paying by transfer see no bank details.",
+      "noBankAccountLink": "Add a bank account"
+    },
+    "bankAccounts": {
+      "title": "Bank accounts",
+      "description": "Where schools wire platform fee transfers. Schools see the active account in their balance currency, or the active USD account when there is none. One active account per currency. Every change is audited.",
+      "add": "Add account",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "active": "Active",
+      "inactive": "Inactive",
+      "empty": "No bank accounts yet",
+      "emptyDesc": "Until you add one, schools paying by bank transfer are told the details will be emailed to them.",
+      "loadError": "Couldn't load the bank accounts. Refresh to try again.",
+      "noActiveWarning": "No active bank account. Schools paying by transfer see no bank details.",
+      "createTitle": "Add bank account",
+      "editTitle": "Edit bank account",
+      "formDescription": "Schools see every field except the internal name and sort order.",
+      "optional": "optional",
+      "hints": {
+        "currency": "3-letter ISO code, e.g. USD.",
+        "label": "Only super admins see this.",
+        "swiftCode": "8 or 11 letters and digits.",
+        "isActive": "Inactive accounts are never shown to schools."
+      },
+      "fields": {
+        "currency": "Currency",
+        "label": "Internal name",
+        "bankName": "Bank",
+        "accountHolder": "Account holder",
+        "accountNumber": "Account number",
+        "accountType": "Account type",
+        "routingNumber": "Routing / branch number",
+        "swiftCode": "SWIFT / BIC",
+        "extraInstructions": "Additional instructions",
+        "sortOrder": "Sort order",
+        "isActive": "Active"
+      },
+      "headers": {
+        "account": "Account",
+        "currency": "Currency",
+        "bank": "Bank",
+        "number": "Account number",
+        "status": "Status",
+        "updated": "Updated"
+      },
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "saved": "Bank account saved.",
+      "activated": "Bank account activated.",
+      "deactivated": "Bank account deactivated.",
+      "deactivateTitle": "Deactivate this account?",
+      "deactivateBody": "Schools stop seeing it right away. You can activate it again later.",
+      "errors": {
+        "forbidden": "Only super admins can do this.",
+        "invalid": "Check the highlighted fields.",
+        "invalid_id": "That account doesn't exist.",
+        "not_found": "That account doesn't exist anymore.",
+        "duplicate_currency": "Another active account already uses this currency. Deactivate it first.",
+        "internal": "Something went wrong. Try again.",
+        "generic": "Something went wrong. Try again."
+      },
+      "fieldErrors": {
+        "currency": "Use a 3-letter currency code.",
+        "label": "Required, up to 80 characters.",
+        "bankName": "Required, up to 120 characters.",
+        "accountHolder": "Required, up to 120 characters.",
+        "accountNumber": "Required, up to 64 characters.",
+        "accountType": "Up to 40 characters.",
+        "routingNumber": "Up to 40 characters.",
+        "swiftCode": "Use 8 or 11 letters and digits.",
+        "extraInstructions": "Up to 1000 characters.",
+        "sortOrder": "Use a whole number.",
+        "isActive": "Invalid value."
+      }
     }
   },
   "platformPricing": {
@@ -9410,6 +9488,7 @@
         "stripe": "Pay now by card. USD balances only.",
         "manual": "Register a transfer. We confirm it by hand, usually within 2 business days."
       },
+      "openRequestHint": "You have a transfer of {amount} waiting for confirmation. Choose Bank transfer to see its details.",
       "cardUnavailable": "Card payment is only available for USD balances of at least $0.50. Use a bank transfer.",
       "bankReference": "Transfer reference (optional)",
       "bankReferenceHint": "If you've already sent the transfer, add its reference so we can match it.",
@@ -9419,9 +9498,33 @@
       "submitting": "Starting…",
       "redirecting": "Opening checkout…",
       "nothingToPay": "There's nothing to pay right now.",
+      "bank": {
+        "title": "Bank transfer details",
+        "fallback": "We don't have bank details to show here yet. Once you register the transfer, we'll email them to your billing contact.",
+        "reference": "Payment reference",
+        "referenceHint": "Include it in the transfer description so we can match it.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyReference": "Copy payment reference",
+        "fields": {
+          "currency": "Currency",
+          "bankName": "Bank",
+          "accountHolder": "Account holder",
+          "accountNumber": "Account number",
+          "accountType": "Account type",
+          "routingNumber": "Routing number",
+          "swiftCode": "SWIFT / BIC",
+          "extraInstructions": "Additional instructions"
+        },
+        "currencyNote": "This account receives {accountCurrency}. Transfer the equivalent of your {currency} balance.",
+        "copyFailed": "Couldn't copy",
+        "copyManual": "Press Ctrl/Cmd+C to copy",
+        "copyField": "Copy {field}"
+      },
       "instructions": {
         "title": "Transfer registered",
         "body": "We registered your transfer of {amount}. We'll email the platform's bank details to your billing contact. Once we confirm the money arrived, your balance updates.",
+        "bodyWithDetails": "We registered your transfer of {amount}. Send it to the details below and include the payment reference. Once we confirm the money arrived, your balance updates.",
         "reference": "Request ID",
         "expires": "This request stays open until {date} (UTC).",
         "done": "Done"
@@ -9439,7 +9542,9 @@
         "forbidden": "Only school admins can pay platform fees.",
         "unauthorized": "Your session expired. Sign in again.",
         "generic": "Something went wrong. Try again."
-      }
+      },
+      "openRequest": "You already have a transfer of {amount} waiting for confirmation (registered {date}). Your balance updates once we confirm it arrived, so there is no need to register it again.",
+      "openRequestReference": "Reference for that transfer"
     },
     "statement": {
       "title": "Platform fee statement",

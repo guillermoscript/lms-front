@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTenantFeeOverview, type TenantFeeOverview } from '@/lib/billing/platform-fee-admin'
 import { listFeeStatements } from '@/lib/billing/platform-fee-statement'
+import { hasActiveBankAccount } from '@/lib/billing/platform-bank-accounts'
 import { formatMoney } from '@/lib/payments/format-money'
 import { PlatformPanel, PlatformSection, TD, TH, TH_RIGHT } from '@/components/platform/section'
 import { StatusDot } from '@/components/platform/badges'
@@ -37,8 +39,13 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
 
   let overview: TenantFeeOverview
   let statements: Awaited<ReturnType<typeof listFeeStatements>>
+  let hasBankAccount: boolean | null
   try {
-    ;[overview, statements] = await Promise.all([getTenantFeeOverview(admin, tenantId), listFeeStatements(admin, tenantId, 12)])
+    ;[overview, statements, hasBankAccount] = await Promise.all([
+      getTenantFeeOverview(admin, tenantId),
+      listFeeStatements(admin, tenantId, 12),
+      hasActiveBankAccount(),
+    ])
   } catch (err) {
     console.error('[platform-fees] tenant panel read failed:', err instanceof Error ? err.message : err)
     return (
@@ -67,7 +74,20 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
         </div>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-2">
+      {hasBankAccount === false ? (
+        <p
+          className="mb-4 flex flex-wrap items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm"
+          role="status"
+          data-testid="tenant-fee-no-bank-account"
+        >
+          <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+          <span className="min-w-0 flex-1">{t('noBankAccount')}</span>
+          <Link href={`/${locale}/platform/bank-accounts`} className="font-medium underline underline-offset-4">
+            {t('noBankAccountLink')}
+          </Link>
+        </p>
+      ) : null}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PlatformPanel className="px-5 py-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" data-testid="tenant-fee-standing">
             <dt className="text-muted-foreground">{t('standing')}</dt>
@@ -97,7 +117,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           {overview.balances.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted-foreground">{t('noBalances')}</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full text-sm" data-testid="tenant-fee-balances">
                 <caption className="sr-only">{t('balances')}</caption>
                 <thead className="border-b border-border">
@@ -180,13 +200,13 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           </PlatformPanel>
         </div>
 
-        <div className="space-y-2 lg:col-span-2">
+        <div className="min-w-0 space-y-2 lg:col-span-2">
           <h3 className="text-xs font-semibold">{t('payments')}</h3>
           <PlatformPanel>
             {overview.payments.length === 0 ? (
               <p className="px-5 py-4 text-sm text-muted-foreground">{t('noPayments')}</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="w-full text-sm" data-testid="tenant-fee-payments">
                   <thead className="border-b border-border">
                     <tr>
@@ -226,7 +246,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           </PlatformPanel>
         </div>
 
-        <div className="space-y-2 lg:col-span-2">
+        <div className="min-w-0 space-y-2 lg:col-span-2">
           <h3 className="text-xs font-semibold">{t('audit')}</h3>
           <PlatformPanel>
             {overview.audit.length === 0 ? (

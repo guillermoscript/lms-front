@@ -2492,13 +2492,13 @@
       "welcome": "Gestiona tu plataforma LMS",
       "earnings": {
         "title": "Ganancias",
-        "description": "Tus ventas, la comisión de la plataforma en cada una y lo que se deben tú y la plataforma.",
+        "description": "Tus ventas, la comisión de la plataforma en cada una y lo que tú le debes a la plataforma o ella te debe a ti.",
         "accessDenied": "Acceso denegado",
         "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
         "scope": {
           "school": "Pagadas directamente a ti ({providers}): la plataforma no cobra su comisión al momento del pago, así que se acumula como un monto que debes a la plataforma.",
           "platform": "Cobradas por la plataforma ({providers}): la plataforma retiene su comisión y te debe el resto, que paga manualmente.",
-          "excluded": "Las ventas con Stripe y Solana no aparecen: la comisión se cobra dentro del mismo pago, así que nadie le debe nada a nadie.",
+          "excluded": "Las ventas con Stripe y Solana no aparecen: la comisión se cobra dentro del mismo pago, así que no queda saldo pendiente entre tú y la plataforma.",
           "timezone": "Las fechas, los filtros de fecha y \"este mes\" usan UTC."
         },
         "providers": {
@@ -6145,7 +6145,8 @@
       "plans": "Planes",
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Volver a mi escuela",
-      "logout": "Cerrar sesión"
+      "logout": "Cerrar sesión",
+      "bankAccounts": "Cuentas bancarias"
     },
     "fees": {
       "title": "Comisiones de la plataforma",
@@ -6257,7 +6258,84 @@
       },
       "feeRequest": "Comisión de la plataforma",
       "viewStatement": "Ver",
-      "backToSchool": "Volver a la escuela"
+      "backToSchool": "Volver a la escuela",
+      "noBankAccount": "No hay ninguna cuenta bancaria de la plataforma configurada. Las escuelas que pagan por transferencia no ven datos bancarios.",
+      "noBankAccountLink": "Agregar una cuenta bancaria"
+    },
+    "bankAccounts": {
+      "title": "Cuentas bancarias",
+      "description": "Adónde transfieren las escuelas sus comisiones de plataforma. Cada escuela ve la cuenta activa en la moneda de su saldo, o la cuenta activa en USD si no hay una. Una cuenta activa por moneda. Cada cambio queda auditado.",
+      "add": "Agregar cuenta",
+      "edit": "Editar",
+      "activate": "Activar",
+      "deactivate": "Desactivar",
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "empty": "Todavía no hay cuentas bancarias",
+      "emptyDesc": "Mientras no agregues una, a las escuelas que paguen por transferencia se les dice que recibirán los datos por correo.",
+      "loadError": "No pudimos cargar las cuentas bancarias. Actualiza para intentarlo de nuevo.",
+      "noActiveWarning": "No hay ninguna cuenta bancaria activa. Las escuelas que pagan por transferencia no ven datos bancarios.",
+      "createTitle": "Agregar cuenta bancaria",
+      "editTitle": "Editar cuenta bancaria",
+      "formDescription": "Las escuelas ven todos los campos excepto el nombre interno y el orden.",
+      "optional": "opcional",
+      "hints": {
+        "currency": "Código ISO de 3 letras, p. ej. USD.",
+        "label": "Solo lo ven los superadministradores.",
+        "swiftCode": "8 u 11 letras y dígitos.",
+        "isActive": "Las cuentas inactivas nunca se muestran a las escuelas."
+      },
+      "fields": {
+        "currency": "Moneda",
+        "label": "Nombre interno",
+        "bankName": "Banco",
+        "accountHolder": "Titular de la cuenta",
+        "accountNumber": "Número de cuenta",
+        "accountType": "Tipo de cuenta",
+        "routingNumber": "Número de ruta / sucursal",
+        "swiftCode": "SWIFT / BIC",
+        "extraInstructions": "Instrucciones adicionales",
+        "sortOrder": "Orden",
+        "isActive": "Activa"
+      },
+      "headers": {
+        "account": "Cuenta",
+        "currency": "Moneda",
+        "bank": "Banco",
+        "number": "Número de cuenta",
+        "status": "Estado",
+        "updated": "Actualizada"
+      },
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "cancel": "Cancelar",
+      "saved": "Cuenta bancaria guardada.",
+      "activated": "Cuenta bancaria activada.",
+      "deactivated": "Cuenta bancaria desactivada.",
+      "deactivateTitle": "¿Desactivar esta cuenta?",
+      "deactivateBody": "Las escuelas dejan de verla de inmediato. Puedes volver a activarla más adelante.",
+      "errors": {
+        "forbidden": "Solo los superadministradores pueden hacer esto.",
+        "invalid": "Revisa los campos marcados.",
+        "invalid_id": "Esa cuenta no existe.",
+        "not_found": "Esa cuenta ya no existe.",
+        "duplicate_currency": "Ya hay otra cuenta activa en esta moneda. Desactívala primero.",
+        "internal": "Algo salió mal. Inténtalo de nuevo.",
+        "generic": "Algo salió mal. Inténtalo de nuevo."
+      },
+      "fieldErrors": {
+        "currency": "Usa un código de moneda de 3 letras.",
+        "label": "Obligatorio, hasta 80 caracteres.",
+        "bankName": "Obligatorio, hasta 120 caracteres.",
+        "accountHolder": "Obligatorio, hasta 120 caracteres.",
+        "accountNumber": "Obligatorio, hasta 64 caracteres.",
+        "accountType": "Hasta 40 caracteres.",
+        "routingNumber": "Hasta 40 caracteres.",
+        "swiftCode": "Usa 8 u 11 letras y dígitos.",
+        "extraInstructions": "Hasta 1000 caracteres.",
+        "sortOrder": "Usa un número entero.",
+        "isActive": "Valor no válido."
+      }
     }
   },
   "platformPricing": {
@@ -9410,6 +9488,7 @@
         "stripe": "Paga ahora con tarjeta. Solo saldos en USD.",
         "manual": "Registra una transferencia. La confirmamos manualmente, normalmente en 2 días hábiles."
       },
+      "openRequestHint": "Tienes una transferencia de {amount} pendiente de confirmación. Elige Transferencia bancaria para ver sus detalles.",
       "cardUnavailable": "El pago con tarjeta solo está disponible para saldos en USD de al menos $0.50. Usa una transferencia bancaria.",
       "bankReference": "Referencia de la transferencia (opcional)",
       "bankReferenceHint": "Si ya enviaste la transferencia, agrega su referencia para que podamos identificarla.",
@@ -9419,9 +9498,33 @@
       "submitting": "Iniciando…",
       "redirecting": "Abriendo el pago…",
       "nothingToPay": "No hay nada que pagar en este momento.",
+      "bank": {
+        "title": "Datos para la transferencia bancaria",
+        "fallback": "Todavía no tenemos datos bancarios para mostrarte aquí. Al registrar la transferencia te los enviaremos por correo a tu contacto de facturación.",
+        "reference": "Referencia de pago",
+        "referenceHint": "Indícala en el concepto de la transferencia para que podamos identificarla.",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "copyReference": "Copiar la referencia de pago",
+        "fields": {
+          "currency": "Moneda",
+          "bankName": "Banco",
+          "accountHolder": "Titular de la cuenta",
+          "accountNumber": "Número de cuenta",
+          "accountType": "Tipo de cuenta",
+          "routingNumber": "Número de ruta",
+          "swiftCode": "SWIFT / BIC",
+          "extraInstructions": "Instrucciones adicionales"
+        },
+        "currencyNote": "Esta cuenta recibe {accountCurrency}. Transfiere el equivalente de tu saldo en {currency}.",
+        "copyFailed": "No se pudo copiar",
+        "copyManual": "Presiona Ctrl/Cmd+C para copiar",
+        "copyField": "Copiar {field}"
+      },
       "instructions": {
         "title": "Transferencia registrada",
         "body": "Registramos tu transferencia de {amount}. Enviaremos los datos bancarios de la plataforma a tu contacto de facturación. Cuando confirmemos que llegó el dinero, tu saldo se actualiza.",
+        "bodyWithDetails": "Registramos tu transferencia de {amount}. Envíala a los datos de abajo e incluye la referencia de pago. Cuando confirmemos que llegó el dinero, tu saldo se actualiza.",
         "reference": "ID de la solicitud",
         "expires": "Esta solicitud sigue abierta hasta el {date} (UTC).",
         "done": "Listo"
@@ -9439,7 +9542,9 @@
         "forbidden": "Solo los administradores de la escuela pueden pagar comisiones de la plataforma.",
         "unauthorized": "Tu sesión expiró. Inicia sesión de nuevo.",
         "generic": "Algo salió mal. Inténtalo de nuevo."
-      }
+      },
+      "openRequest": "Ya tienes una transferencia de {amount} pendiente de confirmación (registrada el {date}). Tu saldo se actualiza cuando confirmemos que llegó, así que no hace falta registrarla de nuevo.",
+      "openRequestReference": "Referencia de esa transferencia"
     },
     "statement": {
       "title": "Estado de cuenta de comisiones de la plataforma",

@@ -193,7 +193,7 @@ export default async function TenantDetailPage({
         ]}
       />
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* Subscription */}
         <PlatformSection title="Platform subscription" data-testid="tenant-subscription">
           <PlatformPanel className="px-5 py-4">

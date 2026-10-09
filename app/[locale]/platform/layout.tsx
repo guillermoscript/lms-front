@@ -60,7 +60,7 @@ export default async function PlatformLayout({
             <UserNav user={user} />
           </div>
         </header>
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           {children}
         </div>
       </SidebarInset>
