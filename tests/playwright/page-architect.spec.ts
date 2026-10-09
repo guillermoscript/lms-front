@@ -13,6 +13,7 @@
  *   step.
  */
 import { expect, test, type Page } from './utils/test'
+import { aiKeysConfigured, seedTenantAi } from './utils/ai-fixtures'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
 import { CODE_ACADEMY_TENANT, getServiceRoleClient } from './utils/seed-state'
@@ -288,6 +289,18 @@ test.describe('Page Architect (mocked /api/landing/chat)', () => {
   }
 
   test('"describe your page" creates an empty page and sends the description as the first message', async ({ page }) => {
+    // The form is only offered to a school with an active AI key (#922). The chat route is mocked, so a
+    // synthetic key is enough. A key already stored (a real one, locally) is never overwritten.
+    const { data: keys } = await getServiceRoleClient()
+      .from('tenant_ai_credentials')
+      .select('status')
+      .eq('tenant_id', CODE_ACADEMY_TENANT)
+    if (!keys?.length) {
+      test.skip(!aiKeysConfigured(), 'needs AI_KEYS_ENCRYPTION_KEYS / AI_KEYS_ACTIVE_VERSION to seed a school AI key')
+      await seedTenantAi('code-academy')
+    } else {
+      test.skip(!keys.some((k) => k.status === 'active'), "the school's stored AI key is not active; not overwriting it")
+    }
     const slug = `e2e-describe-${RUN}`
     const prompt = `A landing page for Python for Beginners (${RUN})`
     let requestBody: { messages?: Array<{ parts?: Array<{ text?: string }> }>; pageData?: { content?: unknown[] } } | null = null
