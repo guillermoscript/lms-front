@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import { getTranslations } from 'next-intl/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTenantFeeOverview, type TenantFeeOverview } from '@/lib/billing/platform-fee-admin'
 import { listFeeStatements } from '@/lib/billing/platform-fee-statement'
+import { hasActiveBankAccount } from '@/lib/billing/platform-bank-accounts'
 import { formatMoney } from '@/lib/payments/format-money'
 import { PlatformPanel, PlatformSection, TD, TH, TH_RIGHT } from '@/components/platform/section'
 import { StatusDot } from '@/components/platform/badges'
@@ -37,8 +39,13 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
 
   let overview: TenantFeeOverview
   let statements: Awaited<ReturnType<typeof listFeeStatements>>
+  let hasBankAccount: boolean | null
   try {
-    ;[overview, statements] = await Promise.all([getTenantFeeOverview(admin, tenantId), listFeeStatements(admin, tenantId, 12)])
+    ;[overview, statements, hasBankAccount] = await Promise.all([
+      getTenantFeeOverview(admin, tenantId),
+      listFeeStatements(admin, tenantId, 12),
+      hasActiveBankAccount(),
+    ])
   } catch (err) {
     console.error('[platform-fees] tenant panel read failed:', err instanceof Error ? err.message : err)
     return (
@@ -67,6 +74,19 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
         </div>
       }
     >
+      {hasBankAccount === false ? (
+        <p
+          className="mb-4 flex flex-wrap items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm"
+          role="status"
+          data-testid="tenant-fee-no-bank-account"
+        >
+          <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+          <span className="min-w-0 flex-1">{t('noBankAccount')}</span>
+          <Link href={`/${locale}/platform/bank-accounts`} className="font-medium underline underline-offset-4">
+            {t('noBankAccountLink')}
+          </Link>
+        </p>
+      ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
         <PlatformPanel className="px-5 py-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" data-testid="tenant-fee-standing">

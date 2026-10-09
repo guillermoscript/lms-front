@@ -7,7 +7,14 @@ import { owedBuckets } from '@/lib/billing/platform-fee-view'
 import { formatMoney } from '@/lib/payments/format-money'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { getPlatformFeeBankInstructions, feeTransferReference } from '@/lib/billing/platform-fee-bank-instructions'
+import {
+  loadActiveBankAccounts,
+  loadOpenFeeRequest,
+  selectBankAccountsForAll,
+  type OpenFeeRequestView,
+  type PlatformBankAccountView,
+} from '@/lib/billing/platform-bank-accounts'
+import { feeTransferReference } from '@/lib/billing/platform-fee-reference'
 import { FeePayNowDialog } from './fee-pay-now-dialog'
 import { FeeRetryButton } from './refresh-buttons'
 import { cn } from '@/lib/utils'
@@ -47,24 +54,38 @@ export async function FeeBalanceCard({
 }) {
   const t = await getTranslations('platformFees.card')
 
+  // One round of reads, in parallel (no waterfall). Each settles on its own:
+  // a failed bank-account read degrades to the "details will be emailed"
+  // fallback, a failed open-request read to "none known" (the route's 409
+  // still guards), a failed slug read to the request id as the reference.
+  const admin = createAdminClient()
+  const [accountRes, bankRes, openRes, tenantRes] = await Promise.allSettled([
+    loadSchoolFeeAccount(admin, tenantId),
+    loadActiveBankAccounts(),
+    loadOpenFeeRequest(tenantId),
+    admin.from('tenants').select('slug').eq('id', tenantId).single(),
+  ])
+
   let account: SchoolFeeAccount | null = null
-  try {
-    account = await loadSchoolFeeAccount(createAdminClient(), tenantId)
-  } catch (err) {
+  if (accountRes.status === 'fulfilled') account = accountRes.value
+  else {
+    const err = accountRes.reason
     console.error('[platform-fees] balance card read failed:', err instanceof Error ? err.message : err)
   }
+  // Never log the rows, only that the read failed.
+  if (bankRes.status === 'rejected') console.error('[platform-fees] bank account read failed')
+  if (openRes.status === 'rejected') console.error('[platform-fees] open fee request read failed')
 
-  const bankInstructions = getPlatformFeeBankInstructions()
-  let tenantSlug = ''
-  if (bankInstructions || account?.payNow.length) {
-    try {
-      const { data } = await createAdminClient().from('tenants').select('slug').eq('id', tenantId).single()
-      tenantSlug = data?.slug ?? ''
-    } catch {
-      // The reference falls back to the request id alone.
-    }
-  }
-  const tenantReference = tenantSlug ? feeTransferReference(tenantSlug) : null
+  const openRequest: OpenFeeRequestView | null = openRes.status === 'fulfilled' ? openRes.value : null
+  // Only accounts for currencies the school can pay now (or has a transfer open in), USD as fallback.
+  const payable = account?.payNow.map((b) => b.currency) ?? []
+  const bankAccounts: PlatformBankAccountView[] =
+    payable.length > 0 && bankRes.status === 'fulfilled'
+      ? selectBankAccountsForAll(bankRes.value, openRequest ? [...payable, openRequest.currency] : payable)
+      : []
+  const tenantSlug = tenantRes.status === 'fulfilled' ? tenantRes.value.data?.slug ?? '' : ''
+  // '' = unknown: the dialog then quotes the request id alone.
+  const tenantReference = tenantSlug ? feeTransferReference(tenantSlug) : ''
 
   return (
     <Card id="platform-fees" className="scroll-mt-20" data-testid="fee-balance-card">
@@ -72,13 +93,20 @@ export async function FeeBalanceCard({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CardTitle>{t('title')}</CardTitle>
-            {account && (
+            {account ? (
               <Badge variant="outline" className={cn('text-[10px]', STATE_TONE[account.standing.state])} data-testid="fee-standing-state">
                 {t(`state.${account.standing.state}`)}
               </Badge>
-            )}
+            ) : null}
           </div>
-          {account && account.payNow.length > 0 && <FeePayNowDialog buckets={account.payNow} bankInstructions={bankInstructions} tenantReference={tenantReference} />}
+          {account && account.payNow.length > 0 ? (
+            <FeePayNowDialog
+              buckets={account.payNow}
+              bankAccounts={bankAccounts}
+              tenantReference={tenantReference}
+              openRequest={openRequest}
+            />
+          ) : null}
         </div>
         <CardDescription>{t('description')}</CardDescription>
       </CardHeader>
