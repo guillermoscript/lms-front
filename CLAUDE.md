@@ -12,9 +12,9 @@ Multi-tenant SaaS LMS built with Next.js 16 (App Router, React 19) and Supabase.
 
 ```bash
 npm run dev              # Dev server at http://localhost:3000
-npm run build            # Production build (TypeScript + lint check)
+npm run build            # Production build (no type check — see typecheck)
 npm run lint             # ESLint
-npm run typecheck        # tsc --noEmit
+npm run typecheck        # tsc --noEmit (8 GB heap; the only type check, also CI's verify job)
 npm run test:unit        # Vitest unit tests
 npx vitest run -t "name" # Single unit test
 
@@ -194,7 +194,7 @@ Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
 - `creator@codeacademy.com` / `password123` — **admin** (Code Academy, subdomain `code-academy.lvh.me:3000`)
 - `alice@student.com` / `password123` — student (Code Academy)
 
-Pre-commit checklist: `npm run build` · tenant filter on every query · tested with all relevant roles · loading + error states handled.
+Pre-commit checklist: `npm run typecheck` + `npm run build` · tenant filter on every query · tested with all relevant roles · loading + error states handled.
 
 ## Known Pitfalls
 
