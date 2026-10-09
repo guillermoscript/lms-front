@@ -7,6 +7,7 @@ import { owedBuckets } from '@/lib/billing/platform-fee-view'
 import { formatMoney } from '@/lib/payments/format-money'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { getPlatformFeeBankInstructions, feeTransferReference } from '@/lib/billing/platform-fee-bank-instructions'
 import { FeePayNowDialog } from './fee-pay-now-dialog'
 import { FeeRetryButton } from './refresh-buttons'
 import { cn } from '@/lib/utils'
@@ -53,6 +54,18 @@ export async function FeeBalanceCard({
     console.error('[platform-fees] balance card read failed:', err instanceof Error ? err.message : err)
   }
 
+  const bankInstructions = getPlatformFeeBankInstructions()
+  let tenantSlug = ''
+  if (bankInstructions || account?.payNow.length) {
+    try {
+      const { data } = await createAdminClient().from('tenants').select('slug').eq('id', tenantId).single()
+      tenantSlug = data?.slug ?? ''
+    } catch {
+      // The reference falls back to the request id alone.
+    }
+  }
+  const tenantReference = tenantSlug ? feeTransferReference(tenantSlug) : null
+
   return (
     <Card id="platform-fees" className="scroll-mt-20" data-testid="fee-balance-card">
       <CardHeader className="gap-1">
@@ -65,7 +78,7 @@ export async function FeeBalanceCard({
               </Badge>
             )}
           </div>
-          {account && account.payNow.length > 0 && <FeePayNowDialog buckets={account.payNow} />}
+          {account && account.payNow.length > 0 && <FeePayNowDialog buckets={account.payNow} bankInstructions={bankInstructions} tenantReference={tenantReference} />}
         </div>
         <CardDescription>{t('description')}</CardDescription>
       </CardHeader>

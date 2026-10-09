@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
+import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -34,6 +35,59 @@ const KNOWN_ERRORS = [
   'unauthorized',
 ] as const
 
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const tb = useTranslations('platformFees.payNow.bank')
+  const [copied, setCopied] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current)
+  }, [])
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard can be blocked; the text stays selectable on screen.
+    }
+  }
+  return (
+    <Button type="button" variant="ghost" size="sm" onClick={() => void copy()} aria-label={label}>
+      {copied ? <IconCheck aria-hidden /> : <IconCopy aria-hidden />}
+      <span aria-live="polite">{copied ? tb('copied') : tb('copy')}</span>
+    </Button>
+  )
+}
+
+/** Bank details + the reference to quote, or a plain "details will be sent" fallback. */
+function BankDetails({ instructions, reference }: { instructions: string | null; reference: string | null }) {
+  const tb = useTranslations('platformFees.payNow.bank')
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/40 p-3 text-sm" data-testid="fee-bank-details">
+      <p className="font-medium">{tb('title')}</p>
+      {instructions ? (
+        <div className="flex items-start justify-between gap-2">
+          <p className="whitespace-pre-wrap break-words" data-testid="fee-bank-instructions">{instructions}</p>
+          <CopyButton value={instructions} label={tb('copyDetails')} />
+        </div>
+      ) : (
+        <p className="text-muted-foreground" data-testid="fee-bank-fallback">{tb('fallback')}</p>
+      )}
+      {reference && (
+        <div className="flex items-center justify-between gap-2 border-t pt-2">
+          <div>
+            <p className="text-xs text-muted-foreground">{tb('reference')}</p>
+            <p className="break-all font-mono text-xs" data-testid="fee-bank-reference">{reference}</p>
+            <p className="text-xs text-muted-foreground">{tb('referenceHint')}</p>
+          </div>
+          <CopyButton value={reference} label={tb('copyReference')} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Instructions {
   requestId: string
   amount: number
@@ -47,7 +101,17 @@ interface Instructions {
  * (`min(netOwed, requested)`), so a stale or edited figure can never charge
  * more than is owed. Card (Stripe) is USD only; any currency by transfer.
  */
-export function FeePayNowDialog({ buckets }: { buckets: PayNowBucket[] }) {
+export function FeePayNowDialog({
+  buckets,
+  bankInstructions = null,
+  tenantReference = null,
+}: {
+  buckets: PayNowBucket[]
+  /** Server-read `PLATFORM_FEE_BANK_INSTRUCTIONS`; null when the platform has not set any. */
+  bankInstructions?: string | null
+  /** Reference to quote on the transfer, known before submit (tenant based). */
+  tenantReference?: string | null
+}) {
   const t = useTranslations('platformFees.payNow')
   const locale = useLocale()
   const router = useRouter()
@@ -147,19 +211,29 @@ export function FeePayNowDialog({ buckets }: { buckets: PayNowBucket[] }) {
           if (!next) reset()
         }}
       >
-        <DialogContent data-testid="fee-pay-now-dialog">
+        <DialogContent data-testid="fee-pay-now-dialog" className="max-h-[90dvh] overflow-y-auto">
           {instructions ? (
             <>
               <DialogHeader>
                 <DialogTitle>{t('instructions.title')}</DialogTitle>
                 <DialogDescription>
-                  {t('instructions.body', { amount: formatMoney(instructions.amount, instructions.currency, locale) })}
+                  {t(bankInstructions ? 'instructions.bodyWithDetails' : 'instructions.body', {
+                    amount: formatMoney(instructions.amount, instructions.currency, locale),
+                  })}
                 </DialogDescription>
               </DialogHeader>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm" data-testid="fee-pay-now-instructions">
                 <dt className="text-muted-foreground">{t('instructions.reference')}</dt>
                 <dd className="break-all font-mono text-xs">{instructions.requestId}</dd>
               </dl>
+              <BankDetails
+                instructions={bankInstructions}
+                reference={
+                  tenantReference
+                    ? `${tenantReference}-${instructions.requestId.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+                    : instructions.requestId
+                }
+              />
               {instructions.expiresAt && (
                 <p className="text-xs text-muted-foreground">{t('instructions.expires', { date: fmtUtc(instructions.expiresAt) })}</p>
               )}
@@ -243,6 +317,7 @@ export function FeePayNowDialog({ buckets }: { buckets: PayNowBucket[] }) {
 
                 {rail === 'manual' && (
                   <>
+                    <BankDetails instructions={bankInstructions} reference={tenantReference} />
                     <div className="space-y-1.5">
                       <Label htmlFor="fee-bank-ref">{t('bankReference')}</Label>
                       <Input

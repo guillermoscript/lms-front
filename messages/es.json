@@ -2492,13 +2492,13 @@
       "welcome": "Gestiona tu plataforma LMS",
       "earnings": {
         "title": "Ganancias",
-        "description": "Tus ventas, la comisión de la plataforma en cada una y lo que se deben tú y la plataforma.",
+        "description": "Tus ventas, la comisión de la plataforma en cada una y lo que tú le debes a la plataforma o ella te debe a ti.",
         "accessDenied": "Acceso denegado",
         "accessDeniedDesc": "Debes ser administrador de la escuela para ver esta página.",
         "scope": {
           "school": "Pagadas directamente a ti ({providers}): la plataforma no cobra su comisión al momento del pago, así que se acumula como un monto que debes a la plataforma.",
           "platform": "Cobradas por la plataforma ({providers}): la plataforma retiene su comisión y te debe el resto, que paga manualmente.",
-          "excluded": "Las ventas con Stripe y Solana no aparecen: la comisión se cobra dentro del mismo pago, así que nadie le debe nada a nadie.",
+          "excluded": "Las ventas con Stripe y Solana no aparecen: la comisión se cobra dentro del mismo pago, así que no queda saldo pendiente entre tú y la plataforma.",
           "timezone": "Las fechas, los filtros de fecha y \"este mes\" usan UTC."
         },
         "providers": {
@@ -9419,9 +9419,20 @@
       "submitting": "Iniciando…",
       "redirecting": "Abriendo el pago…",
       "nothingToPay": "No hay nada que pagar en este momento.",
+      "bank": {
+        "title": "Datos para la transferencia bancaria",
+        "fallback": "Todavía no tenemos datos bancarios para mostrarte aquí. Al registrar la transferencia te los enviaremos por correo a tu contacto de facturación.",
+        "reference": "Referencia de pago",
+        "referenceHint": "Indícala en el concepto de la transferencia para que podamos identificarla.",
+        "copy": "Copiar",
+        "copied": "Copiado",
+        "copyDetails": "Copiar los datos bancarios",
+        "copyReference": "Copiar la referencia de pago"
+      },
       "instructions": {
         "title": "Transferencia registrada",
         "body": "Registramos tu transferencia de {amount}. Enviaremos los datos bancarios de la plataforma a tu contacto de facturación. Cuando confirmemos que llegó el dinero, tu saldo se actualiza.",
+        "bodyWithDetails": "Registramos tu transferencia de {amount}. Envíala a los datos de abajo e incluye la referencia de pago. Cuando confirmemos que llegó el dinero, tu saldo se actualiza.",
         "reference": "ID de la solicitud",
         "expires": "Esta solicitud sigue abierta hasta el {date} (UTC).",
         "done": "Listo"

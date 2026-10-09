@@ -62,6 +62,7 @@ let statementsBefore = new Set<string>()
 
 let paidCourseId: number
 let stripeCourseId: number
+let openManualProductId: number
 let freeCourseId: number
 let heldPlanId: number
 let otherPlanId: number
@@ -190,6 +191,9 @@ test.describe('platform fee lifecycle (#929)', () => {
 
     const manualProductId = await insertProduct(admin, 'E2E #929 manual product', OVERDUE_SALE, 'manual', paidCourseId)
     await insertProduct(admin, 'E2E #929 card product', 30, 'stripe', stripeCourseId)
+    // A second, never-bought manual product: the student has no renewal exemption on it.
+    const openManualCourseId = await insertCourse(admin, QA.id, 'E2E #929 unbought manual course')
+    openManualProductId = await insertProduct(admin, 'E2E #929 unbought manual product', 25, 'manual', openManualCourseId)
 
     heldPlanId = await insertPlan(admin, 'E2E #929 held plan', CURRENT_SALE)
     otherPlanId = await insertPlan(admin, 'E2E #929 other plan', 40)
@@ -354,6 +358,12 @@ test.describe('platform fee lifecycle (#929)', () => {
       "This school isn't accepting new enrollments right now. Please try again later.",
     )
     // Never reveals the school's fee debt to the student.
+    await expect(page.getByText(/platform fee|overdue/i)).toHaveCount(0)
+
+    // The bank-transfer request page shows the same notice, not a submit form.
+    await page.goto(`${QA_BASE}/${LOCALE}/checkout/manual?productId=${openManualProductId}`, { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('checkout-sales-blocked')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: /submit request/i })).toHaveCount(0)
     await expect(page.getByText(/platform fee|overdue/i)).toHaveCount(0)
   })
 

@@ -9419,9 +9419,20 @@
       "submitting": "Starting…",
       "redirecting": "Opening checkout…",
       "nothingToPay": "There's nothing to pay right now.",
+      "bank": {
+        "title": "Bank transfer details",
+        "fallback": "We don't have bank details to show here yet. Once you register the transfer, we'll email them to your billing contact.",
+        "reference": "Payment reference",
+        "referenceHint": "Include it in the transfer description so we can match it.",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyDetails": "Copy bank details",
+        "copyReference": "Copy payment reference"
+      },
       "instructions": {
         "title": "Transfer registered",
         "body": "We registered your transfer of {amount}. We'll email the platform's bank details to your billing contact. Once we confirm the money arrived, your balance updates.",
+        "bodyWithDetails": "We registered your transfer of {amount}. Send it to the details below and include the payment reference. Once we confirm the money arrived, your balance updates.",
         "reference": "Request ID",
         "expires": "This request stays open until {date} (UTC).",
         "done": "Done"
