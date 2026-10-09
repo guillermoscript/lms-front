@@ -149,7 +149,7 @@ export const Header: ComponentConfig<HeaderProps> = {
           </Link>
 
           {/* Nav */}
-          <nav aria-label="Main navigation" className="flex items-center gap-8">
+          <nav aria-label={t('mainNavigation')} className="flex items-center gap-8">
             {navLinks.map((link, i) => (
               <a
                 key={i}

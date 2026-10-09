@@ -545,6 +545,15 @@ describe("applyAgentOps (pure)", () => {
     const bad = applyAgentOps(base, [{ op: "remove", id: "nope" }], { refs });
     expect(bad.errors[0]).toMatch(/no block with id "nope"/);
   });
+
+  it("fills an added block's defaults in the page's language", () => {
+    const add = [{ op: "add" as const, type: "Header", props: { ctaHref: "/pricing" } }];
+    const es = applyAgentOps(null, add, { refs, idFactory: () => "h", locale: "es" });
+    expect(es.data.content[0].props).toMatchObject({ ctaLabel: "Inscríbete ahora", ctaHref: "/pricing" });
+    expect((es.data.content[0].props.navLinks as Array<{ label: string; href: string }>)[0]).toEqual({ label: "Cursos", href: "/courses" });
+    const en = applyAgentOps(null, add, { refs, idFactory: () => "h" });
+    expect(en.data.content[0].props.ctaLabel).toBe("Enroll Now");
+  });
 });
 
 describe("preview summaries (critique F2)", () => {

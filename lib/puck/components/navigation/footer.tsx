@@ -1,5 +1,6 @@
 import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 type FooterLink = {
@@ -69,7 +70,8 @@ export const Footer: ComponentConfig<FooterProps> = {
     socialLinks: [],
     copyright: '\u00a9 2026 Academy. All rights reserved.',
   },
-  render: ({ description, columns, socialLinks, copyright }) => {
+  render: function FooterView({ description, columns, socialLinks, copyright }) {
+    const t = useTranslations('puck.render')
     // Build responsive grid-cols class based on number of link columns + the brand column
     const gridColsClass = cn(
       'grid grid-cols-1 gap-12 mb-12',
@@ -89,7 +91,7 @@ export const Footer: ComponentConfig<FooterProps> = {
                 {description}
               </p>
               {socialLinks.length > 0 && (
-                <div aria-label="Social links" className="flex gap-4 mt-6">
+                <div aria-label={t('socialLinks')} className="flex gap-4 mt-6">
                   {socialLinks.map((s, i) => (
                     <a
                       key={i}
@@ -105,7 +107,7 @@ export const Footer: ComponentConfig<FooterProps> = {
               )}
             </div>
             {/* Link columns */}
-            <nav aria-label="Footer" className="contents">
+            <nav aria-label={t('footerNavigation')} className="contents">
               {columns.map((col, i) => (
                 <div key={i}>
                   <h3 className="text-foreground font-semibold text-sm uppercase tracking-wider mb-4">

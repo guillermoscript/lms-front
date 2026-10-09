@@ -79,7 +79,7 @@ export const Image: ComponentConfig<ImageProps> = {
       >
         <img
           src={src}
-          alt={alt || 'Image'}
+          alt={alt || ''}
           loading="lazy"
           className={cn(
             'block w-full h-full transition-transform motion-reduce:transition-none duration-500 ',

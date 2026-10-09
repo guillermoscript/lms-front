@@ -103,7 +103,8 @@
       "noResults": "No se encontraron cursos",
       "noAvailable": "No hay cursos publicados disponibles",
       "selected": "{count} {count, plural, one {curso seleccionado} other {cursos seleccionados}}"
-    }
+    },
+    "toggleLanguage": "Cambiar idioma"
   },
   "aristotle": {
     "name": "Aristotle",
@@ -7695,7 +7696,12 @@
       "statCourses": "Cursos",
       "statCompletions": "Completados",
       "socialProofReviews": "Basado en {count, plural, one {# reseña} other {# reseñas}}",
-      "socialProofRating": "{rating} de 5 estrellas"
+      "socialProofRating": "{rating} de 5 estrellas",
+      "mainNavigation": "Navegación principal",
+      "navigation": "Navegación",
+      "breadcrumb": "Ruta de navegación",
+      "footerNavigation": "Pie de página",
+      "socialLinks": "Redes sociales"
     },
     "courseBlocks": {
       "blocks": {

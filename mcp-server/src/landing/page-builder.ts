@@ -27,6 +27,7 @@ import {
   expandDuplicate,
   findNode,
   getZone,
+  localizeDefaults,
   newBlockId,
   normalizeRefIds,
   pageCatalog,
@@ -39,6 +40,7 @@ import {
   type PageOp,
   type RefIdSets,
   type RefKind,
+  type TemplateLocale,
 } from "@lms/core";
 import type { LmsSession } from "../session.js";
 
@@ -241,14 +243,16 @@ function clonePage(data: PageData | null | undefined): PageData {
 /**
  * Translate and apply agent ops to a copy of `stored`. Block ids are always minted here;
  * a temp `ref` lets later ops in the same patch address a new block. Validation errors
- * and ops the reducer had to skip are both fatal — the caller saves nothing.
+ * and ops the reducer had to skip are both fatal — the caller saves nothing. With a
+ * `locale`, the defaults an `add` fills in are in the page's language.
  */
 export function applyAgentOps(
   stored: PageData | null | undefined,
   ops: readonly AgentOp[],
-  opts: { refs: RefIdSets; idFactory?: IdFactory }
+  opts: { refs: RefIdSets; idFactory?: IdFactory; locale?: TemplateLocale }
 ): ApplyAgentOpsResult {
   const idFactory = opts.idFactory ?? newBlockId;
+  const catalog = localizeDefaults(pageCatalog, opts.locale);
   const page = clonePage(stored);
   const errors: string[] = [];
   const idMap: Record<string, string> = {};
@@ -278,7 +282,7 @@ export function applyAgentOps(
     return { zone, index: op.index ?? (getZone(page, zone) ?? []).length };
   };
   const apply = (label: string, op: PageOp): boolean => {
-    const warning = applyOpInPlace(page, op, pageCatalog);
+    const warning = applyOpInPlace(page, op, catalog);
     if (warning) {
       errors.push(`${label}: ${warning}`);
       return false;

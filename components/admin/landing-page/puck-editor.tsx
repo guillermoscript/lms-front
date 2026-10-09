@@ -294,7 +294,8 @@ export function PuckEditor({
   const t = useTranslations('puck')
   const tp = useTranslations('pageArchitect.panel.editor')
   const locale: 'en' | 'es' = useLocale() === 'es' ? 'es' : 'en'
-  const config = useMemo(() => createPuckConfig(t) as Config, [t])
+  // Blocks dragged in by hand get their default copy in the page's language (#944).
+  const config = useMemo(() => createPuckConfig(t, locale) as Config, [t, locale])
 
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(pageStatus)
