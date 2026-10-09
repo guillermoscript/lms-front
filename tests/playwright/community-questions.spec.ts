@@ -20,7 +20,7 @@
  * post carries MARK and is removed afterwards (comments and notifications
  * cascade). Desktop only: it writes shared rows.
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { login, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'

@@ -17,7 +17,7 @@
  *   reports    filed pending, about content in the reporter's school
  *   blocks     the blocker stops seeing the author; staff still see everything
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { ACCOUNTS } from './utils/constants'

@@ -6,7 +6,7 @@
  * branding); Code Academy is on Enterprise (everything). Same pages, both
  * tenants: the gate must appear on one and not the other.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient } from '@supabase/supabase-js'
 import { loginAsTeacher, loginAsAdmin } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'

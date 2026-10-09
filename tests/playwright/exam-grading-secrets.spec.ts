@@ -13,7 +13,7 @@
  * DB-level only: every call goes through a role-`authenticated` client, the
  * surface a student's browser or app holds.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { ACCOUNTS } from './utils/constants'
 

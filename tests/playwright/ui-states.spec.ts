@@ -7,7 +7,7 @@
  * - Dark mode toggle
  * - Language switching (en <-> es)
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { loginAsStudent, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
 

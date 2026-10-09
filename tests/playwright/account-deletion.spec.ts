@@ -14,7 +14,7 @@
  * The API itself (Bearer, confirmation mismatch, 409) is pinned in the same
  * file against `/api/account/delete`.
  */
-import { test, expect, type Locator } from '@playwright/test'
+import { test, expect, type Locator } from './utils/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { BASE, TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
 import { login } from './utils/auth'

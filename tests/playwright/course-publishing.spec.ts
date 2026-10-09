@@ -6,7 +6,7 @@
  * - Course status change (published -> draft -> published)
  * - Visibility impact on student browse page
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsTeacher, loginAsStudent } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'

@@ -25,7 +25,7 @@
  * Mailgun (`lib/email/send.ts`), which is unset locally and in CI, so the link
  * is taken from the dialog — the same link the email would carry.
  */
-import { test, expect, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Browser, type BrowserContext, type Locator, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
 import { login } from './utils/auth'

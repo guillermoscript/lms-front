@@ -23,7 +23,7 @@
  * local (it returns transfer instructions), so the full route runs with no
  * external payment API or network dependency.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsTenantStudent } from './utils/auth'
 import { ACCOUNTS, TENANT_BASE } from './utils/constants'

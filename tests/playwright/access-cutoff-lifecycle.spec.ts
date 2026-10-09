@@ -14,7 +14,7 @@
  * and the ladder timing with a fake mailer; this spec proves the route, the
  * RPC the content pages call and the page itself agree with them.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { login } from './utils/auth'
 import { LOCALE } from './utils/constants'
 import {

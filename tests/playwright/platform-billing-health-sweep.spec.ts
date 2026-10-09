@@ -6,7 +6,7 @@
  * Vault secrets (the local default) that records an `unconfigured` run, which
  * is exactly the state the page must make loud rather than hide.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient } from '@supabase/supabase-js'
 import { loginAsSuperAdmin } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'

@@ -92,7 +92,7 @@
  */
 import { createServer, type Server } from 'node:http'
 import { createHmac } from 'node:crypto'
-import { expect, test, type Browser, type Page } from '@playwright/test'
+import { expect, test, type Browser, type Page } from './utils/test'
 import { login } from './utils/auth'
 import {
   SEEDED,

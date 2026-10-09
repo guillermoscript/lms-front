@@ -21,7 +21,7 @@
  * well as positive ("this school's course, not that one's"), and the seeded
  * schools are shared with a dozen other specs.
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import en from '../../messages/en.json'
 import es from '../../messages/es.json'

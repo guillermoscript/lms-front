@@ -14,7 +14,7 @@
  * test that exercises it.
  */
 import { createHmac } from 'node:crypto'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { BASE } from './utils/constants'
 import {
   DAY_MS,

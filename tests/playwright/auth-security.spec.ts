@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { login, loginAsStudent } from './utils/auth'
 import { BASE, TENANT_BASE, ACCOUNTS } from './utils/constants'
 import { getServiceRoleClient } from './utils/seed-state'

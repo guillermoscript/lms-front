@@ -9,7 +9,7 @@
  *
  * Seed: course 1001 (Default School), student@e2etest.com enrolled.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'

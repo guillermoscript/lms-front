@@ -19,7 +19,7 @@
  * post carries MARK and is removed afterwards (grades, comments and
  * notifications cascade). Desktop only: it writes shared rows.
  */
-import { test, expect, type Browser, type Page } from '@playwright/test'
+import { test, expect, type Browser, type Page } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { login, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'

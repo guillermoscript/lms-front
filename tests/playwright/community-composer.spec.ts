@@ -14,7 +14,7 @@
  * removed afterwards; the settings rows are removed so the school is back on
  * the "missing row = ON" default.
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE, LOCALE } from './utils/constants'

@@ -17,7 +17,7 @@
  * PayPal product (PayPal bears a platform fee and charges our amount, so the
  * student bearer applies; nothing here calls PayPal).
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT, ALICE_ID } from './utils/seed-state'

@@ -1,4 +1,4 @@
-import { test, expect, type ConsoleMessage, type Page } from '@playwright/test'
+import { test, expect, type ConsoleMessage, type Page } from './utils/test'
 import { loginAsStudent } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
 

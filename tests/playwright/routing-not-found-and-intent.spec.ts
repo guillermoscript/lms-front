@@ -12,7 +12,7 @@
  * both halves — the new 404 behaviour AND the guards that must not have moved.
  * `auth-security.spec.ts` and `tenant-isolation.spec.ts` cover the rest.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'
 import { loginAsStudent } from './utils/auth'
 

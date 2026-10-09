@@ -19,7 +19,7 @@
  * afterAll, which also restores Alice's gamification profile, her
  * share_milestones preference and the school's milestone switch.
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'

@@ -27,7 +27,7 @@
  * to. Serial and desktop-only: every test builds on the previous one's DB state.
  */
 import { createHmac } from 'node:crypto'
-import { expect, test, type APIRequestContext, type Frame, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Frame, type Page } from './utils/test'
 import { BASE, LOCALE } from './utils/constants'
 import { login } from './utils/auth'
 import {

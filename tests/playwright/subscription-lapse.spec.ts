@@ -14,7 +14,7 @@
  * Pure DB-level test (no browser). Runs once (single Playwright project guard).
  * See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { restoreAliceSeedSubscription } from './utils/seed-state'
 

@@ -19,7 +19,7 @@
  * Runs on Code Academy (community on). Every row carries MARK and is removed
  * afterwards; the one block row is removed by its own test and again here.
  */
-import { test, expect, type Browser, type Page } from '@playwright/test'
+import { test, expect, type Browser, type Page } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE, LOCALE } from './utils/constants'

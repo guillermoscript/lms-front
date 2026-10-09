@@ -11,7 +11,7 @@
  * The OAuth hop is stubbed with a 204: the browser abandons the navigation and
  * stays on the page, which is exactly the "redirect that never lands" shape.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { BASE, LOCALE } from './utils/constants'
 
 const GOOGLE_BUTTON = 'create-school-google'

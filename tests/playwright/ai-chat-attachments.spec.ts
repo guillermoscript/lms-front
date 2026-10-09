@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test, expect, type Page, type Request } from '@playwright/test'
+import { test, expect, type Page, type Request } from './utils/test'
 import { loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { noisePng, tinyPdf } from './utils/images'
@@ -107,6 +107,14 @@ function chatPoster(page: Page) {
  * survives a round trip proves hydration has happened.
  */
 async function waitForChatHydration(page: Page) {
+    // Below `lg` the workspace shows one section at a time (#583) and opens on
+    // the instructions, so the chat is a tap away.
+    if ((page.viewportSize()?.width ?? 1280) < 1024) {
+        await page
+            .getByRole('group', { name: 'Exercise sections' })
+            .getByRole('button', { name: 'AI Coach' })
+            .evaluate((el: HTMLElement) => el.click(), undefined, { timeout: 30_000 })
+    }
     const composer = page.getByPlaceholder('Type your answer…').filter({ visible: true })
     await expect(composer).toBeVisible({ timeout: 30_000 })
     await expect

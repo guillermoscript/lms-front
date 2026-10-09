@@ -66,7 +66,7 @@
  * settled row can no longer assert "stays pending".
  */
 import { createServer, type IncomingMessage, type Server } from 'node:http'
-import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Locator, type Page } from './utils/test'
 import { login } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
 import {

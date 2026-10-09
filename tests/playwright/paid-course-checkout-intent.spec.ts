@@ -18,7 +18,7 @@
  * manual product (no Stripe needed — the checkout page hands a manual product
  * to /checkout/manual, which is still "the checkout for that course").
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'

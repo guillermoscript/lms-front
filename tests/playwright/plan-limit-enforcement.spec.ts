@@ -14,7 +14,7 @@
  * Local run: `PORT=3005 npm run dev`, then
  *   npx playwright test plan-limit-enforcement --workers=1
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient } from '@supabase/supabase-js'
 import { loginAsTeacher } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'

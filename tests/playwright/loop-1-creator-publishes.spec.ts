@@ -24,7 +24,7 @@
  * shards. `afterAll` removes everything the run created; `beforeAll` sweeps
  * whatever an aborted earlier run may have left behind.
  */
-import { test, expect, type Browser, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Browser, type Locator, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { BASE, TENANT_BASE } from './utils/constants'
 import { getServiceRoleClient } from './utils/seed-state'

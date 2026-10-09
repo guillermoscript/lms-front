@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './utils/test'
 import { loginAsStudent, loginAsTeacher } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
 import { DEFAULT_TENANT, getServiceRoleClient } from './utils/seed-state'

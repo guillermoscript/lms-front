@@ -12,7 +12,7 @@
  * without, so the filter has something to exclude no matter what the seed says.
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { loginAsAdmin } from './utils/auth'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
