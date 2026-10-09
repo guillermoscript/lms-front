@@ -9,6 +9,7 @@
 import { resolveAppends } from './appends'
 import { applyArrayDefaults } from './array-defaults'
 import { newBlockId, type IdFactory } from './ids'
+import { localizeTemplateCopy, type TemplateLocale } from './template-i18n'
 import { ROOT_ZONE, type AddOp, type PageOp, type Zone } from './ops'
 import {
   childZoneKeys,
@@ -30,6 +31,16 @@ export interface OpsCatalog {
   fields(type: string): Record<string, ManifestField> | undefined
   /** Does `type` render a DropZone named `zoneName`? Omitted = any zone of an existing block. */
   acceptsZone?(type: string, zoneName: string): boolean
+}
+
+/**
+ * `catalog` with its `defaultProps` in `locale`: the copy a block gets for every prop an `add`
+ * op leaves out, so a new block on a Spanish page reads Spanish (as the editor's own Puck
+ * config does). Same dictionary and copy-key filter as the templates; English = `catalog`.
+ */
+export function localizeDefaults<C extends OpsCatalog>(catalog: C, locale: TemplateLocale | null | undefined): C {
+  if (!locale || locale === 'en') return catalog
+  return { ...catalog, defaultProps: (type: string) => localizeTemplateCopy(catalog.defaultProps(type), locale) }
 }
 
 const zoneCheck = (catalog?: OpsCatalog) =>

@@ -1,5 +1,6 @@
 import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 type BreadcrumbItem = {
@@ -43,11 +44,12 @@ export const BreadcrumbBlock: ComponentConfig<BreadcrumbBlockProps> = {
     ],
     separator: '/',
   },
-  render: ({ items, separator }) => {
+  render: function BreadcrumbView({ items, separator }) {
+    const t = useTranslations('puck.render')
     if (!items || items.length === 0) return <></>
 
     return (
-      <nav aria-label="Breadcrumb" className="text-sm">
+      <nav aria-label={t('breadcrumb')} className="text-sm">
         <ol className="flex items-center gap-2 list-none p-0 m-0">
           {items.map((item, i) => {
             const isLast = i === items.length - 1

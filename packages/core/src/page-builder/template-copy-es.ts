@@ -1,7 +1,8 @@
 /**
- * Spanish copy for the page templates: English source string → Spanish (see template-i18n.ts).
- * Keys are the templates' raw strings, binding tokens included. A unit test fails when a
- * template string has no entry; add one here whenever template copy changes.
+ * Spanish copy for the page templates and the blocks' default props: English source string →
+ * Spanish (see template-i18n.ts). Keys are the raw strings, binding tokens included. A unit
+ * test fails when a template or block-default string has no entry; add one here whenever that
+ * copy changes.
  */
 export const TEMPLATE_COPY_ES: Readonly<Record<string, string>> = {
   "Blank": "En blanco",
@@ -1052,6 +1053,27 @@ export const TEMPLATE_COPY_ES: Readonly<Record<string, string>> = {
   "What’s inside": "Qué hay dentro",
   "Replace with what the price includes": "Reemplaza con lo que incluye el precio",
   "One short line per benefit": "Una línea breve por beneficio",
-  "© 2026 Academy. All rights reserved.": "© 2026 Academy. Todos los derechos reservados.",
+  "© 2026 Academy. All rights reserved.": "© 2026 Academia. Todos los derechos reservados.",
   "Current Page": "Página actual",
+  // Block defaults the editor's config inserts (blocks and array items added by hand).
+  "Feature": "Característica",
+  "Description": "Descripción",
+  "Plan": "Plan",
+  "Perfect for getting started": "Ideal para empezar",
+  "Feature 1\nFeature 2\nFeature 3": "Característica 1\nCaracterística 2\nCaracterística 3",
+  "Their words about what changed.": "Sus palabras sobre lo que cambió.",
+  "Question?": "¿Pregunta?",
+  "Answer here.": "Respuesta aquí.",
+  "Students": "Estudiantes",
+  "Logo": "Logo",
+  "Metric": "Métrica",
+  "New question?": "¿Nueva pregunta?",
+  "Answer goes here.": "La respuesta va aquí.",
+  "Gallery image": "Imagen de la galería",
+  "A skill the student will have by the end": "Una habilidad que el estudiante tendrá al terminar",
+  "What the price includes": "Lo que incluye el precio",
+  "Link": "Enlace",
+  "Column": "Columna",
+  "Link 1": "Enlace 1",
+  "Page": "Página",
 }

@@ -11,7 +11,7 @@ import 'server-only'
  */
 import { stepCountIs, streamText, type LanguageModel, type ModelMessage, type UIMessage, type UIMessageStreamWriter } from 'ai'
 import { propagateAttributes } from '@langfuse/tracing'
-import { newBlockId, pageCatalog, type IdFactory, type PageBuilderDataParts, type PageCatalog, type PageData, type PageOp } from '@lms/core'
+import { localizeDefaults, newBlockId, pageCatalog, type IdFactory, type PageBuilderDataParts, type PageCatalog, type PageData, type PageOp } from '@lms/core'
 import type { ProviderId } from '@/lib/ai/provider-ids'
 import { reportStreamError } from '@/lib/ai/errors'
 import { createDataTools } from './data-tools'
@@ -75,7 +75,8 @@ export interface PageAgentStreamInput {
 }
 
 export function createPageAgent(input: CreatePageAgentInput) {
-  const catalog = input.catalog ?? pageCatalog
+  // A block the AI adds gets the defaults the editor's config gives it: in the page's language.
+  const catalog = localizeDefaults(input.catalog ?? pageCatalog, input.context.locale)
   const shadow = new ShadowPage(input.pageData, catalog)
   // Captured before any op so the prompt shows the page as the admin sent it.
   const instructions = buildInstructions({ context: input.context, page: shadow.data, selectedId: input.selectedId, catalog })

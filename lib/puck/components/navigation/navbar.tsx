@@ -1,5 +1,6 @@
 import { safeHref } from '../../utils/safe-href'
 import type { ComponentConfig } from '@measured/puck'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
@@ -56,12 +57,13 @@ export const Navbar: ComponentConfig<NavbarProps> = {
     sticky: false,
     alignment: 'center',
   },
-  render: ({ links, sticky, alignment }) => {
+  render: function NavbarView({ links, sticky, alignment }) {
+    const t = useTranslations('puck.render')
     if (!links || links.length === 0) return <></>
 
     return (
       <nav
-        aria-label="Navigation"
+        aria-label={t('navigation')}
         className={cn(
           'z-40 bg-background border-b border-border px-6 py-3',
           sticky ? 'sticky top-0' : 'relative'

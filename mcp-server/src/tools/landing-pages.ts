@@ -230,7 +230,7 @@ export const BindingsSchema = z
     locale: z
       .enum(["en", "es"])
       .optional()
-      .describe("The page's language: the template's copy is written in it. Use 'es' for a Spanish-speaking school. Defaults to 'en'"),
+      .describe("The page's language: the template's copy (and the default copy of blocks added as elements) is written in it. Use 'es' for a Spanish-speaking school. Defaults to 'en'"),
   })
   .optional();
 
@@ -733,7 +733,7 @@ export function registerLandingPageTools(server: LmsServer, options: LandingTool
         } else {
           const ops: AgentOp[] = (input.elements ?? []).map((e) => ({ op: "add" as const, type: e.type, props: e.props ?? {} }));
           lookup = await loadRefLookup(session, collectOpRefIds(ops));
-          built = applyAgentOps(null, ops, { refs: refIdSets(lookup), idFactory });
+          built = applyAgentOps(null, ops, { refs: refIdSets(lookup), idFactory, locale: input.bindings?.locale });
         }
         if (built.errors.length) return errorResult(refusal("The page was not created", built.errors));
         warnings.push(...built.warnings);

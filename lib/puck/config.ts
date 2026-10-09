@@ -1,4 +1,7 @@
 import type { Config } from '@measured/puck'
+// Direct module path (like the templates): the codegen script imports this file, so it must
+// not pull the generated manifest in through the `@lms/core` index.
+import { localizeTemplateCopy, type TemplateLocale } from '@lms/core/src/page-builder/template-i18n'
 
 // Primitives
 import { Heading } from './components/primitives/heading'
@@ -173,7 +176,7 @@ function translateFieldLabel(label: string, t: Translator): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function translateFields(fields: Record<string, any>, t: Translator): Record<string, any> {
+function translateFields(fields: Record<string, any>, t: Translator, locale?: TemplateLocale): Record<string, any> {
   const translated: Record<string, unknown> = {}
   for (const [key, field] of Object.entries(fields)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -189,14 +192,23 @@ function translateFields(fields: Record<string, any>, t: Translator): Record<str
       }))
     }
     if (f.arrayFields && typeof f.arrayFields === 'object') {
-      f.arrayFields = translateFields(f.arrayFields, t)
+      f.arrayFields = translateFields(f.arrayFields, t, locale)
+    }
+    if (f.defaultItemProps && typeof f.defaultItemProps === 'object') {
+      f.defaultItemProps = localizeTemplateCopy(f.defaultItemProps, locale)
     }
     translated[key] = f
   }
   return translated
 }
 
-export function createPuckConfig(t: Translator): Config {
+/**
+ * The Puck config with its labels in the UI language. `contentLocale` is the page's language:
+ * a block dragged in (or an array item added) by hand gets its default copy in it, through the
+ * same dictionary and copy-key filter the templates use (`@lms/core` template-i18n), so hrefs
+ * and enum values are never touched.
+ */
+export function createPuckConfig(t: Translator, contentLocale?: TemplateLocale): Config {
   const translatedComponents: Config['components'] = {}
   for (const [key, component] of Object.entries(componentDefinitions)) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -204,7 +216,8 @@ export function createPuckConfig(t: Translator): Config {
     translatedComponents[key] = {
       ...comp,
       label: t(`components.${key}`),
-      ...(comp.fields ? { fields: translateFields(comp.fields, t) } : {}),
+      ...(comp.fields ? { fields: translateFields(comp.fields, t, contentLocale) } : {}),
+      ...(comp.defaultProps ? { defaultProps: localizeTemplateCopy(comp.defaultProps, contentLocale) } : {}),
     }
   }
 

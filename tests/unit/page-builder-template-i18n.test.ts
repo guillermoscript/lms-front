@@ -6,13 +6,16 @@ import {
   collectTemplateCopy,
   instantiateTemplate,
   isCopyKey,
+  localizeDefaults,
   localizeTemplateCopy,
+  pageCatalog,
   presetToOps,
   templateToOps,
   translateTemplateString,
   type ManifestField,
 } from '@lms/core'
 import { TEMPLATE_COPY_ES } from '@lms/core/src/page-builder/template-copy-es'
+import { createPuckConfig } from '@/lib/puck/config'
 
 const TOKEN = /\{\{\s*\w+\s*\}\}/g
 
@@ -25,6 +28,47 @@ describe('template copy in Spanish', () => {
       }
     }
     expect([...missing]).toEqual([])
+  })
+
+  it('has a Spanish entry for every copy string in every block default (defaultProps and array-item defaults)', () => {
+    const missing = new Set<string>()
+    const itemDefaults = (fields: Record<string, ManifestField> | undefined, out: unknown[]) => {
+      for (const field of Object.values(fields ?? {})) {
+        if (field.defaultItemProps) out.push(field.defaultItemProps)
+        itemDefaults(field.arrayFields, out)
+      }
+    }
+    for (const entry of Object.values(PAGE_BUILDER_MANIFEST.components)) {
+      const defaults: unknown[] = [entry.defaultProps]
+      itemDefaults(entry.fields, defaults)
+      for (const value of defaults) {
+        for (const s of collectTemplateCopy(value)) if (!(s in TEMPLATE_COPY_ES)) missing.add(s)
+      }
+    }
+    expect([...missing]).toEqual([])
+  })
+
+  it('fills the defaults of a block added on a Spanish page in Spanish, links and enums untouched', () => {
+    const es = localizeDefaults(pageCatalog, 'es')
+    const header = es.defaultProps('Header') as { navLinks: Array<{ label: string; href: string }>; ctaLabel: string }
+    expect(header.navLinks[0]).toEqual({ label: 'Cursos', href: '/courses' })
+    expect(header.ctaLabel).toBe('Inscríbete ahora')
+    expect(es.defaultProps('CtaBlock').style).toBe(pageCatalog.defaultProps('CtaBlock').style)
+    expect(localizeDefaults(pageCatalog, 'en')).toBe(pageCatalog)
+    // The rest of the catalog is the same one.
+    expect(es.validateBlock('CtaBlock', { title: 'Hola' })).toEqual(pageCatalog.validateBlock('CtaBlock', { title: 'Hola' }))
+  })
+
+  it("gives a Spanish page's editor Spanish block and array-item defaults", () => {
+    const t = Object.assign((key: string) => key, { has: () => false })
+    type HeaderDefaults = { ctaLabel: string; navLinks: Array<{ label: string; href: string }> }
+    const es = createPuckConfig(t, 'es')
+    const header = es.components.Header.defaultProps as HeaderDefaults
+    expect(header.ctaLabel).toBe('Inscríbete ahora')
+    expect(header.navLinks[0]).toEqual({ label: 'Cursos', href: '/courses' })
+    const items = (es.components.FeaturesGrid.fields as Record<string, { defaultItemProps?: Record<string, unknown> }>).items
+    expect(items.defaultItemProps).toEqual({ icon: '⭐', title: 'Característica', description: 'Descripción' })
+    expect((createPuckConfig(t).components.Header.defaultProps as HeaderDefaults).ctaLabel).toBe('Enroll Now')
   })
 
   it('keeps every binding token of the source string', () => {
