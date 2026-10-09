@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
   // Allow the local tenant domains so the app is interactive under automation.
   allowedDevOrigins: ['lvh.me', '*.lvh.me', 'localhost'],
   transpilePackages: ['@lms/core'],
+  // Types are checked by `npm run typecheck` (CI's `verify` job, which deploy
+  // waits on), not here. The project's checker needs ~4 GB of heap — Node's
+  // default limit — and inside the build's type-check worker a cold run kept
+  // growing past 14 GB and killed `next build` locally. One check, in one place.
+  typescript: { ignoreBuildErrors: true },
   experimental: {
     // Both are used repo-wide via barrel named imports (672 files each);
     // this lets Next.js rewrite them to per-icon imports at build time.
