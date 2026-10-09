@@ -38,7 +38,7 @@ export function PlatformSection({
 export function PlatformPanel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('overflow-hidden rounded-lg border border-border bg-card', className)}
+      className={cn('min-w-0 overflow-hidden rounded-lg border border-border bg-card', className)}
       {...props}
     />
   )

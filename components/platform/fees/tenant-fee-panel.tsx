@@ -87,7 +87,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           </Link>
         </p>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PlatformPanel className="px-5 py-4">
           <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" data-testid="tenant-fee-standing">
             <dt className="text-muted-foreground">{t('standing')}</dt>
@@ -200,7 +200,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           </PlatformPanel>
         </div>
 
-        <div className="space-y-2 lg:col-span-2">
+        <div className="min-w-0 space-y-2 lg:col-span-2">
           <h3 className="text-xs font-semibold">{t('payments')}</h3>
           <PlatformPanel>
             {overview.payments.length === 0 ? (
@@ -246,7 +246,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           </PlatformPanel>
         </div>
 
-        <div className="space-y-2 lg:col-span-2">
+        <div className="min-w-0 space-y-2 lg:col-span-2">
           <h3 className="text-xs font-semibold">{t('audit')}</h3>
           <PlatformPanel>
             {overview.audit.length === 0 ? (
