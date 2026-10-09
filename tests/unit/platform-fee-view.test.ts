@@ -4,17 +4,18 @@ import {
   FEE_DIALOG_RAILS,
   feeErrorKey,
   feeRailsFor,
-  MIN_CARD_FEE_PAYMENT_USD,
+  MIN_AUTOMATED_FEE_PAYMENT_USD,
   overpaidByCurrency,
   owedBuckets,
   owedByCurrency,
   parsePayNowAmount,
+  payNowNavigation,
   payNowBuckets,
   summarizeConvertedSales,
   type FeeStandingSnapshot,
   type FeeTxnWithFx,
 } from '@/lib/billing/platform-fee-view'
-import { MIN_AUTOMATED_FEE_PAYMENT_USD } from '@/lib/billing/platform-fee-paynow'
+import { MIN_AUTOMATED_FEE_PAYMENT_USD as ROUTE_MIN } from '@/lib/billing/platform-fee-paynow'
 import type { FeeBalance } from '@/lib/payments/platform-fee-owed'
 
 const bal = (currency: string, netOwed: number, overpaid = 0): FeeBalance => ({
@@ -44,23 +45,24 @@ describe('owed buckets', () => {
 })
 
 describe('pay-now rails', () => {
-  it('offers card only for USD at or above the card minimum, and only when Stripe is configured', () => {
-    expect(feeRailsFor('USD', 10, { cardConfigured: true })).toEqual(['stripe', 'manual'])
-    expect(feeRailsFor('usd', 10, { cardConfigured: true })).toEqual(['stripe', 'manual'])
-    expect(feeRailsFor('USD', 10, { cardConfigured: false })).toEqual(['manual'])
+  const AUTO = ['stripe', 'paypal', 'binance', 'solana', 'manual']
+  it('offers automated rails only for USD at or above the minimum; Stripe only when configured', () => {
+    expect(feeRailsFor('USD', 10, { cardConfigured: true })).toEqual(AUTO)
+    expect(feeRailsFor('usd', 10, { cardConfigured: true })).toEqual(AUTO)
+    expect(feeRailsFor('USD', 10, { cardConfigured: false })).toEqual(['paypal', 'binance', 'solana', 'manual'])
     expect(feeRailsFor('USD', 0.49, { cardConfigured: true })).toEqual(['manual'])
     expect(feeRailsFor('EUR', 100, { cardConfigured: true })).toEqual(['manual'])
   })
 
-  it('is capability-driven and matches the route minimum', () => {
-    expect(FEE_DIALOG_RAILS).toEqual(['stripe', 'manual'])
-    expect(MIN_CARD_FEE_PAYMENT_USD).toBe(MIN_AUTOMATED_FEE_PAYMENT_USD)
+  it('is capability-driven, ordered cards/PayPal, crypto, manual, and matches the route minimum', () => {
+    expect(FEE_DIALOG_RAILS).toEqual(AUTO)
+    expect(MIN_AUTOMATED_FEE_PAYMENT_USD).toBe(ROUTE_MIN)
   })
 
   it('builds one pay-now bucket per owed currency', () => {
     expect(payNowBuckets([bal('USD', 20), bal('VES', 0), bal('EUR', 4)], { cardConfigured: true })).toEqual([
       { currency: 'EUR', netOwed: 4, rails: ['manual'] },
-      { currency: 'USD', netOwed: 20, rails: ['stripe', 'manual'] },
+      { currency: 'USD', netOwed: 20, rails: AUTO },
     ])
   })
 })
@@ -79,8 +81,9 @@ describe('parsePayNowAmount', () => {
     expect(parsePayNowAmount('10.01', 10, 'manual')).toEqual({ ok: false, error: 'amount_above_balance' })
   })
 
-  it('applies the card minimum only on the card rail', () => {
+  it('applies the automated minimum on every rail but manual', () => {
     expect(parsePayNowAmount('0.30', 10, 'stripe')).toEqual({ ok: false, error: 'amount_below_minimum' })
+    expect(parsePayNowAmount('0.30', 10, 'solana')).toEqual({ ok: false, error: 'amount_below_minimum' })
     expect(parsePayNowAmount('0.30', 10, 'manual')).toEqual({ ok: true, amount: 0.3 })
   })
 })
@@ -171,5 +174,20 @@ describe('feeErrorKey', () => {
     expect(feeErrorKey('nothing_owed', ['nothing_owed'])).toBe('nothing_owed')
     expect(feeErrorKey('weird', ['nothing_owed'])).toBe('generic')
     expect(feeErrorKey(undefined, ['nothing_owed'])).toBe('generic')
+  })
+})
+
+describe('payNowNavigation', () => {
+  it('routes Solana QR to the in-app checkout page, never the wallet URI', () => {
+    expect(payNowNavigation({ kind: 'qr', url: 'solana:abc', checkoutPath: '/en/dashboard/admin/billing/checkout/r1' })).toEqual({
+      type: 'push',
+      to: '/en/dashboard/admin/billing/checkout/r1',
+    })
+    expect(payNowNavigation({ kind: 'qr', url: 'solana:abc' })).toBeNull()
+    expect(payNowNavigation({ kind: 'qr', checkoutPath: '//evil.com' })).toBeNull()
+  })
+  it('navigates hosted rails to their url', () => {
+    expect(payNowNavigation({ kind: 'redirect', url: 'https://pay.example/x' })).toEqual({ type: 'assign', to: 'https://pay.example/x' })
+    expect(payNowNavigation({ kind: 'redirect' })).toBeNull()
   })
 })

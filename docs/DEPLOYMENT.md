@@ -177,7 +177,8 @@ SOLANA_USDC_MINT=                               # Set = settle in USDC (recommen
 # PayPal (#744): register a SECOND webhook in the PayPal app pointing at
 #   https://<domain>/api/billing/webhook/paypal
 # (events: BILLING.SUBSCRIPTION.ACTIVATED, .CANCELLED, .EXPIRED, .SUSPENDED,
-# .PAYMENT.FAILED, PAYMENT.SALE.COMPLETED) and set its id below. It shares
+# .PAYMENT.FAILED, PAYMENT.SALE.COMPLETED, PAYMENT.CAPTURE.COMPLETED,
+# PAYMENT.CAPTURE.REFUNDED — the last two settle/reverse fee pay-now, #950) and set its id below. It shares
 # PAYPAL_CLIENT_ID/SECRET with the student webhook but NOT its webhook id —
 # PayPal signs each delivery over the id of the registration it went to.
 # Price rows: paste each Billing Plan id (P-…) under Platform → Plans.

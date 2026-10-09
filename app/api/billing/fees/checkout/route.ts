@@ -20,6 +20,11 @@
  *    (`request_type = 'fee'`) a super admin confirms
  *    (`confirm_platform_fee_request`). Any ledger currency. One open fee
  *    request at a time; an open request does NOT pause a block (3.3).
+ *  - `solana` (#950): a pending payment row plus a short-lived fee request
+ *    carrying the locked on-chain amount and the QR reference. Returns
+ *    `kind: 'qr'` + `checkoutPath`; the QR page polls `/api/billing/solana/verify`,
+ *    which settles through `settle_platform_fee_payment`. USD only, one open
+ *    fee request at a time (shared with manual).
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -31,10 +36,16 @@ import { hasOpenPaymentRequest, requestExpiresAt } from '@/lib/billing/payment-r
 import {
   getTenantFeeBalances,
   quoteFeePayNow,
-  toMinorUnits,
+  feeCheckoutAmount,
   type PayNowError,
 } from '@/lib/billing/platform-fee-paynow'
 import { PLATFORM_FEE_METADATA_KIND } from '@/lib/billing/platform-fee-settlement'
+import {
+  getPlatformSolanaConfig,
+  quotePlatformSettlement,
+  recordSolanaPlatformFeeRequest,
+  type PlatformSettlement,
+} from '@/lib/billing/solana-platform-payment'
 
 export const runtime = 'nodejs'
 
@@ -48,7 +59,7 @@ const QUOTE_ERRORS: Record<PayNowError, { status: number; message: string }> = {
   invalid_amount: { status: 400, message: 'Enter a positive amount.' },
   amount_below_minimum: {
     status: 400,
-    message: 'This amount is below the card minimum. Pay it by bank transfer instead.',
+    message: 'This amount is below the automatic payment minimum. Pay it by bank transfer instead.',
   },
 }
 
@@ -169,6 +180,21 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // ── solana: QR + on-chain verify (#950) ──
+    if (quote.value.provider === 'solana') {
+      return startSolanaFeePayment({
+        req,
+        body,
+        admin,
+        tenantId,
+        userId: user.id,
+        amount,
+        currency: ledgerCurrency,
+        netOwed,
+        partial,
+      })
+    }
+
     // ── automated rail (Stripe): hosted one-off checkout ──
     let paymentProvider
     try {
@@ -221,7 +247,7 @@ export async function POST(req: NextRequest) {
         mode: 'one_time',
         hosted: true,
         providerPriceId: '',
-        amount: toMinorUnits(amount),
+        amount: feeCheckoutAmount(quote.value.provider, amount),
         currency: ledgerCurrency.toLowerCase(),
         reference: `platform_fee:${tenantId}:${payment.payment_id}`,
         providerCustomerId: billingCustomer?.provider_customer_id ?? undefined,
@@ -273,4 +299,161 @@ export async function POST(req: NextRequest) {
     console.error('[billing/fees/checkout] error:', error instanceof Error ? error.message : error)
     return NextResponse.json(errorBody('internal', 'Internal server error'), { status: 500 })
   }
+}
+
+/**
+ * Solana fee payment (#950). No hosted page and no webhook: the pending intent
+ * is a `platform_payment_requests` fee row carrying the LOCKED on-chain amount
+ * and the QR's reference; the in-app checkout page renders the QR and polls
+ * `/api/billing/solana/verify`, which settles through the fee ledger.
+ *
+ * Order matters: everything that can refuse (config, open request, the SOL
+ * quote) runs before any row is written, and a failure after the payment row
+ * exists closes it so no orphan `pending` row is left on the ledger.
+ */
+async function startSolanaFeePayment(input: {
+  req: NextRequest
+  body: Record<string, unknown>
+  admin: ReturnType<typeof createAdminClient>
+  tenantId: string
+  userId: string
+  amount: number
+  currency: string
+  netOwed: number
+  partial: boolean
+}): Promise<NextResponse> {
+  const { req, body, admin, tenantId, userId, amount, currency, netOwed, partial } = input
+  const unavailable = () =>
+    NextResponse.json(errorBody('provider_unavailable', 'This payment method is not available.'), { status: 503 })
+
+  const config = getPlatformSolanaConfig()
+  if (!config) return unavailable()
+
+  if (await hasOpenPaymentRequest(admin, tenantId, { kind: 'fee' })) {
+    return NextResponse.json(
+      errorBody('fee_request_open', 'You already have a fee payment waiting for confirmation.'),
+      { status: 409 },
+    )
+  }
+
+  let paymentProvider
+  try {
+    paymentProvider = getPlatformBillingProvider('solana')
+  } catch (err) {
+    console.error('[billing/fees/checkout] solana not configured:', err instanceof Error ? err.message : err)
+    return unavailable()
+  }
+  if (!paymentProvider.createCheckoutSession) return unavailable()
+
+  // The amount comes from the ledger quote (USD, ≤ netOwed); the lock is what
+  // the chain is verified against. A SOL price outage refuses here, before
+  // anything is written.
+  let settlement: PlatformSettlement
+  try {
+    settlement = await quotePlatformSettlement(amount, config)
+  } catch (err) {
+    console.error('[billing/fees/checkout] solana quote failed:', err instanceof Error ? err.message : err)
+    return NextResponse.json(errorBody('provider_error', 'Could not start checkout'), { status: 502 })
+  }
+
+  const { data: payment, error: paymentError } = await admin
+    .from('platform_fee_payments')
+    .insert({
+      tenant_id: tenantId,
+      currency,
+      amount,
+      provider: 'solana',
+      status: 'pending',
+      requested_by: userId,
+    })
+    .select('payment_id')
+    .single()
+  if (paymentError || !payment) {
+    console.error('[billing/fees/checkout] payment insert failed:', paymentError?.code, paymentError?.message)
+    return NextResponse.json(errorBody('internal', 'Could not start the payment'), { status: 500 })
+  }
+
+  const closePayment = (status: 'failed' | 'canceled') =>
+    admin
+      .from('platform_fee_payments')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('payment_id', payment.payment_id)
+      .eq('status', 'pending')
+
+  const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/[^/]*$/, '') || ''
+  const locale = resolveRequestLocale(req, body.locale)
+  const returnPath = `${origin}/${locale}/dashboard/admin/earnings`
+
+  let session
+  try {
+    session = await paymentProvider.createCheckoutSession({
+      mode: 'one_time',
+      hosted: true,
+      providerPriceId: '',
+      amount: feeCheckoutAmount('solana', amount),
+      currency: currency.toLowerCase(),
+      reference: `platform_fee:${tenantId}:${payment.payment_id}`,
+      successUrl: `${returnPath}?fee_payment=${payment.payment_id}`,
+      cancelUrl: returnPath,
+      baseUrl: origin || undefined,
+      lineItemName: 'Platform fee',
+      metadata: {
+        kind: PLATFORM_FEE_METADATA_KIND,
+        tenant_id: tenantId,
+        payment_id: payment.payment_id,
+      },
+    })
+  } catch (err) {
+    console.error('[billing/fees/checkout] solana checkout failed:', err instanceof Error ? err.message : err)
+    await closePayment('failed')
+    return NextResponse.json(errorBody('provider_error', 'Could not start checkout'), { status: 502 })
+  }
+
+  // The reference is the only thing tying the anonymous wallet call to this
+  // payment; a QR without a row behind it is money nobody can credit.
+  if (!session.url || !session.providerRef) {
+    await closePayment('failed')
+    return NextResponse.json(errorBody('provider_error', 'Could not start checkout'), { status: 502 })
+  }
+
+  let recorded: { requestId: string; expiresAt: string }
+  try {
+    recorded = await recordSolanaPlatformFeeRequest({
+      admin,
+      tenantId,
+      userId,
+      paymentId: payment.payment_id,
+      amountUsd: amount,
+      reference: session.providerRef,
+      settlement,
+    })
+  } catch (err) {
+    console.error('[billing/fees/checkout] solana request insert failed:', err instanceof Error ? err.message : err)
+    await closePayment('canceled')
+    return NextResponse.json(errorBody('internal', 'Could not start the payment'), { status: 500 })
+  }
+
+  await admin
+    .from('platform_fee_payments')
+    .update({ provider_reference: session.providerRef, updated_at: new Date().toISOString() })
+    .eq('payment_id', payment.payment_id)
+
+  return NextResponse.json(
+    {
+      kind: 'qr',
+      url: session.url,
+      provider: 'solana',
+      requestId: recorded.requestId,
+      // The in-app page that renders the QR and polls the chain — a `solana:`
+      // URL is not something a browser can navigate to.
+      checkoutPath: `/${locale}/dashboard/admin/billing/checkout/${recorded.requestId}`,
+      paymentId: payment.payment_id,
+      amount,
+      currency,
+      netOwed,
+      partial,
+      expiresAt: recorded.expiresAt,
+    },
+    { status: 201 },
+  )
 }

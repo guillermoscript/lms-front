@@ -326,7 +326,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
     supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
-    supportsPlatformFeePayNow: false,
+    supportsPlatformFeePayNow: true, // one-off Orders v2 + capture, #950
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -366,7 +366,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // carry a school→platform purchase, not that a redirect URL exists;
     // `CheckoutSession.kind` is what tells the caller how to present it.
     supportsPlatformBillingCheckout: true,
-    supportsPlatformFeePayNow: false,
+    supportsPlatformFeePayNow: true, // QR + on-chain verify, #950
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -433,7 +433,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
     // (#610). Correlation rides in `passThroughInfo`, not in `merchantTradeNo`,
     // which is capped at 32 alphanumeric characters.
     supportsPlatformBillingCheckout: true,
-    supportsPlatformFeePayNow: false,
+    supportsPlatformFeePayNow: true, // hosted Binance Pay order, #950
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,

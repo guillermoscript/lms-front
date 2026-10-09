@@ -275,6 +275,65 @@ export async function recordSolanaPlatformRequest(
   return { requestId: data.request_id as string }
 }
 
+export interface RecordFeeRequestParams {
+  admin: SupabaseClient
+  tenantId: string
+  /** The admin starting the payment. */
+  userId: string
+  /** The pending `platform_fee_payments` row this request settles. */
+  paymentId: string
+  /** What the school pays, USD major units — the fee payment row's `amount`. */
+  amountUsd: number
+  /** The on-chain reference the QR carries, from the provider's session. */
+  reference: string
+  settlement: PlatformSettlement
+  expiresAt?: string
+}
+
+/**
+ * Record the pending intent a platform-FEE Solana QR settles (#950).
+ *
+ * The fee twin of `recordSolanaPlatformRequest`: no plan, no interval, no
+ * switch. `platform_payment_requests_plan_or_fee_check` requires exactly
+ * `plan_id IS NULL AND request_type = 'fee'` once `fee_payment_id` is set.
+ */
+export async function recordSolanaPlatformFeeRequest(
+  params: RecordFeeRequestParams,
+): Promise<{ requestId: string; expiresAt: string }> {
+  const { admin, tenantId, userId, paymentId, amountUsd, reference, settlement } = params
+  // Fee rows share the plan-request TTL so a late on-chain payment is never expired before it is observed.
+  const expiresAt = params.expiresAt ?? requestExpiresAt()
+
+  const { data, error } = await admin
+    .from('platform_payment_requests')
+    .insert({
+      tenant_id: tenantId,
+      plan_id: null,
+      fee_payment_id: paymentId,
+      request_type: 'fee',
+      requested_by: userId,
+      // USD of record (the ledger row's amount); `settlement_base` is what the
+      // chain is checked against. Same split as the plan request.
+      amount: amountUsd,
+      currency: 'usd',
+      status: 'pending',
+      payment_provider: 'solana',
+      provider_reference: reference,
+      settlement_currency: settlement.currency,
+      settlement_base: settlement.base,
+      settlement_mint: settlement.mint,
+      settlement_sol_usd: settlement.solUsd,
+      expires_at: expiresAt,
+    })
+    .select('request_id')
+    .single()
+
+  if (error || !data) {
+    throw new Error(`Failed to record Solana platform fee request: ${error?.message}`)
+  }
+  return { requestId: data.request_id as string, expiresAt }
+}
+
 /**
  * Human-readable amount for the QR page ("12.50 USDC" / "0.0731 SOL"), derived
  * from the same locked figure the chain is checked against so the school is

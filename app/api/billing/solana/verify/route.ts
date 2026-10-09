@@ -14,6 +14,10 @@
  *   2. lease replay-safe entitlement activation. A failed or crashed worker is
  *      retried here or by the reconciliation cron until the request is activated.
  *
+ * The same workflow confirms a platform-FEE QR (#950): stage 2 then credits the
+ * pending `platform_fee_payments` row instead of activating a plan. Every
+ * response carries `kind: 'plan' | 'fee'`.
+ *
  * Deliberately NOT re-checking plan limits here, unlike `confirmManualPayment`:
  * by this point the school's money is on chain and irreversible, and refusing to
  * activate would take the payment without giving the plan. The pre-flight runs
@@ -85,7 +89,7 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        'request_id, tenant_id, plan_id, interval, status, payment_provider, provider_reference, provider_charge_id, settlement_currency, settlement_base, settlement_mint, switch_id, activation_state, activation_attempt_count, platform_plans(slug)',
+        'request_id, tenant_id, plan_id, fee_payment_id, request_type, interval, status, payment_provider, provider_reference, provider_charge_id, settlement_currency, settlement_base, settlement_mint, switch_id, activation_state, activation_attempt_count, platform_plans(slug)',
       )
       .eq('request_id', requestId)
       .eq('tenant_id', tenantId)
@@ -94,8 +98,14 @@ export async function POST(req: NextRequest) {
     if (!request || request.payment_provider !== 'solana') {
       return NextResponse.json({ error: 'Payment request not found' }, { status: 404 })
     }
+    // A platform-fee request (#950) settles a ledger payment, not a plan; the
+    // workflow below is the same and `processSolanaPlatformActivation` picks
+    // the branch. `kind` lets the page say which one it confirmed.
+    const kind = request.fee_payment_id ? 'fee' : 'plan'
+    const respond = (body: Record<string, unknown>, init?: ResponseInit) =>
+      NextResponse.json({ ...body, kind }, init)
     if (request.activation_state === 'activated' || request.status === 'confirmed') {
-      return NextResponse.json({
+      return respond({
         confirmed: true,
         state: 'activated',
         signature: request.provider_charge_id,
@@ -107,14 +117,14 @@ export async function POST(req: NextRequest) {
       request.status === 'rejected' ||
       request.status === 'expired'
     ) {
-      return NextResponse.json({ confirmed: false, state: 'terminal_invalid' })
+      return respond({ confirmed: false, state: 'terminal_invalid' })
     }
 
     // Once a signature is durable, never depend on the chain lookup again.
     // Retry the leased, idempotent activation directly.
     if (request.provider_charge_id) {
       const activation = await processSolanaPlatformActivation(admin, requestId)
-      return NextResponse.json({
+      return respond({
         confirmed: activation.state === 'activated',
         state: activation.state,
         signature: request.provider_charge_id,
@@ -126,19 +136,19 @@ export async function POST(req: NextRequest) {
       })
     }
     if (!(OPEN_REQUEST_STATUSES as readonly string[]).includes(request.status)) {
-      return NextResponse.json({ confirmed: false, status: request.status })
+      return respond({ confirmed: false, status: request.status })
     }
     if (!request.provider_reference) {
-      return NextResponse.json({ error: 'Payment request has no Solana reference' }, { status: 400 })
+      return respond({ error: 'Payment request has no Solana reference' }, { status: 400 })
     }
 
     const config = getPlatformSolanaConfig()
     if (!config) {
-      return NextResponse.json({ error: 'Solana is not configured' }, { status: 503 })
+      return respond({ error: 'Solana is not configured' }, { status: 503 })
     }
     const settlement = resolveStoredSettlement(request)
     if (!settlement) {
-      return NextResponse.json({ error: 'Payment request has no settlement amount' }, { status: 400 })
+      return respond({ error: 'Payment request has no settlement amount' }, { status: 400 })
     }
 
     let signature: string | undefined
@@ -150,26 +160,26 @@ export async function POST(req: NextRequest) {
       })
       if (!result.confirmed) {
         // Nothing on chain yet — the page keeps polling.
-        return NextResponse.json({ confirmed: false })
+        return respond({ confirmed: false })
       }
       signature = result.signature
     } catch (err) {
       // A transaction WAS found and it did not pay what was owed. Never a
       // confirmation, and never silent.
       console.error(`[billing/solana/verify] on-chain validation failed for ${requestId}:`, err)
-      return NextResponse.json(
+      return respond(
         { error: 'On-chain validation failed', confirmed: false, state: 'terminal_invalid' },
         { status: 422 },
       )
     }
 
     if (!signature) {
-      return NextResponse.json({ error: 'On-chain validation failed' }, { status: 422 })
+      return respond({ error: 'On-chain validation failed' }, { status: 422 })
     }
 
     const observed = await observeSolanaPlatformPayment(admin, requestId, tenantId, signature)
     if (observed.status === 'signature_conflict') {
-      return NextResponse.json(
+      return respond(
         {
           error: 'This on-chain payment was already used for another request',
           confirmed: false,
@@ -179,19 +189,19 @@ export async function POST(req: NextRequest) {
       )
     }
     if (observed.status === 'signature_mismatch') {
-      return NextResponse.json(
+      return respond(
         { error: 'Payment request has a different signature', confirmed: false, state: 'terminal_invalid' },
         { status: 409 },
       )
     }
     if (observed.status === 'not_found') {
-      return NextResponse.json({ error: 'Payment request not found' }, { status: 404 })
+      return respond({ error: 'Payment request not found' }, { status: 404 })
     }
     if (observed.status === 'terminal_invalid') {
-      return NextResponse.json({ confirmed: false, state: 'terminal_invalid' })
+      return respond({ confirmed: false, state: 'terminal_invalid' })
     }
     if (observed.status === 'activated') {
-      return NextResponse.json({
+      return respond({
         confirmed: true,
         state: 'activated',
         signature: observed.signature,
@@ -203,7 +213,7 @@ export async function POST(req: NextRequest) {
     if (activation.state === 'activated') {
       console.log(`[billing/solana/verify] activated request ${requestId} (signature ${signature})`)
     }
-    return NextResponse.json({
+    return respond({
       confirmed: activation.state === 'activated',
       state: activation.state,
       signature,

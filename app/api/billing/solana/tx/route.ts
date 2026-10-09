@@ -1,7 +1,9 @@
 /**
  * Solana Pay TRANSACTION-REQUEST endpoint for school → platform billing (#610).
  *
- * The upgrade page's QR points here (a `solana:<link>` URL). The wallet:
+ * The checkout page's QR points here (a `solana:<link>` URL) — for a plan
+ * (#610) or a platform-fee payment (#950); only the wallet message differs.
+ * The wallet:
  *   GET  → { label, icon }                      (shown in the wallet UI)
  *   POST { account } → { transaction, message } (server-built transfer)
  *
@@ -22,6 +24,8 @@ import {
 import { isRequestOpen } from '@/lib/billing/payment-request-ttl'
 import { paymentAnonLimiter, getClientIp } from '@/lib/rate-limit'
 import { APP_NAME } from '@/lib/app-name'
+import { getTranslations } from 'next-intl/server'
+import { defaultLocale, locales, type Locale } from '@/i18n'
 
 export const runtime = 'nodejs'
 
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
     const { data: request } = await admin
       .from('platform_payment_requests')
       .select(
-        'request_id, tenant_id, status, expires_at, payment_provider, provider_charge_id, activation_state, settlement_currency, settlement_base, settlement_mint',
+        'request_id, tenant_id, status, expires_at, payment_provider, provider_charge_id, activation_state, settlement_currency, settlement_base, settlement_mint, fee_payment_id',
       )
       .eq('provider_reference', reference)
       .maybeSingle()
@@ -111,9 +115,16 @@ export async function POST(req: NextRequest) {
       settlement,
     })
 
+    // Shown inside the school's wallet app. The QR page puts its own locale on
+    // the link (the wallet has no session to read one from); anything else
+    // falls back to the default.
+    const localeParam = req.nextUrl.searchParams.get('locale')
+    const locale = (locales as readonly string[]).includes(localeParam ?? '') ? (localeParam as Locale) : defaultLocale
+    const t = await getTranslations({ locale, namespace: 'dashboard.admin.billing.cryptoCheckout' })
+
     return NextResponse.json({
       transaction,
-      message: `${APP_NAME} — plan payment`,
+      message: t(request.fee_payment_id ? 'walletMessageFee' : 'walletMessagePlan', { app: APP_NAME }),
     })
   } catch (error) {
     console.error('[billing/solana/tx] error:', error)

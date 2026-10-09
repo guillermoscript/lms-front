@@ -139,8 +139,8 @@ beforeEach(() => {
 })
 
 describe('quoteFeePayNow', () => {
-  it('pay-now rails come from the capability flag: stripe + manual only (LS/PayPal out, Q6)', () => {
-    expect([...FEE_PAY_NOW_PROVIDERS].sort()).toEqual(['manual', 'stripe'])
+  it('pay-now rails come from the capability flag: stripe, binance, paypal, solana, manual (#950; LS, solana_subs, binance_personal out)', () => {
+    expect([...FEE_PAY_NOW_PROVIDERS].sort()).toEqual(['binance', 'manual', 'paypal', 'solana', 'stripe'])
   })
 
   it('defaults to the full balance and caps a requested amount at it', () => {
@@ -155,8 +155,14 @@ describe('quoteFeePayNow', () => {
     expect(quoteFeePayNow({ provider: 'stripe', requested: -1, balances })).toEqual({ ok: false, error: 'invalid_amount' })
     expect(quoteFeePayNow({ provider: 'stripe', requested: 'abc', balances })).toEqual({ ok: false, error: 'invalid_amount' })
     expect(quoteFeePayNow({ provider: 'stripe', balances: [bal('USD', 0)] })).toEqual({ ok: false, error: 'nothing_owed' })
-    expect(quoteFeePayNow({ provider: 'paypal', balances })).toEqual({ ok: false, error: 'unsupported_rail' })
-    expect(quoteFeePayNow({ provider: 'lemonsqueezy', balances })).toEqual({ ok: false, error: 'unsupported_rail' })
+    for (const p of ['lemonsqueezy', 'solana_subs', 'binance_personal']) {
+      expect(quoteFeePayNow({ provider: p, balances })).toEqual({ ok: false, error: 'unsupported_rail' })
+    }
+    for (const p of ['paypal', 'binance', 'solana']) {
+      expect(quoteFeePayNow({ provider: p, currency: 'eur', balances })).toEqual({ ok: false, error: 'currency_not_supported_on_rail' })
+      expect(quoteFeePayNow({ provider: p, requested: 0.3, balances })).toEqual({ ok: false, error: 'amount_below_minimum' })
+      expect(quoteFeePayNow({ provider: p, balances })).toMatchObject({ ok: true, value: { amount: 40 } })
+    }
     expect(quoteFeePayNow({ provider: 'stripe', currency: 'eur', balances })).toEqual({ ok: false, error: 'currency_not_supported_on_rail' })
     expect(quoteFeePayNow({ provider: 'manual', currency: 'eur', balances })).toMatchObject({ ok: true, value: { currency: 'EUR', amount: 5 } })
     expect(quoteFeePayNow({ provider: 'stripe', requested: 0.3, balances })).toEqual({ ok: false, error: 'amount_below_minimum' })
@@ -254,6 +260,6 @@ describe('POST /api/billing/fees/checkout', () => {
   it('nothing owed / unsupported rail are 400 with a code', async () => {
     state.balances = []
     expect((await (await POST(req({ provider: 'stripe' }))).json()).code).toBe('nothing_owed')
-    expect((await (await POST(req({ provider: 'paypal' }))).json()).code).toBe('unsupported_rail')
+    expect((await (await POST(req({ provider: 'lemonsqueezy' }))).json()).code).toBe('unsupported_rail')
   })
 })

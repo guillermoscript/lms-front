@@ -122,6 +122,16 @@ export const PAYPAL_CUSTOM_ID_MAX_LENGTH = 127
 export const PAYPAL_PLATFORM_CUSTOM_ID_TAG = 'plt'
 
 /**
+ * First field of a school → platform FEE pay-now `custom_id` (#950):
+ * `fee|<tenant uuid>|<payment uuid>`. Numeric student references and the `plt`
+ * tag cannot collide with it.
+ */
+export const PAYPAL_FEE_CUSTOM_ID_TAG = 'fee'
+
+/** `PLATFORM_FEE_METADATA_KIND` from lib/billing/platform-fee-settlement (cycle-safe copy). */
+const PLATFORM_FEE_KIND = 'platform_fee'
+
+/**
  * `SWITCH_METADATA_KEY` from `lib/billing/platform-subscription-switch`, spelled
  * out because importing it here would close an import cycle through
  * `lib/payments`. A unit test pins the two together.
@@ -174,6 +184,26 @@ export function encodePayPalPlatformCustomId(metadata?: Record<string, string>):
   return packed
 }
 
+/** Pack a platform fee pay-now order's correlation into `custom_id` (#950). */
+export function encodePayPalFeeCustomId(metadata?: Record<string, string>): string {
+  const tenantId = metadata?.tenant_id
+  const paymentId = metadata?.payment_id
+  if (!tenantId || !paymentId) {
+    throw new Error('PayPal platform fee checkout requires tenant_id and payment_id metadata')
+  }
+  const fields = [PAYPAL_FEE_CUSTOM_ID_TAG, tenantId, paymentId]
+  if (fields.some((field) => field.includes('|'))) {
+    throw new Error('PayPal platform fee custom_id fields must not contain "|"')
+  }
+  const packed = fields.join('|')
+  if (packed.length > PAYPAL_CUSTOM_ID_MAX_LENGTH) {
+    throw new Error(
+      `PayPal platform fee custom_id is ${packed.length} characters; PayPal allows ${PAYPAL_CUSTOM_ID_MAX_LENGTH}`,
+    )
+  }
+  return packed
+}
+
 /**
  * Unpack custom_id back into the dispatcher's expected metadata shape.
  *
@@ -188,6 +218,15 @@ export function decodePayPalCustomId(customId: string | undefined | null): {
   metadata?: Record<string, string>
 } {
   if (!customId) return {}
+  if (customId.startsWith(`${PAYPAL_FEE_CUSTOM_ID_TAG}|`)) {
+    // No userId on purpose: the student dispatcher's owner binding fails closed.
+    const [, tenantId, paymentId] = customId.split('|')
+    if (!tenantId || !paymentId) return {}
+    return {
+      reference: `platform_fee:${tenantId}:${paymentId}`,
+      metadata: { kind: PLATFORM_FEE_KIND, tenant_id: tenantId, payment_id: paymentId },
+    }
+  }
   if (customId.startsWith(`${PAYPAL_PLATFORM_CUSTOM_ID_TAG}|`)) {
     const [, tenantId, planId, interval, switchId] = customId.split('|')
     if (!tenantId || !planId) return {}
@@ -209,6 +248,19 @@ export function decodePayPalCustomId(customId: string | undefined | null): {
   return { reference, metadata: Object.keys(metadata).length ? metadata : undefined }
 }
 
+/** A capture's amount (major units) and lowercase currency, when well-formed. */
+function captureMoney(capture: { amount?: { value?: string; currency_code?: string } } | undefined): {
+  amount?: number
+  currency?: string
+} {
+  const value = Number.parseFloat(capture?.amount?.value ?? '')
+  const currency = capture?.amount?.currency_code
+  return {
+    ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+    ...(currency ? { currency: String(currency).toLowerCase() } : {}),
+  }
+}
+
 export class PayPalPaymentProvider implements IPaymentProvider {
   readonly provider: PaymentProvider = 'paypal'
   // PayPal: hosted checkout redirect, native Billing Plans (recurring) +
@@ -220,7 +272,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
     supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
-    supportsPlatformFeePayNow: false,
+    supportsPlatformFeePayNow: true, // one-off Orders v2 order, captured by /api/billing/fees/paypal/capture (#950)
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,
@@ -525,12 +577,16 @@ export class PayPalPaymentProvider implements IPaymentProvider {
   async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
     // `hosted` marks the school → platform loop (`CreateCheckoutParams.hosted`),
     // whose correlation needs its own packing (#744).
-    if (params.hosted && params.mode !== 'subscription') {
+    const isFeePayNow =
+      !!params.hosted && params.mode === 'one_time' && params.metadata?.kind === PLATFORM_FEE_KIND
+    if (params.hosted && params.mode !== 'subscription' && !isFeePayNow) {
       throw new Error('PayPal platform billing checkout must be a subscription')
     }
-    const customId = params.hosted
-      ? encodePayPalPlatformCustomId(params.metadata)
-      : encodePayPalCustomId(params.reference, params.metadata)
+    const customId = isFeePayNow
+      ? encodePayPalFeeCustomId(params.metadata)
+      : params.hosted
+        ? encodePayPalPlatformCustomId(params.metadata)
+        : encodePayPalCustomId(params.reference, params.metadata)
     const cancelUrl = params.cancelUrl ?? params.baseUrl ?? ''
 
     if (params.mode === 'subscription') {
@@ -571,13 +627,18 @@ export class PayPalPaymentProvider implements IPaymentProvider {
 
     // One-time: the buyer must return through our capture route — PayPal does
     // not auto-capture an approved order. `next` carries the final success URL.
-    const captureReturnUrl = `${params.baseUrl}/api/payments/paypal/capture?next=${encodeURIComponent(
+    const captureRoute = isFeePayNow ? '/api/billing/fees/paypal/capture' : '/api/payments/paypal/capture'
+    const captureReturnUrl = `${params.baseUrl}${captureRoute}?next=${encodeURIComponent(
       params.successUrl ?? `${params.baseUrl}/checkout/success?transactionId=${params.reference}`,
     )}`
 
     const json = await this.api('/v2/checkout/orders', {
       method: 'POST',
       label: 'createCheckoutSession (order)',
+      // A double-submit of the same fee payment returns the same order.
+      ...(isFeePayNow
+        ? { headers: { 'PayPal-Request-Id': `platform_fee:${params.metadata?.payment_id}` } }
+        : {}),
       body: JSON.stringify({
         intent: 'CAPTURE',
         purchase_units: [
@@ -629,6 +690,9 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     status: string
     /** The CAPTURE's own status — `COMPLETED` is money, `PENDING` is not yet. */
     captureStatus: string
+    /** The capture's amount in MAJOR units + lowercase currency (fee settlement, #950). */
+    amount?: number
+    currency?: string
     reference?: string
     metadata?: Record<string, string>
   }> {
@@ -637,7 +701,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
       label: 'captureOrder',
       // The default `return=minimal` body may omit purchase_units, and with it
       // the capture and the custom_id the owner binding reads.
-      headers: { Prefer: 'return=representation' },
+      headers: { Prefer: 'return=representation', 'PayPal-Request-Id': `capture:${orderId}` },
       body: JSON.stringify({}),
     })
 
@@ -652,6 +716,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
       captureId: capture.id,
       status: capture.status ?? json.status ?? '',
       captureStatus: capture.status ?? '',
+      ...captureMoney(capture),
       ...decoded,
     }
   }
@@ -661,6 +726,8 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     status: string
     captureId?: string
     captureStatus?: string
+    amount?: number
+    currency?: string
     reference?: string
     metadata?: Record<string, string>
   }> {
@@ -675,6 +742,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
       status: json.status ?? '',
       captureId: capture?.id,
       captureStatus: capture?.status,
+      ...captureMoney(capture),
       ...decoded,
     }
   }
@@ -783,12 +851,18 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     switch (eventType) {
       case 'PAYMENT.CAPTURE.COMPLETED': {
         const { reference, metadata } = decodePayPalCustomId(resource.custom_id)
+        // Major units + currency: a platform fee settlement is credited only
+        // against the amount it was quoted (settle_platform_fee_payment, #950).
+        const value = Number.parseFloat(resource.amount?.value)
+        const currency: string | undefined = resource.amount?.currency_code
         return {
           type: 'payment.succeeded',
           providerEventId,
           providerPaymentId: resource.id,
           reference,
           metadata,
+          ...(Number.isFinite(value) && value > 0 ? { amount: value } : {}),
+          ...(currency ? { currency: String(currency).toLowerCase() } : {}),
           raw: payload,
         }
       }

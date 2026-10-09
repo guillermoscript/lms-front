@@ -20,15 +20,18 @@ export interface FeeTxnWithFx extends FeeLedgerTxn {
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-/** Stripe refuses charges under $0.50 (mirrors MIN_AUTOMATED_FEE_PAYMENT_USD in platform-fee-paynow). */
-export const MIN_CARD_FEE_PAYMENT_USD = 0.5
+/** Smallest automated payment (Stripe refuses under $0.50; same floor on every automated rail). Mirrors MIN_AUTOMATED_FEE_PAYMENT_USD in platform-fee-paynow. */
+export const MIN_AUTOMATED_FEE_PAYMENT_USD = 0.5
+
+/** Every rail the dialog knows how to present, in display order: cards/PayPal, crypto, manual last. */
+const FEE_DIALOG_RAIL_ORDER = ['stripe', 'paypal', 'binance', 'solana', 'manual'] as const satisfies readonly PaymentProvider[]
+
+export type FeeRail = (typeof FEE_DIALOG_RAIL_ORDER)[number]
 
 /** Rails offered in the Pay-now dialog, in display order. Capability-driven, never a slug list. */
-export const FEE_DIALOG_RAILS: readonly PaymentProvider[] = (
-  ['stripe', 'manual'] as PaymentProvider[]
-).filter((p) => PROVIDER_CAPABILITIES[p]?.supportsPlatformFeePayNow === true)
-
-export type FeeRail = 'stripe' | 'manual'
+export const FEE_DIALOG_RAILS: readonly FeeRail[] = FEE_DIALOG_RAIL_ORDER.filter(
+  (p) => PROVIDER_CAPABILITIES[p]?.supportsPlatformFeePayNow === true,
+)
 
 export interface FeeStandingSnapshot {
   state: FeeStandingState
@@ -54,26 +57,38 @@ export function overpaidByCurrency(balances: readonly FeeBalance[]): Record<stri
 }
 
 /**
- * Rails the school can pick for one bucket. Card is USD-only (platform billing
- * is `expectedCurrency: 'usd'`) and needs at least the card minimum; the bank
- * transfer rail takes any ledger currency.
+ * Rails the school can pick for one bucket. Automated rails are USD-only
+ * (platform billing is `expectedCurrency: 'usd'`) and need at least the
+ * automated minimum; Stripe additionally needs its key configured here (the
+ * other rails answer `provider_unavailable` from the route when unconfigured).
+ * The bank transfer rail takes any ledger currency.
  */
 export function feeRailsFor(
   currency: string,
   netOwed: number,
   opts: { cardConfigured: boolean },
 ): FeeRail[] {
-  const rails: FeeRail[] = []
-  for (const p of FEE_DIALOG_RAILS) {
-    if (p === 'stripe') {
-      if (opts.cardConfigured && currency.toUpperCase() === FEE_LEDGER_USD && netOwed >= MIN_CARD_FEE_PAYMENT_USD) {
-        rails.push('stripe')
-      }
-    } else if (p === 'manual') {
-      rails.push('manual')
-    }
+  const automatedOk = currency.toUpperCase() === FEE_LEDGER_USD && netOwed >= MIN_AUTOMATED_FEE_PAYMENT_USD
+  return FEE_DIALOG_RAILS.filter((p) => {
+    if (p === 'manual') return true
+    if (!automatedOk) return false
+    return p === 'stripe' ? opts.cardConfigured : true
+  })
+}
+
+/**
+ * What the dialog does with a successful `POST /api/billing/fees/checkout`
+ * body: Solana answers `kind: 'qr'` (its `url` is a `solana:` wallet URI, so
+ * the school goes to the in-app QR page `checkoutPath`); every hosted rail
+ * answers a `url` to navigate to. `manual` (`instructions`) is handled by the
+ * caller before this. Same-origin paths only for `push`.
+ */
+export function payNowNavigation(body: Record<string, unknown>): { type: 'push' | 'assign'; to: string } | null {
+  if (body.kind === 'qr') {
+    const path = body.checkoutPath
+    return typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') ? { type: 'push', to: path } : null
   }
-  return rails
+  return typeof body.url === 'string' && body.url ? { type: 'assign', to: body.url } : null
 }
 
 export interface PayNowBucket {
@@ -102,7 +117,7 @@ export function parsePayNowAmount(
   const amount = Number(trimmed)
   if (!(amount > MONEY_EPSILON)) return { ok: false, error: 'invalid_amount' }
   if (amount > netOwed + MONEY_EPSILON) return { ok: false, error: 'amount_above_balance' }
-  if (rail === 'stripe' && amount < MIN_CARD_FEE_PAYMENT_USD) return { ok: false, error: 'amount_below_minimum' }
+  if (rail !== 'manual' && amount < MIN_AUTOMATED_FEE_PAYMENT_USD) return { ok: false, error: 'amount_below_minimum' }
   return { ok: true, amount: roundMoney(amount) }
 }
 
