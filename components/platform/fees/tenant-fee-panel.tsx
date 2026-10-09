@@ -117,7 +117,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
           {overview.balances.length === 0 ? (
             <p className="px-5 py-4 text-sm text-muted-foreground">{t('noBalances')}</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full text-sm" data-testid="tenant-fee-balances">
                 <caption className="sr-only">{t('balances')}</caption>
                 <thead className="border-b border-border">
@@ -206,7 +206,7 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
             {overview.payments.length === 0 ? (
               <p className="px-5 py-4 text-sm text-muted-foreground">{t('noPayments')}</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="w-full text-sm" data-testid="tenant-fee-payments">
                   <thead className="border-b border-border">
                     <tr>

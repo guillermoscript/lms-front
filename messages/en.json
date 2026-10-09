@@ -9488,6 +9488,7 @@
         "stripe": "Pay now by card. USD balances only.",
         "manual": "Register a transfer. We confirm it by hand, usually within 2 business days."
       },
+      "openRequestHint": "You have a transfer of {amount} waiting for confirmation. Choose Bank transfer to see its details.",
       "cardUnavailable": "Card payment is only available for USD balances of at least $0.50. Use a bank transfer.",
       "bankReference": "Transfer reference (optional)",
       "bankReferenceHint": "If you've already sent the transfer, add its reference so we can match it.",

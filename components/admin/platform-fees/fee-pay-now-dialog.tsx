@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import { toast } from 'sonner'
-import { IconAlertCircle } from '@tabler/icons-react'
+import { IconAlertCircle, IconInfoCircle } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -92,6 +92,18 @@ function TransferRegistered({
   )
 }
 
+/** Always-visible pointer to the open transfer while another rail is selected. */
+function OpenRequestHint({ request }: { request: OpenFeeRequest }) {
+  const t = useTranslations('platformFees.payNow')
+  const locale = useLocale()
+  return (
+    <p className="flex gap-2 rounded-lg border bg-muted/40 p-3 text-sm" role="status" data-testid="fee-pay-now-open-request-hint">
+      <IconInfoCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <span>{t('openRequestHint', { amount: formatMoney(request.amount, request.currency, locale) })}</span>
+    </p>
+  )
+}
+
 /** Variant 2: choose currency, rail and amount, then pay or register a transfer. */
 function PayNowForm({
   buckets,
@@ -114,7 +126,10 @@ function PayNowForm({
 
   const [currency, setCurrency] = useState(buckets[0].currency)
   const bucket = buckets.find((b) => b.currency === currency) ?? buckets[0]
-  const [rail, setRail] = useState<FeeRail>(bucket.rails[0] ?? 'manual')
+  // Card first, unless a transfer is open and card is not offered: then the open request is what matters.
+  const [rail, setRail] = useState<FeeRail>(
+    openRequest && !bucket.rails.includes('stripe') ? 'manual' : (bucket.rails[0] ?? 'manual'),
+  )
   const [amount, setAmount] = useState(bucket.netOwed.toFixed(2))
   const [bankReference, setBankReference] = useState('')
   const [notes, setNotes] = useState('')
@@ -220,6 +235,8 @@ function PayNowForm({
             </select>
           </div>
         ) : null}
+
+        {openRequest && rail !== 'manual' ? <OpenRequestHint request={openRequest} /> : null}
 
         <fieldset className="space-y-2">
           <legend className="mb-1.5 text-sm font-medium">{t('rail')}</legend>
@@ -358,6 +375,13 @@ export function FeePayNowDialog({
   const [open, setOpen] = useState(false)
   const [registered, setRegistered] = useState<RegisteredTransfer | null>(null)
 
+  // Every close path (Done, Cancel, X, Escape, overlay) goes through here.
+  // Closing drops the success view; the form remounts on the next open.
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) setRegistered(null)
+  }
+
   if (buckets.length === 0) return null
 
   return (
@@ -367,10 +391,7 @@ export function FeePayNowDialog({
       </Button>
       <Dialog
         open={open}
-        onOpenChange={(next) => {
-          setOpen(next)
-          if (!next) setRegistered(null)
-        }}
+        onOpenChange={handleOpenChange}
       >
         <DialogContent data-testid="fee-pay-now-dialog" className="max-h-[90dvh] overflow-y-auto">
           {registered ? (
@@ -378,7 +399,7 @@ export function FeePayNowDialog({
               transfer={registered}
               accounts={selectBankAccountsFor(bankAccounts, registered.currency)}
               tenantReference={tenantReference}
-              onDone={() => setOpen(false)}
+              onDone={() => handleOpenChange(false)}
             />
           ) : (
             <PayNowForm
@@ -387,7 +408,7 @@ export function FeePayNowDialog({
               tenantReference={tenantReference}
               openRequest={openRequest}
               onRegistered={setRegistered}
-              onCancel={() => setOpen(false)}
+              onCancel={() => handleOpenChange(false)}
             />
           )}
         </DialogContent>

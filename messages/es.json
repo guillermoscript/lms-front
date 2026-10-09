@@ -9488,6 +9488,7 @@
         "stripe": "Paga ahora con tarjeta. Solo saldos en USD.",
         "manual": "Registra una transferencia. La confirmamos manualmente, normalmente en 2 días hábiles."
       },
+      "openRequestHint": "Tienes una transferencia de {amount} pendiente de confirmación. Elige Transferencia bancaria para ver sus detalles.",
       "cardUnavailable": "El pago con tarjeta solo está disponible para saldos en USD de al menos $0.50. Usa una transferencia bancaria.",
       "bankReference": "Referencia de la transferencia (opcional)",
       "bankReferenceHint": "Si ya enviaste la transferencia, agrega su referencia para que podamos identificarla.",

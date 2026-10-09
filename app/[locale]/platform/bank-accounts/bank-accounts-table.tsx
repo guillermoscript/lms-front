@@ -10,7 +10,7 @@ export async function BankAccountsTable({ accounts, locale }: { accounts: Platfo
   const fmt = (iso: string) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(iso))
   return (
     <PlatformPanel>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[44rem] text-sm" data-testid="bank-accounts-table">
           <thead className="border-b">
             <tr>
