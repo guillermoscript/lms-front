@@ -190,6 +190,250 @@ export function computeSchoolRevenue(
     });
 }
 
+// ── Platform fee ledger (#929) ──────────────────────────────────────────────
+//
+// The mirror image of the payouts above: on rails where the buyer pays the
+// SCHOOL directly (`bearsPlatformFee: false` — manual, Binance personal) the
+// platform never touches the money, so its commission accrues as a balance
+// the school owes the platform. Mirrors `lib/payments/platform-fee-owed.ts`
+// (`feeForTxn`, `computeFeeBalances`, `latestFeeDueBoundary`,
+// `overdueFeeBalances`), `statementStatus` (lib/billing/platform-fee-statement)
+// and `summarizeConvertedSales` (lib/billing/platform-fee-view); parity is
+// asserted in tests/commerce.test.ts.
+//
+// ONE deliberate difference — hyperinflation currencies. The app reads the
+// list from `platform_fee_config.hyperinflation_currencies`, which is
+// super-admin-only under RLS, so a school admin's token cannot see it. Here a
+// sale is converted when it CARRIES the insert-time USD snapshot
+// (`usd_amount IS NOT NULL`): that snapshot is written only for currencies on
+// the list at insert time and is frozen afterwards (CHECK + trigger in
+// 20261009100000), so the two agree unless a super admin later REMOVES a
+// currency from the list — then the ledger would move those already-stamped
+// sales back to their own currency bucket and this view would keep them in USD.
+// Pass `hyperinflationCurrencies` to get the app's exact rule.
+
+/** Rails where the buyer pays the school directly (`bearsPlatformFee: false`). */
+export const FEE_LEDGER_PROVIDERS: readonly string[] = ["manual", "binance_personal"];
+
+/** Days after month close (the 1st, 00:00 UTC) a statement falls due. */
+export const FEE_DUE_DAYS = 3;
+
+/** Ledger currency for converted hyperinflation sales. */
+export const FEE_LEDGER_USD = "USD";
+
+export interface FeeLedgerTxn {
+  /** transactions.payment_provider — the row's own slug, never products.payment_provider. */
+  paymentProvider: string | null;
+  amount: number;
+  refundedAmount: number | null;
+  currency: string | null;
+  schoolPercentageSnapshot: number | null;
+  status: string;
+  transactionDate: string;
+  /** transactions.usd_amount — insert-time USD snapshot (hyperinflation currencies only). */
+  usdAmount?: number | null;
+  fxRateToUsd?: number | null;
+  fxRateSource?: string | null;
+}
+
+export interface FeePaymentRow {
+  amount: number;
+  currency: string;
+  status: string;
+}
+
+export interface FeeLedgerOptions {
+  /** Current revenue_splits.school_percentage, for rows with a NULL snapshot. */
+  fallbackSchoolPercentage?: number;
+  /** The app's config list. Omitted: a row is converted iff it carries `usdAmount` (see above). */
+  hyperinflationCurrencies?: readonly string[];
+  /** Only accrue rows dated strictly before this instant (ms). Payments are always all-time (D4). */
+  accruedBefore?: number;
+}
+
+export interface FeeLine {
+  ledgerCurrency: string;
+  sourceCurrency: string;
+  kept: number;
+  base: number;
+  fee: number;
+  converted: boolean;
+}
+
+const upperCurrency = (c: string | null | undefined) => (c || "usd").toUpperCase();
+
+/** The fee one sale contributes, or null (ineligible rail, not successful, free, refunded to zero). */
+export function feeForTxn(txn: FeeLedgerTxn, opts: FeeLedgerOptions = {}): FeeLine | null {
+  if (!txn.paymentProvider || !FEE_LEDGER_PROVIDERS.includes(txn.paymentProvider)) return null;
+  if (txn.status !== "successful") return null;
+  if (!(txn.amount > 0)) return null;
+  const kept = netOfRefunds(txn.amount, txn.refundedAmount);
+  if (kept <= MONEY_EPSILON) return null;
+
+  const sourceCurrency = upperCurrency(txn.currency);
+  const listed = opts.hyperinflationCurrencies
+    ? opts.hyperinflationCurrencies.map((c) => c.toUpperCase()).includes(sourceCurrency)
+    : true;
+  const converted = listed && txn.usdAmount != null;
+  const base = converted ? roundMoney(((txn.usdAmount as number) * kept) / txn.amount) : kept;
+  const pct = txn.schoolPercentageSnapshot ?? opts.fallbackSchoolPercentage ?? DEFAULT_SCHOOL_PERCENTAGE;
+  const schoolShare = roundMoney((base * pct) / 100);
+  return {
+    ledgerCurrency: converted ? FEE_LEDGER_USD : sourceCurrency,
+    sourceCurrency,
+    kept,
+    base,
+    fee: roundMoney(base - schoolShare),
+    converted,
+  };
+}
+
+export interface FeeBalance {
+  currency: string;
+  /** Commission accrued, net of refunds. */
+  accrued: number;
+  /** Succeeded fee payments, all time. */
+  paid: number;
+  /** accrued - paid, 0 at or below half a cent. */
+  net_owed: number;
+  /** paid - accrued when above half a cent; carried forward, never refunded. */
+  overpaid: number;
+  /** Sales that accrued a fee. */
+  sales: number;
+}
+
+/** Per ledger currency, never summed across currencies. Only `succeeded` payments count. */
+export function computeFeeBalances(
+  txns: readonly FeeLedgerTxn[],
+  payments: readonly FeePaymentRow[] = [],
+  opts: FeeLedgerOptions = {}
+): FeeBalance[] {
+  const by = new Map<string, FeeBalance>();
+  const bucket = (currency: string) => {
+    let b = by.get(currency);
+    if (!b) {
+      b = { currency, accrued: 0, paid: 0, net_owed: 0, overpaid: 0, sales: 0 };
+      by.set(currency, b);
+    }
+    return b;
+  };
+
+  for (const t of txns) {
+    if (opts.accruedBefore != null) {
+      const at = Date.parse(t.transactionDate);
+      if (Number.isNaN(at) || at >= opts.accruedBefore) continue;
+    }
+    const line = feeForTxn(t, opts);
+    if (!line) continue;
+    const b = bucket(line.ledgerCurrency);
+    b.accrued = roundMoney(b.accrued + line.fee);
+    b.sales++;
+  }
+
+  for (const p of payments) {
+    if (p.status !== "succeeded" || !(p.amount > 0)) continue;
+    const b = bucket(upperCurrency(p.currency));
+    b.paid = roundMoney(b.paid + p.amount);
+  }
+
+  for (const b of by.values()) {
+    const owed = roundMoney(b.accrued - b.paid);
+    b.net_owed = owed > MONEY_EPSILON ? owed : 0;
+    b.overpaid = -owed > MONEY_EPSILON ? roundMoney(-owed) : 0;
+  }
+  return [...by.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+}
+
+/**
+ * The latest passed due boundary (UTC): a month closes on the 1st at 00:00 and
+ * its statement is due `FEE_DUE_DAYS` later; rows dated before `accrualCutoff`
+ * are due by `dueAt`.
+ */
+export function latestFeeDueBoundary(now: Date): { accrualCutoff: Date; dueAt: Date } {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth();
+  const dueThisMonth = Date.UTC(y, m, 1 + FEE_DUE_DAYS);
+  if (now.getTime() > dueThisMonth) {
+    return { accrualCutoff: new Date(Date.UTC(y, m, 1)), dueAt: new Date(dueThisMonth) };
+  }
+  return {
+    accrualCutoff: new Date(Date.UTC(y, m - 1, 1)),
+    dueAt: new Date(Date.UTC(y, m - 1, 1 + FEE_DUE_DAYS)),
+  };
+}
+
+/** D4, stateless: fees accrued before the latest passed due boundary minus all-time payments. */
+export function overdueFeeBalances(
+  txns: readonly FeeLedgerTxn[],
+  payments: readonly FeePaymentRow[],
+  now: Date,
+  opts: Omit<FeeLedgerOptions, "accruedBefore"> = {}
+): { currency: string; overdue: number }[] {
+  const { accrualCutoff } = latestFeeDueBoundary(now);
+  return computeFeeBalances(txns, payments, { ...opts, accruedBefore: accrualCutoff.getTime() })
+    .filter((b) => b.net_owed > MONEY_EPSILON)
+    .map((b) => ({ currency: b.currency, overdue: b.net_owed }));
+}
+
+export type FeeStatementStatus = "paid" | "due" | "overdue";
+
+/** A statement is paid once nothing accrued through its period is still owed. */
+export function feeStatementStatus(owedThroughPeriod: number, dueAt: string, now: Date): FeeStatementStatus {
+  if (!(owedThroughPeriod > MONEY_EPSILON)) return "paid";
+  return now.getTime() > Date.parse(dueAt) ? "overdue" : "due";
+}
+
+export interface ConvertedSalesLine {
+  /** Sale currency, e.g. VES. */
+  currency: string;
+  count: number;
+  /** Sales net of refunds, in the sale currency. */
+  sales_total: number;
+  /** USD base those sales were converted to at sale time. */
+  usd_total: number;
+  /** Distinct frozen rate + source pairs, most recent sale first. */
+  rates: { rate: number; source: string | null; date: string }[];
+}
+
+/** Hyperinflation sales that landed in the USD bucket, at the rate frozen on each sale. */
+export function summarizeConvertedSales(
+  txns: readonly FeeLedgerTxn[],
+  opts: FeeLedgerOptions = {},
+  maxRates = 3
+): ConvertedSalesLine[] {
+  const by = new Map<string, ConvertedSalesLine & { seen: Set<string> }>();
+  const sorted = [...txns].sort((a, b) => Date.parse(b.transactionDate) - Date.parse(a.transactionDate));
+  for (const t of sorted) {
+    const line = feeForTxn(t, opts);
+    if (!line || !line.converted) continue;
+    let g = by.get(line.sourceCurrency);
+    if (!g) {
+      g = { currency: line.sourceCurrency, count: 0, sales_total: 0, usd_total: 0, rates: [], seen: new Set() };
+      by.set(line.sourceCurrency, g);
+    }
+    g.count++;
+    g.sales_total = roundMoney(g.sales_total + line.kept);
+    g.usd_total = roundMoney(g.usd_total + line.base);
+    const rate = t.fxRateToUsd != null && Number.isFinite(t.fxRateToUsd) && t.fxRateToUsd > 0 ? t.fxRateToUsd : null;
+    if (rate !== null) {
+      const key = `${rate}|${t.fxRateSource ?? ""}`;
+      if (!g.seen.has(key) && g.rates.length < maxRates) {
+        g.seen.add(key);
+        g.rates.push({ rate, source: t.fxRateSource ?? null, date: t.transactionDate });
+      }
+    }
+  }
+  return [...by.values()]
+    .map((g) => ({ currency: g.currency, count: g.count, sales_total: g.sales_total, usd_total: g.usd_total, rates: g.rates }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+}
+
+/** `platform_fee_payments.status` (CHECK `platform_fee_payments_status_check`, #929). */
+export const FEE_PAYMENT_STATUSES = ["pending", "succeeded", "failed", "canceled", "reversed"] as const;
+
+/** `tenant_fee_standing.state`; a school with no row is `ok`. */
+export const FEE_STANDING_STATES = ["ok", "reminded", "overdue", "blocked"] as const;
+
 // ── Status vocabularies ─────────────────────────────────────────────────────
 
 /** `payment_requests.status` (CHECK constraint `payment_requests_status_check`). */

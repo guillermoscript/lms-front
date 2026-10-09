@@ -4,7 +4,7 @@
  * `lib/payments` modules (the MCP image cannot import them, so this is the
  * drift guard).
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { z } from 'zod'
 
 // Every handler builds its client through createUserClient — swap in a fake.
@@ -61,11 +61,24 @@ import {
   computeSchoolRevenue,
   paymentRequestTransitionError,
   type RevenueRow,
+  FEE_LEDGER_PROVIDERS,
+  FEE_DUE_DAYS,
+  computeFeeBalances,
+  feeForTxn,
+  feeStatementStatus,
+  latestFeeDueBoundary,
+  overdueFeeBalances,
+  summarizeConvertedSales,
+  type FeeLedgerTxn,
 } from '../src/commerce-math.js'
-// The app's own modules — import-free, so they load here without the `@/` alias.
+// The app's own modules. The fee-ledger ones import through the root `@/`
+// alias, which mcp-server/vitest.config.ts maps for tests only.
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '../../lib/payments/types'
 import { computeOwedBalances } from '../../lib/payments/payouts-owed'
 import { computeRevenueTotals, FEE_BEARING_PROVIDERS as APP_FEE_BEARING } from '../../lib/payments/revenue-share'
+import * as appFee from '../../lib/payments/platform-fee-owed'
+import { summarizeConvertedSales as appSummarizeConverted } from '../../lib/billing/platform-fee-view'
+import { statementStatus as appStatementStatus } from '../../lib/billing/platform-fee-statement'
 
 const TENANT = '00000000-0000-0000-0000-000000000001'
 const ADMIN = '11111111-1111-1111-1111-111111111111'
@@ -371,6 +384,98 @@ describe('read handlers return outputSchema-valid payloads', () => {
   })
 })
 
+describe('lms_get_platform_fee_balance', () => {
+  beforeEach(() => {
+    fake.calls.length = 0
+    fake.results.clear()
+    vi.useFakeTimers({ toFake: ['Date'] })
+    // Past the 4 Oct boundary: September's fees are due, October's are not.
+    vi.setSystemTime(new Date('2026-10-09T12:00:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('accrued / paid / overdue per ledger currency, statements, standing and payments', async () => {
+    fake.results.set('revenue_splits:select', [{ data: null, error: null }])
+    fake.results.set('transactions:select', [{
+      data: [
+        // Sept, 80% → fee 20 (overdue part).
+        { transaction_id: 1, payment_provider: 'manual', amount: '100', refunded_amount: null, currency: 'usd', school_percentage_snapshot: '80', status: 'successful', transaction_date: '2026-09-15T10:00:00Z', usd_amount: null, fx_rate_to_usd: null, fx_rate_source: null },
+        // Oct, partial refund: kept 40 at 90% → fee 4 (not yet due).
+        { transaction_id: 2, payment_provider: 'manual', amount: '50', refunded_amount: '10', currency: 'usd', school_percentage_snapshot: '90', status: 'successful', transaction_date: '2026-10-05T10:00:00Z', usd_amount: null, fx_rate_to_usd: null, fx_rate_source: null },
+        // Sept VES with its frozen USD snapshot → USD bucket: 27.30 × 20% = 5.46.
+        { transaction_id: 3, payment_provider: 'binance_personal', amount: '1000', refunded_amount: null, currency: 'ves', school_percentage_snapshot: null, status: 'successful', transaction_date: '2026-09-20T10:00:00Z', usd_amount: '27.30', fx_rate_to_usd: '0.0273', fx_rate_source: 'bcv' },
+      ],
+      error: null,
+      count: 3,
+    }])
+    // One shape for both reads (the paged succeeded sum and the recent list).
+    const payments = {
+      data: [
+        { payment_id: 'p2', amount: '5', currency: 'USD', provider: 'stripe', status: 'pending', review_reason: 'amount/currency mismatch', paid_at: null, created_at: '2026-10-06T00:00:00Z' },
+        { payment_id: 'p1', amount: '10', currency: 'USD', provider: 'manual', status: 'succeeded', review_reason: null, paid_at: '2026-10-02T00:00:00Z', created_at: '2026-10-01T00:00:00Z' },
+      ],
+      error: null,
+      count: 2,
+    }
+    fake.results.set('platform_fee_payments:select', [payments, payments])
+    fake.results.set('tenant_fee_standing:select', [{
+      data: { state: 'overdue', overdue_since: '2026-10-04T00:00:00Z', blocked_at: null, enforcement_exempt: false, last_evaluated_at: null },
+      error: null,
+    }])
+    fake.results.set('platform_fee_statements:select', [{
+      data: [{ statement_number: 'PF-202609-1', currency: 'USD', period_start: '2026-09-01', period_end: '2026-09-30', due_at: '2026-10-04T00:00:00Z', fee_amount: '25.46', txn_count: 2 }],
+      error: null,
+    }])
+
+    const res = await call('lms_get_platform_fee_balance', {})
+    expect(res.isError).toBeUndefined()
+    expect(res.structuredContent).toMatchObject({
+      school_percentage: 80,
+      due_boundary: { accrued_before: '2026-10-01T00:00:00.000Z', due_at: '2026-10-04T00:00:00.000Z' },
+      // 20 + 4 + 5.46 accrued, 10 paid (the pending payment does not count).
+      balances: [{ currency: 'USD', accrued: 29.46, paid: 10, net_owed: 19.46, overdue: 15.46, overpaid: 0, sales: 3 }],
+      standing: { state: 'overdue', blocked_at: null, enforcement_exempt: false },
+      converted_sales: [{ currency: 'VES', count: 1, sales_total: 1000, usd_total: 27.3, rates: [{ rate: 0.0273, source: 'bcv' }] }],
+      statements: [{ statement_number: 'PF-202609-1', fee_amount: 25.46, sales: 2, status: 'overdue' }],
+      recent_payments: [
+        { payment_id: 'p2', counts_toward_balance: false, under_review: true },
+        { payment_id: 'p1', counts_toward_balance: true, under_review: false },
+      ],
+    })
+    expect(res.content[0].text).toMatch(/15\.46 overdue/)
+    expect(res.content[0].text).toMatch(/Pay now/)
+
+    // Every read is tenant-scoped explicitly, and only the school-collected rails accrue.
+    for (const table of ['transactions', 'platform_fee_payments', 'tenant_fee_standing', 'platform_fee_statements', 'revenue_splits']) {
+      expect(fake.calls.some((c) => c.table === table && c.op === 'eq' && c.args[0] === 'tenant_id' && c.args[1] === TENANT), table).toBe(true)
+    }
+    expect(fake.calls.find((c) => c.table === 'transactions' && c.op === 'in')?.args).toEqual(['payment_provider', ['manual', 'binance_personal']])
+    expect(fake.calls.some((c) => c.op === 'update' || c.op === 'insert')).toBe(false)
+  })
+
+  it('a school with no fee history is ok with nothing owed', async () => {
+    const res = await call('lms_get_platform_fee_balance', {})
+    expect(res.isError).toBeUndefined()
+    expect(res.structuredContent).toMatchObject({
+      balances: [],
+      standing: { state: 'ok', overdue_since: null, blocked_at: null, enforcement_exempt: false },
+      statements: [],
+      recent_payments: [],
+      converted_sales: [],
+    })
+    expect(res.content[0].text).not.toMatch(/Pay now/)
+  })
+
+  it('a read error surfaces instead of a wrong balance', async () => {
+    fake.results.set('platform_fee_statements:select', [{ data: null, error: { message: 'boom' } }])
+    const res = await call('lms_get_platform_fee_balance', {})
+    expect(res.isError).toBe(true)
+    expect(res.content[0].text).toMatch(/fee statements: boom/)
+  })
+})
+
 describe('fetchAllPages', () => {
   it('pages until a short page and returns every row', async () => {
     const all = Array.from({ length: 5 }, (_, i) => ({ i }))
@@ -468,5 +573,120 @@ describe('money arithmetic parity with lib/payments', () => {
       expect(c.platform_fees).toBe(app.platformFees)
       expect(c.school_revenue).toBe(app.netRevenue)
     }
+  })
+})
+
+describe('platform fee arithmetic parity with lib/payments/platform-fee-owed (#929)', () => {
+  it('fee-ledger rails match PROVIDER_CAPABILITIES (bearsPlatformFee: false)', () => {
+    expect([...FEE_LEDGER_PROVIDERS].sort()).toEqual([...appFee.FEE_LEDGER_PROVIDERS].sort())
+    expect(FEE_DUE_DAYS).toBe(appFee.FEE_DUE_DAYS)
+    expect(appFee.DEFAULT_HYPERINFLATION_CURRENCIES).toEqual(['VES'])
+  })
+
+  const fx = (usd: number, rate: number) => ({ usdAmount: usd, fxRateToUsd: rate, fxRateSource: 'bcv' })
+  const txns: FeeLedgerTxn[] = [
+    // .99 at 80%: the #547 per-row rounding case.
+    { paymentProvider: 'manual', amount: 49.99, refundedAmount: null, currency: 'usd', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-08-03T09:00:00Z' },
+    // Partial refund, other split.
+    { paymentProvider: 'binance_personal', amount: 100, refundedAmount: 33.33, currency: 'USD', schoolPercentageSnapshot: 85, status: 'successful', transactionDate: '2026-09-30T23:59:59Z' },
+    // Legacy NULL snapshot → fallback split; NULL currency → USD.
+    { paymentProvider: 'manual', amount: 12.5, refundedAmount: null, currency: null, schoolPercentageSnapshot: null, status: 'successful', transactionDate: '2026-10-01T00:00:00Z' },
+    // Refunded to zero, fully refunded, pending, free: no fee.
+    { paymentProvider: 'manual', amount: 20, refundedAmount: 20, currency: 'usd', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-09-02T00:00:00Z' },
+    { paymentProvider: 'manual', amount: 20, refundedAmount: 20, currency: 'usd', schoolPercentageSnapshot: 80, status: 'refunded', transactionDate: '2026-09-02T00:00:00Z' },
+    { paymentProvider: 'manual', amount: 20, refundedAmount: null, currency: 'usd', schoolPercentageSnapshot: 80, status: 'pending', transactionDate: '2026-09-02T00:00:00Z' },
+    { paymentProvider: 'manual', amount: 0, refundedAmount: null, currency: 'usd', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-09-02T00:00:00Z' },
+    // Fee-bearing rails never accrue a debt.
+    { paymentProvider: 'stripe', amount: 30, refundedAmount: null, currency: 'usd', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-09-02T00:00:00Z' },
+    { paymentProvider: 'paypal', amount: 30, refundedAmount: null, currency: 'usd', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-09-02T00:00:00Z' },
+    // VES with its frozen snapshot → USD; a partial refund converts at the stored rate.
+    { paymentProvider: 'manual', amount: 3650, refundedAmount: null, currency: 'ves', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-09-10T00:00:00Z', ...fx(100.01, 0.0274) },
+    { paymentProvider: 'binance_personal', amount: 1000, refundedAmount: 250, currency: 'VES', schoolPercentageSnapshot: 75, status: 'successful', transactionDate: '2026-10-07T00:00:00Z', ...fx(27.33, 0.02733) },
+    { paymentProvider: 'manual', amount: 500, refundedAmount: null, currency: 'ves', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-10-08T00:00:00Z', ...fx(13.67, 0.0274) },
+    // VES with no snapshot stays in its own bucket.
+    { paymentProvider: 'manual', amount: 800, refundedAmount: null, currency: 'ves', schoolPercentageSnapshot: 80, status: 'successful', transactionDate: '2026-08-20T00:00:00Z' },
+    // A second currency never mixes.
+    { paymentProvider: 'manual', amount: 33.33, refundedAmount: null, currency: 'eur', schoolPercentageSnapshot: 70, status: 'successful', transactionDate: '2026-07-15T00:00:00Z' },
+  ]
+  const payments = [
+    { amount: 5, currency: 'USD', status: 'succeeded' },
+    { amount: 3.21, currency: 'USD', status: 'succeeded' },
+    { amount: 99, currency: 'USD', status: 'reversed' },
+    { amount: 99, currency: 'USD', status: 'pending' },
+    { amount: 99, currency: 'USD', status: 'failed' },
+    // EUR overpaid → carried forward as credit.
+    { amount: 20, currency: 'EUR', status: 'succeeded' },
+  ]
+  const fallback = 75
+  const appOpts = { fallbackSchoolPercentage: fallback, hyperinflationCurrencies: appFee.DEFAULT_HYPERINFLATION_CURRENCIES }
+  // The MCP cannot read platform_fee_config: it converts on the snapshot alone.
+  const mcpOpts = { fallbackSchoolPercentage: fallback }
+
+  const asMine = (b: appFee.FeeBalance) => ({
+    currency: b.currency, accrued: b.accrued, paid: b.paid, net_owed: b.netOwed, overpaid: b.overpaid, sales: b.sales,
+  })
+
+  it('per-row fee lines match feeForTxn', () => {
+    for (const t of txns) {
+      const app = appFee.feeForTxn({ ...t, paymentProvider: t.paymentProvider ?? '' }, appOpts)
+      expect(feeForTxn(t, mcpOpts), JSON.stringify(t)).toEqual(app)
+    }
+  })
+
+  it('accrued / paid / balance / overpaid match computeFeeBalances, all time and before a cutoff', () => {
+    const appTxns = txns.map((t) => ({ ...t, paymentProvider: t.paymentProvider ?? '' }))
+    const all = appFee.computeFeeBalances(appTxns, payments, appOpts)
+    expect(computeFeeBalances(txns, payments, mcpOpts)).toEqual(all.map(asMine))
+    expect(all.map((b) => b.currency)).toEqual(['EUR', 'USD', 'VES'])
+    expect(all.find((b) => b.currency === 'EUR')).toMatchObject({ netOwed: 0, overpaid: 10 })
+
+    for (const cutoff of ['2026-09-01T00:00:00Z', '2026-10-01T00:00:00Z', '2026-10-08T00:00:00Z']) {
+      const accruedBefore = Date.parse(cutoff)
+      expect(computeFeeBalances(txns, payments, { ...mcpOpts, accruedBefore }), cutoff).toEqual(
+        appFee.computeFeeBalances(appTxns, payments, { ...appOpts, accruedBefore }).map(asMine)
+      )
+    }
+  })
+
+  it('due boundary and overdue match latestFeeDueBoundary / overdueFeeBalances', () => {
+    const appTxns = txns.map((t) => ({ ...t, paymentProvider: t.paymentProvider ?? '' }))
+    for (const at of [
+      '2026-10-04T00:00:00Z', // exactly on the due instant: not yet past
+      '2026-10-04T00:00:00.001Z',
+      '2026-10-09T12:00:00Z',
+      '2026-01-02T00:00:00Z', // year wrap
+      '2026-03-31T23:59:59Z',
+    ]) {
+      const now = new Date(at)
+      expect(latestFeeDueBoundary(now), at).toEqual(appFee.latestFeeDueBoundary(now))
+      expect(overdueFeeBalances(txns, payments, now, mcpOpts), at).toEqual(
+        appFee.overdueFeeBalances(appTxns, payments, now, appOpts).map(({ currency, overdue }) => ({ currency, overdue }))
+      )
+    }
+  })
+
+  it('statement status matches statementStatus', () => {
+    const now = new Date('2026-10-09T12:00:00Z')
+    for (const [owed, due] of [[0, '2026-10-04T00:00:00Z'], [0.004, '2026-10-04T00:00:00Z'], [12, '2026-10-04T00:00:00Z'], [12, '2026-11-04T00:00:00Z']] as const) {
+      expect(feeStatementStatus(owed, due, now)).toBe(appStatementStatus(owed, due, now))
+    }
+  })
+
+  it('converted sales match summarizeConvertedSales', () => {
+    const appTxns = txns.map((t) => ({ ...t, paymentProvider: t.paymentProvider ?? '' }))
+    const app = appSummarizeConverted(appTxns, appOpts)
+    expect(summarizeConvertedSales(txns, mcpOpts)).toEqual(
+      app.map((l) => ({ currency: l.currency, count: l.count, sales_total: l.salesTotal, usd_total: l.usdTotal, rates: l.rates }))
+    )
+    expect(app).toHaveLength(1)
+  })
+
+  it('documented approximation: only a currency REMOVED from the config list after sales were stamped diverges', () => {
+    const appTxns = txns.map((t) => ({ ...t, paymentProvider: t.paymentProvider ?? '' }))
+    const removed = { fallbackSchoolPercentage: fallback, hyperinflationCurrencies: [] as string[] }
+    // The ledger moves stamped VES sales back to VES; the snapshot-only view keeps them in USD…
+    expect(computeFeeBalances(txns, payments, mcpOpts)).not.toEqual(appFee.computeFeeBalances(appTxns, payments, removed).map(asMine))
+    // …and given the list, the mirror is exact again.
+    expect(computeFeeBalances(txns, payments, removed)).toEqual(appFee.computeFeeBalances(appTxns, payments, removed).map(asMine))
   })
 })

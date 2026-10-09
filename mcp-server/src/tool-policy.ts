@@ -109,6 +109,7 @@ export const ADMIN_ONLY_COMMERCE_TOOLS = [
   "lms_list_transactions",
   "lms_list_subscriptions",
   "lms_get_payouts_owed",
+  "lms_get_platform_fee_balance",
   "lms_get_billing_status",
 ] as const;
 

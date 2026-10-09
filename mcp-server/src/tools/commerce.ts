@@ -6,13 +6,20 @@ import { errorResult } from "../format.js";
 import { getTenantPlanUsage } from "../plan-limits.js";
 import {
   DEFAULT_SCHOOL_PERCENTAGE,
+  FEE_LEDGER_PROVIDERS,
   LIVE_SUBSCRIPTION_STATUSES,
   OPEN_PAYMENT_REQUEST_STATUSES,
   PAYMENT_REQUEST_STATUSES,
   SUBSCRIPTION_STATUSES,
   TRANSACTION_STATUSES,
+  computeFeeBalances,
   computeSchoolRevenue,
+  feeStatementStatus,
+  latestFeeDueBoundary,
   netOfRefunds,
+  overdueFeeBalances,
+  summarizeConvertedSales,
+  type FeeLedgerTxn,
   paymentRequestTransitionError,
   roundMoney,
 } from "../commerce-math.js";
@@ -21,8 +28,9 @@ import {
  * Commerce tools (#897) — ADMIN ONLY (see `ADMIN_ONLY_COMMERCE_TOOLS` in tool-policy.ts).
  *
  * Read-first: products, plans, the manual-payment queue, transactions,
- * subscriptions, the school's revenue split + what the platform owes it, and
- * the school's own platform billing status. Every read runs on the caller's
+ * subscriptions, the school's revenue split + what the platform owes it, what
+ * the school owes the platform in commission on sales it collected itself
+ * (#929), and the school's own platform billing status. Every read runs on the caller's
  * RLS-scoped client and filters `tenant_id` explicitly — several of these
  * tables carry permissive no-tenant policies (`products` "Anyone can view
  * active products", `plans` "Anyone can view plans"), so the filter is what
@@ -408,6 +416,67 @@ const payoutsOutput = z.object({
   ),
 });
 
+const feeBalanceOutput = z.object({
+  school_percentage: z.number(),
+  as_of: z.string(),
+  due_boundary: z.object({
+    accrued_before: z.string(),
+    due_at: z.string(),
+  }),
+  balances: z.array(
+    z.object({
+      currency: z.string(),
+      accrued: z.number(),
+      paid: z.number(),
+      net_owed: z.number(),
+      overpaid: z.number(),
+      overdue: z.number(),
+      sales: z.number(),
+    })
+  ),
+  standing: z.object({
+    state: z.string(),
+    overdue_since: z.string().nullable(),
+    blocked_at: z.string().nullable(),
+    enforcement_exempt: z.boolean(),
+    last_evaluated_at: z.string().nullable(),
+  }),
+  converted_sales: z.array(
+    z.object({
+      currency: z.string(),
+      count: z.number(),
+      sales_total: z.number(),
+      usd_total: z.number(),
+      rates: z.array(z.object({ rate: z.number(), source: z.string().nullable(), date: z.string() })),
+    })
+  ),
+  statements: z.array(
+    z.object({
+      statement_number: z.string(),
+      currency: z.string(),
+      period_start: z.string(),
+      period_end: z.string(),
+      due_at: z.string(),
+      fee_amount: z.number(),
+      sales: z.number(),
+      status: z.enum(["paid", "due", "overdue"]),
+    })
+  ),
+  recent_payments: z.array(
+    z.object({
+      payment_id: z.string(),
+      amount: z.number(),
+      currency: z.string(),
+      provider: z.string(),
+      status: z.string(),
+      counts_toward_balance: z.boolean(),
+      under_review: z.boolean(),
+      paid_at: z.string().nullable(),
+      created_at: z.string().nullable(),
+    })
+  ),
+});
+
 const billingOutput = z.object({
   school_name: z.string().nullable(),
   plan: z.string(),
@@ -456,6 +525,8 @@ const READ_ONLY = {
   idempotentHint: true,
   openWorldHint: false,
 } as const;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function money(amount: number | null, currency: string | null): string {
   if (amount === null) return "—";
@@ -928,7 +999,7 @@ export function registerCommerceTools(server: LmsServer) {
     {
       name: "lms_get_payouts_owed",
       description:
-        "Admin: the school's all-time revenue per currency (gross net of refunds, platform fees, the school's share) and what the platform still owes the school for sales collected into the platform's account (PayPal, Lemon Squeezy, Binance Pay), minus manual payouts already paid. Stripe Connect, Solana, manual and Binance personal sales go straight to the school and are never 'owed'. Never sums across currencies.",
+        "Admin: the school's all-time revenue per currency (gross net of refunds, platform fees, the school's share) and what the platform still owes the school for sales collected into the platform's account (PayPal, Lemon Squeezy, Binance Pay), minus manual payouts already paid. Stripe Connect, Solana, manual and Binance personal sales go straight to the school and are never 'owed' here — on manual and Binance personal sales it is the school that owes the platform its commission, see lms_get_platform_fee_balance. Never sums across currencies.",
       inputSchema: emptyInput,
       outputSchema: payoutsOutput,
       annotations: READ_ONLY,
@@ -1021,6 +1092,226 @@ export function registerCommerceTools(server: LmsServer) {
         }
         if (currencies.length === 0) lines.push("No successful sales or payouts yet.");
         return structured({ school_percentage: schoolPercentage, currencies, recent_payouts }, lines.join("\n"));
+      } catch (err) {
+        return errorResult(message(err));
+      }
+    }
+  );
+
+  // ── lms_get_platform_fee_balance ──────────────────────────────────────────
+  server.tool(
+    {
+      name: "lms_get_platform_fee_balance",
+      description:
+        "Admin: what the school OWES the platform — the platform's commission on sales the school collected itself (manual transfers, Binance personal), which the platform could not take in flight. Per ledger currency: accrued (net of refunds, at each sale's own split), paid (succeeded fee payments; pending/failed/canceled/reversed do not count), balance, overpaid credit, and the part already overdue (fees from months whose statement due date — the 3rd, UTC — has passed). Also the school's fee standing (ok / reminded / overdue / blocked — blocked pauses new sales), recent monthly statements with paid/due/overdue status, recent fee payments, and hyperinflation-currency sales (VES) counted in USD at the rate frozen on each sale. Never sums across currencies. The reverse direction (platform owes school) is lms_get_payouts_owed. Read-only: paying happens in the dashboard (Earnings → Platform fees → Pay now).",
+      inputSchema: emptyInput,
+      outputSchema: feeBalanceOutput,
+      annotations: READ_ONLY,
+    },
+    async (_input, ctx) => {
+      try {
+        const session = adminSession(ctx);
+        const supabase = session.getClient();
+        const tenantId = session.getTenantId();
+        const now = new Date();
+
+        // RLS: an admin reads their own school's transactions, fee payments,
+        // statements and standing. platform_fee_config and platform_fee_ledger()
+        // are not readable with this token, so the balance is derived here from
+        // the same rows, by the arithmetic mirrored in commerce-math.ts.
+        const [splitResult, txns, payments, recentResult, standingResult, statementsResult] = await Promise.all([
+          supabase.from("revenue_splits").select("school_percentage").eq("tenant_id", tenantId).maybeSingle(),
+          fetchAllPages<{
+            payment_provider: string | null;
+            amount: number | string;
+            refunded_amount: number | string | null;
+            currency: string | null;
+            school_percentage_snapshot: number | string | null;
+            status: string;
+            transaction_date: string;
+            usd_amount: number | string | null;
+            fx_rate_to_usd: number | string | null;
+            fx_rate_source: string | null;
+          }>("transactions", (from, to) =>
+            supabase
+              .from("transactions")
+              .select(
+                "transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, usd_amount, fx_rate_to_usd, fx_rate_source",
+                { count: "exact" }
+              )
+              .eq("tenant_id", tenantId)
+              .in("payment_provider", [...FEE_LEDGER_PROVIDERS])
+              .eq("status", "successful")
+              .order("transaction_id")
+              .range(from, to)
+          ),
+          fetchAllPages<{ amount: number | string; currency: string; status: string }>(
+            "platform fee payments",
+            (from, to) =>
+              supabase
+                .from("platform_fee_payments")
+                .select("amount, currency, status", { count: "exact" })
+                .eq("tenant_id", tenantId)
+                .eq("status", "succeeded")
+                .order("payment_id")
+                .range(from, to)
+          ),
+          supabase
+            .from("platform_fee_payments")
+            .select("payment_id, amount, currency, provider, status, review_reason, paid_at, created_at")
+            .eq("tenant_id", tenantId)
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("tenant_fee_standing")
+            .select("state, overdue_since, blocked_at, enforcement_exempt, last_evaluated_at")
+            .eq("tenant_id", tenantId)
+            .maybeSingle(),
+          supabase
+            .from("platform_fee_statements")
+            .select("statement_number, currency, period_start, period_end, due_at, fee_amount, txn_count")
+            .eq("tenant_id", tenantId)
+            .order("period_start", { ascending: false })
+            .order("currency")
+            .limit(6),
+        ]);
+        if (splitResult.error) return errorResult(`Loading revenue split: ${splitResult.error.message}`);
+        if (recentResult.error) return errorResult(`Loading platform fee payments: ${recentResult.error.message}`);
+        if (standingResult.error) return errorResult(`Loading fee standing: ${standingResult.error.message}`);
+        if (statementsResult.error) return errorResult(`Loading fee statements: ${statementsResult.error.message}`);
+
+        // `??`, never `||`: a 0% school share is a real value.
+        const schoolPercentage = num(splitResult.data?.school_percentage) ?? DEFAULT_SCHOOL_PERCENTAGE;
+        const opts = { fallbackSchoolPercentage: schoolPercentage };
+        const ledger: FeeLedgerTxn[] = txns.map((t) => ({
+          paymentProvider: t.payment_provider,
+          amount: Number(t.amount),
+          refundedAmount: num(t.refunded_amount),
+          currency: t.currency,
+          schoolPercentageSnapshot: num(t.school_percentage_snapshot),
+          status: t.status,
+          transactionDate: t.transaction_date,
+          usdAmount: num(t.usd_amount),
+          fxRateToUsd: num(t.fx_rate_to_usd),
+          fxRateSource: t.fx_rate_source,
+        }));
+        const paid = payments.map((p) => ({
+          amount: Number(p.amount),
+          currency: String(p.currency),
+          status: String(p.status),
+        }));
+
+        const boundary = latestFeeDueBoundary(now);
+        const overdue = new Map(overdueFeeBalances(ledger, paid, now, opts).map((o) => [o.currency, o.overdue]));
+        const balances = computeFeeBalances(ledger, paid, opts).map((b) => ({
+          ...b,
+          overdue: overdue.get(b.currency) ?? 0,
+        }));
+
+        // Same status the earnings page shows: paid once nothing accrued
+        // through the statement's period is still owed (all-time payments).
+        const statements = (statementsResult.data ?? []).map((st) => {
+          const periodEnd = st.period_end as string;
+          const throughPeriod = computeFeeBalances(ledger, paid, {
+            ...opts,
+            accruedBefore: Date.parse(`${periodEnd}T00:00:00Z`) + DAY_MS,
+          }).find((b) => b.currency === st.currency);
+          return {
+            statement_number: st.statement_number as string,
+            currency: st.currency as string,
+            period_start: st.period_start as string,
+            period_end: periodEnd,
+            due_at: st.due_at as string,
+            fee_amount: Number(st.fee_amount),
+            sales: Number(st.txn_count ?? 0),
+            status: feeStatementStatus(throughPeriod?.net_owed ?? 0, st.due_at as string, now),
+          };
+        });
+
+        // No row yet = never evaluated = in good standing.
+        const standingRow = standingResult.data;
+        const standing = {
+          state: (standingRow?.state as string | undefined) ?? "ok",
+          overdue_since: (standingRow?.overdue_since as string | null | undefined) ?? null,
+          blocked_at: (standingRow?.blocked_at as string | null | undefined) ?? null,
+          enforcement_exempt: standingRow?.enforcement_exempt === true,
+          last_evaluated_at: (standingRow?.last_evaluated_at as string | null | undefined) ?? null,
+        };
+
+        const recent_payments = (recentResult.data ?? []).map((p) => ({
+          payment_id: p.payment_id as string,
+          amount: Number(p.amount),
+          currency: String(p.currency),
+          provider: String(p.provider),
+          status: String(p.status),
+          counts_toward_balance: p.status === "succeeded",
+          // A provider event that did not match its request is parked for the platform to review, never credited.
+          under_review: p.status === "pending" && p.review_reason != null,
+          paid_at: (p.paid_at as string | null) ?? null,
+          created_at: (p.created_at as string | null) ?? null,
+        }));
+
+        const out = {
+          school_percentage: schoolPercentage,
+          as_of: now.toISOString(),
+          due_boundary: {
+            accrued_before: boundary.accrualCutoff.toISOString(),
+            due_at: boundary.dueAt.toISOString(),
+          },
+          balances,
+          standing,
+          converted_sales: summarizeConvertedSales(ledger, opts),
+          statements,
+          recent_payments,
+        };
+
+        const day = (iso: string | null) => (iso ? iso.slice(0, 10) : "?");
+        const lines = [
+          "# Platform fees owed by the school",
+          "Commission on sales the school collected itself (manual transfers, Binance personal). Per currency, never added together.",
+          "",
+          `- Standing: **${standing.state}**${standing.overdue_since ? ` — overdue since ${day(standing.overdue_since)}` : ""}${standing.blocked_at ? ` — **new sales paused since ${day(standing.blocked_at)}** until the balance is paid` : ""}${standing.enforcement_exempt ? " (exempt from blocking)" : ""}`,
+          "",
+        ];
+        for (const b of balances) {
+          lines.push(
+            `## ${b.currency}`,
+            `- Accrued: ${b.accrued.toFixed(2)} over ${b.sales} sale(s) — paid: ${b.paid.toFixed(2)}`,
+            `- **Balance: ${b.net_owed.toFixed(2)} ${b.currency}**${b.overdue > 0 ? ` — of which **${b.overdue.toFixed(2)} overdue** (due ${day(out.due_boundary.due_at)})` : ""}${b.overpaid > 0 ? ` (credit of ${b.overpaid.toFixed(2)}, carried forward)` : ""}`,
+            ""
+          );
+        }
+        if (balances.length === 0) {
+          lines.push("Nothing accrued: no successful manual or Binance personal sales, and no fee payments.", "");
+        }
+        for (const c of out.converted_sales) {
+          const rates = c.rates
+            .map((r) => `${r.rate} USD/${c.currency} (${r.source ?? "unknown source"}, ${day(r.date)})`)
+            .join("; ");
+          lines.push(
+            `- ${c.count} ${c.currency} sale(s) (${c.sales_total.toFixed(2)} ${c.currency}) counted in USD as ${c.usd_total.toFixed(2)} at the rate frozen on each sale${rates ? `: ${rates}` : ""}`
+          );
+        }
+        if (statements.length) {
+          lines.push("", "Recent statements:");
+          for (const st of statements) {
+            lines.push(
+              `- ${st.statement_number} (${st.period_start} → ${st.period_end}): ${money(st.fee_amount, st.currency)}, due ${day(st.due_at)} — ${st.status}`
+            );
+          }
+        }
+        if (recent_payments.length) {
+          lines.push("", "Recent fee payments:");
+          for (const p of recent_payments) {
+            lines.push(
+              `- [${p.status}${p.under_review ? ", under review" : ""}] ${money(p.amount, p.currency)} via ${p.provider} — ${day(p.paid_at ?? p.created_at)}`
+            );
+          }
+        }
+        if (balances.some((b) => b.net_owed > 0)) {
+          lines.push("", "To pay: Dashboard → Earnings → Platform fees → Pay now (card in USD, or bank transfer).");
+        }
+        return structured(out, lines.join("\n"));
       } catch (err) {
         return errorResult(message(err));
       }
