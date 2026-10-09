@@ -27,6 +27,7 @@ export class ManualPaymentProvider implements IPaymentProvider {
     emitsRenewalWebhooks: false,
     supportsHostedCheckout: false,
     supportsPlatformBillingCheckout: false,
+    supportsPlatformFeePayNow: true,
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,

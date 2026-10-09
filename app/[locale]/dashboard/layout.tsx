@@ -9,6 +9,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 import { GamificationHeaderCard } from "@/components/gamification/gamification-header-card"
 import { VerifyEmailBanner } from "@/components/shared/verify-email-banner"
 import { AccessCutoffBanner } from "@/components/shared/access-cutoff-banner"
+import { FeeStandingBanner } from "@/components/admin/platform-fees/fee-standing-banner"
 import { NotificationBell } from "@/components/notification-bell"
 import { NotificationCountsProvider } from "@/components/notifications/notification-counts"
 import type { Metadata } from "next"
@@ -61,6 +62,9 @@ export default async function DashboardLayout({
                         cutoff, and before this they only saw it if they happened to
                         open the billing page. */}
                     {role === 'admin' && <AccessCutoffBanner />}
+                    {/* #929: platform fee reminder / overdue / sales paused. Admins only;
+                        students never see the school's fee debt. */}
+                    {role === 'admin' && <FeeStandingBanner />}
                     <div className="flex flex-1 flex-col">
                         {children}
                     </div>

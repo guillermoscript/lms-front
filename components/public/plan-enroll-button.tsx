@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { IconLoader2 } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { isSalesBlockedError } from '@/lib/billing/sales-block-error'
 import { Button } from '@/components/ui/button'
 
 interface PlanEnrollButtonProps {
@@ -20,6 +21,7 @@ interface PlanEnrollButtonProps {
 export function PlanEnrollButton({ courseId }: PlanEnrollButtonProps) {
   const router = useRouter()
   const t = useTranslations('coursePublicDetails.pricing')
+  const tFees = useTranslations('platformFees')
   const [isPending, startTransition] = useTransition()
 
   const enroll = useCallback(() => {
@@ -29,13 +31,14 @@ export function PlanEnrollButton({ courseId }: PlanEnrollButtonProps) {
         _course_id: courseId,
       })
       if (error) {
-        toast.error(error.message || t('enrollmentError'))
+        // #929: sales paused (LM003) — neutral copy, never the fee debt.
+        toast.error(isSalesBlockedError(error) ? tFees('salesBlocked') : error.message || t('enrollmentError'))
         return
       }
       toast.success(t('enrollmentSuccess'))
       router.push(`/dashboard/student/courses/${courseId}`)
     })
-  }, [courseId, router, t])
+  }, [courseId, router, t, tFees])
 
   return (
     <Button

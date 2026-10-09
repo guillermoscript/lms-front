@@ -12,7 +12,9 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
+import { isSalesBlockedError } from '@/lib/billing/sales-block-error'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
@@ -21,6 +23,7 @@ export function useEnrollment() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const analytics = useAnalytics()
+  const tFees = useTranslations('platformFees')
 
   /**
    * Self-enroll the current user in a course covered by their subscription.
@@ -37,6 +40,9 @@ export function useEnrollment() {
       })
 
       if (rpcError) {
+        // #929: the school's sales are paused (LM003). Neutral copy — never
+        // the school's fee debt (design 4.4).
+        if (isSalesBlockedError(rpcError)) throw new Error(tFees('salesBlocked'))
         throw new Error(rpcError.message)
       }
 

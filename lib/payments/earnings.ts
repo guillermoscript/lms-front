@@ -92,11 +92,14 @@ export interface EarningsTxn {
   planId?: number | null
   /** transactions.usd_amount — insert-time USD snapshot for hyperinflation currencies (#929). */
   usdAmount?: number | null
+  /** transactions.fx_rate_to_usd / fx_rate_source — the rate frozen at sale time (#929), shown, never re-applied. */
+  fxRateToUsd?: number | null
+  fxRateSource?: string | null
 }
 
 /** Columns the earnings page selects from `transactions` (raw DB shape). */
 export const EARNINGS_TXN_COLUMNS =
-  'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, product_id, plan_id, usd_amount'
+  'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, product_id, plan_id, usd_amount, fx_rate_to_usd, fx_rate_source'
 
 export interface TransactionRowForEarnings {
   transaction_id: number
@@ -111,6 +114,8 @@ export interface TransactionRowForEarnings {
   plan_id: number | null
   /** #929 insert-time USD snapshot; must be carried so #928 reconciles with platform_fee_ledger(). */
   usd_amount?: number | string | null
+  fx_rate_to_usd?: number | string | null
+  fx_rate_source?: string | null
 }
 
 const numOrNull = (v: number | string | null | undefined) => (v == null ? null : Number(v))
@@ -130,6 +135,8 @@ export function earningsTxnFromRow(r: TransactionRowForEarnings): EarningsTxn | 
     productId: r.product_id,
     planId: r.plan_id,
     usdAmount: numOrNull(r.usd_amount),
+    fxRateToUsd: numOrNull(r.fx_rate_to_usd),
+    fxRateSource: r.fx_rate_source ?? null,
   }
 }
 
@@ -326,6 +333,8 @@ export interface EarningsViewInput {
   schoolPercentage: number
   /** Open manual payment requests (statuses `pending` + `contacted`). */
   openRequests: number
+  /** Platform fee payments (#929); only `succeeded` rows reduce the debt. */
+  feePayments?: readonly FeePayment[]
   now: Date
   searchParams: RawSearchParams
   pageSize: number
@@ -340,7 +349,7 @@ export function buildEarningsView(input: EarningsViewInput) {
         Date.parse(b.transactionDate) - Date.parse(a.transactionDate) || b.transactionId - a.transactionId,
     )
 
-  const feeDebt = accruePlatformFees(rows, input.schoolPercentage)
+  const feeDebt = accruePlatformFees(rows, input.schoolPercentage, input.feePayments ?? [])
 
   // Platform owes the school: the same function and inputs getPayoutsOwed uses.
   const platformRows = rows.filter((r) => r.collectedBy === 'platform' && r.status !== 'pending')

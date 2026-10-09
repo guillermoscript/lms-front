@@ -168,6 +168,7 @@ export class BinancePayProvider implements IPaymentProvider {
     // (#610). A plan bought here is a one-time payment that opens a period —
     // `selfManagedPeriod` below is what makes the expiry cron own its renewal.
     supportsPlatformBillingCheckout: true,
+    supportsPlatformFeePayNow: false,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,

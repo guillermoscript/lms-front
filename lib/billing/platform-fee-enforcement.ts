@@ -85,6 +85,8 @@ export interface FeeStanding {
   state: StandingState
   overdueSince: string | null
   blockedAt: string | null
+  /** Super-admin exemption (#929): notices still go out, the block never applies. */
+  enforcementExempt?: boolean
 }
 
 export interface FeeStatement {
@@ -442,7 +444,7 @@ export async function runPlatformFeeEnforcement(store: FeeStore, opts: Enforceme
       if (overdue.length > 0 && standing === 'overdue' && overdueSince) {
         const graceOver = now.getTime() > Date.parse(overdueSince) + config.feeGraceDays * DAY_MS
         const overThreshold = overdue.some((o) => o.overdue >= config.minBlockingBalance)
-        const exempt = FEE_BLOCK_EXEMPT_TENANT_IDS.includes(tenant.id)
+        const exempt = FEE_BLOCK_EXEMPT_TENANT_IDS.includes(tenant.id) || !!standingRow?.enforcementExempt
         if (graceOver && overThreshold && !exempt) {
           if (config.enforcementMode !== 'enforce') {
             // notify_only: report, never write blocked_at.
@@ -537,6 +539,88 @@ function toStatement(r: StatementRow): FeeStatement {
 
 const VALID_MODES: readonly EnforcementMode[] = ['off', 'notify_only', 'enforce']
 
+/** platform_fee_config, fail-closed: a kill switch that cannot be read is not guessed. */
+export async function loadFeeConfig(admin: SupabaseClient): Promise<FeeConfig> {
+  const { data, error } = await admin
+    .from('platform_fee_config')
+    .select('enforcement_mode, fee_grace_days, min_blocking_balance, hyperinflation_currencies')
+    .eq('id', true)
+    .maybeSingle()
+  // A kill switch that cannot be read must not be guessed: fail the run.
+  if (error) throw new Error(`platform_fee_config read failed: ${error.message}`)
+  const mode = (data?.enforcement_mode ?? 'notify_only') as EnforcementMode
+  return {
+    enforcementMode: VALID_MODES.includes(mode) ? mode : 'notify_only',
+    feeGraceDays: Number(data?.fee_grace_days ?? 7),
+    minBlockingBalance: Number(data?.min_blocking_balance ?? 1),
+    hyperinflationCurrencies: (data?.hyperinflation_currencies as string[] | null) ?? ['VES'],
+  }
+}
+
+/** Fee-ledger inputs for one tenant (eligible successful sales + succeeded payments). */
+export async function loadTenantFeeLedger(
+  admin: SupabaseClient,
+  tenantId: string,
+): Promise<{ txns: FeeTxnRow[]; payments: FeePayment[]; fallbackSchoolPercentage: number | null }> {
+  type TxnRow = {
+    payment_provider: string
+    amount: number | string
+    refunded_amount: number | string | null
+    currency: string | null
+    school_percentage_snapshot: number | string | null
+    status: string
+    transaction_date: string
+    usd_amount: number | string | null
+    fx_rate_to_usd: number | string | null
+    fx_rate_source: string | null
+  }
+  const [rows, paymentsRes, splitRes] = await Promise.all([
+    fetchAllRows<TxnRow>('transactions', (from, to) =>
+      admin
+        .from('transactions')
+        .select(
+          'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, usd_amount, fx_rate_to_usd, fx_rate_source',
+          { count: 'exact' },
+        )
+        .eq('tenant_id', tenantId)
+        .in('payment_provider', FEE_LEDGER_PROVIDERS as string[])
+        .eq('status', 'successful')
+        .gt('amount', 0)
+        .order('transaction_id')
+        .range(from, to),
+    ),
+    admin
+      .from('platform_fee_payments')
+      .select('amount, currency, status')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'succeeded'),
+    admin.from('revenue_splits').select('school_percentage').eq('tenant_id', tenantId).maybeSingle(),
+  ])
+  if (paymentsRes.error) throw new Error(`platform_fee_payments read failed: ${paymentsRes.error.message}`)
+  const num = (v: number | string | null) => (v === null ? null : Number(v))
+  return {
+    txns: rows.map((r) => ({
+      paymentProvider: r.payment_provider,
+      amount: Number(r.amount),
+      refundedAmount: num(r.refunded_amount),
+      currency: r.currency,
+      schoolPercentageSnapshot: num(r.school_percentage_snapshot),
+      status: r.status,
+      transactionDate: r.transaction_date,
+      usdAmount: num(r.usd_amount),
+      fxRateToUsd: num(r.fx_rate_to_usd),
+      fxRateSource: r.fx_rate_source,
+    })),
+    payments: (paymentsRes.data ?? []).map((p) => ({
+      amount: Number(p.amount),
+      currency: String(p.currency),
+      status: String(p.status),
+    })),
+    fallbackSchoolPercentage:
+      splitRes.data?.school_percentage != null ? Number(splitRes.data.school_percentage) : null,
+  }
+}
+
 export function createSupabaseFeeStore(
   admin: SupabaseClient,
   deps: {
@@ -545,22 +629,7 @@ export function createSupabaseFeeStore(
   },
 ): FeeStore {
   return {
-    async getConfig() {
-      const { data, error } = await admin
-        .from('platform_fee_config')
-        .select('enforcement_mode, fee_grace_days, min_blocking_balance, hyperinflation_currencies')
-        .eq('id', true)
-        .maybeSingle()
-      // A kill switch that cannot be read must not be guessed: fail the run.
-      if (error) throw new Error(`platform_fee_config read failed: ${error.message}`)
-      const mode = (data?.enforcement_mode ?? 'notify_only') as EnforcementMode
-      return {
-        enforcementMode: VALID_MODES.includes(mode) ? mode : 'notify_only',
-        feeGraceDays: Number(data?.fee_grace_days ?? 7),
-        minBlockingBalance: Number(data?.min_blocking_balance ?? 1),
-        hyperinflationCurrencies: (data?.hyperinflation_currencies as string[] | null) ?? ['VES'],
-      }
-    },
+    getConfig: () => loadFeeConfig(admin),
 
     async listTenants() {
       const rows = await fetchAllRows<{ id: string; name: string | null; slug: string | null }>('tenants', (from, to) =>
@@ -569,70 +638,12 @@ export function createSupabaseFeeStore(
       return rows
     },
 
-    async getLedger(tenantId) {
-      type TxnRow = {
-        payment_provider: string
-        amount: number | string
-        refunded_amount: number | string | null
-        currency: string | null
-        school_percentage_snapshot: number | string | null
-        status: string
-        transaction_date: string
-        usd_amount: number | string | null
-        fx_rate_to_usd: number | string | null
-        fx_rate_source: string | null
-      }
-      const [rows, paymentsRes, splitRes] = await Promise.all([
-        fetchAllRows<TxnRow>('transactions', (from, to) =>
-          admin
-            .from('transactions')
-            .select(
-              'transaction_id, payment_provider, amount, refunded_amount, currency, school_percentage_snapshot, status, transaction_date, usd_amount, fx_rate_to_usd, fx_rate_source',
-              { count: 'exact' },
-            )
-            .eq('tenant_id', tenantId)
-            .in('payment_provider', FEE_LEDGER_PROVIDERS as string[])
-            .eq('status', 'successful')
-            .gt('amount', 0)
-            .order('transaction_id')
-            .range(from, to),
-        ),
-        admin
-          .from('platform_fee_payments')
-          .select('amount, currency, status')
-          .eq('tenant_id', tenantId)
-          .eq('status', 'succeeded'),
-        admin.from('revenue_splits').select('school_percentage').eq('tenant_id', tenantId).maybeSingle(),
-      ])
-      if (paymentsRes.error) throw new Error(`platform_fee_payments read failed: ${paymentsRes.error.message}`)
-      const num = (v: number | string | null) => (v === null ? null : Number(v))
-      return {
-        txns: rows.map((r) => ({
-          paymentProvider: r.payment_provider,
-          amount: Number(r.amount),
-          refundedAmount: num(r.refunded_amount),
-          currency: r.currency,
-          schoolPercentageSnapshot: num(r.school_percentage_snapshot),
-          status: r.status,
-          transactionDate: r.transaction_date,
-          usdAmount: num(r.usd_amount),
-          fxRateToUsd: num(r.fx_rate_to_usd),
-          fxRateSource: r.fx_rate_source,
-        })),
-        payments: (paymentsRes.data ?? []).map((p) => ({
-          amount: Number(p.amount),
-          currency: String(p.currency),
-          status: String(p.status),
-        })),
-        fallbackSchoolPercentage:
-          splitRes.data?.school_percentage != null ? Number(splitRes.data.school_percentage) : null,
-      }
-    },
+    getLedger: (tenantId) => loadTenantFeeLedger(admin, tenantId),
 
     async getStanding(tenantId) {
       const { data, error } = await admin
         .from('tenant_fee_standing')
-        .select('tenant_id, state, overdue_since, blocked_at')
+        .select('tenant_id, state, overdue_since, blocked_at, enforcement_exempt')
         .eq('tenant_id', tenantId)
         .maybeSingle()
       if (error) throw new Error(`tenant_fee_standing read failed: ${error.message}`)
@@ -642,6 +653,7 @@ export function createSupabaseFeeStore(
         state: data.state as StandingState,
         overdueSince: data.overdue_since,
         blockedAt: data.blocked_at,
+        enforcementExempt: data.enforcement_exempt === true,
       }
     },
 

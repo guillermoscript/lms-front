@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
@@ -25,6 +26,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
+import { FeeBalanceCard } from '@/components/admin/platform-fees/fee-balance-card'
 
 const PAGE_SIZE = 20
 
@@ -78,7 +81,7 @@ export default async function AdminEarningsPage({
 
   // Every read is paged and count-verified (#548): the totals sum these lists.
   // `transaction_date` — transactions has no `created_at`.
-  const [txns, paid, split, openRequests] = await Promise.all([
+  const [txns, paid, split, openRequests, feePayments] = await Promise.all([
     fetchAllRows('transactions', (from, to) =>
       supabase
         .from('transactions')
@@ -106,10 +109,17 @@ export default async function AdminEarningsPage({
       .select('request_id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .in('status', ['pending', 'contacted']),
+    // Fee payments (#929) reduce the "owed to the platform" figure.
+    supabase
+      .from('platform_fee_payments')
+      .select('amount, currency, status')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'succeeded'),
   ])
 
   if (split.error) throw new Error(`revenue_splits: ${split.error.message}`)
   if (openRequests.error) throw new Error(`payment_requests: ${openRequests.error.message}`)
+  if (feePayments.error) throw new Error(`platform_fee_payments: ${feePayments.error.message}`)
 
   const view = buildEarningsView({
     tenantId,
@@ -125,6 +135,11 @@ export default async function AdminEarningsPage({
     })),
     schoolPercentage: (split.data?.school_percentage as number | undefined) ?? DEFAULT_SCHOOL_PERCENTAGE,
     openRequests: openRequests.count ?? 0,
+    feePayments: (feePayments.data ?? []).map((p) => ({
+      amount: Number(p.amount),
+      currency: String(p.currency),
+      status: String(p.status),
+    })),
     now: new Date(),
     searchParams: sp,
     pageSize: PAGE_SIZE,
@@ -220,7 +235,9 @@ export default async function AdminEarningsPage({
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {t('stats.owedToPlatformDesc', { count: debtSales })}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{t('stats.owedToPlatformNote')}</p>
+                  <a href="#platform-fees" className="mt-1 inline-block text-[11px] text-brand-text underline-offset-2 hover:underline">
+                    {t('stats.owedToPlatformNote')}
+                  </a>
                 </div>
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-warning/10">
                   <IconBuildingBank className="h-[18px] w-[18px] text-warning" strokeWidth={1.75} />
@@ -270,6 +287,11 @@ export default async function AdminEarningsPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* #929: balance, Pay now, statements. Streams in; fixed-height skeleton, no layout shift. */}
+        <Suspense fallback={<FeeBalanceSkeleton />}>
+          <FeeBalanceCard tenantId={tenantId} locale={locale} paymentReturned={typeof sp.fee_payment === 'string'} />
+        </Suspense>
 
         {/* Secondary, opposite direction: only when the school sells on a platform-collected rail. */}
         {view.hasPlatformCollectedSales && (
@@ -362,7 +384,19 @@ export default async function AdminEarningsPage({
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{providerLabel(r.paymentProvider)}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{t(`table.collectedBy.${r.collectedBy}`)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatMoney(r.kept, r.currencyCode, locale)}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatMoney(r.kept, r.currencyCode, locale)}
+                          {r.fxRateToUsd != null && r.fxRateToUsd > 0 && (
+                            // #929: the rate frozen at sale time, so the school can reconcile in its own currency.
+                            <span className="block text-[10px] text-muted-foreground" data-testid="earnings-fx-rate">
+                              {t('table.fxRate', {
+                                currency: r.currencyCode,
+                                rate: new Intl.NumberFormat(locale, { maximumSignificantDigits: 6 }).format(r.fxRateToUsd),
+                                source: r.fxRateSource ?? '—',
+                              })}
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right tabular-nums text-muted-foreground">{formatMoney(r.commission, r.currencyCode, locale)}</TableCell>
                         <TableCell className="text-right font-semibold tabular-nums">{formatMoney(r.net, r.currencyCode, locale)}</TableCell>
                         <TableCell>{statusBadge(r.status, (r.refundedAmount ?? 0) > 0)}</TableCell>
@@ -414,6 +448,18 @@ export default async function AdminEarningsPage({
           </CardContent>
         </Card>
       </main>
+    </div>
+  )
+}
+
+function FeeBalanceSkeleton() {
+  return (
+    <div className="h-64 space-y-3 rounded-xl border p-5" aria-busy="true">
+      <Skeleton className="h-5 w-40" />
+      <Skeleton className="h-3 w-full max-w-lg" />
+      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-3 w-56" />
+      <Skeleton className="h-20 w-full" />
     </div>
   )
 }

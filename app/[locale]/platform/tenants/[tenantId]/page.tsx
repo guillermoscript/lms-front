@@ -13,6 +13,7 @@ import { PlatformEmptyState } from '@/components/platform/empty-state'
 import { RelativeTime } from '@/components/platform/relative-time'
 import { PlanBadge, StatusDot, billingStatusTone, tenantStatusTone } from '@/components/platform/badges'
 import { TenantActionsMenu } from '../tenant-actions-menu'
+import { TenantFeePanel } from '@/components/platform/fees/tenant-fee-panel'
 import { cn } from '@/lib/utils'
 
 const TX_TONE: Record<string, 'ok' | 'warn' | 'bad' | 'muted'> = {
@@ -276,6 +277,9 @@ export default async function TenantDetailPage({
             )}
           </PlatformPanel>
         </PlatformSection>
+
+        {/* Platform fee ledger (#929): standing, balances, confirm / record / waive / reverse / exempt, audit */}
+        <TenantFeePanel tenantId={tenantId} locale={locale} />
 
         {/* Recent Transactions */}
         <PlatformSection

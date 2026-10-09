@@ -220,6 +220,7 @@ export class PayPalPaymentProvider implements IPaymentProvider {
     emitsRenewalWebhooks: true,
     supportsHostedCheckout: true,
     supportsPlatformBillingCheckout: true, // Billing Subscriptions on the platform merchant account (#744)
+    supportsPlatformFeePayNow: false,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: false,

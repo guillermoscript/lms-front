@@ -173,8 +173,15 @@ export default async function PlatformBillingPage({
                       )}
                     </td>
                     <td className={cn(TD, 'text-muted-foreground')}>
-                      <span className="capitalize">{req.platform_plans?.name || '—'}</span>
-                      <span className="text-muted-foreground"> · {req.interval}</span>
+                      {req.request_type === 'fee' ? (
+                        // #929: a platform fee payment has no plan or interval.
+                        <span data-testid="billing-request-fee">Platform fee</span>
+                      ) : (
+                        <>
+                          <span className="capitalize">{req.platform_plans?.name || '—'}</span>
+                          <span className="text-muted-foreground"> · {req.interval}</span>
+                        </>
+                      )}
                     </td>
                     <td className={cn(TD, 'text-right font-medium tabular-nums')}>
                       {fmt(req.amount)}

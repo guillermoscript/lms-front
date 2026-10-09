@@ -77,12 +77,16 @@ VALUES ('92900000-0000-0000-0000-0000000000a1', 'a1000000-0000-0000-0000-0000000
 
 -- Manual payment requests for Product X: u3's opened BEFORE the block, the
 -- other one (u4) AFTER it. Both already marked payment_received by the admin.
+-- Since 20261009120000 "before the block" is the server snapshot taken when
+-- blocked_at is set (fee_block_open_requests), so u4's row is inserted after it.
 INSERT INTO public.payment_requests (tenant_id, user_id, product_id, contact_name, contact_email, status, created_at) VALUES
-  ('92900000-0000-0000-0000-0000000000a1', 'a1000000-0000-0000-0000-000000000003', 929201, 'u3', 'u3@example.com', 'payment_received', now() - interval '2 days'),
-  ('92900000-0000-0000-0000-0000000000a1', 'a1000000-0000-0000-0000-000000000004', 929201, 'u4', 'u4@example.com', 'payment_received', now());
+  ('92900000-0000-0000-0000-0000000000a1', 'a1000000-0000-0000-0000-000000000003', 929201, 'u3', 'u3@example.com', 'payment_received', now() - interval '2 days');
 
 INSERT INTO public.tenant_fee_standing (tenant_id, state, overdue_since, blocked_at)
 VALUES ('92900000-0000-0000-0000-0000000000a1', 'blocked', now() - interval '10 days', now() - interval '1 hour');
+
+INSERT INTO public.payment_requests (tenant_id, user_id, product_id, contact_name, contact_email, status, created_at) VALUES
+  ('92900000-0000-0000-0000-0000000000a1', 'a1000000-0000-0000-0000-000000000004', 929201, 'u4', 'u4@example.com', 'payment_received', now());
 
 SELECT ok(
   (SELECT subscription_status = 'active' AND provider_subscription_id = 'sub_live' AND payment_provider = 'stripe'

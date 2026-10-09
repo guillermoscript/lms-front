@@ -107,6 +107,7 @@ type LapsedRequestRow = {
   expires_at: string | null
   status: string
   switch_id: string | null
+  request_type?: string | null
   tenants: { name: string | null } | null
   platform_plans: { name: string | null } | null
 }
@@ -168,7 +169,7 @@ export async function GET(req: NextRequest) {
   // Closing them here first means phase 3 below sees the swept state.
   const { data: lapsedRequests } = await supabase
     .from('platform_payment_requests')
-    .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, tenants(name), platform_plans(name)')
+    .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, request_type, tenants(name), platform_plans(name)')
     .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
     .not('expires_at', 'is', null)
     .lt('expires_at', nowIso)
@@ -198,7 +199,9 @@ export async function GET(req: NextRequest) {
     const emails = await getTenantAdminEmails(supabase, req.tenant_id)
     await safeEmail(emails, paymentRequestExpiredTemplate({
       schoolName: req.tenants?.name || 'your school',
-      planName: req.platform_plans?.name || 'your plan',
+      // A fee request (#929) has no plan; its expiry cancels its pending
+      // ledger payment in the DB (after_fee_request_closed trigger).
+      planName: req.request_type === 'fee' ? 'platform fee payment' : req.platform_plans?.name || 'your plan',
       amount: formatAmount(req.amount, req.currency),
       billingUrl,
       ttlDays: REQUEST_TTL_DAYS,

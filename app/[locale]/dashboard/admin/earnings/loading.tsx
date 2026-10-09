@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton'
 
-/** Mirrors earnings/page.tsx: header, scope note, three summary cards, filtered table. */
+/** Mirrors earnings/page.tsx: header, scope note, three summary cards, platform fees card, filtered table. */
 export default function Loading() {
   return (
     <div className="min-h-screen bg-background" aria-busy="true">
@@ -25,6 +25,13 @@ export default function Loading() {
               <Skeleton className="h-3 w-32" />
             </div>
           ))}
+        </div>
+        {/* Platform fees card (#929) */}
+        <div className="h-64 space-y-3 rounded-xl border p-5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3 w-full max-w-lg" />
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-20 w-full" />
         </div>
         <div className="rounded-xl border">
           <div className="space-y-3 border-b p-5">

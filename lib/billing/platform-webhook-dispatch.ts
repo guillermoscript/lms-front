@@ -41,6 +41,7 @@ import {
   switchIdFromMetadata,
 } from '@/lib/billing/platform-subscription-switch'
 import { PLATFORM_APP_CANCELED_PROVIDERS } from '@/lib/billing/platform-billing'
+import { handlePlatformFeeEvent } from '@/lib/billing/platform-fee-settlement'
 
 /**
  * How long a push-renewal rail whose failed school stops talking to us
@@ -341,6 +342,7 @@ const STUDENT_LOOP_EVENT_TYPES = new Set<NormalizedBillingEvent['type']>([
   'payment.succeeded',
   'payment.failed',
   'refund.succeeded',
+  'payment.disputed',
 ])
 
 export async function dispatchPlatformBillingEvent(
@@ -349,6 +351,14 @@ export async function dispatchPlatformBillingEvent(
 ): Promise<void> {
   const { provider, admin, revertToPrice, sendEmailFn = sendEmail } = ctx
   const now = new Date().toISOString()
+
+  // Platform fee ledger first (#929, design 2.4): our pay-now settlement and
+  // refunds / chargebacks of a fee payment. These share event TYPES with the
+  // student loop, so they are claimed by identity (our metadata, or a payment
+  // id that matches a credited fee row) before the type guard below drops the
+  // rest.
+  const fee = await handlePlatformFeeEvent(event, { provider, admin })
+  if (fee.handled) return
 
   if (STUDENT_LOOP_EVENT_TYPES.has(event.type)) {
     // Ack, never throw: the delivery is legitimate, it simply belongs to the
