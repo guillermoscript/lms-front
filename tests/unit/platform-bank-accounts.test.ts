@@ -64,14 +64,17 @@ describe('toBankAccountView', () => {
     accountType: null, routingNumber: null, swiftCode: null, extraInstructions: null,
     isActive: true, sortOrder: 0, updatedAt: '2026-10-01T00:00:00Z',
   }
-  it('joins routing and SWIFT, null when neither', () => {
-    expect(toBankAccountView(base).routingOrSwift).toBeNull()
-    expect(toBankAccountView({ ...base, swiftCode: 'BOFAUS3N' }).routingOrSwift).toBe('BOFAUS3N')
-    expect(toBankAccountView({ ...base, routingNumber: '026009593', swiftCode: 'BOFAUS3N' }).routingOrSwift).toBe('026009593 / BOFAUS3N')
+  it('exposes routing and SWIFT separately, null when absent', () => {
+    const none = toBankAccountView(base)
+    expect([none.routingNumber, none.swiftCode]).toEqual([null, null])
+    const swift = toBankAccountView({ ...base, swiftCode: 'BOFAUS3N' })
+    expect([swift.routingNumber, swift.swiftCode]).toEqual([null, 'BOFAUS3N'])
+    const both = toBankAccountView({ ...base, routingNumber: '026009593', swiftCode: 'BOFAUS3N' })
+    expect([both.routingNumber, both.swiftCode]).toEqual(['026009593', 'BOFAUS3N'])
   })
   it('drops bookkeeping fields', () => {
     expect(Object.keys(toBankAccountView(base)).sort()).toEqual(
-      ['accountHolder', 'accountNumber', 'accountType', 'bankName', 'currency', 'extraInstructions', 'id', 'label', 'routingOrSwift'],
+      ['accountHolder', 'accountNumber', 'accountType', 'bankName', 'currency', 'extraInstructions', 'id', 'label', 'routingNumber', 'swiftCode'],
     )
   })
 })
@@ -91,7 +94,7 @@ describe('fetchActiveBankAccounts', () => {
     expect(calls).toContainEqual(['eq', 'is_active', true])
     expect(rows).toEqual([{
       id: 'a1', currency: 'USD', label: 'Main', bankName: 'B', accountHolder: 'H', accountNumber: '123',
-      accountType: null, routingOrSwift: 'BOFAUS3N', extraInstructions: null,
+      accountType: null, routingNumber: null, swiftCode: 'BOFAUS3N', extraInstructions: null,
     }])
   })
 

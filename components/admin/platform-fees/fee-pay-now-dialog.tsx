@@ -251,10 +251,8 @@ function PayNowForm({
         </fieldset>
 
         {pendingTransfer ? (
-          <OpenRequestNotice request={pendingTransfer}>
-            <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, pendingTransfer.currency)} currency={pendingTransfer.currency}>
-              <TransferReference value={withRequestSuffix(tenantReference, pendingTransfer.id)} />
-            </BankTransferDetails>
+          <OpenRequestNotice request={pendingTransfer} reference={tenantReference ? withRequestSuffix(tenantReference, pendingTransfer.id) : ''}>
+            <BankTransferDetails accounts={selectBankAccountsFor(bankAccounts, pendingTransfer.currency)} currency={pendingTransfer.currency} />
           </OpenRequestNotice>
         ) : (
           <>

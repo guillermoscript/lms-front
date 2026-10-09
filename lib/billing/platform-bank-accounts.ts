@@ -24,8 +24,8 @@ export type PlatformBankAccountView = {
   accountHolder: string
   accountNumber: string
   accountType: string | null
-  /** Routing/branch number and SWIFT/BIC, joined with " / " when both are set. */
-  routingOrSwift: string | null
+  routingNumber: string | null
+  swiftCode: string | null
   extraInstructions: string | null
 }
 
@@ -77,7 +77,6 @@ function toAccount(r: Row): PlatformBankAccount {
 
 /** Only the fields the school-facing dialog renders. Pure. */
 export function toBankAccountView(a: PlatformBankAccount): PlatformBankAccountView {
-  const routingOrSwift = [a.routingNumber, a.swiftCode].filter(Boolean).join(' / ')
   return {
     id: a.id,
     currency: a.currency,
@@ -86,7 +85,8 @@ export function toBankAccountView(a: PlatformBankAccount): PlatformBankAccountVi
     accountHolder: a.accountHolder,
     accountNumber: a.accountNumber,
     accountType: a.accountType,
-    routingOrSwift: routingOrSwift || null,
+    routingNumber: a.routingNumber || null,
+    swiftCode: a.swiftCode || null,
     extraInstructions: a.extraInstructions,
   }
 }

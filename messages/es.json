@@ -9511,13 +9511,13 @@
           "accountHolder": "Titular de la cuenta",
           "accountNumber": "Número de cuenta",
           "accountType": "Tipo de cuenta",
-          "routingNumber": "Número de ruta / sucursal",
-          "routingOrSwift": "Ruta / SWIFT",
+          "routingNumber": "Número de ruta",
           "swiftCode": "SWIFT / BIC",
           "extraInstructions": "Instrucciones adicionales"
         },
         "currencyNote": "Esta cuenta recibe {accountCurrency}. Transfiere el equivalente de tu saldo en {currency}.",
         "copyFailed": "No se pudo copiar",
+        "copyManual": "Presiona Ctrl/Cmd+C para copiar",
         "copyField": "Copiar {field}"
       },
       "instructions": {

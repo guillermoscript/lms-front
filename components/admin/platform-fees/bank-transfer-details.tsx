@@ -1,11 +1,11 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import type { PlatformBankAccountView } from '@/lib/billing/platform-bank-accounts'
 import { CopyButton } from './copy-button'
 
-type BankField = 'bankName' | 'accountHolder' | 'accountNumber' | 'accountType' | 'routingOrSwift'
+type BankField = 'bankName' | 'accountHolder' | 'accountNumber' | 'accountType' | 'routingNumber' | 'swiftCode'
 
 /** Row order and which values are worth a copy button. Labels are UI-owned (en/es), never data. */
 const BANK_FIELDS: readonly { key: BankField; copy: boolean; mono: boolean }[] = [
@@ -13,18 +13,20 @@ const BANK_FIELDS: readonly { key: BankField; copy: boolean; mono: boolean }[] =
   { key: 'accountHolder', copy: true, mono: false },
   { key: 'accountNumber', copy: true, mono: true },
   { key: 'accountType', copy: false, mono: false },
-  { key: 'routingOrSwift', copy: true, mono: true },
+  { key: 'routingNumber', copy: true, mono: true },
+  { key: 'swiftCode', copy: true, mono: true },
 ]
 
 function DetailRow({ label, value, mono, copy }: { label: string; value: string; mono: boolean; copy: boolean }) {
   const tb = useTranslations('platformFees.payNow.bank')
+  const valueId = useId()
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
         <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className={mono ? 'break-all font-mono text-xs' : 'break-words'}>{value}</dd>
+        <dd id={valueId} className={mono ? 'overflow-x-auto whitespace-nowrap font-mono text-xs' : 'break-words'}>{value}</dd>
       </div>
-      {copy ? <CopyButton value={value} label={tb('copyField', { field: label })} /> : null}
+      {copy ? <CopyButton value={value} label={tb('copyField', { field: label })} sourceId={valueId} /> : null}
     </div>
   )
 }
@@ -99,14 +101,16 @@ export function BankTransferDetails({
 /** The payment reference to quote on the transfer, with a copy button. */
 export function TransferReference({ value }: { value: string }) {
   const tb = useTranslations('platformFees.payNow.bank')
+  const valueId = useId()
   return (
     <div className="flex items-center justify-between gap-2 border-t pt-2">
-      <div>
+      <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{tb('reference')}</p>
-        <p className="break-all font-mono text-xs" data-testid="fee-bank-reference">{value}</p>
+        {/* One token: scroll sideways rather than split it mid-word. */}
+        <code id={valueId} className="block overflow-x-auto whitespace-nowrap font-mono text-xs" data-testid="fee-bank-reference">{value}</code>
         <p className="text-xs text-muted-foreground">{tb('referenceHint')}</p>
       </div>
-      <CopyButton value={value} label={tb('copyReference')} />
+      <CopyButton value={value} label={tb('copyReference')} sourceId={valueId} />
     </div>
   )
 }

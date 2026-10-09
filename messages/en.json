@@ -9511,13 +9511,13 @@
           "accountHolder": "Account holder",
           "accountNumber": "Account number",
           "accountType": "Account type",
-          "routingNumber": "Routing / branch number",
-          "routingOrSwift": "Routing / SWIFT",
+          "routingNumber": "Routing number",
           "swiftCode": "SWIFT / BIC",
           "extraInstructions": "Additional instructions"
         },
         "currencyNote": "This account receives {accountCurrency}. Transfer the equivalent of your {currency} balance.",
         "copyFailed": "Couldn't copy",
+        "copyManual": "Press Ctrl/Cmd+C to copy",
         "copyField": "Copy {field}"
       },
       "instructions": {
