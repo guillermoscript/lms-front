@@ -11,7 +11,7 @@ export async function BankAccountsTable({ accounts, locale }: { accounts: Platfo
   return (
     <PlatformPanel>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm" data-testid="bank-accounts-table">
+        <table className="w-full min-w-[44rem] text-sm" data-testid="bank-accounts-table">
           <thead className="border-b">
             <tr>
               <th className={TH}>{t('headers.account')}</th>

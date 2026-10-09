@@ -169,6 +169,14 @@ describe('parseBankAccountInput', () => {
     if (!r.ok) expect(r.fields.sort()).toEqual(['accountNumber', 'currency', 'swiftCode'])
   })
 
+  it('uppercases and trims the currency, rejects non-letter codes', () => {
+    const ok = parseBankAccountInput({ ...valid, currency: ' usd ' })
+    expect(ok.ok && ok.value.currency).toBe('USD')
+    for (const bad of ['usd1', 'us', 'usdd', '12$', '']) {
+      expect(parseBankAccountInput({ ...valid, currency: bad })).toEqual({ ok: false, fields: ['currency'] })
+    }
+  })
+
   it('rejects over-long values', () => {
     const r = parseBankAccountInput({ ...valid, label: 'x'.repeat(81) })
     expect(r).toEqual({ ok: false, fields: ['label'] })

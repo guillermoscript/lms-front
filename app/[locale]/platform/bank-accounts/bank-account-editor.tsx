@@ -132,7 +132,7 @@ function BankAccountForm({
       {TEXT_FIELDS.map((f) => {
         const id = `${idPrefix}-${f.key}`
         const isInvalid = invalid.has(f.key)
-        const describedBy = [f.hint ? `${id}-hint` : null, isInvalid ? `${id}-error` : null].filter(Boolean).join(' ') || undefined
+        const describedBy = [f.hint && !isInvalid ? `${id}-hint` : null, isInvalid ? `${id}-error` : null].filter(Boolean).join(' ') || undefined
         const common = {
           id,
           name: f.key,
@@ -143,7 +143,8 @@ function BankAccountForm({
           'aria-describedby': describedBy,
           'data-testid': `bank-account-${f.key}`,
           onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            const value = e.target.value
+            let value = e.target.value
+            if (f.key === 'currency') value = value.toUpperCase().replace(/[^A-Z]/g, '')
             setForm((p) => ({ ...p, [f.key]: value }))
           },
         }
@@ -163,7 +164,7 @@ function BankAccountForm({
                 className={f.mono ? 'font-mono' : undefined}
               />
             )}
-            {f.hint ? (
+            {f.hint && !isInvalid ? (
               <p id={`${id}-hint`} className="text-xs text-muted-foreground">
                 {t(`hints.${f.key}`)}
               </p>
