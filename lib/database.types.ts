@@ -2957,6 +2957,51 @@ export type Database = {
           },
         ]
       }
+      fee_block_open_requests: {
+        Row: {
+          blocked_at: string
+          captured_at: string
+          plan_id: number | null
+          product_id: number | null
+          request_id: number
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          blocked_at: string
+          captured_at?: string
+          plan_id?: number | null
+          product_id?: number | null
+          request_id: number
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          blocked_at?: string
+          captured_at?: string
+          plan_id?: number | null
+          product_id?: number | null
+          request_id?: number
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_block_open_requests_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "payment_requests"
+            referencedColumns: ["request_id"]
+          },
+          {
+            foreignKeyName: "fee_block_open_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gamification_achievements: {
         Row: {
           category: string
@@ -5131,6 +5176,327 @@ export type Database = {
           },
         ]
       }
+      platform_bank_accounts: {
+        Row: {
+          account_holder: string
+          account_number: string
+          account_type: string | null
+          bank_name: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          extra_instructions: string | null
+          id: string
+          is_active: boolean
+          label: string
+          routing_number: string | null
+          sort_order: number
+          swift_code: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_holder: string
+          account_number: string
+          account_type?: string | null
+          bank_name: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          extra_instructions?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          routing_number?: string | null
+          sort_order?: number
+          swift_code?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_holder?: string
+          account_number?: string
+          account_type?: string | null
+          bank_name?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          extra_instructions?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          routing_number?: string | null
+          sort_order?: number
+          swift_code?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      platform_fee_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          amount: number | null
+          audit_id: number
+          created_at: string
+          currency: string | null
+          details: Json
+          payment_id: string | null
+          reason: string | null
+          request_id: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          amount?: number | null
+          audit_id?: never
+          created_at?: string
+          currency?: string | null
+          details?: Json
+          payment_id?: string | null
+          reason?: string | null
+          request_id?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          amount?: number | null
+          audit_id?: never
+          created_at?: string
+          currency?: string | null
+          details?: Json
+          payment_id?: string | null
+          reason?: string | null
+          request_id?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_fee_audit_log_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "platform_fee_payments"
+            referencedColumns: ["payment_id"]
+          },
+          {
+            foreignKeyName: "platform_fee_audit_log_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "platform_payment_requests"
+            referencedColumns: ["request_id"]
+          },
+          {
+            foreignKeyName: "platform_fee_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_fee_config: {
+        Row: {
+          enforcement_mode: string
+          fee_grace_days: number
+          hyperinflation_currencies: string[]
+          id: boolean
+          min_blocking_balance: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enforcement_mode?: string
+          fee_grace_days?: number
+          hyperinflation_currencies?: string[]
+          id?: boolean
+          min_blocking_balance?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enforcement_mode?: string
+          fee_grace_days?: number
+          hyperinflation_currencies?: string[]
+          id?: boolean
+          min_blocking_balance?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      platform_fee_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          idempotency_key: string | null
+          notes: string | null
+          paid_at: string | null
+          payment_id: string
+          provider: string
+          provider_charge_id: string | null
+          provider_reference: string | null
+          recorded_by: string | null
+          requested_by: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          review_reason: string | null
+          statement_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          idempotency_key?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_id?: string
+          provider: string
+          provider_charge_id?: string | null
+          provider_reference?: string | null
+          recorded_by?: string | null
+          requested_by?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          review_reason?: string | null
+          statement_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          idempotency_key?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_id?: string
+          provider?: string
+          provider_charge_id?: string | null
+          provider_reference?: string | null
+          recorded_by?: string | null
+          requested_by?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          review_reason?: string | null
+          statement_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_fee_payments_statement_id_tenant_id_fkey"
+            columns: ["statement_id", "tenant_id"]
+            isOneToOne: false
+            referencedRelation: "platform_fee_statements"
+            referencedColumns: ["statement_id", "tenant_id"]
+          },
+          {
+            foreignKeyName: "platform_fee_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_fee_statements: {
+        Row: {
+          created_at: string
+          currency: string
+          due_at: string
+          fee_amount: number
+          issued_at: string
+          issued_email_sent_at: string | null
+          lines: Json
+          overdue_email_sent_at: string | null
+          period_end: string
+          period_start: string
+          prior_adjustment: number
+          reminder_sent_at: string | null
+          statement_id: string
+          statement_number: string
+          tenant_id: string
+          txn_count: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          due_at: string
+          fee_amount: number
+          issued_at?: string
+          issued_email_sent_at?: string | null
+          lines?: Json
+          overdue_email_sent_at?: string | null
+          period_end: string
+          period_start: string
+          prior_adjustment?: number
+          reminder_sent_at?: string | null
+          statement_id?: string
+          statement_number: string
+          tenant_id: string
+          txn_count?: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          due_at?: string
+          fee_amount?: number
+          issued_at?: string
+          issued_email_sent_at?: string | null
+          lines?: Json
+          overdue_email_sent_at?: string | null
+          period_end?: string
+          period_start?: string
+          prior_adjustment?: number
+          reminder_sent_at?: string | null
+          statement_id?: string
+          statement_number?: string
+          tenant_id?: string
+          txn_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_fee_statements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_fx_rates: {
+        Row: {
+          created_at: string
+          currency: string
+          rate: number
+          rate_date: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          rate: number
+          rate_date: string
+          source: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          rate?: number
+          rate_date?: string
+          source?: string
+        }
+        Relationships: []
+      }
       platform_payment_requests: {
         Row: {
           activated_at: string | null
@@ -5152,11 +5518,12 @@ export type Database = {
           created_at: string | null
           currency: string
           expires_at: string
+          fee_payment_id: string | null
           interval: string
           notes: string | null
           payment_observed_at: string | null
           payment_provider: string
-          plan_id: string
+          plan_id: string | null
           proof_url: string | null
           provider_charge_id: string | null
           provider_reference: string | null
@@ -5192,11 +5559,12 @@ export type Database = {
           created_at?: string | null
           currency?: string
           expires_at?: string
+          fee_payment_id?: string | null
           interval?: string
           notes?: string | null
           payment_observed_at?: string | null
           payment_provider?: string
-          plan_id: string
+          plan_id?: string | null
           proof_url?: string | null
           provider_charge_id?: string | null
           provider_reference?: string | null
@@ -5232,11 +5600,12 @@ export type Database = {
           created_at?: string | null
           currency?: string
           expires_at?: string
+          fee_payment_id?: string | null
           interval?: string
           notes?: string | null
           payment_observed_at?: string | null
           payment_provider?: string
-          plan_id?: string
+          plan_id?: string | null
           proof_url?: string | null
           provider_charge_id?: string | null
           provider_reference?: string | null
@@ -5253,6 +5622,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "platform_payment_requests_fee_payment_id_fkey"
+            columns: ["fee_payment_id"]
+            isOneToOne: false
+            referencedRelation: "platform_fee_payments"
+            referencedColumns: ["payment_id"]
+          },
           {
             foreignKeyName: "platform_payment_requests_plan_id_fkey"
             columns: ["plan_id"]
@@ -6645,6 +7021,53 @@ export type Database = {
           },
         ]
       }
+      tenant_fee_standing: {
+        Row: {
+          blocked_at: string | null
+          enforcement_exempt: boolean
+          exempt_reason: string | null
+          exempt_set_at: string | null
+          exempt_set_by: string | null
+          last_evaluated_at: string | null
+          overdue_since: string | null
+          state: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          enforcement_exempt?: boolean
+          exempt_reason?: string | null
+          exempt_set_at?: string | null
+          exempt_set_by?: string | null
+          last_evaluated_at?: string | null
+          overdue_since?: string | null
+          state?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          blocked_at?: string | null
+          enforcement_exempt?: boolean
+          exempt_reason?: string | null
+          exempt_set_at?: string | null
+          exempt_set_by?: string | null
+          last_evaluated_at?: string | null
+          overdue_since?: string | null
+          state?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_fee_standing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_invitations: {
         Row: {
           accepted_at: string | null
@@ -7316,7 +7739,8 @@ export type Database = {
           course_id: number | null
           description: string | null
           difficulty_level:
-            Database["public"]["Enums"]["difficulty_level"] | null
+            | Database["public"]["Enums"]["difficulty_level"]
+            | null
           exercise_type: Database["public"]["Enums"]["exercise_type"] | null
           id: number | null
           time_limit: number | null
@@ -7357,6 +7781,10 @@ export type Database = {
           detail: string
           reason: string
         }[]
+      }
+      admin_reverse_platform_fee_payment: {
+        Args: { _actor: string; _payment_id: string; _reason: string }
+        Returns: string
       }
       apply_self_managed_platform_period: {
         Args: {
@@ -7403,6 +7831,10 @@ export type Database = {
       }
       assert_plan_limit_headroom: {
         Args: { _resource: string; _tenant_id: string }
+        Returns: undefined
+      }
+      assert_platform_fee_super_admin: {
+        Args: { _actor: string }
         Returns: undefined
       }
       award_xp:
@@ -7548,10 +7980,7 @@ export type Database = {
           event_id: string
         }[]
       }
-      cleanup_old_preview_sessions: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_old_preview_sessions: { Args: never; Returns: undefined }
       community_award_xp: {
         Args: {
           _action: string
@@ -7706,6 +8135,15 @@ export type Database = {
         Args: { _claim_token: string; _event_id: string }
         Returns: boolean
       }
+      confirm_platform_fee_request: {
+        Args: { _confirmed_by: string; _request_id: string }
+        Returns: {
+          applied: boolean
+          payment_id: string
+          standing: string
+          tenant_id: string
+        }[]
+      }
       confirm_platform_payment_request: {
         Args: { _confirmed_by: string; _request_id: string }
         Returns: {
@@ -7805,10 +8243,16 @@ export type Database = {
         Args: { _claim_token: string; _event_id: string; _last_error: string }
         Returns: boolean
       }
-      generate_verification_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
+      fee_gate_in_flight_max_age_days: { Args: never; Returns: number }
+      fee_gate_self_managed_renewal_window_days: {
+        Args: never
+        Returns: number
       }
+      free_enrollment_allowed: {
+        Args: { _course_id: number; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      generate_verification_code: { Args: never; Returns: string }
       get_completed_courses_count: {
         Args: { _user_id: string }
         Returns: number
@@ -7855,14 +8299,14 @@ export type Database = {
         }[]
       }
       get_gamification_features: { Args: { _tenant_id: string }; Returns: Json }
-      get_league_standings: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_league_standings: { Args: never; Returns: Json }
       get_likes_received_count: { Args: { _user_id: string }; Returns: number }
       get_plan_features: { Args: { _tenant_id: string }; Returns: Json }
       get_platform_revenue: {
         Args: { _end?: string; _start?: string }
         Returns: Json
       }
-      get_platform_stats: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_platform_stats: { Args: never; Returns: Json }
       get_published_lesson_counts: {
         Args: { _course_ids: number[] }
         Returns: {
@@ -7870,9 +8314,9 @@ export type Database = {
           lesson_count: number
         }[]
       }
-      get_tenant_id: { Args: Record<PropertyKey, never>; Returns: string }
+      get_tenant_id: { Args: never; Returns: string }
       get_tenant_plan_usage: { Args: { _tenant_id: string }; Returns: Json }
-      get_tenant_role: { Args: Record<PropertyKey, never>; Returns: string }
+      get_tenant_role: { Args: never; Returns: string }
       grade_exercise_answers: {
         Args: { _answers: Json; _exercise_id: number }
         Returns: Json
@@ -7894,10 +8338,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      handle_student_subscription_expiry: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      handle_student_subscription_expiry: { Args: never; Returns: undefined }
       has_course_access: {
         Args: { _course_id: number; _user_id: string }
         Returns: boolean
@@ -7926,9 +8367,33 @@ export type Database = {
         Args: { _notification_id: number }
         Returns: boolean
       }
+      is_preblock_request_settlement: {
+        Args: {
+          _payment_provider: string
+          _plan_id: number
+          _product_id: number
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_staff_of: { Args: { _tenant: string }; Returns: boolean }
-      is_super_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
-      is_tenant_staff: { Args: Record<PropertyKey, never>; Returns: boolean }
+      is_subscription_renewal: {
+        Args: {
+          _payment_provider: string
+          _plan_id: number
+          _provider_subscription_id: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_super_admin: { Args: never; Returns: boolean }
+      is_tenant_sales_blocked: {
+        Args: { _tenant_id: string }
+        Returns: boolean
+      }
+      is_tenant_staff: { Args: never; Returns: boolean }
       issue_certificate_if_eligible: {
         Args: { p_course_id: number; p_user_id: string }
         Returns: Json
@@ -7943,10 +8408,7 @@ export type Database = {
         Returns: number
       }
       normalize_answer_text: { Args: { _value: string }; Returns: string }
-      notify_users_for_renewal: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      notify_users_for_renewal: { Args: never; Returns: undefined }
       observe_solana_platform_payment: {
         Args: { _request_id: string; _signature: string; _tenant_id: string }
         Returns: {
@@ -7963,6 +8425,15 @@ export type Database = {
           p_teacher_notes: string
         }
         Returns: undefined
+      }
+      platform_fee_ledger: {
+        Args: { _accrued_before?: string; _tenant_id: string }
+        Returns: {
+          accrued: number
+          currency: string
+          paid: number
+          sales: number
+        }[]
       }
       prepare_account_deletion: {
         Args: { _user_id: string }
@@ -7986,22 +8457,29 @@ export type Database = {
         }
         Returns: boolean
       }
-      publish_scheduled_lessons: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      record_cron_run_results: {
-        Args: Record<PropertyKey, never>
-        Returns: number
+      publish_scheduled_lessons: { Args: never; Returns: undefined }
+      record_cron_run_results: { Args: never; Returns: number }
+      record_platform_fee_payment: {
+        Args: {
+          _actor: string
+          _amount: number
+          _currency: string
+          _kind: string
+          _reason: string
+          _reference?: string
+          _tenant_id: string
+        }
+        Returns: string
       }
       redeem_store_item: {
         Args: { _item_id: string; _tenant_id: string; _user_id: string }
         Returns: Json
       }
-      refresh_leaderboard_cache: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      reevaluate_tenant_fee_standing: {
+        Args: { _tenant_id: string }
+        Returns: string
       }
+      refresh_leaderboard_cache: { Args: never; Returns: undefined }
       register_push_token: {
         Args: { _device_name?: string; _platform: string; _token: string }
         Returns: undefined
@@ -8035,6 +8513,23 @@ export type Database = {
         Args: { _template_id: number; _version_number: number }
         Returns: undefined
       }
+      reverse_platform_fee_payment_by_charge: {
+        Args: {
+          _provider: string
+          _provider_charge_id: string
+          _reason: string
+        }
+        Returns: string
+      }
+      reverse_platform_fee_payment_row: {
+        Args: {
+          _actor: string
+          _details: Json
+          _payment_id: string
+          _reason: string
+        }
+        Returns: string
+      }
       rollover_all_leagues: { Args: { _week_start?: string }; Returns: number }
       rollover_leagues: {
         Args: { _tenant_id: string; _week_start?: string }
@@ -8053,6 +8548,24 @@ export type Database = {
           p_submission_id: number
         }
         Returns: undefined
+      }
+      save_platform_bank_account: {
+        Args: {
+          _account_holder: string
+          _account_number: string
+          _account_type?: string
+          _actor: string
+          _bank_name: string
+          _currency: string
+          _extra_instructions?: string
+          _id: string
+          _is_active?: boolean
+          _label: string
+          _routing_number?: string
+          _sort_order?: number
+          _swift_code?: string
+        }
+        Returns: string
       }
       save_product_creation_wizard: {
         Args: {
@@ -8074,8 +8587,32 @@ export type Database = {
         Returns: undefined
       }
       set_league_opt_out: { Args: { _opt_out: boolean }; Returns: undefined }
+      set_platform_bank_account_active: {
+        Args: { _active: boolean; _actor: string; _id: string }
+        Returns: boolean
+      }
+      set_tenant_fee_exemption: {
+        Args: {
+          _actor: string
+          _exempt: boolean
+          _reason: string
+          _tenant_id: string
+        }
+        Returns: undefined
+      }
       settle_expired_checkout: {
         Args: { _transaction_id: number }
+        Returns: string
+      }
+      settle_platform_fee_payment: {
+        Args: {
+          _amount: number
+          _currency: string
+          _payment_id: string
+          _provider: string
+          _provider_charge_id: string
+          _tenant_id: string
+        }
         Returns: string
       }
       split_exercise_answer_key: {
@@ -8086,10 +8623,25 @@ export type Database = {
         Args: { p_answers: Json; p_exam_id: number }
         Returns: number
       }
+      subscription_enrollment_allowed: {
+        Args: { _course_id: number; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       tenant_ai_configured: { Args: { _tenant_id: string }; Returns: Json }
       tenant_plan_limit: {
         Args: { _key: string; _tenant_id: string }
         Returns: number
+      }
+      transaction_sales_gate_allows: {
+        Args: {
+          _payment_provider: string
+          _plan_id: number
+          _product_id: number
+          _provider_subscription_id: string
+          _tenant_id: string
+          _user_id: string
+        }
+        Returns: boolean
       }
       update_token_last_used: {
         Args: { ip_input: unknown; token_id_input: number }
@@ -8107,7 +8659,12 @@ export type Database = {
     }
     Enums: {
       ai_sender_type:
-        "system" | "user" | "assistant" | "function" | "data" | "tool"
+        | "system"
+        | "user"
+        | "assistant"
+        | "function"
+        | "data"
+        | "tool"
       app_role: "admin" | "moderator" | "teacher" | "student"
       chat_types: "free_chat" | "q&a" | "exam_prep" | "course_convo"
       currency_type:
@@ -8148,7 +8705,11 @@ export type Database = {
       reviewable: "lessons" | "courses" | "exams"
       status: "published" | "draft" | "archived"
       subscription_status:
-        "active" | "canceled" | "expired" | "renewed" | "past_due"
+        | "active"
+        | "canceled"
+        | "expired"
+        | "renewed"
+        | "past_due"
       ticket_status: "open" | "in_progress" | "resolved" | "closed"
       transaction_status:
         | "pending"
@@ -8172,12 +8733,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8199,12 +8760,13 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8223,12 +8785,13 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8247,12 +8810,13 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8265,11 +8829,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -8291,7 +8855,17 @@ export const Constants = {
       ],
       app_role: ["admin", "moderator", "teacher", "student"],
       chat_types: ["free_chat", "q&a", "exam_prep", "course_convo"],
-      currency_type: ["usd", "eur", "mxn", "cop", "clp", "pen", "ars", "brl", "ves"],
+      currency_type: [
+        "usd",
+        "eur",
+        "mxn",
+        "cop",
+        "clp",
+        "pen",
+        "ars",
+        "brl",
+        "ves",
+      ],
       difficulty_level: ["easy", "medium", "hard"],
       enrollement_status: ["active", "disabled"],
       entitlement_source: ["product", "subscription", "free", "admin_grant"],
@@ -8340,3 +8914,4 @@ export const Constants = {
     },
   },
 } as const
+
