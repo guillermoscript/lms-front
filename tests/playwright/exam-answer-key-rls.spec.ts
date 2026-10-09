@@ -19,7 +19,7 @@
  * the key itself is in the staff-only `exam_grading_secrets`; see
  * exam-grading-secrets.spec.ts.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { ACCOUNTS } from './utils/constants'
 

@@ -14,7 +14,7 @@
  *
  * Closed questions only, so grading needs no AI provider.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsTenantStudent } from './utils/auth'
 import { TENANT_BASE } from './utils/constants'

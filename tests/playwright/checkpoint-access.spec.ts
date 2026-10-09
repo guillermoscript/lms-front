@@ -13,7 +13,7 @@
  * Deliberately uses a deterministic (closed-question) checkpoint so a passing
  * attempt needs no AI provider.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent } from './utils/auth'
 import { ACCOUNTS, BASE } from './utils/constants'

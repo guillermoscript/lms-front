@@ -6,7 +6,7 @@
  * - Invalid verification code handling
  * - Certificate details rendering (student name, course, issuer)
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { BASE, LOCALE } from './utils/constants'
 

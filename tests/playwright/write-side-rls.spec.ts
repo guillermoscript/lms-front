@@ -19,7 +19,7 @@
  * The `lesson_checkpoint_attempts` half of #543 lives in checkpoint-access.spec.ts,
  * next to the checkpoint fixtures it needs.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent } from './utils/auth'

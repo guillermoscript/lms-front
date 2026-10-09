@@ -11,7 +11,7 @@
  * The run owns a fresh tenant + creator (`country865-<runId>`); `afterAll`
  * removes them and `beforeAll` sweeps whatever an aborted run left behind.
  */
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { BASE } from './utils/constants'
 import { getServiceRoleClient } from './utils/seed-state'

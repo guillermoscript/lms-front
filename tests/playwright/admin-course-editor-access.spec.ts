@@ -19,7 +19,7 @@
  * Both accounts are created in `beforeAll` and removed in `afterAll`, along
  * with every lesson the run added, so the seeded data is never touched.
  */
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { login } from './utils/auth'

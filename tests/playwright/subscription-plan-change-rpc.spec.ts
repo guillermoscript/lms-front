@@ -22,7 +22,7 @@
  * and torn down here, so the shared seed rows (alice's plan-2001 subscription,
  * which half the suite depends on) are never touched.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 

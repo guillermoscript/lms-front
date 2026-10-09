@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './utils/test'
 import type { Database } from '@/lib/database.types'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''

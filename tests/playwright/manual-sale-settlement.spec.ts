@@ -42,7 +42,7 @@
  * ORDERING. Serial and desktop-only — the four steps are one lifecycle and each
  * test continues the previous one's row.
  */
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from './utils/test'
 import { LOCALE, ACCOUNTS } from './utils/constants'
 import { login } from './utils/auth'
 import {

@@ -30,7 +30,7 @@
  *   5. The ungraded submission renders "—" on the teacher list, N/A / — in
  *      the teacher header, and is not presented as 0% to the student.
  */
-import { test, expect, type Page, type BrowserContext } from '@playwright/test'
+import { test, expect, type Page, type BrowserContext } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE as BASE, LOCALE, ACCOUNTS } from './utils/constants'
 import { login } from './utils/auth'

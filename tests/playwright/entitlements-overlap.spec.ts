@@ -10,7 +10,7 @@
  * (`trigger_manage_transactions` → `handle_new_subscription`).
  * See docs/ENTITLEMENTS_MIGRATION_PLAN.md.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { restoreAliceSeedSubscription } from './utils/seed-state'
 

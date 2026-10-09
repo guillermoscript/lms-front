@@ -26,7 +26,7 @@
  * preferences and blocks are put back as they were. Desktop only: it rewrites
  * shared rows, and on mobile the sidebar badge sits in a closed sheet.
  */
-import { test, expect, type Browser, type Page } from '@playwright/test'
+import { test, expect, type Browser, type Page } from './utils/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { login, loginAsTenantStudent } from './utils/auth'
 import { ACCOUNTS, LOCALE, TENANT_BASE } from './utils/constants'

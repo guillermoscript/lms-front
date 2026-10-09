@@ -19,7 +19,7 @@
  *   5. admin lifts the ban in the UI → the row is `removed` (not `active`),
  *      the member rejoins through /join-school and lands on the dashboard.
  */
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
 import { login, loginAsNonMember as loginNonMember } from './utils/auth'

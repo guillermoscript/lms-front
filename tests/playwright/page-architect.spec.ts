@@ -12,7 +12,7 @@
  *   stream: it proves blocks land progressively and that Stop keeps the partial turn as ONE undo
  *   step.
  */
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page } from './utils/test'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
 import { CODE_ACADEMY_TENANT, getServiceRoleClient } from './utils/seed-state'

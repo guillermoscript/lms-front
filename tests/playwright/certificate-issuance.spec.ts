@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { TENANT_BASE as BASE_URL } from './utils/constants'
 
 const STUDENT_EMAIL = 'alice@student.com'

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Page, test } from './utils/test'
 import { loginAsAdmin } from './utils/auth'
 import { LOCALE, TENANT_BASE } from './utils/constants'
 

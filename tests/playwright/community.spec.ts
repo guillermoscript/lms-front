@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsTeacher, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
@@ -336,7 +336,11 @@ test.describe('Course community entry points (#868)', () => {
     await loginAsTenantStudent(page)
     await page.goto(`${TENANT_BASE}/en/dashboard/student/courses/${PYTHON}/lessons/${PYTHON_LESSON}`)
 
-    // The desktop sidebar and the (unopened) mobile sheet can both hold one.
+    // Below `md` the lesson sidebar lives in a sheet behind the "Course Content" button.
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await page.getByRole('button', { name: 'Course Content' }).evaluate((el: HTMLElement) => el.click(), undefined, { timeout: 20_000 })
+    }
+    // The desktop sidebar and the mobile sheet can both hold one.
     const link = page.getByTestId('lesson-sidebar-community-link').filter({ visible: true })
     await expect(link).toBeVisible({ timeout: 20_000 })
     await expect(link).toHaveAttribute('href', new RegExp(`/dashboard/student/courses/${PYTHON}/community$`))

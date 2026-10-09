@@ -25,7 +25,7 @@
  * copy, "Enroll for free"); the manual-payment assertions moved to the priced
  * COP fixture, which also pins that a non-USD price is never shown as euros.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { BASE, TENANT_BASE } from './utils/constants'
 import { getServiceRoleClient, DEFAULT_TENANT } from './utils/seed-state'

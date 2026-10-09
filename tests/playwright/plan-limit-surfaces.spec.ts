@@ -12,7 +12,7 @@
  * (see utils/plan-gate-fixtures.ts), so "at the cap" is one course and one
  * student — the same code paths a Free school at 5/50 goes through.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { login } from './utils/auth'
 import { LOCALE } from './utils/constants'
 import {

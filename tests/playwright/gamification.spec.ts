@@ -1,6 +1,17 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import { loginAsStudent, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
+
+/**
+ * The level / streak / coins card. It sits in the header from `lg` and inside
+ * the avatar menu below it (#586), so open the menu on narrow viewports.
+ */
+async function gamificationCard(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) < 1024) {
+    await page.getByTestId('user-nav-trigger').evaluate((el: HTMLElement) => el.click())
+  }
+  return page.locator('[data-slot="gamification-header-card"]').filter({ visible: true })
+}
 
 /**
  * P1 — Gamification Tests
@@ -67,35 +78,16 @@ test.describe('Gamification', () => {
 
     test('student dashboard loads with gamification header', async ({ page }) => {
       test.setTimeout(60_000)
-      // GamificationHeaderCard renders in the dashboard layout
       await expect(page.getByTestId('student-dashboard')).toBeVisible({ timeout: 30_000 })
 
-      // Wait for client component to hydrate
-      await page.waitForLoadState('networkidle')
-
-      // The gamification header shows level info ("Lvl" text) or a loading skeleton
-      const levelText = page.locator('text=/Lvl|Level/i')
-      const skeleton = page.locator('[class*="animate-pulse"]')
-
-      const levelVisible = await levelText.first().isVisible().catch(() => false)
-      const skeletonVisible = await skeleton.first().isVisible().catch(() => false)
-
-      // Either level text or loading skeleton should be present
-      expect(levelVisible || skeletonVisible).toBeTruthy()
+      // GamificationHeaderCard renders in the dashboard layout once its data loads
+      await expect(await gamificationCard(page)).toContainText(/Lvl|Level/i, { timeout: 15_000 })
     })
 
     test('dashboard shows streak indicator', async ({ page }) => {
-      await page.waitForLoadState('networkidle')
-
-      // Streak section shows a flame icon and count
-      // Look for streak-related text (number followed by streak context)
-      const streakArea = page.locator('text=/streak/i')
-      const flameIcon = page.locator('[class*="orange"]')
-
-      const streakVisible = await streakArea.first().isVisible().catch(() => false)
-      const flameVisible = await flameIcon.first().isVisible().catch(() => false)
-
-      expect(streakVisible || flameVisible).toBeTruthy()
+      // Level, streak and coins each show their count
+      const card = await gamificationCard(page)
+      await expect(card.getByText(/^\d+$/)).toHaveCount(3, { timeout: 15_000 })
     })
   })
 
@@ -159,8 +151,10 @@ test.describe('Gamification', () => {
       await page.waitForLoadState('networkidle')
 
       // ProfileGamificationStats shows coins and streak labels
-      const coinsLabel = page.locator('text=/coins/i')
-      const streakLabel = page.locator('text=/streak/i')
+      // Scoped to the page: the header card's own labels are hidden below `sm`.
+      const profile = page.getByTestId('profile-page').filter({ visible: true })
+      const coinsLabel = profile.locator('text=/coins/i')
+      const streakLabel = profile.locator('text=/streak/i')
 
       const coinsVisible = await coinsLabel.first().isVisible().catch(() => false)
       const streakVisible = await streakLabel.first().isVisible().catch(() => false)

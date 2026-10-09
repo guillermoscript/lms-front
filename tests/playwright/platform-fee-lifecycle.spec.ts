@@ -24,7 +24,7 @@
  * has no clock param, so the spec backdates `transaction_date` and
  * `overdue_since` instead. Run with `--workers=1` on lvh.me.
  */
-import { test, expect, type APIRequestContext } from '@playwright/test'
+import { test, expect, type APIRequestContext } from './utils/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { login } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'

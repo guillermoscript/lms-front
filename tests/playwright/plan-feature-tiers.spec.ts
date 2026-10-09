@@ -13,7 +13,7 @@
  * Both gates are server-side (lib/plans/server.ts), so a plan change is
  * visible on the next request with no client state to reset.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { login } from './utils/auth'
 import { LOCALE } from './utils/constants'
 import {

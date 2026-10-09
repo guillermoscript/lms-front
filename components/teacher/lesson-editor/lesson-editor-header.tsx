@@ -55,7 +55,12 @@ export function LessonEditorHeader() {
         </div>
 
         {/* Center: step nav (desktop) */}
-        <nav data-tour="lesson-steps" className="hidden md:flex items-center gap-1 rounded-lg bg-muted/50 p-1">
+        <nav
+          data-tour="lesson-steps"
+          data-testid="lesson-steps"
+          aria-label={t('stepsNav')}
+          className="hidden md:flex items-center gap-1 rounded-lg bg-muted/50 p-1"
+        >
           {steps.map((step, i) => (
             <button
               key={step.key}
@@ -134,7 +139,11 @@ export function LessonEditorHeader() {
       </div>
 
       {/* Mobile step nav */}
-      <div className="flex md:hidden items-center gap-1 px-4 pb-2 overflow-x-auto">
+      <nav
+        data-testid="lesson-steps"
+        aria-label={t('stepsNav')}
+        className="flex md:hidden items-center gap-1 px-4 pb-2 overflow-x-auto"
+      >
         {steps.map((step) => (
           <button
             key={step.key}
@@ -151,7 +160,7 @@ export function LessonEditorHeader() {
             {step.label}
           </button>
         ))}
-      </div>
+      </nav>
     </header>
   )
 }

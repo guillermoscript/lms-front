@@ -66,7 +66,7 @@
  * is no longer `pending`, so "stays pending" would be unassertable on it.
  */
 import { createHmac } from 'node:crypto'
-import { expect, test, type APIRequestContext } from '@playwright/test'
+import { expect, test, type APIRequestContext } from './utils/test'
 import { BASE } from './utils/constants'
 import {
   SEEDED,

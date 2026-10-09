@@ -14,7 +14,7 @@
  * The teacher is created in `beforeAll` and removed in `afterAll`; seeded data
  * is never touched. Run with `--workers=1` on lvh.me (see tests/README.md).
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { login, loginAsAdmin, loginAsTenantStudent } from './utils/auth'

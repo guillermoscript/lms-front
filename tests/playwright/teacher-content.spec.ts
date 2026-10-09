@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { loginAsTeacher } from './utils/auth'
 import { BASE, LOCALE } from './utils/constants'
 import { SEEDED, getAdmin } from './utils/plan-gate-fixtures'
@@ -234,8 +234,8 @@ test.describe('Teacher Content — Lesson Editor', () => {
     // Shows "Edit" (not "Create") since this is an existing lesson
     await expect(header).toContainText(/edit/i)
 
-    // Step navigation with 4 steps (desktop)
-    const stepsNav = page.locator('[data-tour="lesson-steps"]')
+    // Step navigation with 4 steps (the desktop or the mobile nav, whichever shows)
+    const stepsNav = page.getByTestId('lesson-steps').filter({ visible: true })
     await expect(stepsNav).toBeVisible()
 
     // All 4 step buttons present
@@ -264,7 +264,7 @@ test.describe('Teacher Content — Lesson Editor', () => {
     test.setTimeout(60_000)
     await page.goto(`${COURSE_URL}/lessons/1001`)
 
-    const stepsNav = page.locator('[data-tour="lesson-steps"]')
+    const stepsNav = page.getByTestId('lesson-steps').filter({ visible: true })
     await expect(stepsNav).toBeVisible({ timeout: 15_000 })
 
     const stepButtons = stepsNav.locator('button')
@@ -340,7 +340,7 @@ test.describe('Teacher Content — Lesson Editor', () => {
       await expect(page.locator('[data-tour="lesson-header"]')).toBeVisible({ timeout: 15_000 })
 
       // Content is the 2nd step. base-ui buttons need a DOM click from Playwright.
-      const stepButtons = page.getByRole('navigation').getByRole('button')
+      const stepButtons = page.getByTestId('lesson-steps').filter({ visible: true }).getByRole('button')
       await stepButtons.nth(1).evaluate((btn) => (btn as HTMLButtonElement).click())
 
       const editor = page.locator('[data-tour="lesson-editor-mode"]')

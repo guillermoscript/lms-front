@@ -27,7 +27,7 @@
  * owns that surface). This spec starts from the row that form produces, so the
  * state machine behind it is pinned regardless.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import { login } from './utils/auth'
 import { BASE, LOCALE, ACCOUNTS } from './utils/constants'

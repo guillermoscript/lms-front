@@ -8,7 +8,7 @@
  * - exam_questions / question_options tenant_id after migration
  * - Cross-tenant isolation for exercises and student pages
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsTeacher, loginAsTenantStudent } from './utils/auth'
 import { ACCOUNTS, BASE, TENANT_BASE, LOCALE } from './utils/constants'

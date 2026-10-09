@@ -38,7 +38,7 @@
  * the seeded schools carry sales other specs count, and a ledger that has to be
  * exact cannot share a tenant with them.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { login } from './utils/auth'
 import { LOCALE } from './utils/constants'

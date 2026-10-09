@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './utils/test'
 import { TENANT_BASE } from './utils/constants'
 import { loginAsAdmin } from './utils/auth'
 

@@ -10,7 +10,7 @@
  * Note: Default tenant (free plan) may not have community enabled.
  * Code Academy tenant (business plan) should have community enabled.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { loginAsStudent, loginAsAdmin, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE } from './utils/constants'

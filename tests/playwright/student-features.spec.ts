@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { loginAsStudent, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE } from './utils/constants'
 import { openSidebar, openSidebarGroup } from './utils/sidebar'
@@ -39,7 +39,9 @@ test.describe('Student Features', () => {
       if (hasStats) {
         // Stats cards show numbers (enrolled count, lessons completed, etc.)
         // Per-course progress shows percentage or badge text
-        const numericValues = page.locator('text=/\\d+/')
+        // Scoped to the page: the header's notification badge is a number too,
+        // hidden below `md`.
+        const numericValues = page.getByTestId('progress-page').locator('text=/\\d+/')
         await expect(numericValues.first()).toBeVisible({ timeout: 5_000 })
       }
     })
@@ -134,16 +136,18 @@ test.describe('Student Features', () => {
       await openSidebar(page)
       // Click courses link and verify navigation
       const coursesLink = page.locator(
-        'a[href*="/dashboard/student/courses"]'
+        '[data-sidebar="sidebar"] a[href*="/dashboard/student/courses"]'
       ).first()
       await coursesLink.click()
       await expect(page.getByTestId('student-courses-page')).toBeVisible({
         timeout: 15_000,
       })
 
-      // Click browse link and verify navigation
+      // Click browse link and verify navigation. On mobile the sheet closed
+      // when the previous link navigated, so open it again.
+      await openSidebar(page)
       const browseLink = page.locator(
-        'a[href*="/dashboard/student/browse"]'
+        '[data-sidebar="sidebar"] a[href*="/dashboard/student/browse"]'
       ).first()
       await browseLink.click()
       await expect(page.getByTestId('browse-courses-page')).toBeVisible({
@@ -154,7 +158,7 @@ test.describe('Student Features', () => {
       // "My Courses" group)
       await openSidebarGroup(page, 'My Courses')
       const progressLink = page.locator(
-        'a[href*="/dashboard/student/progress"]'
+        '[data-sidebar="sidebar"] a[href*="/dashboard/student/progress"]'
       ).first()
       await progressLink.click()
       await expect(page.getByTestId('progress-page')).toBeVisible({

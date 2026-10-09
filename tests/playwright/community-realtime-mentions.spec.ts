@@ -22,7 +22,7 @@
  * rows. B and D are throwaway students created here with Code Academy as their
  * JWT tenant; every post carries MARK and is removed afterwards.
  */
-import { test, expect, type Browser, type Page } from '@playwright/test'
+import { test, expect, type Browser, type Page } from './utils/test'
 import {
   createClient as createSupabaseClient,
   type RealtimeChannel,

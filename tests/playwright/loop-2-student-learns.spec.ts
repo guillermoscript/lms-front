@@ -29,7 +29,7 @@
  * `.github/workflows/ci.yml`) the spec also asserts the reset email arrived;
  * without a mailer GoTrue rejects the request and the spec records that.
  */
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { TENANT_BASE, LOCALE } from './utils/constants'
 import { getServiceRoleClient, CODE_ACADEMY_TENANT } from './utils/seed-state'
@@ -449,6 +449,12 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
       await page.goto(`${BASE}/${LOCALE}/dashboard/student/courses/${courseId}/exercises/${exerciseId}`, {
         waitUntil: 'domcontentloaded',
       })
+      // Below `lg` the workspace shows one section at a time (#583) and opens on
+      // the instructions; the editor and its check button are under "Code".
+      if ((page.viewportSize()?.width ?? 1280) < 1024) {
+        const code = page.getByRole('group', { name: 'Exercise sections' }).getByRole('button', { name: 'Code' })
+        await domClick(page, code)
+      }
       const check = page.getByRole('button', { name: /check my solution/i })
       await expect(check).toBeVisible({ timeout: 60_000 })
       const graded = page.waitForResponse(

@@ -1,5 +1,5 @@
 import { openSidebar } from './utils/sidebar'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { login, loginAsSuperAdmin, loginAsStudent } from './utils/auth'
 import { BASE, TENANT_BASE, LOCALE, ACCOUNTS } from './utils/constants'
 

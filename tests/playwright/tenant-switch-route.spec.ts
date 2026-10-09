@@ -16,7 +16,7 @@
  * fills it. Alice's claim is put back on Code Academy afterwards — other specs
  * sign her in there.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { BASE, TENANT_BASE } from './utils/constants'
 import { loginAsTenantStudent } from './utils/auth'

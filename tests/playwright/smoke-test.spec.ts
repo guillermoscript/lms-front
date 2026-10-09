@@ -1,5 +1,5 @@
 import { openSidebar } from './utils/sidebar'
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './utils/test'
 import fs from 'fs'
 import path from 'path'
 import { login } from './utils/auth'

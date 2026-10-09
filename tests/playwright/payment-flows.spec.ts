@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './utils/test'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { login, loginAsStudent, loginAsTenantStudent } from './utils/auth'
 import { BASE, TENANT_BASE, ACCOUNTS } from './utils/constants'

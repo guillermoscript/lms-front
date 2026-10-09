@@ -1484,6 +1484,7 @@
         }
       },
       "lessonEditor": {
+        "stepsNav": "Lesson steps",
         "generateQuestions": {
           "button": "Generate questions",
           "title": "Generate questions from this lesson",
