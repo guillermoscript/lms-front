@@ -136,7 +136,7 @@ test.describe('Student Features', () => {
       await openSidebar(page)
       // Click courses link and verify navigation
       const coursesLink = page.locator(
-        'a[href*="/dashboard/student/courses"]'
+        '[data-sidebar="sidebar"] a[href*="/dashboard/student/courses"]'
       ).first()
       await coursesLink.click()
       await expect(page.getByTestId('student-courses-page')).toBeVisible({
@@ -147,7 +147,7 @@ test.describe('Student Features', () => {
       // when the previous link navigated, so open it again.
       await openSidebar(page)
       const browseLink = page.locator(
-        'a[href*="/dashboard/student/browse"]'
+        '[data-sidebar="sidebar"] a[href*="/dashboard/student/browse"]'
       ).first()
       await browseLink.click()
       await expect(page.getByTestId('browse-courses-page')).toBeVisible({
@@ -158,7 +158,7 @@ test.describe('Student Features', () => {
       // "My Courses" group)
       await openSidebarGroup(page, 'My Courses')
       const progressLink = page.locator(
-        'a[href*="/dashboard/student/progress"]'
+        '[data-sidebar="sidebar"] a[href*="/dashboard/student/progress"]'
       ).first()
       await progressLink.click()
       await expect(page.getByTestId('progress-page')).toBeVisible({
