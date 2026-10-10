@@ -9464,6 +9464,10 @@
       "openRequest": "Transferencia de {amount} esperando nuestra confirmación (solicitada el {date}).",
       "underReview": "{count, plural, one {# pago está} other {# pagos están}} en revisión. Lo acreditamos una vez verificado.",
       "paymentReturned": "Gracias. Tu pago se está procesando y el saldo se actualiza en cuanto el proveedor lo confirme.",
+      "paypalReturn": {
+        "payment_closed": "Ese pago de PayPal ya estaba cerrado, así que no se te cobró. Inicia un pago nuevo.",
+        "failed": "No pudimos confirmar tu pago de PayPal. Si tu saldo no cambió, inténtalo de nuevo."
+      },
       "loadError": "No pudimos cargar tu saldo de comisiones de la plataforma.",
       "retry": "Reintentar",
       "timezone": "Las fechas están en UTC.",
@@ -9557,6 +9561,8 @@
         "amount_above_balance": "Es más de lo que debes.",
         "amount_below_minimum": "Los pagos automáticos empiezan en $0.50. Paga montos menores por transferencia bancaria.",
         "fee_request_open": "Ya tienes una transferencia esperando confirmación.",
+        "fee_checkout_opening": "Ya se está abriendo un pago. Espera un momento e inténtalo de nuevo.",
+        "fee_payment_in_progress": "Ya hay un pago en proceso. Tu saldo se actualiza cuando se confirme.",
         "provider_unavailable": "Este método de pago no está disponible ahora.",
         "provider_error": "No pudimos iniciar el pago. Inténtalo de nuevo.",
         "forbidden": "Solo los administradores de la escuela pueden pagar comisiones de la plataforma.",

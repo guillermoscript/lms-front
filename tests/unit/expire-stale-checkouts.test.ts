@@ -135,6 +135,15 @@ vi.mock('@/lib/payments/webhook-dispatch', () => ({
   },
 }))
 
+// Phase 2 (#951) has its own suite (platform-fee-payment-expiry.test.ts); here
+// it is a stub, so this file pins phase 1 and how the route reports both.
+const FEE_PHASE_IDLE = { scanned: 0, skipped: 0, recovered: 0, waiting: 0, expired: 0 }
+let feePhase: () => Promise<Row> = () => Promise.resolve(FEE_PHASE_IDLE)
+
+vi.mock('@/lib/billing/platform-fee-payment-expiry', () => ({
+  expireStaleFeePayments: () => feePhase(),
+}))
+
 vi.mock('@/lib/stripe', () => ({
   getStripe: () => {
     if (stripeGetThrows) throw new Error('STRIPE_SECRET_KEY is not set in environment variables')
@@ -218,6 +227,7 @@ beforeEach(() => {
   piCancelCalls.length = 0
   piCancelThrows = false
   nextId = 1
+  feePhase = () => Promise.resolve(FEE_PHASE_IDLE)
   process.env.CRON_SECRET = 'cron-secret'
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost'
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
@@ -232,9 +242,21 @@ describe('expire-stale-checkouts cron', () => {
   it('expires a lapsed Lemon Squeezy checkout so the buyer can retry', async () => {
     const row = seedCheckout()
     const res = await GET(req())
-    expect(await res.json()).toMatchObject({ expired: 1, recovered: 0 })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ expired: 1, recovered: 0, fee_payments: FEE_PHASE_IDLE })
     expect(row.status).toBe('canceled')
     expect(row.expired_at).toBeTypeOf('string')
+  })
+
+  // The fee-payment phase (#951) failing must not hide what phase 1 did, and
+  // must still fail the job so the scheduler's alerting sees it.
+  it('answers 500 with the checkout counts when the fee payment phase fails', async () => {
+    const row = seedCheckout()
+    feePhase = () => Promise.reject(new Error('platform_fee_payments stale read failed'))
+    const res = await GET(req())
+    expect(res.status).toBe(500)
+    expect(await res.json()).toMatchObject({ expired: 1, fee_payments: { error: 'Fee payment phase failed' } })
+    expect(row.status).toBe('canceled')
   })
 
   // 'failed' would fire trigger_manage_transactions →

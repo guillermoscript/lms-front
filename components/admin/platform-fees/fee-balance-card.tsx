@@ -47,10 +47,13 @@ export async function FeeBalanceCard({
   tenantId,
   locale,
   paymentReturned = false,
+  paypalReturn,
 }: {
   tenantId: string
   locale: string
   paymentReturned?: boolean
+  /** `?paypal=<code>` from the PayPal fee capture route: the payment did not go through. */
+  paypalReturn?: string
 }) {
   const t = await getTranslations('platformFees.card')
 
@@ -119,7 +122,7 @@ export async function FeeBalanceCard({
             <FeeRetryButton label={t('retry')} />
           </div>
         ) : (
-          <FeeBalanceBody account={account} locale={locale} paymentReturned={paymentReturned} />
+          <FeeBalanceBody account={account} locale={locale} paymentReturned={paymentReturned} paypalReturn={paypalReturn} />
         )}
       </CardContent>
     </Card>
@@ -130,10 +133,12 @@ async function FeeBalanceBody({
   account,
   locale,
   paymentReturned,
+  paypalReturn,
 }: {
   account: SchoolFeeAccount
   locale: string
   paymentReturned: boolean
+  paypalReturn?: string
 }) {
   const t = await getTranslations('platformFees.card')
   const fmtDate = (iso: string) =>
@@ -144,7 +149,20 @@ async function FeeBalanceBody({
 
   return (
     <>
-      {paymentReturned && (
+      {paypalReturn && (
+        // `payment_closed` (#951): the approval link outlived its payment, so nothing was captured.
+        <p
+          className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm"
+          role="alert"
+          data-testid="fee-paypal-return"
+          data-code={paypalReturn === 'payment_closed' ? 'payment_closed' : 'failed'}
+        >
+          <IconAlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
+          {paypalReturn === 'payment_closed' ? t('paypalReturn.payment_closed') : t('paypalReturn.failed')}
+        </p>
+      )}
+
+      {paymentReturned && !paypalReturn && (
         <p className="rounded-lg border bg-muted/40 p-3 text-sm" role="status" data-testid="fee-payment-returned">
           {t('paymentReturned')}
         </p>

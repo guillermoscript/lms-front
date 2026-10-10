@@ -34,6 +34,8 @@ const KNOWN_ERRORS = [
   'amount_above_balance',
   'amount_below_minimum',
   'fee_request_open',
+  'fee_checkout_opening',
+  'fee_payment_in_progress',
   'provider_unavailable',
   'provider_error',
   'forbidden',

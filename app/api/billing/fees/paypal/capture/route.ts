@@ -10,6 +10,12 @@
  * Unlike the student capture route this REQUIRES a session: the caller must be
  * an active admin of the tenant named in the order's own custom_id, otherwise
  * anyone holding an order id could trigger a capture.
+ *
+ * It also only captures for a `pending` fee payment row (#951). This capture is
+ * the one moment PayPal money moves, and an approval link outlives its row: a
+ * newer attempt supersedes it, the stale sweep expires it. Capturing then would
+ * take money `settle_platform_fee_payment` refuses to credit, so a closed row
+ * sends the payer back uncharged (`?paypal=payment_closed`).
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -93,6 +99,8 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
   if (!membership || membership.role !== 'admin') return fail('forbidden')
 
+  const admin = createAdminClient()
+
   let captured: {
     captureId?: string
     captureStatus?: string
@@ -101,6 +109,30 @@ export async function GET(req: NextRequest) {
   } = order
 
   if (!order.captureId) {
+    // No money has moved yet, and it only moves if we capture. An order that
+    // is already captured skips this: its settle path below stays idempotent.
+    const { data: payment, error: paymentError } = await admin
+      .from('platform_fee_payments')
+      .select('status')
+      .eq('payment_id', paymentId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    if (paymentError) {
+      // Fail closed: capturing blind is the hazard. The return URL can be retried.
+      console.error('[fees/paypal/capture] fee payment lookup failed:', paymentError.code, paymentError.message)
+      return fail('capture_failed')
+    }
+    if (!payment) return fail('not_fee_order')
+    if (payment.status === 'succeeded') {
+      // Already credited some other way; a capture now would be a second charge.
+      target.searchParams.set('fee_payment', paymentId)
+      return NextResponse.redirect(target)
+    }
+    if (payment.status !== 'pending') {
+      console.warn(`[fees/paypal/capture] order ${orderId} is for a ${payment.status} fee payment — not capturing`)
+      return fail('payment_closed')
+    }
+
     try {
       captured = await provider.captureOrder(orderId)
     } catch (err) {
@@ -141,7 +173,7 @@ export async function GET(req: NextRequest) {
         currency: captured.currency,
         raw: { source: 'paypal-fee-capture-route', orderId, captureId: captured.captureId },
       },
-      { provider: 'paypal', admin: createAdminClient() },
+      { provider: 'paypal', admin },
     )
   } catch (err) {
     // Money is captured; the webhook retries the settlement.

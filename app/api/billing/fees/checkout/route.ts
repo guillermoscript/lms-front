@@ -11,11 +11,14 @@
  * Never blocked by the fee sales gate — paying must always work (4.2).
  *
  * Rails:
- *  - `stripe`: a pending `platform_fee_payments` row, then a hosted Checkout
- *    Session (mode `payment`) on the platform account carrying
+ *  - hosted (`stripe`, `paypal`, `binance`): a pending `platform_fee_payments`
+ *    row, then a hosted one-off checkout on the platform account carrying
  *    `{ kind: 'platform_fee', tenant_id, payment_id }`. Settled by the platform
- *    webhook (`dispatchPlatformBillingEvent` → `settle_platform_fee_payment`).
- *    USD only.
+ *    webhook (`dispatchPlatformBillingEvent` → `settle_platform_fee_payment`);
+ *    PayPal also through its capture return route. USD only. One open attempt
+ *    per rail (#951): a new one supersedes the previous — its checkout is
+ *    closed AT THE PROVIDER first, then its row cancelled, because the settle
+ *    function never credits a cancelled row (`supersedeOpenFeeCheckouts`).
  *  - `manual`: a pending payment row plus a `platform_payment_requests` row
  *    (`request_type = 'fee'`) a super admin confirms
  *    (`confirm_platform_fee_request`). Any ledger currency. One open fee
@@ -40,6 +43,7 @@ import {
   type PayNowError,
 } from '@/lib/billing/platform-fee-paynow'
 import { PLATFORM_FEE_METADATA_KIND } from '@/lib/billing/platform-fee-settlement'
+import { supersedeOpenFeeCheckouts } from '@/lib/billing/platform-fee-supersede'
 import {
   getPlatformSolanaConfig,
   quotePlatformSettlement,
@@ -195,7 +199,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // ── automated rail (Stripe): hosted one-off checkout ──
+    // ── automated rails (Stripe, PayPal, Binance Pay): hosted one-off checkout ──
     let paymentProvider
     try {
       paymentProvider = getPlatformBillingProvider(quote.value.provider)
@@ -209,6 +213,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(errorBody('provider_unavailable', 'This payment method is not available.'), {
         status: 501,
       })
+    }
+
+    // One open attempt per rail (#951): the previous checkout is closed at the
+    // provider and its row cancelled before this one is written. Like the
+    // Solana branch, everything that can refuse runs before the insert.
+    const superseded = await supersedeOpenFeeCheckouts(admin, { tenantId, provider: quote.value.provider })
+    if (!superseded.ok) {
+      switch (superseded.reason) {
+        case 'checkout_opening':
+          // A double submit: the other request is still opening its checkout.
+          return NextResponse.json(
+            errorBody('fee_checkout_opening', 'A checkout is already opening. Try again in a moment.'),
+            { status: 409 },
+          )
+        case 'payment_in_progress':
+          // The previous checkout took the money (or is taking it); a second
+          // one would charge the school twice for the same balance.
+          return NextResponse.json(
+            errorBody('fee_payment_in_progress', 'A payment is already being processed.'),
+            { status: 409 },
+          )
+        case 'provider_unknown':
+          // The rail we are about to call is not answering.
+          return NextResponse.json(errorBody('provider_error', 'Could not start checkout'), { status: 502 })
+        default:
+          return NextResponse.json(errorBody('internal', 'Could not start the payment'), { status: 500 })
+      }
     }
 
     const { data: payment, error: paymentError } = await admin
@@ -280,10 +311,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(errorBody('provider_error', 'Could not start checkout'), { status: 502 })
     }
 
-    await admin
+    // The reference is what lets this checkout be closed at the provider later
+    // (supersede, stale sweep). A row without one reads as "never opened" and
+    // would be cancelled under a live checkout, so the URL is only handed out
+    // once the reference is on the row.
+    const { error: referenceError } = await admin
       .from('platform_fee_payments')
       .update({ provider_reference: session.providerRef ?? session.reference, updated_at: new Date().toISOString() })
       .eq('payment_id', payment.payment_id)
+    if (referenceError) {
+      console.error('[billing/fees/checkout] reference write failed:', referenceError.code, referenceError.message)
+      return NextResponse.json(errorBody('internal', 'Could not start the payment'), { status: 500 })
+    }
 
     return NextResponse.json({
       kind: session.kind,
