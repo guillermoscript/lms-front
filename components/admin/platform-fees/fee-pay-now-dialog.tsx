@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatMoney } from '@/lib/payments/format-money'
-import { feeErrorKey, parsePayNowAmount, type FeeRail, type PayNowBucket } from '@/lib/billing/platform-fee-view'
+import { feeErrorKey, parsePayNowAmount, payNowNavigation, type FeeRail, type PayNowBucket } from '@/lib/billing/platform-fee-view'
 import { withRequestSuffix } from '@/lib/billing/platform-fee-reference'
 import type { PlatformBankAccountView } from '@/lib/billing/platform-bank-accounts'
 import { selectBankAccountsFor } from '@/lib/billing/platform-bank-account-select'
@@ -126,9 +126,9 @@ function PayNowForm({
 
   const [currency, setCurrency] = useState(buckets[0].currency)
   const bucket = buckets.find((b) => b.currency === currency) ?? buckets[0]
-  // Card first, unless a transfer is open and card is not offered: then the open request is what matters.
+  // Automated rails first, unless a transfer is open and none is offered: then the open request is what matters.
   const [rail, setRail] = useState<FeeRail>(
-    openRequest && !bucket.rails.includes('stripe') ? 'manual' : (bucket.rails[0] ?? 'manual'),
+    openRequest && !bucket.rails.some((r) => r !== 'manual') ? 'manual' : (bucket.rails[0] ?? 'manual'),
   )
   const [amount, setAmount] = useState(bucket.netOwed.toFixed(2))
   const [bankReference, setBankReference] = useState('')
@@ -139,7 +139,7 @@ function PayNowForm({
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Derived in render, not stored.
-  const cardOffered = bucket.rails.includes('stripe')
+  const automatedOffered = bucket.rails.some((r) => r !== 'manual')
   const parsed = parsePayNowAmount(amount, bucket.netOwed, rail)
   // The route refuses a second transfer while one is open; card stays available.
   const pendingTransfer = rail === 'manual' ? openRequest : null
@@ -196,9 +196,16 @@ function PayNowForm({
         router.refresh()
         return
       }
-      if (typeof body.url === 'string' && body.url) {
+      const next = payNowNavigation(body)
+      if (next?.type === 'push') {
+        // Solana: `url` is a wallet URI; the QR checkout page lives in the app.
         setRedirecting(true)
-        window.location.assign(body.url)
+        router.push(next.to)
+        return
+      }
+      if (next?.type === 'assign') {
+        setRedirecting(true)
+        window.location.assign(next.to)
         return
       }
       fail(t('errors.generic'))
@@ -264,7 +271,7 @@ function PayNowForm({
               </span>
             </label>
           ))}
-          {cardOffered ? null : <p className="text-xs text-muted-foreground">{t('cardUnavailable')}</p>}
+          {automatedOffered ? null : <p className="text-xs text-muted-foreground">{t('cardUnavailable')}</p>}
         </fieldset>
 
         {pendingTransfer ? (
@@ -351,7 +358,7 @@ function PayNowForm({
  * Pay-now for the platform fee balance (#929, design 2.4). The amount typed
  * here is only a CAP: the route derives what is charged from the live ledger
  * (`min(netOwed, requested)`), so a stale or edited figure can never charge
- * more than is owed. Card (Stripe) is USD only; any currency by transfer.
+ * more than is owed. Automated rails (card, PayPal, Binance, Solana) are USD only; any currency by transfer.
  *
  * Two explicit variants share the dialog: `PayNowForm` and, once a transfer
  * is registered, `TransferRegistered`. The form remounts on every open, so

@@ -2892,7 +2892,14 @@
           "mismatch": "La transferencia encontrada no coincide con el monto adeudado. Contacta a soporte antes de volver a pagar.",
           "expired": "Esta solicitud de pago venció. Inicia la mejora de nuevo para obtener una nueva.",
           "backToBilling": "Volver a facturación",
-          "usdEquivalent": "≈ ${amount} USD"
+          "usdEquivalent": "≈ ${amount} USD",
+          "feeSubtitle": "Pago de comisión de la plataforma.",
+          "feeScan": "Escanea este código con una billetera Solana. Tu saldo de comisiones se acredita en cuanto la transferencia se confirme en la cadena.",
+          "feeConfirmed": "Pago confirmado: tu saldo de comisiones está actualizado",
+          "feeExpired": "Esta solicitud de pago venció. Inicia un nuevo pago desde Ganancias para obtener una nueva.",
+          "backToEarnings": "Volver a ganancias",
+          "walletMessagePlan": "{app} — pago del plan",
+          "walletMessageFee": "{app} — pago de comisión de la plataforma"
         },
         "planComparison": {
           "intervalGroupLabel": "Periodo de facturación",
@@ -9489,14 +9496,20 @@
       "rail": "Método de pago",
       "rails": {
         "stripe": "Tarjeta",
+        "paypal": "PayPal",
+        "binance": "Binance Pay",
+        "solana": "Solana",
         "manual": "Transferencia bancaria"
       },
       "railHints": {
         "stripe": "Paga ahora con tarjeta. Solo saldos en USD.",
+        "paypal": "Paga ahora con PayPal o con tarjeta a través de PayPal. Solo saldos en USD.",
+        "binance": "Paga ahora con Binance Pay. Solo saldos en USD.",
+        "solana": "Escanea un código QR con tu billetera. Solo saldos en USD.",
         "manual": "Registra una transferencia. La confirmamos manualmente, normalmente en 2 días hábiles."
       },
       "openRequestHint": "Tienes una transferencia de {amount} pendiente de confirmación. Elige Transferencia bancaria para ver sus detalles.",
-      "cardUnavailable": "El pago con tarjeta solo está disponible para saldos en USD de al menos $0.50. Usa una transferencia bancaria.",
+      "cardUnavailable": "El pago automático solo está disponible para saldos en USD de al menos $0.50. Usa una transferencia bancaria.",
       "bankReference": "Referencia de la transferencia (opcional)",
       "bankReferenceHint": "Si ya enviaste la transferencia, agrega su referencia para que podamos identificarla.",
       "notes": "Notas (opcional)",
@@ -9538,11 +9551,11 @@
       },
       "errors": {
         "unsupported_rail": "Este método de pago no se puede usar para comisiones de la plataforma.",
-        "currency_not_supported_on_rail": "Solo los saldos en USD se pueden pagar con tarjeta. Paga otras monedas por transferencia bancaria.",
+        "currency_not_supported_on_rail": "Solo los saldos en USD se pueden pagar automáticamente. Paga otras monedas por transferencia bancaria.",
         "nothing_owed": "No hay nada que pagar en esta moneda.",
         "invalid_amount": "Ingresa un monto mayor que cero, con hasta 2 decimales.",
         "amount_above_balance": "Es más de lo que debes.",
-        "amount_below_minimum": "Los pagos con tarjeta empiezan en $0.50. Paga montos menores por transferencia bancaria.",
+        "amount_below_minimum": "Los pagos automáticos empiezan en $0.50. Paga montos menores por transferencia bancaria.",
         "fee_request_open": "Ya tienes una transferencia esperando confirmación.",
         "provider_unavailable": "Este método de pago no está disponible ahora.",
         "provider_error": "No pudimos iniciar el pago. Inténtalo de nuevo.",

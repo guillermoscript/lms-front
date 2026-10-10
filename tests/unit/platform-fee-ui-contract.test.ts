@@ -125,7 +125,7 @@ describe('platform fee UI contracts', () => {
           expect(typeof get(cat, `platform.fees.state.${s}`)).toBe('string')
         }
         for (const s of ['paid', 'due', 'overdue']) expect(typeof get(cat, `platformFees.card.statements.status.${s}`)).toBe('string')
-        for (const r of ['stripe', 'manual']) {
+        for (const r of ['stripe', 'paypal', 'binance', 'solana', 'manual']) {
           expect(typeof get(cat, `platformFees.payNow.rails.${r}`)).toBe('string')
           expect(typeof get(cat, `platformFees.payNow.railHints.${r}`)).toBe('string')
         }

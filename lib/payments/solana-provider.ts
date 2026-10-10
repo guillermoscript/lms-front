@@ -51,7 +51,7 @@ export class SolanaProvider implements IPaymentProvider {
     // checkout and `/api/billing/solana/verify` is the confirmation. Mirrors
     // PROVIDER_CAPABILITIES.solana.
     supportsPlatformBillingCheckout: true,
-    supportsPlatformFeePayNow: false,
+    supportsPlatformFeePayNow: true, // QR + on-chain verify (#950), mirrors PROVIDER_CAPABILITIES.solana
     supportsRefunds: false,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,

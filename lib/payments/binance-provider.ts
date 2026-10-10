@@ -62,6 +62,9 @@ interface BinancePassThrough {
   plan_slug?: string
   interval?: string
   billing_switch_id?: string
+  /** Platform-fee pay-now (#950): `kind: 'platform_fee'` + the payment row id. Never with plan_id. */
+  kind?: string
+  payment_id?: string
   /** Our own reference, when it did not fit `merchantTradeNo`. See below. */
   ref?: string
 }
@@ -77,6 +80,9 @@ const PASS_THROUGH_KEYS: (keyof BinancePassThrough)[] = [
   'plan_slug',
   'interval',
   'billing_switch_id',
+  // Fee pay-now keys sit BEFORE `ref` so the 512-char cap drops `ref` first.
+  'kind',
+  'payment_id',
   'ref',
 ]
 
@@ -168,7 +174,7 @@ export class BinancePayProvider implements IPaymentProvider {
     // (#610). A plan bought here is a one-time payment that opens a period —
     // `selfManagedPeriod` below is what makes the expiry cron own its renewal.
     supportsPlatformBillingCheckout: true,
-    supportsPlatformFeePayNow: false,
+    supportsPlatformFeePayNow: true,
     supportsRefunds: true,
     isMerchantOfRecord: false,
     selfManagedPeriod: true,
@@ -410,12 +416,32 @@ export class BinancePayProvider implements IPaymentProvider {
             raw: payload,
           }
         }
+        // Platform-fee pay-now (#950): settle_platform_fee_payment refuses to
+        // credit (answers `mismatch`) unless amount + currency are present and
+        // match, so state them. Field names (orderAmount/totalFee/currency) are
+        // unverified against Binance docs; parsing is defensive. `orderAmount`
+        // preferred over `totalFee`; major units, string or number.
+        const isFee = passThrough.kind === 'platform_fee'
+        let amount: number | undefined
+        let currency: string | undefined
+        if (isFee) {
+          const parsed = Number.parseFloat(String(data.orderAmount ?? data.totalFee ?? ''))
+          if (Number.isFinite(parsed) && parsed > 0) amount = parsed
+          const rawCurrency = data.currency
+          if (typeof rawCurrency === 'string' && rawCurrency) {
+            currency = normalizeBinanceCurrency(rawCurrency)
+          }
+        }
         return {
           type: 'payment.succeeded',
           providerEventId,
-          providerPaymentId: bizId,
+          // Fee path: same id the refund event reports (the order's prepayId),
+          // so a refund reverses by this charge id. Product path unchanged.
+          providerPaymentId: isFee ? String(data.prepayId ?? bizId) : bizId,
           reference,
           metadata,
+          ...(amount !== undefined ? { amount } : {}),
+          ...(currency ? { currency } : {}),
           raw: payload,
         }
       }

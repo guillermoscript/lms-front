@@ -24,7 +24,7 @@ export function isAutomatedFeeRail(provider: PaymentProvider): boolean {
   return provider !== 'manual'
 }
 
-/** Stripe refuses charges under $0.50; below that the school pays by transfer. */
+/** Automated rails (Stripe refuses under $0.50) share one floor; below it the school pays by transfer. */
 export const MIN_AUTOMATED_FEE_PAYMENT_USD = 0.5
 
 export type PayNowError =
@@ -97,4 +97,14 @@ export async function getTenantFeeBalances(admin: SupabaseClient, tenantId: stri
 /** Major → Stripe minor units (fee pay-now is USD only: two decimals). */
 export function toMinorUnits(amount: number): number {
   return Math.round(roundMoney(amount) * 100)
+}
+
+/**
+ * The amount `createCheckoutSession` expects for a fee payment. Stripe takes
+ * minor units (cents); Binance Pay, PayPal and the other hosted rails take
+ * major units (`orderAmount: toFixed(2)`). Sending cents to a major-unit rail
+ * charges 100x, so the unit is decided here, in one place.
+ */
+export function feeCheckoutAmount(provider: string, amount: number): number {
+  return provider === 'stripe' ? toMinorUnits(amount) : roundMoney(amount)
 }

@@ -2892,7 +2892,14 @@
           "mismatch": "The transfer we found does not match the amount owed. Contact support before paying again.",
           "expired": "This payment request has expired. Start the upgrade again to get a fresh one.",
           "backToBilling": "Back to billing",
-          "usdEquivalent": "≈ ${amount} USD"
+          "usdEquivalent": "≈ ${amount} USD",
+          "feeSubtitle": "Platform fee payment.",
+          "feeScan": "Scan this code with a Solana wallet. Your fee balance is credited as soon as the transfer confirms on chain.",
+          "feeConfirmed": "Payment confirmed — your fee balance is updated",
+          "feeExpired": "This payment request has expired. Start a new payment from Earnings to get a fresh one.",
+          "backToEarnings": "Back to earnings",
+          "walletMessagePlan": "{app} — plan payment",
+          "walletMessageFee": "{app} — platform fee payment"
         },
         "planComparison": {
           "intervalGroupLabel": "Billing interval",
@@ -9489,14 +9496,20 @@
       "rail": "Payment method",
       "rails": {
         "stripe": "Card",
+        "paypal": "PayPal",
+        "binance": "Binance Pay",
+        "solana": "Solana",
         "manual": "Bank transfer"
       },
       "railHints": {
         "stripe": "Pay now by card. USD balances only.",
+        "paypal": "Pay now with PayPal or a card through PayPal. USD balances only.",
+        "binance": "Pay now with Binance Pay. USD balances only.",
+        "solana": "Scan a QR code with your wallet. USD balances only.",
         "manual": "Register a transfer. We confirm it by hand, usually within 2 business days."
       },
       "openRequestHint": "You have a transfer of {amount} waiting for confirmation. Choose Bank transfer to see its details.",
-      "cardUnavailable": "Card payment is only available for USD balances of at least $0.50. Use a bank transfer.",
+      "cardUnavailable": "Automatic payment is only available for USD balances of at least $0.50. Use a bank transfer.",
       "bankReference": "Transfer reference (optional)",
       "bankReferenceHint": "If you've already sent the transfer, add its reference so we can match it.",
       "notes": "Notes (optional)",
@@ -9538,11 +9551,11 @@
       },
       "errors": {
         "unsupported_rail": "This payment method can't be used for platform fees.",
-        "currency_not_supported_on_rail": "Only USD balances can be paid by card. Pay other currencies by bank transfer.",
+        "currency_not_supported_on_rail": "Only USD balances can be paid automatically. Pay other currencies by bank transfer.",
         "nothing_owed": "There's nothing to pay in this currency.",
         "invalid_amount": "Enter an amount greater than zero, with up to 2 decimals.",
         "amount_above_balance": "That's more than you owe.",
-        "amount_below_minimum": "Card payments start at $0.50. Pay smaller amounts by bank transfer.",
+        "amount_below_minimum": "Automatic payments start at $0.50. Pay smaller amounts by bank transfer.",
         "fee_request_open": "You already have a transfer waiting for confirmation.",
         "provider_unavailable": "This payment method isn't available right now.",
         "provider_error": "We couldn't start the checkout. Try again.",

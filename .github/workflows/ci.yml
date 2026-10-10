@@ -185,6 +185,7 @@ jobs:
       PAYPAL_CLIENT_ID: ci_paypal_client_synthetic
       PAYPAL_CLIENT_SECRET: ci_paypal_secret_synthetic
       PAYPAL_WEBHOOK_ID: ci_paypal_webhook_synthetic
+      PAYPAL_PLATFORM_WEBHOOK_ID: ci_paypal_platform_webhook_synthetic
       PAYPAL_API_BASE: http://127.0.0.1:3098
       SOLANA_RPC_URL: https://api.devnet.solana.com
       SOLANA_PLATFORM_WALLET: EqK4KJFiUoV53TrCt2kXHn8Ryg6fcSTuwaa9nNppqc2A

@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { dispatchPlatformBillingEvent } from '@/lib/billing/platform-webhook-dispatch'
+import {
+  handlePlatformFeeEvent,
+  PLATFORM_FEE_METADATA_KIND,
+} from '@/lib/billing/platform-fee-settlement'
 
 export const SOLANA_ACTIVATION_MAX_ATTEMPTS = 5
 export const SOLANA_ACTIVATION_LEASE_SECONDS = 5 * 60
@@ -41,8 +45,12 @@ interface ClaimRow {
 interface ActivationRequestRow {
   request_id: string
   tenant_id: string
-  plan_id: string
-  interval: string
+  /** NULL on a fee request (#950). */
+  plan_id: string | null
+  /** Set on a platform-fee request (`request_type = 'fee'`), NULL on a plan one. */
+  fee_payment_id: string | null
+  request_type: string | null
+  interval: string | null
   provider_charge_id: string
   switch_id: string | null
   amount: number | string | null
@@ -140,7 +148,7 @@ export async function processSolanaPlatformActivation(
   const { data: request, error: requestError } = await admin
     .from('platform_payment_requests')
     .select(
-      'request_id, tenant_id, plan_id, interval, provider_charge_id, switch_id, amount, currency, platform_plans(slug)',
+      'request_id, tenant_id, plan_id, fee_payment_id, request_type, interval, provider_charge_id, switch_id, amount, currency, platform_plans(slug)',
     )
     .eq('request_id', requestId)
     .eq('payment_provider', 'solana')
@@ -151,33 +159,12 @@ export async function processSolanaPlatformActivation(
     if (!request?.provider_charge_id) throw new Error('Observed Solana payment has no signature')
 
     const row = request as unknown as ActivationRequestRow
-    const embeddedPlan = row.platform_plans
-    const planSlug = (Array.isArray(embeddedPlan) ? embeddedPlan[0] : embeddedPlan)?.slug
 
-    await dispatchPlatformBillingEvent(
-      {
-        type: 'subscription.activated',
-        providerEventId: row.provider_charge_id,
-        providerPaymentId: row.provider_charge_id,
-        providerSubscriptionId: row.provider_charge_id,
-        // The USD figure the school owes, so the dispatcher's
-        // `platform_payment_succeeded` reports a real amount instead of 0.
-        // Deliberately the USD price, NOT `settlement_base` — lamports and USDC
-        // base units are what the chain is verified against and are meaningless
-        // summed alongside a card payment. Read-only for the dispatcher.
-        amount: Number(row.amount ?? 0),
-        currency: row.currency ?? 'usd',
-        metadata: {
-          tenant_id: row.tenant_id,
-          plan_id: row.plan_id,
-          ...(planSlug ? { plan_slug: planSlug } : {}),
-          interval: row.interval,
-          ...(row.switch_id ? { billing_switch_id: row.switch_id } : {}),
-        },
-        raw: { requestId: row.request_id, signature: row.provider_charge_id },
-      },
-      { provider: 'solana', admin },
-    )
+    if (row.fee_payment_id) {
+      await settleSolanaFeePayment(admin, row)
+    } else {
+      await activateSolanaPlan(admin, row)
+    }
 
     const { data: completed, error: completeError } = await admin.rpc(
       'complete_solana_platform_activation',
@@ -216,4 +203,78 @@ export async function processSolanaPlatformActivation(
       ...(exhausted ? { alertRequired: true } : {}),
     }
   }
+}
+
+/**
+ * Fee request (#950): credit the pending `platform_fee_payments` row through
+ * the platform-fee branch of the dispatcher (`handlePlatformFeeEvent` is the
+ * FIRST thing `dispatchPlatformBillingEvent` runs — called directly here
+ * because the dispatcher returns void and this worker must know the outcome).
+ *
+ * `settled` and `duplicate` both mean the row is credited (a lease reclaimed
+ * after a crash replays the same signature), so the request completes. Any
+ * other outcome — `mismatch` / `not_pending` / `not_found` — left the money on
+ * chain uncredited (the RPC flags `review_reason`); throwing parks it in the
+ * retry queue, whose exhaustion alert is what puts it in front of a human.
+ */
+async function settleSolanaFeePayment(admin: SupabaseClient, row: ActivationRequestRow): Promise<void> {
+  const signature = row.provider_charge_id
+  const fee = await handlePlatformFeeEvent(
+    {
+      type: 'payment.succeeded',
+      providerEventId: signature,
+      providerPaymentId: signature,
+      // USD major units of record — the figure `settle_platform_fee_payment`
+      // compares against the ledger row, never `settlement_base`.
+      amount: Number(row.amount ?? 0),
+      currency: (row.currency ?? 'usd').toUpperCase(),
+      reference: row.fee_payment_id ?? undefined,
+      metadata: {
+        kind: PLATFORM_FEE_METADATA_KIND,
+        tenant_id: row.tenant_id,
+        payment_id: row.fee_payment_id as string,
+      },
+      raw: { requestId: row.request_id, signature },
+    },
+    { provider: 'solana', admin },
+  )
+
+  if (!fee.handled || fee.action !== 'settle') {
+    throw new Error('Solana fee payment was not claimed by the platform fee ledger')
+  }
+  if (fee.outcome !== 'settled' && fee.outcome !== 'duplicate') {
+    throw new Error(`Solana fee payment ${fee.paymentId} not credited: ${fee.outcome}`)
+  }
+}
+
+/** Plan request (#610/#622): activate the paid period through the dispatcher. */
+async function activateSolanaPlan(admin: SupabaseClient, row: ActivationRequestRow): Promise<void> {
+  if (!row.plan_id) throw new Error('Solana plan request has no plan')
+  const embeddedPlan = row.platform_plans
+  const planSlug = (Array.isArray(embeddedPlan) ? embeddedPlan[0] : embeddedPlan)?.slug
+
+  await dispatchPlatformBillingEvent(
+    {
+      type: 'subscription.activated',
+      providerEventId: row.provider_charge_id,
+      providerPaymentId: row.provider_charge_id,
+      providerSubscriptionId: row.provider_charge_id,
+      // The USD figure the school owes, so the dispatcher's
+      // `platform_payment_succeeded` reports a real amount instead of 0.
+      // Deliberately the USD price, NOT `settlement_base` — lamports and USDC
+      // base units are what the chain is verified against and are meaningless
+      // summed alongside a card payment. Read-only for the dispatcher.
+      amount: Number(row.amount ?? 0),
+      currency: row.currency ?? 'usd',
+      metadata: {
+        tenant_id: row.tenant_id,
+        plan_id: row.plan_id,
+        ...(planSlug ? { plan_slug: planSlug } : {}),
+        ...(row.interval ? { interval: row.interval } : {}),
+        ...(row.switch_id ? { billing_switch_id: row.switch_id } : {}),
+      },
+      raw: { requestId: row.request_id, signature: row.provider_charge_id },
+    },
+    { provider: 'solana', admin },
+  )
 }

@@ -5,6 +5,11 @@
  * Every row is leased through the same token-fenced RPC as the live poll. The
  * downstream dispatcher deduplicates the on-chain signature, so reclaiming a
  * crashed worker cannot extend the paid period twice.
+ *
+ * Platform-FEE requests (#950, `fee_payment_id` set, no plan) ride the same
+ * queue: `processSolanaPlatformActivation` routes them to the fee ledger
+ * (`settle_platform_fee_payment`, idempotent) instead of plan activation, so
+ * this cron never needs to know the difference beyond labelling its alert.
  */
 
 import { timingSafeEqual } from 'node:crypto'
@@ -26,6 +31,7 @@ interface ActivationQueueRow {
 interface ParkedActivationRow {
   request_id: string
   tenant_id: string
+  fee_payment_id: string | null
   provider_charge_id: string | null
   activation_attempt_count: number
   activation_last_error: string | null
@@ -99,7 +105,7 @@ export async function GET(req: NextRequest) {
   const { data: parked, error: parkedError } = await admin
     .from('platform_payment_requests')
     .select(
-      'request_id, tenant_id, provider_charge_id, activation_attempt_count, activation_last_error',
+      'request_id, tenant_id, fee_payment_id, provider_charge_id, activation_attempt_count, activation_last_error',
     )
     .eq('payment_provider', 'solana')
     .eq('activation_state', 'failed_retryable')
@@ -136,7 +142,11 @@ export async function GET(req: NextRequest) {
         '[billing-alert]',
         JSON.stringify({
           type: 'solana_platform_activation_exhausted',
+          // A fee row's money is on chain but not credited to the ledger; a
+          // plan row's is on chain without the plan. Different fixes.
+          kind: row.fee_payment_id ? 'fee' : 'plan',
           requestId: row.request_id,
+          ...(row.fee_payment_id ? { feePaymentId: row.fee_payment_id } : {}),
           tenantId: row.tenant_id,
           signature: row.provider_charge_id,
           attempts: row.activation_attempt_count,
