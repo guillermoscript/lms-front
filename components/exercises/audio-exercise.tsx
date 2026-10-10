@@ -12,6 +12,7 @@ import {
   type MediaAttempt,
   type MediaSubmitState,
 } from './media-exercise-panels'
+import { classifyMediaSubmitFailure, type MediaAiError, type MediaSubmitStep } from '@/lib/exercises/media-submit-error'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 
 type SubmissionHistoryItem = MediaAttempt
@@ -75,6 +76,8 @@ export default function AudioExercise({
     isExerciseCompleted ? true : latestSubmission ? latestSubmission.status === 'completed' : undefined
   )
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  /** The school's AI setup (key, model, provider) is why the submission was refused. */
+  const [aiError, setAiError] = useState<MediaAiError | null>(null)
   const [showRecorder, setShowRecorder] = useState(!latestEvaluation)
   const [dailyLimitReached, setDailyLimitReached] = useState(
     !isUnlimited && (serverDailyAttemptsUsed ?? 0) >= maxDaily
@@ -96,6 +99,8 @@ export default function AudioExercise({
   const handleRecordingComplete = useCallback(async (blob: Blob, duration: number) => {
     setSubmitState('uploading')
     setErrorMsg(null)
+    setAiError(null)
+    let step: MediaSubmitStep = 'upload-url'
 
     try {
       // 1. Get a signed upload URL
@@ -110,19 +115,19 @@ export default function AudioExercise({
       })
 
       if (!uploadRes.ok) {
-        if (uploadRes.status === 429) {
-          try {
-            const errData = await uploadRes.json()
-            if (errData.error === 'daily_limit_reached') {
-              setDailyLimitReached(true)
-              setAttemptsUsed(maxDaily)
-              setSubmitState('error')
-              return
-            }
-          } catch { /* fall through */ }
+        // The body is read once and never printed: it is plain English text or
+        // raw JSON, and a second read of a consumed body throws.
+        const failure = classifyMediaSubmitFailure(step, uploadRes.status, await uploadRes.text().catch(() => ''))
+        if (failure.kind === 'daily_limit') {
+          setDailyLimitReached(true)
+          setAttemptsUsed(maxDaily)
+        } else if (failure.kind === 'ai') {
+          setAiError(failure.error)
+        } else {
+          setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'submitFailed'))
         }
-        const msg = await uploadRes.text()
-        throw new Error(msg || 'Failed to get upload URL')
+        setSubmitState('error')
+        return
       }
 
       const { submissionId, uploadUrl, dailyAttemptsUsed: newUsed } = await uploadRes.json()
@@ -138,6 +143,7 @@ export default function AudioExercise({
       if (!putRes.ok) throw new Error('Failed to upload audio file')
 
       // 3. Trigger analysis
+      step = 'analyze'
       setSubmitState('analyzing')
 
       const analyzeRes = await fetch('/api/exercises/media/analyze', {
@@ -147,8 +153,11 @@ export default function AudioExercise({
       })
 
       if (!analyzeRes.ok) {
-        const msg = await analyzeRes.text()
-        throw new Error(msg || 'Analysis failed')
+        const failure = classifyMediaSubmitFailure(step, analyzeRes.status, await analyzeRes.text().catch(() => ''))
+        if (failure.kind === 'ai') setAiError(failure.error)
+        else setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'analysisFailed'))
+        setSubmitState('error')
+        return
       }
 
       const { evaluation: result, passed: didPass } = await analyzeRes.json()
@@ -170,15 +179,16 @@ export default function AudioExercise({
       }, ...prev])
     } catch (err) {
       console.error('Audio submission error:', err)
-      setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
+      setErrorMsg(t(step === 'analyze' ? 'analysisFailed' : 'submitFailed'))
       setSubmitState('error')
     }
-  }, [exercise.id, maxDaily])
+  }, [exercise.id, maxDaily, t])
 
   const handleTryAgain = () => {
     setShowRecorder(true)
     setSubmitState('idle')
     setErrorMsg(null)
+    setAiError(null)
   }
 
   // A review is on screen whenever the student is not mid-recording. Then it
@@ -235,6 +245,7 @@ export default function AudioExercise({
             }
             submitState={submitState}
             errorMsg={errorMsg}
+            aiError={aiError}
             evaluation={evaluation}
             passed={passed}
             showRecorder={showRecorder}

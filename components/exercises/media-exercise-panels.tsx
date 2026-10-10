@@ -11,7 +11,9 @@ import {
   IconTarget,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { AiErrorNotice } from '@/components/ai/ai-error-notice'
 import { cn } from '@/lib/utils'
+import type { MediaAiError } from '@/lib/exercises/media-submit-error'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 import ExerciseBrief from './exercise-brief'
 import { AnnotatedTranscript, SpeechFeedback, TranscriptLegend } from './speech-feedback'
@@ -70,6 +72,8 @@ interface MediaTaskPanelProps {
   recorder: ReactNode
   submitState: MediaSubmitState
   errorMsg: string | null
+  /** The school's AI setup refused the submission: shown as the shared AI notice. */
+  aiError?: MediaAiError | null
   /** Last graded attempt, when there is one. */
   evaluation: SpeechEvaluation | null
   passed: boolean | undefined
@@ -94,6 +98,7 @@ export function MediaTaskPanel({
   recorder,
   submitState,
   errorMsg,
+  aiError,
   evaluation,
   passed,
   showRecorder,
@@ -179,11 +184,20 @@ export function MediaTaskPanel({
             </div>
           )}
 
-          {errorMsg && (
-            <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
-              <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-              {errorMsg}
-            </p>
+          {aiError ? (
+            <AiErrorNotice
+              code={aiError.code}
+              canConfigure={aiError.canConfigure}
+              settingsUrl={aiError.settingsUrl}
+              audience="student"
+            />
+          ) : (
+            errorMsg && (
+              <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
+                <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                {errorMsg}
+              </p>
+            )
           )}
 
           {submitState === 'analyzing' ? (

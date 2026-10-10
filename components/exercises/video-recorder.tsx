@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { IconVideo, IconPlayerStop, IconRefresh, IconCheck, IconUpload } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
-type RecorderState = 'idle' | 'countdown' | 'recording' | 'review' | 'submitting'
+type RecorderState = 'idle' | 'countdown' | 'recording' | 'review'
 
 interface VideoRecorderProps {
   onRecordingComplete: (blob: Blob, duration: number) => void
@@ -197,9 +197,11 @@ export function VideoRecorderComponent({
     setState('idle')
   }
 
+  // "Submitting" is the parent's `isSubmitting`, not a state of its own: the
+  // recorder had no way out of one, so a refused upload left a disabled spinner
+  // and no control to retry with. It stays in review and keeps the recording.
   const handleSubmit = () => {
     if (!blob) return
-    setState('submitting')
     onRecordingComplete(blob, durationRef.current)
   }
 
@@ -363,7 +365,7 @@ export function VideoRecorderComponent({
           </Button>
         )}
 
-        {state === 'review' && (
+        {state === 'review' && !isSubmitting && (
           <>
             <Button
               variant="outline"
@@ -385,7 +387,7 @@ export function VideoRecorderComponent({
           </>
         )}
 
-        {(state === 'submitting' || isSubmitting) && (
+        {isSubmitting && (
           <Button disabled className="gap-2 flex-1" size="lg">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
             {t('uploading')}
