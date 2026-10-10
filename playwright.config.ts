@@ -99,6 +99,9 @@ export default defineConfig({
     // never receives this env) look configured when it is not. Empty string =
     // unset: the provider's `||` falls back to api.binance.com.
     //
+    // platform-fee-paynow-rails.spec.ts stubs the hosted Binance Pay rail (order
+    // + webhook certificate) on that same origin (#952).
+    //
     // paypal-settlement.spec.ts needs the same treatment for the same reason —
     // it stubs PayPal's OAuth, signature-verify and Orders v2 calls, and it is
     // the APP that makes them.

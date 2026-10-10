@@ -171,6 +171,10 @@ jobs:
       # failure — the alarm we want. Server-runtime only (not a NEXT_PUBLIC_*), so
       # the Build step neither inlines it nor needs a Dockerfile ARG, and it must
       # never be set on a deployed environment.
+      # platform-fee-paynow-rails.spec.ts serves the hosted Binance Pay rail on
+      # the same origin (#952): the v3 order and the webhook certificate
+      # (lib/payments/binance-provider.ts). The two specs never overlap — one
+      # worker per shard — and the two APIs share no path.
       BINANCE_PAY_API_BASE: http://127.0.0.1:3099
       # paypal-settlement.spec.ts hosts a stub of PayPal's OAuth,
       # verify-webhook-signature and Orders v2 endpoints inside the Playwright

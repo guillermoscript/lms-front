@@ -25,11 +25,17 @@
  *    reference, wrong-amount refusal) is covered by unit tests instead:
  *    tests/unit/solana-fee-verify.test.ts, solana-fee-activation.test.ts,
  *    solana-fee-checkout.test.ts.
- *  - Binance Pay: test.fixme — lib/payments/binance-provider.ts hardcodes
- *    `https://bpay.binanceapi.com` (BINANCE_PAY_BASE_URL, line 44; used by
- *    `api()` line 225 for the order AND for the webhook-verification
- *    certificate, line 314), so there is no loopback seam: a checkout would make
- *    a real outbound call. Unit coverage: tests/unit/binance-fee-paynow.test.ts.
+ *  - Binance Pay: Binance's host. `BINANCE_PAY_API_BASE` (loopback-only seam,
+ *    #952) points the app at a stub in this process for the two calls the rail
+ *    makes: the v3 order and the webhook-verification certificate. The
+ *    certificate is an RSA key generated here, so the notification this spec
+ *    signs is verified by the shipping `verifyWebhook`, and one signed with any
+ *    other key is refused. Proves: the order is opened in MAJOR units of USDT
+ *    with the fee bag in `passThroughInfo` and a request signature made with the
+ *    merchant secret, a signed PAY_SUCCESS settles + clears the balance, and its
+ *    replay credits nothing twice. The notification body follows Binance's
+ *    documented shape (`totalFee`/`currency`, the prepay id as `bizIdStr`); it
+ *    has NOT been compared with a live sandbox payload (#479).
  *  - Hardening: an automated rail refuses a EUR balance
  *    (currency_not_supported_on_rail), an amount under $0.50
  *    (amount_below_minimum), a non-fee rail (unsupported_rail), and a
@@ -40,8 +46,9 @@
  *   PAYPAL_PLATFORM_WEBHOOK_ID=e2e-platform-webhook \
  *   npx playwright test platform-fee-paynow-rails --workers=1
  * PAYPAL_API_BASE (http://127.0.0.1:<port>), PAYPAL_CLIENT_ID/SECRET (any
- * value — the stub checks none) and SOLANA_RPC_URL/SOLANA_PLATFORM_WALLET come
- * from .env.local or the CI job env.
+ * value — the stub checks none), BINANCE_PAY_API_BASE (http://127.0.0.1:<port>),
+ * BINANCE_PAY_API_KEY/SECRET (any value) and SOLANA_RPC_URL/SOLANA_PLATFORM_WALLET
+ * come from .env.local or the CI job env.
  */
 import crypto from 'node:crypto'
 import { test, expect, type Page } from './utils/test'
@@ -79,10 +86,16 @@ const USD_FEE = 12.37
 const EUR_SALE = 50 // → fee 10.00 EUR
 const SOLANA_SALE = 25 // → fee 5.00
 const SOLANA_FEE = 5
+const BINANCE_SALE = 44.35 // → fee 8.87
+const BINANCE_FEE = 8.87
 
 const PAYPAL_BASE = process.env.PAYPAL_API_BASE
 const PAYPAL_READY = Boolean(PAYPAL_BASE && process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET)
 const SOLANA_READY = Boolean(process.env.SOLANA_RPC_URL && process.env.SOLANA_PLATFORM_WALLET)
+const BINANCE_BASE = process.env.BINANCE_PAY_API_BASE
+const BINANCE_KEY = process.env.BINANCE_PAY_API_KEY
+const BINANCE_SECRET = process.env.BINANCE_PAY_API_SECRET
+const BINANCE_READY = Boolean(BINANCE_BASE && BINANCE_KEY && BINANCE_SECRET)
 
 type Admin = ReturnType<typeof getAdmin>
 
@@ -173,6 +186,65 @@ function paypalHandler(hit: StubHit) {
     return o ? { status: 200, body: orderJson(o) } : undefined
   }
   return undefined
+}
+
+// ---------------------------------------------------------------------------
+// Binance Pay stub state: the certificate the app verifies webhooks against,
+// and the orders the APP opened.
+// ---------------------------------------------------------------------------
+
+const BINANCE_ORDER_PATH = '/binancepay/openapi/v3/order'
+const BINANCE_CERT_PATH = '/binancepay/openapi/certificates'
+
+// "Binance's" signing key for this run. The app fetches the public half from
+// the stub, so only a notification signed with `binanceKeys.privateKey` verifies.
+const binanceKeys = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 })
+const BINANCE_CERT_PEM = binanceKeys.publicKey.export({ type: 'spki', format: 'pem' }).toString()
+
+let binanceSeq = 0
+let binanceStub: LoopbackStub | undefined
+
+function binanceHandler(hit: StubHit) {
+  if (hit.method === 'POST' && hit.path === BINANCE_CERT_PATH) {
+    return {
+      status: 200,
+      body: { status: 'SUCCESS', code: '000000', data: [{ certSerial: `cert-${TAG}`, certPublic: BINANCE_CERT_PEM }] },
+    }
+  }
+  if (hit.method === 'POST' && hit.path === BINANCE_ORDER_PATH) {
+    // Carries TAG so the notification's event id (`PAY:<prepayId>:PAY_SUCCESS`) is swept by cleanup().
+    const prepayId = `PREPAY-${TAG}-${RUN}-${++binanceSeq}`
+    return {
+      status: 200,
+      body: {
+        status: 'SUCCESS',
+        code: '000000',
+        data: {
+          prepayId,
+          terminalType: 'WEB',
+          expireTime: Date.now() + 60 * 60 * 1000,
+          checkoutUrl: `https://pay.binance.com/en/checkout/${prepayId}`,
+          currency: hit.body?.currency,
+          totalFee: String(hit.body?.orderAmount),
+        },
+      },
+    }
+  }
+  return undefined
+}
+
+/** A Binance Pay notification, signed the way Binance signs: RSA-SHA256 over `ts\nnonce\nbody\n`, base64. */
+function signedBinanceWebhook(body: string, key: crypto.KeyObject = binanceKeys.privateKey) {
+  const timestamp = Date.now().toString()
+  const nonce = crypto.randomBytes(16).toString('hex')
+  const signature = crypto.createSign('RSA-SHA256').update(`${timestamp}\n${nonce}\n${body}\n`).sign(key, 'base64')
+  return {
+    'content-type': 'application/json',
+    'BinancePay-Certificate-SN': `cert-${TAG}`,
+    'BinancePay-Timestamp': timestamp,
+    'BinancePay-Nonce': nonce,
+    'BinancePay-Signature': signature,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -297,11 +369,14 @@ test.describe('platform fee pay-now on Binance / PayPal / Solana (#950)', () => 
     await seedSale(admin, USD_SALE, 'usd')
     await seedSale(admin, EUR_SALE, 'eur')
     if (PAYPAL_READY) paypalStub = await startLoopbackStub(PAYPAL_BASE!, paypalHandler)
+    if (BINANCE_READY) binanceStub = await startLoopbackStub(BINANCE_BASE!, binanceHandler)
   })
 
   test.afterAll(async () => {
     await paypalStub?.stop()
     paypalStub = undefined
+    await binanceStub?.stop()
+    binanceStub = undefined
     await cleanup()
   })
 
@@ -337,6 +412,7 @@ test.describe('platform fee pay-now on Binance / PayPal / Solana (#950)', () => 
 
     expect(await feePayments(admin)).toEqual([])
     expect(paypalStub?.hitsOn('POST', '/v2/checkout/orders') ?? []).toEqual([])
+    expect(binanceStub?.hitsOn('POST', BINANCE_ORDER_PATH) ?? []).toEqual([])
   })
 
   test.describe('PayPal (stubbed PAYPAL_API_BASE)', () => {
@@ -564,23 +640,122 @@ test.describe('platform fee pay-now on Binance / PayPal / Solana (#950)', () => 
     })
   })
 
-  test.describe('Binance Pay', () => {
-    test.fixme(
-      true,
-      'issue #952 — no loopback seam: lib/payments/binance-provider.ts:44 hardcodes https://bpay.binanceapi.com for the order (api(), :225) and the webhook-verification certificate (:314), so checkout would call the real Binance Pay and a signed PAY_SUCCESS cannot be verified against a test key. Needs a PAYPAL_API_BASE-style loopback override; covered meanwhile by tests/unit/binance-fee-paynow.test.ts',
+  test.describe('Binance Pay (stubbed BINANCE_PAY_API_BASE)', () => {
+    test.skip(
+      !BINANCE_READY,
+      'BINANCE_PAY_API_BASE (http://127.0.0.1:<port>), BINANCE_PAY_API_KEY and BINANCE_PAY_API_SECRET are required, and the app server must boot with them',
     )
 
-    test('checkout opens a MAJOR-unit USDT order; a signed PAY_SUCCESS settles; a replay is a no-op', async () => {
-      // Once the seam exists: stub POST /binancepay/openapi/v3/order (assert
-      // orderAmount === 12.37, currency 'USDT', passThroughInfo carries
-      // kind/tenant_id/payment_id) and /binancepay/openapi/certificates
-      // (certPublic = a PEM generated here with crypto.generateKeyPairSync('rsa')),
-      // then POST /api/billing/webhook/binance with BinancePay-Timestamp/Nonce and
-      // BinancePay-Signature = base64 RSA-SHA256 of `ts\nnonce\nbody\n`, body
-      // { bizType: 'PAY', bizIdStr, bizStatus: 'PAY_SUCCESS', data: JSON of
-      // { merchantTradeNo, prepayId, orderAmount: '12.37', currency: 'USDT',
-      // passThroughInfo } }; expect payment succeeded, ledger net 0, replay
-      // `duplicate: true`.
+    let paymentId = ''
+    let prepayId = ''
+    let merchantTradeNo = ''
+    let passThroughInfo = ''
+    let owed = 0
+
+    test('checkout opens a MAJOR-unit USDT order carrying the fee bag, signed with the merchant secret', async ({ page }) => {
+      test.setTimeout(120_000)
+      const admin = getAdmin()
+      const before = await ledger(admin, 'USD')
+      await seedSale(admin, BINANCE_SALE, 'usd')
+      // Whatever the earlier rails left unpaid is paid here too; when they ran,
+      // that is exactly this sale's fee.
+      owed = cents(before.net + BINANCE_FEE)
+      expect((await ledger(admin, 'USD')).net).toBe(owed)
+
+      await login(page, SEEDED.owner.email, SEEDED.owner.password, QA_BASE)
+      const res = await postJson(page, '/api/billing/fees/checkout', { provider: 'binance', locale: LOCALE })
+      expect(res.status, JSON.stringify(res.json)).toBe(200)
+      expect(res.json).toMatchObject({ kind: 'redirect', provider: 'binance', amount: owed, currency: 'USD', partial: false })
+      paymentId = String(res.json!.paymentId)
+
+      const created = binanceStub!.hitsOn('POST', BINANCE_ORDER_PATH)
+      expect(created).toHaveLength(1)
+      const order = created[0].body
+      // MAJOR units of the 1:1 USD stablecoin: 8.87, never Stripe's minor-unit 887.
+      expect(order.orderAmount).toBe(owed)
+      expect(order.currency).toBe('USDT')
+      expect(order.merchantTradeNo).toMatch(/^[A-Za-z0-9]{1,32}$/)
+      expect(order.returnUrl).toBe(`${QA_BASE}/${LOCALE}/dashboard/admin/earnings?fee_payment=${paymentId}`)
+      expect(order.cancelUrl).toBe(`${QA_BASE}/${LOCALE}/dashboard/admin/earnings`)
+      merchantTradeNo = order.merchantTradeNo
+      passThroughInfo = order.passThroughInfo
+      expect(passThroughInfo.length).toBeLessThanOrEqual(512)
+      // The whole owner binding: no plan_id, or the webhook would read it as a plan purchase.
+      expect(JSON.parse(passThroughInfo)).toEqual({
+        tenant_id: QA.id,
+        kind: 'platform_fee',
+        payment_id: paymentId,
+        ref: `platform_fee:${QA.id}:${paymentId}`,
+      })
+
+      // The request is signed as Binance requires: uppercase hex HMAC-SHA512 of
+      // `timestamp\nnonce\nbody\n` with the merchant secret, key id in the SN header.
+      const h = created[0].headers
+      expect(h['binancepay-certificate-sn']).toBe(BINANCE_KEY)
+      const expected = crypto
+        .createHmac('sha512', BINANCE_SECRET!)
+        .update(`${h['binancepay-timestamp']}\n${h['binancepay-nonce']}\n${JSON.stringify(order)}\n`)
+        .digest('hex')
+        .toUpperCase()
+      expect(h['binancepay-signature']).toBe(expected)
+
+      prepayId = String(res.json!.url).split('/').pop()!
+      expect(String(res.json!.url)).toBe(`https://pay.binance.com/en/checkout/${prepayId}`)
+      const payment = await feePayment(admin, paymentId)
+      expect(payment).toMatchObject({ provider: 'binance', status: 'pending', currency: 'USD', provider_reference: prepayId })
+      expect(Number(payment.amount)).toBe(owed)
+    })
+
+    test('a PAY_SUCCESS signed with the wrong key is refused; signed by Binance it settles; a replay is a no-op', async ({ request }) => {
+      test.setTimeout(120_000)
+      expect(prepayId, 'checkout test ran').toBeTruthy()
+      const admin = getAdmin()
+      const url = `${BASE}/api/billing/webhook/binance`
+      // Binance's order notification: the prepay id is the business id, and
+      // `data` is a JSON STRING carrying the order total as `totalFee`.
+      const body = JSON.stringify({
+        bizType: 'PAY',
+        bizIdStr: prepayId,
+        bizStatus: 'PAY_SUCCESS',
+        data: JSON.stringify({
+          merchantTradeNo,
+          productType: 'Platform fee',
+          productName: 'Platform fee',
+          transactTime: Date.now(),
+          tradeType: 'WEB',
+          totalFee: owed,
+          currency: 'USDT',
+          openUserId: `payer-${TAG}`,
+          passThroughInfo,
+        }),
+      })
+
+      // The seam swaps the HOST, not the check: a key the certificate endpoint
+      // did not publish does not verify.
+      const forged = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey
+      const refused = await request.post(url, { headers: signedBinanceWebhook(body, forged), data: body })
+      expect(refused.status(), await refused.text()).toBe(400)
+      expect((await feePayment(admin, paymentId)).status).toBe('pending')
+
+      const certsBefore = binanceStub!.hitsOn('POST', BINANCE_CERT_PATH).length
+      const first = await request.post(url, { headers: signedBinanceWebhook(body), data: body })
+      expect(first.status(), await first.text()).toBe(200)
+      expect(await first.json()).toMatchObject({ received: true, eventStatus: 'accepted' })
+      expect(binanceStub!.hitsOn('POST', BINANCE_CERT_PATH).length).toBeGreaterThan(certsBefore)
+
+      await expect.poll(async () => (await feePayment(admin, paymentId)).status, { timeout: 15_000 }).toBe('succeeded')
+      // The charge id is the prepay id — the id a refund notification reports.
+      expect(await feePayment(admin, paymentId)).toMatchObject({ provider_charge_id: prepayId, review_reason: null })
+      const settled = await ledger(admin, 'USD')
+      expect(settled.net).toBe(0)
+      expect(settled.paid).toBe(settled.accrued)
+      const succeeded = (await feePayments(admin)).filter((p) => p.status === 'succeeded').length
+
+      const replay = await request.post(url, { headers: signedBinanceWebhook(body), data: body })
+      expect(replay.status()).toBe(200)
+      expect(await replay.json()).toMatchObject({ duplicate: true })
+      expect((await feePayments(admin)).filter((p) => p.status === 'succeeded')).toHaveLength(succeeded)
+      expect(await ledger(admin, 'USD')).toEqual(settled)
     })
   })
 })
