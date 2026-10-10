@@ -7,6 +7,10 @@ const PAYMENT = 'pay-1'
 const h = vi.hoisted(() => ({
   user: { id: 'user-1' } as { id: string } | null,
   membership: { role: 'admin' } as { role: string } | null,
+  // The platform_fee_payments row the order names (#951).
+  payment: { status: 'pending' } as { status: string } | null,
+  paymentError: null as { code: string; message: string } | null,
+  paymentFilters: [] as [string, unknown][],
   getOrder: vi.fn(),
   captureOrder: vi.fn(),
   dispatch: vi.fn(),
@@ -24,7 +28,21 @@ vi.mock('@/lib/supabase/server', () => ({
     },
   }),
 }))
-vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ admin: true }) }))
+vi.mock('@/lib/supabase/admin', () => ({
+  createAdminClient: () => ({
+    admin: true,
+    from: () => {
+      const q: Record<string, unknown> = {}
+      q.select = () => q
+      q.eq = (k: string, v: unknown) => {
+        h.paymentFilters.push([k, v])
+        return q
+      }
+      q.maybeSingle = async () => ({ data: h.paymentError ? null : h.payment, error: h.paymentError })
+      return q
+    },
+  }),
+}))
 vi.mock('@/lib/billing/platform-billing', () => ({
   getPlatformBillingProvider: () => ({ getOrder: h.getOrder, captureOrder: h.captureOrder }),
 }))
@@ -54,6 +72,9 @@ const feeOrder = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   h.user = { id: 'user-1' }
   h.membership = { role: 'admin' }
+  h.payment = { status: 'pending' }
+  h.paymentError = null
+  h.paymentFilters = []
   h.getOrder.mockReset()
   h.captureOrder.mockReset()
   h.dispatch.mockReset().mockResolvedValue(undefined)
@@ -145,6 +166,75 @@ describe('GET /api/billing/fees/paypal/capture', () => {
     const res = await call()
     expect(new URL(res.headers.get('location')!).searchParams.get('paypal')).toBe('capture_failed')
     expect(h.dispatch).not.toHaveBeenCalled()
+  })
+
+  // #951: this capture is the one moment PayPal money moves, and
+  // settle_platform_fee_payment() never credits a row that is not pending.
+  describe('fee payment row guard', () => {
+    it('reads the row named by the order, scoped to the order tenant', async () => {
+      h.getOrder.mockResolvedValue(feeOrder())
+      h.captureOrder.mockResolvedValue({ captureId: 'CAP-1', captureStatus: 'COMPLETED', amount: 12.5, currency: 'USD' })
+      await call()
+      expect(h.paymentFilters).toEqual(
+        expect.arrayContaining([
+          ['payment_id', PAYMENT],
+          ['tenant_id', TENANT],
+        ]),
+      )
+    })
+
+    it.each(['canceled', 'failed', 'reversed'])('%s row: payment_closed, never captured', async (status) => {
+      h.getOrder.mockResolvedValue(feeOrder())
+      h.payment = { status }
+      const res = await call()
+      const loc = new URL(res.headers.get('location')!)
+      expect(loc.searchParams.get('paypal')).toBe('payment_closed')
+      // No "being processed" notice for money that never moved.
+      expect(loc.searchParams.get('fee_payment')).toBeNull()
+      expect(h.captureOrder).not.toHaveBeenCalled()
+      expect(h.dispatch).not.toHaveBeenCalled()
+    })
+
+    it('succeeded row: success without a second capture', async () => {
+      h.getOrder.mockResolvedValue(feeOrder())
+      h.payment = { status: 'succeeded' }
+      const res = await call()
+      const loc = new URL(res.headers.get('location')!)
+      expect(loc.searchParams.get('paypal')).toBeNull()
+      expect(loc.searchParams.get('fee_payment')).toBe(PAYMENT)
+      expect(h.captureOrder).not.toHaveBeenCalled()
+      expect(h.dispatch).not.toHaveBeenCalled()
+    })
+
+    it('no such row for this tenant: not_fee_order, never captured', async () => {
+      h.getOrder.mockResolvedValue(feeOrder())
+      h.payment = null
+      const res = await call()
+      expect(new URL(res.headers.get('location')!).searchParams.get('paypal')).toBe('not_fee_order')
+      expect(h.captureOrder).not.toHaveBeenCalled()
+    })
+
+    it('row lookup fails: fails closed, never captured', async () => {
+      h.getOrder.mockResolvedValue(feeOrder())
+      h.paymentError = { code: '57014', message: 'timeout' }
+      const res = await call()
+      expect(new URL(res.headers.get('location')!).searchParams.get('paypal')).toBe('capture_failed')
+      expect(h.captureOrder).not.toHaveBeenCalled()
+      expect(h.dispatch).not.toHaveBeenCalled()
+    })
+
+    it('an order that is ALREADY captured still settles, whatever the row says', async () => {
+      h.getOrder.mockResolvedValue(feeOrder({ captureId: 'CAP-9', captureStatus: 'COMPLETED' }))
+      h.payment = { status: 'canceled' }
+      const res = await call()
+      const loc = new URL(res.headers.get('location')!)
+      expect(loc.searchParams.get('paypal')).toBeNull()
+      expect(loc.searchParams.get('fee_payment')).toBe(PAYMENT)
+      expect(h.captureOrder).not.toHaveBeenCalled()
+      // Money moved: the settle function decides (credits, or flags for review).
+      expect(h.dispatch).toHaveBeenCalledTimes(1)
+      expect(h.dispatch.mock.calls[0][0]).toMatchObject({ providerEventId: 'platform-paypal-capture:CAP-9' })
+    })
   })
 
   it('cross-origin next falls back to the earnings page', async () => {

@@ -95,7 +95,7 @@ gh workflow enable cron.yml
 | `redeliver-webhook-events` | `*/10` | An event whose worker died mid-lease is never processed by anyone — paid, never enrolled (#625) |
 | `reconcile-solana-platform-activations` | `*/10` | School paid the platform on chain, activation crashed, plan never applied (#622) |
 | `daily-digest` | hourly | No digests, no streak nudges. Must be **hourly** — each tenant sends at its own local hour |
-| `expire-stale-checkouts` | hourly | An abandoned PayPal/Lemon Squeezy/Binance redirect leaves a `pending` transaction inside both purchase-uniqueness indexes, and the buyer can never retry that item again (#624). Reconciles PayPal orders before expiring, so an approved-but-uncaptured payment is taken rather than thrown away |
+| `expire-stale-checkouts` | hourly | Two phases, see §2.2. **Student checkouts:** an abandoned PayPal/Lemon Squeezy/Binance redirect leaves a `pending` transaction inside both purchase-uniqueness indexes, and the buyer can never retry that item again (#624). Reconciles PayPal orders before expiring, so an approved-but-uncaptured payment is taken rather than thrown away. **Platform fee pay-now:** a hosted fee checkout the school walked away from leaves its `platform_fee_payments` row `pending` forever (#951) |
 | `expire-subscriptions` | `0 0` | Lapsed self-managed subscriptions (Solana, manual) keep their entitlements forever |
 | `expire-payment-requests` | `0 0` | A student-facing manual/offline `payment_requests` row (#802) never closes: an unpaid request blocks that student from ever requesting the same item again (one-open-per-item unique index), and one who paid gets no "your request is about to expire" nudge before it lapses |
 | `league-rollover` | Mon `0 1` | Nothing — pg_cron is primary. This is the fallback |
@@ -157,6 +157,64 @@ select enforcement_mode, fee_grace_days, min_blocking_balance from public.platfo
 update public.platform_fee_config set enforcement_mode = 'notify_only';  -- emergency stop (as super admin)
 select state, count(*) from public.tenant_fee_standing group by 1;
 ```
+
+### 2.2 `expire-stale-checkouts` (#624, #951)
+
+Two independent phases in one route (no second route: production schedules
+routes through pg_cron, and a new one would not run until someone scheduled
+it). Each reports its own counts; if one fails the response is a **500 that
+still carries the other phase's result**, so the job alerts and nothing is
+hidden. Both are idempotent.
+
+1. **Student checkouts** (`transactions`, top-level keys `scanned` /
+   `recovered` / `expired` / `stale_pending`) — unchanged from #624.
+2. **Platform fee payments** (`platform_fee_payments`, under `fee_payments`) —
+   `lib/billing/platform-fee-payment-expiry.ts`. Candidates are `pending` rows
+   older than the checkout TTL (`CHECKOUT_TTL_MINUTES`, default 24h) with no
+   `review_reason`. For each one the checkout is **closed at the provider
+   first**, and only then is the row set to `canceled`:
+   `settle_platform_fee_payment()` credits only a `pending` row, so a payment
+   landing on a cancelled one is flagged for review instead of credited.
+
+| `fee_payments` key | Means |
+|---|---|
+| `scanned` | Stale pending rows read this pass |
+| `skipped` | A `platform_payment_requests` row points at the payment (any status). That request's lifecycle decides, never this TTL — which is what keeps a `payment_received` request safe |
+| `recovered` | The provider says it is paid or being paid. Never cancelled. A Stripe session that is `complete` + `paid` and a PayPal `COMPLETED` capture are credited on the spot through the webhook's own settle function; anything else waits for its webhook |
+| `waiting` | The provider did not answer (or the cancel write failed). Left pending, retried next hour |
+| `expired` | What the database actually cancelled — a webhook that settled the row mid-pass wins |
+| `error` | The phase could not read the ledger. Nothing was closed or cancelled |
+
+Per rail: **Stripe** expires an `open` Checkout Session before cancelling;
+**PayPal** cancels only an order with no capture (the capture route refuses a
+row that is no longer pending); **Binance Pay** cannot be asked or closed yet
+(#952), so its row is cancelled on the TTL alone and a late `PAY_SUCCESS` shows
+up as `review_reason` on a `canceled` row; an orphan **manual / Solana** row
+(its request insert failed) is cancelled, since nothing can credit it without
+the request.
+
+`waiting` that stays above zero run after run means a provider is not
+answering — expired credentials, or a rail whose key was removed while it
+still had pending rows:
+
+```sql
+-- what the sweep keeps leaving behind, oldest first
+select p.payment_id, p.tenant_id, p.provider, p.provider_reference, p.amount, p.currency, p.created_at
+from public.platform_fee_payments p
+where p.status = 'pending' and p.review_reason is null
+  and p.created_at < now() - interval '24 hours'
+  and not exists (select 1 from public.platform_payment_requests r where r.fee_payment_id = p.payment_id)
+order by p.created_at;
+
+-- payments that arrived on a row the sweep (or a newer attempt) had already cancelled
+select payment_id, tenant_id, provider, amount, currency, review_reason, updated_at
+from public.platform_fee_payments
+where status = 'canceled' and review_reason is not null
+order by updated_at desc;
+```
+
+The second list is money a school paid that is **not credited**: a super admin
+records it from the fee ledger (offline payment) or refunds it at the provider.
 
 ---
 

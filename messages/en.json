@@ -9464,6 +9464,10 @@
       "openRequest": "Transfer of {amount} waiting for our confirmation (requested {date}).",
       "underReview": "{count, plural, one {# payment is} other {# payments are}} under review. We credit it once it's checked.",
       "paymentReturned": "Thanks. Your payment is being processed and your balance updates as soon as the provider confirms it.",
+      "paypalReturn": {
+        "payment_closed": "That PayPal checkout was closed, so you weren't charged. Start a new payment.",
+        "failed": "We couldn't confirm your PayPal payment. If your balance hasn't changed, try again."
+      },
       "loadError": "We couldn't load your platform fee balance.",
       "retry": "Retry",
       "timezone": "Dates are in UTC.",
@@ -9557,6 +9561,8 @@
         "amount_above_balance": "That's more than you owe.",
         "amount_below_minimum": "Automatic payments start at $0.50. Pay smaller amounts by bank transfer.",
         "fee_request_open": "You already have a transfer waiting for confirmation.",
+        "fee_checkout_opening": "A checkout is already opening. Wait a moment and try again.",
+        "fee_payment_in_progress": "A payment is already being processed. Your balance updates once it's confirmed.",
         "provider_unavailable": "This payment method isn't available right now.",
         "provider_error": "We couldn't start the checkout. Try again.",
         "forbidden": "Only school admins can pay platform fees.",

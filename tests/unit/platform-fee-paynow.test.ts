@@ -106,6 +106,11 @@ vi.mock('@/lib/billing/platform-fee-paynow', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/billing/platform-fee-paynow')>()
   return { ...actual, getTenantFeeBalances: () => Promise.resolve(state.balances) }
 })
+// The open-attempt guard on the hosted rails (#951) has its own suite:
+// platform-fee-supersede.test.ts.
+vi.mock('@/lib/billing/platform-fee-supersede', () => ({
+  supersedeOpenFeeCheckouts: () => Promise.resolve({ ok: true, superseded: [] }),
+}))
 vi.mock('@/lib/billing/platform-billing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/billing/platform-billing')>()
   return {

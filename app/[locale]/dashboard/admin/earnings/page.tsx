@@ -290,7 +290,12 @@ export default async function AdminEarningsPage({
 
         {/* #929: balance, Pay now, statements. Streams in; fixed-height skeleton, no layout shift. */}
         <Suspense fallback={<FeeBalanceSkeleton />}>
-          <FeeBalanceCard tenantId={tenantId} locale={locale} paymentReturned={typeof sp.fee_payment === 'string'} />
+          <FeeBalanceCard
+            tenantId={tenantId}
+            locale={locale}
+            paymentReturned={typeof sp.fee_payment === 'string'}
+            paypalReturn={typeof sp.paypal === 'string' ? sp.paypal : undefined}
+          />
         </Suspense>
 
         {/* Secondary, opposite direction: only when the school sells on a platform-collected rail. */}

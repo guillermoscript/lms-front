@@ -21,6 +21,18 @@
  * back). Stripe Elements, Solana Pay and manual payments never set
  * `checkout_expires_at` at all, so they cannot appear in this queue.
  *
+ * SECOND PHASE: stale platform-fee pay-now payments (#951). A school that
+ * walks away from a hosted fee checkout leaves a `pending`
+ * `platform_fee_payments` row that nothing else ever closes (only the manual
+ * and Solana rails have a request row whose expiry cancels it). Same contract,
+ * other table: close the checkout at the provider, then cancel
+ * (`lib/billing/platform-fee-payment-expiry.ts`). It lives here rather than in
+ * a route of its own because production schedules routes through pg_cron, and
+ * a new route would not run until someone scheduled it.
+ *
+ * The two phases are independent: each reports its own result, and one failing
+ * never hides what the other did.
+ *
  * Secured by CRON_SECRET. Scheduled from .github/workflows/cron.yml; operating
  * notes in docs/CRON_RUNBOOK.md.
  */
@@ -34,6 +46,10 @@ import { abandonStripeCheckout } from '@/lib/payments/stripe-reconcile'
 import { getStripe } from '@/lib/stripe'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
+import {
+  expireStaleFeePayments,
+  type FeePaymentExpiryResult,
+} from '@/lib/billing/platform-fee-payment-expiry'
 
 export const runtime = 'nodejs'
 
@@ -63,6 +79,13 @@ interface StaleCheckout {
   transaction_date: string
 }
 
+interface StaleCheckoutResult {
+  scanned: number
+  recovered: number
+  expired: number
+  stale_pending: number
+}
+
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET
   const provided = req.headers.get('authorization')?.replace('Bearer ', '')
@@ -71,8 +94,38 @@ export async function GET(req: NextRequest) {
   }
 
   const admin = getSupabaseAdmin()
-  const now = new Date().toISOString()
+  const now = new Date()
 
+  let checkouts: StaleCheckoutResult | { error: string }
+  try {
+    checkouts = await expireStaleCheckouts(admin, now.toISOString())
+  } catch (err) {
+    console.error('[expire-stale-checkouts] checkout phase failed:', err)
+    checkouts = { error: 'Checkout phase failed' }
+  }
+
+  let feePayments: FeePaymentExpiryResult | { error: string }
+  try {
+    feePayments = await expireStaleFeePayments(admin, now)
+  } catch (err) {
+    console.error('[expire-stale-checkouts] fee payment phase failed:', err instanceof Error ? err.message : err)
+    feePayments = { error: 'Fee payment phase failed' }
+  }
+
+  // A failed phase still answers with the other one's counts, and with a 500 so
+  // the scheduler's own job-success alerting sees it. Both phases are
+  // idempotent, so the retry is safe.
+  const result = { ...checkouts, fee_payments: feePayments }
+  const failed = 'error' in checkouts || 'error' in feePayments
+  console.log('[expire-stale-checkouts]', result)
+  return NextResponse.json(result, { status: failed ? 500 : 200 })
+}
+
+/** Phase 1 (#624): abandoned student checkouts on `transactions`. */
+async function expireStaleCheckouts(
+  admin: SupabaseClient,
+  now: string,
+): Promise<StaleCheckoutResult | { error: string }> {
   const { data: stale, error } = await admin
     .from('transactions')
     .select(
@@ -86,7 +139,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     console.error('[expire-stale-checkouts] query failed:', error)
-    return NextResponse.json({ error: 'Query failed' }, { status: 500 })
+    return { error: 'Query failed' }
   }
 
   const rows = (stale ?? []) as StaleCheckout[]
@@ -152,7 +205,7 @@ export async function GET(req: NextRequest) {
 
     if (updateError) {
       console.error('[expire-stale-checkouts] update failed:', updateError)
-      return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+      return { error: 'Update failed' }
     }
 
     // Report only what the DB actually expired — a row a webhook settled
@@ -194,7 +247,7 @@ export async function GET(req: NextRequest) {
     .not('checkout_expires_at', 'is', null)
     .lt('checkout_expires_at', new Date().toISOString())
 
-  const result = {
+  return {
     scanned: rows.length,
     recovered: recovered.length,
     // What the DB actually expired, not what this pass selected — the two
@@ -202,6 +255,4 @@ export async function GET(req: NextRequest) {
     expired: expiredCount,
     stale_pending: remaining ?? 0,
   }
-  console.log('[expire-stale-checkouts]', result)
-  return NextResponse.json(result)
 }
