@@ -40,8 +40,48 @@ import {
   CheckoutSession,
   RefundParams,
 } from './types'
+import { isLoopbackOrigin } from './loopback-origin'
 
 const BINANCE_PAY_BASE_URL = 'https://bpay.binanceapi.com'
+
+let warnedNonLoopback = false
+
+/**
+ * Binance Pay's API host. Overridable so an E2E can point the server at a local
+ * stub for the order and for the webhook-verification certificate; production
+ * never sets it. Read PER CALL, not frozen at import, because the value must
+ * follow the server process's env.
+ *
+ * LOOPBACK ONLY, and that is a security boundary, not tidiness. Every request
+ * to this host is signed with the platform's merchant secret, and the
+ * certificate it answers with is the key every Binance webhook is verified
+ * against: a stray non-loopback value (a copy-pasted Dokploy env, a leaked
+ * `.env.local` on a self-hosted install, a bad Actions variable) would let that
+ * host mint PAY_SUCCESS notifications we accept. So anything that is not
+ * loopback is ignored (warned once) and we fall back to Binance. A
+ * `NODE_ENV !== 'production'` guard would NOT work here: CI runs the specs
+ * against `next start`, i.e. NODE_ENV=production.
+ *
+ * The same variable drives the binance_personal adapter (api.binance.com); the
+ * two APIs share no path, so one stub origin serves both.
+ *
+ * A trailing slash is trimmed — `api()` interpolates `${baseUrl()}/binancepay/…`.
+ */
+function baseUrl(): string {
+  const override = process.env.BINANCE_PAY_API_BASE
+  if (!override) return BINANCE_PAY_BASE_URL
+  if (!isLoopbackOrigin(override)) {
+    if (!warnedNonLoopback) {
+      warnedNonLoopback = true
+      console.warn(
+        `[binance] ignoring non-loopback BINANCE_PAY_API_BASE (${override}) — using ${BINANCE_PAY_BASE_URL}. ` +
+          'This override exists only to point an E2E at a local stub; it must never be set on a deployed environment.',
+      )
+    }
+    return BINANCE_PAY_BASE_URL
+  }
+  return override.replace(/\/+$/, '')
+}
 
 /**
  * Shape of the JSON we place in the order's passThroughInfo (≤512 chars).
@@ -222,7 +262,7 @@ export class BinancePayProvider implements IPaymentProvider {
       .digest('hex')
       .toUpperCase()
 
-    const response = await fetch(`${BINANCE_PAY_BASE_URL}${path}`, {
+    const response = await fetch(`${baseUrl()}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
