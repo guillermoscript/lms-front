@@ -13,9 +13,10 @@ const ALLOWED_EXTENSIONS = new Set(['webm', 'ogg', 'mp3', 'mp4', 'm4a', 'wav', '
 const MAX_PENDING_SUBMISSIONS = 5 // per user per exercise
 // A row still pending/processing after this long is not in flight: analyze is
 // capped at 120s and the upload before it takes minutes at most. Nothing sweeps
-// or re-analyzes such a row (an abandoned upload, an analyze reset to pending
-// on a provider failure), so counting them without a bound locked the student
-// out of the exercise for good after five.
+// such a row (an abandoned upload, an analyze reset to pending on a provider
+// failure) and only the web client's in-page retry re-analyzes one, so counting
+// them without a bound locked the student out of the exercise for good after
+// five.
 const PENDING_WINDOW_MS = 15 * 60 * 1000
 
 export async function POST(req: Request) {

@@ -85,6 +85,12 @@ interface MediaTaskPanelProps {
   minDuration: number
   maxDuration: number
   onRecordAgain: () => void
+  /**
+   * Set while the recording the AI notice is about can still be graded: the
+   * notice then carries a control that analyzes it again, with no new upload
+   * and so no new daily attempt.
+   */
+  onRetryAnalysis?: () => void
   /** Defaults to a microphone. */
   recordIcon?: ReactNode
 }
@@ -108,6 +114,7 @@ export function MediaTaskPanel({
   minDuration,
   maxDuration,
   onRecordAgain,
+  onRetryAnalysis,
   recordIcon,
 }: MediaTaskPanelProps) {
   const t = useTranslations(ns)
@@ -190,7 +197,17 @@ export function MediaTaskPanel({
               canConfigure={aiError.canConfigure}
               settingsUrl={aiError.settingsUrl}
               audience="student"
-            />
+            >
+              {onRetryAnalysis && (
+                <Button
+                  variant="outline"
+                  onClick={onRetryAnalysis}
+                  className="h-9 shrink-0 px-3 text-sm text-foreground"
+                >
+                  {t('retryAnalysis')}
+                </Button>
+              )}
+            </AiErrorNotice>
           ) : (
             errorMsg && (
               <p className="flex items-start gap-2 text-sm text-destructive" role="alert">

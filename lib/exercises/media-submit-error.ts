@@ -47,6 +47,25 @@ export function classifyMediaSubmitFailure(
   return { kind: 'generic' }
 }
 
+/**
+ * What a refused analyze leaves of the recording. Its row already counted
+ * against the daily cap and the file is in storage, so sending the same take
+ * through upload-url again would spend a second attempt on nothing (#958):
+ * - `retry`: a typed AI error (key, quota, provider down). The route put the
+ *   row back to `pending`, or never claimed it, so the same submission can be
+ *   analyzed again. A provider rejection that is not transient is typed too but
+ *   leaves the row `failed`; the retry learns that as a 400.
+ * - `busy`: 409, a run on it is still in flight. Keep it, ask again later.
+ * - `gone`: anything else. The row is terminal (400), missing (404) or the
+ *   student lost access: only a new recording goes on from here.
+ */
+export type MediaAnalyzeRetry = 'retry' | 'busy' | 'gone'
+
+export function mediaAnalyzeRetry(status: number, failure: MediaSubmitFailure): MediaAnalyzeRetry {
+  if (failure.kind === 'ai') return 'retry'
+  return status === 409 ? 'busy' : 'gone'
+}
+
 function isDailyLimitBody(bodyText: string): boolean {
   try {
     const parsed = JSON.parse(bodyText) as { error?: unknown } | null

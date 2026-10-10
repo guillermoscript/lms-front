@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AI_ERROR_CODES, AI_ERROR_HTTP_STATUS } from '@/lib/ai/error-codes'
-import { classifyMediaSubmitFailure } from '@/lib/exercises/media-submit-error'
+import { classifyMediaSubmitFailure, mediaAnalyzeRetry } from '@/lib/exercises/media-submit-error'
 
 const typed = (code: string, canConfigure = false) =>
   JSON.stringify({
@@ -54,5 +54,34 @@ describe('classifyMediaSubmitFailure', () => {
     for (const [status, body] of bodies) {
       expect(classifyMediaSubmitFailure('analyze', status, body)).toEqual({ kind: 'generic' })
     }
+  })
+})
+
+describe('mediaAnalyzeRetry', () => {
+  const retryAfter = (status: number, body: string) =>
+    mediaAnalyzeRetry(status, classifyMediaSubmitFailure('analyze', status, body))
+
+  // The row behind a refused analyze already counted against the daily cap.
+  // Whatever the school's AI refused must be re-analyzed on that same row, not
+  // uploaded again as a new attempt (#958).
+  it.each(AI_ERROR_CODES)('%s keeps the recording for another analysis', (code) => {
+    expect(retryAfter(AI_ERROR_HTTP_STATUS[code], typed(code))).toBe('retry')
+  })
+
+  it('a 409 is a run still in flight: keep the recording, do not upload it again', () => {
+    expect(retryAfter(409, 'This submission is already being analyzed')).toBe('busy')
+    expect(retryAfter(409, 'Submission is already being processed')).toBe('busy')
+  })
+
+  it('a terminal, missing or forbidden row is gone', () => {
+    const answers: [number, string][] = [
+      [400, 'This submission cannot be analyzed'],
+      [404, 'Submission not found'],
+      [403, 'You do not have access to this course'],
+      [401, 'Unauthorized'],
+      [500, JSON.stringify({ error: { code: 'analysis_failed' } })],
+      [422, JSON.stringify({ error: { code: 'audio_unavailable' } })],
+    ]
+    for (const [status, body] of answers) expect(retryAfter(status, body)).toBe('gone')
   })
 })

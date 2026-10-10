@@ -12,7 +12,7 @@ import {
   type MediaAttempt,
   type MediaSubmitState,
 } from './media-exercise-panels'
-import { classifyMediaSubmitFailure, type MediaAiError, type MediaSubmitStep } from '@/lib/exercises/media-submit-error'
+import { classifyMediaSubmitFailure, mediaAnalyzeRetry, type MediaAiError } from '@/lib/exercises/media-submit-error'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 
 type SubmissionHistoryItem = MediaAttempt
@@ -78,6 +78,12 @@ export default function AudioExercise({
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   /** The school's AI setup (key, model, provider) is why the submission was refused. */
   const [aiError, setAiError] = useState<MediaAiError | null>(null)
+  /**
+   * A recording that is uploaded and counted, whose analysis the school's AI
+   * refused. Retry re-analyzes that row: a new upload of the same take would
+   * spend another daily attempt (#958).
+   */
+  const [retrySubmissionId, setRetrySubmissionId] = useState<number | null>(null)
   const [showRecorder, setShowRecorder] = useState(!latestEvaluation)
   const [dailyLimitReached, setDailyLimitReached] = useState(
     !isUnlimited && (serverDailyAttemptsUsed ?? 0) >= maxDaily
@@ -96,11 +102,71 @@ export default function AudioExercise({
   const minDuration = config.min_duration_seconds ?? 5
   const maxDuration = config.max_duration_seconds ?? 300
 
+  // Analysis of an uploaded recording: the last step of a submission, and all
+  // of a retry. `retryOf` is the notice the retry started from, put back when
+  // the answer says nothing new about the recording.
+  const analyze = useCallback(async (submissionId: number, retryOf: MediaAiError | null) => {
+    setSubmitState('analyzing')
+    setErrorMsg(null)
+    setAiError(null)
+
+    try {
+      const analyzeRes = await fetch('/api/exercises/media/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId }),
+      })
+
+      if (!analyzeRes.ok) {
+        const failure = classifyMediaSubmitFailure('analyze', analyzeRes.status, await analyzeRes.text().catch(() => ''))
+        const retry = mediaAnalyzeRetry(analyzeRes.status, failure)
+        if (failure.kind === 'ai') {
+          // Still gradable once the school's AI answers: keep it for Retry.
+          setAiError(failure.error)
+          setRetrySubmissionId(submissionId)
+        } else if (retry === 'busy' && retryOf) {
+          setAiError(retryOf)
+        } else {
+          setRetrySubmissionId(null)
+          setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'analysisFailed'))
+        }
+        setSubmitState('error')
+        return
+      }
+
+      const { evaluation: result, passed: didPass } = await analyzeRes.json()
+      setRetrySubmissionId(null)
+      setEvaluation(result)
+      setPassed(didPass)
+      setShowRecorder(false)
+      setSubmitState('done')
+      setGradedNonce((n) => n + 1)
+
+      // Add to history
+      setSubmissionHistory(prev => [{
+        id: submissionId,
+        ai_evaluation: result,
+        score: result.score,
+        status: didPass ? 'completed' : 'failed',
+        submission_id: submissionId,
+        created_at: new Date().toISOString(),
+        duration_seconds: result.metrics?.duration_seconds ?? null,
+      }, ...prev])
+    } catch (err) {
+      console.error('Audio submission error:', err)
+      // A retry that got no answer keeps the recording and its notice.
+      if (retryOf) setAiError(retryOf)
+      else setErrorMsg(t('analysisFailed'))
+      setSubmitState('error')
+    }
+  }, [t])
+
   const handleRecordingComplete = useCallback(async (blob: Blob, duration: number) => {
     setSubmitState('uploading')
     setErrorMsg(null)
     setAiError(null)
-    let step: MediaSubmitStep = 'upload-url'
+    // A new recording never re-analyzes the one before it.
+    setRetrySubmissionId(null)
 
     try {
       // 1. Get a signed upload URL
@@ -117,7 +183,7 @@ export default function AudioExercise({
       if (!uploadRes.ok) {
         // The body is read once and never printed: it is plain English text or
         // raw JSON, and a second read of a consumed body throws.
-        const failure = classifyMediaSubmitFailure(step, uploadRes.status, await uploadRes.text().catch(() => ''))
+        const failure = classifyMediaSubmitFailure('upload-url', uploadRes.status, await uploadRes.text().catch(() => ''))
         if (failure.kind === 'daily_limit') {
           setDailyLimitReached(true)
           setAttemptsUsed(maxDaily)
@@ -145,52 +211,25 @@ export default function AudioExercise({
       if (!putRes.ok) throw new Error('Failed to upload audio file')
 
       // 3. Trigger analysis
-      step = 'analyze'
-      setSubmitState('analyzing')
-
-      const analyzeRes = await fetch('/api/exercises/media/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId }),
-      })
-
-      if (!analyzeRes.ok) {
-        const failure = classifyMediaSubmitFailure(step, analyzeRes.status, await analyzeRes.text().catch(() => ''))
-        if (failure.kind === 'ai') setAiError(failure.error)
-        else setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'analysisFailed'))
-        setSubmitState('error')
-        return
-      }
-
-      const { evaluation: result, passed: didPass } = await analyzeRes.json()
-      setEvaluation(result)
-      setPassed(didPass)
-      setShowRecorder(false)
-      setSubmitState('done')
-      setGradedNonce((n) => n + 1)
-
-      // Add to history
-      setSubmissionHistory(prev => [{
-        id: submissionId,
-        ai_evaluation: result,
-        score: result.score,
-        status: didPass ? 'completed' : 'failed',
-        submission_id: submissionId,
-        created_at: new Date().toISOString(),
-        duration_seconds: result.metrics?.duration_seconds ?? null,
-      }, ...prev])
+      await analyze(submissionId, null)
     } catch (err) {
       console.error('Audio submission error:', err)
-      setErrorMsg(t(step === 'analyze' ? 'analysisFailed' : 'submitFailed'))
+      setErrorMsg(t('submitFailed'))
       setSubmitState('error')
     }
-  }, [exercise.id, maxDaily, t])
+  }, [exercise.id, maxDaily, t, analyze])
 
   const handleTryAgain = () => {
     setShowRecorder(true)
     setSubmitState('idle')
     setErrorMsg(null)
     setAiError(null)
+    setRetrySubmissionId(null)
+  }
+
+  // Same recording, same row: no upload-url, so no new daily attempt.
+  const handleRetryAnalysis = () => {
+    if (retrySubmissionId !== null) void analyze(retrySubmissionId, aiError)
   }
 
   // A review is on screen whenever the student is not mid-recording. Then it
@@ -257,6 +296,7 @@ export default function AudioExercise({
             minDuration={minDuration}
             maxDuration={maxDuration}
             onRecordAgain={handleTryAgain}
+            onRetryAnalysis={retrySubmissionId !== null ? handleRetryAnalysis : undefined}
           />
         }
         taskLabel={tWorkspace('record')}
