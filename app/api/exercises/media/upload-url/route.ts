@@ -1,12 +1,23 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import { createTenantAi } from '@/lib/ai/tenant-ai'
+import { isAiError } from '@/lib/ai/errors'
+import { aiFailureResponse, canConfigureAi } from '@/lib/exercises/ai-failure'
+import { getPipeline } from '@/lib/speech/registry'
 
 const MEDIA_EXERCISE_TYPES = ['audio_evaluation', 'video_evaluation']
 const STORAGE_BUCKET = 'exercise-media'
 // mov/3gp: native mobile camera output (iOS records .mov, some Androids .3gp)
 const ALLOWED_EXTENSIONS = new Set(['webm', 'ogg', 'mp3', 'mp4', 'm4a', 'wav', 'aac', 'mov', '3gp'])
 const MAX_PENDING_SUBMISSIONS = 5 // per user per exercise
+// A row still pending/processing after this long is not in flight: analyze is
+// capped at 120s and the upload before it takes minutes at most. Nothing sweeps
+// such a row (an abandoned upload, an analyze reset to pending on a provider
+// failure) and only the web client's in-page retry re-analyzes one, so counting
+// them without a bound locked the student out of the exercise for good after
+// five.
+const PENDING_WINDOW_MS = 15 * 60 * 1000
 
 export async function POST(req: Request) {
   // 1. Auth — cookie session (web) or Bearer token (mobile), server-verified
@@ -69,6 +80,30 @@ export async function POST(req: Request) {
     return new Response('You are not enrolled in this course', { status: 403 })
   }
 
+  // 4b. Resolve the school's STT + coach, the exact pair /media/analyze runs,
+  // BEFORE the caps and before any row (#958). The row opened below is what the
+  // daily cap counts, so a school with no usable key used to cost the student
+  // an attempt per try and only said so at analyze. Now it is the typed
+  // 402/424/422 here, with nothing written. The role lookup (settings link for
+  // admins) only runs on this error path.
+  const ai = createTenantAi(tenantId, { actorId: user.id })
+  try {
+    await getPipeline(ai)
+  } catch (err) {
+    return aiFailureResponse(
+      err,
+      {
+        // The error names whichever of speech_stt / speech_coach was the problem.
+        feature: isAiError(err) && err.feature ? err.feature : 'speech_stt',
+        canConfigure: await canConfigureAi(auth.supabase, user.id, tenantId),
+        tenantId,
+        providerId: ai.lastProviderId(),
+        actorId: user.id,
+      },
+      () => new Response('Failed to create upload URL', { status: 500 })
+    )
+  }
+
   // 5. Rate limit — prevent flooding with pending/processing submissions
   const { count: pendingCount } = await adminClient
     .from('exercise_media_submissions')
@@ -76,13 +111,14 @@ export async function POST(req: Request) {
     .eq('exercise_id', exerciseIdInt)
     .eq('user_id', user.id)
     .in('status', ['pending', 'processing'])
+    .gte('created_at', new Date(Date.now() - PENDING_WINDOW_MS).toISOString())
 
   if ((pendingCount ?? 0) >= MAX_PENDING_SUBMISSIONS) {
     return new Response('Too many pending submissions. Please wait for current ones to complete.', { status: 429 })
   }
 
   // 5b. Daily attempt limit (0 = unlimited)
-  const config = (exercise as any).exercise_config ?? {}
+  const config = (exercise.exercise_config ?? {}) as { max_daily_attempts?: number }
   const maxDailyAttempts = config.max_daily_attempts ?? 5
 
   let dailyAttemptsUsed = 0

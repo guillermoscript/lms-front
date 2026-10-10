@@ -11,7 +11,9 @@ import {
   IconTarget,
 } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { AiErrorNotice } from '@/components/ai/ai-error-notice'
 import { cn } from '@/lib/utils'
+import type { MediaAiError } from '@/lib/exercises/media-submit-error'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 import ExerciseBrief from './exercise-brief'
 import { AnnotatedTranscript, SpeechFeedback, TranscriptLegend } from './speech-feedback'
@@ -70,6 +72,8 @@ interface MediaTaskPanelProps {
   recorder: ReactNode
   submitState: MediaSubmitState
   errorMsg: string | null
+  /** The school's AI setup refused the submission: shown as the shared AI notice. */
+  aiError?: MediaAiError | null
   /** Last graded attempt, when there is one. */
   evaluation: SpeechEvaluation | null
   passed: boolean | undefined
@@ -81,6 +85,12 @@ interface MediaTaskPanelProps {
   minDuration: number
   maxDuration: number
   onRecordAgain: () => void
+  /**
+   * Set while the recording the AI notice is about can still be graded: the
+   * notice then carries a control that analyzes it again, with no new upload
+   * and so no new daily attempt.
+   */
+  onRetryAnalysis?: () => void
   /** Defaults to a microphone. */
   recordIcon?: ReactNode
 }
@@ -94,6 +104,7 @@ export function MediaTaskPanel({
   recorder,
   submitState,
   errorMsg,
+  aiError,
   evaluation,
   passed,
   showRecorder,
@@ -103,6 +114,7 @@ export function MediaTaskPanel({
   minDuration,
   maxDuration,
   onRecordAgain,
+  onRetryAnalysis,
   recordIcon,
 }: MediaTaskPanelProps) {
   const t = useTranslations(ns)
@@ -179,11 +191,30 @@ export function MediaTaskPanel({
             </div>
           )}
 
-          {errorMsg && (
-            <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
-              <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-              {errorMsg}
-            </p>
+          {aiError ? (
+            <AiErrorNotice
+              code={aiError.code}
+              canConfigure={aiError.canConfigure}
+              settingsUrl={aiError.settingsUrl}
+              audience="student"
+            >
+              {onRetryAnalysis && (
+                <Button
+                  variant="outline"
+                  onClick={onRetryAnalysis}
+                  className="h-9 shrink-0 px-3 text-sm text-foreground"
+                >
+                  {t('retryAnalysis')}
+                </Button>
+              )}
+            </AiErrorNotice>
+          ) : (
+            errorMsg && (
+              <p className="flex items-start gap-2 text-sm text-destructive" role="alert">
+                <IconAlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                {errorMsg}
+              </p>
+            )
           )}
 
           {submitState === 'analyzing' ? (

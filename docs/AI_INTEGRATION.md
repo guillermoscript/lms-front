@@ -137,7 +137,7 @@ Non-streaming AI evaluation of HTML/CSS/JS artifact submissions.
 Speech-to-text transcription followed by AI coaching evaluation.
 
 **API Routes**:
-- `POST /api/exercises/media/upload-url` — Get a signed upload URL for audio recording
+- `POST /api/exercises/media/upload-url` — Get a signed upload URL for audio recording. Resolves the school's speech pipeline (STT + coach) first: without a usable key it answers the typed AI error (402/424/422) and writes nothing, so no daily attempt is spent (#958)
 - `POST /api/exercises/media/signed-url` — Get a signed URL for playback
 - `POST /api/exercises/media/analyze` — Transcribe + AI evaluate
 
