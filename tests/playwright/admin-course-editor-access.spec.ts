@@ -105,11 +105,14 @@ async function clickUntil(
   }
 }
 
-/** Publishing a lesson returns to the course curriculum; wait for that hop. */
+/**
+ * Publishing a lesson returns to the course curriculum; wait for that hop. The header Publish
+ * exists on every layout; on mobile the footer one comes last and the open block picker covers it.
+ */
 async function publishLesson(page: Page) {
   const backOnCourse = new RegExp(`/dashboard/teacher/courses/${COURSE_ID}$`)
   await clickUntil(
-    page.getByRole('button', { name: /^publish$/i }).filter({ visible: true }).last(),
+    page.getByRole('button', { name: /^publish$/i }).filter({ visible: true }).first(),
     async () => backOnCourse.test(page.url()),
   )
   await expect(page).toHaveURL(backOnCourse, { timeout: 30_000 })
