@@ -11,6 +11,12 @@ const STORAGE_BUCKET = 'exercise-media'
 // mov/3gp: native mobile camera output (iOS records .mov, some Androids .3gp)
 const ALLOWED_EXTENSIONS = new Set(['webm', 'ogg', 'mp3', 'mp4', 'm4a', 'wav', 'aac', 'mov', '3gp'])
 const MAX_PENDING_SUBMISSIONS = 5 // per user per exercise
+// A row still pending/processing after this long is not in flight: analyze is
+// capped at 120s and the upload before it takes minutes at most. Nothing sweeps
+// or re-analyzes such a row (an abandoned upload, an analyze reset to pending
+// on a provider failure), so counting them without a bound locked the student
+// out of the exercise for good after five.
+const PENDING_WINDOW_MS = 15 * 60 * 1000
 
 export async function POST(req: Request) {
   // 1. Auth — cookie session (web) or Bearer token (mobile), server-verified
@@ -104,6 +110,7 @@ export async function POST(req: Request) {
     .eq('exercise_id', exerciseIdInt)
     .eq('user_id', user.id)
     .in('status', ['pending', 'processing'])
+    .gte('created_at', new Date(Date.now() - PENDING_WINDOW_MS).toISOString())
 
   if ((pendingCount ?? 0) >= MAX_PENDING_SUBMISSIONS) {
     return new Response('Too many pending submissions. Please wait for current ones to complete.', { status: 429 })

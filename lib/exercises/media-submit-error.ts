@@ -22,6 +22,7 @@ export interface MediaAiError {
 export type MediaSubmitFailure =
   | { kind: 'ai'; error: MediaAiError }
   | { kind: 'daily_limit' }
+  | { kind: 'too_many_pending' }
   | { kind: 'no_access' }
   | { kind: 'generic' }
 
@@ -36,7 +37,11 @@ export function classifyMediaSubmitFailure(
     return { kind: 'ai', error: { code: info.kind, canConfigure: info.canConfigure, settingsUrl: info.settingsUrl } }
   }
 
-  if (step === 'upload-url' && status === 429 && isDailyLimitBody(bodyText)) return { kind: 'daily_limit' }
+  // upload-url has two caps of its own behind 429: the daily one (JSON) and the
+  // flood guard on submissions still in flight (plain text).
+  if (step === 'upload-url' && status === 429) {
+    return { kind: isDailyLimitBody(bodyText) ? 'daily_limit' : 'too_many_pending' }
+  }
   // Both routes answer 403 only for a missing (or revoked) course entitlement.
   if (status === 403) return { kind: 'no_access' }
   return { kind: 'generic' }

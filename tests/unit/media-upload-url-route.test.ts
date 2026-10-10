@@ -15,17 +15,18 @@ const state = vi.hoisted(() => {
     daily: 0,
     inserts: [] as { table: string; row: Record<string, unknown> }[],
     /** Count queries (awaited without `single()`), by table. */
-    counts: [] as { table: string; guard: 'pending' | 'daily' }[],
+    counts: [] as { table: string; guard: 'pending' | 'daily'; since?: string }[],
     signedUrls: [] as string[],
     from: (table: string) => {
       let op: 'select' | 'insert' | 'update' = 'select'
       // Only the flood guard filters by status.
       let guard: 'pending' | 'daily' = 'daily'
+      let since: string | undefined
       const query: Record<string, unknown> = {
         select: () => query,
         eq: () => query,
         in: () => { guard = 'pending'; return query },
-        gte: () => query,
+        gte: (_column: string, value: string) => { since = value; return query },
         update: () => { op = 'update'; return query },
         insert: (row: Record<string, unknown>) => { op = 'insert'; s.inserts.push({ table, row }); return query },
         single: async () => (op === 'insert'
@@ -38,7 +39,7 @@ const state = vi.hoisted(() => {
         then: (resolve: (v: unknown) => void) => {
           // `markCredentialInvalid` awaits update().select(): no active row here, so no audit insert.
           if (op === 'update') return Promise.resolve({ data: [], error: null }).then(resolve)
-          s.counts.push({ table, guard })
+          s.counts.push({ table, guard, since })
           return Promise.resolve({ count: s[guard], error: null }).then(resolve)
         },
       }
@@ -158,6 +159,18 @@ describe('POST /api/exercises/media/upload-url (BYOK, #958)', () => {
     expect(await res.json()).toMatchObject({ error: 'daily_limit_reached', limit: 5 })
     expect(submissionInserts()).toEqual([])
     expect(state.signedUrls).toEqual([])
+  })
+
+  it('the flood guard only counts submissions that can still be in flight', async () => {
+    state.pending = 5
+    const res = await POST(req())
+    expect(res.status).toBe(429)
+    expect(submissionInserts()).toEqual([])
+    // Rows stranded pending/processing long ago must not lock the exercise for good.
+    const guard = submissionCounts().find((c) => c.guard === 'pending')
+    const ageMs = Date.now() - Date.parse(guard?.since ?? '')
+    expect(ageMs).toBeGreaterThanOrEqual(15 * 60 * 1000)
+    expect(ageMs).toBeLessThan(15 * 60 * 1000 + 5_000)
   })
 
   it('with a key, opens one pending submission and returns the upload slot', async () => {

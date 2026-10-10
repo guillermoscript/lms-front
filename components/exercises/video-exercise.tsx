@@ -116,6 +116,8 @@ export default function VideoExercise({
           setAttemptsUsed(maxDaily)
         } else if (failure.kind === 'ai') {
           setAiError(failure.error)
+        } else if (failure.kind === 'too_many_pending') {
+          setErrorMsg(t('tooManyPending'))
         } else {
           setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'submitFailed'))
         }

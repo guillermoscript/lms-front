@@ -30,6 +30,12 @@ describe('classifyMediaSubmitFailure', () => {
     expect(classifyMediaSubmitFailure('upload-url', 429, typed('ai_quota')).kind).toBe('ai')
   })
 
+  it('the other upload-url 429 is the flood guard on submissions still in flight', () => {
+    const body = 'Too many pending submissions. Please wait for current ones to complete.'
+    expect(classifyMediaSubmitFailure('upload-url', 429, body)).toEqual({ kind: 'too_many_pending' })
+    expect(classifyMediaSubmitFailure('analyze', 429, body)).toEqual({ kind: 'generic' })
+  })
+
   it('a 403 is a lost course entitlement', () => {
     expect(classifyMediaSubmitFailure('upload-url', 403, 'You are not enrolled in this course')).toEqual({ kind: 'no_access' })
     expect(classifyMediaSubmitFailure('analyze', 403, 'You do not have access to this course')).toEqual({ kind: 'no_access' })
