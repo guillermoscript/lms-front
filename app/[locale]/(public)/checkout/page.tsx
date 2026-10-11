@@ -98,6 +98,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     let currency = 'USD';
     let productId: number | undefined = undefined;
     let durationDays: number | undefined = undefined;
+    let durationHours: number | undefined = undefined;
     let features: string | null = null;
     let paymentProvider: string | null = null;
     let feeIncluded = false;
@@ -178,7 +179,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
     } else if (planId) {
         const { data: dbPlan } = await supabase
             .from("plans")
-            .select("plan_name, price, plan_id, currency, payment_provider, description, duration_in_days, features")
+            .select("plan_name, price, plan_id, currency, payment_provider, description, duration_in_days, solana_period_hours, features")
             .eq("plan_id", planId)
             .eq("tenant_id", tenantId)
             .single();
@@ -224,7 +225,8 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
             description = dbPlan.description;
             price = parseFloat(dbPlan.price);
             currency = dbPlan.currency?.toUpperCase() || 'USD';
-            durationDays = dbPlan.duration_in_days;
+            durationHours = dbPlan.payment_provider === 'solana_subs' ? dbPlan.solana_period_hours ?? undefined : undefined;
+            durationDays = durationHours ? undefined : dbPlan.duration_in_days;
             features = dbPlan.features;
             paymentProvider = dbPlan.payment_provider ?? null;
 
@@ -295,6 +297,7 @@ export default async function CheckoutPage(props: { params: Promise<{ locale: st
                     formattedPrice={formattedPrice}
                     productId={productId}
                     durationDays={durationDays}
+                    durationHours={durationHours}
                     features={features}
                     userName={userName}
                     userEmail={userEmail}

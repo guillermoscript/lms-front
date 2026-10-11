@@ -15,7 +15,7 @@
  * On-chain shape (per design):
  *   merchant   = puller pubkey (derived from SOLANA_PULLER_SECRET_KEY)
  *   planId     = BigInt(our plan_id)
- *   periodHours = plan.duration_in_days * 24
+ *   periodHours = plan.solana_period_hours ?? plan.duration_in_days * 24
  *   amountBase = round(plan.price * 1e6)            (USDC, 6 decimals)
  *   destinations = [schoolWallet, platformWallet]
  *   pullers    = [pullerPubkey]
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     // tenant-scoping invariant and fails closed on any cross-tenant drift.
     const { data: plan } = await admin
       .from('plans')
-      .select('duration_in_days, price')
+      .select('duration_in_days, solana_period_hours, price')
       .eq('plan_id', tx.plan_id)
       .eq('tenant_id', tx.tenant_id)
       .maybeSingle()
@@ -183,13 +183,20 @@ export async function POST(req: NextRequest) {
     // STEP 2: authority exists. Ensure the on-chain plan exists (idempotent;
     // puller = merchant/owner), then build the unsigned SUBSCRIBE tx carrying
     // our reference pubkey so findReference can locate it.
+    const periodHours = Number(
+      (plan as { solana_period_hours?: number | null }).solana_period_hours ?? durationDays * 24,
+    )
+    if (!Number.isSafeInteger(periodHours) || periodHours < 1) {
+      return NextResponse.json({ error: 'Invalid Solana subscription period' }, { status: 400 })
+    }
+
     await ensurePlanOnChain({
       rpcUrl,
       pullerSecretKeyBase58: pullerSecret,
       planId,
       mint,
       amountBase: BigInt(Math.round(price * 1e6)),
-      periodHours: BigInt(durationDays * 24),
+      periodHours: BigInt(periodHours),
       destinations: [wallet.wallet_address, platformWallet],
       pullers: [merchant],
     })

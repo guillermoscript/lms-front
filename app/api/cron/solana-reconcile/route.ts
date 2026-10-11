@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       admin
         .from('transactions')
         .select(
-          'transaction_id, amount, tenant_id, provider_subscription_id, settlement_currency, settlement_base, settlement_mint, status, payment_provider, transaction_date',
+          'transaction_id, amount, tenant_id, provider_subscription_id, settlement_currency, settlement_base, settlement_mint, school_percentage_snapshot, status, payment_provider, transaction_date',
           { count: 'exact' },
         )
         .eq('payment_provider', 'solana')

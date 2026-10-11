@@ -119,7 +119,7 @@ export class SolanaProvider implements IPaymentProvider {
       }
       // The on-chain marker the wallet must include so we can find the payment —
       // also the unguessable lookup key /tx uses to load the pending transaction.
-      const reference = generateReference()
+      const reference = params.providerReference ?? generateReference()
 
       // `hosted` marks the school → platform loop (#610). Its transfer has one
       // recipient — us — so it is built by a different endpoint than the

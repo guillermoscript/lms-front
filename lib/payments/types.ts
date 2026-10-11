@@ -496,6 +496,8 @@ export interface CreateCheckoutParams {
   currency: string
   /** Our internal correlation id — must round-trip back on the webhook. */
   reference: string
+  /** Existing Solana reference when resuming a pending one-time checkout. */
+  providerReference?: string
   /** Optional stored customer (Stripe/MP card-on-file). Required for native subs. */
   providerCustomerId?: string
   /**

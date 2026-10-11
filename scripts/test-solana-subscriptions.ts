@@ -460,17 +460,10 @@ async function main() {
     expectedAmount: AMOUNT_BASE,
     expectedPeriodHours: PERIOD_HOURS,
     expectedCreatedAt: actualCreatedAt, // use actual stored value from plan PDA
+    // Filled from the confirmed init instruction below. The program records
+    // the execution slot as init_id; zero is only valid when init ran at slot 0.
     expectedSubscriptionAuthorityInitId: BigInt(0),
   };
-
-  const subscribeIx = getSubscribeInstruction({
-    subscriber: subscriberSigner,
-    merchant: merchantSigner.address,
-    planPda,
-    subscriptionPda,
-    subscriptionAuthorityPda: subAuthorityPda,
-    subscribeData,
-  });
 
   // First try initAuthority alone to identify if the issue is there or in subscribe
   console.log("  Sending initSubscriptionAuthority…");
@@ -487,7 +480,35 @@ async function main() {
       console.log(`  ATA delegateOption: ${decoded.delegateOption}`);
       console.log(`  ATA delegatedAmount: ${decoded.delegatedAmount}`);
     }
+
+    // Subscribe must bind to the init transaction's execution slot. The
+    // production flow does this by confirming init, then rebuilding subscribe.
+    const { decodeSubscriptionAuthority } = await import("@solana/subscriptions");
+    const authorityAccount = svm.getAccount(subAuthorityPda);
+    if (!authorityAccount.exists || !authorityAccount.data) {
+      console.error("  BLOCKED: initialized subscription authority was not readable.");
+      printResults();
+      process.exit(1);
+    }
+    const authority = decodeSubscriptionAuthority({
+      address: subAuthorityPda,
+      data: authorityAccount.data,
+      executable: false,
+      lamports: authorityAccount.lamports,
+      programAddress: authorityAccount.programAddress,
+    });
+    subscribeData.expectedSubscriptionAuthorityInitId = authority.data.initId;
+    console.log(`  authority init_id: ${authority.data.initId}`);
   }
+
+  const subscribeIx = getSubscribeInstruction({
+    subscriber: subscriberSigner,
+    merchant: merchantSigner.address,
+    planPda,
+    subscriptionPda,
+    subscriptionAuthorityPda: subAuthorityPda,
+    subscribeData,
+  });
 
   console.log("  Sending subscribe…");
   const subscribeResult = await svmSend(svm, subscriberSigner, [subscribeIx]);

@@ -381,6 +381,21 @@ async function handleSolanaSubsVerify(
 
   // 5. Persist on-chain metadata on the subscription row (created by the trigger)
   //    so the crank cron can resolve the on-chain coordinates each period.
+  const firstPeriodEnd = new Date(
+    Number(state.currentPeriodStartTs + state.periodHours * BigInt(3600)) * 1000,
+  ).toISOString()
+  const { error: periodError } = await admin.rpc('extend_subscription_period', {
+    _provider_subscription_id: subscriptionPda,
+    _provider: 'solana_subs',
+    _new_period_end: firstPeriodEnd,
+  })
+  if (periodError) {
+    // The payment is already confirmed and the subscription trigger already
+    // granted access. Surface the alignment failure in logs without making a
+    // second poll appear to have failed; the cron can repair it after renewal.
+    console.error(`[solana/verify] could not align initial subscription period ${subscriptionPda}:`, periodError)
+  }
+
   await admin
     .from('subscriptions')
     .update({

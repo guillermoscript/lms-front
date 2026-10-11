@@ -30,6 +30,7 @@ export interface OneTimeSolanaTx {
   settlement_currency: string | null
   settlement_base: number | null
   settlement_mint: string | null
+  school_percentage_snapshot?: number | null
 }
 
 /**
@@ -87,12 +88,20 @@ export async function reconcileSolanaOneTimeTransaction(
   if (!wallet?.wallet_address) {
     return { status: 'config_error', message: 'School has not configured a Solana wallet' }
   }
-  const { data: split } = await admin
-    .from('revenue_splits')
-    .select('platform_percentage')
-    .eq('tenant_id', tx.tenant_id)
-    .maybeSingle()
-  const platformPercent = Number(split?.platform_percentage ?? 20)
+  // Use the split locked on the transaction. A school may update its split
+  // while a QR is still open; changing the ratio would make that QR settle
+  // against different terms than the checkout displayed.
+  let platformPercent: number
+  if (tx.school_percentage_snapshot != null) {
+    platformPercent = 100 - Number(tx.school_percentage_snapshot)
+  } else {
+    const { data: split } = await admin
+      .from('revenue_splits')
+      .select('platform_percentage')
+      .eq('tenant_id', tx.tenant_id)
+      .maybeSingle()
+    platformPercent = Number(split?.platform_percentage ?? 20)
+  }
 
   // Verify against the settlement LOCKED at checkout (amount + token), so a
   // native-SOL payment is checked against the exact lamports quoted then — the
