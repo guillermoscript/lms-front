@@ -1,0 +1,189 @@
+{
+  "checkedAt": "2026-10-11T17:58:09.173Z",
+  "walletKeyAvailable": true,
+  "sub": {
+    "subscription_id": 10002,
+    "user_id": "a1000000-0000-0000-0000-000000000001",
+    "plan_id": 1791732752,
+    "start_date": "2026-10-11T15:38:50.261078+00:00",
+    "end_date": "2026-10-11T18:38:45+00:00",
+    "subscription_status": "active",
+    "transaction_id": 10006,
+    "cancel_at": null,
+    "canceled_at": null,
+    "trial_start": "2026-10-11T15:38:50.261078+00:00",
+    "trial_end": "2026-10-11T15:38:50.261078+00:00",
+    "cancel_at_period_end": false,
+    "created": "2026-10-11T15:38:50.261078+00:00",
+    "current_period_start": "2026-10-11T17:38:45+00:00",
+    "current_period_end": "2026-10-11T18:38:45+00:00",
+    "ended_at": null,
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "payment_provider": "solana_subs",
+    "provider_subscription_id": "CP8Jnkz23u7V1a2Nq3n7BBTjZYB5EjhicjHCLJNbvCGE",
+    "provider_metadata": {
+      "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+      "planId": "1791732752",
+      "merchant": "ExJT4h8jLPBBVua8KrQabeJ9eTWj2ja2FkxES8HSDhtH",
+      "subscriber": "FmJvMsNXi8xcXAh7qDwToEhijT9my4bkQKDtMUwZpHRj"
+    },
+    "superseded_by": null
+  },
+  "txs": [
+    {
+      "transaction_id": 10009,
+      "amount": 0.01,
+      "currency": "usd",
+      "transaction_date": "2026-10-11T16:42:41+00:00",
+      "status": "successful",
+      "payment_provider": "solana_subs",
+      "payment_method": "USDC",
+      "plan_id": 1791732752,
+      "provider_subscription_id": "CP8Jnkz23u7V1a2Nq3n7BBTjZYB5EjhicjHCLJNbvCGE",
+      "provider_charge_id": "3kuPHjvkZmdxdMp9DUyzt7Uva6dv4rDxghuJ83x2vCfCKqCDJB7HBs5iD6SE7Ugkoh3jA1c9NHTdZKjXwVh4EvLJ",
+      "provider_metadata": {
+        "kind": "renewal",
+        "network": "devnet",
+        "error_code": null,
+        "period_end": "2026-10-11 17:38:45+00",
+        "signatures": [
+          "3kuPHjvkZmdxdMp9DUyzt7Uva6dv4rDxghuJ83x2vCfCKqCDJB7HBs5iD6SE7Ugkoh3jA1c9NHTdZKjXwVh4EvLJ",
+          "127x1pRui5LaSwsAvJJD1o75XcjrrL8xoEhXDMhuFpZs5fFULpPGuGL9z5eDmJ8Pv18oZhuvzr1gH1RQnbH6YhUZ"
+        ],
+        "subscriber": "FmJvMsNXi8xcXAh7qDwToEhijT9my4bkQKDtMUwZpHRj",
+        "confirmed_at": "2026-10-11T16:42:41+00:00",
+        "period_start": "2026-10-11 16:38:45+00"
+      }
+    },
+    {
+      "transaction_id": 10012,
+      "amount": 0.01,
+      "currency": "usd",
+      "transaction_date": "2026-10-11T17:55:34.500439+00:00",
+      "status": "successful",
+      "payment_provider": "solana_subs",
+      "payment_method": "USDC",
+      "plan_id": 1791732752,
+      "provider_subscription_id": "CP8Jnkz23u7V1a2Nq3n7BBTjZYB5EjhicjHCLJNbvCGE",
+      "provider_charge_id": "52399aBp3147xaE2z4adLXkbP3gtcX8JV82dgQQDGWgtii2FmqXgPB7awETRCVr4wDMhJCtAtFdYdqAXE6eTyjq5",
+      "provider_metadata": {
+        "kind": "renewal",
+        "network": "devnet",
+        "error_code": null,
+        "period_end": "2026-10-11 18:38:45+00",
+        "signatures": [
+          "52399aBp3147xaE2z4adLXkbP3gtcX8JV82dgQQDGWgtii2FmqXgPB7awETRCVr4wDMhJCtAtFdYdqAXE6eTyjq5"
+        ],
+        "subscriber": "FmJvMsNXi8xcXAh7qDwToEhijT9my4bkQKDtMUwZpHRj",
+        "confirmed_at": "2026-10-11T17:55:34.500439+00:00",
+        "period_start": "2026-10-11 17:38:45+00"
+      }
+    },
+    {
+      "transaction_id": 10006,
+      "amount": 0.01,
+      "currency": "usd",
+      "transaction_date": "2026-10-11T15:38:42.162025+00:00",
+      "status": "successful",
+      "payment_provider": "solana_subs",
+      "payment_method": null,
+      "plan_id": 1791732752,
+      "provider_subscription_id": "CP8Jnkz23u7V1a2Nq3n7BBTjZYB5EjhicjHCLJNbvCGE",
+      "provider_charge_id": null,
+      "provider_metadata": {
+        "subscriber": "FmJvMsNXi8xcXAh7qDwToEhijT9my4bkQKDtMUwZpHRj"
+      }
+    }
+  ],
+  "entitlements": [
+    {
+      "entitlement_id": 8,
+      "user_id": "a1000000-0000-0000-0000-000000000001",
+      "course_id": 1002,
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "source_type": "subscription",
+      "source_id": 10002,
+      "status": "active",
+      "granted_at": "2026-10-11T15:38:50.261078+00:00",
+      "expires_at": "2026-10-11T18:38:45+00:00",
+      "revoked_at": null
+    }
+  ],
+  "access": [
+    {
+      "courseId": 1002,
+      "access": true,
+      "error": null
+    }
+  ],
+  "chain": {
+    "amountPulledInPeriod": "10000",
+    "currentPeriodStartTs": "1791740325",
+    "periodHours": "1",
+    "expiresAtTs": "0"
+  },
+  "chainPeriodEnd": "2026-10-11T18:38:45.000Z",
+  "balance": {
+    "amount": "9940000",
+    "decimals": 6,
+    "uiAmount": 9.94,
+    "uiAmountString": "9.94"
+  },
+  "ata": "BweWg4Fq2S6oEAap95MpFrMpKmadsTzC3BXeWMpM88uc",
+  "signatures": [
+    {
+      "blockTime": 1791741333,
+      "confirmationStatus": "finalized",
+      "err": null,
+      "memo": null,
+      "signature": "52399aBp3147xaE2z4adLXkbP3gtcX8JV82dgQQDGWgtii2FmqXgPB7awETRCVr4wDMhJCtAtFdYdqAXE6eTyjq5",
+      "slot": 509984353,
+      "transactionIndex": 13
+    },
+    {
+      "blockTime": 1791736961,
+      "confirmationStatus": "finalized",
+      "err": null,
+      "memo": null,
+      "signature": "3kuPHjvkZmdxdMp9DUyzt7Uva6dv4rDxghuJ83x2vCfCKqCDJB7HBs5iD6SE7Ugkoh3jA1c9NHTdZKjXwVh4EvLJ",
+      "slot": 509966059,
+      "transactionIndex": 8
+    },
+    {
+      "blockTime": 1791736960,
+      "confirmationStatus": "finalized",
+      "err": null,
+      "memo": null,
+      "signature": "127x1pRui5LaSwsAvJJD1o75XcjrrL8xoEhXDMhuFpZs5fFULpPGuGL9z5eDmJ8Pv18oZhuvzr1gH1RQnbH6YhUZ",
+      "slot": 509966054,
+      "transactionIndex": 2
+    },
+    {
+      "blockTime": 1791733133,
+      "confirmationStatus": "finalized",
+      "err": null,
+      "memo": null,
+      "signature": "3nTaLHDtY7HUWwJ9641jRcBAfmG58H2VNCiUptEDLwVi77c88EkxEcTSU6mG6mVXmNWPAaSfZboFQk9JcKuai3pa",
+      "slot": 509950042,
+      "transactionIndex": 11
+    },
+    {
+      "blockTime": 1791733131,
+      "confirmationStatus": "finalized",
+      "err": null,
+      "memo": null,
+      "signature": "3ceKsjjAXd2JxYGxnSqAgkNr91ryvG5ZtWsHgpkppo15B9KmAgHMEbMbPodXzKjE1Gf9UvAL3NHRicnMLDjhdEs5",
+      "slot": 509950036,
+      "transactionIndex": 1
+    },
+    {
+      "blockTime": 1791733125,
+      "confirmationStatus": "finalized",
+      "err": null,
+      "memo": null,
+      "signature": "2aR7EttvbbNpRGj6jrdXPUujnqf8oi8WJysZuMF5des7XhTCKCZz1rPHtz6k8ncHa1YFxeVBG9nLeWZTrLWzM4sv",
+      "slot": 509950011,
+      "transactionIndex": 7
+    }
+  ]
+}

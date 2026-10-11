@@ -1,0 +1,22 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": []
+  },
+  "include": [
+    "../../../next-env.d.ts",
+    "../../../app/[locale]/dashboard/student/billing/page.tsx",
+    "../../../app/api/cron/solana-pull/route.ts",
+    "../../../app/api/payments/solana/retry-renewal/route.ts",
+    "../../../components/student/billing-purchases-explorer.tsx",
+    "../../../components/student/solana-renewal-details.tsx",
+    "../../../lib/payments/solana-pull-decision.ts",
+    "../../../lib/payments/solana-subscription-pull.ts",
+    "../../../lib/payments/solana-subscriptions.ts",
+    "../../../lib/payments/solana-renewal.ts",
+    "../../../tests/unit/solana-renewal.test.ts",
+    "../../../tests/unit/solana-subscription-pull.test.ts",
+    "../../../tests/unit/solana-pull-decision.test.ts"
+  ]
+}

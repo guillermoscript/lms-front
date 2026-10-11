@@ -4,19 +4,21 @@
  * Student self-service subscription management (issue #464).
  *
  * Students cancel their own subscription at period end and can undo it before
- * the period ends. Both actions are scoped to the current user: a student can
+ * the period ends when the provider supports resuming. Both actions are scoped
+ * to the current user: a student can
  * only touch a subscription row they own, inside their current tenant. Because
  * students cannot UPDATE `subscriptions` under RLS, these use the service-role
  * admin client and validate ownership explicitly before every write (per the
  * CLAUDE.md admin-client rule).
  *
- * `solana_subs` is NOT handled here — it keeps its own on-chain wallet-revoke
- * flow (RevokeSolanaDelegation) because the server cannot revoke the delegation.
+ * Wallet delegation revocation uses its own signing flow, then calls the same
+ * shared access rule. The server cannot sign on the student's behalf.
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
-import { cancelIsFinalAtProvider } from '@/lib/payments/types'
+import { cancelIsFinalAtProvider, type CancellationResult } from '@/lib/payments/types'
+import { applySubscriptionCancellation, cancelProviderSubscription, resumeProviderSubscription } from '@/lib/payments/subscription-cancellation'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { revalidatePath } from 'next/cache'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
@@ -53,24 +55,23 @@ export async function cancelMySubscription(subscriptionId: number): Promise<Acti
       return { success: false, error: 'access_denied' }
     }
 
-    // Idempotent — already scheduled to cancel.
-    if (subscription.cancel_at_period_end) return { success: true }
-
     if (!CANCELABLE.includes(subscription.subscription_status)) {
       return { success: false, error: 'not_cancelable' }
     }
 
     // Cancel at the provider (at period end) when there's an external subscription.
-    // A provider error must NOT strand the student — the DB row is the source of
-    // truth for access and the crank/webhook honors cancel_at_period_end — so we
-    // surface it as a non-fatal warning, mirroring the admin cancel action.
+    // Local scheduling protects access and stops application-driven renewals.
+    // External billing still needs provider confirmation: report any failure
+    // as a warning, and retry it even when already scheduled locally. The shared
+    // access operation is idempotent and never extends access on a retry.
     let providerWarning: string | undefined
+    let cancellationResult: CancellationResult | undefined
     if (subscription.provider_subscription_id) {
       try {
         const provider = getPaymentProvider(
           (subscription.payment_provider as PaymentProvider) || 'stripe'
         )
-        await provider.cancelSubscription?.(subscription.provider_subscription_id, false)
+        cancellationResult = await cancelProviderSubscription(provider, subscription.provider_subscription_id, false)
       } catch (providerError) {
         providerWarning =
           providerError instanceof Error ? providerError.message : String(providerError)
@@ -78,34 +79,7 @@ export async function cancelMySubscription(subscriptionId: number): Promise<Acti
       }
     }
 
-    // Schedule the cancel in our DB. The status stays live so access continues
-    // to period end; the cron / webhook flips it to expired when the period
-    // lapses.
-    //
-    // Cancelling must never IMPROVE a status (#545). This used to write
-    // 'active' unconditionally, so a student mid-dunning who cancelled had
-    // their `past_due` row rewritten as healthy and the delinquency vanished
-    // from billing health and the admin views. Only the legacy `renewed`
-    // status is normalized — it means the same thing as `active` and nothing
-    // else writes it any more.
-    const nextStatus =
-      subscription.subscription_status === 'renewed' ? 'active' : subscription.subscription_status
-
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        cancel_at_period_end: true,
-        cancel_at: subscription.current_period_end || subscription.end_date,
-        canceled_at: new Date().toISOString(),
-        subscription_status: nextStatus,
-      })
-      .eq('subscription_id', subscriptionId)
-      .eq('tenant_id', tenantId)
-
-    if (updateError) {
-      console.error('Student cancel: DB update error:', updateError)
-      return { success: false, error: 'update_failed' }
-    }
+    const accessEndsAt = await applySubscriptionCancellation(supabase, subscriptionId, { result: cancellationResult })
 
     // LEARNER churn, which is a different question from school churn — hence
     // the dedicated `student_subscription_*` name rather than Loop E's
@@ -122,7 +96,7 @@ export async function cancelMySubscription(subscriptionId: number): Promise<Acti
         provider: subscription.payment_provider ?? 'unknown',
         plan_id: subscription.plan_id,
         status_before: subscription.subscription_status,
-        access_ends_at: subscription.current_period_end || subscription.end_date,
+        access_ends_at: accessEndsAt,
         days_subscribed: daysSince(subscription.created),
         provider_cancel_failed: !!providerWarning,
       },
@@ -134,7 +108,7 @@ export async function cancelMySubscription(subscriptionId: number): Promise<Acti
       tenantId,
       studentId: userId,
       planId: subscription.plan_id,
-      accessEndsAt: subscription.current_period_end || subscription.end_date,
+      accessEndsAt,
     })
 
     revalidatePath('/dashboard/student/billing')
@@ -174,27 +148,29 @@ export async function reactivateMySubscription(subscriptionId: number): Promise<
       return { success: false, error: 'not_scheduled' }
     }
 
-    // A PayPal cancel cannot be undone at PayPal (#479). Clearing our flag here
+    if (!['active', 'renewed', 'past_due'].includes(subscription.subscription_status)
+      || !(Date.parse(subscription.current_period_end ?? subscription.end_date) > Date.now())) {
+      return { success: false, error: 'not_reactivatable' }
+    }
+
+    // Final-at-provider cancellation cannot be undone. Clearing our flag here
     // would show "renewing" on a subscription that will never bill again, and
     // the student would silently lose access at the period end.
     if (subscription.provider_subscription_id && cancelIsFinalAtProvider(subscription.payment_provider)) {
       return { success: false, error: 'not_reactivatable' }
     }
 
-    // Reverse the provider-side cancel first. If the provider can't reactivate
-    // (e.g. solana_subs), surface it as a warning but still clear our flag so the
-    // UI reflects the student's intent.
-    let providerWarning: string | undefined
+    // Resume at the provider before clearing the local schedule. A provider
+    // failure leaves the existing cancellation/access contract intact.
     if (subscription.provider_subscription_id) {
       try {
         const provider = getPaymentProvider(
           (subscription.payment_provider as PaymentProvider) || 'stripe'
         )
-        await provider.reactivateSubscription?.(subscription.provider_subscription_id)
+        await resumeProviderSubscription(provider, subscription.provider_subscription_id)
       } catch (providerError) {
-        providerWarning =
-          providerError instanceof Error ? providerError.message : String(providerError)
-        console.error('Student reactivate: provider reactivateSubscription failed (continuing to update DB):', providerError)
+        console.error('Student reactivate: provider reactivateSubscription failed:', providerError)
+        return { success: false, error: 'provider_reactivation_failed' }
       }
     }
 
@@ -202,21 +178,20 @@ export async function reactivateMySubscription(subscriptionId: number): Promise<
     // it is nullable and the CHECK `subscriptions_cancel_at_requires_schedule`
     // rejects a cancel date that outlives its schedule, so a leftover date can
     // no longer be read as a live cancel by the Solana auto-pull crank.
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        cancel_at_period_end: false,
-        cancel_at: null,
-        canceled_at: null,
-      })
-      .eq('subscription_id', subscriptionId)
-      .eq('tenant_id', tenantId)
-
-    if (updateError) {
-      console.error('Student reactivate: DB update error:', updateError)
-      return { success: false, error: 'update_failed' }
+    const { data: resumed, error: updateError } = await supabase.rpc('resume_subscription', {
+      _subscription_id: subscriptionId,
+    })
+    if (updateError || !resumed) {
+      if (subscription.provider_subscription_id) {
+        try {
+          const provider = getPaymentProvider((subscription.payment_provider as PaymentProvider) || 'stripe')
+          await cancelProviderSubscription(provider, subscription.provider_subscription_id, false)
+        } catch (providerError) {
+          console.error('Resume compensation requires provider reconciliation:', providerError)
+        }
+      }
+      return { success: false, error: updateError ? 'update_failed' : 'not_reactivatable' }
     }
-
     // `scope: 'student'` separates learner win-backs from the school-side
     // reactivations in `app/actions/admin/billing.ts`, which share this event
     // name. `canceled_at` is read off the row loaded before the update above
@@ -228,13 +203,13 @@ export async function reactivateMySubscription(subscriptionId: number): Promise<
         provider: subscription.payment_provider ?? 'unknown',
         plan_id: subscription.plan_id,
         days_since_cancel: daysSince(subscription.canceled_at),
-        provider_reactivate_failed: !!providerWarning,
+        provider_reactivate_failed: false,
       },
       { userId, tenantId, role: 'student' }
     )
 
     revalidatePath('/dashboard/student/billing')
-    return { success: true, providerWarning }
+    return { success: true }
   } catch (error) {
     console.error('reactivateMySubscription error:', error)
     return { success: false, error: 'unexpected' }

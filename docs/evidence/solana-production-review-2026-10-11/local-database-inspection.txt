@@ -1,0 +1,31 @@
+LIVE local Supabase query before Docker stopped responding. Not a prepared fixture.
+
+subscription_id: 10002
+subscription_status: canceled
+current_period_end: 2026-10-11 19:38:45+00
+cancel_at_period_end: false
+canceled_at: 2026-10-11 18:40:53.398+00
+end_date: 2026-10-11 19:38:45+00
+
+subscription entitlement (source_id 10002):
+status: expired
+expires_at: 2026-10-11 19:38:45+00
+revoked_at: 2026-10-11 18:40:53.148095+00
+
+Existing pg_cron job:
+expire-student-subscriptions → SELECT handle_student_subscription_expiry()
+Its old function updated all active subscriptions where end_date < NOW(),
+without checking provider capabilities or the cancellation schedule.
+
+LOCAL MIGRATION APPLICATION: BLOCKED, NOT CONFIRMED/APPLIED.
+Command: docker exec -i supabase_db_lms-front psql -U postgres -d postgres -v ON_ERROR_STOP=1
+Input was the initially prepared migration; the Docker client produced no SQL
+results and ultimately exited 1:
+Cannot connect to the Docker daemon at unix:///Users/guillermomarin/.docker/run/docker.sock. Is the docker daemon running?
+
+Subsequent local Supabase inspection returned PGRST002:
+Could not query the database for the schema cache. Retrying.
+
+User explicitly requested leaving Docker running and reporting live checks as
+blocked. No Docker restart was performed. The final migration was not applied.
+No fixture database rows were created or changed by this task.

@@ -3,7 +3,7 @@
  * #280, Phase 6 — `solana_subs`).
  *
  * A single on-chain pull (`transfer_subscription`) targets ONE receiver, so a
- * platform-fee split needs TWO pulls: the school share, then the platform fee.
+ * platform-fee split needs two instructions in one atomic transaction.
  * Both must fit within the on-chain per-period cap (their sum = the plan price),
  * so the program enforces correctness — a duplicate/over-cap pull reverts.
  *
@@ -50,15 +50,9 @@ export interface PullSplitParams {
 
 const USDC_DECIMALS = 6
 
-/**
- * Retries a transient RPC failure a few times within THIS invocation, before
- * the caller ever sees an error. This is what actually closes the H2
- * partial-failure gap (issue #343): if the platform leg fails only because of
- * a momentary RPC blip, the crank's period-rolled gate won't re-trigger this
- * pull until the NEXT period, so a failure that survives past this call is a
- * fee permanently missed. Safe to retry blindly — a transfer_subscription
- * pull is idempotent-by-cap (a duplicate/over-cap pull reverts on-chain), so
- * retrying can only reduce missed pulls, never double-charge.
+/** Retry transient submission errors; the on-chain period cap prevents a second
+ * settlement. Confirmation uncertainty is reconciled from chain before granting
+ * access or presenting a paid receipt.
  */
 async function withRetries<T>(fn: () => Promise<T>, attempts = 3, delayMs = 1500): Promise<T> {
   let lastErr: unknown
@@ -74,11 +68,9 @@ async function withRetries<T>(fn: () => Promise<T>, attempts = 3, delayMs = 1500
 }
 
 /**
- * Execute the two split pulls (school then platform, if the platform share > 0)
- * for one billing period. Each `pullOnce` builds + signs the puller's
- * transfer_subscription instruction.
+ * Execute the outstanding split legs atomically and return confirmed signatures.
  */
-export async function pullSplitForSubscription(p: PullSplitParams): Promise<void> {
+export async function pullSplitForSubscription(p: PullSplitParams): Promise<string[]> {
   const mintPk = new PublicKey(p.mint)
   const schoolAta = getAssociatedTokenAddressSync(mintPk, new PublicKey(p.schoolWallet)).toBase58()
   const platformAta = getAssociatedTokenAddressSync(mintPk, new PublicKey(p.platformWallet)).toBase58()
@@ -86,35 +78,26 @@ export async function pullSplitForSubscription(p: PullSplitParams): Promise<void
   const { schoolBase, platformBase } = computeSplit(p.priceMajor, p.platformPercent, USDC_DECIMALS)
   const alreadyPulled = p.alreadyPulledBase ?? BigInt(0)
 
-  // School share first — skip if this period already covered it (resume).
+  // One transaction makes insufficient funds and fee-split failures atomic.
+  // Historical partial periods can still resume only their outstanding legs.
+  const transfers: { receiverAta: string; amountBase: bigint }[] = []
   if (alreadyPulled < BigInt(schoolBase)) {
-    await withRetries(() =>
-      pullOnce({
-        rpcUrl: p.rpcUrl,
-        pullerSecretKeyBase58: p.pullerSecretKeyBase58,
-        subscriber: p.subscriber,
-        merchant: p.merchant,
-        planId: p.planId,
-        mint: p.mint,
-        receiverAta: schoolAta,
-        amountBase: BigInt(schoolBase),
-      }),
-    )
+    transfers.push({ receiverAta: schoolAta, amountBase: BigInt(schoolBase) })
   }
-
-  // Platform fee (only if non-zero and not already covered this period).
   if (platformBase > 0 && alreadyPulled < BigInt(schoolBase + platformBase)) {
-    await withRetries(() =>
-      pullOnce({
-        rpcUrl: p.rpcUrl,
-        pullerSecretKeyBase58: p.pullerSecretKeyBase58,
-        subscriber: p.subscriber,
-        merchant: p.merchant,
-        planId: p.planId,
-        mint: p.mint,
-        receiverAta: platformAta,
-        amountBase: BigInt(platformBase),
-      }),
-    )
+    transfers.push({ receiverAta: platformAta, amountBase: BigInt(platformBase) })
   }
+  const first = transfers[0]
+  if (!first) return []
+  const signature = await withRetries(() => pullOnce({
+    rpcUrl: p.rpcUrl,
+    pullerSecretKeyBase58: p.pullerSecretKeyBase58,
+    subscriber: p.subscriber,
+    merchant: p.merchant,
+    planId: p.planId,
+    mint: p.mint,
+    ...first,
+    additionalTransfers: transfers.slice(1),
+  }))
+  return [signature]
 }

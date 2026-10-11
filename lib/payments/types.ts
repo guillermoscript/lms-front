@@ -473,8 +473,8 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
 }
 
 /**
- * The provider renews by itself but its cancel is final the moment it is made
- * (PayPal, #744/#479): no cancel-at-period-end to schedule, no way to undo it.
+ * The provider has a native subscription whose cancellation cannot be resumed
+ * (PayPal billing cancellation or Solana wallet delegation revocation).
  * The period already paid for is therefore the APP's to keep and to end — the
  * CANCELLED webhook must not revoke access, a "resume" button must not appear,
  * and the expiry cron (which otherwise leaves push-renewal rails to their
@@ -482,7 +482,7 @@ export const PROVIDER_CAPABILITIES: Record<PaymentProvider, ProviderCapabilities
  */
 export function cancelIsFinalAtProvider(provider: string | null | undefined): boolean {
   const caps = provider ? PROVIDER_CAPABILITIES[provider as PaymentProvider] : undefined
-  return !!caps && caps.emitsRenewalWebhooks && caps.supportsNativeSubscriptions && !caps.supportsScheduledCancellation
+  return !!caps && caps.supportsNativeSubscriptions && !caps.supportsScheduledCancellation
 }
 
 /** Params for starting a payment (the missing "start a payment" abstraction). */
@@ -496,6 +496,8 @@ export interface CreateCheckoutParams {
   currency: string
   /** Our internal correlation id — must round-trip back on the webhook. */
   reference: string
+  /** Existing Solana reference when resuming a pending one-time checkout. */
+  providerReference?: string
   /** Optional stored customer (Stripe/MP card-on-file). Required for native subs. */
   providerCustomerId?: string
   /**
@@ -689,7 +691,15 @@ export interface NormalizedBillingEvent {
   raw: unknown
 }
 
-/** Provider-reported effect of a cancellation request. */
+/**
+ * Provider-reported BILLING effect, independent of student access.
+ * `none`: no remote recurring billing to stop (manual/one-time adapters).
+ * `immediate`: billing authorization ended at the provider, including a final
+ * cancellation such as PayPal. Already-paid access is still preserved.
+ * `period_end`: future renewals are disabled at the provider; effectiveAt is
+ * its verified deadline, when supplied.
+ * Only an explicit application termination/refund ends paid access immediately.
+ */
 export interface CancellationResult {
   mode: 'none' | 'immediate' | 'period_end'
   effectiveAt?: Date
@@ -735,7 +745,10 @@ export interface IPaymentProvider {
   archivePrice(priceId: string): Promise<void>
 
   // Subscription operations (optional — providers without recurring billing,
-  // e.g. manual/offline, implement these as no-ops)
+  // e.g. manual/offline, may omit them or implement these as no-ops).
+  // Native subscription adapters must implement cancellation and must throw
+  // if provider authorization cannot be stopped (e.g. a wallet signature is
+  // needed). Adapters never update application entitlements themselves.
   createSubscription?(params: CreateSubscriptionParams): Promise<ProviderSubscription>
   cancelSubscription?(providerSubId: string, immediate: boolean): Promise<CancellationResult>
   // Reverse a scheduled cancel-at-period-end before the period ends. Providers

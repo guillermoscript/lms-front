@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -38,7 +38,10 @@ export default function GeneralSettingsForm({ settings, tenantName, country: sav
   const maintenanceMode = settings.maintenance_mode?.value?.enabled || false
   const maintenanceMessage = settings.maintenance_mode?.value?.message || ''
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
 
     try {
@@ -84,7 +87,7 @@ export default function GeneralSettingsForm({ settings, tenantName, country: sav
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Site Name */}
       <div className="space-y-2">
         <Label htmlFor="site_name">{t('general.siteName')}</Label>

@@ -59,16 +59,21 @@ export function ReviewSession({ userId, tenantId, cards, totalDue }: ReviewSessi
     async (rating: ReviewRating) => {
       if (!card || !revealed || saving) return
       setSaving(true)
-      const result = await gradeReviewCard(supabase, userId, tenantId, card.id, rating)
-      setSaving(false)
-      if (!result.ok) {
+      try {
+        const result = await gradeReviewCard(supabase, userId, tenantId, card.id, rating)
+        if (!result.ok) {
+          toast.error(t('gradeError'))
+          return
+        }
+        setGraded((n) => n + 1)
+        setRevealed(false)
+        setQueue(([head, ...rest]) => (rating === 'again' ? [...rest, head] : rest))
+        if (rating !== 'again') setFinished((s) => new Set(s).add(card.id))
+      } catch {
         toast.error(t('gradeError'))
-        return
+      } finally {
+        setSaving(false)
       }
-      setGraded((n) => n + 1)
-      setRevealed(false)
-      setQueue(([head, ...rest]) => (rating === 'again' ? [...rest, head] : rest))
-      if (rating !== 'again') setFinished((s) => new Set(s).add(card.id))
     },
     [card, revealed, saving, supabase, userId, tenantId, t]
   )

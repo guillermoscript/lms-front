@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-11T19:08:03.934Z",
+  "source": "LIVE read-only Devnet RPC, no new transactions",
+  "subscriptionId": 10002,
+  "subscriber": "FmJvMsNXi8xcXAh7qDwToEhijT9my4bkQKDtMUwZpHRj",
+  "state": {
+    "amountPulledInPeriod": "10000",
+    "currentPeriodStartTs": "1791743925",
+    "periodHours": "1",
+    "expiresAtTs": "1791747525"
+  },
+  "balance": {
+    "amount": "9930000",
+    "decimals": 6,
+    "uiAmount": 9.93,
+    "uiAmountString": "9.93"
+  }
+}

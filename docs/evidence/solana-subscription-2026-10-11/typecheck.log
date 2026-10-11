@@ -1,0 +1,268 @@
+
+> lms-front@0.1.0 typecheck
+> NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit
+
+
+<--- Last few GCs --->
+
+[61662:0x74880c000]   306780 ms: Mark-Compact 8152.4 (8218.4) -> 8137.4 (8219.9) MB, pooled: 0 MB, 14201.96 / 0.00 ms  (average mu = 0.198, current mu = 0.065) allocation failure; scavenge might not succeed
+[61662:0x74880c000]   321907 ms: Mark-Compact 8153.6 (8220.2) -> 8139.3 (8221.9) MB, pooled: 0 MB, 15048.75 / 0.00 ms  (average mu = 0.103, current mu = 0.005) allocation failure; scavenge might not succeed
+
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 0x102bd3848 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 2: 0x102dd2a14 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 3: 0x103030e24 v8::internal::Heap::stack() [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 4: 0x1030341f8 v8::internal::Heap::HasLowYoungGenerationAllocationRate() [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 5: 0x103045414 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags)::$_1::operator()() const [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 6: 0x103044ce8 void heap::base::Stack::SetMarkerAndCallbackImpl<v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags)::$_1>(heap::base::Stack*, void*, void const*) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 7: 0x1039fa2e4 PushAllRegistersAndIterateStack [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 8: 0x10302eb28 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+ 9: 0x103023854 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+10: 0x103004fdc v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+11: 0x103493c88 v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+12: 0x103ae9f74 Builtins_CEntry_Return1_ArgvOnStack_NoBuiltinExit [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+13: 0x126eb78d4
+14: 0x1279b3fc8
+15: 0x1271260f0
+16: 0x126eb07b8
+17: 0x1271290a4
+18: 0x1271368e8
+19: 0x127a34bc0
+20: 0x12712a768
+21: 0x126eb103c
+22: 0x1271290a4
+23: 0x1271368e8
+24: 0x127a34bc0
+25: 0x12712a768
+26: 0x126eb103c
+27: 0x127128998
+28: 0x127136d80
+29: 0x127a34bc0
+30: 0x12712a768
+31: 0x126eb103c
+32: 0x1271290a4
+33: 0x1271368e8
+34: 0x127a34bc0
+35: 0x12712a768
+36: 0x126eb103c
+37: 0x127128998
+38: 0x127136d80
+39: 0x127a34bc0
+40: 0x12712a768
+41: 0x126eb103c
+42: 0x1271290a4
+43: 0x1271368e8
+44: 0x127a34bc0
+45: 0x12712a768
+46: 0x126eb103c
+47: 0x127128998
+48: 0x127136d80
+49: 0x127a34bc0
+50: 0x12712a768
+51: 0x126eb103c
+52: 0x1271290a4
+53: 0x1271368e8
+54: 0x127a34bc0
+55: 0x12712a768
+56: 0x126eb103c
+57: 0x127128998
+58: 0x127136d80
+59: 0x127a34bc0
+60: 0x12712a768
+61: 0x126eb103c
+62: 0x1271290a4
+63: 0x1271368e8
+64: 0x127a34bc0
+65: 0x12712a768
+66: 0x126eb103c
+67: 0x127128998
+68: 0x127136d80
+69: 0x127a34bc0
+70: 0x12712a768
+71: 0x126eb103c
+72: 0x127a2c554
+73: 0x1274ab364
+74: 0x126eb1268
+75: 0x127131e44
+76: 0x126eb1630
+77: 0x127128998
+78: 0x127136d80
+79: 0x127a34bc0
+80: 0x12712a768
+81: 0x126eb103c
+82: 0x1271290a4
+83: 0x1271368e8
+84: 0x127a34bc0
+85: 0x12712a768
+86: 0x126eb103c
+87: 0x1271290a4
+88: 0x1271368e8
+89: 0x127a34bc0
+90: 0x12712a768
+91: 0x126eb103c
+92: 0x127128998
+93: 0x127136d80
+94: 0x127a34bc0
+95: 0x12712a768
+96: 0x126eb103c
+97: 0x1271290a4
+98: 0x127135820
+99: 0x127a34bc0
+100: 0x12712a768
+101: 0x126eb103c
+102: 0x127134fe8
+103: 0x127a34bc0
+104: 0x12712a768
+105: 0x126eb103c
+106: 0x1271290a4
+107: 0x1271368e8
+108: 0x127a34bc0
+109: 0x12712a768
+110: 0x126eb103c
+111: 0x127128998
+112: 0x127136d80
+113: 0x127a34bc0
+114: 0x12712a768
+115: 0x126eb103c
+116: 0x127128998
+117: 0x127136d80
+118: 0x127a34bc0
+119: 0x12712a768
+120: 0x126eb103c
+121: 0x127128998
+122: 0x127136d80
+123: 0x127a34bc0
+124: 0x12712a768
+125: 0x126eb103c
+126: 0x127128998
+127: 0x127136d80
+128: 0x127a34bc0
+129: 0x12712a768
+130: 0x126eb103c
+131: 0x1271290a4
+132: 0x1271368e8
+133: 0x127a34bc0
+134: 0x12712a768
+135: 0x126eb103c
+136: 0x1271290a4
+137: 0x1271359ac
+138: 0x127a34bc0
+139: 0x12712a768
+140: 0x126eb103c
+141: 0x127134fe8
+142: 0x127a34bc0
+143: 0x12712a768
+144: 0x126eb103c
+145: 0x1271290a4
+146: 0x1271368e8
+147: 0x127a34bc0
+148: 0x12712a768
+149: 0x126eb103c
+150: 0x127128998
+151: 0x127136d80
+152: 0x127a34bc0
+153: 0x12712a768
+154: 0x126eb103c
+155: 0x1271290a4
+156: 0x1271359ac
+157: 0x127a34bc0
+158: 0x12712a768
+159: 0x126eb103c
+160: 0x127134fe8
+161: 0x127a34bc0
+162: 0x12712a768
+163: 0x126eb103c
+164: 0x127128998
+165: 0x127136d80
+166: 0x127a34bc0
+167: 0x12712a768
+168: 0x126eb103c
+169: 0x127128998
+170: 0x127136d80
+171: 0x127a34bc0
+172: 0x12712a768
+173: 0x126eb103c
+174: 0x127128998
+175: 0x127136d80
+176: 0x127a34bc0
+177: 0x12712a768
+178: 0x126eb103c
+179: 0x1271290a4
+180: 0x127135820
+181: 0x127a34bc0
+182: 0x12712a768
+183: 0x126eb103c
+184: 0x127128998
+185: 0x127136d80
+186: 0x127a34bc0
+187: 0x12712a768
+188: 0x126eb103c
+189: 0x1271290a4
+190: 0x1271368e8
+191: 0x127a34bc0
+192: 0x12712a768
+193: 0x126eb103c
+194: 0x1271290a4
+195: 0x103a4cbec Builtins_InterpreterEntryTrampoline [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+196: 0x127a34bc0
+197: 0x127a25434
+198: 0x1267997d4
+199: 0x127a1a030
+200: 0x126a07d98
+201: 0x127a34bc0
+202: 0x127a25434
+203: 0x1267997d4
+204: 0x127a14a30
+205: 0x103a4cbec Builtins_InterpreterEntryTrampoline [/Users/guillermomarin/.nvm/versions/node/v24.11.1/bin/node]
+206: 0x127a34bc0
+207: 0x127a25434
+208: 0x1279bb1a4
+209: 0x127a14a30
+210: 0x127a382bc
+211: 0x127a34bc0
+212: 0x127a25434
+213: 0x1279bb1a4
+214: 0x127a1a030
+215: 0x127a382ac
+216: 0x127a34bc0
+217: 0x127a25434
+218: 0x1279bb1a4
+219: 0x127a14a30
+220: 0x127a3823c
+221: 0x127a34bc0
+222: 0x127a25434
+223: 0x1279bb1a4
+224: 0x127a38200
+225: 0x127a34bc0
+226: 0x127a25434
+227: 0x1279bb1a4
+228: 0x127a1a030
+229: 0x127a382ac
+230: 0x127a34bc0
+231: 0x127a25434
+232: 0x1279bb1a4
+233: 0x127a14a30
+234: 0x127a382bc
+235: 0x127a34bc0
+236: 0x127a25434
+237: 0x1279bb1a4
+238: 0x127a14a30
+239: 0x127a3823c
+240: 0x127a34bc0
+241: 0x127a25434
+242: 0x1279bb1a4
+243: 0x127a38200
+244: 0x127a34bc0
+245: 0x127a25434
+246: 0x1279bb1a4
+247: 0x127a14a30
+248: 0x127a382bc
+249: 0x127a34bc0
+250: 0x127a25434
+251: 0x1279bb1a4
+252: 0x127a38200
+253: 0x127a34bc0
+254: 0x127a25434
+255: 0x1279bb1a4

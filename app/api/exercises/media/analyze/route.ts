@@ -182,7 +182,7 @@ export async function POST(req: Request) {
 
       // 11. Save results
       const passed = evaluation.score >= passingScore
-      await adminClient
+      const { error: resultError } = await adminClient
         .from('exercise_media_submissions')
         .update({
           status: passed ? 'completed' : 'failed',
@@ -192,9 +192,15 @@ export async function POST(req: Request) {
         })
         .eq('id', submissionId)
 
+      if (resultError) {
+        console.error('Failed to save exercise result:', resultError)
+        await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', submissionId)
+        return Response.json({ error: 'Could not record the result' }, { status: 500 })
+      }
+
       // 12. Insert unified evaluation record
       const mediaType = submission.media_type === 'video' ? 'video' : 'audio'
-      await adminClient.from('exercise_evaluations').insert({
+      const { error: evaluationError } = await adminClient.from('exercise_evaluations').insert({
         exercise_id: submission.exercise_id,
         user_id: user.id,
         tenant_id: tenantId,
@@ -212,6 +218,12 @@ export async function POST(req: Request) {
         ai_metrics: evaluation.metrics as unknown as Record<string, unknown>,
       })
 
+      if (evaluationError) {
+        console.error('Failed to record exercise evaluation:', evaluationError)
+        await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', submissionId)
+        return Response.json({ error: 'Could not record the result' }, { status: 500 })
+      }
+
       // 13. Record exercise completion only if score meets passing threshold
       if (passed) {
         const completion = await recordExerciseCompletion(adminClient, {
@@ -219,7 +231,11 @@ export async function POST(req: Request) {
           userId: user.id,
           score: evaluation.score,
         })
-        if (completion.error) console.error('Failed to record exercise completion:', completion.error)
+        if (completion.error) {
+          console.error('Failed to record exercise completion:', completion.error)
+          await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', submissionId)
+          return Response.json({ error: 'Could not record the result' }, { status: 500 })
+        }
       }
 
       return Response.json({ evaluation, passed, passingScore })

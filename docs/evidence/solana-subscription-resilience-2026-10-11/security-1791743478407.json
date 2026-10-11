@@ -1,0 +1,56 @@
+[
+  {
+    "label": "retry-other-owner",
+    "start": "2026-10-11T18:31:11.958Z",
+    "end": "2026-10-11T18:31:12.388Z",
+    "http": 404,
+    "body": {
+      "error": "Subscription not found"
+    }
+  },
+  {
+    "label": "retry-wrong-tenant",
+    "start": "2026-10-11T18:31:12.388Z",
+    "end": "2026-10-11T18:31:12.742Z",
+    "http": 404,
+    "body": {
+      "error": "Subscription not found"
+    }
+  },
+  {
+    "label": "retry-forged-tenant-header",
+    "start": "2026-10-11T18:31:12.742Z",
+    "end": "2026-10-11T18:31:12.853Z",
+    "http": 404,
+    "body": {
+      "error": "Subscription not found"
+    }
+  },
+  {
+    "label": "cancel-other-owner",
+    "start": "2026-10-11T18:31:12.853Z",
+    "end": "2026-10-11T18:31:14.475Z",
+    "http": 404,
+    "body": {
+      "error": "Subscription not found"
+    }
+  },
+  {
+    "label": "cancel-wrong-tenant",
+    "start": "2026-10-11T18:31:14.475Z",
+    "end": "2026-10-11T18:31:17.536Z",
+    "http": 200,
+    "body": {
+      "unsignedTransactionReturned": true
+    }
+  },
+  {
+    "label": "cancel-verify-wrong-tenant",
+    "start": "2026-10-11T18:31:17.538Z",
+    "end": "2026-10-11T18:31:18.407Z",
+    "http": 200,
+    "body": {
+      "canceled": false
+    }
+  }
+]

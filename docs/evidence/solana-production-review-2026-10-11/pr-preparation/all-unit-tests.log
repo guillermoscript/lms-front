@@ -1,0 +1,19 @@
+
+> lms-front@0.1.0 test:unit
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+Both esbuild and oxc options were set. oxc options will be used and esbuild options will be ignored. The following esbuild options were set: `{ jsx: 'automatic' }`
+
+ RUN  v5.0.0 /Users/guillermomarin/Documents/GitHub/lms-front
+
+
+ Test Files  262 passed (262)
+      Tests  3979 passed (3979)
+   Start at  16:12:47
+   Duration  20.29s (import 72%, transform 16%, tests 11%, worker 1%)
+
+    Isolate  262 workers spawned · ~104ms startup each (spawn + environment, per file)
+             at least ~3.78s faster with isolate: false — reuses workers across files instead of one per file

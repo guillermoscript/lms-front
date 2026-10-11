@@ -93,6 +93,11 @@ const NOT_A_NEW_SALE: Record<string, string> = {
   // transactions, #538), no app caller, and a renewal of a held subscription
   // is exempt by design 4.2a anyway.
   create_transaction_for_renewal: 'legacy renewal helper, no app caller',
+  // Service-only receipt writer locks an existing subscription. It cannot
+  // create a new checkout/subscription, and confirmed-payment reconciliation
+  // must remain possible even when new sales are suspended. The DB sales gate
+  // still applies its held-subscription renewal exemption on receipt insertion.
+  record_solana_renewal: 'receipt/recovery for a held subscription, not a new sale',
 }
 
 /** RPCs that create a new sale or a new enrollment. */

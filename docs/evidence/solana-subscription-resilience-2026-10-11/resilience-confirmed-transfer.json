@@ -1,0 +1,49 @@
+{
+  "checkedAt": "2026-10-11T18:40:35.383Z",
+  "network": "devnet",
+  "signature": "621tgGAN4zcHgU3aWWbfkgpTxdpd5dCBNaad8tG8gUu1FnUDnjfw8BbdF8YxXSnjwutMXt4iBXYW2hoBsbufUfco",
+  "status": {
+    "confirmationStatus": "finalized",
+    "confirmations": null,
+    "err": null,
+    "slot": 509995247,
+    "status": {
+      "Ok": null
+    }
+  },
+  "balances": {
+    "subscriber": "-10000",
+    "school": "9500",
+    "platform": "500"
+  },
+  "receipt": {
+    "transaction_id": 10019,
+    "amount": 0.01,
+    "currency": "usd",
+    "transaction_date": "2026-10-11T18:38:56+00:00",
+    "status": "successful",
+    "payment_provider": "solana_subs",
+    "payment_method": "USDC",
+    "plan_id": 1791732752,
+    "provider_subscription_id": "CP8Jnkz23u7V1a2Nq3n7BBTjZYB5EjhicjHCLJNbvCGE",
+    "provider_charge_id": "621tgGAN4zcHgU3aWWbfkgpTxdpd5dCBNaad8tG8gUu1FnUDnjfw8BbdF8YxXSnjwutMXt4iBXYW2hoBsbufUfco",
+    "provider_metadata": {
+      "kind": "renewal",
+      "network": "devnet",
+      "error_code": null,
+      "period_end": "2026-10-11 19:38:45+00",
+      "signatures": [
+        "621tgGAN4zcHgU3aWWbfkgpTxdpd5dCBNaad8tG8gUu1FnUDnjfw8BbdF8YxXSnjwutMXt4iBXYW2hoBsbufUfco"
+      ],
+      "subscriber": "FmJvMsNXi8xcXAh7qDwToEhijT9my4bkQKDtMUwZpHRj",
+      "confirmed_at": "2026-10-11T18:38:56+00:00",
+      "period_start": "2026-10-11 18:38:45+00"
+    }
+  },
+  "beforeBalance": "9940000",
+  "afterFailureBalance": "9930000",
+  "afterRecoveryBalance": "9930000",
+  "failedDatabasePeriodEnd": "2026-10-11T18:38:45+00:00",
+  "recoveredDatabasePeriodEnd": "2026-10-11T19:38:45+00:00",
+  "assertions": "All passed"
+}

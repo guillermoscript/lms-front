@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { PROVIDER_CAPABILITIES, cancelIsFinalAtProvider, type PaymentProvider } from '@/lib/payments/types'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 
@@ -18,11 +18,12 @@ function getSupabaseAdmin() {
  * The DB trigger `on_subscription_status_change` (handle_subscription_status_change)
  * automatically revokes linked entitlements when status → 'expired' / 'canceled'.
  *
- * CAPABILITY-AWARE: only self-managed-period subscriptions are cron-expired.
+ * CAPABILITY-AWARE: unscheduled expiry is limited to self-managed periods.
+ * Scheduled cancellation on every provider uses the shared paid-access deadline.
  * Push-renewal providers (Stripe, PayPal, Lemon Squeezy — `emitsRenewalWebhooks`)
  * MUST NOT be expired here: their webhooks drive state, and a delayed renewal
  * webhook would otherwise let the cron prematurely kill a still-paying sub.
- * Providers WE own the period for (Solana, manual, mock/legacy NULL) are the
+ * Providers WE own the period for (one-time Solana, manual, mock/legacy NULL) are the
  * ones that must be cron-expired when their period lapses. We gate on the
  * capability flag, never on provider name.
  *
@@ -55,12 +56,12 @@ export async function GET(req: NextRequest) {
   const now = new Date().toISOString()
 
   // Find subscriptions that:
-  // 1. Are still marked 'active'
+  // 1. Still have a live subscription status
   // 2. Have a current_period_end in the past (or end_date, whichever is later)
   const { data: expired, error } = await supabase
     .from('subscriptions')
     .select('subscription_id, user_id, tenant_id, current_period_end, end_date, payment_provider, cancel_at_period_end')
-    .eq('subscription_status', 'active')
+    .in('subscription_status', ['active', 'renewed', 'past_due'])
     .or(`current_period_end.lt.${now},end_date.lt.${now}`)
 
   if (error) {
@@ -74,12 +75,11 @@ export async function GET(req: NextRequest) {
 
   // Filter: only expire if BOTH period_end and end_date are in the past (or null)
   // This avoids expiring subs that were renewed but have a stale end_date.
-  // Also skip push-renewal providers (their webhooks own expiry).
+  // Skip automatic renewal providers unless cancellation is scheduled.
   const toExpire = expired.filter(sub => {
-    // A final-at-provider cancel (PayPal) left the paid period for us to end
-    // (#479): the webhook kept access instead of revoking it, and no further
-    // provider event will ever arrive for this subscription.
-    const appOwnsCancel = !!sub.cancel_at_period_end && cancelIsFinalAtProvider(sub.payment_provider)
+    // Every scheduled cancellation uses the shared paid-access deadline,
+    // whether billing ended immediately or was scheduled at the provider.
+    const appOwnsCancel = !!sub.cancel_at_period_end
     if (!isCronExpirable(sub.payment_provider) && !appOwnsCancel) return false
     const periodEnd = sub.current_period_end ? new Date(sub.current_period_end) : null
     const endDate = sub.end_date ? new Date(sub.end_date) : null
@@ -95,30 +95,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ expired: 0 })
   }
 
-  const ids = toExpire.map(s => s.subscription_id)
-
-  // Update to 'expired' — DB trigger fires and disables enrollments for each
-  const { error: updateError } = await supabase
-    .from('subscriptions')
-    .update({ subscription_status: 'expired' })
-    .in('subscription_id', ids)
-
-  if (updateError) {
-    console.error('expire-subscriptions cron: update error', updateError)
-    return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+  const ids: number[] = []
+  for (const sub of toExpire) {
+    // Recheck under a row lock; the queue snapshot can race with renewal.
+    const { data: didExpire, error: updateError } = await supabase.rpc('expire_subscription_if_due', {
+      _subscription_id: sub.subscription_id,
+      _allow_unscheduled: isCronExpirable(sub.payment_provider),
+    })
+    if (updateError) return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+    if (didExpire) ids.push(sub.subscription_id)
   }
-
-  console.log(`expire-subscriptions cron: expired ${toExpire.length} subscriptions`, ids)
+  console.log(`expire-subscriptions cron: expired ${ids.length} subscriptions`, ids)
 
   // Loop E, LEARNER side — `scope` separates it from the platform subscriptions
   // expired by the sibling cron, which are a different business entirely.
   // This is the terminal churn event: `student_subscription_cancel_confirmed`
   // records the intent, this records the day access actually stopped.
   //
-  // Emitted after the batch UPDATE succeeded, so nothing is reported as expired
-  // that the DB refused. The status filter above makes the whole pass
-  // idempotent: a re-run finds no `active` rows and emits nothing.
-  for (const sub of toExpire) {
+  // Emitted only for rows the locked expiry operation actually ended.
+  // A concurrent renewal may make the queued deadline stale; it emits nothing.
+  for (const sub of toExpire.filter((row) => ids.includes(row.subscription_id))) {
     await track(
       ANALYTICS_EVENTS.SUBSCRIPTION_EXPIRED,
       {
@@ -136,7 +132,7 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  return NextResponse.json({ expired: toExpire.length, ids })
+  return NextResponse.json({ expired: ids.length, ids })
 }
 
 export const runtime = 'nodejs'

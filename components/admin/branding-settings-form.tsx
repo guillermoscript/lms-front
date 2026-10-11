@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
@@ -29,7 +29,10 @@ export default function BrandingSettingsForm({ settings }: BrandingSettingsFormP
   const t = useTranslations('dashboard.admin.settings.form')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
     try {
       const result = await updateSettings({
@@ -46,7 +49,7 @@ export default function BrandingSettingsForm({ settings }: BrandingSettingsFormP
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="logo_url">{t('branding.logoUrl')}</FieldLabel>

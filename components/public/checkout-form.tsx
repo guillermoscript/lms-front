@@ -47,6 +47,7 @@ interface CheckoutFormProps {
     formattedPrice?: string | null;
     productId?: number;
     durationDays?: number;
+    durationHours?: number;
     features?: string | null;
     userName?: string;
     userEmail?: string;
@@ -66,6 +67,7 @@ export function CheckoutForm({
     formattedPrice,
     productId,
     durationDays,
+    durationHours,
     features,
     userName,
     userEmail,
@@ -109,6 +111,12 @@ export function CheckoutForm({
         solCurrencyOpts[0] ?? 'usdc',
     );
     const [solanaQr, setSolanaQr] = useState<string | null>(null);
+    const [solanaPaymentUrl, setSolanaPaymentUrl] = useState<string | null>(null);
+    const [solanaPaymentDetails, setSolanaPaymentDetails] = useState<{
+        currency: 'usdc' | 'sol';
+        amount: number;
+        network: 'devnet' | 'testnet' | 'mainnet' | 'solana';
+    } | null>(null);
     // Binance-personal transfer instructions + QR of the Pay ID string, plus a
     // flag set when a poll reports a colliding payment awaiting admin review.
     const [instructions, setInstructions] = useState<{
@@ -133,6 +141,12 @@ export function CheckoutForm({
     const [phantomBusy, setPhantomBusy] = useState(false);
     const [phantomMsg, setPhantomMsg] = useState<string | null>(null);
     const [phantomError, setPhantomError] = useState<string | null>(null);
+    const [simulatorBusy, setSimulatorBusy] = useState(false);
+    const [simulatorError, setSimulatorError] = useState<string | null>(null);
+    const showDevnetSimulator =
+        process.env.NODE_ENV === 'development' &&
+        isSolanaSubs &&
+        title.startsWith('Devnet Auto-Renew Test (');
 
     // Clean up the Solana poll on unmount.
     useEffect(() => {
@@ -225,12 +239,28 @@ export function CheckoutForm({
         const data = await res.json();
         if (!res.ok) {
             // Platform fee sales block (#929): neutral, translated copy.
-            throw new Error(data.code === SALES_BLOCKED_CODE ? tFees('salesBlocked') : data.error || 'Checkout failed');
+            const checkoutError = data.code === SALES_BLOCKED_CODE
+                ? tFees('salesBlocked')
+                : data.code === 'CHECKOUT_TERMS_CHANGED'
+                    ? t('payment.pendingTermsChanged')
+                    : data.code === 'PAYMENT_REVIEW'
+                        ? t('payment.pendingReview')
+                        : data.code === 'PAYMENT_PROVIDER_UNAVAILABLE'
+                            ? t('payment.pendingUnavailable')
+                            : data.code === 'CHECKOUT_IN_FLIGHT'
+                                ? t('payment.pendingInFlight')
+                                : data.error || 'Checkout failed';
+            throw new Error(checkoutError);
         }
         return data as {
             kind: string;
             url: string | null;
             transactionId: number;
+            paymentDetails?: {
+                currency: 'usdc' | 'sol';
+                amount: number;
+                network: 'devnet' | 'testnet' | 'mainnet' | 'solana';
+            };
             instructions?: { payId: string; amount: number; currency: string; code: string };
         };
     };
@@ -241,6 +271,11 @@ export function CheckoutForm({
         if (!isRedirectProvider && !isQrProvider && !isInstructionsProvider) return false;
 
         const data = await createCheckoutSession();
+
+        if (data.kind === 'success' && data.transactionId) {
+            checkoutDone(data.transactionId);
+            return true;
+        }
 
         if (data.kind === 'redirect' && data.url) {
             // Lemon Squeezy hosted checkout — leave the app.
@@ -253,6 +288,8 @@ export function CheckoutForm({
             // verify endpoint until the on-chain transfer is confirmed.
             const dataUrl = await QRCode.toDataURL(data.url, { width: 240, margin: 1 });
             setSolanaQr(dataUrl);
+            setSolanaPaymentUrl(data.url);
+            setSolanaPaymentDetails(data.paymentDetails ?? null);
             startVerifyPoll(data.transactionId);
             return true;
         }
@@ -289,6 +326,10 @@ export function CheckoutForm({
             if (!provider) throw new Error(t('payment.phantomNotFound'));
 
             const data = await createCheckoutSession();
+            if (data.kind === 'success' && data.transactionId) {
+                checkoutDone(data.transactionId);
+                return;
+            }
             if (data.kind !== 'qr' || !data.url) throw new Error('Unsupported checkout response');
             const txId = data.transactionId;
             // The QR `url` is a Solana Pay link (solana:<encoded tx-request URL>).
@@ -345,6 +386,40 @@ export function CheckoutForm({
             setPhantomError(error instanceof Error ? error.message : String(error));
             setPhantomBusy(false);
             setPhantomMsg(null);
+        }
+    };
+
+    // Local-only fallback for the isolated Devnet renewal test plan. The API
+    // signs with the disposable wallet on the server so the user can inspect the
+    // same checkout/confirmation UI without a phone or browser wallet extension.
+    const simulateDevnetWallet = async () => {
+        setSimulatorError(null);
+        setSimulatorBusy(true);
+        try {
+            const checkout = await createCheckoutSession();
+            if (checkout.kind === 'success' && checkout.transactionId) {
+                checkoutDone(checkout.transactionId);
+                return;
+            }
+            if (checkout.kind !== 'qr' || !checkout.transactionId) {
+                throw new Error('Could not create the Devnet subscription checkout.');
+            }
+
+            const response = await fetch('/api/payments/solana/devnet-simulate-subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transactionId: checkout.transactionId }),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.submitted || !result.subscriber) {
+                throw new Error(result.error || 'Devnet wallet simulation failed.');
+            }
+
+            startVerifyPoll(checkout.transactionId, result.subscriber);
+        } catch (error) {
+            setSimulatorError(error instanceof Error ? error.message : 'Devnet wallet simulation failed.');
+        } finally {
+            setSimulatorBusy(false);
         }
     };
 
@@ -431,6 +506,12 @@ export function CheckoutForm({
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                             <IconCalendar className="h-3.5 w-3.5" />
                             {t('duration', { days: durationDays })}
+                        </p>
+                    )}
+                    {durationHours && (
+                        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <IconCalendar className="h-3.5 w-3.5" />
+                            {t('durationHours', { hours: durationHours })}
                         </p>
                     )}
                 </div>
@@ -568,7 +649,32 @@ export function CheckoutForm({
                             )}
                         </div>
                     ) : solanaQr ? (
-                        <div className="flex flex-col items-center gap-3 text-center">
+                        <div className="flex flex-col items-center gap-4 text-center">
+                            {solanaPaymentDetails && (
+                                <div className="w-full max-w-xs rounded-lg border border-border bg-muted/30 px-4 py-3 text-left">
+                                    <div className="flex items-center justify-between gap-4 text-sm">
+                                        <span className="text-muted-foreground">{t('payment.solanaAmount')}</span>
+                                        <span className="font-semibold tabular-nums">
+                                            {new Intl.NumberFormat(undefined, {
+                                                minimumFractionDigits: solanaPaymentDetails.currency === 'usdc' ? 2 : 4,
+                                                maximumFractionDigits: solanaPaymentDetails.currency === 'usdc' ? 6 : 9,
+                                            }).format(solanaPaymentDetails.amount)} {solanaPaymentDetails.currency.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between gap-4 text-sm">
+                                        <span className="text-muted-foreground">{t('payment.solanaNetwork')}</span>
+                                        <span className="font-medium">
+                                            {solanaPaymentDetails.network === 'devnet'
+                                                ? t('payment.solanaDevnet')
+                                                : solanaPaymentDetails.network === 'testnet'
+                                                  ? t('payment.solanaTestnet')
+                                                  : solanaPaymentDetails.network === 'mainnet'
+                                                    ? t('payment.solanaMainnet')
+                                                    : t('payment.solanaNetworkUnknown')}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                             <p className="text-sm font-medium">{t('payment.solanaScan')}</p>
                             {/* The QR keeps an explicit white plate + quiet zone on every
                                 theme — its modules are black and inverted or tinted quiet
@@ -577,14 +683,28 @@ export function CheckoutForm({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                                 src={solanaQr}
-                                alt="Solana Pay QR"
+                                alt={t('payment.solanaQrAlt')}
                                 width={240}
                                 height={240}
                                 className="rounded-lg border border-border bg-white p-2 box-content"
                             />
+                            <ol className="w-full max-w-xs space-y-2 text-left text-xs leading-relaxed text-muted-foreground">
+                                <li><span className="mr-2 font-semibold text-foreground">1.</span>{t('payment.solanaStepScan')}</li>
+                                <li><span className="mr-2 font-semibold text-foreground">2.</span>{t('payment.solanaStepReview')}</li>
+                                <li><span className="mr-2 font-semibold text-foreground">3.</span>{t('payment.solanaStepWait')}</li>
+                            </ol>
+                            {solanaPaymentUrl && (
+                                <a
+                                    href={solanaPaymentUrl}
+                                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border px-4 text-sm font-medium transition-colors hover:bg-muted sm:hidden"
+                                >
+                                    <IconWallet className="h-4 w-4" />
+                                    {t('payment.solanaOpenWallet')}
+                                </a>
+                            )}
                             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-                                {t('payment.solanaWaiting')}
+                                {t('payment.solanaWaitingForPayment')}
                             </p>
                         </div>
                     ) : phantomBusy ? (
@@ -628,7 +748,7 @@ export function CheckoutForm({
                                     </p>
                                 </div>
                             )}
-                            {subsNeedsWallet && (
+                            {subsNeedsWallet && !showDevnetSimulator && (
                                 <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-xs leading-relaxed text-warning">
                                     <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                                     <div className="space-y-1.5">
@@ -649,6 +769,17 @@ export function CheckoutForm({
                                 <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs leading-relaxed text-destructive">
                                     <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                                     {phantomError}
+                                </p>
+                            )}
+                            {showDevnetSimulator && (
+                                <p className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                                    Local Devnet test only. The simulator uses a disposable funded wallet and sends $0.01 test USDC; it cannot access mainnet funds.
+                                </p>
+                            )}
+                            {simulatorError && (
+                                <p className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs leading-relaxed text-destructive">
+                                    <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                    {simulatorError}
                                 </p>
                             )}
                         </div>
@@ -678,6 +809,11 @@ export function CheckoutForm({
                                 )}
                                 <p className="text-center text-[11px] text-muted-foreground">{t('payment.phantomHint')}</p>
                             </div>
+                        ) : showDevnetSimulator ? (
+                            <Button className="w-full" onClick={simulateDevnetWallet} disabled={isPending || simulatorBusy}>
+                                {simulatorBusy && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {simulatorBusy ? t('payment.simulatorProcessing') : t('payment.simulatorButton')}
+                            </Button>
                         ) : subsNeedsWallet ? null : (
                             /* Lemon Squeezy redirect, or one-time Solana via QR. */
                             <Button className="w-full" onClick={handleEnroll} disabled={isPending}>

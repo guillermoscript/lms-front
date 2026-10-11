@@ -1,0 +1,14 @@
+
+/Users/guillermomarin/Documents/GitHub/lms-front/lib/payments/solana-subscriptions-provider.ts
+   80:33  warning  '_fromUnit' is defined but never used       @typescript-eslint/no-unused-vars
+  151:28  warning  '_providerSubId' is defined but never used  @typescript-eslint/no-unused-vars
+  151:52  warning  '_immediate' is defined but never used      @typescript-eslint/no-unused-vars
+  163:32  warning  '_providerSubId' is defined but never used  @typescript-eslint/no-unused-vars
+  175:23  warning  '_rawBody' is defined but never used        @typescript-eslint/no-unused-vars
+  175:41  warning  '_headers' is defined but never used        @typescript-eslint/no-unused-vars
+  183:31  warning  '_rawBody' is defined but never used        @typescript-eslint/no-unused-vars
+  217:24  warning  '_productId' is defined but never used      @typescript-eslint/no-unused-vars
+  221:24  warning  '_productId' is defined but never used      @typescript-eslint/no-unused-vars
+  252:22  warning  '_priceId' is defined but never used        @typescript-eslint/no-unused-vars
+
+✖ 10 problems (0 errors, 10 warnings)

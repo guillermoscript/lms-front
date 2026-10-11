@@ -5131,6 +5131,7 @@ export type Database = {
           price: number
           provider_price_id: string | null
           provider_product_id: string | null
+          solana_period_hours: number | null
           tenant_id: string
           thumbnail: string | null
         }
@@ -5147,6 +5148,7 @@ export type Database = {
           price: number
           provider_price_id?: string | null
           provider_product_id?: string | null
+          solana_period_hours?: number | null
           tenant_id?: string
           thumbnail?: string | null
         }
@@ -5163,6 +5165,7 @@ export type Database = {
           price?: number
           provider_price_id?: string | null
           provider_product_id?: string | null
+          solana_period_hours?: number | null
           tenant_id?: string
           thumbnail?: string | null
         }

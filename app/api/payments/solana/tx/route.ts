@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     // provider_subscription_id at checkout) — unguessable, unlike transaction_id.
     const { data: tx } = await admin
       .from('transactions')
-      .select('transaction_id, status, amount, tenant_id, payment_provider, provider_subscription_id, settlement_currency, settlement_base, settlement_mint')
+      .select('transaction_id, status, amount, tenant_id, payment_provider, provider_subscription_id, settlement_currency, settlement_base, settlement_mint, school_percentage_snapshot')
       .eq('provider_subscription_id', reference)
       .maybeSingle()
 
@@ -98,12 +98,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Platform wallet not configured' }, { status: 503 })
     }
 
-    const { data: split } = await admin
-      .from('revenue_splits')
-      .select('platform_percentage')
-      .eq('tenant_id', tx.tenant_id)
-      .maybeSingle()
-    const platformPercent = Number(split?.platform_percentage ?? 20)
+    // Keep the original checkout split while this QR remains payable.
+    let platformPercent: number
+    if (tx.school_percentage_snapshot != null) {
+      platformPercent = 100 - Number(tx.school_percentage_snapshot)
+    } else {
+      const { data: split } = await admin
+        .from('revenue_splits')
+        .select('platform_percentage')
+        .eq('tenant_id', tx.tenant_id)
+        .maybeSingle()
+      platformPercent = Number(split?.platform_percentage ?? 20)
+    }
 
     const rpcUrl = process.env.SOLANA_RPC_URL
     if (!rpcUrl) {

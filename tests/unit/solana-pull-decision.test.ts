@@ -66,13 +66,18 @@ describe('decidePullAction', () => {
     expect(d.action).toBe('pull')
   })
 
+  it('retries a past-due subscription only when its period is due', () => {
+    expect(decidePullAction({ row: { ...activeRow, subscription_status: 'past_due' }, state: dueState, nowSec: NOW }).action).toBe('pull')
+    expect(decidePullAction({ row: { ...activeRow, subscription_status: 'past_due' }, state: activeState, nowSec: NOW }).action).toBe('skip')
+  })
+
   it('skips when the period has not rolled over yet', () => {
     const d = decidePullAction({ row: activeRow, state: activeState, nowSec: NOW })
     expect(d.action).toBe('skip')
   })
 
   it('never pulls a row whose DB status is not active (mid-run cancel race)', () => {
-    for (const status of ['canceled', 'expired', 'past_due', 'renewed']) {
+    for (const status of ['canceled', 'expired', 'renewed']) {
       const d = decidePullAction({
         row: { ...activeRow, subscription_status: status },
         state: dueState, // due — would pull if the gate were missing
@@ -135,13 +140,13 @@ describe('decidePullAction', () => {
   })
 
   it('does not expire while the on-chain grace deadline is still in the future', () => {
-    // expiresAtTs set but in the future — treat as still live, and (period due) pull.
+    // Paid access continues during grace, but delegation cancellation blocks every pull.
     const d = decidePullAction({
       row: activeRow,
       state: { ...dueState, expiresAtTs: BigInt(NOW + 10_000) },
       nowSec: NOW,
     })
-    expect(d.action).toBe('pull')
+    expect(d.action).toBe('skip')
   })
 
   it('status gate wins over an on-chain expiry (canceled row is left alone)', () => {

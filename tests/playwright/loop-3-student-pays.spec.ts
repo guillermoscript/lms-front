@@ -406,11 +406,16 @@ test.describe('Loop 3 — a student pays the school with Stripe and the school s
     expect(replay.status()).toBe(200)
     expect(await entitlementsOf()).toHaveLength(1)
 
-    // The success page now resolves to the course, and the course opens.
+    // The order confirmation shows a readable receipt before linking to the course.
     await login(page, SEEDED.student.email, SEEDED.student.password, QA_BASE)
     await page.goto(`${QA_BASE}/${LOCALE}/checkout/success?transactionId=${productTransactionId}`, {
       waitUntil: 'domcontentloaded',
     })
+    await expect(page).toHaveURL(new RegExp(`/checkout/success\\?transactionId=${productTransactionId}$`))
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Payment successful')
+    await expect(page.getByText(`#${productTransactionId}`)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Start learning' })).toBeVisible()
+    await page.getByRole('button', { name: 'Start learning' }).click()
     await page.waitForURL(`**/dashboard/student/courses/${courseId}**`, { timeout: 60_000 })
     await expect(page.getByRole('heading', { level: 1 })).toContainText(COURSE_TITLE, { timeout: 30_000 })
   })

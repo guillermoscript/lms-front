@@ -14,8 +14,9 @@ const pullCalls: { receiverAta: string; amountBase: bigint }[] = []
 
 // A hoisted function declaration (not `const`) — vi.mock's factory is hoisted
 // above top-level statements, so a `const` reference here would hit the TDZ.
-async function defaultPullOnceImpl(p: { receiverAta: string; amountBase: bigint }) {
-  pullCalls.push({ receiverAta: p.receiverAta, amountBase: p.amountBase })
+async function defaultPullOnceImpl(p: { receiverAta: string; amountBase: bigint; additionalTransfers?: { receiverAta: string; amountBase: bigint }[] }) {
+  pullCalls.push({ receiverAta: p.receiverAta, amountBase: p.amountBase }, ...(p.additionalTransfers ?? []))
+  return 'confirmed-signature'
 }
 
 vi.mock('@/lib/payments/solana-subscriptions', () => ({
@@ -64,6 +65,8 @@ describe('pullSplitForSubscription resume contract', () => {
   it('alreadyPulled=0 → pulls BOTH legs (school then platform)', async () => {
     await pullSplitForSubscription(base(BigInt(0)))
     expect(pullCalls.map((c) => c.amountBase)).toEqual([SCHOOL_BASE, PLATFORM_BASE])
+    expect(pullOnceMock).toHaveBeenCalledTimes(1)
+    expect(pullOnceMock.mock.calls[0][0].additionalTransfers).toHaveLength(1)
   })
 
   it('alreadyPulled undefined → defaults to both legs', async () => {
@@ -104,7 +107,7 @@ describe('pullSplitForSubscription retry-within-invocation (issue #343 H2 partia
       })
       const promise = pullSplitForSubscription(base(SCHOOL_BASE)) // only the platform leg is due
       await vi.advanceTimersByTimeAsync(5000)
-      await expect(promise).resolves.toBeUndefined()
+      await expect(promise).resolves.toEqual(['confirmed-signature'])
       expect(pullCalls.filter((c) => c.amountBase === PLATFORM_BASE)).toHaveLength(1)
     } finally {
       vi.useRealTimers()

@@ -56,6 +56,7 @@ export default async function ExercisesListPage({ params }: PageProps) {
 
     if (error) {
         console.error('Error fetching exercises:', error)
+        throw new Error('Unable to load your exercises')
     }
 
     // Exercises embedded as lesson checkpoints are completed inside the

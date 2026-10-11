@@ -2,7 +2,8 @@
 
 import { createAdminClient, verifyAdminAccess } from '@/lib/supabase/admin'
 import { getPaymentProvider, PaymentProvider } from '@/lib/payments'
-import { cancelIsFinalAtProvider } from '@/lib/payments/types'
+import { cancelIsFinalAtProvider, type CancellationResult } from '@/lib/payments/types'
+import { applySubscriptionCancellation, cancelProviderSubscription, resumeProviderSubscription } from '@/lib/payments/subscription-cancellation'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { revalidatePath } from 'next/cache'
@@ -50,12 +51,13 @@ export async function cancelSubscription(
     // provider-side authorization is still live is the money leak in #460. We
     // surface the message so the UI can warn the admin.
     let providerCancelError: string | undefined
+    let cancellationResult: CancellationResult | undefined
     if (subscription.provider_subscription_id) {
       try {
         const provider = getPaymentProvider(
           (subscription.payment_provider as PaymentProvider) || 'stripe'
         )
-        await provider.cancelSubscription?.(subscription.provider_subscription_id, immediate)
+        cancellationResult = await cancelProviderSubscription(provider, subscription.provider_subscription_id, immediate)
       } catch (providerError) {
         providerCancelError =
           providerError instanceof Error ? providerError.message : String(providerError)
@@ -63,41 +65,13 @@ export async function cancelSubscription(
       }
     }
 
-    // A period-end cancel keeps whatever live status the row already had —
-    // cancelling must never IMPROVE it (#545). Writing 'active' unconditionally
-    // erased a `past_due` delinquency from billing health and the admin views
-    // the moment anyone scheduled a cancel. Only the legacy `renewed` status is
-    // normalized to 'active'; nothing writes it any more.
-    const liveStatus =
-      subscription.subscription_status === 'renewed' ? 'active' : subscription.subscription_status
+    await applySubscriptionCancellation(supabase, subscriptionId, {
+      immediate, result: cancellationResult,
+    })
 
-    const updates: any = {
-      // Use 'canceled' (correct enum value) for immediate; keep the live status for period-end
-      subscription_status: immediate ? 'canceled' : liveStatus,
-      canceled_at: new Date().toISOString(),
-    }
-
-    if (!immediate) {
-      updates.cancel_at_period_end = true
-      updates.cancel_at = subscription.current_period_end || subscription.end_date
-    } else {
-      updates.end_date = new Date().toISOString()
-      updates.current_period_end = new Date().toISOString()
-    }
-
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update(updates)
-      .eq('subscription_id', subscriptionId)
-      .eq('tenant_id', tenantId)
-
-    if (updateError) {
-      console.error('Database update error:', updateError)
-      return { success: false, error: 'Failed to update subscription' }
-    }
-
-    // For immediate cancellation, the DB trigger already disabled linked enrollments.
-    // For period-end cancellation, enrollments stay active until the cron job
+    // For immediate termination, the trigger revokes subscription entitlements.
+    // For period-end cancellation, independently purchased access stays intact
+    // and subscription access stays active until the cron job
     // or a future webhook fires when the period ends.
 
     // Revalidate the subscriptions page
@@ -151,7 +125,12 @@ export async function reactivateSubscription(subscriptionId: number) {
       return { success: false, error: 'Subscription is not scheduled to cancel' }
     }
 
-    // PayPal cancels are final at PayPal (#479): un-flagging the row would show
+    if (!['active', 'renewed', 'past_due'].includes(subscription.subscription_status)
+      || !(Date.parse(subscription.current_period_end ?? subscription.end_date) > Date.now())) {
+      return { success: false, error: 'not_reactivatable' }
+    }
+
+    // Final-at-provider cancels cannot resume: un-flagging the row would show
     // a renewing subscription that never bills again.
     if (subscription.provider_subscription_id && cancelIsFinalAtProvider(subscription.payment_provider)) {
       return {
@@ -162,19 +141,16 @@ export async function reactivateSubscription(subscriptionId: number) {
 
     // Reverse the provider-side cancel too. A DB-only reactivate would leave the
     // provider (e.g. Stripe) still set to cancel at period end, so the sub would
-    // lapse anyway. Errors are surfaced as a warning, not swallowed (mirrors the
-    // cancel action) — some providers (solana_subs) cannot reactivate server-side.
-    let providerReactivateError: string | undefined
+    // lapse anyway. A provider error leaves the cancellation schedule intact.
     if (subscription.provider_subscription_id) {
       try {
         const provider = getPaymentProvider(
           (subscription.payment_provider as PaymentProvider) || 'stripe'
         )
-        await provider.reactivateSubscription?.(subscription.provider_subscription_id)
+        await resumeProviderSubscription(provider, subscription.provider_subscription_id)
       } catch (providerError) {
-        providerReactivateError =
-          providerError instanceof Error ? providerError.message : String(providerError)
-        console.error('Provider reactivateSubscription failed (continuing to update DB):', providerError)
+        console.error('Provider reactivateSubscription failed:', providerError)
+        return { success: false, error: 'Provider reactivation failed' }
       }
     }
 
@@ -183,25 +159,24 @@ export async function reactivateSubscription(subscriptionId: number) {
     // `subscriptions_cancel_at_requires_schedule` rejects a cancel date that
     // outlives its schedule, so a leftover date can no longer be read as a live
     // cancel by the Solana auto-pull crank. `canceled_at` is cleared too.
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        cancel_at_period_end: false,
-        cancel_at: null,
-        canceled_at: null,
-      })
-      .eq('subscription_id', subscriptionId)
-      .eq('tenant_id', tenantId)
-
-    if (updateError) {
-      console.error('Database update error:', updateError)
-      return { success: false, error: 'Failed to reactivate subscription' }
+    const { data: resumed, error: updateError } = await supabase.rpc('resume_subscription', {
+      _subscription_id: subscriptionId,
+    })
+    if (updateError || !resumed) {
+      if (subscription.provider_subscription_id) {
+        try {
+          const provider = getPaymentProvider((subscription.payment_provider as PaymentProvider) || 'stripe')
+          await cancelProviderSubscription(provider, subscription.provider_subscription_id, false)
+        } catch (providerError) {
+          console.error('Resume compensation requires provider reconciliation:', providerError)
+        }
+      }
+      return { success: false, error: updateError ? 'update_failed' : 'not_reactivatable' }
     }
-
     // Revalidate the subscriptions page
     revalidatePath('/dashboard/admin/subscriptions')
 
-    return { success: true, providerReactivateError }
+    return { success: true }
   } catch (error) {
     console.error('Reactivate subscription error:', error)
     return { success: false, error: 'An unexpected error occurred' }

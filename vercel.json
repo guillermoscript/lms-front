@@ -37,6 +37,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "path": "/api/cron/solana-pull",
+      "schedule": "*/10 * * * *"
+    },
+    {
       "path": "/api/cron/binance-personal-reconcile",
       "schedule": "*/10 * * * *"
     },

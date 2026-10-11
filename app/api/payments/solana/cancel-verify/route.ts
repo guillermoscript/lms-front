@@ -1,16 +1,5 @@
-/**
- * Confirm an on-chain subscription cancel and finalize the DB row (issue #460).
- *
- * After the student signs the cancel tx (from /cancel-tx) and submits it through
- * /submit, this route reads the on-chain SubscriptionDelegation and, if it is
- * now cancelled (expiresAtTs != 0), marks our subscription row `canceled`. The
- * crank already refuses to charge any non-active row, so this closes the loop:
- * the delegation is revoked on-chain AND our records agree.
- *
- * Auth: the caller must be signed in AND own the subscription (resolved through
- * the RLS server client filtered by user_id). The status write uses the service
- * role because subscription status is not student-writable under RLS — ownership
- * is already proven by the RLS-scoped select above.
+/** Verify revocation, stop future charges and retain the verified paid period.
+ * Ownership, school and origin are checked before privileged work.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,6 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSubscriptionState } from '@/lib/payments/solana-subscriptions'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { applySubscriptionCancellation } from '@/lib/payments/subscription-cancellation'
+import { renewSolanaSubscription, type SolanaRenewalRow } from '@/lib/payments/solana-renewal'
 
 export const runtime = 'nodejs'
 
@@ -29,6 +21,10 @@ interface SolanaSubMeta {
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  if (!origin || origin !== `${req.nextUrl.protocol}//${req.headers.get('host')}`) {
+    return NextResponse.json({ error: 'Invalid origin' }, { status: 403 })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -47,16 +43,18 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => null)
     const subscriptionId = body?.subscriptionId
-    if (!subscriptionId || typeof subscriptionId !== 'number') {
+    if (!Number.isSafeInteger(subscriptionId) || subscriptionId <= 0) {
       return NextResponse.json({ error: 'Missing subscriptionId' }, { status: 400 })
     }
 
-    // RLS + explicit user filter: the caller can only reach their own row.
+    const tenantId = await getCurrentTenantId()
+    // Scope ownership to the school resolved from the request hostname.
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('subscription_id, payment_provider, provider_metadata')
+      .select('subscription_id, payment_provider, provider_metadata, start_date, tenant_id, plan_id, subscription_status, cancel_at_period_end, cancel_at, provider_subscription_id, plans(price)')
       .eq('subscription_id', subscriptionId)
       .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
     if (!sub) {
@@ -92,23 +90,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ canceled: false })
     }
 
-    // Ownership is already proven above; use the service role to write the status
-    // (not student-writable under RLS).
     const admin = createAdminClient()
-    const { error: updateError } = await admin
-      .from('subscriptions')
-      .update({ subscription_status: 'canceled', canceled_at: new Date().toISOString() })
-      .eq('subscription_id', subscriptionId)
-
-    if (updateError) {
-      console.error('[solana/cancel-verify] db update error:', updateError)
-      return NextResponse.json({ error: 'Failed to finalize cancellation' }, { status: 500 })
-    }
-
-    return NextResponse.json({ canceled: true })
+    // A renewal can land before cancellation but fail to persist its receipt.
+    // Reconcile it without debiting before choosing the paid-access deadline.
+    if (state) await renewSolanaSubscription(admin, sub as SolanaRenewalRow, { recoveryOnly: true })
+    const deadline = await applySubscriptionCancellation(admin, subscriptionId, {
+      result: { mode: 'period_end', ...(state ? { effectiveAt: new Date(Number(state.expiresAtTs) * 1000) } : {}) },
+    })
+    return NextResponse.json({ canceled: true, paidThrough: deadline })
   } catch (error) {
     console.error('[solana/cancel-verify] error:', error)
-    const message = error instanceof Error ? error.message : 'Cancel verification failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: 'Cancellation verification is unresolved. Check cancellation again before submitting another transaction.', recoveryRequired: true }, { status: 503 })
   }
 }

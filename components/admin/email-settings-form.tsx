@@ -1,17 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { updateSettings } from '@/app/actions/admin/settings'
+import { updateSettings, type SettingsGroup } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 interface EmailSettingsFormProps {
-  settings: Record<string, any>
+  settings: SettingsGroup
 }
 
 export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) {
@@ -28,7 +28,10 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
   const smtpFromName = settings.smtp_from_name?.value?.value || ''
   const emailNotifications = settings.email_notifications?.value?.enabled || false
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
 
     try {
@@ -57,7 +60,7 @@ export default function EmailSettingsForm({ settings }: EmailSettingsFormProps) 
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Email Notifications Toggle */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">

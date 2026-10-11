@@ -50,7 +50,6 @@ export function LessonNavigation({
   isCompleted,
   prevLessonId,
   nextLessonId,
-  tenantId,
   requireSequentialCompletion = false,
   completedCount = 0,
   totalLessons = 0,
@@ -124,40 +123,46 @@ export function LessonNavigation({
     setUncompleteOpen(false)
     setLoading(true)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
 
-    if (!user) {
-      setLoading(false)
-      return
-    }
+      if (!user) {
+        toast.error(t('updateFailed'), { position: 'top-center' })
+        router.push('/auth/login')
+        return
+      }
 
-    // Optimistic: flip immediately, revert on error
-    setCompleted(false)
+      // Optimistic: flip immediately, revert on error
+      setCompleted(false)
 
-    const { error } = await supabase
-      .from('lesson_completions')
-      .delete()
-      .eq('lesson_id', lessonId)
-      .eq('user_id', user.id)
+      const { error } = await supabase
+        .from('lesson_completions')
+        .delete()
+        .eq('lesson_id', lessonId)
+        .eq('user_id', user.id)
 
-    if (error) {
-      console.error('Failed to uncomplete lesson:', error)
-      toast.error(t('updateFailed'))
+      if (error) {
+        console.error('Failed to uncomplete lesson:', error)
+        toast.error(t('updateFailed'), { position: 'top-center' })
+        setCompleted(true)
+        return
+      }
+
+      // After the delete lands, never on the optimistic flip above.
+      analytics.track(ANALYTICS_EVENTS.LESSON_UNCOMPLETED, {
+        lesson_id: lessonId,
+        course_id: courseId,
+      })
+
+      toast.success(t('uncompleted'))
+      startTransition(() => { router.refresh() })
+    } catch {
       setCompleted(true)
+      toast.error(t('updateFailed'), { position: 'top-center' })
+    } finally {
       setLoading(false)
-      return
     }
-
-    // After the delete lands, never on the optimistic flip above.
-    analytics.track(ANALYTICS_EVENTS.LESSON_UNCOMPLETED, {
-      lesson_id: lessonId,
-      course_id: courseId,
-    })
-
-    toast.success(t('uncompleted'))
-    setLoading(false)
-    startTransition(() => { router.refresh() })
   }
 
   async function handleComplete() {
@@ -173,16 +178,29 @@ export function LessonNavigation({
     }
     setLoading(true)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    const user = session?.user
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
 
-    if (!user) {
-      setLoading(false)
-      return
-    }
+      if (!user) {
+        toast.error(t('updateFailed'), { position: 'top-center' })
+        router.push('/auth/login')
+        return
+      }
 
-    {
-      // Optimistic: celebrate immediately, revert on error
+      const { error } = await supabase.from('lesson_completions').insert({
+        lesson_id: lessonId,
+        user_id: user.id,
+      })
+
+      if (error) {
+        console.error('Failed to complete lesson:', error)
+        toast.error(t('completeFailed'), { position: 'top-center' })
+        setCompleted(false)
+        return
+      }
+
+      // Celebrate only after the database confirms the completion.
       setCompleted(true)
       const isCourseNowComplete = totalLessons > 0 && completedCount + 1 >= totalLessons
 
@@ -225,22 +243,7 @@ export function LessonNavigation({
         })
       }
 
-      const { error } = await supabase.from('lesson_completions').insert({
-        lesson_id: lessonId,
-        user_id: user.id,
-      })
-
-      if (error) {
-        console.error('Failed to complete lesson:', error)
-        toast.error(t('completeFailed'))
-        setCompleted(false)
-        setLoading(false)
-        return
-      }
-
-      // The insert is the only proof the completion is real — the UI flipped
-      // optimistically several lines ago and reverts on the branch above, so
-      // tracking any earlier would count completions that errored.
+      // Record analytics only after the completion has been saved.
       analytics.track(ANALYTICS_EVENTS.LESSON_COMPLETED, {
         lesson_id: lessonId,
         course_id: courseId,
@@ -259,7 +262,6 @@ export function LessonNavigation({
         })
       }
 
-      setLoading(false)
 
       // Check if a certificate was auto-issued after this lesson completion
       const { data: cert } = await supabase
@@ -267,6 +269,7 @@ export function LessonNavigation({
         .select('certificate_id, verification_code')
         .eq('user_id', user.id)
         .eq('course_id', courseId)
+        .is('revoked_at', null)
         .maybeSingle()
 
       if (cert?.verification_code) {
@@ -288,6 +291,10 @@ export function LessonNavigation({
       } else {
         startTransition(() => { router.refresh() })
       }
+    } catch {
+      toast.error(t('completeFailed'), { position: 'top-center' })
+    } finally {
+      setLoading(false)
     }
   }
 

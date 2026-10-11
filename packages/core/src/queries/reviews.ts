@@ -181,13 +181,17 @@ export async function gradeReviewCard(
   if (!row) return { ok: false, reason: 'not_found', message: `Card ${cardId} not found` }
 
   const next = gradeCard(row as FsrsRow, rating, now)
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from('review_cards')
     .update(next)
     .eq('id', cardId)
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
+    .select('id')
+    .maybeSingle()
   if (updateError) return { ok: false, reason: 'error', message: `Updating card: ${updateError.message}` }
+
+  if (!updated) return { ok: false, reason: 'not_found', message: `Card ${cardId} was not updated` }
 
   return { ok: true, card_id: cardId, rating, next }
 }

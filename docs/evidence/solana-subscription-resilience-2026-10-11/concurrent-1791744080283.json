@@ -1,0 +1,43 @@
+[
+  {
+    "label": "student-retry-a",
+    "start": "2026-10-11T18:41:19.657Z",
+    "end": "2026-10-11T18:41:20.274Z",
+    "http": 200,
+    "body": {
+      "status": "not_due"
+    }
+  },
+  {
+    "label": "student-lost-response",
+    "start": "2026-10-11T18:41:19.659Z",
+    "http": 429,
+    "body": {
+      "error": "Too many requests"
+    }
+  },
+  {
+    "label": "cron-1",
+    "start": "2026-10-11T18:41:19.659Z",
+    "end": "2026-10-11T18:41:20.283Z",
+    "http": 200,
+    "body": {
+      "pulled": 0,
+      "reconciled": 0,
+      "insufficientFunds": 0,
+      "errors": 0
+    }
+  },
+  {
+    "label": "cron-2",
+    "start": "2026-10-11T18:41:19.663Z",
+    "end": "2026-10-11T18:41:20.273Z",
+    "http": 200,
+    "body": {
+      "pulled": 0,
+      "reconciled": 0,
+      "insufficientFunds": 0,
+      "errors": 0
+    }
+  }
+]

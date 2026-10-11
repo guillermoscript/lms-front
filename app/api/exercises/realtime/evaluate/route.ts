@@ -162,7 +162,7 @@ export async function POST(req: Request) {
     const score = Math.max(0, Math.min(100, Math.round(output.score)))
     const passed = score >= config.passing_score
 
-    await adminClient
+    const { error: resultError } = await adminClient
       .from('exercise_media_submissions')
       .update({
         status: passed ? 'completed' : 'failed',
@@ -173,7 +173,13 @@ export async function POST(req: Request) {
       })
       .eq('id', session.id)
 
-    await adminClient.from('exercise_evaluations').insert({
+    if (resultError) {
+      console.error('Failed to save exercise result:', resultError)
+      await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', session.id)
+      return Response.json({ error: 'Could not record the result' }, { status: 500 })
+    }
+
+    const { error: evaluationError } = await adminClient.from('exercise_evaluations').insert({
       exercise_id: exerciseId,
       user_id: user.id,
       tenant_id: tenantId,
@@ -198,9 +204,19 @@ export async function POST(req: Request) {
       },
     })
 
+    if (evaluationError) {
+      console.error('Failed to record exercise evaluation:', evaluationError)
+      await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', session.id)
+      return Response.json({ error: 'Could not record the result' }, { status: 500 })
+    }
+
     if (passed) {
       const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score })
-      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
+      if (completion.error) {
+        console.error('Failed to record exercise completion:', completion.error)
+        await adminClient.from('exercise_media_submissions').update({ status: 'pending' }).eq('id', session.id)
+        return Response.json({ error: 'Could not record the result' }, { status: 500 })
+      }
     }
 
     await track(

@@ -1,0 +1,41 @@
+[
+  {
+    "label": "student-retry-a",
+    "start": "2026-10-11T18:38:53.760Z",
+    "end": "2026-10-11T18:38:57.279Z",
+    "http": 503,
+    "body": {
+      "status": "unconfirmed"
+    }
+  },
+  {
+    "label": "student-lost-response",
+    "start": "2026-10-11T18:38:53.762Z",
+    "end": "2026-10-11T18:38:54.967Z",
+    "clientOutcome": "HTTP request deliberately aborted while server continued"
+  },
+  {
+    "label": "cron-1",
+    "start": "2026-10-11T18:38:53.762Z",
+    "end": "2026-10-11T18:38:57.298Z",
+    "http": 200,
+    "body": {
+      "pulled": 0,
+      "reconciled": 0,
+      "insufficientFunds": 0,
+      "errors": 1
+    }
+  },
+  {
+    "label": "cron-2",
+    "start": "2026-10-11T18:38:53.766Z",
+    "end": "2026-10-11T18:38:57.300Z",
+    "http": 200,
+    "body": {
+      "pulled": 0,
+      "reconciled": 0,
+      "insufficientFunds": 0,
+      "errors": 1
+    }
+  }
+]

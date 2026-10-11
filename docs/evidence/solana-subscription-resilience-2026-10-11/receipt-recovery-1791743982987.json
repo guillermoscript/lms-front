@@ -1,0 +1,14 @@
+{
+  "label": "receipt-recovery",
+  "start": "2026-10-11T18:39:41.145Z",
+  "end": "2026-10-11T18:39:42.986Z",
+  "http": 200,
+  "body": {
+    "status": "paid",
+    "signatures": [
+      "621tgGAN4zcHgU3aWWbfkgpTxdpd5dCBNaad8tG8gUu1FnUDnjfw8BbdF8YxXSnjwutMXt4iBXYW2hoBsbufUfco"
+    ],
+    "periodEnd": "2026-10-11T19:38:45.000Z",
+    "reconciled": true
+  }
+}

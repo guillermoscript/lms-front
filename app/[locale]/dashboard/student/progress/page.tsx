@@ -26,7 +26,7 @@ export default async function StudentProgressPage() {
   }
 
   // Fetch enrollments with course data
-  const { data: enrollments } = await supabase
+  const { data: enrollments, error: enrollmentError } = await supabase
     .from('enrollments')
     .select(`
       enrollment_id,
@@ -43,24 +43,26 @@ export default async function StudentProgressPage() {
     .eq('tenant_id', tenantId)
     .order('enrollment_date', { ascending: false })
 
+  if (enrollmentError) throw new Error('Unable to load your course progress')
+
   // Get all course IDs for enrolled courses
   const courseIds = enrollments?.map((e) => e.course_id) || []
 
   // Parallelize all 4 queries (all independent once we have courseIds and userId)
   const [
-    { data: lessons },
-    { data: completions },
-    { data: exams },
-    { data: examSubmissions },
-    { data: promptGrades },
+    { data: lessons, error: lessonsError },
+    { data: completions, error: completionsError },
+    { data: exams, error: examsError },
+    { data: examSubmissions, error: submissionsError },
+    { data: promptGrades, error: gradesError },
   ] = await Promise.all([
     courseIds.length > 0
       ? supabase.from('lessons').select('id, course_id, title').in('course_id', courseIds).eq('status', 'published')
-      : Promise.resolve({ data: [] as { id: number; course_id: number; title: string }[] }),
+      : Promise.resolve({ data: [] as { id: number; course_id: number; title: string }[], error: null }),
     supabase.from('lesson_completions').select('lesson_id, completed_at').eq('user_id', userId),
     courseIds.length > 0
       ? supabase.from('exams').select('exam_id, course_id, title').in('course_id', courseIds)
-      : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string }[] }),
+      : Promise.resolve({ data: [] as { exam_id: number; course_id: number; title: string }[], error: null }),
     supabase.from('exam_submissions').select('exam_id, score, submission_date')
       .eq('student_id', userId).eq('tenant_id', tenantId),
     // #873: the student's own grades on graded discussion prompts. Shown, but
@@ -73,6 +75,10 @@ export default async function StudentProgressPage() {
       .eq('community_posts.is_hidden', false)
       .order('graded_at', { ascending: true }),
   ])
+
+  if (lessonsError || completionsError || examsError || submissionsError || gradesError) {
+    throw new Error('Unable to load your course progress')
+  }
 
   // Build maps
   const completionSet = new Set(completions?.map((c) => c.lesson_id) || [])

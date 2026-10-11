@@ -15,8 +15,9 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { applySubscriptionCancellation } from './subscription-cancellation'
 import type { NormalizedBillingEvent } from './types'
-import { PROVIDER_CAPABILITIES, cancelIsFinalAtProvider, type PaymentProvider } from './types'
+import { PROVIDER_CAPABILITIES, type PaymentProvider } from './types'
 import { netOfRefunds } from './payouts-owed'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
@@ -405,14 +406,15 @@ export async function dispatchBillingEvent(
       }
 
       if (!subId) break
-      // Existing row (return-from-expired reactivation). Set 'active' (not
-      // 'renewed') so the enrollment-reactivation branch of
-      // handle_subscription_status_change fires on a return from expired.
+      // Existing-row activation is not proof of a new paid period. Ignore late
+      // activations for ended/scheduled subscriptions; explicit resume or a
+      // new checkout owns reauthorization.
       const patch: Record<string, unknown> = { subscription_status: 'active' }
-      if (event.periodEnd) patch.current_period_end = event.periodEnd.toISOString()
       const { error } = await admin
         .from('subscriptions')
         .update(patch)
+        .in('subscription_status', ['active', 'renewed', 'past_due'])
+        .eq('cancel_at_period_end', false)
         .eq('provider_subscription_id', subId)
         .eq('payment_provider', provider)
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
@@ -479,52 +481,22 @@ export async function dispatchBillingEvent(
     case 'subscription.canceled':
     case 'subscription.expired': {
       if (!subId) break
-      // A cancel that is final at the provider (PayPal) arrives the moment
-      // anyone cancels — the student on the billing page, the school admin, or
-      // the payer from their PayPal account — not when the period they paid for
-      // ends. Writing `canceled` here fired the status trigger and revoked the
-      // courses that same second on a subscription paid through next month
-      // (seen live, #479). Keep the access, record the cancel the way a
-      // scheduled one looks, and let `expire-subscriptions` end it at the period
-      // end (`cancelIsFinalAtProvider`). `expired` is not deferred: PayPal only
-      // sends it once the billing cycles are over.
-      if (event.type === 'subscription.canceled' && cancelIsFinalAtProvider(provider)) {
-        const { data: live, error: liveErr } = await admin
-          .from('subscriptions')
-          .select('subscription_id, subscription_status, current_period_end, end_date, cancel_at_period_end')
-          .eq('provider_subscription_id', subId)
-          .eq('payment_provider', provider)
-          .limit(1)
-          .maybeSingle()
-        if (liveErr) throw new Error(`dispatch ${event.type} lookup failed: ${liveErr.message}`)
-        const paidThrough = live?.current_period_end ?? live?.end_date
-        if (
-          live &&
-          ['active', 'renewed', 'past_due'].includes(live.subscription_status) &&
-          paidThrough &&
-          new Date(paidThrough).getTime() > Date.now()
-        ) {
-          if (!live.cancel_at_period_end) {
-            const { error: scheduleErr } = await admin
-              .from('subscriptions')
-              .update({
-                cancel_at_period_end: true,
-                cancel_at: paidThrough,
-                canceled_at: new Date().toISOString(),
-              })
-              .eq('subscription_id', live.subscription_id)
-            if (scheduleErr) throw new Error(`dispatch ${event.type} failed: ${scheduleErr.message}`)
-          }
-          break
-        }
+      const { data: live, error: liveErr } = await admin.from('subscriptions')
+        .select('subscription_id').eq('provider_subscription_id', subId)
+        .eq('payment_provider', provider).limit(1).maybeSingle()
+      if (liveErr) throw new Error(`dispatch ${event.type} lookup failed: ${liveErr.message}`)
+      if (!live) break
+      if (event.type === 'subscription.canceled') {
+        // Provider billing finality never discards valid paid access. Explicit
+        // admin termination/refund uses the immediate path separately.
+        await applySubscriptionCancellation(admin, live.subscription_id)
+      } else {
+        // A late terminal event cannot revoke a newer paid period.
+        const { error } = await admin.rpc('expire_subscription_if_due', {
+          _subscription_id: live.subscription_id, _allow_unscheduled: true,
+        })
+        if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       }
-      const status = event.type === 'subscription.canceled' ? 'canceled' : 'expired'
-      const { error } = await admin
-        .from('subscriptions')
-        .update({ subscription_status: status, ended_at: new Date().toISOString() })
-        .eq('provider_subscription_id', subId)
-        .eq('payment_provider', provider)
-      if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
       break
     }
 
@@ -540,6 +512,7 @@ export async function dispatchBillingEvent(
       const { error } = await admin
         .from('subscriptions')
         .update({ subscription_status: 'past_due' })
+        .in('subscription_status', ['active', 'renewed', 'past_due'])
         .eq('provider_subscription_id', subId)
         .eq('payment_provider', provider)
       if (error) throw new Error(`dispatch ${event.type} failed: ${error.message}`)
