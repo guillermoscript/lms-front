@@ -1,0 +1,25 @@
+{
+  "unitTests": {
+    "passed": 133,
+    "files": 9,
+    "kind": "mocked"
+  },
+  "componentBrowserTests": {
+    "passed": 7,
+    "kind": "prepared props and mocked API"
+  },
+  "liveUiApi": {
+    "passed": true,
+    "rejections": 12,
+    "desktopMobileScreenshots": 2,
+    "kind": "local production build, real local Supabase"
+  },
+  "databaseContract": "passed; isolated fixtures rolled back; synthetic receipts/deadlines",
+  "databaseConcurrency": "passed; two real PostgreSQL sessions; synthetic paid periods; isolated fixtures deleted",
+  "targetedLint": "passed",
+  "strictTypeScript": "passed; scoped strict config; 6144 MB heap",
+  "productionBuild": "passed; ignoreBuildErrors remains true",
+  "migrationApplication": "local only, direct SQL; history ledger not stamped",
+  "devnet": "read-only canceled delegation confirmed; no new payments",
+  "verdict": "code review ready; release validation incomplete"
+}

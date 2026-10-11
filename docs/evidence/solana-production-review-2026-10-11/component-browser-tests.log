@@ -1,0 +1,12 @@
+
+Running 5 tests using 1 worker
+
+(node:91839) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/playwright/solana-billing-components.spec.ts:9:7 › desktop scheduled cancellation keeps deadline visible (209ms)
+  ✓  2 tests/playwright/solana-billing-components.spec.ts:20:7 › desktop confirmation uncertainty uses reconciliation only, including repeated checks (296ms)
+  ✓  3 tests/playwright/solana-billing-components.spec.ts:9:7 › mobile scheduled cancellation keeps deadline visible (147ms)
+  ✓  4 tests/playwright/solana-billing-components.spec.ts:20:7 › mobile confirmation uncertainty uses reconciliation only, including repeated checks (336ms)
+  ✓  5 tests/playwright/solana-billing-components.spec.ts:40:5 › insufficient balance recovery switches to a safe check after transport uncertainty (212ms)
+
+  5 passed (1.6s)

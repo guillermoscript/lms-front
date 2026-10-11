@@ -20,7 +20,7 @@ export default async function StudentCertificatesPage() {
   }
 
   // Fetch certificates with related course and template data
-  const { data: certificates } = await supabase
+  const { data: certificates, error } = await supabase
     .from('certificates')
     .select(`
       *,
@@ -41,6 +41,8 @@ export default async function StudentCertificatesPage() {
     .eq('tenant_id', tenantId)
     .is('revoked_at', null)
     .order('issued_at', { ascending: false })
+
+  if (error) throw new Error('Unable to load your certificates')
 
   // Get unique courses with certificates for stats
   const uniqueCourses = new Set(certificates?.map(c => c.course_id) || [])

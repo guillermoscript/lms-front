@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     const passed = evaluation.score >= passingScore
 
     // 10. Insert evaluation record
-    await adminClient.from('exercise_evaluations').insert({
+    const { error: evaluationError } = await adminClient.from('exercise_evaluations').insert({
       exercise_id: exerciseId,
       user_id: user.id,
       tenant_id: tenantId,
@@ -129,10 +129,18 @@ export async function POST(req: Request) {
       },
     })
 
+    if (evaluationError) {
+      console.error('Failed to record exercise evaluation:', evaluationError)
+      return Response.json({ error: 'Could not record the result' }, { status: 500 })
+    }
+
     // 11. Record completion if passed
     if (passed) {
       const completion = await recordExerciseCompletion(adminClient, { exerciseId, userId: user.id, score: evaluation.score })
-      if (completion.error) console.error('Failed to record exercise completion:', completion.error)
+      if (completion.error) {
+        console.error('Failed to record exercise completion:', completion.error)
+        return Response.json({ error: 'Could not record the result' }, { status: 500 })
+      }
     }
 
     // 12. Track the submission. No `attempt_number`: the only count this route

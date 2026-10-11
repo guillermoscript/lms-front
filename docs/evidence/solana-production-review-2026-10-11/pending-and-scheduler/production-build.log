@@ -1,0 +1,260 @@
+
+> lms-front@0.1.0 build
+> next build
+
+▲ Next.js 16.2.12 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+  · optimizePackageImports
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 24.0s
+  Running next.config.js provided runAfterProductionCompile ...
+✓ Completed runAfterProductionCompile in 1524ms
+  Skipping validation of types
+  Finished TypeScript config validation in 9ms ...
+  Collecting page data using 7 workers ...
+bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+bigint: Failed to load bindings, pure JS will be used (try npm run rebuild?)
+  Generating static pages using 7 workers (0/237) ...
+  Generating static pages using 7 workers (59/237)
+  Generating static pages using 7 workers (118/237)
+  Generating static pages using 7 workers (177/237)
+✓ Generating static pages using 7 workers (237/237) in 668ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /_not-found
+├ ƒ /[locale]
+├ ƒ /[locale]/about
+├ ƒ /[locale]/auth/confirm
+├ ƒ /[locale]/auth/error
+├ ƒ /[locale]/auth/forgot-password
+├ ƒ /[locale]/auth/login
+├ ƒ /[locale]/auth/sign-up
+├ ƒ /[locale]/auth/sign-up-success
+├ ƒ /[locale]/auth/update-password
+├ ƒ /[locale]/checkout
+├ ƒ /[locale]/checkout/manual
+├ ƒ /[locale]/checkout/success
+├ ƒ /[locale]/courses
+├ ƒ /[locale]/courses/[id]
+├ ƒ /[locale]/courses/[id]/lessons/[lessonId]
+├ ƒ /[locale]/create-school
+├ ƒ /[locale]/creators
+├ ƒ /[locale]/dashboard
+├ ƒ /[locale]/dashboard/admin
+├ ƒ /[locale]/dashboard/admin/analytics
+├ ƒ /[locale]/dashboard/admin/api-tokens
+├ ƒ /[locale]/dashboard/admin/appearance
+├ ƒ /[locale]/dashboard/admin/billing
+├ ƒ /[locale]/dashboard/admin/billing/checkout/[requestId]
+├ ƒ /[locale]/dashboard/admin/billing/upgrade
+├ ƒ /[locale]/dashboard/admin/categories
+├ ƒ /[locale]/dashboard/admin/community
+├ ƒ /[locale]/dashboard/admin/community/moderation
+├ ƒ /[locale]/dashboard/admin/courses
+├ ƒ /[locale]/dashboard/admin/courses/new
+├ ƒ /[locale]/dashboard/admin/earnings
+├ ƒ /[locale]/dashboard/admin/earnings/statements/[statementNumber]
+├ ƒ /[locale]/dashboard/admin/enrollments
+├ ƒ /[locale]/dashboard/admin/invoices
+├ ƒ /[locale]/dashboard/admin/landing-page
+├ ƒ /[locale]/dashboard/admin/landing-page/preview/[pageId]
+├ ƒ /[locale]/dashboard/admin/monetization
+├ ƒ /[locale]/dashboard/admin/notifications
+├ ƒ /[locale]/dashboard/admin/notifications/templates
+├ ƒ /[locale]/dashboard/admin/payment-requests
+├ ƒ /[locale]/dashboard/admin/payment-requests/[requestId]
+├ ƒ /[locale]/dashboard/admin/payouts
+├ ƒ /[locale]/dashboard/admin/plans
+├ ƒ /[locale]/dashboard/admin/plans/[planId]/edit
+├ ƒ /[locale]/dashboard/admin/plans/new
+├ ƒ /[locale]/dashboard/admin/products
+├ ƒ /[locale]/dashboard/admin/products/[productId]/edit
+├ ƒ /[locale]/dashboard/admin/products/new
+├ ƒ /[locale]/dashboard/admin/revenue
+├ ƒ /[locale]/dashboard/admin/settings
+├ ƒ /[locale]/dashboard/admin/settings/ai
+├ ƒ /[locale]/dashboard/admin/subscriptions
+├ ƒ /[locale]/dashboard/admin/transactions
+├ ƒ /[locale]/dashboard/admin/users
+├ ƒ /[locale]/dashboard/admin/users/[userId]
+├ ƒ /[locale]/dashboard/notifications
+├ ƒ /[locale]/dashboard/settings
+├ ƒ /[locale]/dashboard/student
+├ ƒ /[locale]/dashboard/student/access-suspended
+├ ƒ /[locale]/dashboard/student/ai-assistant
+├ ƒ /[locale]/dashboard/student/billing
+├ ƒ /[locale]/dashboard/student/browse
+├ ƒ /[locale]/dashboard/student/certificates
+├ ƒ /[locale]/dashboard/student/community
+├ ƒ /[locale]/dashboard/student/courses
+├ ƒ /[locale]/dashboard/student/courses/[courseId]
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/community
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/exams
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/exams/[examId]
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/exams/[examId]/result
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/exams/[examId]/review
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/exercises
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/exercises/[exerciseId]
+├ ƒ /[locale]/dashboard/student/courses/[courseId]/lessons/[lessonId]
+├ ƒ /[locale]/dashboard/student/payments
+├ ƒ /[locale]/dashboard/student/payments/[requestId]
+├ ƒ /[locale]/dashboard/student/profile
+├ ƒ /[locale]/dashboard/student/progress
+├ ƒ /[locale]/dashboard/student/reviews
+├ ƒ /[locale]/dashboard/student/store
+├ ƒ /[locale]/dashboard/teacher
+├ ƒ /[locale]/dashboard/teacher/api-tokens
+├ ƒ /[locale]/dashboard/teacher/community
+├ ƒ /[locale]/dashboard/teacher/courses
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/analytics
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/certificates
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/certificates/settings
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/community
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/community/prompts/[postId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exams
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exams/[examId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exams/[examId]/submissions
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exams/[examId]/submissions/[submissionId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exams/new
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exercises
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exercises/[exerciseId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/exercises/new
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/lessons/[lessonId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/lessons/new
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/preview
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/preview/lessons/[lessonId]
+├ ƒ /[locale]/dashboard/teacher/courses/[courseId]/settings
+├ ƒ /[locale]/dashboard/teacher/courses/ai
+├ ƒ /[locale]/dashboard/teacher/courses/new
+├ ƒ /[locale]/dashboard/teacher/revenue
+├ ƒ /[locale]/dashboard/teacher/templates
+├ ƒ /[locale]/dashboard/teacher/templates/[id]/edit
+├ ƒ /[locale]/dashboard/teacher/templates/new
+├ ƒ /[locale]/delete-account
+├ ƒ /[locale]/join-school
+├ ƒ /[locale]/oauth/consent
+├ ƒ /[locale]/onboarding
+├ ƒ /[locale]/p/[slug]
+├ ƒ /[locale]/platform
+├ ƒ /[locale]/platform-pricing
+├ ƒ /[locale]/platform/bank-accounts
+├ ƒ /[locale]/platform/billing
+├ ƒ /[locale]/platform/billing-health
+├ ƒ /[locale]/platform/payouts
+├ ƒ /[locale]/platform/plans
+├ ƒ /[locale]/platform/revenue
+├ ƒ /[locale]/platform/tenants
+├ ƒ /[locale]/platform/tenants/[tenantId]
+├ ƒ /[locale]/platform/tenants/[tenantId]/statements/[statementNumber]
+├ ƒ /[locale]/pricing
+├ ƒ /[locale]/products
+├ ƒ /[locale]/products/[productId]
+├ ƒ /[locale]/verify/[code]
+├ ƒ /api/account/delete
+├ ƒ /api/aristotle/sessions
+├ ƒ /api/auth/callback
+├ ƒ /api/auth/send-email-hook
+├ ƒ /api/billing/checkout
+├ ƒ /api/billing/fees/checkout
+├ ƒ /api/billing/fees/paypal/capture
+├ ƒ /api/billing/fees/statements/[statementNumber]
+├ ƒ /api/billing/portal
+├ ƒ /api/billing/solana/tx
+├ ƒ /api/billing/solana/verify
+├ ƒ /api/billing/webhook/[provider]
+├ ƒ /api/certificates/[id]
+├ ƒ /api/certificates/generate
+├ ƒ /api/certificates/issue
+├ ƒ /api/certificates/share
+├ ƒ /api/certificates/verify/[code]
+├ ƒ /api/certificates/view/[code]
+├ ƒ /api/chat/aristotle
+├ ƒ /api/chat/aristotle/restart
+├ ƒ /api/chat/attachments/sign
+├ ƒ /api/chat/course-architect
+├ ƒ /api/chat/exercises/student
+├ ƒ /api/chat/exercises/student/restart
+├ ƒ /api/chat/lesson-task
+├ ƒ /api/chat/lesson-task/restart
+├ ƒ /api/community/blocked-members
+├ ƒ /api/community/new-posts
+├ ƒ /api/cron/binance-personal-reconcile
+├ ƒ /api/cron/daily-digest
+├ ƒ /api/cron/enforce-plan-limits
+├ ƒ /api/cron/enforce-platform-fees
+├ ƒ /api/cron/expire-payment-requests
+├ ƒ /api/cron/expire-platform-subscriptions
+├ ƒ /api/cron/expire-stale-checkouts
+├ ƒ /api/cron/expire-subscriptions
+├ ƒ /api/cron/league-rollover
+├ ƒ /api/cron/reconcile-solana-platform-activations
+├ ƒ /api/cron/redeliver-webhook-events
+├ ƒ /api/cron/send-pushes
+├ ƒ /api/cron/solana-pull
+├ ƒ /api/cron/solana-reconcile
+├ ƒ /api/exams/[examId]/grade
+├ ƒ /api/exercises/artifact/evaluate
+├ ƒ /api/exercises/evaluate
+├ ƒ /api/exercises/media/analyze
+├ ƒ /api/exercises/media/signed-url
+├ ƒ /api/exercises/media/upload-url
+├ ƒ /api/exercises/realtime/evaluate
+├ ƒ /api/exercises/realtime/token
+├ ƒ /api/internal/ai/image
+├ ƒ /api/invoices/[invoiceNumber]
+├ ƒ /api/landing/chat
+├ ƒ /api/lesson-checkpoints/[checkpointId]/attempt
+├ ƒ /api/lessons/[lessonId]/checkpoints
+├ ƒ /api/lessons/[lessonId]/resources/[resourceId]/url
+├ ƒ /api/mcp/[[...path]]
+├ ƒ /api/oauth/decision
+├ ƒ /api/og
+├ ƒ /api/op/[...path]
+├ ƒ /api/payments/binance-personal/verify
+├ ƒ /api/payments/checkout
+├ ƒ /api/payments/paypal/capture
+├ ƒ /api/payments/solana/cancel-tx
+├ ƒ /api/payments/solana/cancel-verify
+├ ƒ /api/payments/solana/devnet-simulate-subscription
+├ ƒ /api/payments/solana/retry-renewal
+├ ƒ /api/payments/solana/submit
+├ ƒ /api/payments/solana/subscribe-tx
+├ ƒ /api/payments/solana/tx
+├ ƒ /api/payments/solana/verify
+├ ƒ /api/payments/webhook/[provider]
+├ ƒ /api/seed-test-data
+├ ƒ /api/stripe/connect
+├ ƒ /api/stripe/create-payment-intent
+├ ƒ /api/stripe/webhook
+├ ƒ /api/teacher/lessons/[lessonId]/ai-task-audit
+├ ƒ /api/teacher/lessons/[lessonId]/generate-questions
+├ ƒ /api/teacher/preview/exercise
+├ ƒ /api/teacher/preview/exercise-run
+├ ƒ /api/teacher/preview/lesson-task
+├ ƒ /api/teacher/preview/realtime
+├ ƒ /api/teacher/submissions/[submissionId]/override
+├ ƒ /api/teacher/templates
+├ ƒ /api/teacher/templates/[id]
+├ ƒ /api/tenant/brand
+├ ƒ /api/tenant/memberships
+├ ƒ /api/tenant/switch
+├ ƒ /api/wallet-subscribe
+├ ƒ /api/well-known/oauth-authorization-server
+├ ƒ /api/well-known/oauth-protected-resource
+├ ƒ /robots.txt
+└ ƒ /sitemap.xml
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

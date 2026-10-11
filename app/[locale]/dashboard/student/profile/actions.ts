@@ -36,7 +36,7 @@ export async function updateProfile(formData: FormData): Promise<UpdateProfileRe
         return { success: false, field: 'username', code: 'username_too_short' }
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from("profiles")
         .update({
             full_name,
@@ -44,7 +44,9 @@ export async function updateProfile(formData: FormData): Promise<UpdateProfileRe
             website,
             bio,
         })
-        .eq("id", userId);
+        .eq("id", userId)
+        .select('id')
+        .maybeSingle();
 
     if (error) {
         // 23505 = unique_violation on profiles_username_key; 23514 = the
@@ -54,8 +56,12 @@ export async function updateProfile(formData: FormData): Promise<UpdateProfileRe
         return { success: false, code: 'unknown' }
     }
 
-    revalidatePath("/dashboard/student/profile");
-    revalidatePath("/dashboard/settings");
+    // An UPDATE can match no rows without an error (missing profile or RLS).
+    // Only acknowledge a save after PostgREST confirms the caller's row changed.
+    if (!data) return { success: false, code: 'unknown' }
+
+    revalidatePath('/[locale]/dashboard/student/profile', 'page');
+    revalidatePath('/[locale]/dashboard/settings', 'page');
     return { success: true };
 }
 
@@ -82,6 +88,6 @@ export async function updateShareMilestones(enabled: boolean): Promise<UpdateSha
     // No row back = RLS matched nothing, which is a failure, not a no-op.
     if (error || !data) return { success: false, code: 'unknown' }
 
-    revalidatePath('/dashboard/student/profile')
+    revalidatePath('/[locale]/dashboard/student/profile', 'page')
     return { success: true }
 }

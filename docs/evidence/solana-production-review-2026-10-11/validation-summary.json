@@ -1,0 +1,12 @@
+{
+  "environment": "local repository, read-only local Supabase inspection, read-only Solana Devnet",
+  "mockedUnitTests": {"passed": 126, "files": 9, "exitCode": 0},
+  "preparedComponentBrowserTests": {"passed": 5, "viewports": ["1440x1000", "390x844"], "api": "mocked", "exitCode": 0},
+  "targetedLint": {"exitCode": 0, "errors": 0, "warnings": 0},
+  "strictScopedTypecheck": {"command": "NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit -p tests/tsconfig.subscription-review.json", "exitCode": 0, "scope": "listed changed TS/TSX files and imported dependencies; not repository-wide"},
+  "productionBuild": {"command": "npm run build", "exitCode": 0, "typescriptIgnoreBuildErrors": true},
+  "localMigrationApplication": "blocked by unavailable Docker daemon; not applied",
+  "sqlContractTests": "prepared, not executed",
+  "newLivePayments": 0,
+  "readiness": "implementation prepared for review; release validation blocked"
+}

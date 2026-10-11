@@ -318,7 +318,7 @@ export async function buildSubscribeTxBase64(p: {
 
 /**
  * Signs a transfer_subscription instruction as the puller and returns the
- * base64 wire transaction. The caller submits it to the network.
+ * confirmed transaction signature. All requested split legs settle atomically.
  *
  * `receiverAta` is the ATA that receives the tokens (typically merchant's ATA).
  */
@@ -331,6 +331,8 @@ export async function pullOnce(p: {
   mint: string;
   receiverAta: string;
   amountBase: bigint;
+  /** Additional legs in the SAME atomic transaction (subscription fee split). */
+  additionalTransfers?: readonly { receiverAta: string; amountBase: bigint }[];
   tokenProgram?: string;
   /** Optional: subscriber's ATA for the mint. Derived from spl-token if omitted. */
   delegatorAta?: string;
@@ -377,27 +379,25 @@ export async function pullOnce(p: {
 
   const SPL_TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 
-  const transferData: TransferDataArgs = {
-    amount: p.amountBase,
-    delegator: addr(p.subscriber) as Address,
-    mint: addr(p.mint) as Address,
-  };
-
-  const ix = getTransferSubscriptionInstruction({
+  const instructions = [{ receiverAta: p.receiverAta, amountBase: p.amountBase }, ...(p.additionalTransfers ?? [])].map((leg) => getTransferSubscriptionInstruction({
     subscriptionPda,
     planPda,
     subscriptionAuthority: subAuthorityPda,
     delegatorAta: addr(delegatorAtaAddr) as Address,
-    receiverAta: addr(p.receiverAta) as Address,
+    receiverAta: addr(leg.receiverAta) as Address,
     caller: pullerSigner,
     tokenMint: addr(p.mint) as Address,
     tokenProgram: addr(
       p.tokenProgram ?? SPL_TOKEN_PROGRAM
     ) as Address,
-    transferData,
-  });
+    transferData: {
+      amount: leg.amountBase,
+      delegator: addr(p.subscriber) as Address,
+      mint: addr(p.mint) as Address,
+    } satisfies TransferDataArgs,
+  }));
 
-  const signedBase64 = await buildAndSignTx(p.rpcUrl, pullerSigner, [ix]);
+  const signedBase64 = await buildAndSignTx(p.rpcUrl, pullerSigner, instructions);
 
   // Submit AND confirm. (The previous version returned the signed base64 without
   // ever sending it, so pulls never moved tokens — the subscription looked

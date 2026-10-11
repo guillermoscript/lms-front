@@ -45,10 +45,35 @@ export function RevokeSolanaDelegation({ subscriptionId }: { subscriptionId: num
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
+  const verifyCancellation = async () => {
+    const response = await fetch('/api/payments/solana/cancel-verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscriptionId }),
+    })
+    const result = await response.json()
+    if (!response.ok) throw new Error(t('unresolved'))
+    if (result.canceled) {
+      toast.success(t('success'))
+      setOpen(false)
+      router.refresh()
+      return true
+    }
+    return false
+  }
+  const checkCancellation = async () => {
+    setBusy(true)
+    try { if (!await verifyCancellation()) toast.info(t('notConfirmed')) }
+    catch { toast.error(t('unresolved')) }
+    finally { setBusy(false) }
+  }
+
   const handleRevoke = async () => {
     setBusy(true)
     setMsg(t('connecting'))
     try {
+      // A previous transaction may have confirmed after its HTTP response was
+      // lost. Recover cancellation without asking the wallet to sign again.
+      if (await verifyCancellation()) return
       const provider = getPhantom()
       if (!provider) throw new Error(t('noWallet'))
 
@@ -86,17 +111,7 @@ export function RevokeSolanaDelegation({ subscriptionId }: { subscriptionId: num
 
       // 4. Confirm on-chain + finalize our DB row.
       setMsg(t('confirming'))
-      const vr = await fetch('/api/payments/solana/cancel-verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId }),
-      })
-      const vd = await vr.json()
-      if (!vr.ok || !vd.canceled) throw new Error(vd.error || t('notConfirmed'))
-
-      toast.success(t('success'))
-      setOpen(false)
-      router.refresh()
+      if (!await verifyCancellation()) throw new Error(t('notConfirmed'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('error'))
     } finally {
@@ -112,9 +127,14 @@ export function RevokeSolanaDelegation({ subscriptionId }: { subscriptionId: num
         size="sm"
         className="gap-1.5 text-destructive"
         onClick={() => setOpen(true)}
+        disabled={busy}
       >
         <IconWallet className="h-3.5 w-3.5" />
         {t('button')}
+      </Button>
+
+      <Button variant="outline" size="sm" onClick={checkCancellation} disabled={busy}>
+        {t('checkCancellation')}
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => !busy && setOpen(v)}>

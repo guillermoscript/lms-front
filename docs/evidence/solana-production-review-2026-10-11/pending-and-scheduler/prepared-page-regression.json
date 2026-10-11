@@ -1,0 +1,23 @@
+{
+  "source": "Real local production page + manually prepared isolated DB state + mocked retry API. No Devnet payment.",
+  "checks": [
+    {
+      "name": "desktop",
+      "passed": true,
+      "afterReload": true,
+      "oldErrorPresentInDb": true,
+      "recoveryOnly": true,
+      "screenshot": "/Users/guillermomarin/Documents/GitHub/lms-front/docs/qa/solana-production-review-2026-10-11/desktop-prepared-pending-after-insufficient.png"
+    },
+    {
+      "name": "mobile",
+      "passed": true,
+      "afterReload": true,
+      "oldErrorPresentInDb": true,
+      "recoveryOnly": true,
+      "screenshot": "/Users/guillermomarin/Documents/GitHub/lms-front/docs/qa/solana-production-review-2026-10-11/mobile-prepared-pending-after-insufficient.png"
+    }
+  ],
+  "passed": true,
+  "fixturesRemoved": true
+}

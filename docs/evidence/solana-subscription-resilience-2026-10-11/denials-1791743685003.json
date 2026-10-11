@@ -1,0 +1,72 @@
+[
+  {
+    "label": "retry-no-session",
+    "start": "2026-10-11T18:34:43.823Z",
+    "end": "2026-10-11T18:34:43.848Z",
+    "http": 401,
+    "body": {
+      "error": "Unauthorized"
+    }
+  },
+  {
+    "label": "retry-cross-origin",
+    "start": "2026-10-11T18:34:43.848Z",
+    "end": "2026-10-11T18:34:43.857Z",
+    "http": 403,
+    "body": {
+      "error": "Invalid origin"
+    }
+  },
+  {
+    "label": "cancel-cross-origin",
+    "start": "2026-10-11T18:34:43.857Z",
+    "end": "2026-10-11T18:34:43.894Z",
+    "http": 403,
+    "body": {
+      "error": "Invalid origin"
+    }
+  },
+  {
+    "label": "cancel-verify-cross-origin",
+    "start": "2026-10-11T18:34:43.894Z",
+    "end": "2026-10-11T18:34:43.900Z",
+    "http": 403,
+    "body": {
+      "error": "Invalid origin"
+    }
+  },
+  {
+    "label": "retry-invalid-id",
+    "start": "2026-10-11T18:34:43.900Z",
+    "end": "2026-10-11T18:34:43.939Z",
+    "http": 400,
+    "body": {
+      "error": "Invalid subscription"
+    }
+  },
+  {
+    "label": "retry-nonexistent",
+    "start": "2026-10-11T18:34:43.939Z",
+    "end": "2026-10-11T18:34:43.985Z",
+    "http": 404,
+    "body": {
+      "error": "Subscription not found"
+    }
+  },
+  {
+    "label": "cancel-verify-own-not-yet-canceled",
+    "start": "2026-10-11T18:34:43.985Z",
+    "end": "2026-10-11T18:34:44.782Z",
+    "http": 200,
+    "body": {
+      "canceled": false
+    }
+  },
+  {
+    "label": "cron-invalid-secret",
+    "http": 401,
+    "body": {
+      "error": "Unauthorized"
+    }
+  }
+]

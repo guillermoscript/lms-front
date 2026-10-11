@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildCancelTxUnsignedBase64 } from '@/lib/payments/solana-subscriptions'
 import { paymentAuthLimiter } from '@/lib/rate-limit'
+import { getCurrentTenantId } from '@/lib/supabase/tenant'
 
 export const runtime = 'nodejs'
 
@@ -29,6 +30,10 @@ interface SolanaSubMeta {
 }
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  if (!origin || origin !== `${req.nextUrl.protocol}//${req.headers.get('host')}`) {
+    return NextResponse.json({ error: 'Invalid origin' }, { status: 403 })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -47,16 +52,18 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => null)
     const subscriptionId = body?.subscriptionId
-    if (!subscriptionId || typeof subscriptionId !== 'number') {
+    if (!Number.isSafeInteger(subscriptionId) || subscriptionId <= 0) {
       return NextResponse.json({ error: 'Missing subscriptionId' }, { status: 400 })
     }
 
-    // RLS + explicit user filter: the caller can only reach their own row.
+    const tenantId = await getCurrentTenantId()
+    // Scope ownership to the school resolved from the request hostname.
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('subscription_id, payment_provider, provider_metadata, subscription_status')
       .eq('subscription_id', subscriptionId)
       .eq('user_id', user.id)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
     if (!sub) {

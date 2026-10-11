@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,6 +17,8 @@ import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
+type NotificationInput = Parameters<typeof createNotification>[0]
+
 interface NotificationFormProps {
   onSuccess?: () => void
 }
@@ -27,16 +29,20 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
   const [targetType, setTargetType] = useState<string>('all')
   const [sendNow, setSendNow] = useState(true)
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    const form = event.currentTarget
+    const formData = new FormData(form)
     setIsSubmitting(true)
 
     try {
       const data = {
         title: formData.get('title') as string,
         content: formData.get('content') as string,
-        notification_type: formData.get('notification_type') as any,
-        priority: formData.get('priority') as any,
-        target_type: targetType as any,
+        notification_type: formData.get('notification_type') as NotificationInput['notification_type'],
+        priority: formData.get('priority') as NotificationInput['priority'],
+        target_type: targetType as NotificationInput['target_type'],
         target_roles: targetType === 'role'
           ? (formData.get('target_roles') as string).split(',').map(r => r.trim()).filter(Boolean)
           : undefined,
@@ -56,6 +62,7 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
         }
 
         toast.success(sendNow ? t('form.toasts.success') : t('form.toasts.draft'))
+        form.reset()
         onSuccess?.()
       } else {
         throw new Error(result.error)
@@ -68,7 +75,7 @@ export default function NotificationForm({ onSuccess }: NotificationFormProps) {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="title">{t('form.title')}</Label>

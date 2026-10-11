@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { hasCourseAccess } from '@/lib/services/course-access'
+import type { Json } from '@/lib/database.types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,10 +54,10 @@ export async function POST(request: NextRequest) {
     if (eligError) {
       console.error('Eligibility check error:', eligError)
       // Fallback: do a simpler check if the RPC fails (e.g., no template configured)
-      return await fallbackCertificateGeneration(supabase, user.id, courseId, tenantId)
+      return await fallbackCertificateGeneration(supabase, user.id, courseId, tenantId, user.email)
     }
 
-    const result = eligibility as { success: boolean; reason?: string; eligible?: boolean; completion?: any; certificateId?: string }
+    const result = eligibility as { success: boolean; reason?: string; eligible?: boolean; completion?: Json; certificateId?: string }
 
     // If already issued (returned by RPC)
     if (!result.success && result.certificateId) {
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Eligible — issue the certificate
-    return await issueCertificate(supabase, user.id, courseId, result.completion, tenantId)
+    return await issueCertificate(supabase, user.id, courseId, result.completion, tenantId, user.email)
   } catch (error) {
     console.error('Certificate generation error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -88,8 +89,9 @@ async function issueCertificate(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   courseId: number,
-  completionData: any,
-  tenantId: string
+  completionData: Json | undefined,
+  tenantId: string,
+  userEmail?: string
 ) {
   // Get course info (already validated above, safe to use)
   const { data: courseInfo } = await supabase
@@ -104,13 +106,16 @@ async function issueCertificate(
   }
 
   // Get student profile
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('full_name, email')
+    .select('full_name')
     .eq('id', userId)
     .single()
 
-  const studentName = profile?.full_name || profile?.email || 'Student'
+  if (profileError) {
+    return NextResponse.json({ error: 'Failed to load student profile' }, { status: 500 })
+  }
+  const studentName = profile?.full_name || userEmail || 'Student'
 
   // Get template for this course (if exists)
   const { data: template } = await supabase
@@ -204,7 +209,8 @@ async function fallbackCertificateGeneration(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   courseId: number,
-  tenantId: string
+  tenantId: string,
+  userEmail?: string
 ) {
   // Verify access (entitlements model)
   if (!(await hasCourseAccess(supabase, userId, courseId))) {
@@ -247,7 +253,7 @@ async function fallbackCertificateGeneration(
     issued_via: 'fallback_no_template',
   }
 
-  return await issueCertificate(supabase, userId, courseId, completionData, tenantId)
+  return await issueCertificate(supabase, userId, courseId, completionData, tenantId, userEmail)
 }
 
 function generateVerificationCode(): string {

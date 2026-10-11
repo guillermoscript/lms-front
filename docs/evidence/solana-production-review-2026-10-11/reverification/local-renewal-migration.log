@@ -1,0 +1,8 @@
+BEGIN
+NOTICE:  relation "transactions_solana_renewal_period_unique" already exists, skipping
+CREATE INDEX
+CREATE FUNCTION
+CREATE FUNCTION
+REVOKE
+GRANT
+COMMIT

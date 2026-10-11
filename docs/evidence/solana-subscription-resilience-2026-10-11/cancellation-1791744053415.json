@@ -1,0 +1,29 @@
+{
+  "time": "2026-10-11T18:40:53.415Z",
+  "buildHttp": 200,
+  "submit": {
+    "http": 200,
+    "body": {
+      "signature": "3ecF16yEjet73LQNPN85vkE5kZTR6JX4iiKg3c5fmmhSUJBfnMskCB8kdxcv8gHtZgVJheb5ARqVmQ1jxgCh5YeJ",
+      "confirmed": true
+    }
+  },
+  "verified": {
+    "label": "cancel-verified",
+    "start": "2026-10-11T18:40:52.902Z",
+    "end": "2026-10-11T18:40:53.155Z",
+    "http": 200,
+    "body": {
+      "canceled": true
+    }
+  },
+  "duplicate": {
+    "label": "cancel-verify-duplicate",
+    "start": "2026-10-11T18:40:53.155Z",
+    "end": "2026-10-11T18:40:53.415Z",
+    "http": 200,
+    "body": {
+      "canceled": true
+    }
+  }
+}

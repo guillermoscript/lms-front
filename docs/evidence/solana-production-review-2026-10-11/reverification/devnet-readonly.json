@@ -1,0 +1,11 @@
+{
+  "checkedAt": "2026-10-11T19:27:34.824Z",
+  "source": "LIVE read-only Devnet; no signer or transfer",
+  "subscriptionId": 10002,
+  "state": {
+    "amountPulledInPeriod": "10000",
+    "currentPeriodStartTs": "1791743925",
+    "periodHours": "1",
+    "expiresAtTs": "1791747525"
+  }
+}

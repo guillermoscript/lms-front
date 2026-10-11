@@ -39,8 +39,9 @@ const USER = 'u1'
 
 const state: {
   subscription: SubRow | null
+  rpc: { fn: string; args: Record<string, unknown> }[]
   updates: { table: string; values: Record<string, unknown> }[]
-} = { subscription: null, updates: [] }
+} = { subscription: null, updates: [], rpc: [] }
 
 function subRow(overrides: Partial<SubRow> = {}): SubRow {
   return {
@@ -63,6 +64,7 @@ function makeAdminClient() {
     const b: Record<string, unknown> = {
       select: () => b,
       eq: () => b,
+      in: () => b,
       insert: () => b,
       update: (values: Record<string, unknown>) => {
         state.updates.push({ table, values })
@@ -81,7 +83,7 @@ function makeAdminClient() {
     }
     return b
   }
-  return { from: (t: string) => builder(t) }
+  return { from: (t: string) => builder(t), rpc: (fn: string, args: Record<string, unknown>) => { state.rpc.push({fn,args}); return Promise.resolve({data: fn === 'resume_subscription' ? true : state.subscription?.current_period_end, error: null}) } }
 }
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
@@ -106,89 +108,55 @@ import {
   findConflictingSubscription,
 } from '@/lib/payments/subscription-guard'
 
-/** The one `subscriptions` patch the action under test wrote. */
-function soleSubscriptionPatch() {
-  const subs = state.updates.filter((u) => u.table === 'subscriptions')
-  expect(subs).toHaveLength(1)
-  return subs[0].values
-}
-
 beforeEach(() => {
   state.subscription = null
   state.updates = []
+  state.rpc = []
 })
 
-describe('cancelMySubscription — cancelling never improves a status', () => {
-  it('leaves a past_due subscription past_due', async () => {
-    state.subscription = subRow({ subscription_status: 'past_due' })
-
-    const result = await cancelMySubscription(10)
-
-    expect(result).toEqual({ success: true, providerWarning: undefined })
-    const patch = soleSubscriptionPatch()
-    expect(patch.subscription_status).toBe('past_due')
-    expect(patch.cancel_at_period_end).toBe(true)
-    expect(patch.cancel_at).toBe('2026-09-01T00:00:00.000Z')
+describe('cancelMySubscription — shared paid-access cancellation', () => {
+  it.each(['active', 'past_due', 'renewed'])('delegates %s without changing access directly', async (status) => {
+    state.subscription = subRow({subscription_status:status})
+    expect(await cancelMySubscription(10)).toEqual({success:true,providerWarning:undefined})
+    expect(state.updates.filter(u=>u.table==='subscriptions')).toHaveLength(0)
+    expect(state.rpc).toEqual([{fn:'apply_subscription_cancellation',args:{_subscription_id:10,_immediate:false,_provider_deadline:null}}])
   })
-
-  it('keeps an active subscription active', async () => {
-    state.subscription = subRow({ subscription_status: 'active' })
-    await cancelMySubscription(10)
-    expect(soleSubscriptionPatch().subscription_status).toBe('active')
-  })
-
-  it("normalizes the legacy 'renewed' status to active", async () => {
-    // `renewed` means exactly what `active` means and nothing writes it any
-    // more — this is the one status the cancel is allowed to rewrite.
-    state.subscription = subRow({ subscription_status: 'renewed' })
-    await cancelMySubscription(10)
-    expect(soleSubscriptionPatch().subscription_status).toBe('active')
-  })
-
-  it('refuses to cancel a subscription that is not live', async () => {
-    state.subscription = subRow({ subscription_status: 'expired' })
-    await expect(cancelMySubscription(10)).resolves.toEqual({
-      success: false,
-      error: 'not_cancelable',
-    })
-    expect(state.updates.filter((u) => u.table === 'subscriptions')).toHaveLength(0)
+  it('refuses ended access', async () => {
+    state.subscription = subRow({subscription_status:'expired'})
+    expect(await cancelMySubscription(10)).toEqual({success:false,error:'not_cancelable'})
+    expect(state.rpc).toHaveLength(0)
   })
 })
 
 describe('reactivateMySubscription — the cancel date dies with the schedule', () => {
   it('clears cancel_at together with cancel_at_period_end', async () => {
-    state.subscription = subRow({ cancel_at_period_end: true })
+    state.subscription = subRow({ cancel_at_period_end: true, current_period_end: '2030-01-01T00:00:00Z', end_date: '2030-01-01T00:00:00Z' })
 
     await reactivateMySubscription(10)
 
-    const patch = soleSubscriptionPatch()
-    expect(patch).toEqual({
-      cancel_at_period_end: false,
-      cancel_at: null,
-      canceled_at: null,
-    })
+    expect(state.rpc).toEqual([{fn:'resume_subscription',args:{_subscription_id:10}}])
+    expect(state.updates.filter(u=>u.table==='subscriptions')).toHaveLength(0)
   })
 })
 
-describe('admin cancelSubscription — same rule, admin surface', () => {
-  it('a period-end cancel leaves a past_due subscription past_due', async () => {
-    state.subscription = subRow({ subscription_status: 'past_due' })
-
-    await adminCancelSubscription(10, false)
-
-    const patch = soleSubscriptionPatch()
-    expect(patch.subscription_status).toBe('past_due')
-    expect(patch.cancel_at_period_end).toBe(true)
+describe('resume cannot revive terminal or final-at-provider subscriptions', () => {
+  it.each(['expired', 'canceled'])('refuses %s before contacting a provider', async (status) => {
+    state.subscription = subRow({subscription_status:status,cancel_at_period_end:true,current_period_end:'2030-01-01T00:00:00Z'})
+    expect((await reactivateMySubscription(10)).success).toBe(false)
+    expect(state.rpc).toHaveLength(0)
   })
+  it.each(['paypal','solana_subs'])('refuses %s final cancellation', async (provider) => {
+    state.subscription = subRow({payment_provider:provider,provider_subscription_id:'provider-sub',cancel_at_period_end:true,current_period_end:'2030-01-01T00:00:00Z'})
+    expect(await reactivateMySubscription(10)).toEqual({success:false,error:'not_reactivatable'})
+    expect(state.rpc).toHaveLength(0)
+  })
+})
 
-  it('an immediate cancel is still a cancel', async () => {
-    state.subscription = subRow({ subscription_status: 'past_due' })
-
-    await adminCancelSubscription(10, true)
-
-    const patch = soleSubscriptionPatch()
-    expect(patch.subscription_status).toBe('canceled')
-    expect(patch.cancel_at_period_end).toBeUndefined()
+describe('admin cancellation separates scheduling from immediate termination', () => {
+  it.each([false,true])('immediate=%s uses the shared rule', async (immediate) => {
+    state.subscription = subRow({subscription_status:'past_due'})
+    expect((await adminCancelSubscription(10,immediate)).success).toBe(true)
+    expect(state.rpc).toEqual([{fn:'apply_subscription_cancellation',args:{_subscription_id:10,_immediate:immediate,_provider_deadline:null}}])
   })
 })
 

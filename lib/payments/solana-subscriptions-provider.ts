@@ -144,13 +144,13 @@ export class SolanaSubscriptionsProvider implements IPaymentProvider {
    * delegation is still live and pullable (issue #460).
    *
    * Cancelling still neutralizes the money leak: the crank refuses to charge any
-   * row whose DB status is not `active` (see decidePullAction). The student
+   * row scheduled to cancel or already ended (see decidePullAction). The student
    * revokes the delegation itself from the billing page (`/api/payments/solana/
    * cancel-tx` → wallet sign → `/api/payments/solana/cancel-verify`).
    */
   async cancelSubscription(_providerSubId: string, _immediate: boolean): Promise<CancellationResult> {
     throw new Error(
-      'solana_subs: the on-chain auto-pull delegation cannot be revoked server-side — it requires the subscriber\'s wallet signature. The subscription has been canceled in our records (the crank will not charge it), but the student must revoke the delegation from their wallet on the billing page.',
+      'solana_subs: the on-chain auto-pull delegation cannot be revoked server-side — it requires the subscriber\'s wallet signature. The student must revoke the delegation from their wallet on the billing page. Application cancellation is handled separately by the shared subscription lifecycle.',
     )
   }
 

@@ -1,17 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { updateSettings } from '@/app/actions/admin/settings'
+import { updateSettings, type SettingsGroup } from '@/app/actions/admin/settings'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 interface EnrollmentSettingsFormProps {
-  settings: Record<string, any>
+  settings: SettingsGroup
   /** Published lessons currently marked as a free preview, across every
    *  course — so the switch below isn't a decision made in the dark (#799). */
   previewLessonCount: number
@@ -30,7 +30,10 @@ export default function EnrollmentSettingsForm({ settings, previewLessonCount }:
   const courseCapacityEnabled = settings.course_capacity_enabled?.value?.enabled ?? false
   const freePreviewEnabled = settings.free_preview_enabled?.value?.enabled ?? true
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
 
     try {
@@ -59,7 +62,7 @@ export default function EnrollmentSettingsForm({ settings, previewLessonCount }:
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Auto Enrollment */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">

@@ -26,7 +26,7 @@ const ROW: FsrsRow = {
 type Call = { op: string; args: unknown[] }
 
 /** A PostgREST-shaped chain that records every call and answers from `result`. */
-function fakeClient(opts: { row?: FsrsRow | null; readError?: string; writeError?: string }) {
+function fakeClient(opts: { row?: FsrsRow | null; readError?: string; writeError?: string; missingUpdate?: boolean }) {
   const reads: Call[] = []
   const writes: Call[] = []
   const client = {
@@ -34,11 +34,13 @@ function fakeClient(opts: { row?: FsrsRow | null; readError?: string; writeError
       let log = reads
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a recording stand-in for the PostgREST builder
       const chain: any = {
-        select: (...args: unknown[]) => (reads.push({ op: 'select', args }), chain),
+        select: (...args: unknown[]) => (log.push({ op: 'select', args }), chain),
         update: (...args: unknown[]) => ((log = writes), writes.push({ op: 'update', args }), chain),
         eq: (...args: unknown[]) => (log.push({ op: 'eq', args }), chain),
         maybeSingle: async () =>
-          opts.readError ? { data: null, error: { message: opts.readError } } : { data: opts.row ?? null, error: null },
+          log === writes
+            ? { data: opts.missingUpdate ? null : { id: 42 }, error: opts.writeError ? { message: opts.writeError } : null }
+            : opts.readError ? { data: null, error: { message: opts.readError } } : { data: opts.row ?? null, error: null },
         then: (resolve: (v: unknown) => void) =>
           resolve({ error: opts.writeError ? { message: opts.writeError } : null }),
       }
@@ -93,4 +95,10 @@ describe('gradeReviewCard', () => {
     expect(result).toMatchObject({ ok: false, reason: 'error' })
     expect(!result.ok && result.message).toContain('permission denied')
   })
+})
+
+it('does not report a saved rating when the update affects no rows', async () => {
+  const { client } = fakeClient({ row: ROW, missingUpdate: true })
+  const result = await gradeReviewCard(client, 'user-1', 'tenant-1', 42, 'good', NOW)
+  expect(result).toMatchObject({ ok: false, reason: 'not_found' })
 })

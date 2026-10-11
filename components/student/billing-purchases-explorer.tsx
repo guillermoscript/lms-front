@@ -15,6 +15,7 @@ import {
 } from '@tabler/icons-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { BillingDateTime } from '@/components/student/solana-renewal-details'
 import { VerifyPaymentButton } from '@/components/student/verify-payment-button'
 import { ListToolbar, matchesQuery } from '@/components/student/list-toolbar'
 
@@ -28,6 +29,9 @@ export interface PurchaseRow {
   status: PurchaseStatus
   amount: number
   currency: string | null
+  renewal?: boolean
+  signatures?: string[]
+  network?: string | null
 }
 
 type StatusFilter = 'all' | PurchaseStatus
@@ -161,14 +165,14 @@ export function BillingPurchasesExplorer({ rows }: { rows: PurchaseRow[] }) {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
-          <table className="min-w-[620px] w-full text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-muted/20">
               <tr className="border-b">
                 <th className={TH}>{t('purchases.table.item')}</th>
                 <th className={`${TH} hidden sm:table-cell`}>{t('purchases.table.provider')}</th>
                 <th className={`${TH} hidden sm:table-cell`}>{t('purchases.table.date')}</th>
                 <th className={TH}>{t('purchases.table.status')}</th>
-                <th className={`${TH} text-right`}>{t('purchases.table.amount')}</th>
+                <th className={`${TH} hidden sm:table-cell text-right`}>{t('purchases.table.amount')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -177,20 +181,25 @@ export function BillingPurchasesExplorer({ rows }: { rows: PurchaseRow[] }) {
                 const meta = statusMeta(tx.status)
                 return (
                   <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="max-w-[160px] px-4 py-3 align-top font-medium" title={itemName}>
-                      <span className="block truncate">{itemName}</span>
+                    <td className="min-w-0 px-3 py-3 align-top font-medium" title={itemName}>
+                      <span className="block break-words">{itemName}</span>
+                      {tx.renewal && <span className="text-xs text-muted-foreground">{t('purchases.renewal')}</span>}
+                      <p className="mt-1 flex items-center gap-1 text-xs font-normal text-muted-foreground sm:hidden">
+                        <ProviderIcon provider={tx.provider} />
+                        {tx.provider === 'solana_subs' ? t('purchases.usdcMethod') : providerLabel(tx.provider)}
+                      </p>
                       <p className="mt-1 text-xs font-normal text-muted-foreground sm:hidden">
-                        {formatDate(tx.date)}
+                        {tx.provider === 'solana_subs' ? <BillingDateTime date={tx.date} /> : formatDate(tx.date)}
                       </p>
                     </td>
                     <td className="hidden px-4 py-3 align-top sm:table-cell">
                       <span className="flex items-center gap-1 text-muted-foreground text-xs">
                         <ProviderIcon provider={tx.provider} />
-                        {providerLabel(tx.provider)}
+                        {tx.provider === 'solana_subs' ? t('purchases.usdcMethod') : providerLabel(tx.provider)}
                       </span>
                     </td>
                     <td className="hidden px-4 py-3 align-top tabular-nums text-muted-foreground sm:table-cell">
-                      {formatDate(tx.date)}
+                      {tx.provider === 'solana_subs' ? <BillingDateTime date={tx.date} /> : formatDate(tx.date)}
                     </td>
                     <td className="px-4 py-3 align-top">
                       <div className="flex flex-col items-start gap-1.5">
@@ -198,12 +207,19 @@ export function BillingPurchasesExplorer({ rows }: { rows: PurchaseRow[] }) {
                           {meta.icon}
                           {t(`purchases.status.${tx.status}` as Parameters<typeof t>[0])}
                         </Badge>
+                        <span className="font-medium tabular-nums sm:hidden">{formatCurrency(tx.amount, tx.currency ?? 'USD')}</span>
+                        {tx.renewal && tx.status === 'failed' && <span className="text-xs text-muted-foreground">{t('purchases.notCharged')}</span>}
+                        {tx.status === 'successful' && tx.signatures?.map((signature, index) => (
+                          <a key={signature} href={`https://explorer.solana.com/tx/${signature}${tx.network === 'devnet' || tx.network === 'testnet' ? `?cluster=${tx.network}` : ''}`} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-text underline underline-offset-4">
+                            {t('purchases.receipt', { number: index + 1 })}
+                          </a>
+                        ))}
                         {tx.status === 'pending' && tx.provider === 'solana' && (
                           <VerifyPaymentButton transactionId={tx.id} />
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right align-top font-medium tabular-nums">
+                    <td className="hidden px-4 py-3 text-right align-top font-medium tabular-nums sm:table-cell">
                       {formatCurrency(tx.amount, tx.currency ?? 'USD')}
                     </td>
                   </tr>

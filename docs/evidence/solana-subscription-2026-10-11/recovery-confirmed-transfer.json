@@ -1,0 +1,48 @@
+{
+  "devnet": true,
+  "signature": "52399aBp3147xaE2z4adLXkbP3gtcX8JV82dgQQDGWgtii2FmqXgPB7awETRCVr4wDMhJCtAtFdYdqAXE6eTyjq5",
+  "confirmation": {
+    "context": {
+      "apiVersion": "4.4.0-beta.0",
+      "slot": 509984912
+    },
+    "value": [
+      {
+        "confirmationStatus": "finalized",
+        "confirmations": null,
+        "err": null,
+        "slot": 509984353,
+        "status": {
+          "Ok": null
+        }
+      }
+    ]
+  },
+  "time": "2026-10-11T17:55:33.000Z",
+  "err": null,
+  "changes": {
+    "subscriber": "-10000",
+    "school": "9500",
+    "platform": "500"
+  },
+  "logs": [
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 invoke [1]",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 111 of 394107 compute units",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 invoke [2]",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 consumed 137 of 392650 compute units",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 success",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 consumed 7512 of 400000 compute units",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 success",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 invoke [1]",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 111 of 386662 compute units",
+    "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 invoke [2]",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 consumed 137 of 385205 compute units",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 success",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 consumed 7445 of 392488 compute units",
+    "Program De1egAFMkMWZSN5rYXRj9CAdheBamobVNubTsi9avR44 success"
+  ]
+}

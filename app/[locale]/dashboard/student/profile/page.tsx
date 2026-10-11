@@ -32,6 +32,8 @@ import Image from 'next/image'
 import { StudentCertificateCard } from '@/components/student/student-certificate-card'
 import { getCurrentTenantId, getSessionUser } from '@/lib/supabase/tenant'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/supabase/get-user-role'
 import { getUiState } from '@/lib/supabase/ui-state'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
 import { areToursEnabled } from '@/lib/ui-state-keys'
@@ -48,11 +50,12 @@ type EnrolledCourse = {
 
 async function getProfileData(userId: string, tenantId: string) {
     const supabase = createAdminClient()
+    const profileClient = await createClient()
 
     const [profileRes, subscriptionRes, transactionsRes, certificatesRes, enrollmentsRes] = await Promise.all([
-        supabase
+        profileClient
             .from('profiles')
-            .select('*, user_roles(role)')
+            .select('*')
             .eq('id', userId)
             .single(),
         supabase
@@ -82,10 +85,11 @@ async function getProfileData(userId: string, tenantId: string) {
             .select(`
                 *,
                 courses(title),
-                course_certificates_templates:certificate_templates(*)
+                certificate_templates(*)
             `)
             .eq('user_id', userId)
             .eq('tenant_id', tenantId)
+            .is('revoked_at', null)
             .order('issued_at', { ascending: false }),
         supabase
             .from('enrollments')
@@ -96,6 +100,12 @@ async function getProfileData(userId: string, tenantId: string) {
             .order('enrollment_date', { ascending: false })
             .limit(6),
     ])
+
+    // user_roles references auth.users, not profiles; embedding it makes the
+    // entire profile query fail. Never render a failed read as a blank profile.
+    if (profileRes.error || !profileRes.data) {
+        throw new Error('Unable to load your profile')
+    }
 
     // Enrich enrolled courses with basic data + progress
     const enrollmentRows = enrollmentsRes.data || []
@@ -279,10 +289,11 @@ export default async function ProfilePage() {
     }
 
     const { profile, subscription, transactions, certificates, enrolledCourses } = await getProfileData(user.id, tenantId)
-    const [uiState, hasCommunity, communitySettings] = await Promise.all([
+    const [uiState, hasCommunity, communitySettings, role] = await Promise.all([
         getUiState(user.id),
         hasPlanFeature(tenantId, 'community'),
         getCommunitySettings(tenantId),
+        getUserRole(),
     ])
     const userInitial = profile?.full_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U"
 
@@ -328,11 +339,11 @@ export default async function ProfilePage() {
                                     <h2 className="text-xl font-bold tracking-tight truncate">{profile?.full_name || user.email?.split('@')[0]}</h2>
                                     <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                     <div className="flex justify-center gap-2 pt-1">
-                                        {profile?.user_roles?.map((ur: { role: string }) => (
-                                            <Badge key={ur.role} variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
-                                                {ur.role}
+                                        {role && (
+                                            <Badge variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
+                                                {role}
                                             </Badge>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
 
@@ -393,7 +404,7 @@ export default async function ProfilePage() {
                                                 </div>
                                             ))}
                                         </div>
-                                        <Button variant="outline" className="w-full h-10 font-semibold">
+                                        <Button render={<Link href="/dashboard/student/billing" />} variant="outline" className="w-full h-10 font-semibold">
                                             {t('manageSubscription')}
                                         </Button>
                                     </>
@@ -571,7 +582,7 @@ export default async function ProfilePage() {
                             {certificates.length > 0 ? (
                                 <div className="grid gap-4">
                                     {certificates.map((cert) => (
-                                        <StudentCertificateCard key={cert.id} certificate={cert} />
+                                        <StudentCertificateCard key={cert.certificate_id} certificate={cert} />
                                     ))}
                                 </div>
                             ) : (

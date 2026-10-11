@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-11T19:33:34.717Z",
+  "source": "LIVE local production UI/API; existing canceled subscription10002; no payment submitted",
+  "screenshots": [
+    {
+      "name": "desktop",
+      "path": "/Users/guillermomarin/Documents/GitHub/lms-front/docs/qa/solana-production-review-2026-10-11/desktop-live-canceled-billing.png",
+      "canceled": true,
+      "paidDeadlineVisible": true,
+      "noHorizontalOverflow": true
+    },
+    {
+      "name": "mobile",
+      "path": "/Users/guillermomarin/Documents/GitHub/lms-front/docs/qa/solana-production-review-2026-10-11/mobile-live-canceled-billing.png",
+      "canceled": true,
+      "paidDeadlineVisible": true,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "denials": [
+    {
+      "case": "cross-origin",
+      "route": "cancel-tx",
+      "status": 403
+    },
+    {
+      "case": "cross-origin",
+      "route": "cancel-verify",
+      "status": 403
+    },
+    {
+      "case": "cross-origin",
+      "route": "retry-renewal",
+      "status": 403
+    },
+    {
+      "case": "wrong-tenant-host",
+      "route": "cancel-tx",
+      "status": 404
+    },
+    {
+      "case": "wrong-tenant-host",
+      "route": "cancel-verify",
+      "status": 404
+    },
+    {
+      "case": "wrong-tenant-host",
+      "route": "retry-renewal",
+      "status": 404
+    },
+    {
+      "case": "wrong-host-with-forged-tenant-header",
+      "route": "cancel-tx",
+      "status": 404
+    },
+    {
+      "case": "wrong-host-with-forged-tenant-header",
+      "route": "cancel-verify",
+      "status": 404
+    },
+    {
+      "case": "wrong-host-with-forged-tenant-header",
+      "route": "retry-renewal",
+      "status": 429
+    }
+  ],
+  "passed": false,
+  "error": "Wrong school accepted: retry-renewal"
+}

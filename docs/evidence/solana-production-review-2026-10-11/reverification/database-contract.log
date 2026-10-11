@@ -1,0 +1,4 @@
+BEGIN
+NOTICE:  PASS: shared cancellation, exclusive access, deadline expiry, duplicates, out-of-order, delayed receipts, immediate termination, independent product, privileges
+DO
+ROLLBACK

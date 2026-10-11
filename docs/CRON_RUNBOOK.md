@@ -103,7 +103,7 @@ gh workflow enable cron.yml
 | `enforce-plan-limits` | `0 3` | pg_cron is primary (#660); this is the fallback. If neither runs: a tenant that grows past its plan limits with no plan-change event is never cut off, a pending cutoff never completes, and no reminder email is ever sent |
 | `enforce-platform-fees` | `0 6` | pg_cron is primary (`0 5`, #929); this is the fallback. If neither runs: no monthly fee statement is issued, no reminder/overdue notice is sent and, in `enforce` mode, an overdue school is never paused (nor resumed — paying also resumes it synchronously once pay-now ships). See §2.1 |
 | `send-pushes` | every minute (pg_cron only) | No push notification reaches the mobile app. Pending rows older than a day are then marked sent without a push, so a long outage drops those pushes rather than flooding devices when it recovers |
-| `solana-pull` | **never** | See §5 |
+| `solana-pull` | `*/10` | Native subscription renewal and missing-receipt reconciliation; see §5 |
 
 Every route is idempotent, so a late or repeated run is safe. `league-rollover`
 in particular resolves the previous week from the data and finalizes every
@@ -309,31 +309,28 @@ confirm, and check Sentry for how many ticks were missed.
 
 ---
 
-## 5. `solana-pull` is manual-only, on purpose
+## 5. Native Solana subscription renewals
 
-`/api/cron/solana-pull` submits **real on-chain USDC transfers** — it pulls funds
-from subscribers' wallets for native `solana_subs` auto-pull subscriptions. It
-has never had a scheduler in `vercel.json` either, and `cron.yml` exposes it only
-under `workflow_dispatch`.
+`/api/cron/solana-pull` is included in the ten-minute group in `cron.yml` and
+in `vercel.json`. Dokploy production uses the GitHub Actions workflow; Vercel
+configuration alone does not schedule jobs there. Use only one scheduler for
+the deployed app. Manual dispatch remains available for recovery.
 
-**Consequence:** native Solana auto-pull subscriptions do not renew on their own.
+The route uses the same renewal/reconciliation code as student retries. It
+checks cancellation and the on-chain paid period, reconciles confirmed transfers
+before considering a new debit, and persists an unresolved-attempt marker before
+submission. An unconfigured rail returns a skipped result without transferring.
 
-This is safe today and verifiably so: as of 2026-08-29 production has **zero
-rows in `subscriptions`** (19 tenants, all on the `free` plan), so there is
-nothing to pull.
+Before enabling native subscriptions, configure `CRON_SECRET`, `CRON_BASE_URL`,
+`SOLANA_RPC_URL`, `SOLANA_USDC_MINT`, `SOLANA_PLATFORM_WALLET` and
+`SOLANA_PULLER_SECRET_KEY` on the appropriate scheduler/app, and ensure the
+puller has fee funds. Observe scheduled execution and the `cron-solana-pull`
+monitor in the target environment. The repository change does not deploy,
+enable the hosted workflow or demonstrate live scheduled payments.
 
-**Trigger to revisit:** the first `subscriptions` row with
-`payment_provider = 'solana_subs'`. At that point either schedule this route or
-disable that provider — leaving it as-is silently stops collecting money that is
-owed. Guard it with:
-
-```sql
-select count(*) from subscriptions where payment_provider = 'solana_subs';
-```
-
-Before scheduling it, confirm `SOLANA_RPC_URL`, `SOLANA_PLATFORM_WALLET` and
-`SOLANA_PULLER_SECRET_KEY` are set on the app and that the puller keypair holds
-SOL for fees.
+GitHub schedules can be delayed; this cadence is not an exact billing-time
+promise. Verify scheduled renewal, cancellation and receipt recovery with
+isolated Devnet fixtures before production sign-off. Mainnet remains deferred.
 
 ---
 

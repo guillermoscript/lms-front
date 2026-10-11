@@ -279,6 +279,9 @@
         "subtitle": "Your purchases, active subscription, and downloadable invoices.",
         "subscription": {
           "sectionTitle": "Active Subscription",
+          "endedSectionTitle": "Ended subscription",
+          "paidAccessUntil": "Paid access until",
+          "scheduledToEnd": "Scheduled to end",
           "unknownPlan": "Unknown plan",
           "renewsOn": "Renews on",
           "cancelsOn": "Cancels on",
@@ -312,6 +315,8 @@
             "title": "Revoke auto-pull delegation",
             "description": "This signs an on-chain transaction with your wallet that cancels the auto-pull authorization. After this, no further charges can be pulled from your wallet for this subscription.",
             "walletNote2": "You'll be asked to approve one transaction in your wallet.",
+            "checkCancellation": "Check cancellation",
+            "unresolved": "Cancellation may already be on-chain. Check cancellation to synchronize your paid access before signing another transaction.",
             "confirm": "Revoke delegation",
             "cancel": "Keep subscription",
             "working": "Revoking…",
@@ -345,6 +350,30 @@
             "free": "Free",
             "success": "Your plan has been changed.",
             "error": "We couldn't change your plan. Please try again."
+          },
+          "solana": {
+            "canceledHelp": "Subscription access continues through the paid deadline shown above. Separately purchased courses keep their own access.",
+            "endedHelp": "This subscription has ended. The paid-period deadline is shown above for your records. Separately purchased courses keep their own access.",
+            "canceledTitle": "Future renewals stopped",
+            "checked": "No new confirmed receipt was found. Your payment may still be processing. Check again before retrying payment.",
+            "checkPayment": "Check payment",
+            "pendingTitle": "Payment confirmation unresolved",
+            "paymentMethod": "Payment method",
+            "devnetMethod": "USDC · Solana Devnet",
+            "method": "USDC · Solana",
+            "renewalAmount": "Renewal amount",
+            "wallet": "Wallet: {wallet}",
+            "insufficientTitle": "Not enough USDC to renew",
+            "overdueTitle": "Renewal payment overdue",
+            "overdueHelp": "Your renewal payment needs attention. Check that this wallet has at least {amount} USDC on {network}, then retry. Access provided by this subscription returns after a confirmed payment.",
+            "topUp": "Add at least {amount} USDC on {network} to this wallet, then retry your payment. No renewal was charged. Access provided by this subscription is paused after your paid period ends and returns when payment is confirmed. Separately purchased courses remain available.",
+            "retry": "Retry payment",
+            "retrying": "Confirming payment…",
+            "paid": "Renewal paid. Your course access has been restored.",
+            "insufficient": "Your wallet has {balance} USDC. Add enough to cover the {amount} USDC renewal, then retry.",
+            "notDue": "No payment is due yet. No additional charge was made.",
+            "unconfirmed": "Payment may already have landed. Check payment to reconcile its receipt without sending another charge.",
+            "lastRenewalPaid": "Last renewal paid · {amount} USDC"
           }
         },
         "purchases": {
@@ -383,7 +412,11 @@
           "verifyNow": "Verify now",
           "verifyConfirmed": "Payment confirmed — access granted.",
           "verifyPending": "Payment not found on-chain yet. Try again in a moment.",
-          "verifyError": "Could not verify the payment. Please try again."
+          "verifyError": "Could not verify the payment. Please try again.",
+          "renewal": "Subscription renewal",
+          "usdcMethod": "USDC · Solana",
+          "notCharged": "Not charged",
+          "receipt": "Receipt {number}"
         },
         "offline": {
           "sectionTitle": "Offline / Manual Payments",

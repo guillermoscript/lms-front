@@ -63,7 +63,7 @@ export default async function ExamsPage({ params }: PageProps) {
 
   if (error) {
     console.error('Error fetching exams:', error)
-    notFound()
+    throw new Error('Unable to load your exams')
   }
 
   if (!exams || exams.length === 0) {

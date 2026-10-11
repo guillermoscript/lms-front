@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -117,7 +117,10 @@ export default function PaymentSettingsForm({
     normalizeManualPaymentAccounts(settings.manual_payment_accounts?.value)
   )
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (isSubmitting) return
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
     let credentialsSaved: typeof pendingBinance = null
 
@@ -204,7 +207,7 @@ export default function PaymentSettingsForm({
   )
 
   return (
-    <form action={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <section className="space-y-4">
         <div className="space-y-1">
           <h3 className="text-sm font-semibold">{t('payment.howStudentsPay')}</h3>

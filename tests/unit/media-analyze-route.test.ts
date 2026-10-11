@@ -34,7 +34,8 @@ vi.mock('@/lib/supabase/admin', () => {
     let payload: Record<string, unknown> = {}
     const self = new Proxy(q, {
       get: (_t, prop: string) => {
-        if (prop === 'then') return undefined
+        if (prop === 'then') return (resolve: (result: { data: null; error: null }) => unknown) =>
+          Promise.resolve({ data: null, error: null }).then(resolve)
         if (prop === 'update') return (p: Record<string, unknown>) => { op = 'update'; payload = p; if (table === 'exercise_media_submissions') state.updates.push(p); return self }
         if (prop === 'insert') return () => Promise.resolve({ error: null })
         if (prop === 'single' || prop === 'maybeSingle') {

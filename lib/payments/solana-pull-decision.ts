@@ -75,14 +75,19 @@ export function decidePullAction(params: {
   // can land between the query and this pull; re-checking here (the caller
   // re-fetches the row just before deciding) closes that race. Never charge a
   // row our DB doesn't consider active.
-  if (row.subscription_status !== 'active') {
-    return { action: 'skip', reason: `status is ${row.subscription_status}, not active` }
+  if (!['active', 'past_due'].includes(row.subscription_status)) {
+    return { action: 'skip', reason: `status is ${row.subscription_status}, not eligible for renewal` }
   }
 
   // (2) On-chain cancelled and past grace → expire our row (trigger revokes
   // access). This is the terminal state after a student revokes the delegation.
   if (state.expiresAtTs !== BigInt(0) && state.expiresAtTs <= now) {
     return { action: 'expire', reason: 'on-chain delegation cancelled and past grace' }
+  }
+
+  // A revoked delegation must never be charged, including before its deadline.
+  if (state.expiresAtTs !== BigInt(0)) {
+    return { action: 'skip', reason: 'on-chain cancellation scheduled' }
   }
 
   const periodEndSec = state.currentPeriodStartTs + state.periodHours * BigInt(3600)

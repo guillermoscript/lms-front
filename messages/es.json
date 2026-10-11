@@ -279,6 +279,9 @@
         "subtitle": "Tus compras, suscripción activa y facturas descargables.",
         "subscription": {
           "sectionTitle": "Suscripción activa",
+          "endedSectionTitle": "Suscripción finalizada",
+          "paidAccessUntil": "Acceso pagado hasta",
+          "scheduledToEnd": "Finalización programada",
           "unknownPlan": "Plan desconocido",
           "renewsOn": "Se renueva el",
           "cancelsOn": "Se cancela el",
@@ -312,6 +315,8 @@
             "title": "Revocar la delegación de cobro automático",
             "description": "Esto firma una transacción en la cadena con tu billetera que cancela la autorización de cobro automático. Después de esto, no se podrán realizar más cargos desde tu billetera por esta suscripción.",
             "walletNote2": "Se te pedirá aprobar una transacción en tu billetera.",
+            "checkCancellation": "Verificar cancelación",
+            "unresolved": "La cancelación puede haberse confirmado en la cadena. Verifica la cancelación para sincronizar tu acceso pagado antes de firmar otra transacción.",
             "confirm": "Revocar delegación",
             "cancel": "Mantener suscripción",
             "working": "Revocando…",
@@ -345,6 +350,30 @@
             "free": "Gratis",
             "success": "Tu plan ha sido cambiado.",
             "error": "No pudimos cambiar tu plan. Inténtalo de nuevo."
+          },
+          "solana": {
+            "canceledHelp": "El acceso de la suscripción continúa hasta la fecha pagada indicada arriba. Los cursos comprados por separado conservan su propio acceso.",
+            "endedHelp": "Esta suscripción ha finalizado. La fecha límite del período pagado se muestra arriba como referencia. Los cursos comprados por separado mantienen su propio acceso.",
+            "canceledTitle": "Renovaciones futuras detenidas",
+            "checked": "No se encontró un nuevo recibo confirmado. Tu pago puede seguir procesándose. Verifica de nuevo antes de reintentar el pago.",
+            "checkPayment": "Verificar pago",
+            "pendingTitle": "Confirmación del pago pendiente",
+            "paymentMethod": "Método de pago",
+            "devnetMethod": "USDC · Solana Devnet",
+            "method": "USDC · Solana",
+            "renewalAmount": "Importe de renovación",
+            "wallet": "Billetera: {wallet}",
+            "insufficientTitle": "No tienes suficiente USDC para renovar",
+            "overdueTitle": "Pago de renovación pendiente",
+            "overdueHelp": "Tu pago de renovación necesita atención. Comprueba que esta billetera tenga al menos {amount} USDC en {network} y vuelve a intentarlo. El acceso que ofrece esta suscripción se restablece cuando se confirma el pago.",
+            "topUp": "Añade al menos {amount} USDC en {network} a esta billetera y reintenta el pago. No se cobró la renovación. El acceso que ofrece esta suscripción se pausa al finalizar tu período pagado y se restablece cuando se confirma el pago. Los cursos comprados por separado siguen disponibles.",
+            "retry": "Reintentar pago",
+            "retrying": "Confirmando pago…",
+            "paid": "Renovación pagada. Se restableció tu acceso a los cursos.",
+            "insufficient": "Tu billetera tiene {balance} USDC. Añade lo necesario para cubrir la renovación de {amount} USDC y reintenta.",
+            "notDue": "Todavía no hay un pago pendiente. No se realizó otro cobro.",
+            "unconfirmed": "El pago puede haberse realizado. Verifica el pago para recuperar su recibo sin enviar otro cobro.",
+            "lastRenewalPaid": "Última renovación pagada · {amount} USDC"
           }
         },
         "purchases": {
@@ -383,7 +412,11 @@
           "verifyNow": "Verificar ahora",
           "verifyConfirmed": "Pago confirmado: acceso otorgado.",
           "verifyPending": "El pago aún no aparece en la cadena. Inténtalo de nuevo en un momento.",
-          "verifyError": "No se pudo verificar el pago. Inténtalo de nuevo."
+          "verifyError": "No se pudo verificar el pago. Inténtalo de nuevo.",
+          "renewal": "Renovación de suscripción",
+          "usdcMethod": "USDC · Solana",
+          "notCharged": "Sin cobro",
+          "receipt": "Comprobante {number}"
         },
         "offline": {
           "sectionTitle": "Pagos offline / manuales",

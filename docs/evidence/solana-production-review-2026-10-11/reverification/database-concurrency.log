@@ -1,0 +1,23 @@
+BEGIN
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+COMMIT
+t
+DO
+UPDATE 1
+2026-10-11 21:28:23.408817+00
+DO
+UPDATE 1
+f
+f
+DO
+PASS: real concurrent PostgreSQL sessions; both cancel/renew orders, stale expiry, terminal access guard. Synthetic paid periods; no provider payment.
+BEGIN
+DELETE 1
+DELETE 1
+DELETE 1
+DELETE 1
+COMMIT
+Isolated fixtures removed; subscription 10002 unchanged.

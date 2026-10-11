@@ -1,0 +1,10 @@
+{
+  "time": "2026-10-11T17:25:20.138Z",
+  "status": 200,
+  "body": {
+    "pulled": 0,
+    "reconciled": 1,
+    "insufficientFunds": 0,
+    "errors": 0
+  }
+}
