@@ -617,7 +617,7 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
       // request itself is rejected with "Error sending recovery email" and
       // the form shows it. The form round-trip is still exercised; the
       // recovery token comes from generateLink below.
-      const outcome = success.or(page.locator('form p.text-red-500'))
+      const outcome = success.or(page.getByRole('alert'))
       await expect(outcome.first()).toBeVisible({ timeout: 30_000 })
       test.info().annotations.push({
         type: 'note',
@@ -661,6 +661,7 @@ test.describe('Loop 2 — public link → join → learn → verifiable certific
 
     await test.step('a new password is saved and works at the login form', async () => {
       await fillSettled(page, 'update-password-password', STUDENT.newPassword)
+      await fillSettled(page, 'update-password-confirmation', STUDENT.newPassword)
       await domClick(page, 'update-password-submit')
       await page.waitForURL(/\/dashboard\//, { timeout: 60_000 })
 

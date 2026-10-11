@@ -1,5 +1,6 @@
 import { locales, type Locale } from '@/i18n'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
+import { localizePath } from '@/lib/auth/route-access'
 
 const CONFIRM_PATH = '/auth/confirm'
 
@@ -39,13 +40,14 @@ export function buildAuthEmailLink(params: {
   tokenHash: string
   type: string
 }): AuthEmailLink {
-  let origin = params.siteUrl
+  let origin = new URL(params.siteUrl).origin
   let next = '/'
   let locale: Locale | null = null
 
   if (params.redirectTo) {
     try {
       const target = new URL(params.redirectTo)
+      if (!['http:', 'https:'].includes(target.protocol)) throw new Error('Unsupported redirect protocol')
       origin = target.origin
       locale = localeFromPath(target.pathname)
 
@@ -58,7 +60,13 @@ export function buildAuthEmailLink(params: {
     }
   }
 
-  const link = new URL(CONFIRM_PATH, origin)
+  // A missing/rejected redirect must still open the password form, never the
+  // platform home page. Recovery destinations cannot be changed via `next`.
+  if (params.type === 'recovery') {
+    next = locale ? localizePath('/auth/update-password', locale) : '/auth/update-password'
+  }
+
+  const link = new URL(locale ? localizePath(CONFIRM_PATH, locale) : CONFIRM_PATH, origin)
   link.searchParams.set('token_hash', params.tokenHash)
   link.searchParams.set('type', params.type)
   link.searchParams.set('next', next)

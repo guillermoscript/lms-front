@@ -3,52 +3,50 @@
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { localizePath } from '@/lib/auth/route-access'
+import { passwordResetErrorKey } from '@/lib/auth/password-reset-errors'
 
 export function ForgotPasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const t = useTranslations('auth.forgotPassword')
+  const locale = useLocale()
   const analytics = useAnalytics()
   const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [retrySeconds, setRetrySeconds] = useState(0)
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const supabase = createClient()
+  useEffect(() => {
+    if (retrySeconds <= 0) return
+    const timer = setTimeout(() => setRetrySeconds((seconds) => seconds - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [retrySeconds])
+
+  async function requestReset() {
+    if (isLoading || retrySeconds > 0) return
     setIsLoading(true)
     setError(null)
-
     try {
-      // Preserve subdomain in password reset redirect
-      const currentHost = window.location.host
-      const protocol = window.location.protocol
-
-      // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${protocol}//${currentHost}/auth/update-password`,
+      const supabase = createClient()
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}${localizePath('/auth/update-password', locale)}`,
       })
       if (error) throw error
       setSuccess(true)
-      // Volume here is a leading indicator: a spike means people cannot get in,
-      // and it is the half of the reset funnel that does not require the email
-      // to have arrived. `password_reset_completed` is the other half.
+      setRetrySeconds(60)
       analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_REQUESTED, {})
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      const key = passwordResetErrorKey(error)
+      setError(t(`errors.${key === 'rateLimited' || key === 'delivery' ? key : 'generic'}`))
+      if (key === 'rateLimited') setRetrySeconds(60)
     } finally {
       setIsLoading(false)
     }
@@ -56,55 +54,48 @@ export function ForgotPasswordForm({ className, ...props }: React.ComponentProps
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      {success ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{t('success.title')}</CardTitle>
-            <CardDescription>{t('success.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {t('success.info')}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">{t('title')}</CardTitle>
-            <CardDescription>
-              {t('description')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleForgotPassword}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">{t('email')}</Label>
-                  <Input
-                    id="email"
-                    data-testid="forgot-password-email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                {error && <p className="text-sm text-red-500">{error}</p>}
-                <Button type="submit" data-testid="forgot-password-submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? t('submitting') : t('submit')}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t(success ? 'success.title' : 'title')}</CardTitle>
+          <CardDescription>{t(success ? 'success.description' : 'description')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {success ? (
+            <div className="flex flex-col gap-4" aria-live="polite">
+              <p className="text-sm text-muted-foreground">{t('success.info', { email: email.trim() })}</p>
+              <p className="text-sm text-muted-foreground">{t('success.spam')}</p>
+              {error ? <FieldError>{error}</FieldError> : null}
+              <Button type="button" variant="outline" data-testid="forgot-password-resend"
+                disabled={isLoading || retrySeconds > 0} onClick={() => void requestReset()}>
+                {isLoading ? t('submitting') : retrySeconds > 0 ? t('resendIn', { seconds: retrySeconds }) : t('resend')}
+              </Button>
+              <Button type="button" variant="ghost" disabled={isLoading} onClick={() => { setSuccess(false); setError(null); setRetrySeconds(0) }}>
+                {t('changeEmail')}
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={(event) => { event.preventDefault(); void requestReset() }} aria-busy={isLoading}>
+              <FieldGroup>
+                <Field data-disabled={isLoading}>
+                  <FieldLabel htmlFor="email">{t('email')}</FieldLabel>
+                  <Input id="email" name="email" data-testid="forgot-password-email" type="email"
+                    autoComplete="email" placeholder="nombre@ejemplo.com" required
+                    disabled={isLoading} value={email} onChange={(event) => setEmail(event.target.value)} />
+                </Field>
+                {error ? <FieldError>{error}</FieldError> : null}
+                <Button type="submit" data-testid="forgot-password-submit" className="w-full" disabled={isLoading || retrySeconds > 0}>
+                  {isLoading ? t('submitting') : retrySeconds > 0 ? t('resendIn', { seconds: retrySeconds }) : t('submit')}
                 </Button>
-              </div>
-              <div className="mt-4 text-center text-sm">
-                <Link href="/auth/login" className="underline underline-offset-4">
-                  {t('backToLogin')}
-                </Link>
-              </div>
+              </FieldGroup>
             </form>
-          </CardContent>
-        </Card>
-      )}
+          )}
+          <div className="mt-4 text-center text-sm">
+            <Link href={localizePath('/auth/login', locale)} className="underline underline-offset-4">
+              {t('backToLogin')}
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

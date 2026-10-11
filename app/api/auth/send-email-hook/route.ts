@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import {
   SendEmailHookSignatureError,
   verifySendEmailHookPayload,
@@ -7,7 +8,7 @@ import { isSendEmailHookPayload, type SendEmailHookPayload } from '@/lib/auth/se
 import { buildAuthEmailLink } from '@/lib/auth/send-email-hook/build-link'
 import { resolveTenantIdForAuthEmail } from '@/lib/auth/send-email-hook/resolve-tenant'
 import { getSchoolBrand, platformSchoolBrand } from '@/lib/themes/school-brand'
-import { authOtpTemplate, type AuthOtpKind } from '@/lib/email/templates/auth-otp'
+import { authOtpTemplate, authReauthenticationTemplate, type AuthOtpKind } from '@/lib/email/templates/auth-otp'
 import { sendEmail } from '@/lib/email/send'
 
 /**
@@ -17,7 +18,7 @@ import { sendEmail } from '@/lib/email/send'
  * confirmation, magic link, recovery, invite and email-change. This route
  * resolves the school the email should be branded as, renders one of the
  * `lib/email/templates/auth-otp.ts` templates with `school-brand-parts.ts`,
- * and sends it through the existing Mailgun-backed `sendEmail()`.
+ * and sends it through `sendEmail()` using Resend's API (or legacy Mailgun).
  *
  * `proxy.ts` never touches this: `/api/*` routes are handled before the
  * intl/auth guards run (they just get `x-tenant-id` set and pass through),
@@ -25,8 +26,7 @@ import { sendEmail } from '@/lib/email/send'
  *
  * Local dev: the hook is commented out in `supabase/config.toml` — enabling
  * it locally means GoTrue stops emailing Inbucket, and this app's local
- * Mailgun is unset too, so nothing would arrive anywhere. See that file for
- * how to turn it on once Mailgun (or another mailer) is configured locally.
+ * mailer needs credentials first. See docs/AUTH_EMAIL_SETUP.md for setup.
  */
 
 const SUPPORTED_ACTION_TYPES = new Set(['signup', 'magiclink', 'recovery', 'invite'])
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!isSendEmailHookPayload(payload)) {
-    console.error('[send-email-hook] malformed payload', payload)
+    console.error('[send-email-hook] malformed payload')
     return NextResponse.json(
       { error: { http_code: 400, message: 'Malformed payload' } },
       { status: 400 }
@@ -57,16 +57,14 @@ export async function POST(request: NextRequest) {
   const { user, email_data: emailData } = payload as SendEmailHookPayload
   const actionType = emailData.email_action_type
 
-  // Types this app has no branded template for (`reauthentication` — an
-  // MFA-challenge OTP; MFA is disabled in `config.toml` so this shouldn't
-  // fire, but a future type could). Enabling the hook means GoTrue no longer
-  // sends anything of its own, and a non-2xx here fails the WHOLE auth
-  // request (blocking a signup/reset that has nothing to do with email
-  // rendering), so an unsupported type is accepted with no email sent rather
-  // than declined — a missing email is recoverable, a blocked login is not.
-  if (actionType !== 'email_change' && !SUPPORTED_ACTION_TYPES.has(actionType)) {
-    console.warn('[send-email-hook] unsupported email_action_type — accepting without sending:', actionType)
-    return NextResponse.json({})
+  // Never acknowledge an email that was not actually handed to a provider.
+  // Reauthentication needs its OTP, not a verification link.
+  if (actionType !== 'email_change' && actionType !== 'reauthentication' && !SUPPORTED_ACTION_TYPES.has(actionType)) {
+    console.error('[send-email-hook] unsupported email action')
+    return NextResponse.json(
+      { error: { http_code: 400, message: 'Unsupported email action' } },
+      { status: 400 }
+    )
   }
 
   try {
@@ -77,6 +75,19 @@ export async function POST(request: NextRequest) {
     })
     const brand = tenantId ? await getSchoolBrand(tenantId) : platformSchoolBrand('')
     const schoolName = brand.name || 'LMS Platform'
+
+    if (actionType === 'reauthentication') {
+      if (!emailData.token) {
+        return NextResponse.json({ error: { http_code: 400, message: 'Missing reauthentication code' } }, { status: 400 })
+      }
+      const locale = typeof user.user_metadata?.locale === 'string' ? user.user_metadata.locale : null
+      const template = authReauthenticationTemplate({ schoolName, token: emailData.token, locale, brand })
+      const idempotencyKey = `auth/${createHash('sha256').update(`reauthentication:${user.email}:${emailData.token}`).digest('hex')}`
+      const sent = await sendEmail({ to: user.email, ...template, idempotencyKey })
+      return sent
+        ? NextResponse.json({})
+        : NextResponse.json({ error: { http_code: 500, message: 'Failed to send email' } }, { status: 500 })
+    }
 
     // Which (recipient, token_hash) pairs to send. Every type but
     // `email_change` sends one email to `user.email` with `token_hash`.
@@ -94,10 +105,6 @@ export async function POST(request: NextRequest) {
       if (emailData.token_hash_new) {
         sends.push({ to: user.email, tokenHash: emailData.token_hash_new, kind: 'email_change_current' })
       }
-      if (sends.length === 0 && emailData.token_hash) {
-        // Secure Email Change disabled, or `new_email` missing — best effort: one email to the current address.
-        sends.push({ to: user.email, tokenHash: emailData.token_hash, kind: 'email_change_current' })
-      }
     } else {
       sends.push({ to: user.email, tokenHash: emailData.token_hash, kind: actionType as AuthOtpKind })
     }
@@ -110,16 +117,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    for (const send of sends) {
+    // Secure email changes send to two addresses. Parallel sends stay within
+    // the hook's HTTP deadline; idempotency makes partial retries safe.
+    const deliveries = await Promise.all(sends.map(async (send) => {
       const link = buildAuthEmailLink({
         siteUrl: emailData.site_url,
         redirectTo: emailData.redirect_to || null,
         tokenHash: send.tokenHash,
         type: actionType,
       })
-      const localeCandidate =
-        (typeof user.user_metadata?.locale === 'string' ? (user.user_metadata.locale as string) : null) ??
-        link.locale
+      const localeCandidate = link.locale ??
+        (typeof user.user_metadata?.locale === 'string' ? user.user_metadata.locale : null)
 
       const template = authOtpTemplate({
         kind: send.kind,
@@ -129,19 +137,33 @@ export async function POST(request: NextRequest) {
         brand,
       })
 
-      const delivered = await sendEmail({ to: send.to, subject: template.subject, html: template.html })
+      const idempotencyKey = `auth/${createHash('sha256')
+        .update(`${send.kind}:${send.to}:${send.tokenHash}`)
+        .digest('hex')}`
+      const delivered = await sendEmail({
+        to: send.to,
+        subject: template.subject,
+        html: template.html,
+        idempotencyKey,
+      })
       if (!delivered) {
         console.error('[send-email-hook] sendEmail() returned false for', send.kind)
-        return NextResponse.json(
-          { error: { http_code: 500, message: 'Mailer not configured or send failed' } },
-          { status: 500 }
-        )
       }
+      return delivered
+    }))
+
+    if (deliveries.some((delivered) => !delivered)) {
+      return NextResponse.json(
+        { error: { http_code: 500, message: 'Mailer not configured or send failed' } },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({})
   } catch (error) {
-    console.error('[send-email-hook] failed to send branded auth email:', error)
+    console.error('[send-email-hook] failed to send branded auth email', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    })
     return NextResponse.json(
       { error: { http_code: 500, message: 'Failed to send email' } },
       { status: 500 }

@@ -541,10 +541,13 @@ POSTs the OTP payload to `app/api/auth/send-email-hook/route.ts` instead,
 which resolves the school (from the `redirect_to` subdomain, else the user's
 own tenant membership, else the platform palette), renders
 `lib/email/templates/auth-otp.ts` with `school-brand-parts.ts`, and sends
-through the existing Mailgun-backed `sendEmail()`. The link it builds always
+through `sendEmail()` using Resend's API when `RESEND_API_KEY` is configured
+(Mailgun remains available for existing deployments). The link it builds always
 points at `/auth/confirm` (below), never Supabase's hosted `/auth/v1/verify`.
 Disabled locally — see `supabase/config.toml`'s `[auth.hook.send_email]`
-comment for why and how to turn it on.
+comment for why and how to turn it on. The complete setup and real-delivery checks
+are in [Auth email setup](./AUTH_EMAIL_SETUP.md); run `npm run email:setup` to
+generate a local signing secret and `npm run email:check` to diagnose configuration.
 
 ### Handling Confirmation Callback
 
@@ -557,7 +560,10 @@ Has active tenant_users memberships?
   -> NO, school subdomain -> /join-school
 ```
 
-For all other OTP types (`recovery`, `magiclink`, etc.) the route uses the `next` query param as before.
+Recovery always opens the localized password form and handles used/expired links
+with a button to request another email. Other OTP types use the safe `next` query
+param. Reauthentication emails contain an OTP for `updateUser({ nonce })` rather
+than a verification link.
 
 ```typescript
 // Simplified — see route.ts for full implementation
@@ -575,7 +581,7 @@ if (type === 'signup' && user) {
   else if (tenantId === DEFAULT_TENANT_ID) redirect('/create-school')
   else redirect('/join-school')
 }
-redirect(next) // recovery, magiclink, etc.
+redirect(next) // other confirmations; recovery goes directly to update-password
 ```
 
 **Why this matters:** New users signing up at `school.lvh.me` land on `/join-school` for that school; new users signing up at the main domain land on `/create-school`. No more floating, school-less accounts.

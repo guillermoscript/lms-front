@@ -98,4 +98,18 @@ describe('buildAuthEmailLink', () => {
 
     expect(link.locale).toBeNull()
   })
+
+  it('always opens the password form when the recovery redirect is missing or points to the site root', () => {
+    for (const redirectTo of [null, 'not a url', 'https://acme.example.com/', 'https://acme.example.com/auth/confirm?next=/dashboard/student']) {
+      const url = new URL(buildAuthEmailLink({ siteUrl: 'https://platform.example.com', redirectTo, tokenHash: 'th_recovery', type: 'recovery' }).url)
+      expect(url.searchParams.get('next')).toBe('/auth/update-password')
+    }
+  })
+
+  it('preserves school and language in both verification and recovery URLs', () => {
+    const url = new URL(buildAuthEmailLink({ siteUrl: 'https://platform.example.com', redirectTo: 'https://acme.example.com/es/auth/update-password', tokenHash: 'th_recovery', type: 'recovery' }).url)
+    expect(url.origin).toBe('https://acme.example.com')
+    expect(url.pathname).toBe('/es/auth/confirm')
+    expect(url.searchParams.get('next')).toBe('/es/auth/update-password')
+  })
 })

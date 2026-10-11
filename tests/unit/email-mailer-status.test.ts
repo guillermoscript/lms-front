@@ -9,6 +9,14 @@ import { platformSchoolBrand } from '@/lib/themes/school-brand'
  */
 
 describe('isMailerConfigured', () => {
+  it('requires a full sender address with Resend, not just a domain', () => {
+    expect(isMailerConfigured({ RESEND_API_KEY: 're_test', EMAIL_FROM: 'example.com' })).toBe(false)
+    expect(isMailerConfigured({ RESEND_API_KEY: 're_test', EMAIL_FROM: 'School <noreply@example.com>' })).toBe(true)
+  })
+
+  it('does not hide incomplete Resend setup behind Mailgun credentials', () => {
+    expect(isMailerConfigured({ RESEND_API_KEY: 're_test', MAILGUN_API_KEY: 'mg_test', MAILGUN_DOMAIN: 'mg.example.com' })).toBe(false)
+  })
   it('is false when MAILGUN_API_KEY is missing', () => {
     expect(isMailerConfigured({ MAILGUN_DOMAIN: 'mg.example.com' })).toBe(false)
   })
@@ -25,6 +33,11 @@ describe('isMailerConfigured', () => {
 })
 
 describe('getMailerStatus', () => {
+  it('reports the Resend sender domain without leaking its API key', () => {
+    const status = getMailerStatus({ RESEND_API_KEY: 're_private', EMAIL_FROM: 'School <noreply@example.com>' })
+    expect(status).toEqual({ configured: true, domain: 'example.com', from: 'School <noreply@example.com>' })
+    expect(JSON.stringify(status)).not.toContain('re_private')
+  })
   it('reports unconfigured with null domain/from', () => {
     expect(getMailerStatus({})).toEqual({ configured: false, domain: null, from: null })
   })

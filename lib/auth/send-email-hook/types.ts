@@ -58,10 +58,12 @@ export function isSendEmailHookPayload(value: unknown): value is SendEmailHookPa
   const emailData = v.email_data as Record<string, unknown> | undefined
   return (
     !!user &&
-    typeof user.id === 'string' &&
-    typeof user.email === 'string' &&
+    typeof user.id === 'string' && user.id.length > 0 &&
+    typeof user.email === 'string' && user.email.length > 0 &&
     !!emailData &&
     typeof emailData.token_hash === 'string' &&
+    typeof emailData.token === 'string' &&
+    (emailData.email_action_type === 'reauthentication' || emailData.token_hash.length > 0) &&
     typeof emailData.email_action_type === 'string' &&
     typeof emailData.site_url === 'string' &&
     typeof emailData.redirect_to === 'string'

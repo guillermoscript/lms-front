@@ -216,22 +216,48 @@
       }
     },
     "forgotPassword": {
-      "title": "Restablecer Contraseña",
+      "title": "Restablecer contraseña",
       "description": "Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña",
       "email": "Correo Electrónico",
       "submit": "Enviar correo de restablecimiento",
       "submitting": "Enviando...",
       "backToLogin": "Volver al inicio de sesión",
+      "resend": "Reenviar enlace",
+      "resendIn": "Reenviar en {seconds} s",
+      "changeEmail": "Usar otro correo",
+      "errors": {
+        "rateLimited": "Espera un minuto antes de pedir otro enlace.",
+        "delivery": "No pudimos enviar el correo. Inténtalo de nuevo en unos minutos o contacta a tu escuela.",
+        "generic": "No pudimos solicitar el enlace. Revisa tu conexión e inténtalo de nuevo."
+      },
       "success": {
-        "title": "Revisa tu Correo",
-        "description": "Instrucciones de restablecimiento enviadas",
-        "info": "Si te registraste usando tu correo y contraseña, recibirás un correo para restablecerla."
+        "title": "Revisa tu correo",
+        "description": "Abre el enlace del correo para elegir una nueva contraseña.",
+        "info": "Si existe una cuenta para {email}, recibirás un enlace de recuperación. Solo puedes usarlo una vez.",
+        "spam": "Si no lo ves, revisa la carpeta de spam. Usa siempre el enlace del correo más reciente."
       }
     },
     "updatePassword": {
       "title": "Cambiar Contraseña",
       "description": "Por favor ingresa tu nueva contraseña a continuación.",
       "password": "Nueva contraseña",
+      "confirmPassword": "Repite la nueva contraseña",
+      "hint": "Usa al menos 6 caracteres.",
+      "showPassword": "Mostrar contraseñas",
+      "hidePassword": "Ocultar contraseñas",
+      "success": "Tu contraseña se actualizó correctamente.",
+      "invalidLink": {
+        "title": "Pide un nuevo enlace",
+        "description": "Este enlace venció, ya se usó o no es válido. Te enviaremos uno nuevo para cambiar tu contraseña.",
+        "requestNew": "Solicitar otro enlace"
+      },
+      "errors": {
+        "mismatch": "Las contraseñas no coinciden.",
+        "weakPassword": "La contraseña no cumple los requisitos de seguridad. Usa una contraseña más larga y combina letras, números y símbolos.",
+        "samePassword": "Elige una contraseña diferente a la anterior.",
+        "rateLimited": "Espera un minuto antes de intentarlo otra vez.",
+        "generic": "No pudimos guardar tu contraseña. Inténtalo de nuevo."
+      },
       "submit": "Guardar nueva contraseña",
       "submitting": "Guardando..."
     },
@@ -4093,7 +4119,7 @@
           "label": "Servicio de email de la plataforma",
           "configured": "Configurado — los emails se envían desde {from} vía {domain}.",
           "notConfigured": "No configurado — no se envía ningún email. Las invitaciones muestran un enlace para compartir; los certificados y avisos de cursos no se entregan.",
-          "hint": "Lo configura el operador de la plataforma (MAILGUN_API_KEY, MAILGUN_DOMAIN, EMAIL_FROM). Los campos SMTP de abajo se guardan pero aún no se usan para enviar."
+          "hint": "Lo configura el operador con RESEND_API_KEY y EMAIL_FROM, o con las credenciales de Mailgun. Los campos SMTP de abajo se guardan pero aún no se usan para enviar."
         }
       },
       "apiTokens": {
