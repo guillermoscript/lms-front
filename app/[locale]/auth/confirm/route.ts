@@ -4,13 +4,14 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import { type NextRequest } from 'next/server'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
-import { joinSchoolPath } from '@/lib/auth/route-access'
+import { joinSchoolPath, localizePath } from '@/lib/auth/route-access'
 import { track } from '@/lib/analytics/server'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 
 const DEFAULT_TENANT_ID = '00000000-0000-0000-0000-000000000001'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
   const { searchParams } = new URL(request.url)
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
@@ -24,6 +25,11 @@ export async function GET(request: NextRequest) {
       type,
       token_hash,
     })
+    // Recovery only needs the verified session. Tenant metadata updates and
+    // onboarding queries must not prevent someone from changing a password.
+    if (type === 'recovery') {
+      redirect(localizePath(`/auth/update-password${error ? '?error=invalid_link' : ''}`, locale))
+    }
     if (!error) {
       // Get tenant from current subdomain (middleware sets header)
       const tenantId = await getCurrentTenantId()
@@ -78,14 +84,17 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // For recovery and other OTP types, use the next param
-      redirect(next)
+      // For other OTP types, use the next param
+      redirect(localizePath(next, locale))
     } else {
       // redirect the user to an error page with some instructions
-      redirect(`/auth/error?error=${error?.message}`)
+      redirect(localizePath(`/auth/error?error=${encodeURIComponent(error.message)}`, locale))
     }
   }
 
   // redirect the user to an error page with some instructions
-  redirect(`/auth/error?error=No token hash or type`)
+  if (type === 'recovery') {
+    redirect(localizePath('/auth/update-password?error=invalid_link', locale))
+  }
+  redirect(localizePath('/auth/error', locale))
 }

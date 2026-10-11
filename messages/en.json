@@ -222,16 +222,42 @@
       "submit": "Send reset email",
       "submitting": "Sending...",
       "backToLogin": "Back to login",
+      "resend": "Resend link",
+      "resendIn": "Resend in {seconds}s",
+      "changeEmail": "Use another email",
+      "errors": {
+        "rateLimited": "Wait a minute before requesting another link.",
+        "delivery": "We couldn't send the email. Try again in a few minutes or contact your school.",
+        "generic": "We couldn't request the link. Check your connection and try again."
+      },
       "success": {
         "title": "Check Your Email",
-        "description": "Password reset instructions sent",
-        "info": "If you registered using your email and password, you will receive a password reset email."
+        "description": "Open the email link to choose a new password.",
+        "info": "If an account exists for {email}, you'll receive a recovery link. It only works once.",
+        "spam": "If you don't see it, check your spam folder. Always use the link in the most recent email."
       }
     },
     "updatePassword": {
       "title": "Reset Your Password",
       "description": "Please enter your new password below.",
       "password": "New password",
+      "confirmPassword": "Repeat your new password",
+      "hint": "Use at least 6 characters.",
+      "showPassword": "Show passwords",
+      "hidePassword": "Hide passwords",
+      "success": "Your password was updated successfully.",
+      "invalidLink": {
+        "title": "Request a new link",
+        "description": "This link has expired, was already used, or is invalid. We'll send you a new one to change your password.",
+        "requestNew": "Request another link"
+      },
+      "errors": {
+        "mismatch": "The passwords don't match.",
+        "weakPassword": "Your password doesn't meet the security requirements. Use a longer password with letters, numbers, and symbols.",
+        "samePassword": "Choose a password different from your previous one.",
+        "rateLimited": "Wait a minute before trying again.",
+        "generic": "We couldn't save your password. Please try again."
+      },
       "submit": "Save new password",
       "submitting": "Saving..."
     },
@@ -4093,7 +4119,7 @@
           "label": "Platform mailer",
           "configured": "Configured — emails are sent from {from} via {domain}.",
           "notConfigured": "Not configured — no emails are sent. Invitations show a shareable link instead; certificates and course notices are not delivered.",
-          "hint": "Set by the platform operator (MAILGUN_API_KEY, MAILGUN_DOMAIN, EMAIL_FROM). The SMTP fields below are stored but not used for sending yet."
+          "hint": "Set by the platform operator using RESEND_API_KEY and EMAIL_FROM, or Mailgun credentials. The SMTP fields below are stored but not used for sending yet."
         }
       },
       "revenue": {

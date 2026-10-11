@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "email:check": "node --import tsx scripts/auth-email.ts",
+    "email:setup": "node --import tsx scripts/auth-email.ts --setup",
     "typecheck": "NODE_OPTIONS=--max-old-space-size=8192 tsc --noEmit",
     "devnet:renew": "tsx scripts/devnet-renew.ts",
     "test": "npx playwright test",

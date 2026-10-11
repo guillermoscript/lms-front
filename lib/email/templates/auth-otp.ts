@@ -166,3 +166,27 @@ export function authOtpTemplate(data: AuthOtpEmailData): { subject: string; html
 </html>`,
   }
 }
+
+/** Reauthentication uses an OTP passed to updateUser({ nonce }), not a link. */
+export function authReauthenticationTemplate(data: {
+  schoolName: string
+  token: string
+  locale?: string | null
+  brand: SchoolBrand
+}): { subject: string; html: string } {
+  const spanish = resolveAuthOtpLocale(data.locale) === 'es'
+  const school = escapeHtml(data.schoolName)
+  const heading = spanish ? 'Confirma tu identidad' : 'Confirm your identity'
+  const body = spanish
+    ? `Usa este código para confirmar el cambio en tu cuenta de <strong>${school}</strong>.`
+    : `Use this code to confirm the change to your <strong>${school}</strong> account.`
+  return {
+    subject: `${heading} — ${data.schoolName}`,
+    html: `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+      ${schoolLogoHeader(data.brand)}
+      <h2 style="${schoolHeadingStyle(data.brand)}">${heading}</h2>
+      <p>${body}</p><p style="font-size:32px;letter-spacing:8px;text-align:center">${escapeHtml(data.token)}</p>
+      <p>${spanish ? 'Si no solicitaste este cambio, ignora este correo. No compartas el código.' : "If you didn't request this change, ignore this email. Do not share the code."}</p>
+    </body></html>`,
+  }
+}

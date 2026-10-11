@@ -2,46 +2,55 @@
 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { useAnalytics } from '@/lib/analytics/client'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
+import { localizePath } from '@/lib/auth/route-access'
+import { passwordResetErrorKey } from '@/lib/auth/password-reset-errors'
 
-export function UpdatePasswordForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+interface UpdatePasswordFormProps extends React.ComponentPropsWithoutRef<'div'> {
+  hasSession: boolean
+}
+
+export function UpdatePasswordForm({ hasSession, className, ...props }: UpdatePasswordFormProps) {
   const t = useTranslations('auth.updatePassword')
+  const locale = useLocale()
   const analytics = useAnalytics()
   const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [sessionExpired, setSessionExpired] = useState(false)
+  const invalidLink = !hasSession || sessionExpired
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const supabase = createClient()
-    setIsLoading(true)
+  async function handleUpdatePassword(event: React.FormEvent) {
+    event.preventDefault()
+    if (isLoading || invalidLink) return
     setError(null)
-
+    if (password !== confirmation) { setError(t('errors.mismatch')); return }
+    setIsLoading(true)
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      // Closes the reset funnel. Fired before the redirect, since the push
-      // unmounts this component.
       analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_COMPLETED, {})
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push('/dashboard/student')
+      toast.success(t('success'))
+      router.replace(localizePath('/dashboard/student', locale))
+      router.refresh()
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : t('common.error'))
+      const key = passwordResetErrorKey(error)
+      if (key === 'invalidLink') setSessionExpired(true)
+      else setError(t(`errors.${key === 'delivery' ? 'generic' : key}`))
     } finally {
       setIsLoading(false)
     }
@@ -51,30 +60,44 @@ export function UpdatePasswordForm({ className, ...props }: React.ComponentProps
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">{t('title')}</CardTitle>
-          <CardDescription>{t('description')}</CardDescription>
+          <CardTitle>{t(invalidLink ? 'invalidLink.title' : 'title')}</CardTitle>
+          <CardDescription>{t(invalidLink ? 'invalidLink.description' : 'description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleForgotPassword}>
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="password">{t('password')}</Label>
-                <Input
-                  id="password"
-                  data-testid="update-password-password"
-                  type="password"
-                  placeholder={t('password')}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" data-testid="update-password-submit" className="w-full" disabled={isLoading}>
-                {isLoading ? t('submitting') : t('submit')}
-              </Button>
-            </div>
-          </form>
+          {invalidLink ? (
+            <Link href={localizePath('/auth/forgot-password', locale)} className={cn(buttonVariants(), 'w-full')}>
+              {t('invalidLink.requestNew')}
+            </Link>
+          ) : (
+            <form onSubmit={handleUpdatePassword} aria-busy={isLoading}>
+              <FieldGroup>
+                <Field data-disabled={isLoading}>
+                  <FieldLabel htmlFor="password">{t('password')}</FieldLabel>
+                  <Input id="password" name="password" data-testid="update-password-password"
+                    type={showPassword ? 'text' : 'password'} autoComplete="new-password"
+                    minLength={6} required disabled={isLoading} value={password}
+                    aria-describedby="password-hint" onChange={(event) => setPassword(event.target.value)} />
+                  <FieldDescription id="password-hint">{t('hint')}</FieldDescription>
+                </Field>
+                <Field data-disabled={isLoading} data-invalid={Boolean(error)}>
+                  <FieldLabel htmlFor="confirmation">{t('confirmPassword')}</FieldLabel>
+                  <Input id="confirmation" name="confirmation" data-testid="update-password-confirmation"
+                    type={showPassword ? 'text' : 'password'} autoComplete="new-password"
+                    minLength={6} required disabled={isLoading} value={confirmation}
+                    aria-invalid={Boolean(error)} aria-describedby={error ? 'password-error' : undefined}
+                    onChange={(event) => setConfirmation(event.target.value)} />
+                </Field>
+                <Button type="button" variant="ghost" aria-pressed={showPassword}
+                  onClick={() => setShowPassword((shown) => !shown)}>
+                  {t(showPassword ? 'hidePassword' : 'showPassword')}
+                </Button>
+                {error ? <FieldError id="password-error">{error}</FieldError> : null}
+                <Button type="submit" data-testid="update-password-submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? t('submitting') : t('submit')}
+                </Button>
+              </FieldGroup>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

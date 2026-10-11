@@ -16,7 +16,7 @@ const state: {
   verifyThrows: boolean
   tenantId: string | null
   brandName: string
-  sent: Array<{ to: string; subject: string; html: string }>
+  sent: Array<{ to: string; subject: string; html: string; idempotencyKey?: string }>
   sendResult: boolean
 } = {
   verifyResult: null,
@@ -115,12 +115,32 @@ describe('POST /api/auth/send-email-hook', () => {
     expect(state.sent[0].subject).toContain('Acme School')
   })
 
-  it('accepts an unsupported action type (e.g. reauthentication) without sending, and returns 200', async () => {
+  it('rejects unsupported actions instead of pretending an email was sent', async () => {
     const res = await POST(
-      makeReq({ user: { id: 'u1', email: 'a@b.com' }, email_data: { ...BASE_EMAIL_DATA, email_action_type: 'reauthentication' } })
+      makeReq({ user: { id: 'u1', email: 'a@b.com' }, email_data: { ...BASE_EMAIL_DATA, email_action_type: 'unknown_action' } })
     )
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(400)
     expect(state.sent).toHaveLength(0)
+  })
+
+  it('sends reauthentication as an OTP instead of a broken verification link', async () => {
+    const res = await POST(makeReq({ user: { id: 'u1', email: 'a@b.com' }, email_data: { ...BASE_EMAIL_DATA, email_action_type: 'reauthentication' } }))
+    expect(res.status).toBe(200)
+    expect(state.sent).toHaveLength(1)
+    expect(state.sent[0].html).toContain('123456')
+    expect(state.sent[0].html).not.toContain('/auth/confirm')
+  })
+
+  it('keeps the same idempotency key on retries, changes it for a new token, and localizes recovery', async () => {
+    const payload = { user: { id: 'u1', email: 'a@b.com', user_metadata: { locale: 'en' } }, email_data: { ...BASE_EMAIL_DATA, redirect_to: 'https://acme.lvh.me:3005/es/auth/update-password', email_action_type: 'recovery' } }
+    await POST(makeReq(payload))
+    await POST(makeReq(payload))
+    expect(state.sent[0].idempotencyKey).toMatch(/^auth\/[a-f0-9]{64}$/)
+    expect(state.sent[1].idempotencyKey).toBe(state.sent[0].idempotencyKey)
+    expect(state.sent[0].html).toContain('/es/auth/confirm')
+    expect(state.sent[0].subject).toContain('Restablece')
+    await POST(makeReq({ ...payload, email_data: { ...payload.email_data, token_hash: 'new-token' } }))
+    expect(state.sent[2].idempotencyKey).not.toBe(state.sent[0].idempotencyKey)
   })
 
   it('returns 500 and reports the failure when the mailer fails to send', async () => {
@@ -154,17 +174,23 @@ describe('POST /api/auth/send-email-hook', () => {
     expect(toCurrent!.html).toContain('th_for_current_address')
   })
 
-  it('email_change with only token_hash (secure email change disabled) sends one email to the current address', async () => {
+  it('email_change with only token_hash (secure email change disabled) sends to the NEW address', async () => {
     const res = await POST(
       makeReq({
-        user: { id: 'u1', email: 'only@acme.com' },
+        user: { id: 'u1', email: 'old@acme.com', new_email: 'new@acme.com' },
         email_data: { ...BASE_EMAIL_DATA, email_action_type: 'email_change', token_hash: 'th_solo' },
       })
     )
     expect(res.status).toBe(200)
     expect(state.sent).toHaveLength(1)
-    expect(state.sent[0].to).toBe('only@acme.com')
+    expect(state.sent[0].to).toBe('new@acme.com')
     expect(state.sent[0].html).toContain('th_solo')
+  })
+
+  it('does not send a new-address token to the wrong address when new_email is missing', async () => {
+    const res = await POST(makeReq({ user: { id: 'u1', email: 'old@acme.com' }, email_data: { ...BASE_EMAIL_DATA, email_action_type: 'email_change' } }))
+    expect(res.status).toBe(500)
+    expect(state.sent).toHaveLength(0)
   })
 
   it('falls back to the platform brand name when no tenant resolves', async () => {

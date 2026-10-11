@@ -147,7 +147,7 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:3005"
+site_url = "http://default.lvh.me:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 # lvh.me entries: the Playwright suite (local and CI) serves the app on
 # lvh.me:3000 with tenant subdomains; without them GoTrue falls back to
@@ -177,8 +177,9 @@ minimum_password_length = 6
 password_requirements = ""
 
 [auth.rate_limit]
-# Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+# Local email tests and the optional Resend hook. Hosted limits are configured
+# separately in Authentication > Rate Limits; using the hook permits customization.
+email_sent = 100
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -269,20 +270,15 @@ max_frequency = "5s"
 enabled = true
 uri = "pg-functions://postgres/app_private/custom_access_token_hook"
 
-# Send Email hook (#776): brands sign-up/magic-link/recovery/invite/email-change
-# emails per school via app/api/auth/send-email-hook/route.ts, instead of
-# GoTrue's default templates. LEFT DISABLED LOCALLY on purpose:
-#   1. Enabling it means GoTrue stops sending its own emails to Inbucket for
-#      EVERY Auth flow on this local project — the hook becomes the only path.
-#   2. The route delivers through this app's Mailgun-backed sendEmail(), which
-#      is unset in local .env.local (see .env.example) — so with the hook on
-#      and no MAILGUN_* vars, sign-up/reset emails go nowhere (not Inbucket,
-#      not Mailgun) and the auth request itself fails once sendEmail() returns
-#      false, since the route reports that failure back to GoTrue.
-# To try it locally: set MAILGUN_API_KEY/MAILGUN_DOMAIN (a Mailgun sandbox
-# domain works) and SEND_EMAIL_HOOK_SECRET in .env.local, uncomment below,
-# then `supabase stop && supabase start` to reload config.toml — do NOT do
-# this against the shared local Supabase instance other agents/tests use.
+# Send Email hook: school branding + Resend API; no SMTP needed.
+# Default local mode captures email in Mailpit without external credentials.
+# With RESEND_API_KEY and EMAIL_FROM set, run:
+#   npm run email:setup -- --local --restart
+# The command generates a hook secret, enables this block, and loads .env.local
+# into the CLI before restarting Supabase. Database data is preserved. Run only
+# when other local agents/tests are not using this instance. Keep the app running
+# on port 3000 while testing the hook; emails then go to Resend, not Mailpit.
+# See docs/AUTH_EMAIL_SETUP.md for hosted activation and delivery checks.
 # [auth.hook.send_email]
 # enabled = true
 # uri = "http://host.docker.internal:3000/api/auth/send-email-hook"

@@ -1,9 +1,9 @@
 /**
  * Whether the platform mailer can send at all.
  *
- * Every transactional email goes through `sendEmail()`, which needs a Mailgun
- * API key and a sending domain from the runtime environment. This module reads
- * only env presence (no Mailgun import, no secret values), so a server page can
+ * Every transactional email goes through `sendEmail()`. Resend needs an API
+ * key and an explicit sender on a verified domain; Mailgun remains supported.
+ * This module reads only env presence (no provider imports or secret values), so a server page can
  * show the state to an admin and a call site can tell "nothing was sent" apart
  * from "sent" (#676).
  */
@@ -23,12 +23,20 @@ export interface MailerStatus {
 type EnvLike = Record<string, string | undefined>
 
 export function isMailerConfigured(env: EnvLike = process.env): boolean {
-  return Boolean(env.MAILGUN_API_KEY && env.MAILGUN_DOMAIN)
+  return getMailerStatus(env).configured
 }
 
 export function getMailerStatus(env: EnvLike = process.env): MailerStatus {
-  const configured = isMailerConfigured(env)
-  if (!configured) return { configured: false, domain: null, from: null }
-  const domain = env.MAILGUN_DOMAIN as string
-  return { configured: true, domain, from: env.EMAIL_FROM || `noreply@${domain}` }
+  const unconfigured = { configured: false, domain: null, from: null }
+  const from = env.EMAIL_FROM?.trim()
+  // Once Resend is selected, incomplete configuration must fail visibly.
+  // Falling back to another provider would hide a broken Resend deployment.
+  if (env.RESEND_API_KEY?.trim()) {
+    const address = from?.match(/^(?:[^<>\r\n]*<)?([^<>\s@]+@[^<>\s@]+\.[^<>\s@]+)>?$/)?.[1]
+    if (!address) return unconfigured
+    return { configured: true, domain: address.split('@')[1], from: from! }
+  }
+  const domain = env.MAILGUN_DOMAIN?.trim()
+  if (!env.MAILGUN_API_KEY?.trim() || !domain) return unconfigured
+  return { configured: true, domain, from: from || `noreply@${domain}` }
 }
