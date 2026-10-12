@@ -708,10 +708,12 @@ export function registerStudentTools(server: LmsServer) {
             .eq("status", "active"),
           supabase
             .from("subscriptions")
-            .select("subscription_id, plan_id, end_date")
+            .select("subscription_id, plan_id, end_date, cancel_at_period_end")
             .eq("user_id", userId)
             .eq("tenant_id", tenantId)
-            .eq("subscription_status", "active")
+            // `renewed` is live too (CLAUDE.md #545); self_enroll_subscription_course
+            // accepts active + renewed, so the catalog flag matches what enrolling does.
+            .in("subscription_status", ["active", "renewed"])
             .gte("end_date", nowIso),
         ]);
 
@@ -728,7 +730,20 @@ export function registerStudentTools(server: LmsServer) {
           (enrollmentsRes.data ?? []).map((e) => e.course_id as number)
         );
 
-        const planIds = (subsRes.data ?? []).map((s) => s.plan_id as number);
+        const liveSubs = subsRes.data ?? [];
+        const planIds = liveSubs.map((s) => s.plan_id as number);
+        // cancel_at_period_end is the ONLY cancel-scheduled signal; paid access
+        // keeps running until end_date, so this is a heads-up, not a loss of access.
+        const cancelingSubs = liveSubs.filter(
+          (s) => s.cancel_at_period_end === true && s.end_date
+        );
+        const cancelNote =
+          cancelingSubs.length > 0
+            ? ` Your subscription is set to cancel at period end; plan access continues until ${cancelingSubs
+                .map((s) => String(s.end_date))
+                .sort()
+                .pop()}.`
+            : "";
         let planCovered = new Set<number>();
         if (planIds.length > 0) {
           const { data: planCourses } = await supabase
@@ -850,7 +865,7 @@ export function registerStudentTools(server: LmsServer) {
           output: text(
             courses.length === 0
               ? "No published courses found."
-              : `Found ${coursesRes.count ?? courses.length} course(s); of the ones shown you are enrolled in ${courses.filter((c) => c.enrolled).length} and have access to ${courses.filter((c) => c.has_access).length}.`
+              : `Found ${coursesRes.count ?? courses.length} course(s); of the ones shown you are enrolled in ${courses.filter((c) => c.enrolled).length} and have access to ${courses.filter((c) => c.has_access).length}.${cancelNote}`
           ),
         });
       } catch (err) {
