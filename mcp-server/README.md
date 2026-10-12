@@ -16,16 +16,16 @@ implementation.
   isolation and ownership**. The server holds no elevated data privileges.
 - **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
   the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
-  tools; `student` gets only the 30 self-scoped learning/practice tools (list
+  tools; `student` gets only the 46 self-scoped learning/practice tools (list
   hiding in `src/tool-policy.ts`, call-time gating in `src/register.ts`).
 - **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
   via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
 
 ## What it exposes
 
-- **140 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
+- **142 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
-  `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
+  `lms_complete_lesson`, `lms_my_exam_results`, `lms_get_exam_for_student` + `lms_submit_exam` (take an exam: no answer key; `submit_exam` RPC, then the app's `/api/exams/[examId]/grade`, `pending` when grading can't run), `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
   with attempt history, `lms_check_exercise_answers` to grade closed
   questions server-side, `lms_complete_exercise` to submit a text or
@@ -128,10 +128,10 @@ implementation.
   `skills/teach/`; and `page-building` — the platform rules and workflow for
   building school landing pages with the `lms_*_landing_*` tools
   (`skills/page-building/`).
-- **12 prompts:** create-course-outline, generate-lesson-content,
+- **13 prompts:** create-course-outline, generate-lesson-content,
   create-exam-questions, review-course, generate-remediation-exercises,
-  socratic-tutor, drill-coach, explain-my-mistake, exam-prep-session,
-  daily-review, conversation-practice, mock-exam.
+  generate-lesson-questions, socratic-tutor, drill-coach, explain-my-mistake,
+  exam-prep-session, daily-review, conversation-practice, mock-exam.
 
 ## Develop
 

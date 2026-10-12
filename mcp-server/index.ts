@@ -14,6 +14,7 @@ import { registerStudentTools } from "./src/tools/student.js";
 import { registerPracticeTools } from "./src/tools/practice.js";
 import { registerIngestTools } from "./src/tools/ingest.js";
 import { registerMockExamTools } from "./src/tools/mock-exam.js";
+import { registerExamTakingTools } from "./src/tools/exam-taking.js";
 import { registerAristotleTools } from "./src/tools/aristotle.js";
 import { registerEnrollTools } from "./src/tools/enroll.js";
 import { registerFlashcardTools } from "./src/tools/flashcards.js";
@@ -123,6 +124,7 @@ if (demoWidgetsEnabled()) {
   registerPracticeTools(server);
   registerIngestTools(server);
   registerMockExamTools(server);
+  registerExamTakingTools(server);
   registerAristotleTools(server);
   registerEnrollTools(server);
   registerFlashcardTools(server);

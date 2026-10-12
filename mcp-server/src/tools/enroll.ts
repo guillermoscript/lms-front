@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { LmsServer } from "../server-types.js";
 import { LmsSession } from "../session.js";
 import { ok, errorResult } from "../format.js";
+import { isSalesBlockedError, SALES_BLOCKED_MESSAGE } from "../sales-block.js";
 
 /**
  * Self-enrollment tool (Epic #348 Phase 2). Delegates entirely to the
@@ -45,10 +46,8 @@ export function registerEnrollTools(server: LmsServer) {
         // #929 fee sales gate: SQLSTATE LM003 ('sales_blocked:fees') while the
         // school's sales are paused. Neutral copy — never the school's fee debt
         // (design 4.4); re-enrolling a course already held is not refused.
-        if (error && (error.code === "LM003" || /sales_blocked/.test(error.message ?? ""))) {
-          return errorResult(
-            "This school isn't accepting new enrollments right now. Please try again later."
-          );
+        if (error && isSalesBlockedError(error)) {
+          return errorResult(SALES_BLOCKED_MESSAGE);
         }
         // Surface the RPC's own message (e.g. "No active subscription covers
         // this course") — it already explains the failure to the student.
