@@ -19,7 +19,7 @@ import { deriveWidgetBrand } from "./kit-brand";
  * are also exposed as `--brand-ink` / `--brand-text` for widgets that want an
  * exact AA-checked colour rather than a ramp shade. A tenant with no theme
  * kit (or no branding at all — an unauthenticated demo call) renders the
- * platform palette (teal), computed by the same `deriveWidgetBrand(null)`
+ * platform palette (Tinta azul), computed by the same `deriveWidgetBrand(null)`
  * the server falls back to, so there is exactly one "no brand" colour.
  */
 export interface Branding {
@@ -64,7 +64,7 @@ function safeColor(value: string | null | undefined): string | null {
 }
 
 /**
- * The platform palette (teal), from `deriveWidgetBrand(null)` — the same
+ * The platform palette (Tinta azul), from `deriveWidgetBrand(null)` — the same
  * "no theme kit" colours `src/branding.ts` falls back to. Used both for a
  * tenant with no theme kit and for a widget rendered with no branding `_meta`
  * at all (no session, e.g. an unauthenticated demo call).
@@ -101,7 +101,7 @@ function ramp(base: string): Record<string, string> {
  * every widget does, in both its pending and loaded branches.
  *
  * Always renders: with no branding at all, or a tenant on the platform
- * palette, it emits the same teal `deriveWidgetBrand(null)` gives the server,
+ * palette, it emits the same Tinta azul `deriveWidgetBrand(null)` gives the server,
  * which is what the `bg-[var(--brand-600)]` utilities resolve against.
  */
 export function BrandStyle({ branding }: { branding: Branding | null }) {

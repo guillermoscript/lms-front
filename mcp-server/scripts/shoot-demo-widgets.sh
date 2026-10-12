@@ -66,7 +66,7 @@ for entry in "${SHOTS[@]}"; do
   i=$((i + 1))
   name="${tool#lms_demo_}--${variant}"
   printf '[%2d/%d] %s (%s)\n' "$i" "${#SHOTS[@]}" "$name" "$THEME"
-  npx mcp-use client screenshot \
+  npx mcp-use screenshot \
     --mcp "$MCP" \
     --tool "$tool" "variant=$variant" \
     --width 1100 --height "$height" --theme "$THEME" \
