@@ -16,7 +16,7 @@ implementation.
   isolation and ownership**. The server holds no elevated data privileges.
 - **Tenant/role:** read from JWT claims (`tenant_id`, `tenant_role`) injected by
   the LMS `custom_access_token_hook`. `teacher`/`admin` get the management
-  tools; `student` gets only the 44 self-scoped learning/practice tools (list
+  tools; `student` gets only the 46 self-scoped learning/practice tools (list
   hiding in `src/tool-policy.ts`, call-time gating in `src/register.ts`).
 - **Audit:** an `mcp:tools/call` middleware logs every call to `mcp_audit_log`
   via a service-role client (no-op if `SUPABASE_SERVICE_ROLE_KEY` is unset).
