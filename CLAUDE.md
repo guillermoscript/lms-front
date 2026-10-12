@@ -1,251 +1,92 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Index for the LMS app. Inline = rules that bite on every task; everything else is a pointer. Read the linked file **before** working in that area. Report to the user extremely concisely (grammar optional).
 
-## Project Overview
+## What this is
 
-Multi-tenant SaaS LMS built with Next.js 16 (App Router, React 19) and Supabase. Schools operate as independent tenants on subdomains (`school-slug.platform.com`). The platform uses **RLS for data security** — database queries go directly from components, not through server actions.
-
-**Stack:** Next.js 16.1.5 · Supabase (PostgreSQL 15, Auth, Storage) · Shadcn UI (base-mira) · Tailwind CSS v4 · TypeScript strict · Stripe Connect · next-intl (en/es)
+Multi-tenant SaaS LMS: Next.js 16 (App Router, React 19) + Supabase (Postgres/RLS/Auth/Storage) + Shadcn (base-mira, `@base-ui/react`) + Tailwind v4 + TS strict + Stripe Connect + next-intl (en/es). Schools = tenants on subdomains. Reads go **directly from components via RLS**, not server actions.
 
 ## Commands
 
 ```bash
-npm run dev              # Dev server at http://localhost:3000
-npm run build            # Production build (no type check — see typecheck)
-npm run lint             # ESLint
-npm run typecheck        # tsc --noEmit (8 GB heap; the only type check, also CI's verify job)
-npm run test:unit        # Vitest unit tests
-npx vitest run -t "name" # Single unit test
-
-supabase db push                # Apply local migrations to cloud
-supabase migration new <name>   # Create migration file
-npm run db:reset                # Reset local DB (migrations + seed)
-npm run db:types                # Regenerate lib/database.types.ts from linked project
-
-npx playwright test              # Run all E2E tests
-npx playwright test --ui         # Interactive test runner
-npx playwright test -g "name"    # Run single test
+npm run dev | build | lint | test:unit      # build has no type check
+npm run typecheck                           # only type check (8 GB heap; CI verify job)
+npx vitest run -t "name"                    # single unit test
+npx playwright test -g "name" --workers=1   # E2E; use lvh.me, never localhost
+supabase migration new <name> | db push     # migrations; npm run db:reset (local)
+npm run db:types                            # regen lib/database.types.ts (--linked = CLOUD)
 ```
+Branches: `<type>/<slug>-<issue#>`. Skill `/web-design-guidelines <path>` audits UI.
 
-`/web-design-guidelines <path>` skill audits UI for accessibility + best practices.
+## Rules that apply everywhere
 
-Branches: `<type>/<slug>-<issueNumber>` (e.g. `fix/binance-settings-category-479`).
+- `proxy.ts` is the ONLY middleware (never `middleware.ts`): resolves tenant from subdomain, sets `x-tenant-id`/`x-user-id`, role route guards.
+- Tenant: `getCurrentTenantId()` (`@/lib/supabase/tenant`). Role: `getUserRole()` (`@/lib/supabase/get-user-role`, `tenant_users` authoritative). After tenant switch → `supabase.auth.refreshSession()`.
+- Clients: server `@/lib/supabase/server` · client `@/lib/supabase/client` · bypass-RLS `createAdminClient()` from `@/lib/supabase/admin` (validate `tenant_id` manually before writes).
+- RLS is on, but **still `.eq('tenant_id', tenantId)`** — except tables without it (below).
+- Server actions (`app/actions/`) only for multi-step mutations, service-role ops, external APIs.
+- Button has no `asChild`: `<Button render={<Link/>}>` or wrap `<Link>`. Dropdown/Breadcrumb triggers use `render`.
+- All routes under `app/[locale]/`; user strings in `messages/{en,es}.json` (parity test).
+- AI is BYOK: no platform key, no fallback. Only `lib/ai/providers.ts` imports `@ai-sdk/*`. Never log/return keys.
+- Never `git add -A` after a build (rewrites `next-env.d.ts`); stage named paths.
 
-## Architecture
+## Schema gotchas (top hits; full list → docs/claude/testing-env-pitfalls.md)
 
-### Multi-Tenancy
+- No `tenant_id`: `profiles`, `gamification_levels`, `lesson_completions`, `exercise_completions`, exam child tables (`exam_questions`, `exam_answers`, `question_options`, …).
+- `lesson_completions`/`exercise_completions` use `user_id`; `exam_submissions` order col = `submission_date`; `transactions` date = `transaction_date`, status `'successful'`.
+- `subscriptions`: `subscription_status`, `provider_subscription_id`, `created`. `plans`: `plan_name`, `duration_in_days`, soft-delete `deleted_at`.
+- Access lives in `entitlements`, not `enrollments` (progress only). `product_courses`: never `.single()`.
+- `transactions` is server-write-only (admin client / SECDEF). `profiles` has no email.
 
-Every request goes through `proxy.ts` (the single middleware file — **not** `middleware.ts`), which:
-1. Extracts tenant slug from subdomain (`school.lmsplatform.com` → `"school"`)
-2. Resolves tenant ID from `tenants` table
-3. Injects `x-tenant-id` header into the response
-4. Checks `tenant_users` membership; redirects non-members to `/join-school`
-5. Enforces role-based route guards (`/dashboard/student`, `/dashboard/teacher`, `/dashboard/admin`)
+## Index: where things live
 
-In development, pass `x-tenant-slug` header to simulate a subdomain.
-
-```typescript
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
-const tenantId = await getCurrentTenantId() // reads x-tenant-id header
-```
-
-Default tenant ID (single-tenant fallback): `00000000-0000-0000-0000-000000000001`
-
-### JWT Claims
-
-`custom_access_token_hook()` injects into every JWT: `user_role` (global), `tenant_role` (`student`/`teacher`/`admin` in current tenant), `tenant_id`, `is_super_admin`.
-
-```typescript
-import { getUserRole } from '@/lib/supabase/get-user-role'
-const role = await getUserRole()  // tenant_users row is authoritative; falls back to JWT tenant_role/user_role only if no active membership AND the JWT tenant_id is this tenant
-```
-
-After a tenant switch, **always call `supabase.auth.refreshSession()`** to get updated claims.
-
-### Database Query Pattern
-
-RLS is enabled on all tenant-scoped tables, but **filter by `tenant_id` explicitly anyway** — clarity and performance, not just security:
-
-```typescript
-const supabase = await createClient()       // @/lib/supabase/server
-const tenantId = await getCurrentTenantId()
-const { data } = await supabase.from('courses').select('*').eq('tenant_id', tenantId)
-```
-
-**Client imports:** server components → `@/lib/supabase/server` · client components → `@/lib/supabase/client` · admin/bypass-RLS → `createAdminClient()` from `@/lib/supabase/admin`.
-
-When using `createAdminClient()` in server actions, manually validate tenant ownership before writes:
-```typescript
-const { data: resource } = await adminClient.from('products').select('tenant_id').eq('product_id', id).single()
-if (resource.tenant_id !== tenantId) throw new Error('Access denied')
-```
-
-### Server Actions vs Direct Queries
-
-Use **direct RLS queries** for all reads. Use **server actions** (in `app/actions/`: `admin/`, `teacher/`, `payment-requests.ts`, `join-school.ts`, `onboarding.ts`) only for multi-step mutations (payment processing, enrollment), service-role operations, or external API calls (Stripe, email).
-
-### Payment Architecture
-
-Two separate Stripe integrations:
-
-| | School Billing (Platform) | Student Payments (Connect) |
-|--|--|--|
-| **Who pays** | School admin pays platform | Student pays school |
-| **Stripe mode** | Billing (Checkout + Subscriptions) | Connect (PaymentIntents) |
-| **Webhook** | `/api/billing/webhook/stripe` | `/api/stripe/webhook` |
-| **Env var** | `STRIPE_PLATFORM_WEBHOOK_SECRET` | `STRIPE_WEBHOOK_SECRET` |
-| **Customer ID** | `tenants.stripe_customer_id` | `profiles.stripe_customer_id` |
-
-Student payments have two flows, both produce a `transaction` and call `enroll_user()` RPC on success:
-- **Stripe Connect:** `app/api/stripe/create-payment-intent/route.ts` sets `application_fee_amount` (platform fee) + `transfer_data.destination` (school's account); revenue split in `revenue_splits` (default 20% platform / 80% school)
-- **Manual/offline:** student creates a `payment_requests` row (`app/actions/payment-requests.ts`) → admin confirms receipt → `enroll_user()` RPC
-
-Also supported (`products.payment_provider`): `paypal`, `lemonsqueezy`, `solana`, `solana_subs`, `binance` — see `docs/PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md`.
-
-**School billing is not Stripe-only either.** `POST /api/billing/checkout` runs on whichever provider has an active `platform_plan_prices` row and carries `supportsPlatformBillingCheckout` — Stripe, Lemon Squeezy, Binance Pay and Solana (#610). Two things follow that no Stripe-shaped code expects:
-- **The crypto rails have no subscription object.** One payment buys one period, `dispatchPlatformBillingEvent` derives `current_period_end` from the interval (`selfManagedPeriod`), and `/api/cron/expire-platform-subscriptions` reminds/graces/downgrades every rail with `selfManagedPeriod`, not just `manual`. A second checkout on the same crypto rail is a *renewal* and must not be blocked or supersede anything.
-- **Solana has no webhook and no redirect.** `/api/billing/webhook/solana` 404s by design; the QR page polls `/api/billing/solana/verify`, which proves the transfer on chain and dispatches through the same function the webhooks use. The pending intent is a `platform_payment_requests` row (`provider_reference` → the wallet-facing `/api/billing/solana/tx`, `provider_charge_id` UNIQUE → one signature settles one request).
-
-**Key invariants:**
-- Transaction `status`: `pending`, `successful`, `failed`, `archived`, `canceled`, `refunded`
-- **`subscriptions.cancel_at_period_end` is the ONLY signal that a cancel is scheduled** (since `20260726120000`, issue #545). `cancel_at` is nullable and purely informational — the CHECK `subscriptions_cancel_at_requires_schedule` allows it to be non-NULL only while the flag is set, so clear both together (both reactivate actions do). It shipped as `NOT NULL DEFAULT now()` with no writer setting it, which made the Solana crank cancel every subscription at its first rollover. `subscription_status` is `active`/`canceled`/`expired`/`renewed`/`past_due`; `renewed` and `past_due` both count as LIVE (parallel-subscription guards, billing UI, plan change), and cancelling must never *improve* a status
-- **A refund is not all-or-nothing (since #547).** A PARTIAL refund keeps `transactions.status = 'successful'` and records the slice in `refunded_amount` (major units of the row's own currency); only a FULL refund sets `refunded_amount = amount`, flips `status` to `'refunded'` and revokes the entitlement. Every money sum must use `amount - refunded_amount` (`netOfRefunds()` in `lib/payments/payouts-owed.ts`). `NormalizedBillingEvent.amount` is always MAJOR units, converted in each provider's own mapper (Lemon Squeezy reports cents, Binance a USD-pegged stablecoin); an absent amount or a currency mismatch falls back to a full refund
-- **Whether the platform takes a fee is `ProviderCapabilities.bearsPlatformFee`, never `revenue_splits.applies_to_providers`** (retired in #547 — it stored the labels `stripe`/`manual`, not provider slugs, so every PayPal/LS/Binance sale bore 0% on the school's screens while `getPayoutsOwed` applied the full split). The *rate* always comes from the transaction's own `school_percentage_snapshot`, so the school-facing and platform-facing figures reconcile. `transactions` has **no `created_at`** — it is `transaction_date`; querying or merely ordering by the former 42703s the whole request
-- **Access control lives in `entitlements`, not `enrollments`** (since migration `20260516150000`): `entitlements` (`user_id`, `course_id`, `tenant_id`, `source_type`, `source_id`, `status`, `expires_at`) is the polymorphic source of truth for product/subscription access. `enrollments.product_id`/`subscription_id` and their old CHECK constraint were dropped — `enrollments` is now a learning-progress record only (`user_id`, `course_id`, `status`, `tenant_id`, `enrollment_date`)
-- `enroll_user()` RPC loops through ALL courses for a product (a product can map to multiple courses via `product_courses`) and writes to `entitlements`
-- **Subscriptions grant access, not auto-enrollment** — students self-enroll via `/dashboard/student/browse` (`useEnrollment()` hook); `plan_courses` defines which courses a plan covers
-- Transactions have two partial unique indexes (not one): `(user_id, product_id) WHERE plan_id IS NULL AND status IN ('pending','successful')` and `(user_id, plan_id) WHERE product_id IS NULL AND status = 'pending'` (pending only since #754 — a plan is bought again every period, so settled plan rows repeat; never archive old sales to make room), plus `transactions_provider_charge_id_unique` for Solana idempotency
-- **`transactions` is server-write-only.** `authenticated` has no INSERT grant (#538) and an UPDATE grant on only `status`, `provider_subscription_id`, `stripe_payment_intent_id` (#528) — every insert uses `createAdminClient()` or a SECURITY DEFINER function. `amount` and the `settlement_*` columns decide what the buyer owes (`settlement_base` is what the on-chain Solana payment is verified against), so they are derived from `products`/`plans` server-side, never taken from the request. A user-scoped insert fails with `permission denied for table transactions` — by design, not a bug to re-grant around
-
-### AI (BYOK — bring your own key)
-
-Every AI call runs on the **school's own provider key**. **No platform key, no fallback** — a school without a usable key gets a typed error (never someone else's credentials). Admin UI: `/dashboard/admin/settings/ai`. Full guide: `docs/AI_BYOK.md`.
-
-```typescript
-const ai = createTenantAi(tenantId)  // @/lib/ai/tenant-ai — tenantId from auth context, NEVER the request body
-const { model, providerId, modelId } = await ai.getModelForFeature('lesson_tutor', { require: ['tools'] })
-// also ai.getTranscriber() / getRealtime() / getImageModel(); wrap routes in withTenantAi() (lib/ai/with-tenant-ai.ts)
-```
-
-- **Resolver order:** `course_ai_tutors` (Aristotle) → `tenant_ai_feature_models` → feature `inherits` parent → `tenant_ai_settings` default → `AiNotConfiguredError`. Features live in `lib/ai/features.ts` (`AiFeature`); a new feature needs a call site (contract test).
-- **Only `lib/ai/providers.ts` imports `@ai-sdk/<provider>`** (ESLint + `tests/unit/ai-byok-contract.test.ts`). Sole exception: `lib/speech/realtime-model.ts` (browser parser, holds no key). Never reintroduce `AI_MODELS`/`defaultModel`; `lib/ai/config.ts` is constants only.
-- **Keys:** `tenant_ai_credentials`, AES-256-GCM with AAD `tenantId:provider` (`lib/ai/byok/*`, all `server-only`; never import from client code). No grant to `anon`/`authenticated`; read via admin client + explicit `tenant_id` check. Never return, log or Sentry a key — logs use `err.name`/`status`/`redact(msg)`. UI gets masked DTOs (`last4`) from `app/actions/admin/ai-settings.ts` or booleans from `tenant_ai_configured()`.
-- **Errors:** 402 `ai_not_configured` · 424 `ai_key_invalid` · 422 `ai_model_unsupported` · 429 `ai_quota` · 502 `ai_provider_error` (never 401/403: client auth handlers sign the user out). Body `{error:{code,feature,canConfigure,settingsUrl}}`.
-- **Check order in routes:** auth → access → role → resolve model → rate limit/usage → side effects (a missing key must leave no pending rows/claims/usage).
-- Structured output = `generateText` + `Output.object` (no `generateObject`/`streamObject`). Langfuse metadata `{tenantId, feature, provider, modelId}` via `propagateAttributes`; `tenant_ai_settings.ai_trace_content=false` strips prompt/response text (`lib/ai/trace-content-guard.ts`). Sentry `beforeSend` redacts keys.
-- Tenant-monthly AI chat caps are non-blocking (`-1` in `platform_plans.limits`); plan feature gates (`ai_grading`, `voice_exercises`) still apply.
-
-### Routing & i18n
-
-All routes live under `app/[locale]/` (`[locale]` is always `/en/` or `/es/`). Public routes (no auth): `/auth/*`, `/`, `/create-school`, `/creators`, `/join-school`, `/platform-pricing`, `/pricing`, `/courses`, `/verify`, `/oauth/consent`. Role routing after login: `/dashboard/student` · `/dashboard/teacher` · `/dashboard/admin`. `/platform/*` is guarded separately by `checkSuperAdmin()` in `proxy.ts`, independent of tenant role.
-
-### Database Schema Essentials
-
-116 tables. Key groups: multi-tenancy (`tenants`, `tenant_users`, `tenant_settings`, `super_admins`) · users (`profiles` — global, no tenant_id) · content (`courses`, `lessons`, `exercises`, `exams`, `exam_questions`) · progress (`enrollments` — progress only, `lesson_completions`, `exam_submissions`) · commerce (`products`, `plans`, `transactions`, `subscriptions`, `payment_requests`, `entitlements` — course-access source of truth) · revenue (`revenue_splits`, `payouts`, `invoices`) · platform billing (`platform_plans`, `platform_subscriptions`, `platform_payment_requests`) · gamification (10 `gamification_*` tables incl. `gamification_profiles`, `gamification_xp_transactions`, `gamification_achievements`; plus leagues in `league_tiers`/`league_memberships`) · certificates · notifications.
-
-`profiles` and `gamification_levels` are global (no `tenant_id`).
-
-**Key RPCs:**
-```typescript
-supabase.rpc('enroll_user', { _user_id, _product_id })
-supabase.rpc('handle_new_subscription', { _user_id, _plan_id, _transaction_id, _start_date })  // trigger-invoked; writes to entitlements
-supabase.rpc('has_course_access', { _user_id, _course_id })  // access check; _course_id is integer — cast ::int from SQL
-supabase.rpc('award_xp', { _user_id, _action_type, _xp_amount, _reference_id, _reference_type })  // overload adds _tenant_id
-supabase.rpc('submit_exam', { p_exam_id, p_answers })  // only client write path for exam_submissions/exam_answers; p_answers = { [question_id]: answer_text }; idempotent
-supabase.rpc('save_exam_feedback', { p_submission_id, p_exam_id, p_student_id, p_answers, p_overall_feedback, p_score, p_question_feedback, p_ai_model, p_processing_time_ms })
-supabase.rpc('get_plan_features', { _tenant_id })
-```
-
-### Plan Limits & Feature Gating
-
-Limits live in `platform_plans.limits` (JSONB): `free` (5 courses/50 students/10% fee) · `starter` (15/200/5%, $9/mo) · `pro` (100/1000/2%, $29/mo) · `business` (unlimited courses/5000 students, 0% fee, $79/mo) · `enterprise` (unlimited/0%, $199/mo). `get_plan_features(_tenant_id)` RPC is the single source of truth. Client hook: `usePlanFeatures()`. Component: `<FeatureGate feature="..." />`.
-
-**Limits are enforced by the database (#658).** `enforce_course_plan_limit` / `enforce_student_plan_limit` triggers refuse any write that would make a `courses` row non-archived or a `tenant_users` row an active student beyond `max_courses` / `max_students`, from any client (server action, MCP, SQL). They raise SQLSTATE `LM001` with message `plan_limit_exceeded:<courses|students>` — map it with `isPlanLimitError()` / `courseLimitMessage()` from `lib/billing/plan-limit-error.ts`, never by matching the message. App-layer pre-checks (`checkCourseLimit()`, `joinCurrentSchool`) stay for the nicer message; the trigger is what wins a race. `-1` or a missing limit means unlimited; `SET app.bypass_plan_limits = 'on'` skips the check for operators/seed only. RLS-scoped callers pre-check through the `get_tenant_plan_usage(_tenant_id)` RPC (members / super admins / service role).
-
-**Features are enforced on the server too (#662).** `lib/plans/server.ts`: `getTenantPlan(tenantId)` (React `cache()`, reads `tenants.plan` → `platform_plans` with NO `is_active` filter), `hasPlanFeature`, `requirePlanFeature` (throws `PlanFeatureError`, map with `planFeatureErrorMessage`), `getAnalyticsTier` (`none|basic|advanced`), `getCertificateTier` (`none|basic|custom`). Closed by default: a missing key is "not included", so any new key MUST be backfilled into every plan's JSON (see `20260901170000_backfill_plan_feature_keys.sql`) before a gate reads it. `FEATURE_REQUIRED_PLAN` in `lib/plans/features.ts` is the pricing promise and `tests/unit/plan-feature-gate-contract.test.ts` fails when a key there has no gate site. Tier meanings live in PRODUCT.md "Plan tiers".
-
-## MCP Server
-
-`mcp-server/` exposes LMS course-management tools/resources/prompts/widgets to AI agents, built on **mcp-use** (not raw `@modelcontextprotocol/sdk`). **Read the `mcp-apps-builder` skill before touching it.** Runs standalone on port 3000 (`cd mcp-server && npm run dev`; `npm run mcp:build` from root). Auth is Supabase OAuth 2.1 — every query runs through a request-scoped, RLS-aware client using the caller's token (no service-role data access); role/tenant come from JWT claims, gated per-role in `src/tool-policy.ts`. In production, `app/api/mcp/[[...path]]/route.ts` fronts it at `https://<tenant>.<domain>/api/mcp`. Tool inventory lives in `mcp-server/src/tools/*.ts`, widgets in `mcp-server/views/<name>/view.tsx` — read those directly rather than relying on a list here, as they change frequently.
-
-## Environment Variables
-
-See `.env.example` for the full annotated list. Minimum to run locally:
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=         # Bypasses RLS — admin ops only
-NEXT_PUBLIC_PLATFORM_DOMAIN=       # e.g. lvh.me for local dev, lmsplatform.com in prod
-```
-AI needs `AI_KEYS_ENCRYPTION_KEYS` (JSON `{"1":"<base64 32B>"}`) + `AI_KEYS_ACTIVE_VERSION` — the master key that encrypts schools' stored AI keys; back it up, losing it makes every key unreadable. There is **no** platform AI key: `OPENAI_API_KEY`, `ASSEMBLYAI_API_KEY`, `NEXT_PUBLIC_OPENAI_API_KEY` are not read anywhere.
+| Area | Code | Docs / read first |
+|---|---|---|
+| Multi-tenancy, JWT, query pattern, routing, schema, RPCs | `proxy.ts`, `lib/supabase/`, `lib/tenant/`, `app/api/tenant/` | docs/claude/architecture.md · docs/AUTH.md · docs/DATABASE_SCHEMA.md |
+| Student/teacher/admin dashboards | `app/[locale]/dashboard/{student,teacher,admin}`, `components/{student,teacher,admin}` | docs/MVP_USER_JOURNEYS.md |
+| Platform (super-admin) console | `app/[locale]/platform/`, `app/actions/platform/`, `components/platform/` | docs/PLATFORM_ADMIN.md |
+| Public site, checkout, `/p/[slug]` landing | `app/[locale]/(public)/`, `components/public/` | PRODUCT.md |
+| Auth, onboarding, join/create school | `app/[locale]/auth/`, `onboarding/`, `lib/auth/`, `app/actions/{onboarding,join-school}.ts` | docs/AUTH.md · docs/AUTH_EMAIL_SETUP.md |
+| Student payments (Stripe Connect, PayPal, LS, Binance, Solana, manual) | `lib/payments/`, `app/api/{stripe,payments}/`, `app/actions/payment-requests.ts` | docs/claude/payments.md · docs/MANUAL_PAYMENT_SYSTEM.md · docs/PROVIDER_AGNOSTIC_PAYMENTS_SPIKE.md |
+| School billing, fees, access cutoff | `lib/billing/`, `app/api/billing/`, `app/api/cron/` | docs/MONETIZATION.md · docs/PLATFORM_FEE_LEDGER_DESIGN.md · docs/CRON_RUNBOOK.md |
+| Provider adapters (one file each) | `lib/payments/{stripe,paypal,lemonsqueezy,binance,binance-personal,solana,manual}-*.ts`, `webhook-dispatch.ts`, `subscription-guard.ts` | docs/claude/payments.md |
+| Payouts / revenue / invoices | `lib/payments/payouts-owed.ts`, `app/[locale]/dashboard/admin/{payouts,revenue}` | docs/claude/payments.md |
+| Plan limits & feature gates | `lib/plans/`, `lib/billing/plan-limits.ts`, `components/shared/feature-gate.tsx` | docs/claude/plans-gating.md |
+| AI BYOK, tutor (Aristotle), chat | `lib/ai/`, `app/api/{chat,aristotle}/`, `components/{ai,aristotle}/` | docs/claude/ai-byok.md · docs/AI_BYOK.md · docs/AI_AGENT_GUIDE.md |
+| Page Architect / Puck landing builder | `lib/{page-builder,puck,landing-pages}/`, `app/api/landing/`, `packages/core/` | skill `ai-landing-builder` · docs/PAGE_ARCHITECT.md |
+| Courses, lessons, MDX, checkpoints | `components/{teacher,lesson}/`, `lib/{lesson,lessons,checkpoints}/` | docs/MDX_COMPONENTS.md |
+| Exams & grading | `lib/exams/`, `app/api/exams/`, `app/actions/exam-grading.ts` | `submit_exam` RPC is the only write path |
+| Exercises, code challenges, voice | `lib/{exercises,speech}/`, `app/api/exercises/`, `components/exercises/` | — |
+| Community spaces | `lib/community/`, `components/community/`, `app/actions/community.ts` | docs/COMMUNITY_SPACES.md |
+| Gamification, leagues | `lib/hooks/use-{gamification,league}*.ts`, `components/gamification/`, `supabase/functions/` | docs/GAMIFICATION.md |
+| Spaced review (FSRS) | `components/student/{review-session,due-reviews-banner}.tsx`, `app/[locale]/dashboard/student/reviews` | migration `*_add_fsrs_to_review_cards` |
+| Invitations | `lib/tenant/join-school.ts`, `app/actions/admin/invitations.ts`, `app/[locale]/join-school` | — |
+| Certificates | `lib/certificates/`, `app/api/certificates/`, `app/[locale]/verify/` | template-gated issue |
+| Notifications, push, email | `lib/{notifications,email}/`, `app/api/cron/send-pushes` | — |
+| Theming / brand | `lib/themes/kit.ts`, `components/{theme-kit,tenant}/`, `app/globals.css` | DESIGN.md · docs/claude/design-context.md |
+| i18n | `messages/`, `i18n.ts`, `lib/i18n/` | docs/I18N_GUIDE.md |
+| Analytics / observability | `lib/analytics/`, `lib/sentry/`, `instrumentation*.ts` | docs/ANALYTICS_OPENPANEL.md |
+| MCP server (mcp-use, OAuth 2.1) | `mcp-server/`, `app/api/mcp/` | docs/claude/mcp-server.md · skill `mcp-apps-builder` · docs/MCP_SETUP.md |
+| Account deletion | `lib/account/`, `app/api/account/delete` | — |
+| DB migrations / seed | `supabase/migrations/`, `seed.sql`, `scripts/` | docs/MIGRATIONS.md · docs/CRON_RUNBOOK.md |
+| Env vars, deploy | `.env.example`, `Dockerfile`, `.github/workflows/deploy.yml` | docs/ENV_VARIABLES.md · docs/DEPLOYMENT.md · docs/claude/testing-env-pitfalls.md |
 
 ## Testing
 
-E2E tests in `tests/playwright/` — 33 spec files (tenant isolation, auth security, payment flows, enrollment, entitlements, gamification, community, i18n, platform panel, plan change, teacher/admin CRUD). Read the directory rather than a list here; it changes often. Highest-priority: `tenant-isolation.spec.ts`, `auth-security.spec.ts`, `payment-flows.spec.ts`, `evaluations-security.spec.ts`.
+Unit: `tests/unit/` (Vitest). E2E: `tests/playwright/` (only testDir; every skip needs a reason → `tests/README.md`). Priority specs: `tenant-isolation`, `auth-security`, `payment-flows`, `evaluations-security`. Plan-gate specs own hidden `platform_plans` rows (`utils/plan-gate-fixtures.ts`). Accounts: `student@e2etest.com`, `owner@e2etest.com` (admin + super admin), `creator@codeacademy.com` (code-academy), all `password123`, local only. Detail → docs/claude/testing-env-pitfalls.md.
 
-Plan-gate specs (`plan-limit-surfaces`, `access-cutoff-lifecycle`, `plan-feature-tiers`, `platform-billing-stripe-webhook`) each own a dedicated tenant and a hidden `platform_plans` row with tiny limits (`tests/playwright/utils/plan-gate-fixtures.ts`) — every enforcement path reads the plan by slug with no `is_active` filter, so "at the cap" costs one row, not fifty users. Never move the seeded tenants off their plan.
+## Design
 
-The Playwright config boots its own `webServer` (`next dev` locally on the `BASE_URL` port, reusing a server already listening; `next start` in CI). Use `lvh.me` (never `localhost`), and keep `--workers=1` locally or GoTrue rate-limits the sign-ins. Every spec lives in `tests/playwright/` — the only `testDir` — and every skip carries a reason (permanent ones link an issue); see `tests/README.md`. Unit tests: `npm run test:unit` (Vitest, `tests/unit/`).
+Read PRODUCT.md before UI work and DESIGN.md for tokens. Minimal, content-first, WCAG AA, tenant theme via CSS vars; light+dark. Detail → docs/claude/design-context.md.
 
-Test accounts (from `supabase/seed.sql`, seeded by `supabase db reset`):
-- `student@e2etest.com` / `password123` — student (Default School)
-- `owner@e2etest.com` / `password123` — admin (Default School) **+ super admin** (`/platform/*`)
-- `creator@codeacademy.com` / `password123` — **admin** (Code Academy, subdomain `code-academy.lvh.me:3000`)
-- `alice@student.com` / `password123` — student (Code Academy)
+## Project skills (`.claude/skills/`)
 
-Pre-commit checklist: `npm run typecheck` + `npm run build` · tenant filter on every query · tested with all relevant roles · loading + error states handled.
+`ai-landing-builder`, `supabase`, `next-best-practices`, `shadcn`, `mcp-apps-builder`, `security-review`, `web-design-guidelines`, `work-issue` → `ship-pr` → `pr-review-loop` (GitHub flow). Subagents (`.claude/agents/`): analyst → refactor → qa-report.
 
-## Known Pitfalls
+## Pre-commit
 
-- **`product_courses` — never `.single()`**: a course can belong to multiple products.
-- **`lesson_completions` uses `user_id`**, not `student_id`. Has **no `tenant_id`** — never filter by it.
-- **`exercise_completions` has no `tenant_id`** — filter by `user_id` only.
-- **`exams` has no `passing_score` or `allow_retake`** — use 70 as default threshold, assume retakes allowed.
-- **`profiles` has no `email`** — get emails via `createAdminClient().auth.admin.getUserById()`.
-- **`exam_submissions` order column** is `submission_date`, not `submitted_at`.
-- **Transaction status** is `'successful'`, not `'succeeded'`.
-- Exam child tables (`exam_questions`, `exam_answers`, `exam_question_scores`, `exam_scores`, `question_options`) have **no `tenant_id`** — filter by exam_id/submission_id only; adding `.eq('tenant_id', …)` errors the whole query. `exam_questions` also has **no `sequence`**.
-- **`exercise_completions` uses `user_id`**, not `student_id`, and stores only `score` + `completed_at` — submissions/feedback live in `exercise_evaluations` and the `exercise_*_submissions` tables.
-- **`subscriptions` uses `subscription_status`** (not `status`), `provider_subscription_id` (not `stripe_subscription_id`), and `created` (not `created_at`).
-- **`plans` uses `plan_name` and `duration_in_days`** — there is no `name`, no `interval`, no `status`. Soft-deleted via `deleted_at`.
-- **`transactions` has three unique indexes**, product-shaped and plan-shaped kept separate plus `(payment_provider, provider_charge_id)` for webhook idempotency — see `docs/DATABASE_SCHEMA.md`.
-- **Creating test users via SQL** won't fire `handle_new_user()` — manually insert `profiles`, `user_roles`, `auth.identities`. Use `NULL` for `phone`, `''` for nullable strings.
-- **`proxy.ts` is the only middleware** — do not create `middleware.ts` (conflict).
-- **`createAdminClient()`** lives in `@/lib/supabase/admin`, NOT `@/lib/supabase/server`.
-- **Button component** uses `@base-ui/react` — no `asChild` prop. Wrap `<Link>` around `<Button>` instead.
-- **Stripe API v2025 types** need `any` casts for `Subscription`/`Invoice` objects.
-- **`getUserRole()` checks `tenant_users` first** (authoritative), resolving the user via the `x-user-id` header — no extra `getUser()` call. It only falls back to `getSession()`-derived JWT claims (`tenant_role`/`user_role`) when there's no active membership row AND the token's `tenant_id` is the current tenant — the hook stamps `tenant_role` for the user's home school, and proxy.ts skips membership checks on public routes, so trusting the claim on another subdomain handed out that school's admin actions (#763).
-- **`isSuperAdmin()`** queries the `super_admins` table directly — does not trust JWT claims.
-- **API routes** get tenant context via `proxy.ts` too — `x-tenant-id` is set for `/api/*` routes.
-- **`enroll_user()` RPC** loops through ALL courses per product via `product_courses` (FOR loop).
+`npm run typecheck` + `npm run build` · tenant filter on every query · test each relevant role · loading + error states handled.
 
-## Security Notes
+## Maintaining this file
 
-- **Sentry DSN comes from `NEXT_PUBLIC_SENTRY_DSN`, never a literal.** It was hardcoded in the three `Sentry.init` files until a third-party Vercel fork of this repo (deployed without Supabase env vars) filled our issue stream with its own crashes. Unset = `Sentry.init` no-ops.
-- **Build-time env vars do NOT live in Dokploy.** `.github/workflows/deploy.yml` builds the image in GitHub Actions and pushes to `ghcr.io`; Dokploy only pulls it. Every `NEXT_PUBLIC_*` (plus `SENTRY_AUTH_TOKEN`) is a Docker `build-args` entry backed by an Actions variable/secret and a matching `ARG`/`ENV` pair in the Dockerfile's builder stage. Adding one to the Dokploy service environment is a silent no-op.
-- **Test account passwords** (`password123`) are for local development only, seeded by `supabase db reset`. Never use in a deployed environment.
-
-## Key Documentation
-
-- `docs/DATABASE_SCHEMA.md` — complete schema with relationships
-- `docs/AUTH.md` — auth flows
-- `docs/AI_AGENT_GUIDE.md` — detailed patterns
-- `docs/AI_BYOK.md` — AI keys, resolver, error codes, rotation, telemetry
-- `docs/MONETIZATION.md` — school billing, feature gating, LATAM payments, revenue dashboard
-- `docs/COMMUNITY_SPACES.md` — community feed, comments, reactions, polls, moderation, security
-
-## Design Context
-
-**Canonical source: [`PRODUCT.md`](PRODUCT.md) (strategy) + [`DESIGN.md`](DESIGN.md) (visual system).** Read PRODUCT.md before any UI work — it carries the register (`product`, with `(public)/*` and Puck blocks in `brand`), the four user groups, the anti-references, and the five design principles. The summary below is a pointer, not the authority.
-
-Users span independent creators/solo educators and multi-staff schools, across LATAM and English-speaking markets (en/es). Brand personality: **minimal, elegant, focused** — content over chrome, no visual noise.
-
-- **Aesthetic:** clean, spacious, content-first; hierarchy via typography weight/size over color/ornament. References: Duolingo/Khan Academy, Teachable/Thinkific. Anti-references: cluttered enterprise dashboards, generic Bootstrap.
-- **Theme:** light + dark, tenant theming overrides primary/accent via CSS custom properties. The platform palette **is the theme kit's default theme** (#766): Estructura + **Tinta azul** `#3A50B8` (`oklch(0.476 0.166 270)`), same value in both modes, over Estructura's cool surfaces. `app/globals.css` holds `deriveKitVars('estructura', '#3A50B8')` verbatim — change it in `lib/themes/kit.ts` and paste, never by hand. Nothing may depend on that hue holding; tenants override it.
-- **Typography/icons:** Noto Sans (body), Geist Sans/Mono (UI/code); Tabler Icons + Lucide (outline style).
-- **Motion:** subtle, via `motion` lib; respect `prefers-reduced-motion`; convey state changes, not decoration.
-- **Principles:** content over chrome · obvious over clever · consistent structure across tenants (brand via color/logo, not layout) · WCAG AA by default · progressive disclosure (sheets/dialogs for detail).
-- **Stack:** Shadcn UI (base-mira, `@base-ui/react` primitives) · Tailwind v4 with OKLCH tokens · `motion` + `tw-animate-css` · `next-themes` + `TenantCssVarsServer` · `--radius: 0.625rem` base.
-
-When reporting information to me, be extremely concise and sacrifice grammar for sake of concision.
+Keep < 200 lines. Add pointers, not prose; put detail in `docs/claude/*.md` (plain paths, not `@imports` — those load eagerly). Delete rules that code/tests already enforce.
