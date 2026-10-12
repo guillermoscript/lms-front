@@ -25,6 +25,12 @@ export const MCP_PRODUCT_PROVIDERS = ["manual", "lemonsqueezy", "solana", "solan
 export const CATALOG_PROVIDERS: readonly string[] = ["stripe", "paypal"];
 
 export const productCurrency = z.enum(["usd", "eur"]);
+/** #927: who bears the platform fee. Mirrors lib/payments/fee-bearer.ts. */
+export const productFeeBearer = z
+  .enum(["school", "student"])
+  .describe(
+    "Who bears the platform fee: school (default; deducted from the school's share) or student (price grossed up at checkout so the school receives the listed price). Only takes effect on providers that bear a platform fee and price from our amount (not manual, not lemonsqueezy)."
+  );
 
 export const createProductInput = z.object({
   name: z.string().trim().min(1).max(200).describe("Product name shown at checkout"),
@@ -44,6 +50,7 @@ export const createProductInput = z.object({
     .trim()
     .optional()
     .describe("Lemon Squeezy variant id (required for lemonsqueezy only)"),
+  fee_bearer: productFeeBearer.optional(),
 });
 
 export const updateProductInput = z.object({
@@ -60,6 +67,7 @@ export const updateProductInput = z.object({
     .max(50)
     .optional()
     .describe("REPLACES the set of linked courses (at least one)"),
+  fee_bearer: productFeeBearer.optional(),
 });
 
 export const listProductsInput = z.object({
@@ -69,7 +77,7 @@ export const listProductsInput = z.object({
 });
 
 const PRODUCT_COLUMNS =
-  "product_id, name, description, price, currency, image, status, payment_provider, provider_price_id, tenant_id";
+  "product_id, name, description, price, currency, image, status, payment_provider, provider_price_id, fee_bearer, tenant_id";
 
 type ProductRow = {
   product_id: number;
@@ -81,6 +89,7 @@ type ProductRow = {
   status: string;
   payment_provider: string;
   provider_price_id: string | null;
+  fee_bearer?: string | null;
   tenant_id: string;
 };
 
@@ -140,6 +149,7 @@ function present(p: ProductRow, courseIds: number[]) {
     image: p.image,
     status: p.status,
     payment_provider: p.payment_provider,
+    fee_bearer: p.fee_bearer === "student" ? "student" : "school",
     course_ids: courseIds,
   };
 }
@@ -287,6 +297,7 @@ export function registerProductTools(server: LmsServer) {
             payment_provider: input.payment_provider,
             provider_product_id: null,
             provider_price_id: providerPriceId,
+            ...(input.fee_bearer ? { fee_bearer: input.fee_bearer } : {}),
             status: "active",
             tenant_id: tenantId,
           })
@@ -372,6 +383,8 @@ export function registerProductTools(server: LmsServer) {
         if (input.price !== undefined) update.price = input.price;
         if (input.currency !== undefined) update.currency = input.currency;
         if (input.provider_price_id !== undefined) update.provider_price_id = input.provider_price_id || null;
+        // fee_bearer is a school setting, not catalog data: allowed on Stripe/PayPal too.
+        if (input.fee_bearer !== undefined) update.fee_bearer = input.fee_bearer;
 
         if (Object.keys(update).length === 0 && !input.course_ids) {
           return ok({ id: existing.product_id }, "No fields to update.");

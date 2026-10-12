@@ -111,6 +111,26 @@ describe("handlers", () => {
     expect(links).toHaveLength(2);
   });
 
+  it("writes fee_bearer on create and update, rejects unknown values (#927)", async () => {
+    fake = makeFake({
+      courses: [{ data: [{ course_id: 1 }] }],
+      products: [{ data: { product_id: 7, name: "x", price: 5, currency: "usd", status: "active", payment_provider: "manual", fee_bearer: "student", tenant_id: TENANT } }],
+      product_courses: [{ data: null }],
+    });
+    const r = await handlers.get("lms_create_product")!({ name: "x", price: 5, currency: "usd", course_ids: [1], payment_provider: "manual", fee_bearer: "student" }, ctxFor("admin"));
+    const ins = fake.calls.find((c) => c.table === "products")!.ops.find((o) => o[0] === "insert")![1] as Record<string, unknown>;
+    expect(ins.fee_bearer).toBe("student");
+    expect((r.structuredContent as { fee_bearer?: string }).fee_bearer).toBe("student");
+
+    expect(products.updateProductInput.safeParse({ product_id: 1, fee_bearer: "bogus" }).success).toBe(false);
+    const base = { product_id: 3, name: "s", price: 9, currency: "usd", status: "active", payment_provider: "stripe", fee_bearer: "school", tenant_id: TENANT };
+    fake = makeFake({ products: [{ data: base }, { data: { ...base, fee_bearer: "student" } }], product_courses: [{ data: [] }] });
+    const u = await handlers.get("lms_update_product")!({ product_id: 3, fee_bearer: "student" }, ctxFor("admin"));
+    expect(u.isError).toBeUndefined();
+    const upd = fake.calls.filter((c) => c.table === "products")[1].ops.find((o) => o[0] === "update")![1];
+    expect(upd).toEqual({ fee_bearer: "student" });
+  });
+
   it("lemonsqueezy needs a variant id; solana needs a wallet", async () => {
     fake = makeFake({ courses: [{ data: [{ course_id: 1 }] }] });
     let r = await handlers.get("lms_create_product")!({ name: "x", price: 5, currency: "usd", course_ids: [1], payment_provider: "lemonsqueezy" }, ctxFor("admin"));

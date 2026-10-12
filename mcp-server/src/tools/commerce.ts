@@ -508,7 +508,9 @@ const billingOutput = z.object({
     z.object({
       request_id: z.string(),
       status: z.string(),
+      /** Plan name; null for platform-fee rows (request_type 'fee', plan_id NULL). */
       plan: z.string().nullable(),
+      request_type: z.string().nullable(),
       amount: z.number().nullable(),
       currency: z.string().nullable(),
       interval: z.string().nullable(),
@@ -1351,7 +1353,7 @@ export function registerCommerceTools(server: LmsServer) {
           getTenantPlanUsage(supabase, tenantId),
           supabase
             .from("platform_payment_requests")
-            .select("request_id, status, amount, currency, interval, payment_provider, created_at, expires_at, platform_plans(name)")
+            .select("request_id, status, amount, currency, interval, payment_provider, created_at, expires_at, request_type, platform_plans(name)")
             .eq("tenant_id", tenantId)
             .order("created_at", { ascending: false })
             .limit(5),
@@ -1362,8 +1364,10 @@ export function registerCommerceTools(server: LmsServer) {
 
         const tenant = tenantResult.data;
         const planSlug = (tenant?.plan as string | null) || "free";
-        // get_plan_features filters is_active and falls back to Free, so its
-        // name/fee only describe THIS school when the slugs agree.
+        // get_plan_features resolves by the tenant's plan slug with NO is_active
+        // filter (#898), so a retired plan still describes its subscribers. It
+        // falls back to Free only when the slug has no platform_plans row at
+        // all, so name/fee are trusted only when the slugs agree.
         const features = (featuresResult.data ?? {}) as {
           plan?: string;
           plan_name?: string;
@@ -1403,6 +1407,7 @@ export function registerCommerceTools(server: LmsServer) {
             request_id: r.request_id as string,
             status: r.status as string,
             plan: embedded(r.platform_plans as { name: string } | { name: string }[] | null)?.name ?? null,
+            request_type: (r.request_type as string | null) ?? null,
             amount: num(r.amount),
             currency: (r.currency as string | null) ?? null,
             interval: (r.interval as string | null) ?? null,
@@ -1428,7 +1433,7 @@ export function registerCommerceTools(server: LmsServer) {
         if (out.recent_platform_payment_requests.length) {
           lines.push("", "Recent platform payment requests:");
           for (const r of out.recent_platform_payment_requests) {
-            lines.push(`- [${r.status}] ${r.plan ?? "?"} ${r.interval ?? ""} ${money(r.amount, r.currency)} via ${r.payment_provider ?? "?"} — ${r.created_at?.slice(0, 10) ?? ""}`);
+            lines.push(`- [${r.status}] ${r.request_type === "fee" ? "platform fees" : (r.plan ?? "?")} ${r.interval ?? ""} ${money(r.amount, r.currency)} via ${r.payment_provider ?? "?"} — ${r.created_at?.slice(0, 10) ?? ""}`);
           }
         }
         return structured(out, lines.join("\n"));
