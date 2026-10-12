@@ -162,8 +162,11 @@ export function resolveSchoolTheme(
   return { ...stored, brand: KIT_THEME_META[stored.theme].swatches[0].hex };
 }
 
-/** The platform palette's brand — `PLATFORM_BRAND_HEX` in `lib/themes/brand-outputs.ts`. */
-const PLATFORM_BRAND_HEX = "#007595";
+/**
+ * The platform palette's brand — `PLATFORM_BRAND_HEX` in `lib/themes/brand-outputs.ts`.
+ * Since #766 it is Estructura's recommended swatch (Tinta azul), not a teal.
+ */
+const PLATFORM_BRAND_HEX = "#3A50B8";
 
 /** The paper every output is designed on. */
 const BRAND_PAPER = "#FFFFFF";

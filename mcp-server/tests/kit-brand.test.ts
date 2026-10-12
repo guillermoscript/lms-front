@@ -18,14 +18,14 @@ import {
  */
 
 describe("deriveWidgetBrand", () => {
-  it("falls back to the platform teal when there is no kit", () => {
+  it("falls back to the platform Tinta azul when there is no kit", () => {
     const out = deriveWidgetBrand(null);
     expect(out).toEqual({
       themeId: null,
-      brand: "#007595",
-      button: "#007595",
+      brand: "#3A50B8",
+      button: "#3A50B8",
       buttonInk: "#FCFCFC",
-      brandText: "#00637F",
+      brandText: "#3A50B8",
       headingFont: null,
     });
   });
