@@ -12,6 +12,7 @@ import {
   type MediaAttempt,
   type MediaSubmitState,
 } from './media-exercise-panels'
+import { classifyMediaSubmitFailure, mediaAnalyzeRetry, type MediaAiError } from '@/lib/exercises/media-submit-error'
 import type { SpeechEvaluation } from '@/lib/speech/types'
 
 type SubmissionHistoryItem = MediaAttempt
@@ -75,6 +76,14 @@ export default function AudioExercise({
     isExerciseCompleted ? true : latestSubmission ? latestSubmission.status === 'completed' : undefined
   )
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  /** The school's AI setup (key, model, provider) is why the submission was refused. */
+  const [aiError, setAiError] = useState<MediaAiError | null>(null)
+  /**
+   * A recording that is uploaded and counted, whose analysis the school's AI
+   * refused. Retry re-analyzes that row: a new upload of the same take would
+   * spend another daily attempt (#958).
+   */
+  const [retrySubmissionId, setRetrySubmissionId] = useState<number | null>(null)
   const [showRecorder, setShowRecorder] = useState(!latestEvaluation)
   const [dailyLimitReached, setDailyLimitReached] = useState(
     !isUnlimited && (serverDailyAttemptsUsed ?? 0) >= maxDaily
@@ -93,53 +102,15 @@ export default function AudioExercise({
   const minDuration = config.min_duration_seconds ?? 5
   const maxDuration = config.max_duration_seconds ?? 300
 
-  const handleRecordingComplete = useCallback(async (blob: Blob, duration: number) => {
-    setSubmitState('uploading')
+  // Analysis of an uploaded recording: the last step of a submission, and all
+  // of a retry. `retryOf` is the notice the retry started from, put back when
+  // the answer says nothing new about the recording.
+  const analyze = useCallback(async (submissionId: number, retryOf: MediaAiError | null) => {
+    setSubmitState('analyzing')
     setErrorMsg(null)
+    setAiError(null)
 
     try {
-      // 1. Get a signed upload URL
-      const uploadRes = await fetch('/api/exercises/media/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exerciseId: exercise.id,
-          mediaType: 'audio',
-          filename: `recording_${Date.now()}.webm`,
-        }),
-      })
-
-      if (!uploadRes.ok) {
-        if (uploadRes.status === 429) {
-          try {
-            const errData = await uploadRes.json()
-            if (errData.error === 'daily_limit_reached') {
-              setDailyLimitReached(true)
-              setAttemptsUsed(maxDaily)
-              setSubmitState('error')
-              return
-            }
-          } catch { /* fall through */ }
-        }
-        const msg = await uploadRes.text()
-        throw new Error(msg || 'Failed to get upload URL')
-      }
-
-      const { submissionId, uploadUrl, dailyAttemptsUsed: newUsed } = await uploadRes.json()
-      setAttemptsUsed(newUsed)
-
-      // 2. Upload the blob to Supabase Storage via signed URL
-      const putRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': blob.type || 'audio/webm' },
-        body: blob,
-      })
-
-      if (!putRes.ok) throw new Error('Failed to upload audio file')
-
-      // 3. Trigger analysis
-      setSubmitState('analyzing')
-
       const analyzeRes = await fetch('/api/exercises/media/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,11 +118,24 @@ export default function AudioExercise({
       })
 
       if (!analyzeRes.ok) {
-        const msg = await analyzeRes.text()
-        throw new Error(msg || 'Analysis failed')
+        const failure = classifyMediaSubmitFailure('analyze', analyzeRes.status, await analyzeRes.text().catch(() => ''))
+        const retry = mediaAnalyzeRetry(analyzeRes.status, failure)
+        if (failure.kind === 'ai') {
+          // Still gradable once the school's AI answers: keep it for Retry.
+          setAiError(failure.error)
+          setRetrySubmissionId(submissionId)
+        } else if (retry === 'busy' && retryOf) {
+          setAiError(retryOf)
+        } else {
+          setRetrySubmissionId(null)
+          setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'analysisFailed'))
+        }
+        setSubmitState('error')
+        return
       }
 
       const { evaluation: result, passed: didPass } = await analyzeRes.json()
+      setRetrySubmissionId(null)
       setEvaluation(result)
       setPassed(didPass)
       setShowRecorder(false)
@@ -170,15 +154,82 @@ export default function AudioExercise({
       }, ...prev])
     } catch (err) {
       console.error('Audio submission error:', err)
-      setErrorMsg(err instanceof Error && err.message ? err.message : 'Something went wrong. Please try again.')
+      // A retry that got no answer keeps the recording and its notice.
+      if (retryOf) setAiError(retryOf)
+      else setErrorMsg(t('analysisFailed'))
       setSubmitState('error')
     }
-  }, [exercise.id, maxDaily])
+  }, [t])
+
+  const handleRecordingComplete = useCallback(async (blob: Blob, duration: number) => {
+    setSubmitState('uploading')
+    setErrorMsg(null)
+    setAiError(null)
+    // A new recording never re-analyzes the one before it.
+    setRetrySubmissionId(null)
+
+    try {
+      // 1. Get a signed upload URL
+      const uploadRes = await fetch('/api/exercises/media/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exerciseId: exercise.id,
+          mediaType: 'audio',
+          filename: `recording_${Date.now()}.webm`,
+        }),
+      })
+
+      if (!uploadRes.ok) {
+        // The body is read once and never printed: it is plain English text or
+        // raw JSON, and a second read of a consumed body throws.
+        const failure = classifyMediaSubmitFailure('upload-url', uploadRes.status, await uploadRes.text().catch(() => ''))
+        if (failure.kind === 'daily_limit') {
+          setDailyLimitReached(true)
+          setAttemptsUsed(maxDaily)
+        } else if (failure.kind === 'ai') {
+          setAiError(failure.error)
+        } else if (failure.kind === 'too_many_pending') {
+          setErrorMsg(t('tooManyPending'))
+        } else {
+          setErrorMsg(t(failure.kind === 'no_access' ? 'noAccess' : 'submitFailed'))
+        }
+        setSubmitState('error')
+        return
+      }
+
+      const { submissionId, uploadUrl, dailyAttemptsUsed: newUsed } = await uploadRes.json()
+      setAttemptsUsed(newUsed)
+
+      // 2. Upload the blob to Supabase Storage via signed URL
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': blob.type || 'audio/webm' },
+        body: blob,
+      })
+
+      if (!putRes.ok) throw new Error('Failed to upload audio file')
+
+      // 3. Trigger analysis
+      await analyze(submissionId, null)
+    } catch (err) {
+      console.error('Audio submission error:', err)
+      setErrorMsg(t('submitFailed'))
+      setSubmitState('error')
+    }
+  }, [exercise.id, maxDaily, t, analyze])
 
   const handleTryAgain = () => {
     setShowRecorder(true)
     setSubmitState('idle')
     setErrorMsg(null)
+    setAiError(null)
+    setRetrySubmissionId(null)
+  }
+
+  // Same recording, same row: no upload-url, so no new daily attempt.
+  const handleRetryAnalysis = () => {
+    if (retrySubmissionId !== null) void analyze(retrySubmissionId, aiError)
   }
 
   // A review is on screen whenever the student is not mid-recording. Then it
@@ -235,6 +286,7 @@ export default function AudioExercise({
             }
             submitState={submitState}
             errorMsg={errorMsg}
+            aiError={aiError}
             evaluation={evaluation}
             passed={passed}
             showRecorder={showRecorder}
@@ -244,6 +296,7 @@ export default function AudioExercise({
             minDuration={minDuration}
             maxDuration={maxDuration}
             onRecordAgain={handleTryAgain}
+            onRetryAnalysis={retrySubmissionId !== null ? handleRetryAnalysis : undefined}
           />
         }
         taskLabel={tWorkspace('record')}

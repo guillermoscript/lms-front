@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { IconAlertTriangle, IconMicrophone, IconPlayerStop, IconRefresh, IconCheck, IconUpload } from '@tabler/icons-react'
 import { useTranslations } from 'next-intl'
 
-type RecorderState = 'idle' | 'countdown' | 'recording' | 'review' | 'submitting'
+type RecorderState = 'idle' | 'countdown' | 'recording' | 'review'
 
 interface MediaRecorderProps {
   onRecordingComplete: (blob: Blob, duration: number) => void
@@ -255,9 +255,11 @@ export function MediaRecorderComponent({
     setState('idle')
   }
 
+  // "Submitting" is the parent's `isSubmitting`, not a state of its own: the
+  // recorder had no way out of one, so a refused upload left a disabled spinner
+  // and no control to retry with. It stays in review and keeps the recording.
   const handleSubmit = () => {
     if (!blob) return
-    setState('submitting')
     onRecordingComplete(blob, durationRef.current)
   }
 
@@ -308,7 +310,7 @@ export function MediaRecorderComponent({
 
   const isBelowMin = elapsed < minDurationSeconds && state === 'recording'
 
-  const busy = state === 'submitting' || isSubmitting
+  const busy = isSubmitting
 
   // A dictaphone, not a form: one round control under a fixed stage, so the
   // panel keeps its height while idle → countdown → recording → review swap.
@@ -347,7 +349,7 @@ export function MediaRecorderComponent({
           />
         )}
 
-        {(state === 'review' || state === 'submitting') && audioUrl && (
+        {state === 'review' && audioUrl && (
           <audio src={audioUrl} controls className="h-10 w-full" aria-label={t('recordingPreview')} />
         )}
       </div>
