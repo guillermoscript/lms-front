@@ -35,6 +35,10 @@ const STUDENT_TOOLS = new Set<string>([
   "lms_view_lesson",
   "lms_complete_lesson",
   "lms_my_exam_results",
+  // Take + submit a real exam as the caller: no answer key is ever returned,
+  // the write is the submit_exam RPC and grading is the app's grade route.
+  "lms_get_exam_for_student",
+  "lms_submit_exam",
   "lms_my_gamification",
   "lms_browse_catalog",
   // AI-tutor practice tools (Epic #348) — all self-scoped.

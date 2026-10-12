@@ -1,6 +1,6 @@
 import { getServiceClient } from "./supabase.js";
 
-const SENSITIVE_KEYS = ["password", "secret", "token", "key", "credential"];
+const SENSITIVE_KEYS = ["password", "secret", "token", "key", "credential", "answer"];
 
 /** Strip obviously sensitive values before persisting params. */
 function sanitizeParams(params: unknown): unknown {

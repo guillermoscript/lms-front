@@ -23,9 +23,9 @@ implementation.
 
 ## What it exposes
 
-- **140 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
+- **142 tools** (`lms_*`) across courses, products (admin-only `lms_*_product`: manual / Lemon Squeezy / Solana rails; Stripe/PayPal stay in the dashboard), subscription plans (`lms_list_plans`), landing pages (admin-only Page Architect parity: `lms_get_landing_context`, `lms_list_landing_templates`, `lms_create_landing_page` from a template, `lms_patch_landing_page` op edits with an `updated_at` check, `lms_insert_landing_preset`), lessons, exercises, exams, analytics,
   student learning (`lms_my_learning`, `lms_view_lesson`,
-  `lms_complete_lesson`, `lms_my_exam_results`, `lms_my_gamification`,
+  `lms_complete_lesson`, `lms_my_exam_results`, `lms_get_exam_for_student` + `lms_submit_exam` (take an exam: no answer key; `submit_exam` RPC, then the app's `/api/exams/[examId]/grade`, `pending` when grading can't run), `lms_my_gamification`,
   `lms_browse_catalog`), AI-tutor practice (`lms_get_exercise_for_student`
   with attempt history, `lms_check_exercise_answers` to grade closed
   questions server-side, `lms_complete_exercise` to submit a text or
