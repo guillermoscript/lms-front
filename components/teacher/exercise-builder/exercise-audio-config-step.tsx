@@ -23,13 +23,25 @@ import {
 import { CONVERSATION_LANGUAGES, CONVERSATION_LEVELS } from '@/lib/speech/conversation'
 import { MAX_CUSTOM_CRITERIA_CHARS, SPEECH_RUBRIC_MODES } from '@/lib/speech/learner-rubric'
 import { cn } from '@/lib/utils'
+import { ImprovedTemplateSelector, type PromptTemplate } from '../improved-template-selector'
 
 /** base-ui Select has no empty value; this stands for "the language the student spoke". */
 const SAME_AS_SPOKEN = 'auto'
+const MEDIA_TEMPLATE_KINDS = ['videoEditing', 'photography', 'presentation', 'productDemo', 'tutorial'] as const
 
 export function ExerciseAudioConfigStep() {
-  const { formData, updateField } = useExerciseBuilder()
+  const { formData, updateField, setFormData } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
+  const templates: PromptTemplate[] = MEDIA_TEMPLATE_KINDS.map((kind, index) => ({
+    id: -200 - index,
+    name: t(`mediaTemplates.${kind}.name`),
+    description: t(`mediaTemplates.${kind}.description`),
+    category: 'exercise',
+    task_description_template: t(`mediaTemplates.${kind}.instructions`),
+    system_prompt_template: t(`mediaTemplates.${kind}.criteria`),
+    variables: { variables: ['topic'] },
+    is_system: true,
+  }))
   const learner = formData.speech_rubric_mode === 'language_learner'
   const custom = formData.speech_rubric_mode === 'custom'
   const isVideo = formData.exercise_type === 'video_evaluation'
@@ -46,6 +58,17 @@ export function ExerciseAudioConfigStep() {
           <p className="text-sm text-muted-foreground">{t('audioSetupDesc')}</p>
         </div>
       </div>
+
+      <ImprovedTemplateSelector
+        category="exercise"
+        additionalTemplates={templates}
+        onApply={(data) => setFormData((previous) => ({
+          ...previous,
+          topic_prompt: data.instructions,
+          speech_rubric_mode: 'custom',
+          speech_evaluation_criteria: data.system_prompt,
+        }))}
+      />
 
       {/* Topic Prompt */}
       <div>

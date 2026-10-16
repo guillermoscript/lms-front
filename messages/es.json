@@ -2135,7 +2135,39 @@
         "customCriteriaAudioHint": "Los ejercicios de audio se evalúan solo con la transcripción del habla.",
         "customExtraInstructionsLabel": "Instrucciones extra para la IA (opcional)",
         "customExtraInstructionsPlaceholder": "Ej.: Eres un profesor estricto de cine. Sé directo.",
-        "customExtraInstructionsHint": "Personalidad o contexto extra para la IA. Los estudiantes nunca lo ven."
+        "customExtraInstructionsHint": "Personalidad o contexto extra para la IA. Los estudiantes nunca lo ven.",
+        "mediaTemplates": {
+          "videoEditing": {
+            "name": "Edición de video",
+            "description": "Ritmo, cortes, mezcla de audio, color y narrativa de un video editado.",
+            "instructions": "Tema: {{topic}}\nGraba o sube tu video editado y explica brevemente tus decisiones de edición.",
+            "criteria": "Evalúa el video sobre {{topic}}. Ritmo y cortes 25%, calidad y mezcla de audio 20%, color y coherencia visual 20%, narrativa y claridad 25%, acabado técnico 10%. Usa solo lo que se ve u oye; cita momentos concretos y da una acción siguiente."
+          },
+          "photography": {
+            "name": "Fotografía",
+            "description": "Composición, luz, enfoque e intención de una foto o serie.",
+            "instructions": "Tema: {{topic}}\nMuestra tu(s) foto(s) en cámara y explica la intención de cada una.",
+            "criteria": "Evalúa la fotografía sobre {{topic}}. Composición 30%, luz y exposición 25%, enfoque y nitidez 15%, sujeto e intención 20%, edición/acabado 10%. Juzga solo lo visible; si algo no se ve, indica que no pudo evaluarse."
+          },
+          "presentation": {
+            "name": "Presentación",
+            "description": "Estructura, entrega, claridad y confianza en una charla.",
+            "instructions": "Tema: {{topic}}\nPresenta el tema como ante una audiencia, con inicio, desarrollo y cierre claros.",
+            "criteria": "Evalúa la presentación sobre {{topic}}. Estructura 30%, claridad de ideas 25%, entrega (ritmo, muletillas, voz) 25%, lenguaje corporal y confianza 20%. Da ejemplos concretos y un foco para el próximo intento."
+          },
+          "productDemo": {
+            "name": "Demo de producto",
+            "description": "Mostrar un producto o herramienta funcionando y explicar su valor.",
+            "instructions": "Tema: {{topic}}\nDemuestra el producto paso a paso y explica para quién es y por qué importa.",
+            "criteria": "Evalúa la demo de {{topic}}. Claridad del flujo 30%, propuesta de valor 25%, exactitud 20%, ritmo y visuales 15%, llamada a la acción 10%. Cita momentos concretos y sugiere una mejora."
+          },
+          "tutorial": {
+            "name": "Tutorial / explicación",
+            "description": "Enseñar un concepto o proceso paso a paso.",
+            "instructions": "Tema: {{topic}}\nExplica y muestra cómo hacerlo, en orden, para que un principiante lo siga.",
+            "criteria": "Evalúa el tutorial sobre {{topic}}. Corrección 30%, orden y completitud de pasos 25%, claridad para un principiante 25%, ejemplos/visuales 20%. Cita momentos concretos y da una acción siguiente."
+          }
+        }
       },
       "submissionReview": {
         "status": {

@@ -2135,7 +2135,39 @@
         "customCriteriaAudioHint": "Audio exercises are graded from the speech transcript only.",
         "customExtraInstructionsLabel": "Extra AI instructions (optional)",
         "customExtraInstructionsPlaceholder": "E.g. You are a strict film-school professor. Be direct.",
-        "customExtraInstructionsHint": "Persona or extra context for the AI. Students never see it."
+        "customExtraInstructionsHint": "Persona or extra context for the AI. Students never see it.",
+        "mediaTemplates": {
+          "videoEditing": {
+            "name": "Video editing",
+            "description": "Pacing, cuts, audio mix, color and storytelling of an edited video.",
+            "instructions": "Topic: {{topic}}\nRecord or upload your edited video. Explain your editing choices briefly.",
+            "criteria": "Evaluate the video on {{topic}}. Pacing and cuts 25%, audio quality and mix 20%, color and visual consistency 20%, storytelling and clarity 25%, technical polish 10%. Use only what is visible/audible; cite timestamps or concrete moments, give one next action."
+          },
+          "photography": {
+            "name": "Photography",
+            "description": "Composition, light, focus and intent of a photo or photo series.",
+            "instructions": "Topic: {{topic}}\nShow your photo(s) on camera and explain the intent behind each.",
+            "criteria": "Evaluate the photography on {{topic}}. Composition 30%, light and exposure 25%, focus and sharpness 15%, subject and intent 20%, editing/finish 10%. Only judge what can be seen; if an element is not visible, say it could not be assessed."
+          },
+          "presentation": {
+            "name": "Presentation",
+            "description": "Structure, delivery, clarity and confidence of a talk.",
+            "instructions": "Topic: {{topic}}\nPresent the topic as if to an audience. Keep a clear opening, body and closing.",
+            "criteria": "Evaluate the presentation on {{topic}}. Structure 30%, clarity of ideas 25%, delivery (pace, fillers, voice) 25%, body language and confidence 20%. Give concrete examples from the recording and one focus for the next attempt."
+          },
+          "productDemo": {
+            "name": "Product demo",
+            "description": "Show a product or tool working and explain its value.",
+            "instructions": "Topic: {{topic}}\nDemonstrate the product step by step and explain who it is for and why it matters.",
+            "criteria": "Evaluate the demo of {{topic}}. Clarity of the workflow 30%, value proposition 25%, accuracy 20%, pacing and visuals 15%, call to action 10%. Cite concrete moments and suggest one improvement."
+          },
+          "tutorial": {
+            "name": "Tutorial / explanation",
+            "description": "Teach a concept or process step by step.",
+            "instructions": "Topic: {{topic}}\nExplain and show how to do it, in order, so a beginner can follow.",
+            "criteria": "Evaluate the tutorial on {{topic}}. Correctness 30%, step order and completeness 25%, clarity for a beginner 25%, examples/visuals 20%. Cite concrete moments and give one next action."
+          }
+        }
       },
       "submissionReview": {
         "status": {
