@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTenantId } from '@/lib/supabase/tenant'
 import { AI_CONFIG } from '@/lib/ai/config'
 import { withTenantAi } from '@/lib/ai/with-tenant-ai'
+import { reportStreamError, streamErrorText } from '@/lib/ai/errors'
 import { PROMPTS } from '@/lib/ai/prompts'
 import { createPreviewLessonTools } from '@/lib/ai/tools'
 import { verifyLessonCompletion } from '@/lib/ai/lesson-completion-verifier'
@@ -113,11 +114,16 @@ export async function POST(req: Request) {
             requirementIds(structuredRequirements)
           ),
           experimental_telemetry: { functionId: 'preview-lesson-task' },
+          onError: ({ error }) =>
+            reportStreamError(error, { feature: 'lesson_tutor', tenantId, userId: user.id, providerId: tutor.providerId }),
           stopWhen: stepCountIs(AI_CONFIG.maxSteps),
         }),
       )
 
-      return result.toUIMessageStreamResponse()
+      return result.toUIMessageStreamResponse({
+        onError: (error) =>
+          streamErrorText(error, { feature: 'lesson_tutor', providerId: tutor.providerId, canConfigure: membership.role === 'admin' }),
+      })
     },
   )
 }
