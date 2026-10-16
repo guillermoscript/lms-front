@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
-import { ImprovedTemplateSelector, type PromptTemplate } from '../improved-template-selector'
+import { AIEvalTemplateBar, useBuiltInTemplates } from './ai-eval-templates'
 import { Separator } from '@/components/ui/separator'
 import {
   Select,
@@ -28,17 +28,13 @@ export function ExerciseConversationConfigStep() {
   const { formData, updateField, setFormData } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
 
-  const templates: PromptTemplate[] = ['roleplay', 'interview', 'discussion'].map((kind, index) => ({
-    id: -100 - index,
-    name: t(`voiceTemplates.${kind}.name`),
-    description: t(`voiceTemplates.${kind}.description`),
-    category: 'exercise',
-    task_description_template: t(`voiceTemplates.${kind}.instructions`),
-    system_prompt_template: t(`voiceTemplates.${kind}.criteria`),
-    scenario_template: t(`voiceTemplates.${kind}.scenario`),
-    variables: { variables: ['topic', 'student_role', 'partner_role', 'goals'] },
-    is_system: true,
-  }))
+  const templates = useBuiltInTemplates(
+    'voiceTemplates',
+    ['roleplay', 'interview', 'discussion'],
+    ['topic', 'student_role', 'partner_role', 'goals'],
+    -100,
+    { scenario: true },
+  )
 
   const languageSelect = (
     field: 'conv_target_language' | 'conv_native_language',
@@ -74,9 +70,8 @@ export function ExerciseConversationConfigStep() {
         </div>
       </div>
 
-      <ImprovedTemplateSelector
-        category="exercise"
-        additionalTemplates={templates}
+      <AIEvalTemplateBar
+        builtIns={templates}
         onApply={(data) => setFormData((previous) => ({
           ...previous,
           instructions: data.instructions,
