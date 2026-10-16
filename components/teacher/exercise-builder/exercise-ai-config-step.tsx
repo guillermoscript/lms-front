@@ -6,8 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ImprovedTemplateSelector } from '../improved-template-selector'
-import { AIPreviewModal } from '../ai-preview-modal'
+import { AIEvalTemplateBar } from './ai-eval-templates'
 import {
   IconRobot,
   IconEye,
@@ -93,26 +92,20 @@ export function ExerciseAIConfigStep() {
       </div>
 
       {/* Template + Preview actions */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-muted-foreground/20 bg-muted/20 p-4">
-        <ImprovedTemplateSelector
-          category="exercise"
-          onApply={(data) => {
-            setFormData((prev) => ({
-              ...prev,
-              instructions: data.instructions,
-              system_prompt: data.system_prompt,
-            }))
-          }}
-        />
-        <AIPreviewModal
-          type="exercise"
-          config={{
-            system_prompt: formData.system_prompt,
-            instructions: formData.instructions,
-            exercise: { title: formData.title, description: formData.description },
-          }}
-        />
-      </div>
+      <AIEvalTemplateBar
+        onApply={(data) => {
+          setFormData((prev) => ({
+            ...prev,
+            instructions: data.instructions,
+            system_prompt: data.system_prompt,
+          }))
+        }}
+        previewConfig={{
+          system_prompt: formData.system_prompt,
+          instructions: formData.instructions,
+          exercise: { title: formData.title, description: formData.description },
+        }}
+      />
     </div>
   )
 }

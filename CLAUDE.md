@@ -56,7 +56,7 @@ Branches: `<type>/<slug>-<issue#>`. Skill `/web-design-guidelines <path>` audits
 | Page Architect / Puck landing builder | `lib/{page-builder,puck,landing-pages}/`, `app/api/landing/`, `packages/core/` | skill `ai-landing-builder` · docs/PAGE_ARCHITECT.md |
 | Courses, lessons, MDX, checkpoints | `components/{teacher,lesson}/`, `lib/{lesson,lessons,checkpoints}/` | docs/MDX_COMPONENTS.md |
 | Exams & grading | `lib/exams/`, `app/api/exams/`, `app/actions/exam-grading.ts` | `submit_exam` RPC is the only write path |
-| Exercises, code challenges, voice | `lib/{exercises,speech}/`, `app/api/exercises/`, `components/exercises/` | — |
+| Exercises, code challenges, voice | `lib/{exercises,speech}/`, `app/api/exercises/`, `components/exercises/` | docs/claude/exercise-ai-eval-standard.md |
 | Community spaces | `lib/community/`, `components/community/`, `app/actions/community.ts` | docs/COMMUNITY_SPACES.md |
 | Gamification, leagues | `lib/hooks/use-{gamification,league}*.ts`, `components/gamification/`, `supabase/functions/` | docs/GAMIFICATION.md |
 | Spaced review (FSRS) | `components/student/{review-session,due-reviews-banner}.tsx`, `app/[locale]/dashboard/student/reviews` | migration `*_add_fsrs_to_review_cards` |
