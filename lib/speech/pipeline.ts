@@ -41,11 +41,17 @@ export async function loadAudio(source: AudioSource): Promise<Buffer | Uint8Arra
   return buf
 }
 
+/** Largest recording sent inline to a multimodal model (provider inline-request limits are ~20 MB). */
+export const MAX_VISUAL_BYTES = 18 * 1024 * 1024
+
 export async function runSpeechPipeline(
   audio: AudioSource,
   exerciseContext: ExerciseContext,
   providers: { stt: STTProvider; coach: SpeechCoach },
-  options?: SpeechCoachOptions
+  options?: SpeechCoachOptions & {
+    /** MIME type of the recording, when the caller knows it. Only `video/*` can be analysed visually. */
+    mediaType?: string
+  }
 ): Promise<SpeechEvaluation> {
   const rubric = exerciseContext.speechRubric
   const signal = options?.abortSignal
@@ -58,6 +64,14 @@ export async function runSpeechPipeline(
       abortSignal: signal,
     }
   )
-  const evaluation = await providers.coach.evaluate(transcription, exerciseContext, options)
+  const { mediaType, ...coachOptions } = options ?? {}
+  // Custom criteria on a video may be about what is SEEN; hand the coach the bytes (if small enough).
+  const visual =
+    rubric?.rubric_mode === 'custom' && mediaType?.startsWith('video/') && bytes.byteLength <= MAX_VISUAL_BYTES
+  const evaluation = await providers.coach.evaluate(
+    transcription,
+    exerciseContext,
+    visual ? { ...coachOptions, media: { data: bytes, mediaType: mediaType! } } : coachOptions
+  )
   return evaluation
 }

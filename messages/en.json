@@ -2046,6 +2046,10 @@
           "language_learner": {
             "label": "Language learning",
             "desc": "Grammar, vocabulary and fluency for the student's level, with corrections."
+          },
+          "custom": {
+            "label": "Custom criteria",
+            "desc": "You write what is graded: video editing, photo composition, a demo, anything."
           }
         },
         "speechFeedbackLanguage": "Feedback language",
@@ -2123,7 +2127,15 @@
             "scenario": "Topic: {{topic}}. Student: {{student_role}}. Partner: {{partner_role}}. Objectives: {{goals}}.",
             "criteria": "Evaluate objectives {{goals}} in the context of {{topic}}. Express your opinion with reasons, respond to another perspective and summarize your position.\nTask 35%, grammar 25%, vocabulary 20%, interaction 20%. Adapt to the CEFR level. Use only student evidence, distinguish supported from independent responses and give concrete examples and a next action."
           }
-        }
+        },
+        "customCriteriaLabel": "What should the AI evaluate?",
+        "customCriteriaRequired": "Required, hidden from students",
+        "customCriteriaPlaceholder": "Examples:\n- Video editing: clean cuts, pacing, audio levels, titles readable.\n- Photography: composition, lighting, focus, subject clarity.\n- Presentation or product demo: clear problem, live walkthrough, closing call to action.",
+        "customCriteriaVideoHint": "Visual criteria (editing, framing, composition) need a video-capable model such as Google Gemini set for the speech coach under Settings > AI. Otherwise only the spoken audio is graded, and visual points are reported as not assessed.",
+        "customCriteriaAudioHint": "Audio exercises are graded from the speech transcript only.",
+        "customExtraInstructionsLabel": "Extra AI instructions (optional)",
+        "customExtraInstructionsPlaceholder": "E.g. You are a strict film-school professor. Be direct.",
+        "customExtraInstructionsHint": "Persona or extra context for the AI. Students never see it."
       },
       "submissionReview": {
         "status": {

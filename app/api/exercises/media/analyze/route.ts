@@ -17,6 +17,21 @@ const PIPELINE_BUDGET_MS = 100_000
 
 const STORAGE_BUCKET = 'exercise-media'
 
+const VIDEO_MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  mov: 'video/quicktime',
+  ogv: 'video/ogg',
+  ogg: 'video/ogg',
+  avi: 'video/x-msvideo',
+}
+
+/** MIME of a stored video from its storage path; undefined for audio or anything unknown. */
+function videoMimeFromPath(path: string | null | undefined, mediaType: string | null | undefined): string | undefined {
+  if (mediaType !== 'video' || !path) return undefined
+  return VIDEO_MIME_BY_EXT[path.split('?')[0].split('.').pop()?.toLowerCase() ?? '']
+}
+
 /** The `exercises(...)` join on the submission row. */
 type JoinedExercise = {
   id: number
@@ -24,6 +39,8 @@ type JoinedExercise = {
   instructions: string | null
   course_id: number
   tenant_id: string
+  /** Restored from `exercise_grading_secrets` by `withGradingSecrets`. */
+  system_prompt?: string | null
   exercise_config: {
     passing_score?: number
     topic_prompt?: string
@@ -154,6 +171,7 @@ export async function POST(req: Request) {
         title: exercise.title ?? 'Exercise',
         instructions: exercise.instructions ?? '',
         topic_prompt: config.topic_prompt,
+        system_prompt: exercise.system_prompt?.trim() || undefined,
         rubric: config.rubric,
         speechRubric: parseSpeechRubricConfig(config),
         exerciseId: submission.exercise_id,
@@ -171,6 +189,7 @@ export async function POST(req: Request) {
         runSpeechPipeline(urlData.signedUrl, exerciseContext, providers, {
           supabase: adminClient,
           abortSignal: controller.signal,
+          mediaType: videoMimeFromPath(submission.media_url, submission.media_type),
         }),
         new Promise<never>((_, reject) => {
           deadline = setTimeout(() => {

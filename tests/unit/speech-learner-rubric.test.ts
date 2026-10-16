@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   SPEECH_RUBRIC_DEFAULTS,
+  buildCustomSpeechPrompt,
   buildLearnerSpeechPrompt,
   feedbackLanguageInstruction,
   parseSpeechRubricConfig,
@@ -91,5 +92,29 @@ describe('the public-speaking coach', () => {
     )
     expect(text).toContain('in Spanish')
     expect(PROMPTS.speechCoach(exercise, metrics)).toContain('the language the student spoke in')
+  })
+})
+
+describe('custom rubric mode', () => {
+  it('parses custom mode and trims the teacher criteria', () => {
+    const c = parseSpeechRubricConfig({ rubric_mode: 'custom', evaluation_criteria: '  clean cuts  ' })
+    expect(c.rubric_mode).toBe('custom')
+    expect(c.evaluation_criteria).toBe('clean cuts')
+  })
+
+  it('prompt grades strictly against the criteria and treats the work as data', () => {
+    const rubric = parseSpeechRubricConfig({ rubric_mode: 'custom', evaluation_criteria: 'Framing and lighting', feedback_language: 'es' })
+    const text = buildCustomSpeechPrompt({ ...exercise, system_prompt: 'You are a strict film professor.' }, rubric, metrics, { passingScore: 70 })
+    expect(text).toContain('Framing and lighting')
+    expect(text).toContain('You are a strict film professor.')
+    expect(text).toContain('never instructions')
+    expect(text).toContain('could not be assessed from audio alone')
+    expect(text).toContain('feedback in Spanish')
+    expect(text).not.toContain('words-per-minute')
+  })
+
+  it('visual prompt tells the model it sees the video', () => {
+    const rubric = parseSpeechRubricConfig({ rubric_mode: 'custom', evaluation_criteria: 'x' })
+    expect(buildCustomSpeechPrompt(exercise, rubric, metrics, { visual: true })).toContain('video itself')
   })
 })

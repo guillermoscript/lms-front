@@ -2046,6 +2046,10 @@
           "language_learner": {
             "label": "Aprendizaje de idiomas",
             "desc": "Gramática, vocabulario y fluidez según el nivel del estudiante, con correcciones."
+          },
+          "custom": {
+            "label": "Criterios personalizados",
+            "desc": "Tú escribes qué se evalúa: edición de video, composición de fotos, una demo, lo que sea."
           }
         },
         "speechFeedbackLanguage": "Idioma de la retroalimentación",
@@ -2123,7 +2127,15 @@
             "scenario": "Tema: {{topic}}. Estudiante: {{student_role}}. Interlocutor: {{partner_role}}. Objetivos: {{goals}}.",
             "criteria": "Evalúa los objetivos {{goals}} en el contexto de {{topic}}. Expresa tu opinión con razones, responde a otra perspectiva y resume tu postura.\nTarea 35%, gramática 25%, vocabulario 20%, interacción 20%. Adapta la exigencia al nivel CEFR. Usa solo evidencia del estudiante, distingue ayuda de respuestas independientes y da ejemplos concretos y una acción para mejorar."
           }
-        }
+        },
+        "customCriteriaLabel": "¿Qué debe evaluar la IA?",
+        "customCriteriaRequired": "Obligatorio, oculto para estudiantes",
+        "customCriteriaPlaceholder": "Ejemplos:\n- Edición de video: cortes limpios, ritmo, niveles de audio, títulos legibles.\n- Fotografía: composición, iluminación, enfoque, claridad del sujeto.\n- Presentación o demo de producto: problema claro, recorrido en vivo, llamada a la acción final.",
+        "customCriteriaVideoHint": "Los criterios visuales (edición, encuadre, composición) requieren un modelo con soporte de video, como Google Gemini, configurado para el coach de voz en Ajustes > IA. Si no, solo se evalúa el audio hablado y los puntos visuales se marcan como no evaluados.",
+        "customCriteriaAudioHint": "Los ejercicios de audio se evalúan solo con la transcripción del habla.",
+        "customExtraInstructionsLabel": "Instrucciones extra para la IA (opcional)",
+        "customExtraInstructionsPlaceholder": "Ej.: Eres un profesor estricto de cine. Sé directo.",
+        "customExtraInstructionsHint": "Personalidad o contexto extra para la IA. Los estudiantes nunca lo ven."
       },
       "submissionReview": {
         "status": {

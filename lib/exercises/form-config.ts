@@ -18,6 +18,15 @@ export function buildConversationConfig(data: ExerciseFormData) {
 }
 
 export function buildAudioConfig(data: ExerciseFormData) {
+  const { evaluation_criteria, ...rest } = parseSpeechRubricConfig({
+    rubric_mode: data.speech_rubric_mode,
+    target_language: data.speech_target_language,
+    level: data.speech_level,
+    feedback_language: data.speech_feedback_language,
+    evaluation_criteria: data.speech_rubric_mode === 'custom' ? data.speech_evaluation_criteria : '',
+  })
+  // Only custom mode carries criteria; a stale value must not outlive a mode switch.
+  const speechRubric = evaluation_criteria ? { ...rest, evaluation_criteria } : rest
   return {
     // STT and the coach model are the school's, set under Settings > AI (speech_stt / speech_coach).
     topic_prompt: data.topic_prompt,
@@ -32,12 +41,7 @@ export function buildAudioConfig(data: ExerciseFormData) {
       confidence: data.rubric_confidence,
     },
     // Normalised through the same parser the analyze route reads it with.
-    ...parseSpeechRubricConfig({
-      rubric_mode: data.speech_rubric_mode,
-      target_language: data.speech_target_language,
-      level: data.speech_level,
-      feedback_language: data.speech_feedback_language,
-    }),
+    ...speechRubric,
   }
 }
 

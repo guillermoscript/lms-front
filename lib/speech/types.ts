@@ -51,6 +51,8 @@ export interface SpeechEvaluation {
   corrections?: import('./learner-rubric').SpeechCorrection[]
   annotated_transcript: AnnotatedSegment[]
   metrics: SpeechMetrics
+  /** Custom rubric only: did the model see the video, or grade the transcript alone? */
+  analysis?: 'video' | 'transcript_only'
 }
 
 export interface STTConfig {
@@ -72,6 +74,8 @@ export interface ExerciseContext {
   }
   /** How to grade and in what language to answer. Absent = public speaking. */
   speechRubric?: import('./learner-rubric').SpeechRubricConfig
+  /** The exercise's hidden `system_prompt` (teacher persona / extra instructions). */
+  system_prompt?: string
   exerciseId?: number
   userId?: string
   passingScore?: number
@@ -83,7 +87,15 @@ export interface STTProvider {
   transcribe(audio: Buffer | Uint8Array | URL, config?: STTConfig): Promise<TranscriptionResult>
 }
 
+/** The recording itself, for coaches that can look at it (custom rubric on video). */
+export interface SpeechMedia {
+  data: Uint8Array
+  mediaType: string
+}
+
 export interface SpeechCoachOptions {
+  /** Offered only when the pipeline decided the recording may be sent to the model. */
+  media?: SpeechMedia
   /** Aborts the provider calls (route deadline), so a timed-out run stops spending the school's key. */
   abortSignal?: AbortSignal
   supabase?: import('@supabase/supabase-js').SupabaseClient
