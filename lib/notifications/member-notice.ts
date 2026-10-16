@@ -9,6 +9,9 @@ export type MemberNoticeKind =
   | 'banLifted'
   | 'deactivated'
   | 'reactivated'
+  | 'courseApproved'
+  | 'courseArchived'
+  | 'courseRestored'
 
 const NOTICE_TYPE: Record<MemberNoticeKind, 'info' | 'success' | 'warning'> = {
   roleChanged: 'info',
@@ -17,6 +20,9 @@ const NOTICE_TYPE: Record<MemberNoticeKind, 'info' | 'success' | 'warning'> = {
   banLifted: 'success',
   deactivated: 'warning',
   reactivated: 'success',
+  courseApproved: 'success',
+  courseArchived: 'warning',
+  courseRestored: 'success',
 }
 
 /**
@@ -36,19 +42,26 @@ export async function notifyMember(params: {
   actorId?: string | null
   kind: MemberNoticeKind
   reason?: string | null
+  /** Course title for the course* kinds. */
+  courseTitle?: string | null
   link?: string
 }): Promise<boolean> {
-  const { admin, tenantId, userId, actorId, kind, reason, link } = params
+  const { admin, tenantId, userId, actorId, kind, reason, courseTitle, link } = params
   try {
     const locale = await resolveTenantLocale(admin, tenantId)
     const t = await getTranslations({ locale, namespace: 'memberNotices' })
-    const key = kind === 'deactivated' && reason ? 'deactivatedWithReason' : kind
+    const key =
+      kind === 'deactivated' && reason
+        ? 'deactivatedWithReason'
+        : kind === 'courseArchived' && reason
+          ? 'courseArchivedWithReason'
+          : kind
 
     const { data: notification, error } = await admin
       .from('notifications')
       .insert({
         title: t(`${key}.title`),
-        content: t(`${key}.content`, { reason: reason ?? '' }),
+        content: t(`${key}.content`, { reason: reason ?? '', course: courseTitle ?? '' }),
         notification_type: NOTICE_TYPE[kind],
         priority: 'normal',
         target_type: 'user',

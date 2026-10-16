@@ -2,10 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyAdminAccess, createAdminClient, type ActionResult } from '@/lib/supabase/admin'
-import { getCurrentTenantId } from '@/lib/supabase/tenant'
+import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { checkCourseLimit } from '@/app/actions/teacher/courses'
+import { notifyMember } from '@/lib/notifications/member-notice'
 import { courseLimitMessage, isPlanLimitError } from '@/lib/billing/plan-limit-error'
 
 /**
@@ -53,10 +54,13 @@ export async function approveCourse(courseId: number): Promise<ActionResult> {
 
     // Notify teacher
     if (course) {
-      await adminClient.from('notifications').insert({
-        user_id: course.author_id,
-        notification_type: 'course_update',
-        message: `Your course "${course.title}" has been approved and published!`,
+      await notifyMember({
+        admin: adminClient,
+        tenantId,
+        userId: course.author_id,
+        actorId: await getCurrentUserId(),
+        kind: 'courseApproved',
+        courseTitle: course.title,
         link: `/dashboard/teacher/courses/${courseId}`
       })
     }
@@ -123,14 +127,14 @@ export async function archiveCourse(
 
     // Notify teacher
     if (course) {
-      const message = reason
-        ? `Your course "${course.title}" has been archived. Reason: ${reason}`
-        : `Your course "${course.title}" has been archived.`
-
-      await adminClient.from('notifications').insert({
-        user_id: course.author_id,
-        notification_type: 'course_update',
-        message,
+      await notifyMember({
+        admin: adminClient,
+        tenantId,
+        userId: course.author_id,
+        actorId: await getCurrentUserId(),
+        kind: 'courseArchived',
+        courseTitle: course.title,
+        reason,
         link: `/dashboard/teacher/courses/${courseId}`
       })
     }
@@ -213,10 +217,13 @@ export async function restoreCourse(courseId: number): Promise<ActionResult> {
 
     // Notify teacher
     if (course) {
-      await adminClient.from('notifications').insert({
-        user_id: course.author_id,
-        notification_type: 'course_update',
-        message: `Your course "${course.title}" has been restored and is now published.`,
+      await notifyMember({
+        admin: adminClient,
+        tenantId,
+        userId: course.author_id,
+        actorId: await getCurrentUserId(),
+        kind: 'courseRestored',
+        courseTitle: course.title,
         link: `/dashboard/teacher/courses/${courseId}`
       })
     }

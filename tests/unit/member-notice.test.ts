@@ -13,7 +13,7 @@ vi.mock('next-intl/server', () => ({
     const ns = (l === 'es' ? es : en) as unknown as Record<string, Record<string, Record<string, string>>>
     return (key: string, values?: Record<string, string>) => {
       const [k, field] = key.split('.')
-      return ns[namespace][k][field].replace('{reason}', values?.reason ?? '')
+      return ns[namespace][k][field].replace('{reason}', values?.reason ?? '').replace('{course}', values?.course ?? '')
     }
   },
 }))
@@ -91,5 +91,22 @@ describe('notifyMember (#961)', () => {
     await expect(
       notifyMember({ admin: makeAdmin(), tenantId: 't1', userId: 'u1', kind: 'reactivated' })
     ).resolves.toBe(false)
+  })
+
+  it('course kinds interpolate the course title and pick the reason variant (en/es)', async () => {
+    await notifyMember({ admin: makeAdmin(), tenantId: 't1', userId: 'u1', kind: 'courseArchived', courseTitle: 'Algebra', reason: 'outdated' })
+    expect(inserts[0].row.content).toBe('Your course "Algebra" has been archived. Reason: outdated')
+    expect(inserts[0].row.notification_type).toBe('warning')
+    inserts.length = 0
+    locale = 'es'
+    await notifyMember({ admin: makeAdmin(), tenantId: 't1', userId: 'u1', kind: 'courseApproved', courseTitle: 'Algebra', link: '/dashboard/teacher/courses/7' })
+    expect(inserts[0].row.content).toBe('Tu curso "Algebra" fue aprobado y publicado.')
+    expect(inserts[0].row.notification_type).toBe('success')
+    expect(inserts[0].row.metadata).toEqual({ link: '/dashboard/teacher/courses/7', kind: 'courseApproved' })
+  })
+
+  it('archive without a reason uses the plain text', async () => {
+    await notifyMember({ admin: makeAdmin(), tenantId: 't1', userId: 'u1', kind: 'courseArchived', courseTitle: 'Algebra' })
+    expect(inserts[0].row.content).toBe('Your course "Algebra" has been archived.')
   })
 })

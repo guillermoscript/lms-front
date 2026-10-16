@@ -9790,6 +9790,22 @@
     "reactivated": {
       "title": "Account reactivated",
       "content": "Your account has been reactivated. You can now access the platform."
+    },
+    "courseApproved": {
+      "title": "Course published",
+      "content": "Your course \"{course}\" has been approved and published."
+    },
+    "courseArchived": {
+      "title": "Course archived",
+      "content": "Your course \"{course}\" has been archived."
+    },
+    "courseArchivedWithReason": {
+      "title": "Course archived",
+      "content": "Your course \"{course}\" has been archived. Reason: {reason}"
+    },
+    "courseRestored": {
+      "title": "Course restored",
+      "content": "Your course \"{course}\" has been restored and is now published."
     }
   }
 }
