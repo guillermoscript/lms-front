@@ -9761,5 +9761,35 @@
       "back": "Back to earnings",
       "notFound": "Statement not found"
     }
+  },
+  "memberNotices": {
+    "roleChanged": {
+      "title": "Your role changed",
+      "content": "Your account roles have been updated by an administrator."
+    },
+    "removed": {
+      "title": "Removed from the school",
+      "content": "Your membership of this school has been removed by an administrator."
+    },
+    "banned": {
+      "title": "Removed from the school",
+      "content": "You have been removed from this school and can no longer rejoin it."
+    },
+    "banLifted": {
+      "title": "Ban lifted",
+      "content": "The ban on your membership of this school was lifted. You can rejoin it."
+    },
+    "deactivated": {
+      "title": "Account deactivated",
+      "content": "Your account has been deactivated by an administrator."
+    },
+    "deactivatedWithReason": {
+      "title": "Account deactivated",
+      "content": "Your account has been deactivated: {reason}"
+    },
+    "reactivated": {
+      "title": "Account reactivated",
+      "content": "Your account has been reactivated. You can now access the platform."
+    }
   }
 }

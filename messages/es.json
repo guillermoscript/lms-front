@@ -9761,5 +9761,35 @@
       "back": "Volver a ingresos",
       "notFound": "Estado de cuenta no encontrado"
     }
+  },
+  "memberNotices": {
+    "roleChanged": {
+      "title": "Tu rol cambió",
+      "content": "Un administrador actualizó los roles de tu cuenta."
+    },
+    "removed": {
+      "title": "Te quitaron de la escuela",
+      "content": "Un administrador quitó tu membresía de esta escuela."
+    },
+    "banned": {
+      "title": "Te quitaron de la escuela",
+      "content": "Te quitaron de esta escuela y ya no puedes volver a unirte."
+    },
+    "banLifted": {
+      "title": "Bloqueo levantado",
+      "content": "Se levantó el bloqueo de tu membresía en esta escuela. Puedes volver a unirte."
+    },
+    "deactivated": {
+      "title": "Cuenta desactivada",
+      "content": "Un administrador desactivó tu cuenta."
+    },
+    "deactivatedWithReason": {
+      "title": "Cuenta desactivada",
+      "content": "Tu cuenta fue desactivada: {reason}"
+    },
+    "reactivated": {
+      "title": "Cuenta reactivada",
+      "content": "Tu cuenta fue reactivada. Ya puedes acceder a la plataforma."
+    }
   }
 }
