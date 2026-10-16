@@ -71,10 +71,6 @@
     0,
     8
   ],
-  "components/forgot-password-form.tsx": [
-    1,
-    0
-  ],
   "components/gamification/achievement-grid.tsx": [
     12,
     2
@@ -190,10 +186,6 @@
   "components/ui/slider.tsx": [
     0,
     1
-  ],
-  "components/update-password-form.tsx": [
-    1,
-    0
   ],
   "lib/color/contrast.ts": [
     0,
