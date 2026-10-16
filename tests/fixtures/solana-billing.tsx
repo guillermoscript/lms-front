@@ -13,7 +13,7 @@ const state = new URLSearchParams(location.search).get('state') ?? 'pending'
 const ended = state === 'ended'
 const canceled = state === 'canceled' || ended
 const pending = state === 'pending'
-const router = {back(){},forward(){},refresh(){document.documentElement.dataset.refreshed='true'},push(){},replace(){},prefetch:async()=>{}}
+const router = {back(){},forward(){},refresh(){document.documentElement.dataset.refreshed='true'},push(){},replace(){},prefetch:async()=>{},bfcacheId:'qa-fixture'}
 createRoot(document.getElementById('root')!).render(
   <AppRouterContext.Provider value={router}>
     <NextIntlClientProvider locale="en" messages={messages} timeZone="UTC">
