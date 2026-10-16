@@ -21,21 +21,25 @@ export function useBuiltInTemplates(
   opts: { scenario?: boolean } = {},
 ): PromptTemplate[] {
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
+  // `t.raw`: the bodies carry literal `{{variable}}` placeholders that the template
+  // selector substitutes itself; ICU formatting would treat them as a syntax error.
+  const raw = (key: string) => String(t.raw(key))
   const kindsKey = kinds.join(',')
   const variablesKey = variables.join(',')
   return useMemo(
     () =>
       kindsKey.split(',').map((kind, index) => ({
         id: idOffset - index,
-        name: t(`${namespaceKey}.${kind}.name`),
-        description: t(`${namespaceKey}.${kind}.description`),
+        name: raw(`${namespaceKey}.${kind}.name`),
+        description: raw(`${namespaceKey}.${kind}.description`),
         category: 'exercise',
-        task_description_template: t(`${namespaceKey}.${kind}.instructions`),
-        system_prompt_template: t(`${namespaceKey}.${kind}.criteria`),
-        ...(opts.scenario ? { scenario_template: t(`${namespaceKey}.${kind}.scenario`) } : {}),
+        task_description_template: raw(`${namespaceKey}.${kind}.instructions`),
+        system_prompt_template: raw(`${namespaceKey}.${kind}.criteria`),
+        ...(opts.scenario ? { scenario_template: raw(`${namespaceKey}.${kind}.scenario`) } : {}),
         variables: { variables: variablesKey.split(',') },
         is_system: true,
       })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `raw` only wraps `t`
     [t, namespaceKey, kindsKey, variablesKey, idOffset, opts.scenario],
   )
 }
