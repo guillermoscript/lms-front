@@ -1,7 +1,7 @@
 import { generateText, Output, type LanguageModel } from 'ai'
 import { z } from 'zod'
 import { PROMPTS } from '@/lib/ai/prompts'
-import { SpeechCorrectionSchema, buildLearnerSpeechPrompt, feedbackLanguageInstruction, unclearWords } from '../learner-rubric'
+import { SpeechCorrectionSchema, buildCustomSpeechPrompt, buildLearnerSpeechPrompt, feedbackLanguageInstruction, unclearWords } from '../learner-rubric'
 import type { SpeechCoach, TranscriptionResult, ExerciseContext, SpeechEvaluation, SpeechMetrics, AnnotatedSegment, SpeechCoachOptions } from '../types'
 
 const SpeechEvaluationSchema = z.object({
@@ -13,6 +13,17 @@ const SpeechEvaluationSchema = z.object({
 const LearnerEvaluationSchema = SpeechEvaluationSchema.extend({
   corrections: z.array(SpeechCorrectionSchema).max(5).describe('The most useful language corrections'),
 })
+
+/** Providers whose chat models accept a `video/*` file part inline. */
+const VIDEO_INPUT_PROVIDERS = new Set(['google'])
+
+/** The provider rejected the media itself (unsupported type/size), not the key or quota. */
+function isMediaRejection(err: unknown): boolean {
+  const e = err as { name?: string; statusCode?: number } | null
+  if (!e) return false
+  if (e.name === 'AI_UnsupportedFunctionalityError') return true
+  return typeof e.statusCode === 'number' && [400, 413, 415, 422].includes(e.statusCode)
+}
 
 /**
  * Speech coach on whichever language model the school mapped to `speech_coach`
@@ -40,19 +51,54 @@ export class ModelCoachProvider implements SpeechCoach {
 
     const rubric = context.speechRubric
     const learner = rubric?.rubric_mode === 'language_learner'
-    // Grading only: completion is recorded by the analyze route from the score.
-    const { output } = await generateText({
-      model: this.model,
-      output: Output.object({ schema: learner ? LearnerEvaluationSchema : SpeechEvaluationSchema }),
-      system: learner
-        ? buildLearnerSpeechPrompt(context, rubric, metrics, unclearWords(transcription.words))
-        : PROMPTS.speechCoach(
-            { ...context, feedbackLanguageInstruction: feedbackLanguageInstruction(rubric?.feedback_language ?? '') },
-            metrics
-          ),
-      abortSignal: options?.abortSignal,
-      prompt: `Student transcript:\n\n"${transcription.transcript}"`,
-    })
+    const custom = rubric?.rubric_mode === 'custom'
+    const media = custom && options?.media && VIDEO_INPUT_PROVIDERS.has(this.name) ? options.media : undefined
+    const transcriptPrompt = `Student transcript:\n\n${JSON.stringify(transcription.transcript)}`
+
+    const run = (withVideo: boolean) =>
+      // Grading only: completion is recorded by the analyze route from the score.
+      generateText({
+        model: this.model,
+        output: Output.object({ schema: learner ? LearnerEvaluationSchema : SpeechEvaluationSchema }),
+        system: custom
+          ? buildCustomSpeechPrompt(context, rubric, metrics, { passingScore: context.passingScore, visual: withVideo })
+          : learner
+            ? buildLearnerSpeechPrompt(context, rubric, metrics, unclearWords(transcription.words))
+            : PROMPTS.speechCoach(
+                { ...context, feedbackLanguageInstruction: feedbackLanguageInstruction(rubric?.feedback_language ?? '') },
+                metrics
+              ),
+        abortSignal: options?.abortSignal,
+        ...(withVideo && media
+          ? {
+              messages: [
+                {
+                  role: 'user' as const,
+                  content: [
+                    { type: 'text' as const, text: transcriptPrompt },
+                    { type: 'file' as const, data: media.data, mediaType: media.mediaType },
+                  ],
+                },
+              ],
+            }
+          : { prompt: transcriptPrompt }),
+      })
+
+    let analysis: 'video' | 'transcript_only' = 'transcript_only'
+    let result
+    if (media) {
+      try {
+        result = await run(true)
+        analysis = 'video'
+      } catch (err) {
+        // A deadline abort or a key/quota failure is the caller's to handle; only a media rejection degrades.
+        if (options?.abortSignal?.aborted || !isMediaRejection(err)) throw err
+        result = await run(false)
+      }
+    } else {
+      result = await run(false)
+    }
+    const { output } = result
 
     if (!output) throw new Error('AI coach did not return structured output')
 
@@ -66,6 +112,7 @@ export class ModelCoachProvider implements SpeechCoach {
       ...(learner ? { corrections: (output as z.infer<typeof LearnerEvaluationSchema>).corrections } : {}),
       annotated_transcript,
       metrics,
+      ...(custom ? { analysis } : {}),
     }
   }
 

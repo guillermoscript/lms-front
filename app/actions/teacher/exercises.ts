@@ -31,6 +31,7 @@ export interface ExerciseFormData {
   speech_target_language: string
   speech_level: string
   speech_feedback_language: string
+  speech_evaluation_criteria?: string
   // Live conversation config fields
   conv_scenario: string
   conv_evaluation_criteria: string

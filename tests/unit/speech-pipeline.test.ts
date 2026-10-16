@@ -119,7 +119,7 @@ describe('runSpeechPipeline + ModelCoachProvider', () => {
       {
         title: 't',
         instructions: 'i',
-        speechRubric: { rubric_mode: 'language_learner', target_language: 'en', level: 'A2', feedback_language: 'es' },
+        speechRubric: { rubric_mode: 'language_learner', target_language: 'en', level: 'A2', feedback_language: 'es', evaluation_criteria: '' },
       },
       { stt: new TenantSttProvider({ providerId: 'openai', transcribe }), coach: new ModelCoachProvider(model, 'openai') },
     )
@@ -136,5 +136,62 @@ describe('buildAudioConfig', () => {
     const config = buildAudioConfig({ passing_score: 70 } as never)
     expect(config).not.toHaveProperty('stt_provider')
     expect(config).not.toHaveProperty('ai_coach')
+  })
+})
+
+describe('custom rubric on video', () => {
+  const transcribe = vi.fn().mockResolvedValue({ text: 'hi', words: [w('hi', 0, 300)], durationSeconds: 1 })
+  const context = {
+    title: 't',
+    instructions: 'i',
+    speechRubric: { rubric_mode: 'custom' as const, target_language: 'en', level: 'A2' as const, feedback_language: '', evaluation_criteria: 'Editing quality' },
+  }
+  const out = { score: 80, strengths: ['a'], improvements: ['b'], focus_next: 'c' }
+  const stt = () => new TenantSttProvider({ providerId: 'openai', transcribe })
+  beforeEach(() => sdk.generateText.mockReset())
+
+  it('sends the video as a file part to a video-capable provider', async () => {
+    sdk.generateText.mockResolvedValue({ output: out })
+    const ev = await runSpeechPipeline(Buffer.from('vid'), context, { stt: stt(), coach: new ModelCoachProvider({} as never, 'google') }, { mediaType: 'video/mp4' })
+    const call = sdk.generateText.mock.calls[0][0]
+    expect(call.messages[0].content[1]).toMatchObject({ type: 'file', mediaType: 'video/mp4' })
+    expect(call.system).toContain('Editing quality')
+    expect(ev.analysis).toBe('video')
+  })
+
+  it('stays transcript-only on a provider without video input', async () => {
+    sdk.generateText.mockResolvedValue({ output: out })
+    const ev = await runSpeechPipeline(Buffer.from('vid'), context, { stt: stt(), coach: new ModelCoachProvider({} as never, 'openai') }, { mediaType: 'video/mp4' })
+    expect(sdk.generateText.mock.calls[0][0].messages).toBeUndefined()
+    expect(ev.analysis).toBe('transcript_only')
+  })
+
+  it('falls back to transcript-only when the provider rejects the media', async () => {
+    sdk.generateText.mockRejectedValueOnce(Object.assign(new Error('bad media'), { statusCode: 400 })).mockResolvedValueOnce({ output: out })
+    const ev = await runSpeechPipeline(Buffer.from('vid'), context, { stt: stt(), coach: new ModelCoachProvider({} as never, 'google') }, { mediaType: 'video/mp4' })
+    expect(sdk.generateText).toHaveBeenCalledTimes(2)
+    expect(ev.analysis).toBe('transcript_only')
+  })
+
+  it('does not swallow a key/quota failure', async () => {
+    sdk.generateText.mockRejectedValueOnce(Object.assign(new Error('quota'), { statusCode: 429 }))
+    let caught: unknown
+    try {
+      await runSpeechPipeline(Buffer.from('vid'), context, { stt: stt(), coach: new ModelCoachProvider({} as never, 'google') }, { mediaType: 'video/mp4' })
+    } catch (e) {
+      caught = e
+    }
+    expect((caught as Error).message).toBe('quota')
+    expect(sdk.generateText).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('buildAudioConfig custom mode', () => {
+  it('keeps criteria only in custom mode', () => {
+    const custom = buildAudioConfig({ speech_rubric_mode: 'custom', speech_evaluation_criteria: 'Lighting' } as never)
+    expect(custom.rubric_mode).toBe('custom')
+    expect((custom as Record<string, unknown>).evaluation_criteria).toBe('Lighting')
+    const other = buildAudioConfig({ speech_rubric_mode: 'public_speaking', speech_evaluation_criteria: 'Lighting' } as never)
+    expect(other).not.toHaveProperty('evaluation_criteria')
   })
 })

@@ -21,16 +21,30 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CONVERSATION_LANGUAGES, CONVERSATION_LEVELS } from '@/lib/speech/conversation'
-import { SPEECH_RUBRIC_MODES } from '@/lib/speech/learner-rubric'
+import { MAX_CUSTOM_CRITERIA_CHARS, SPEECH_RUBRIC_MODES } from '@/lib/speech/learner-rubric'
 import { cn } from '@/lib/utils'
+import { ImprovedTemplateSelector, type PromptTemplate } from '../improved-template-selector'
 
 /** base-ui Select has no empty value; this stands for "the language the student spoke". */
 const SAME_AS_SPOKEN = 'auto'
+const MEDIA_TEMPLATE_KINDS = ['videoEditing', 'photography', 'presentation', 'productDemo', 'tutorial'] as const
 
 export function ExerciseAudioConfigStep() {
-  const { formData, updateField } = useExerciseBuilder()
+  const { formData, updateField, setFormData } = useExerciseBuilder()
   const t = useTranslations('dashboard.teacher.exerciseBuilder')
+  const templates: PromptTemplate[] = MEDIA_TEMPLATE_KINDS.map((kind, index) => ({
+    id: -200 - index,
+    name: t(`mediaTemplates.${kind}.name`),
+    description: t(`mediaTemplates.${kind}.description`),
+    category: 'exercise',
+    task_description_template: t(`mediaTemplates.${kind}.instructions`),
+    system_prompt_template: t(`mediaTemplates.${kind}.criteria`),
+    variables: { variables: ['topic'] },
+    is_system: true,
+  }))
   const learner = formData.speech_rubric_mode === 'language_learner'
+  const custom = formData.speech_rubric_mode === 'custom'
+  const isVideo = formData.exercise_type === 'video_evaluation'
 
   return (
     <div className="animate-in fade-in slide-in-from-left-2 duration-300  space-y-6">
@@ -44,6 +58,17 @@ export function ExerciseAudioConfigStep() {
           <p className="text-sm text-muted-foreground">{t('audioSetupDesc')}</p>
         </div>
       </div>
+
+      <ImprovedTemplateSelector
+        category="exercise"
+        additionalTemplates={templates}
+        onApply={(data) => setFormData((previous) => ({
+          ...previous,
+          topic_prompt: data.instructions,
+          speech_rubric_mode: 'custom',
+          speech_evaluation_criteria: data.system_prompt,
+        }))}
+      />
 
       {/* Topic Prompt */}
       <div>
@@ -150,7 +175,7 @@ export function ExerciseAudioConfigStep() {
       {/* What is graded */}
       <div>
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{t('speechRubricMode')}</h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {SPEECH_RUBRIC_MODES.map((mode) => {
             const selected = formData.speech_rubric_mode === mode
             return (
@@ -172,6 +197,43 @@ export function ExerciseAudioConfigStep() {
             )
           })}
         </div>
+
+        {custom && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="speech_evaluation_criteria" className="mb-2 flex items-center gap-2 text-sm font-medium">
+                {t('customCriteriaLabel')}
+                <Badge variant="outline" className="text-[10px]">{t('customCriteriaRequired')}</Badge>
+              </Label>
+              <Textarea
+                id="speech_evaluation_criteria"
+                value={formData.speech_evaluation_criteria}
+                onChange={(e) => updateField('speech_evaluation_criteria', e.target.value)}
+                placeholder={t('customCriteriaPlaceholder')}
+                rows={6}
+                maxLength={MAX_CUSTOM_CRITERIA_CHARS}
+                className="border-muted bg-muted/30 transition-colors focus:bg-background"
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {isVideo ? t('customCriteriaVideoHint') : t('customCriteriaAudioHint')}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="speech_extra_instructions" className="mb-2 block text-sm font-medium">
+                {t('customExtraInstructionsLabel')}
+              </Label>
+              <Textarea
+                id="speech_extra_instructions"
+                value={formData.system_prompt}
+                onChange={(e) => updateField('system_prompt', e.target.value)}
+                placeholder={t('customExtraInstructionsPlaceholder')}
+                rows={3}
+                className="border-muted bg-muted/30 transition-colors focus:bg-background"
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">{t('customExtraInstructionsHint')}</p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {learner && (
@@ -244,10 +306,10 @@ export function ExerciseAudioConfigStep() {
         <p className="mt-1.5 text-xs text-muted-foreground">{t('speechFeedbackLanguageHint')}</p>
       </div>
 
-      {!learner && <Separator className="my-2" />}
+      {!learner && !custom && <Separator className="my-2" />}
 
       {/* Rubric — the public-speaking criteria; the learner rubric is fixed. */}
-      {!learner && (
+      {!learner && !custom && (
       <div>
         <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{t('evaluationRubric')}</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -111,12 +111,13 @@ export async function POST(req: Request) {
       const context: ExerciseContext = {
         title: draft.title, instructions: draft.instructions,
         topic_prompt: typeof config.topic_prompt === 'string' ? config.topic_prompt : '',
+        system_prompt: typeof draft.system_prompt === 'string' ? draft.system_prompt.trim() || undefined : undefined,
         rubric: config.rubric as ExerciseContext['rubric'], speechRubric: parseSpeechRubricConfig(config), passingScore,
       }
       // The STT provider uploads these bytes exactly as it uploads stored media.
       // No permanent LMS media, attempts, or progress records are created.
       const source = `data:${mediaMime};base64,${Buffer.from(await media.arrayBuffer()).toString('base64')}`
-      const evaluation = await runSpeechPipeline(source, context, providers!)
+      const evaluation = await runSpeechPipeline(source, context, providers!, { mediaType: mediaMime })
       return Response.json({ ...evaluation, feedback: evaluation.focus_next, passed: evaluation.score >= passingScore, passingScore, preview: true, evaluator: 'ai' })
     }
     const result = draft.exercise_type === 'artifact'

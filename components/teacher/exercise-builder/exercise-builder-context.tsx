@@ -60,6 +60,8 @@ export interface ExerciseFormData {
   speech_target_language: string
   speech_level: string
   speech_feedback_language: string
+  /** Custom rubric mode: what the teacher wants graded (free text). */
+  speech_evaluation_criteria: string
   // live conversation config
   conv_scenario: string
   conv_evaluation_criteria: string
@@ -151,7 +153,11 @@ export function ExerciseBuilderProvider({
     rubric_confidence: initialData?.exercise_config?.rubric?.confidence !== false,
     // Shares `target_language`/`level` keys with the conversation config on
     // purpose: an exercise is one type or the other, never both.
-    speech_rubric_mode: initialData?.exercise_config?.rubric_mode || SPEECH_RUBRIC_DEFAULTS.rubric_mode,
+    // New video exercises start on free-form criteria; stored exercises keep whatever they were saved with.
+    speech_rubric_mode:
+      initialData?.exercise_config?.rubric_mode ||
+      (!initialData?.id && initialData?.exercise_type === 'video_evaluation' ? 'custom' : SPEECH_RUBRIC_DEFAULTS.rubric_mode),
+    speech_evaluation_criteria: (initialData?.exercise_config?.rubric_mode === 'custom' && initialData?.exercise_config?.evaluation_criteria) || '',
     speech_target_language: initialData?.exercise_config?.target_language || SPEECH_RUBRIC_DEFAULTS.target_language,
     speech_level: initialData?.exercise_config?.level || SPEECH_RUBRIC_DEFAULTS.level,
     speech_feedback_language: initialData?.exercise_config?.feedback_language || '',
@@ -169,9 +175,21 @@ export function ExerciseBuilderProvider({
 
   const updateField = useCallback(
     <K extends keyof ExerciseFormData>(key: K, value: ExerciseFormData[K]) => {
-      setFormData((prev) => ({ ...prev, [key]: value }))
+      setFormData((prev) => {
+        const next = { ...prev, [key]: value }
+        // Choosing "video" on a new exercise that never left the audio default starts it on custom criteria.
+        if (
+          key === 'exercise_type' &&
+          value === 'video_evaluation' &&
+          !initialData?.id &&
+          prev.speech_rubric_mode === SPEECH_RUBRIC_DEFAULTS.rubric_mode
+        ) {
+          next.speech_rubric_mode = 'custom'
+        }
+        return next
+      })
     },
-    []
+    [initialData?.id]
   )
 
   useEffect(() => {
@@ -208,6 +226,7 @@ export function ExerciseBuilderProvider({
         speech_target_language: formData.speech_target_language,
         speech_level: formData.speech_level,
         speech_feedback_language: formData.speech_feedback_language,
+        speech_evaluation_criteria: formData.speech_evaluation_criteria,
         conv_scenario: formData.conv_scenario,
         conv_evaluation_criteria: formData.conv_evaluation_criteria,
         conv_target_language: formData.conv_target_language,
@@ -275,7 +294,9 @@ export function ExerciseBuilderProvider({
       key: 'audio-config' as ExerciseStep,
       label: t('audioSetupTitle'),
       icon: <IconMicrophone className="h-4 w-4" />,
-      complete: formData.topic_prompt.trim().length > 0,
+      complete:
+        formData.topic_prompt.trim().length > 0 &&
+        (formData.speech_rubric_mode !== 'custom' || formData.speech_evaluation_criteria.trim().length > 0),
     }] : isConversationType ? [{
       key: 'conversation-config' as ExerciseStep,
       label: t('conversationSetupTitle'),
