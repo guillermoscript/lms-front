@@ -9790,6 +9790,22 @@
     "reactivated": {
       "title": "Cuenta reactivada",
       "content": "Tu cuenta fue reactivada. Ya puedes acceder a la plataforma."
+    },
+    "courseApproved": {
+      "title": "Curso publicado",
+      "content": "Tu curso \"{course}\" fue aprobado y publicado."
+    },
+    "courseArchived": {
+      "title": "Curso archivado",
+      "content": "Tu curso \"{course}\" fue archivado."
+    },
+    "courseArchivedWithReason": {
+      "title": "Curso archivado",
+      "content": "Tu curso \"{course}\" fue archivado. Motivo: {reason}"
+    },
+    "courseRestored": {
+      "title": "Curso restaurado",
+      "content": "Tu curso \"{course}\" fue restaurado y ya está publicado."
     }
   }
 }
