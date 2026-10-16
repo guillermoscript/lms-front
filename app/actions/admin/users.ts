@@ -6,6 +6,7 @@ import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { isSuperAdmin } from '@/lib/supabase/get-user-role'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { normalizeBanReason } from '@/lib/tenant/ban'
+import { notifyMember } from '@/lib/notifications/member-notice'
 
 /**
  * Drop this school's `tenant_id` stamp from a user who just left it (removed
@@ -120,11 +121,13 @@ export async function updateUserRoles(
     }
 
     // Create notification for user
-    await adminClient.from('notifications').insert({
-      user_id: userId,
-      notification_type: 'account_update',
-      message: 'Your account roles have been updated by an administrator.',
-      link: '/dashboard'
+    await notifyMember({
+      admin: adminClient,
+      tenantId,
+      userId,
+      actorId: await getCurrentUserId(),
+      kind: 'roleChanged',
+      link: '/dashboard',
     })
 
     revalidatePath('/dashboard/admin/users')
@@ -216,10 +219,12 @@ export async function removeTenantMember(userId: string): Promise<ActionResult> 
 
     await clearTenantClaim(adminClient, userId, tenantId, 'Remove')
 
-    await adminClient.from('notifications').insert({
-      user_id: userId,
-      notification_type: 'account_update',
-      message: 'Your membership of this school has been removed by an administrator.',
+    await notifyMember({
+      admin: adminClient,
+      tenantId,
+      userId,
+      actorId: await getCurrentUserId(),
+      kind: 'removed',
       link: '/join-school',
     })
 
@@ -288,10 +293,12 @@ export async function banTenantMember(
 
     await clearTenantClaim(adminClient, userId, tenantId, 'Ban')
 
-    await adminClient.from('notifications').insert({
-      user_id: userId,
-      notification_type: 'account_update',
-      message: 'You have been removed from this school and can no longer rejoin it.',
+    await notifyMember({
+      admin: adminClient,
+      tenantId,
+      userId,
+      actorId,
+      kind: 'banned',
       link: '/join-school',
     })
 
@@ -344,10 +351,12 @@ export async function liftTenantBan(userId: string): Promise<ActionResult> {
       })
       if (error) throw error
 
-      await adminClient.from('notifications').insert({
-        user_id: userId,
-        notification_type: 'account_update',
-        message: 'The ban on your membership of this school was lifted. You can rejoin it.',
+      await notifyMember({
+        admin: adminClient,
+        tenantId,
+        userId,
+        actorId: await getCurrentUserId(),
+        kind: 'banLifted',
         link: '/join-school',
       })
     }
@@ -407,13 +416,14 @@ export async function deactivateUser(
     if (updateError) throw updateError
 
     // Create notification for user
-    await adminClient.from('notifications').insert({
-      user_id: userId,
-      notification_type: 'account_update',
-      message: reason
-        ? `Your account has been deactivated: ${reason}`
-        : 'Your account has been deactivated by an administrator.',
-      link: '/dashboard'
+    await notifyMember({
+      admin: adminClient,
+      tenantId,
+      userId,
+      actorId: await getCurrentUserId(),
+      kind: 'deactivated',
+      reason,
+      link: '/dashboard',
     })
 
     revalidatePath('/dashboard/admin/users')
@@ -468,11 +478,13 @@ export async function reactivateUser(userId: string): Promise<ActionResult> {
     if (updateError) throw updateError
 
     // Create notification for user
-    await adminClient.from('notifications').insert({
-      user_id: userId,
-      notification_type: 'account_update',
-      message: 'Your account has been reactivated. You can now access the platform.',
-      link: '/dashboard'
+    await notifyMember({
+      admin: adminClient,
+      tenantId,
+      userId,
+      actorId: await getCurrentUserId(),
+      kind: 'reactivated',
+      link: '/dashboard',
     })
 
     revalidatePath('/dashboard/admin/users')
