@@ -1,7 +1,7 @@
 import { getApiAuthContext } from '@/lib/supabase/api-auth'
 import { AI_CONFIG, DEFAULT_PASSING_SCORE } from '@/lib/ai/config'
 import { createTenantAi } from '@/lib/ai/tenant-ai'
-import { classifyProviderError, handleAiError, markCredentialInvalid } from '@/lib/ai/errors'
+import { classifyProviderError, handleAiError, markCredentialInvalid, streamErrorText } from '@/lib/ai/errors'
 import { buildAristotlePrompt } from '@/lib/ai/aristotle-prompt'
 import { capChatHistory, lastUserMessageText } from '@/lib/ai/chat-helpers'
 import { convertToModelMessages, stepCountIs, streamText } from 'ai'
@@ -353,5 +353,10 @@ export async function POST(req: Request) {
         }),
     )
 
-    return result.toUIMessageStreamResponse()
+    // Mid-stream provider failures reach the client as the typed body, not "An error occurred."
+    const canConfigureNow = await isTenantAdmin(supabase, user.id, tenantId).catch(() => false)
+    return result.toUIMessageStreamResponse({
+        onError: (error) =>
+            streamErrorText(error, { feature: 'aristotle', providerId: resolved.providerId, canConfigure: canConfigureNow }),
+    })
 }
