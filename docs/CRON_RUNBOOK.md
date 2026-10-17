@@ -93,6 +93,7 @@ gh workflow enable cron.yml
 | `solana-reconcile` | `*/10` | Student paid on chain, closed the tab: money taken, no entitlement, and the `pending` row blocks a retry checkout |
 | `binance-personal-reconcile` | `*/10` | Same failure for personal Binance Pay (#482) |
 | `redeliver-webhook-events` | `*/10` | An event whose worker died mid-lease is never processed by anyone — paid, never enrolled (#625) |
+| `deliver-webhooks` | `* * * * *` | Outbound webhooks (n8n etc.) queue up undelivered and retries never fire; see docs/WEBHOOKS.md |
 | `reconcile-solana-platform-activations` | `*/10` | School paid the platform on chain, activation crashed, plan never applied (#622) |
 | `daily-digest` | hourly | No digests, no streak nudges. Must be **hourly** — each tenant sends at its own local hour |
 | `expire-stale-checkouts` | hourly | Two phases, see §2.2. **Student checkouts:** an abandoned PayPal/Lemon Squeezy/Binance redirect leaves a `pending` transaction inside both purchase-uniqueness indexes, and the buyer can never retry that item again (#624). Reconciles PayPal orders before expiring, so an approved-but-uncaptured payment is taken rather than thrown away. **Platform fee pay-now:** a hosted fee checkout the school walked away from leaves its `platform_fee_payments` row `pending` forever (#951) |
