@@ -310,14 +310,8 @@ export default function PaymentSettingsForm({
             )}
           </PaymentProviderRow>
 
-          <PaymentProviderRow
-            provider="binance"
-            name={t('payment.binance')}
-            description={t('payment.binanceHint')}
-            enabled={flags.binance}
-            onEnabledChange={setFlag('binance')}
-            configured
-          />
+          {/* Binance Pay merchant checkout hidden for now (needs a business
+              merchant account). Personal Binance Pay ID rows are unaffected. */}
         </ProviderGroup>
 
         {/* ── Offline ─────────────────────────────────────────────────── */}

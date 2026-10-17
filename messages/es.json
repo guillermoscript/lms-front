@@ -6074,6 +6074,9 @@
       "binancePersonalCopyCode": "Copiar código de pago",
       "binancePersonalNote": "Incluye este código en la nota de la transferencia para poder identificar tu pago.",
       "binancePersonalWaiting": "Esperando la confirmación de tu transferencia…",
+      "binancePersonalPaid": "Ya pagué: verificar ahora",
+      "binancePersonalChecking": "Verificando en Binance…",
+      "binancePersonalNotFoundYet": "Aún no vemos tu transferencia. Puede tardar hasta un minuto en aparecer; seguimos verificando automáticamente.",
       "binancePersonalReview": "Otro pago coincidió con este monto, así que la escuela debe confirmar el tuyo manualmente. Puede tardar un poco más; mantén esta página abierta.",
       "binancePersonalContinue": "Continuar a las instrucciones de pago"
     },
