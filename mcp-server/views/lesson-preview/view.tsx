@@ -179,6 +179,14 @@ function LessonPreview() {
             )}
           </div>
 
+          {lesson.image && (
+            <img
+              src={lesson.image}
+              alt=""
+              className="mb-5 aspect-video w-full rounded-xl object-cover"
+            />
+          )}
+
           {/* Content preview — video, embed and MDX exactly as students see it */}
           <div className="mb-5">
             <div className="mb-3 text-[11px] font-bold tracking-[0.06em] text-zinc-400 uppercase dark:text-zinc-500">

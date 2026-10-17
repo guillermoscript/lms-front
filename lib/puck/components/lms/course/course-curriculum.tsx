@@ -87,6 +87,10 @@ export const CourseCurriculum: ComponentConfig<CourseCurriculumProps> = {
               return (
                 <li key={lesson.id} className="flex items-center gap-4 px-5 py-4">
                   <span className="w-6 shrink-0 text-right text-sm tabular-nums text-muted-foreground">{i + 1}</span>
+                  {lesson.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={lesson.image} alt="" loading="lazy" className="h-10 w-16 shrink-0 rounded object-cover" />
+                  )}
                   {preview ? (
                     <a href={href} className="min-w-0 flex-1 truncate text-foreground underline-offset-4 hover:underline">
                       {lesson.title}

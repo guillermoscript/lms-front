@@ -41,6 +41,15 @@ export function LessonPreviewPanel() {
           </div>
           <div className="flex-1 overflow-y-auto p-6">
             <article className="prose prose-neutral dark:prose-invert max-w-none">
+              {formData.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={formData.image}
+                  alt=""
+                  className="mb-4 aspect-video w-full rounded-lg object-cover"
+                />
+              )}
+
               {formData.title && (
                 <h1 className="mb-3 text-2xl font-bold tracking-tight">
                   {formData.title}

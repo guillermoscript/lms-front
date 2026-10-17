@@ -103,6 +103,7 @@ export default async function EditLessonPage({ params, searchParams }: PageProps
           description: lesson.description,
           content: lesson.content,
           video_url: lesson.video_url,
+          image: lesson.image,
           sequence: lesson.sequence,
           status: lesson.status as 'draft' | 'published' | 'archived',
           publish_at: lesson.publish_at || null,

@@ -84,7 +84,7 @@ export default async function LessonPage({ params }: PageProps) {
   const { data: lessonData, error: lessonError } = await supabase
     .from('lessons')
     .select(`
-      id, title, sequence, content, video_url, embed_code, course_id,
+      id, title, sequence, content, video_url, image, embed_code, course_id,
       courses(title, require_sequential_completion),
       lesson_comments(*,
         profiles(*),
@@ -400,6 +400,14 @@ export default async function LessonPage({ params }: PageProps) {
         {/* Scrollable content area with reading progress */}
         <LessonScrollArea>
           <div className="mx-auto max-w-3xl px-3 py-5 sm:px-4 sm:py-8 md:px-6 md:py-10 space-y-8 sm:space-y-10">
+            {lesson.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={lesson.image}
+                alt=""
+                className="aspect-video w-full rounded-xl object-cover"
+              />
+            )}
             <LessonContent
               mdx={lessonMdx}
               videoUrl={lesson.video_url}
