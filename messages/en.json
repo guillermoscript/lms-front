@@ -4989,6 +4989,7 @@
     "billing": "Billing",
     "apiTokens": "API Tokens",
     "aiSettings": "AI",
+    "aiUsage": "AI usage",
     "appearance": "Appearance",
     "pages": "Pages",
     "analytics": "Analytics",
@@ -9134,6 +9135,53 @@
     "burst": "You're sending messages a bit fast. Wait a moment and try again.",
     "daily": "You've reached today's practice limit. Try again tomorrow.",
     "monthly": "Your school's monthly AI budget is spent for this month. Ask an admin to upgrade the plan."
+  },
+  "aiUsage": {
+    "breadcrumb": "AI usage",
+    "title": "AI usage & cost",
+    "description": "What your students and teachers are spending on your own AI key. Estimates only: your provider's invoice is the source of truth.",
+    "range": {
+      "7": "Last 7 days",
+      "30": "Last 30 days",
+      "90": "Last 90 days"
+    },
+    "cards": {
+      "cost": "Estimated cost",
+      "calls": "AI calls",
+      "tokens": "Tokens",
+      "avgPerUser": "Avg. cost per active user",
+      "activeUsers": "{count} active users"
+    },
+    "unpriced": "Some models have no known price, so the cost shown is a minimum. Token counts are exact.",
+    "estimateNote": "Cost = tokens × public list prices. Voice, speech-to-text and image generation are not included.",
+    "daily": {
+      "title": "Daily activity",
+      "tokensLabel": "{tokens} tokens · {calls} calls"
+    },
+    "byFeature": {
+      "title": "By feature",
+      "description": "Where the spend comes from.",
+      "feature": "Feature",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Est. cost"
+    },
+    "byUser": {
+      "title": "By person",
+      "description": "Who is using AI the most. Heavy users are your biggest cost lever.",
+      "user": "Person",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Est. cost",
+      "share": "Share",
+      "unknown": "Removed account"
+    },
+    "empty": {
+      "title": "No AI usage yet",
+      "description": "Usage appears here as soon as students or teachers use AI on your key."
+    },
+    "noPrice": "n/a",
+    "loadError": "Could not load AI usage. Try again."
   },
   "aiSettings": {
     "title": "AI",

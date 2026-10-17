@@ -79,3 +79,7 @@ Plan feature gates (`ai_grading`, `voice_exercises`, landing `PAID_PLANS`) still
 ## Cutover note
 
 Existing schools have no key until they add one, so AI fails closed for them at the flip (admins see an "Add an AI key" banner; students see "your school hasn't enabled AI yet"). A grace period would need `mode='managed'` plus a `grace_until`, which is not built.
+
+## Usage and cost (admin)
+
+Every language-model call on a school's key is recorded in `ai_usage_events` (tokens only, per tenant/user/feature/model) by AI SDK middleware that `createTenantAi().getModelForFeature` attaches (`lib/ai/usage-recorder.ts`), so call sites need no changes. Pass `actorId` to `createTenantAi`/`withTenantAi` so the row is attributed to a person. Admins see estimated cost by person and by feature at `/dashboard/admin/ai-usage`. Dollars are estimated at read time from `lib/ai/pricing.ts` (list prices, unknown models show tokens only); the provider invoice is the source of truth. Speech-to-text, realtime voice and image generation are not tracked. The table and its aggregate RPCs are service-role only.
