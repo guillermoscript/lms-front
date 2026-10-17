@@ -4878,6 +4878,7 @@
     "billing": "Facturación",
     "apiTokens": "Tokens de API",
     "aiSettings": "IA",
+    "aiUsage": "Uso de IA",
     "appearance": "Apariencia",
     "pages": "Páginas",
     "analytics": "Analíticas",
@@ -9141,6 +9142,53 @@
     "burst": "Estás enviando mensajes muy rápido. Espera un momento e inténtalo de nuevo.",
     "daily": "Has alcanzado el límite de práctica de hoy. Inténtalo de nuevo mañana.",
     "monthly": "El presupuesto mensual de IA de tu escuela se agotó este mes. Pide a un administrador que mejore el plan."
+  },
+  "aiUsage": {
+    "breadcrumb": "Uso de IA",
+    "title": "Uso y costo de IA",
+    "description": "Lo que tus estudiantes y profesores gastan con tu propia clave de IA. Son estimaciones: la factura de tu proveedor es la fuente de verdad.",
+    "range": {
+      "7": "Últimos 7 días",
+      "30": "Últimos 30 días",
+      "90": "Últimos 90 días"
+    },
+    "cards": {
+      "cost": "Costo estimado",
+      "calls": "Llamadas de IA",
+      "tokens": "Tokens",
+      "avgPerUser": "Costo prom. por usuario activo",
+      "activeUsers": "{count} usuarios activos"
+    },
+    "unpriced": "Algunos modelos no tienen precio conocido, así que el costo mostrado es un mínimo. Los tokens son exactos.",
+    "estimateNote": "Costo = tokens × precios de lista públicos. No incluye voz, voz a texto ni generación de imágenes.",
+    "daily": {
+      "title": "Actividad diaria",
+      "tokensLabel": "{tokens} tokens · {calls} llamadas"
+    },
+    "byFeature": {
+      "title": "Por función",
+      "description": "De dónde viene el gasto.",
+      "feature": "Función",
+      "calls": "Llamadas",
+      "tokens": "Tokens",
+      "cost": "Costo est."
+    },
+    "byUser": {
+      "title": "Por persona",
+      "description": "Quién usa más la IA. Los usuarios intensivos son tu mayor palanca de costo.",
+      "user": "Persona",
+      "calls": "Llamadas",
+      "tokens": "Tokens",
+      "cost": "Costo est.",
+      "share": "Parte",
+      "unknown": "Cuenta eliminada"
+    },
+    "empty": {
+      "title": "Aún no hay uso de IA",
+      "description": "El uso aparece aquí en cuanto estudiantes o profesores usen la IA con tu clave."
+    },
+    "noPrice": "n/d",
+    "loadError": "No se pudo cargar el uso de IA. Inténtalo de nuevo."
   },
   "aiSettings": {
     "title": "IA",
