@@ -123,6 +123,14 @@ function LessonViewer() {
             )}
           </div>
 
+          {lesson.image && (
+            <img
+              src={lesson.image}
+              alt=""
+              className="mb-5 aspect-video w-full rounded-xl object-cover"
+            />
+          )}
+
           {locked ? (
             <div className="mb-5 rounded-xl bg-amber-100 p-7 text-center dark:bg-amber-950">
               <div className="mb-2 text-[28px]">🔒</div>

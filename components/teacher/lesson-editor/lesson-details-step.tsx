@@ -1,6 +1,8 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { uploadCourseImage } from '@/app/actions/teacher/course-images'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +15,10 @@ import {
   IconChevronRight,
   IconCalendarEvent,
   IconEye,
+  IconPhoto,
+  IconUpload,
+  IconLoader2,
+  IconX,
 } from '@tabler/icons-react'
 import { useLessonEditor } from './lesson-editor-context'
 import { VideoCheckpointMarkers } from '../video-checkpoint-markers'
@@ -22,6 +28,28 @@ export function LessonDetailsStep() {
   const { formData, updateField, initialData, setActiveStep, courseId } = useLessonEditor()
   const t = useTranslations('dashboard.teacher.lessonEditor')
   const previewEmbedUrl = getEmbedUrl(formData.video_url)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setImageError(null)
+    try {
+      const data = new FormData()
+      data.append('file', file)
+      const result = await uploadCourseImage(data)
+      if (result.success) updateField('image', result.url)
+      else setImageError(result.error)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : t('imageUploadError'))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   return (
     <div className="animate-in fade-in slide-in-from-left-2 duration-300">
@@ -55,6 +83,61 @@ export function LessonDetailsStep() {
           rows={3}
           className="resize-none border-muted bg-muted/30 transition-colors focus:bg-background"
         />
+      </div>
+
+      {/* Cover image */}
+      <div className="mb-6">
+        <Label className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <IconPhoto className="h-3.5 w-3.5" />
+          {t('imageLabel')}
+        </Label>
+        {formData.image && (
+          <div className="relative mb-3 overflow-hidden rounded-lg border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={formData.image} alt="" className="aspect-video w-full object-cover" />
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="absolute right-2 top-2 h-7 w-7 p-0"
+              aria-label={t('imageRemove')}
+              onClick={() => updateField('image', '')}
+            >
+              <IconX className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
+            ) : (
+              <IconUpload className="mr-2 h-4 w-4" />
+            )}
+            {uploading ? t('imageUploading') : t('imageUpload')}
+          </Button>
+        </div>
+        <Input
+          value={formData.image}
+          onChange={(e) => updateField('image', e.target.value)}
+          placeholder={t('imageUrlPlaceholder')}
+          className="mt-2 border-muted bg-muted/30 transition-colors focus:bg-background"
+        />
+        {imageError && <p className="mt-1.5 text-xs text-destructive">{imageError}</p>}
+        <p className="mt-1.5 text-xs text-muted-foreground">{t('imageHint')}</p>
       </div>
 
       {/* Video URL */}

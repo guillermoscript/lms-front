@@ -7,6 +7,7 @@ const lessonSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   video_url: z.string().nullable(),
+  image: z.string().nullable().optional(),
   embed_code: z.string().nullable(),
   content: z.string().nullable(),
   status: z.string(),
