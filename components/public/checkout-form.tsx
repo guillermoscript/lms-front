@@ -128,6 +128,10 @@ export function CheckoutForm({
     const [instructionsQr, setInstructionsQr] = useState<string | null>(null);
     const [instructionsAmbiguous, setInstructionsAmbiguous] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // One verify round, shared by the interval and the "I've paid" button.
+    const verifyNowRef = useRef<(() => Promise<boolean>) | null>(null);
+    const [checkingNow, setCheckingNow] = useState(false);
+    const [checkedNotFound, setCheckedNotFound] = useState(false);
 
     // In-app desktop wallet ("Pay with Phantom"). The QR is for off-device /
     // mobile wallets; a first-time subscription needs TWO signed txs (init then
@@ -183,6 +187,16 @@ export function CheckoutForm({
         router.push(`/checkout/success?transactionId=${transactionId}`);
     };
 
+    // "I've paid": skip the poll tick and check Binance right now.
+    const checkPaymentNow = async () => {
+        if (!verifyNowRef.current || checkingNow) return;
+        setCheckingNow(true);
+        setCheckedNotFound(false);
+        const confirmed = await verifyNowRef.current();
+        setCheckingNow(false);
+        if (!confirmed) setCheckedNotFound(true);
+    };
+
     const copyText = async (value: string) => {
         try {
             await navigator.clipboard.writeText(value);
@@ -203,7 +217,7 @@ export function CheckoutForm({
         const endpoint = opts?.endpoint ?? '/api/payments/solana/verify';
         const interval = opts?.interval ?? 3000;
         if (pollRef.current) clearInterval(pollRef.current);
-        pollRef.current = setInterval(async () => {
+        const verifyOnce = async (): Promise<boolean> => {
             try {
                 const vr = await fetch(endpoint, {
                     method: 'POST',
@@ -217,11 +231,15 @@ export function CheckoutForm({
                 if (vd.confirmed) {
                     if (pollRef.current) clearInterval(pollRef.current);
                     checkoutDone(txId);
+                    return true;
                 }
             } catch {
                 /* transient poll error — keep polling */
             }
-        }, interval);
+            return false;
+        };
+        verifyNowRef.current = verifyOnce;
+        pollRef.current = setInterval(verifyOnce, interval);
     };
 
     // Create the pending transaction + provider checkout session. Returns the
@@ -637,10 +655,19 @@ export function CheckoutForm({
                                     <p className="text-[11px] leading-relaxed text-muted-foreground">{t('payment.binancePersonalNote')}</p>
                                 </div>
                             </div>
-                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status" aria-live="polite">
                                 <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
                                 {t('payment.binancePersonalWaiting')}
                             </p>
+                            <Button type="button" variant="outline" className="w-full" onClick={checkPaymentNow} disabled={checkingNow}>
+                                {checkingNow && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {checkingNow ? t('payment.binancePersonalChecking') : t('payment.binancePersonalPaid')}
+                            </Button>
+                            {checkedNotFound && !checkingNow && (
+                                <p className="text-xs text-muted-foreground" role="status">
+                                    {t('payment.binancePersonalNotFoundYet')}
+                                </p>
+                            )}
                             {instructionsAmbiguous && (
                                 <p className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[11px] leading-relaxed text-warning">
                                     <IconAlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />

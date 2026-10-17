@@ -6074,6 +6074,9 @@
       "binancePersonalCopyCode": "Copy payment code",
       "binancePersonalNote": "Include this code in the transfer note so we can match your payment.",
       "binancePersonalWaiting": "Waiting for your transfer to be confirmed…",
+      "binancePersonalPaid": "I've paid — check now",
+      "binancePersonalChecking": "Checking Binance…",
+      "binancePersonalNotFoundYet": "We haven't seen your transfer yet. It can take up to a minute to appear — we keep checking automatically.",
       "binancePersonalReview": "Another payment matched this amount, so the school needs to confirm yours manually. This can take a little longer — keep this page open.",
       "binancePersonalContinue": "Continue to payment instructions"
     },
