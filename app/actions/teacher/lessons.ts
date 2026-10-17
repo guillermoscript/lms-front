@@ -11,6 +11,8 @@ export interface LessonFormData {
   description: string
   content: string
   video_url: string
+  /** Cover image URL (course-images bucket or pasted). Empty clears it. */
+  image?: string
   sequence: number
   publish: boolean
   publish_at: string
@@ -38,6 +40,7 @@ export async function createLesson(courseId: number, data: LessonFormData) {
         description: data.description || null,
         content: data.content || null,
         video_url: data.video_url || null,
+        image: data.image || null,
         sequence: data.sequence,
         status: data.publish ? ('published' as const) : ('draft' as const),
         publish_at: isScheduled ? data.publish_at : null,
@@ -111,6 +114,7 @@ export async function updateLesson(
         description: data.description || null,
         content: data.content || null,
         video_url: data.video_url || null,
+        image: data.image || null,
         sequence: data.sequence,
         status: data.publish ? ('published' as const) : ('draft' as const),
         publish_at: isScheduled ? data.publish_at : null,

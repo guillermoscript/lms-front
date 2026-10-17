@@ -35,7 +35,7 @@ type AdminClient = any
 /** Column lists, exported so tests (and reviewers) can see exactly what leaves the DB. */
 export const COURSE_COLUMNS = 'course_id, title, description, thumbnail_url, status'
 export const COURSE_DETAIL_COLUMNS = `${COURSE_COLUMNS}, learning_objectives, author_id`
-export const LESSON_COLUMNS = 'id, course_id, title, sequence, is_preview, publish_at'
+export const LESSON_COLUMNS = 'id, course_id, title, sequence, is_preview, publish_at, image'
 export const PRODUCT_COLUMNS = 'product_id, name, description, price, currency, image'
 export const AUTHOR_COLUMNS = 'id, full_name, avatar_url, bio'
 export const REVIEWER_COLUMNS = 'id, full_name, avatar_url'
@@ -264,6 +264,7 @@ type LessonRow = {
   sequence: number | null
   is_preview: boolean | null
   publish_at: string | null
+  image: string | null
 }
 type ReviewRow = {
   review_id: number
@@ -333,7 +334,7 @@ export async function getLandingCourseDetailsByIds(
   for (const l of (lessonsRes?.data ?? []) as LessonRow[]) {
     if (!isLessonLive(l.publish_at, now)) continue
     const list = lessonsByCourse.get(l.course_id) ?? []
-    list.push({ id: String(l.id), title: l.title ?? '', sequence: l.sequence ?? null, isPreview: !!l.is_preview })
+    list.push({ id: String(l.id), title: l.title ?? '', sequence: l.sequence ?? null, isPreview: !!l.is_preview, image: l.image ?? null })
     lessonsByCourse.set(l.course_id, list)
   }
 

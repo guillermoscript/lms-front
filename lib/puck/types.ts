@@ -40,6 +40,7 @@ export interface LandingLesson {
   title: string
   sequence: number | null
   isPreview: boolean
+  image: string | null
 }
 
 // The course author, from `profiles` (real data only — no invented credentials).

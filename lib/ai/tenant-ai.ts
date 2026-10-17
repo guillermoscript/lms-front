@@ -30,6 +30,7 @@ import {
   type RealtimeTokenOptions,
 } from './providers'
 import { transcribeWithProvider, type TenantTranscript, type TranscribeOptions } from './transcription'
+import { withUsageTracking } from './usage-recorder'
 
 /**
  * The one door to a tenant's AI. Everything that calls a model on a school's
@@ -494,7 +495,13 @@ export function createTenantAi(tenantId: string, opts: TenantAiOptions = {}): Te
       }
 
       return {
-        model: cred.instance.languageModel(choice.modelId),
+        model: withUsageTracking(cred.instance.languageModel(choice.modelId), {
+          tenantId,
+          userId: opts.actorId ?? null,
+          feature,
+          providerId: choice.providerId,
+          modelId: choice.modelId,
+        }),
         providerId: choice.providerId,
         modelId: choice.modelId,
         feature,

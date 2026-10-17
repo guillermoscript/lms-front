@@ -39,7 +39,7 @@ async function loadLessonForLearner(session: LmsSession, lessonId: number) {
   const { data: lesson, error } = await supabase
     .from("lessons")
     .select(
-      "id, course_id, title, description, summary, content, video_url, embed_code, sequence, status, courses(title, require_sequential_completion)"
+      "id, course_id, title, description, summary, content, video_url, image, embed_code, sequence, status, courses(title, require_sequential_completion)"
     )
     .eq("id", lessonId)
     .eq("tenant_id", session.getTenantId())
@@ -267,6 +267,7 @@ export function registerStudentTools(server: LmsServer) {
               // decorative if the payload still contained the body.
               content: locked ? null : lesson.content,
               video_url: locked ? null : lesson.video_url,
+              image: locked ? null : lesson.image,
               embed_code: locked ? null : lesson.embed_code,
               sequence: lesson.sequence,
             },

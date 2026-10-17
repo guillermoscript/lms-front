@@ -10,6 +10,7 @@ const lessonSchema = z.object({
   summary: z.string().nullable(),
   content: z.string().nullable(),
   video_url: z.string().nullable(),
+  image: z.string().nullable().optional(),
   embed_code: z.string().nullable(),
   sequence: z.number(),
 });
