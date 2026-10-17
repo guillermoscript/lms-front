@@ -8564,226 +8564,76 @@
   },
   "home": {
     "hero": {
-      "badge": "Plataforma LMS de marca blanca",
-      "titleLead": "Lanza tu academia en línea en",
-      "titleHighlight": "minutos",
-      "subtitle": "La plataforma completa para crear, vender y escalar tus cursos en línea. Calificación con IA, gamificación, pagos que funcionan en Latinoamérica y una escuela aislada por subdominio, todo incluido.",
-      "ctaPrimary": "Crea tu escuela gratis",
-      "ctaSecondary": "Explorar cursos",
-      "trust": {
-        "noCard": "Sin tarjeta de crédito",
-        "freePlan": "Plan gratuito disponible",
-        "subdomain": "Tu propio subdominio",
-        "openSource": "Código abierto (MIT)"
-      }
+      "tag": "Código abierto",
+      "tagText": "Gratis para empezar, sin tarjeta",
+      "titleLead": "Enseña en línea.",
+      "titleHighlight": "Cobra desde donde sea.",
+      "subtitle": "Tu propia escuela, en tu propia dirección. Cursos, calificación con IA y los métodos de pago que tus estudiantes sí usan.",
+      "cta": "Crea tu escuela",
+      "secondary": "Cómo funciona"
     },
-    "audience": {
-      "badge": "Una plataforma, dos experiencias",
-      "title": "Hecha para escuelas y estudiantes",
-      "schools": {
-        "title": "Creadores de cursos y escuelas",
-        "description": "Lanza tu academia en línea con tu marca en minutos. Crea cursos, define precios, acepta pagos y sigue el progreso de tus estudiantes desde un solo panel.",
-        "items": {
-          "subdomain": "Tu propio subdominio (tuescuela.plataforma.com)",
-          "branding": "Marca personalizada: logo y colores",
-          "payments": "Stripe Connect, PayPal, transferencia bancaria o cripto: el dinero llega a ti",
-          "ai": "Calificación de exámenes y ejercicios con IA",
-          "analytics": "Analíticas y seguimiento del progreso de tus estudiantes"
-        },
-        "cta": "Crea tu escuela"
-      },
-      "learners": {
-        "title": "Estudiantes",
-        "description": "Aprende a tu ritmo con cursos estructurados, lecciones en video y ejercicios guiados por IA. Gana XP, sube en la tabla de posiciones y demuestra tus habilidades con certificados verificables.",
-        "items": {
-          "progress": "Seguimiento del progreso en todos tus cursos",
-          "tutor": "Un tutor de IA te acompaña en los ejercicios en tiempo real",
-          "gamification": "Gamificación: XP, niveles, rachas y logros",
-          "certificates": "Certificados descargables verificados con código QR",
-          "mdx": "Lecciones con bloques de código y demos interactivas"
-        },
-        "cta": "Explorar cursos"
-      }
-    },
-    "ai": {
-      "badge": "Enseñanza con IA",
-      "title": "Deja que la IA haga el trabajo pesado",
-      "subtitle": "Deja de pasar horas calificando. La IA califica exámenes, da retroalimentación personalizada y acompaña a los estudiantes en tiempo real.",
-      "grading": {
-        "title": "Calificación de exámenes con IA",
-        "description": "Las respuestas abiertas se califican automáticamente con retroalimentación por pregunta y una nota global. El profesor revisa, no califica.",
-        "note": "El profesor puede corregir cualquier nota"
-      },
-      "tutor": {
-        "title": "Tutor de IA interactivo",
-        "description": "Los estudiantes reciben una guía de IA personalizada durante los ejercicios: pistas, explicaciones y ánimo, sin revelar las respuestas.",
-        "note": "Pistas, nunca la solución"
-      },
-      "templates": {
-        "title": "Plantillas de prompts",
-        "description": "El profesor define exactamente cómo debe calificar la IA: rúbricas, tono, rigor. Control total sobre la calidad de la retroalimentación.",
-        "note": "Reutilizables en todos tus cursos"
-      }
-    },
-    "gamification": {
-      "badge": "Motivación estilo Duolingo",
-      "title": "Estudiantes que juegan, estudiantes que se quedan",
-      "subtitle": "Un motor de gamificación completo desde el primer día. Sin plugins ni integraciones: estudiantes motivados que vuelven.",
-      "perks": {
-        "xp": {
-          "title": "Sistema de XP",
-          "description": "Gana XP por lecciones, exámenes, ejercicios, comentarios y reseñas"
-        },
-        "levels": {
-          "title": "Niveles",
-          "description": "Hitos progresivos que premian la constancia"
-        },
-        "streaks": {
-          "title": "Rachas diarias",
-          "description": "Los bonos por racha fomentan el hábito de estudiar cada día"
-        },
-        "achievements": {
-          "title": "Logros",
-          "description": "Desbloquea insignias por hitos de aprendizaje, participación y rachas"
-        },
-        "coins": {
-          "title": "Tienda de monedas",
-          "description": "Gasta las monedas ganadas en personalizar tu perfil y contenido extra"
-        },
-        "leaderboard": {
-          "title": "Tabla de posiciones",
-          "description": "Rankings semanales que motivan una competencia sana entre estudiantes"
-        }
-      },
-      "preview": {
-        "title": "Tu progreso",
-        "level": "Nivel {level}",
-        "xpProgress": "Progreso de XP",
-        "xpValue": "{current} / {total} XP",
-        "streak": "Racha",
-        "streakValue": "{count} días",
-        "coins": "Monedas",
-        "rank": "Puesto",
-        "recent": "Logros recientes",
-        "badges": {
-          "firstExam": "Primer examen",
-          "streak7": "Racha de 7 días",
-          "lessons10": "10 lecciones",
-          "firstComment": "Primer comentario"
-        },
-        "leaders": "Líderes de la semana",
-        "you": "Tú",
-        "xp": "{count} XP"
-      }
+    "mock": {
+      "course": "Inglés para principiantes",
+      "published": "Publicado",
+      "lesson1": "Saludos y presentaciones",
+      "lesson2": "Números y precios",
+      "exercise": "Ejercicio",
+      "add": "Agregar lección",
+      "paid": "Pago recibido",
+      "paidVia": "Transferencia · confirmada",
+      "graded": "Calificado con IA",
+      "gradedNote": "Comentarios enviados al estudiante"
     },
     "features": {
-      "badge": "Todo incluido",
-      "title": "Todas las funciones que necesitas, ninguna que no",
-      "subtitle": "Sin plugins. Sin complementos de pago. Sin cobros escondidos. Todo viene incluido.",
-      "items": {
-        "mdx": {
-          "title": "Editor MDX enriquecido",
-          "description": "Editor de contenido por bloques con video, código resaltado, imágenes, embeds y componentes interactivos."
-        },
-        "exams": {
-          "title": "Constructor de exámenes",
-          "description": "Preguntas de opción múltiple, abiertas y de verdadero/falso. Exámenes con o sin tiempo límite y puntuación configurable."
-        },
-        "video": {
-          "title": "Lecciones en video",
-          "description": "Inserta YouTube o cualquier URL de video dentro de las lecciones. Los estudiantes ven y leen en la misma vista."
-        },
-        "exercises": {
-          "title": "Ejercicios con IA",
-          "description": "Ejercicios interactivos de programación y conceptos guiados por un tutor de IA. Prompts configurables por ejercicio."
-        },
-        "payments": {
-          "title": "Pagos que funcionan en LATAM",
-          "description": "Vende cursos individuales o por suscripción. Stripe, PayPal, transferencia bancaria, Binance Pay o Solana: tú eliges el medio."
-        },
-        "plans": {
-          "title": "Planes de suscripción",
-          "description": "Crea planes gratuitos, de pago y por niveles. Agrupa cursos por plan con control de acceso automático."
-        },
-        "certificates": {
-          "title": "Certificados",
-          "description": "Certificados PDF firmados que se emiten al completar el curso. Verificación por código QR en una URL pública."
-        },
-        "multiTenant": {
-          "title": "Multi-escuela",
-          "description": "Cada escuela tiene su propio subdominio, marca, estudiantes y datos, totalmente aislados a nivel de base de datos."
-        },
-        "rls": {
-          "title": "Seguridad a nivel de fila",
-          "description": "Todos los datos están delimitados por escuela mediante RLS de Postgres. Ninguna escuela puede ver los datos de otra, por diseño."
-        },
-        "notifications": {
-          "title": "Notificaciones",
-          "description": "Notificaciones en la plataforma con estado leído/no leído, correos con plantillas y actualizaciones en tiempo real."
-        },
-        "analytics": {
-          "title": "Analíticas para administradores",
-          "description": "Paneles de ingresos, inscripciones y participación para los administradores de la escuela. Métricas globales para el superadministrador."
-        },
-        "i18n": {
-          "title": "Inglés y español",
-          "description": "Internacionalización completa. Cada texto de la interfaz está traducido. Cambio de idioma desde la barra de navegación."
-        }
-      }
-    },
-    "howItWorks": {
-      "badge": "Cómo funciona",
-      "title": "De la idea a una escuela en línea en 3 pasos",
-      "steps": {
-        "create": {
-          "title": "Crea tu escuela",
-          "description": "Regístrate, elige un nombre y obtén tu propio subdominio. Toma 30 segundos."
-        },
-        "build": {
-          "title": "Construye tus cursos",
-          "description": "Usa el editor por bloques para agregar lecciones, exámenes y ejercicios. Publica cuando estés listo."
-        },
-        "enroll": {
-          "title": "Los estudiantes se inscriben y aprenden",
-          "description": "Comparte tu enlace, acepta pagos y sigue el progreso de tus estudiantes."
-        }
-      }
-    },
-    "multiTenant": {
-      "badge": "Verdadera arquitectura multi-escuela",
-      "title": "Cada escuela es un mundo completamente separado",
-      "description": "El aislamiento a nivel de base de datos garantiza que la Escuela A nunca vea los estudiantes, cursos o transacciones de la Escuela B, aunque compartan la misma plataforma. Las políticas RLS lo aplican en cada consulta, no en la capa de aplicación.",
-      "items": {
-        "subdomain": "Subdominio dedicado: tuescuela.plataforma.com",
-        "branding": "Marca independiente: logo, colores y nombre del sitio",
-        "students": "Base de estudiantes aislada: sin visibilidad entre escuelas",
-        "payments": "Cuentas de pago separadas por escuela",
-        "roles": "Acceso por rol: administrador, profesor y estudiante en cada escuela"
+      "title": "Todo para enseñar. Nada que vigilar.",
+      "ai": {
+        "title": "La IA califica. Tú enseñas.",
+        "body": "Exámenes y ejercicios se califican con comentarios apenas el estudiante envía. Usa tu propia clave de IA.",
+        "answerLabel": "Respuesta del estudiante",
+        "answer": "“It costs five dollars, it's very cheap.”",
+        "feedback": "Correcto. Prueba “it costs five dollars”."
       },
-      "cards": {
-        "a": {
-          "name": "Academia de Código",
-          "plan": "Pro"
-        },
-        "b": {
-          "name": "Escuela de Diseño",
-          "plan": "Starter"
-        },
-        "c": {
-          "name": "Laboratorio de Datos",
-          "plan": "Business"
-        },
-        "d": {
-          "name": "DevBoot",
-          "plan": "Gratis"
-        },
-        "students": "{count} estudiantes",
-        "courses": "{count} cursos"
+      "pay": {
+        "title": "Pagos que funcionan donde las tarjetas no.",
+        "cards": "Tarjetas",
+        "paypal": "PayPal",
+        "binance": "Binance",
+        "solana": "Solana",
+        "transfer": "Transferencia"
+      },
+      "brand": {
+        "title": "Tu escuela, tu dirección.",
+        "body": "Tu nombre, colores y logo en cada página que ven tus estudiantes.",
+        "url": "tuescuela.example.com"
+      },
+      "certs": {
+        "title": "Certificados que cualquiera puede verificar.",
+        "body": "Se emiten al completar el curso, con un enlace público para comprobarlos."
+      },
+      "oss": {
+        "title": "Código abierto. MIT.",
+        "body": "Alójalo tú, lee el código, sé dueño de tu escuela."
+      }
+    },
+    "how": {
+      "title": "En línea en tres pasos.",
+      "create": {
+        "title": "Nombra tu escuela",
+        "body": "Elige un nombre y una dirección. Como un minuto."
+      },
+      "build": {
+        "title": "Agrega tus cursos",
+        "body": "Escribe lecciones, añade ejercicios, fija un precio."
+      },
+      "share": {
+        "title": "Comparte tu enlace",
+        "body": "Tus estudiantes se inscriben, aprenden y obtienen certificados."
       }
     },
     "pricing": {
-      "title": "Empieza gratis. Crece sin límites.",
-      "subtitle": "El plan gratuito no tiene cuota mensual. Sube de plan cuando estés listo para escalar.",
+      "title": "Empieza gratis. Paga cuando crezcas.",
+      "subtitle": "El plan gratis no tiene cuota mensual.",
+      "perMonth": "/mes",
       "plans": {
         "free": {
           "name": "Gratis",
@@ -8794,14 +8644,14 @@
         },
         "starter": {
           "name": "Starter",
-          "price": "$9/mes",
+          "price": "$9",
           "f1": "15 cursos",
           "f2": "200 estudiantes",
           "f3": "Pagos con tarjeta"
         },
         "pro": {
           "name": "Pro",
-          "price": "$29/mes",
+          "price": "$29",
           "f1": "100 cursos",
           "f2": "1,000 estudiantes",
           "f3": "2% de comisión por transacción",
@@ -8809,20 +8659,19 @@
         },
         "business": {
           "name": "Business",
-          "price": "$79/mes",
+          "price": "$79",
           "f1": "Cursos ilimitados",
           "f2": "5,000 estudiantes",
           "f3": "0% de comisión por transacción",
           "f4": "Soporte prioritario"
         }
       },
-      "seeAll": "Ver todos los detalles de precios"
+      "seeAll": "Comparar todos los planes"
     },
     "cta": {
-      "title": "Tu academia está a un clic",
-      "subtitle": "Crea hoy tu propia escuela con tu marca. Empieza gratis, sin tarjeta de crédito.",
-      "primary": "Crea tu escuela gratis",
-      "secondary": "Conoce más"
+      "title": "Abre tu escuela hoy.",
+      "subtitle": "Plan gratis. Sin tarjeta de crédito.",
+      "primary": "Crea tu escuela"
     }
   },
   "themeKit": {
