@@ -1,6 +1,6 @@
 /**
  * Outbound webhook event catalog. The DB triggers in
- * 20261016140000_outbound_webhooks.sql emit exactly these `type` strings; keep
+ * 20261016140000_outbound_webhooks.sql (and later *outbound_webhooks*.sql) emit exactly these `type` strings; keep
  * the two in sync (tests/unit/webhooks.test.ts pins the list).
  */
 
@@ -14,6 +14,29 @@ export const SCHOOL_WEBHOOK_EVENTS = [
   'subscription.status_changed',
   'member.joined',
   'certificate.issued',
+  'entitlement.granted',
+  'entitlement.revoked',
+  'payment.failed',
+  'payment.refunded',
+  'payment_request.created',
+  'payment_request.status_changed',
+  'course.completed',
+  'exam.passed',
+  'exam.failed',
+  'community.post.created',
+  'community.comment.created',
+  'community.content_reported',
+  'invitation.created',
+  'invitation.accepted',
+  'member.status_changed',
+  'member.role_changed',
+  'course.published',
+  'lesson.published',
+  'certificate.revoked',
+  'payout.created',
+  'payout.status_changed',
+  'billing.status_changed',
+  'school.access_cutoff',
 ] as const
 
 /** Platform-only: delivered to platform-wide endpoints, never to a school's. */
@@ -21,6 +44,10 @@ export const PLATFORM_ONLY_WEBHOOK_EVENTS = [
   'school.created',
   'school.plan_changed',
   'school.billing_status_changed',
+  'platform_payment.requested',
+  'platform_payment.status_changed',
+  'platform_fee.statement_created',
+  'platform_subscription.changed',
 ] as const
 
 export const PLATFORM_WEBHOOK_EVENTS = [

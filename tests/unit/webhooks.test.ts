@@ -16,8 +16,10 @@ describe('event catalog', () => {
   })
 
   it('every event type is emitted by the migration', async () => {
-    const { readFileSync } = await import('fs')
-    const sql = readFileSync('supabase/migrations/20261016140000_outbound_webhooks.sql', 'utf8')
+    const { readFileSync, readdirSync } = await import('fs')
+    const files = readdirSync('supabase/migrations').filter((f) => /outbound_webhooks.*\.sql$/.test(f))
+    expect(files.length).toBeGreaterThan(0)
+    const sql = files.map((f) => readFileSync(`supabase/migrations/${f}`, 'utf8')).join('\n')
     for (const ev of PLATFORM_WEBHOOK_EVENTS) expect(sql).toContain(`'${ev}'`)
   })
 

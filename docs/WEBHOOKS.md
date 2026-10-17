@@ -31,12 +31,36 @@ source table write ──AFTER trigger──▶ emit_outbound_webhook() ──�
 | `subscription.status_changed` | `subscription_status` changes | school |
 | `member.joined` | row inserted in `tenant_users` | school |
 | `certificate.issued` | row inserted in `certificates` | school |
+| `entitlement.granted` | row inserted in `entitlements` with status `active` | school |
+| `entitlement.revoked` | entitlement status becomes `revoked` | school |
+| `payment.failed` | transaction becomes `failed` | school |
+| `payment.refunded` | `transactions.refunded_amount` changes or status becomes `refunded` (`amount` = this refund, `full_refund` flag) | school |
+| `payment_request.created` | manual/offline payment request created | school |
+| `payment_request.status_changed` | manual payment request status changes | school |
+| `course.completed` | student completes the last published lesson of a course (may repeat if a lesson is un-completed and redone) | school |
+| `exam.passed` / `exam.failed` | exam score set, or its pass/fail outcome flips (pass mark = active certificate template's minimum, default 70) | school |
+| `community.post.created` | visible non-milestone post created (no body in payload) | school |
+| `community.comment.created` | visible community comment created (high volume, no body in payload) | school |
+| `community.content_reported` | row inserted in `community_flags` (post or comment report) | school |
+| `invitation.created` / `invitation.accepted` | row inserted in / accepted `tenant_invitations` | school |
+| `member.status_changed` | `tenant_users.status` changes (includes `ban_reason` when banned) | school |
+| `member.role_changed` | `tenant_users.role` changes | school |
+| `course.published` / `lesson.published` | status becomes `published` (includes scheduled lesson publish) | school |
+| `certificate.revoked` | `certificates.revoked_at` set | school |
+| `payout.created` / `payout.status_changed` | row inserted in / status changes on `payouts` | school |
+| `billing.status_changed` | the school's billing status changes (`past_due` = payment problem) | school |
+| `school.access_cutoff` | access-cutoff notice sent (`stage`: scheduled, reminder_7d, reminder_1d, enforced) | school |
 | `school.created` | row inserted in `tenants` | platform only |
 | `school.plan_changed` | `tenants.plan` changes | platform only |
 | `school.billing_status_changed` | `tenants.billing_status` changes | platform only |
+| `platform_payment.requested` / `platform_payment.status_changed` | school's platform billing payment request created / status changes | platform only |
+| `platform_fee.statement_created` | platform fee statement issued | platform only |
+| `platform_subscription.changed` | platform subscription created, or status/plan/interval/cancel-at-period-end changes | platform only |
 | `webhook.test` | "Send test" button | either |
 
-Add an event: add the trigger/emit call in a migration, add the string to `lib/webhooks/events.ts` (a unit test checks every catalog entry appears in the migration).
+`lesson.completed` and `community.comment.created` are high volume: subscribe to specific events rather than `*` if your receiver is rate limited. Events live in `20261016140000_outbound_webhooks.sql` and `20261016160000_outbound_webhooks_more_events.sql`.
+
+Add an event: add the trigger/emit call in a migration, add the string to `lib/webhooks/events.ts` (a unit test checks every catalog entry appears in an `*outbound_webhooks*.sql` migration).
 
 ## Payload
 
@@ -106,5 +130,5 @@ Verification is optional for a quick start but recommended: the URL alone is the
 ## Ops
 
 - Cron: `/api/cron/deliver-webhooks` every minute (`vercel.json`), `CRON_SECRET` bearer. On a self-hosted crontab call it the same way as the other cron routes (see `docs/CRON_RUNBOOK.md`).
-- Rollback: `supabase/migrations/rollback/20261016140000_outbound_webhooks.down.sql`.
+- Rollback: `supabase/migrations/rollback/20261016140000_outbound_webhooks.down.sql` and `20261016160000_outbound_webhooks_more_events.down.sql`.
 - Code: `lib/webhooks/` (events, signing, url-guard, input, deliver, endpoints), `app/actions/webhooks.ts`, `components/webhooks/webhooks-manager.tsx`.
