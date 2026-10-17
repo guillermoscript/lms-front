@@ -2786,7 +2786,8 @@
         "apiTokens": "Tokens de API",
         "monetization": "Monetización",
         "appearance": "Apariencia",
-        "website": "Sitio Web"
+        "website": "Sitio Web",
+        "webhooks": "Webhooks"
       },
       "appearance": {
         "title": "Apariencia",
@@ -4897,7 +4898,8 @@
     "myPayments": "Mis Pagos",
     "myBilling": "Facturación y Recibos",
     "community": "Comunidad",
-    "flashcardReviews": "Repaso de Tarjetas"
+    "flashcardReviews": "Repaso de Tarjetas",
+    "webhooks": "Webhooks"
   },
   "userNav": {
     "profile": "Perfil",
@@ -6313,7 +6315,8 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Volver a mi escuela",
       "logout": "Cerrar sesión",
-      "bankAccounts": "Cuentas bancarias"
+      "bankAccounts": "Cuentas bancarias",
+      "webhooks": "Webhooks"
     },
     "fees": {
       "title": "Comisiones de la plataforma",
@@ -9864,6 +9867,106 @@
     "courseRestored": {
       "title": "Curso restaurado",
       "content": "Tu curso \"{course}\" fue restaurado y ya está publicado."
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "breadcrumb": "Webhooks",
+    "description": {
+      "school": "Envía eventos de tu escuela a n8n, Zapier, Make o a tu propio servidor en cuanto ocurren.",
+      "platform": "Los endpoints de la plataforma reciben eventos de todas las escuelas, además de eventos del ciclo de vida de cada escuela."
+    },
+    "loadError": "No se pudieron cargar los webhooks",
+    "loadErrorDesc": "Inténtalo de nuevo en un momento.",
+    "cancel": "Cancelar",
+    "saved": "Webhook guardado",
+    "deleted": "Webhook eliminado",
+    "enabled": "Webhook activado",
+    "disabled": "Webhook en pausa",
+    "endpoints": {
+      "title": "Endpoints",
+      "add": "Agregar endpoint",
+      "empty": "Aún no hay endpoints de webhook",
+      "emptyDesc": {
+        "school": "Agrega un endpoint (por ejemplo la URL de un nodo Webhook de n8n) para recibir un POST firmado cuando un estudiante se inscriba, pague o complete una lección.",
+        "platform": "Agrega un endpoint para recibir la actividad de todas las escuelas, incluidas nuevas escuelas y cambios de plan."
+      },
+      "allEvents": "Todos los eventos",
+      "test": "Enviar prueba",
+      "edit": "Editar",
+      "rotate": "Rotar secreto",
+      "delete": "Eliminar",
+      "toggle": "Activar {name}",
+      "autoDisabledHint": "Pausado automáticamente tras fallos repetidos. Arregla el receptor y vuelve a activarlo."
+    },
+    "status": {
+      "active": "Activo",
+      "paused": "En pausa",
+      "autoDisabled": "En pausa (con fallos)"
+    },
+    "test": {
+      "ok": "Prueba entregada (HTTP {status})",
+      "failed": "La prueba falló: {reason}"
+    },
+    "form": {
+      "createTitle": "Agregar endpoint de webhook",
+      "editTitle": "Editar endpoint de webhook",
+      "description": "Enviamos un evento JSON firmado por POST a esta URL.",
+      "name": "Nombre",
+      "namePlaceholder": "n8n – nuevos estudiantes",
+      "url": "URL del endpoint",
+      "urlHint": "Debe ser una URL https pública. Se bloquean direcciones privadas e internas.",
+      "events": "Eventos",
+      "allEvents": "Todos los eventos (incluidos los futuros)",
+      "save": "Guardar",
+      "saving": "Guardando…"
+    },
+    "secret": {
+      "title": "Secreto de firma",
+      "description": "Cópialo ahora. Solo se muestra una vez. Úsalo para verificar el encabezado X-Webhook-Signature.",
+      "copy": "Copiar secreto",
+      "copied": "Secreto copiado",
+      "copyFailed": "No se pudo copiar. Selecciónalo y cópialo manualmente.",
+      "done": "Ya lo guardé"
+    },
+    "confirm": {
+      "deleteTitle": "¿Eliminar este endpoint?",
+      "deleteDesc": "Las entregas pendientes se descartan y el endpoint deja de recibir eventos.",
+      "rotateTitle": "¿Rotar el secreto de firma?",
+      "rotateDesc": "El secreto anterior deja de funcionar al instante. Actualiza tu receptor con el nuevo."
+    },
+    "deliveries": {
+      "title": "Entregas recientes",
+      "empty": "Aún no hay entregas. Envía una prueba para ver una aquí.",
+      "event": "Evento",
+      "endpoint": "Endpoint",
+      "status": "Estado",
+      "attempts": "Intentos",
+      "when": "Cuándo",
+      "actions": "Acciones",
+      "retry": "Reintentar",
+      "requeued": "En cola para reintento",
+      "statuses": {
+        "pending": "Pendiente",
+        "success": "Entregado",
+        "failed": "Fallido"
+      }
+    },
+    "help": {
+      "title": "Conectar con n8n",
+      "step1": "En n8n agrega un nodo Webhook (método POST) y copia su Production URL.",
+      "step2": "Pégala aquí como un nuevo endpoint y pulsa Enviar prueba.",
+      "step3": "Elige los eventos que quieres y construye tu flujo después del nodo Webhook.",
+      "verify": "Cada solicitud incluye X-Webhook-Id, X-Webhook-Event, X-Webhook-Timestamp y X-Webhook-Signature (v1=HMAC-SHA256 de \"timestamp.body\" con tu secreto). Las entregas fallidas se reintentan durante unos 2 días. Ver docs/WEBHOOKS.md."
+    },
+    "errors": {
+      "forbidden": "No tienes permiso para gestionar webhooks.",
+      "invalid": "Revisa el nombre, la URL y los eventos.",
+      "insecure_url": "Usa una URL https://.",
+      "blocked_host": "Esa dirección no está permitida. Usa una URL pública.",
+      "not_found": "Endpoint no encontrado.",
+      "limit_reached": "Límite de endpoints alcanzado. Elimina uno primero.",
+      "internal": "Algo salió mal. Inténtalo de nuevo."
     }
   }
 }

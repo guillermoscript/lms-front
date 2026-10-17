@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/reconcile-solana-platform-activations",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/deliver-webhooks",
+      "schedule": "* * * * *"
     }
   ]
 }

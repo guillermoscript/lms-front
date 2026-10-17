@@ -2786,7 +2786,8 @@
         "apiTokens": "API Tokens",
         "monetization": "Monetization",
         "appearance": "Appearance",
-        "website": "Website"
+        "website": "Website",
+        "webhooks": "Webhooks"
       },
       "appearance": {
         "title": "Appearance",
@@ -5016,7 +5017,8 @@
     "myBilling": "Billing & Receipts",
     "community": "Community",
     "profile": "Profile",
-    "flashcardReviews": "Flashcard Review"
+    "flashcardReviews": "Flashcard Review",
+    "webhooks": "Webhooks"
   },
   "userNav": {
     "profile": "Profile",
@@ -6313,7 +6315,8 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Back to my school",
       "logout": "Log out",
-      "bankAccounts": "Bank accounts"
+      "bankAccounts": "Bank accounts",
+      "webhooks": "Webhooks"
     },
     "fees": {
       "title": "Platform fees",
@@ -9864,6 +9867,106 @@
     "courseRestored": {
       "title": "Course restored",
       "content": "Your course \"{course}\" has been restored and is now published."
+    }
+  },
+  "webhooks": {
+    "title": "Webhooks",
+    "breadcrumb": "Webhooks",
+    "description": {
+      "school": "Send events from your school to n8n, Zapier, Make or your own server as they happen.",
+      "platform": "Platform-wide endpoints receive events from every school, plus school lifecycle events."
+    },
+    "loadError": "Couldn't load webhooks",
+    "loadErrorDesc": "Try again in a moment.",
+    "cancel": "Cancel",
+    "saved": "Webhook saved",
+    "deleted": "Webhook deleted",
+    "enabled": "Webhook enabled",
+    "disabled": "Webhook paused",
+    "endpoints": {
+      "title": "Endpoints",
+      "add": "Add endpoint",
+      "empty": "No webhook endpoints yet",
+      "emptyDesc": {
+        "school": "Add an endpoint (for example an n8n Webhook node URL) to get a signed POST whenever a student enrolls, pays or completes a lesson.",
+        "platform": "Add an endpoint to be notified about activity across all schools, including new schools and plan changes."
+      },
+      "allEvents": "All events",
+      "test": "Send test",
+      "edit": "Edit",
+      "rotate": "Rotate secret",
+      "delete": "Delete",
+      "toggle": "Enable {name}",
+      "autoDisabledHint": "Paused automatically after repeated failures. Fix the receiver, then switch it back on."
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "autoDisabled": "Paused (failing)"
+    },
+    "test": {
+      "ok": "Test delivered (HTTP {status})",
+      "failed": "Test failed: {reason}"
+    },
+    "form": {
+      "createTitle": "Add webhook endpoint",
+      "editTitle": "Edit webhook endpoint",
+      "description": "We POST a signed JSON event to this URL.",
+      "name": "Name",
+      "namePlaceholder": "n8n – new students",
+      "url": "Endpoint URL",
+      "urlHint": "Must be a public https URL. Private and internal addresses are blocked.",
+      "events": "Events",
+      "allEvents": "All events (including future ones)",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "secret": {
+      "title": "Signing secret",
+      "description": "Copy this now. It is shown only once. Use it to verify the X-Webhook-Signature header.",
+      "copy": "Copy secret",
+      "copied": "Secret copied",
+      "copyFailed": "Couldn't copy. Select and copy it manually.",
+      "done": "I've saved it"
+    },
+    "confirm": {
+      "deleteTitle": "Delete this endpoint?",
+      "deleteDesc": "Pending deliveries are dropped and the endpoint stops receiving events.",
+      "rotateTitle": "Rotate the signing secret?",
+      "rotateDesc": "The old secret stops working immediately. Update your receiver with the new one."
+    },
+    "deliveries": {
+      "title": "Recent deliveries",
+      "empty": "No deliveries yet. Send a test to see one here.",
+      "event": "Event",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "attempts": "Attempts",
+      "when": "When",
+      "actions": "Actions",
+      "retry": "Retry",
+      "requeued": "Queued for retry",
+      "statuses": {
+        "pending": "Pending",
+        "success": "Delivered",
+        "failed": "Failed"
+      }
+    },
+    "help": {
+      "title": "Connect to n8n",
+      "step1": "In n8n add a Webhook node (method POST) and copy its Production URL.",
+      "step2": "Paste it here as a new endpoint and press Send test.",
+      "step3": "Choose the events you want, then build your workflow after the Webhook node.",
+      "verify": "Every request carries X-Webhook-Id, X-Webhook-Event, X-Webhook-Timestamp and X-Webhook-Signature (v1=HMAC-SHA256 of \"timestamp.body\" with your secret). Failed deliveries retry for about 2 days. See docs/WEBHOOKS.md."
+    },
+    "errors": {
+      "forbidden": "You don't have permission to manage webhooks.",
+      "invalid": "Check the name, URL and events.",
+      "insecure_url": "Use an https:// URL.",
+      "blocked_host": "That address isn't allowed. Use a public URL.",
+      "not_found": "Endpoint not found.",
+      "limit_reached": "Endpoint limit reached. Delete one first.",
+      "internal": "Something went wrong. Try again."
     }
   }
 }

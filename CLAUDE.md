@@ -63,6 +63,7 @@ Branches: `<type>/<slug>-<issue#>`. Skill `/web-design-guidelines <path>` audits
 | Invitations | `lib/tenant/join-school.ts`, `app/actions/admin/invitations.ts`, `app/[locale]/join-school` | — |
 | Certificates | `lib/certificates/`, `app/api/certificates/`, `app/[locale]/verify/` | template-gated issue |
 | Notifications, push, email | `lib/{notifications,email}/`, `app/api/cron/send-pushes` | — |
+| Outbound webhooks (n8n/Zapier; school + platform scopes) | `lib/webhooks/`, `app/actions/webhooks.ts`, `components/webhooks/`, `app/api/cron/deliver-webhooks` | docs/WEBHOOKS.md |
 | Theming / brand | `lib/themes/kit.ts`, `components/{theme-kit,tenant}/`, `app/globals.css` | DESIGN.md · docs/claude/design-context.md |
 | i18n | `messages/`, `i18n.ts`, `lib/i18n/` | docs/I18N_GUIDE.md |
 | Analytics / observability | `lib/analytics/`, `lib/sentry/`, `instrumentation*.ts` | docs/ANALYTICS_OPENPANEL.md |

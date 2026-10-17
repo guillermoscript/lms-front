@@ -250,6 +250,7 @@ export function AppSidebar({ userRole, ...props }: AppSidebarProps) {
                         { title: t('apiTokens'), href: "/dashboard/admin/api-tokens" },
                         { title: t('aiSettings'), href: "/dashboard/admin/settings/ai" },
                         { title: t('aiUsage'), href: "/dashboard/admin/ai-usage" },
+                        { title: t('webhooks'), href: "/dashboard/admin/settings/webhooks" },
                     ],
                 },
             ],
