@@ -1,3 +1,4 @@
+import { subscriptionLifecycleApplies, normalizeBillingMode } from '@/lib/billing/billing-mode'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { redirect } from 'next/navigation'
@@ -157,7 +158,7 @@ export default async function AdminDashboardPage({
   ] = await Promise.all([
     supabase.from('transactions').select('amount, refunded_amount')
       .eq('tenant_id', tenantId).eq('status', 'successful'),
-    adminClient.from('tenants').select('plan, stripe_account_id')
+    adminClient.from('tenants').select('plan, stripe_account_id, billing_mode')
       .eq('id', tenantId).single(),
     adminClient.from('tenant_users').select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId).eq('role', 'student').eq('status', 'active'),
@@ -388,12 +389,14 @@ export default async function AdminDashboardPage({
             limit={planLimits.max_students ?? 50}
           />
         </div>
-        <Link href="/dashboard/admin/billing/upgrade">
-          <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
-            {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
-            <IconArrowUpRight className="h-3.5 w-3.5" />
-          </Button>
-        </Link>
+        {subscriptionLifecycleApplies(normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode)) && (
+          <Link href="/dashboard/admin/billing/upgrade">
+            <Button variant={planSlug === 'free' ? 'default' : 'outline'} size="sm" className="gap-1.5">
+              {planSlug === 'free' ? t('plan.upgrade') : t('plan.changePlan')}
+              <IconArrowUpRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats Grid — clean, no color noise */}

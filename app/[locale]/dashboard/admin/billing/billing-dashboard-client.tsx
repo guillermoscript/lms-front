@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { subscriptionLifecycleApplies, type BillingMode } from '@/lib/billing/billing-mode'
 import { BillingOverview } from '@/components/admin/billing-overview'
+import { CompedPlanCard } from '@/components/admin/comped-plan-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -59,6 +60,8 @@ interface BillingDashboardClientProps {
     transactionFeePercent: number
     accessCutoffAt: string | null
     billingMode?: BillingMode
+    compedUntil?: string | null
+    feePercent?: number
   }
   paymentRequests: Array<{
     request_id: string
@@ -215,6 +218,12 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
 
   return (
     <div className="space-y-6">
+      <CompedPlanCard
+        billingMode={status.billingMode ?? 'paid'}
+        planName={status.planName}
+        compedUntil={status.compedUntil ?? null}
+        feePercent={status.feePercent ?? 0}
+      />
       <BillingOverview
         plan={status.plan}
         planName={status.planName}

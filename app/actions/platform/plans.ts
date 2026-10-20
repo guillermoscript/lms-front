@@ -14,7 +14,6 @@ import {
 } from '@/lib/billing/plan-prices'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { failPlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
-import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
 import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 
 async function verifySuperAdmin() {
@@ -382,158 +381,6 @@ export async function sendPaymentInstructions(requestId: string) {
 }
 
 /**
- * Super admin: force a tenant onto a plan without any payment.
- *
- * This never calls Stripe, so a tenant with a live Stripe subscription keeps
- * paying for the plan it actually bought while enjoying the comped one. The
- * divergence is recorded as `tenants.billing_mode = 'comped'` (billing_mode
- * design): the portal-change reconciler, the expiry cron and dunning all skip
- * non-paid schools. An already comped / internal school keeps its mode.
- *
- * The cutoff is reconciled afterwards: the plan (and so its limits) just
- * changed, and a lowered plan can put the school over its limits.
- *
- * Exits: a real payment (`confirmManualPayment`, `changePlan`) or
- * `convertCompedTenantToPaid`.
- */
-export async function forceTenantPlanChange(tenantId: string, planSlug: string) {
-  const superAdminId = await verifySuperAdmin()
-  const adminClient = createAdminClient()
-
-  const { data: plan } = await adminClient
-    .from('platform_plans')
-    .select('plan_id, slug, transaction_fee_percent')
-    .eq('slug', planSlug)
-    .single()
-
-  if (!plan) throw new Error('Plan not found')
-
-  const nowIso = new Date().toISOString()
-
-  const { data: modeRow } = await adminClient
-    .from('tenants')
-    .select('billing_mode')
-    .eq('id', tenantId)
-    .maybeSingle()
-  const currentMode = normalizeBillingMode((modeRow as { billing_mode?: unknown } | null)?.billing_mode)
-
-  await adminClient
-    .from('tenants')
-    .update({ plan: planSlug, updated_at: nowIso })
-    .eq('id', tenantId)
-
-  // Update revenue split
-  await adminClient
-    .from('revenue_splits')
-    .upsert({
-      tenant_id: tenantId,
-      platform_percentage: plan.transaction_fee_percent,
-      school_percentage: 100 - plan.transaction_fee_percent,
-      updated_at: nowIso,
-    }, { onConflict: 'tenant_id' })
-
-  // Keep platform_subscriptions in sync with the forced plan (issue #468).
-  // Previously this action changed tenants.plan + the split but left the
-  // subscription row pointing at the old plan, so the two disagreed after an
-  // override.
-  const { data: existingSub } = await adminClient
-    .from('platform_subscriptions')
-    .select('subscription_id, status, current_period_end')
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
-
-  if (planSlug === 'free') {
-    // Free needs no active subscription — cancel any existing row so the
-    // subscription and the tenant's plan agree.
-    if (existingSub) {
-      await adminClient
-        .from('platform_subscriptions')
-        .update({
-          plan_id: plan.plan_id,
-          status: 'canceled',
-          canceled_at: nowIso,
-          updated_at: nowIso,
-        })
-        .eq('tenant_id', tenantId)
-    }
-  } else if (existingSub) {
-    // Point the existing subscription at the forced plan. Preserve the billing
-    // period only when the sub is on a live paid cycle (active with a future
-    // period end); otherwise — canceled/expired row, or a lapsed period —
-    // reactivating with the stale current_period_end would hand the row
-    // straight to the expire-platform-subscriptions cron (past_due, then
-    // auto-downgrade after grace), silently undoing the override. Clear the
-    // period instead so the override is indefinite, like the insert below.
-    const liveCycle =
-      existingSub.status === 'active' &&
-      existingSub.current_period_end != null &&
-      new Date(existingSub.current_period_end) > new Date()
-    await adminClient
-      .from('platform_subscriptions')
-      .update({
-        plan_id: plan.plan_id,
-        status: 'active',
-        updated_at: nowIso,
-        ...(liveCycle
-          ? {}
-          : {
-              current_period_end: null,
-              grace_period_end: null,
-              cancel_at_period_end: false,
-              canceled_at: null,
-            }),
-      })
-      .eq('tenant_id', tenantId)
-  } else {
-    // No subscription yet (e.g. tenant was on free): create a manual override
-    // row so the paid plan is backed by an active subscription.
-    //
-    // current_period_end stays NULL on purpose: a super-admin override is
-    // indefinite, not a one-month grant. The expire-platform-subscriptions
-    // cron filters every phase on `.not('current_period_end', 'is', null)`,
-    // so a NULL period end is never reminded, never lapses to past_due, and
-    // never auto-downgrades — the override holds until a super admin changes
-    // it again or the school starts paying (confirmManualPayment then upserts
-    // a real dated cycle over this row).
-    await adminClient
-      .from('platform_subscriptions')
-      .insert({
-        tenant_id: tenantId,
-        plan_id: plan.plan_id,
-        status: 'active',
-        payment_provider: 'manual',
-        interval: 'monthly',
-        current_period_start: nowIso,
-        current_period_end: null,
-      })
-  }
-
-  // Written last: the SQL that confirms a real payment flips comped -> paid, and a
-  // forced downgrade to `free` is not a comp. An already comped / internal school
-  // keeps its mode (and its fee override).
-  if (planSlug !== 'free' && currentMode === 'paid') {
-    const { error: modeError } = await adminClient
-      .from('tenants')
-      .update({
-        billing_mode: 'comped',
-        comped_by: superAdminId,
-        comped_at: nowIso,
-        comped_reason: 'plan forced by super admin',
-        updated_at: nowIso,
-      })
-      .eq('id', tenantId)
-    if (modeError) throw new Error(`Failed to mark school as comped: ${modeError.message}`)
-  }
-
-  // The plan (and so its limits) just changed: re-evaluate the access cutoff now
-  // instead of waiting for the nightly sweep.
-  await reconcileAccessCutoffSafely(adminClient, tenantId)
-
-  revalidatePath('/platform/tenants')
-  return { success: true }
-}
-
-/**
  * Super admin: convert a comped school back to `paid` (billing_mode design).
  * The school keeps its current plan; the comp metadata and fee override are
  * cleared so the normal subscription lifecycle, dunning and plan fee apply
@@ -562,6 +409,7 @@ export async function convertCompedTenantToPaid(tenantId: string) {
       comped_by: null,
       comped_at: null,
       fee_percent_override: null,
+      comped_notice_sent: {},
       updated_at: new Date().toISOString(),
     })
     .eq('id', tenantId)

@@ -6,10 +6,10 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export async function getTenantAdminEmails(
+export async function getTenantAdmins(
   supabase: SupabaseClient,
   tenantId: string
-): Promise<string[]> {
+): Promise<{ userId: string; email: string | null }[]> {
   const { data: adminUsers } = await supabase
     .from('tenant_users')
     .select('user_id')
@@ -17,10 +17,18 @@ export async function getTenantAdminEmails(
     .eq('role', 'admin')
     .eq('status', 'active')
 
-  const emails: string[] = []
+  const admins: { userId: string; email: string | null }[] = []
   for (const admin of adminUsers || []) {
     const { data: authUser } = await supabase.auth.admin.getUserById(admin.user_id)
-    if (authUser?.user?.email) emails.push(authUser.user.email)
+    admins.push({ userId: admin.user_id, email: authUser?.user?.email ?? null })
   }
-  return emails
+  return admins
+}
+
+export async function getTenantAdminEmails(
+  supabase: SupabaseClient,
+  tenantId: string
+): Promise<string[]> {
+  const admins = await getTenantAdmins(supabase, tenantId)
+  return admins.flatMap((a) => (a.email ? [a.email] : []))
 }

@@ -39,7 +39,7 @@ on:
     - cron: '0 * * * *' # daily-digest — hourly by design (each tenant sends at its own local hour); expire-stale-checkouts rides along
     - cron: '0 0 * * *' # expire-subscriptions; expire-payment-requests (manual request TTL, #802) rides along
     - cron: '0 1 * * 1' # league-rollover (pg_cron also runs it Mondays 00:05; this is the fallback)
-    - cron: '0 2 * * *' # expire-platform-subscriptions
+    - cron: '0 2 * * *' # comped-expiry (runs first); expire-platform-subscriptions
     - cron: '0 3 * * *' # enforce-plan-limits
     - cron: '0 6 * * *' # enforce-platform-fees (pg_cron runs it at 0 5; this is the fallback, #929)
   workflow_dispatch:
@@ -51,6 +51,7 @@ on:
         options:
           - enforce-plan-limits
           - enforce-platform-fees
+          - comped-expiry
           - expire-platform-subscriptions
           - expire-subscriptions
           - daily-digest
@@ -96,7 +97,7 @@ jobs:
               '0 * * * *')    routes='daily-digest expire-stale-checkouts' ;;
               '0 0 * * *')    routes='expire-subscriptions expire-payment-requests' ;;
               '0 1 * * 1')    routes='league-rollover' ;;
-              '0 2 * * *')    routes='expire-platform-subscriptions' ;;
+              '0 2 * * *')    routes='comped-expiry expire-platform-subscriptions' ;;
               '0 3 * * *')    routes='enforce-plan-limits' ;;
               '0 6 * * *')    routes='enforce-platform-fees' ;;
               *)

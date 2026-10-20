@@ -70,6 +70,10 @@ Decisions made while implementing:
 - Fee-exempt and `plan_override` schools migrated to `comped`, preserving today's fee in `fee_percent_override` (100 - `school_percentage`, default 20).
 - `comped` keeps plan limits and the cutoff; only `internal` is exempt from the cutoff.
 
+### Resolved in PR 2 (#983)
+
+- Expiry lifecycle implemented as `/api/cron/comped-expiry` (daily `0 2`, scheduled by `.github/workflows/cron.yml` + `vercel.json`; pure window logic in `lib/billing/comped-expiry.ts`). Notices: only the smallest reached window is sent (a school converted 10 days out gets one), larger reached windows are marked covered. At expiry the school flips to `paid` and the cron itself stamps its subscription `past_due` with a 7-day `grace_period_end` (override rows have `current_period_end NULL`, which `expire-platform-subscriptions` never visits); that cron then downgrades normally.
+
 ## Code map (from survey; re-verify before editing)
 
 - Plan resolution: `lib/plans/server.ts`, `lib/plans/features.ts`, `lib/billing/plan-limits.ts`
