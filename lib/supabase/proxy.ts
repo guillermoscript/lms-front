@@ -1,22 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { User } from '@supabase/supabase-js'
-
-// Derive root domain for cross-subdomain cookie sharing
-function getCookieDomain(): string | undefined {
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
-  if (!platformDomain) return undefined
-  const domain = platformDomain.split(':')[0]
-  if (domain === 'localhost' || domain === '127.0.0.1') return undefined
-  return `.${domain}`
-}
+import { cookieDomainForHost } from '@/lib/tenant/cookie-domain'
 
 export async function updateSession(request: NextRequest): Promise<{ response: NextResponse; user: User | null }> {
   let supabaseResponse = NextResponse.next({
     request,
   })
 
-  const cookieDomain = getCookieDomain()
+  const cookieDomain = cookieDomainForHost(request.headers.get('x-forwarded-host') || request.headers.get('host'))
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.

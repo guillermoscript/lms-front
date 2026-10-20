@@ -12,6 +12,7 @@ import {
   toBankAccountView,
 } from '@/lib/billing/platform-bank-accounts'
 import { parseBankAccountInput } from '@/lib/billing/platform-bank-account-input'
+import { extractVesPerUsd, usdToVes } from '@/lib/billing/ves-rate-convert'
 import { feeTransferReference, withRequestSuffix } from '@/lib/billing/platform-fee-reference'
 
 /** Minimal PostgREST builder double: records calls, resolves to `result`. */
@@ -51,6 +52,47 @@ describe('selectBankAccountsFor', () => {
   })
 })
 
+describe('Pago Móvil (VES) with a USD balance', () => {
+  const pm = { id: 'p', currency: 'VES', kind: 'pago_movil', bankName: 'Banesco' }
+  const zinli = { id: 'z', currency: 'USD', kind: 'zinli', bankName: null }
+
+  it('is always offered next to the USD accounts, order kept', () => {
+    expect(selectBankAccountsFor([zinli, pm], 'USD')).toEqual([zinli, pm])
+    expect(selectBankAccountsFor([pm, zinli], 'USD')).toEqual([pm, zinli])
+  })
+
+  it('is offered even when no USD account exists', () => {
+    expect(selectBankAccountsFor([pm], 'USD')).toEqual([pm])
+    expect(selectBankAccountsFor([pm], 'EUR')).toEqual([pm])
+  })
+
+  it('does not duplicate when the balance itself is in VES', () => {
+    expect(selectBankAccountsFor([pm, zinli], 'VES')).toEqual([pm])
+  })
+})
+
+describe('VES rate', () => {
+  it('reads a dot path and accepts numeric strings, comma decimals included', () => {
+    expect(extractVesPerUsd({ data: { usd: 36.5 } }, 'data.usd')).toBe(36.5)
+    expect(extractVesPerUsd({ rate: '36.5' }, 'rate')).toBe(36.5)
+    expect(extractVesPerUsd({ rate: '36,5' }, 'rate')).toBe(36.5)
+    expect(extractVesPerUsd([{ price: 40 }], '0.price')).toBe(40)
+  })
+
+  it('rejects missing, non-numeric and implausible values', () => {
+    for (const body of [{}, { rate: 'abc' }, { rate: 0 }, { rate: -3 }, { rate: 1e12 }, null]) {
+      expect(extractVesPerUsd(body, 'rate')).toBeNull()
+    }
+  })
+
+  it('converts USD to bolívares rounded to cents', () => {
+    expect(usdToVes(10, 36.5)).toBe(365)
+    expect(usdToVes(15.5, 36.4567)).toBe(565.08)
+    expect(usdToVes(0, 36.5)).toBeNull()
+    expect(usdToVes(10, 0)).toBeNull()
+  })
+})
+
 describe('selectBankAccountsForAll', () => {
   it('unions per currency without duplicates, never other currencies', () => {
     const gbp = { id: 'g', currency: 'GBP', bankName: 'GBP Bank' }
@@ -60,7 +102,7 @@ describe('selectBankAccountsForAll', () => {
 
 describe('toBankAccountView', () => {
   const base = {
-    id: 'x', currency: 'USD', label: 'Main', bankName: 'B', accountHolder: 'H', accountNumber: '1',
+    id: 'x', kind: 'bank' as const, currency: 'USD', label: 'Main', email: null, document: null, bankName: 'B', accountHolder: 'H', accountNumber: '1',
     accountType: null, routingNumber: null, swiftCode: null, extraInstructions: null,
     isActive: true, sortOrder: 0, updatedAt: '2026-10-01T00:00:00Z',
   }
@@ -74,7 +116,7 @@ describe('toBankAccountView', () => {
   })
   it('drops bookkeeping fields', () => {
     expect(Object.keys(toBankAccountView(base)).sort()).toEqual(
-      ['accountHolder', 'accountNumber', 'accountType', 'bankName', 'currency', 'extraInstructions', 'id', 'label', 'routingNumber', 'swiftCode'],
+      ['accountHolder', 'accountNumber', 'accountType', 'bankName', 'currency', 'document', 'email', 'extraInstructions', 'id', 'kind', 'label', 'routingNumber', 'swiftCode'],
     )
   })
 })
@@ -93,8 +135,8 @@ describe('fetchActiveBankAccounts', () => {
     expect(calls).toContainEqual(['from', 'platform_bank_accounts'])
     expect(calls).toContainEqual(['eq', 'is_active', true])
     expect(rows).toEqual([{
-      id: 'a1', currency: 'USD', label: 'Main', bankName: 'B', accountHolder: 'H', accountNumber: '123',
-      accountType: null, routingNumber: null, swiftCode: 'BOFAUS3N', extraInstructions: null,
+      id: 'a1', kind: 'bank', currency: 'USD', label: 'Main', bankName: 'B', accountHolder: 'H', accountNumber: '123',
+      accountType: null, routingNumber: null, swiftCode: 'BOFAUS3N', email: null, document: null, extraInstructions: null,
     }])
   })
 
@@ -151,8 +193,11 @@ describe('parseBankAccountInput', () => {
     expect(r).toEqual({
       ok: true,
       value: {
+        kind: 'bank',
         currency: 'USD',
         label: 'Main',
+        email: null,
+        document: null,
         bankName: 'First Bank',
         accountHolder: 'LMS Inc',
         accountNumber: '0001',
@@ -183,6 +228,46 @@ describe('parseBankAccountInput', () => {
   it('rejects over-long values', () => {
     const r = parseBankAccountInput({ ...valid, label: 'x'.repeat(81) })
     expect(r).toEqual({ ok: false, fields: ['label'] })
+  })
+
+  describe('payment methods', () => {
+    const base = { currency: 'usd', label: 'Wallet', sortOrder: 0, isActive: true }
+
+    it('a Zinli account needs only an email', () => {
+      const r = parseBankAccountInput({ ...base, kind: 'zinli', email: ' pay@example.com ' })
+      expect(r.ok && r.value).toMatchObject({ kind: 'zinli', email: 'pay@example.com', bankName: null, accountNumber: null })
+    })
+
+    it('requires each method\'s own fields', () => {
+      expect(parseBankAccountInput({ ...base, kind: 'zinli' })).toEqual({ ok: false, fields: ['email'] })
+      expect(parseBankAccountInput({ ...base, kind: 'binance' })).toEqual({ ok: false, fields: ['accountNumber'] })
+      expect(parseBankAccountInput({ ...base, kind: 'cash' })).toEqual({ ok: false, fields: ['extraInstructions'] })
+      const pm = parseBankAccountInput({ ...base, kind: 'pago_movil' })
+      expect(pm.ok).toBe(false)
+      if (!pm.ok) expect(pm.fields.sort()).toEqual(['accountNumber', 'bankName', 'document'])
+    })
+
+    it('a complete Pago Móvil account saves with Pay-style columns', () => {
+      const r = parseBankAccountInput({
+        ...base, currency: 'ves', kind: 'pago_movil', bankName: 'Banesco', accountNumber: '04141234567', document: 'V-12345678',
+      })
+      expect(r.ok && r.value).toMatchObject({ kind: 'pago_movil', currency: 'VES', document: 'V-12345678' })
+    })
+
+    it('rejects a malformed email', () => {
+      expect(parseBankAccountInput({ ...base, kind: 'paypal', email: 'nope' })).toEqual({ ok: false, fields: ['email'] })
+    })
+
+    it('drops fields the chosen method does not use', () => {
+      const r = parseBankAccountInput({ ...base, kind: 'paypal', email: 'a@b.co', accountNumber: '999', bankName: 'Old Bank', swiftCode: 'BOFAUS3N' })
+      expect(r.ok && r.value).toMatchObject({ accountNumber: null, bankName: null, swiftCode: null })
+    })
+
+    it('defaults to a bank account and rejects unknown methods', () => {
+      const bank = parseBankAccountInput({ ...base, bankName: 'B', accountHolder: 'H', accountNumber: '1' })
+      expect(bank.ok && bank.value.kind).toBe('bank')
+      expect(parseBankAccountInput({ ...base, kind: 'venmo', email: 'a@b.co' }).ok).toBe(false)
+    })
   })
 })
 

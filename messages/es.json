@@ -6322,7 +6322,7 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Volver a mi escuela",
       "logout": "Cerrar sesión",
-      "bankAccounts": "Cuentas bancarias",
+      "bankAccounts": "Cuentas de pago",
       "webhooks": "Webhooks"
     },
     "fees": {
@@ -6432,20 +6432,20 @@
       "noBankAccountLink": "Agregar una cuenta bancaria"
     },
     "bankAccounts": {
-      "title": "Cuentas bancarias",
-      "description": "Adónde transfieren las escuelas sus comisiones de plataforma. Cada escuela ve la cuenta activa en la moneda de su saldo, o la cuenta activa en USD si no hay una. Una cuenta activa por moneda. Cada cambio queda auditado.",
+      "title": "Cuentas de pago",
+      "description": "Adónde pagan las escuelas sus comisiones de plataforma: transferencia bancaria, Zelle, Binance, PayPal, Zinli, efectivo o Pago Móvil. Cada escuela ve las cuentas activas en la moneda de su saldo, o las activas en USD si no hay ninguna. Una cuenta activa por método y moneda. Cada cambio queda auditado.",
       "add": "Agregar cuenta",
       "edit": "Editar",
       "activate": "Activar",
       "deactivate": "Desactivar",
       "active": "Activa",
       "inactive": "Inactiva",
-      "empty": "Todavía no hay cuentas bancarias",
+      "empty": "Todavía no hay cuentas de pago",
       "emptyDesc": "Mientras no agregues una, a las escuelas que paguen por transferencia se les dice que recibirán los datos por correo.",
-      "loadError": "No pudimos cargar las cuentas bancarias. Actualiza para intentarlo de nuevo.",
-      "noActiveWarning": "No hay ninguna cuenta bancaria activa. Las escuelas que pagan por transferencia no ven datos bancarios.",
-      "createTitle": "Agregar cuenta bancaria",
-      "editTitle": "Editar cuenta bancaria",
+      "loadError": "No pudimos cargar las cuentas de pago. Actualiza para intentarlo de nuevo.",
+      "noActiveWarning": "No hay ninguna cuenta de pago activa. Las escuelas que pagan por transferencia no ven datos de pago.",
+      "createTitle": "Agregar cuenta de pago",
+      "editTitle": "Editar cuenta de pago",
       "formDescription": "Las escuelas ven todos los campos excepto el nombre interno y el orden.",
       "optional": "opcional",
       "hints": {
@@ -6465,7 +6465,10 @@
         "swiftCode": "SWIFT / BIC",
         "extraInstructions": "Instrucciones adicionales",
         "sortOrder": "Orden",
-        "isActive": "Activa"
+        "isActive": "Activa",
+        "kind": "Método",
+        "email": "Correo",
+        "document": "Cédula / RIF"
       },
       "headers": {
         "account": "Cuenta",
@@ -6473,14 +6476,16 @@
         "bank": "Banco",
         "number": "Número de cuenta",
         "status": "Estado",
-        "updated": "Actualizada"
+        "updated": "Actualizada",
+        "method": "Método",
+        "details": "Datos"
       },
       "save": "Guardar",
       "saving": "Guardando…",
       "cancel": "Cancelar",
-      "saved": "Cuenta bancaria guardada.",
-      "activated": "Cuenta bancaria activada.",
-      "deactivated": "Cuenta bancaria desactivada.",
+      "saved": "Cuenta de pago guardada.",
+      "activated": "Cuenta de pago activada.",
+      "deactivated": "Cuenta de pago desactivada.",
       "deactivateTitle": "¿Desactivar esta cuenta?",
       "deactivateBody": "Las escuelas dejan de verla de inmediato. Puedes volver a activarla más adelante.",
       "errors": {
@@ -6488,7 +6493,7 @@
         "invalid": "Revisa los campos marcados.",
         "invalid_id": "Esa cuenta no existe.",
         "not_found": "Esa cuenta ya no existe.",
-        "duplicate_currency": "Ya hay otra cuenta activa en esta moneda. Desactívala primero.",
+        "duplicate_currency": "Otra cuenta activa ya usa este método y moneda. Desactívala primero.",
         "internal": "Algo salió mal. Inténtalo de nuevo.",
         "generic": "Algo salió mal. Inténtalo de nuevo."
       },
@@ -6503,7 +6508,63 @@
         "swiftCode": "Usa 8 u 11 letras y dígitos.",
         "extraInstructions": "Hasta 1000 caracteres.",
         "sortOrder": "Usa un número entero.",
-        "isActive": "Valor no válido."
+        "isActive": "Valor no válido.",
+        "kind": "Elige un método.",
+        "email": "Ingresa un correo válido.",
+        "document": "Obligatorio, hasta 40 caracteres."
+      },
+      "kinds": {
+        "bank": {
+          "name": "Transferencia bancaria",
+          "description": "Una cuenta bancaria a la que las escuelas transfieren."
+        },
+        "zelle": {
+          "name": "Zelle",
+          "description": "Recibe pagos Zelle en un correo.",
+          "fields": {
+            "email": "Correo de Zelle",
+            "accountHolder": "Nombre en la cuenta"
+          }
+        },
+        "binance": {
+          "name": "Binance",
+          "description": "Binance Pay: las escuelas envían a tu Pay ID.",
+          "fields": {
+            "accountNumber": "Pay ID de Binance",
+            "email": "Correo de Binance"
+          }
+        },
+        "paypal": {
+          "name": "PayPal",
+          "description": "Recibe pagos de PayPal en un correo.",
+          "fields": {
+            "email": "Correo de PayPal"
+          }
+        },
+        "zinli": {
+          "name": "Zinli",
+          "description": "Recibe pagos en una billetera Zinli.",
+          "fields": {
+            "email": "Correo de Zinli",
+            "accountHolder": "Nombre en la cuenta"
+          }
+        },
+        "cash": {
+          "name": "Efectivo",
+          "description": "Pago en efectivo en persona. Indica dónde y cuándo en las instrucciones.",
+          "fields": {
+            "extraInstructions": "Instrucciones"
+          }
+        },
+        "pago_movil": {
+          "name": "Pago Móvil",
+          "description": "Pago Móvil se paga en bolívares, convertidos desde tu monto en USD.",
+          "fields": {
+            "bankName": "Banco",
+            "accountNumber": "Teléfono",
+            "accountHolder": "Titular de la cuenta"
+          }
+        }
       }
     }
   },
@@ -9588,7 +9649,7 @@
       "redirecting": "Abriendo el pago…",
       "nothingToPay": "No hay nada que pagar en este momento.",
       "bank": {
-        "title": "Datos para la transferencia bancaria",
+        "title": "Datos de pago",
         "fallback": "Todavía no tenemos datos bancarios para mostrarte aquí. Al registrar la transferencia te los enviaremos por correo a tu contacto de facturación.",
         "reference": "Referencia de pago",
         "referenceHint": "Indícala en el concepto de la transferencia para que podamos identificarla.",
@@ -9603,12 +9664,26 @@
           "accountType": "Tipo de cuenta",
           "routingNumber": "Número de ruta",
           "swiftCode": "SWIFT / BIC",
-          "extraInstructions": "Instrucciones adicionales"
+          "extraInstructions": "Instrucciones adicionales",
+          "email": "Correo",
+          "document": "Cédula / RIF",
+          "payId": "Pay ID de Binance",
+          "phone": "Teléfono",
+          "vesAmount": "Monto a enviar"
         },
         "currencyNote": "Esta cuenta recibe {accountCurrency}. Transfiere el equivalente de tu saldo en {currency}.",
         "copyFailed": "No se pudo copiar",
         "copyManual": "Presiona Ctrl/Cmd+C para copiar",
-        "copyField": "Copiar {field}"
+        "copyField": "Copiar {field}",
+        "kinds": {
+          "zelle": "Zelle",
+          "binance": "Binance",
+          "paypal": "PayPal",
+          "zinli": "Zinli",
+          "cash": "Efectivo",
+          "pago_movil": "Pago Móvil"
+        },
+        "vesRate": "Tasa: {rate} Bs por USD · {source} · {date}"
       },
       "instructions": {
         "title": "Transferencia registrada",

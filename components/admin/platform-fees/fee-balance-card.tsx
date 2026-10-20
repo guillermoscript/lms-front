@@ -7,6 +7,7 @@ import { owedBuckets } from '@/lib/billing/platform-fee-view'
 import { formatMoney } from '@/lib/payments/format-money'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { loadVesRate } from '@/lib/billing/ves-rate'
 import {
   loadActiveBankAccounts,
   loadOpenFeeRequest,
@@ -86,6 +87,8 @@ export async function FeeBalanceCard({
     payable.length > 0 && bankRes.status === 'fulfilled'
       ? selectBankAccountsForAll(bankRes.value, openRequest ? [...payable, openRequest.currency] : payable)
       : []
+  // Pago Móvil is paid in VES against a USD balance: show the converted amount.
+  const vesRate = bankAccounts.some((a) => a.kind === 'pago_movil') ? await loadVesRate() : null
   const tenantSlug = tenantRes.status === 'fulfilled' ? tenantRes.value.data?.slug ?? '' : ''
   // '' = unknown: the dialog then quotes the request id alone.
   const tenantReference = tenantSlug ? feeTransferReference(tenantSlug) : ''
@@ -106,6 +109,7 @@ export async function FeeBalanceCard({
             <FeePayNowDialog
               buckets={account.payNow}
               bankAccounts={bankAccounts}
+              vesRate={vesRate}
               tenantReference={tenantReference}
               openRequest={openRequest}
             />

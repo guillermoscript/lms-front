@@ -5,9 +5,9 @@
 -- reads nothing and writes nothing, a super admin reads through RLS but
 -- still cannot write directly); writes go through the service-role-only
 -- functions, which check the actor is a super admin, normalise input,
--- enforce one active account per currency and audit without the number.
+-- enforce one active account per kind and currency and audit without the number.
 BEGIN;
-SELECT plan(24);
+SELECT plan(32);
 
 -- ── privileges ──
 SELECT ok(NOT has_table_privilege('anon', 'public.platform_bank_accounts', 'SELECT'), 'anon cannot select');
@@ -15,7 +15,7 @@ SELECT ok(NOT has_table_privilege('authenticated', 'public.platform_bank_account
 SELECT ok(NOT has_table_privilege('authenticated', 'public.platform_bank_accounts', 'UPDATE'), 'authenticated cannot update');
 SELECT ok(NOT has_table_privilege('authenticated', 'public.platform_bank_accounts', 'DELETE'), 'authenticated cannot delete');
 SELECT ok(NOT has_function_privilege('authenticated',
-  'public.save_platform_bank_account(uuid, uuid, text, text, text, text, text, text, text, text, text, integer, boolean)', 'EXECUTE'),
+  'public.save_platform_bank_account(uuid, uuid, text, text, text, text, text, text, text, text, text, integer, boolean, text, text, text)', 'EXECUTE'),
   'authenticated cannot execute save');
 SELECT ok(NOT has_function_privilege('anon', 'public.set_platform_bank_account_active(uuid, uuid, boolean)', 'EXECUTE'),
   'anon cannot execute set_active');
@@ -64,6 +64,40 @@ SELECT throws_ok(
        NULL, 'EUR', 'Bad', 'Bank', 'Holder', '1', _swift_code => 'NOPE') $$,
   '23514', NULL, 'SWIFT must be 8 or 11 alphanumerics');
 
+-- ── payment method kinds ──
+SELECT lives_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'USD', 'Zinli USD', _email => ' Pay@Example.com ', _kind => 'zinli') $$,
+  'a Zinli account needs only an email, and may share a currency with the bank account');
+SELECT results_eq(
+  $$ SELECT kind, email, bank_name, account_number FROM public.platform_bank_accounts WHERE label = 'Zinli USD' $$,
+  $$ VALUES ('zinli'::text, 'Pay@Example.com'::text, NULL::text, NULL::text) $$,
+  'kind rows keep unused columns NULL');
+SELECT throws_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'USD', 'Zinli again', _email => 'other@example.com', _kind => 'zinli') $$,
+  '23505', NULL, 'only one active account per kind and currency');
+SELECT throws_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'EUR', 'No email', _kind => 'paypal') $$,
+  '23514', NULL, 'a PayPal account requires an email');
+SELECT throws_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'EUR', 'Bad email', _email => 'not-an-email', _kind => 'zelle') $$,
+  '23514', NULL, 'the email must look like an email');
+SELECT throws_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'VES', 'Pago movil', 'Banesco', _account_number => '04141234567', _kind => 'pago_movil') $$,
+  '23514', NULL, 'Pago Movil requires the document');
+SELECT lives_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'VES', 'Pago movil', 'Banesco', _account_number => '04141234567', _document => 'V-12345678', _kind => 'pago_movil') $$,
+  'a complete Pago Movil account saves');
+SELECT throws_ok(
+  $$ SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
+       NULL, 'EUR', 'Mystery', _extra_instructions => 'x', _kind => 'venmo') $$,
+  '23514', NULL, 'an unknown kind is refused');
+
 -- update audits changed field names only
 SELECT public.save_platform_bank_account((SELECT user_id FROM public.super_admins LIMIT 1),
   (SELECT id FROM public.platform_bank_accounts WHERE label = 'Main USD'),
@@ -100,7 +134,7 @@ RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims',
   '{"sub":"a1000000-0000-0000-0000-000000000002","role":"authenticated","tenant_id":"00000000-0000-0000-0000-000000000001","is_super_admin":true}', true);
-SELECT is((SELECT count(*)::int FROM public.platform_bank_accounts), 2, 'a super admin reads all accounts');
+SELECT is((SELECT count(*)::int FROM public.platform_bank_accounts), 4, 'a super admin reads all accounts');
 RESET ROLE;
 
 SELECT * FROM finish();
