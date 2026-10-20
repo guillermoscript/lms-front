@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { confirmManualPayment } from "@/app/actions/admin/billing"
+import { confirmManualPaymentForUi } from "@/app/actions/admin/billing"
 import { rejectManualPayment, sendPaymentInstructions } from "@/app/actions/platform/plans"
 
 interface Props {
@@ -62,7 +62,11 @@ export function BillingActions({ requestId, status }: Props) {
   async function handleConfirm() {
     setLoadingConfirm(true)
     try {
-      await confirmManualPayment(requestId)
+      const result = await confirmManualPaymentForUi(requestId)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success('Payment confirmed — school moved to its new plan')
       router.refresh()
     } catch (e) {
