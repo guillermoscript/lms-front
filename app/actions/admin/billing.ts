@@ -458,6 +458,23 @@ export async function confirmManualPayment(requestId: string) {
 }
 
 /**
+ * UI-facing wrapper around `confirmManualPayment`. Next.js masks the message of
+ * anything a server action throws in production ("An error occurred in the
+ * Server Components render"), so an expected refusal (expired / rejected
+ * request, over-limit downgrade) never reached the toast. Return it instead.
+ */
+export async function confirmManualPaymentForUi(
+  requestId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    await confirmManualPayment(requestId)
+    return { success: true }
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to confirm payment' }
+  }
+}
+
+/**
  * Load the pieces needed to modify an active platform subscription: the
  * provider it is billed through, its capabilities, and the target plan's price
  * on THAT provider. Throws a friendly Error for every non-actionable state (no
