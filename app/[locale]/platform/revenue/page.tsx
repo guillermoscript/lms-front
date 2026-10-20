@@ -4,6 +4,8 @@ import { PlatformPageHeader } from '@/components/platform/page-header'
 import { StatStrip, type StatItem } from '@/components/platform/stat-strip'
 import { PlatformPanel, PlatformSection, TD, TH, TH_RIGHT } from '@/components/platform/section'
 import { PlanBadge } from '@/components/platform/badges'
+import { BillingModeBadge } from '@/components/platform/billing-mode-badge'
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 import { cn } from '@/lib/utils'
 
 interface ProviderRow {
@@ -16,6 +18,7 @@ interface TenantRow {
   tenant_id: string
   name: string
   plan: string
+  billing_mode?: string
   gmv: number
   fees: number
   count: number
@@ -30,6 +33,7 @@ interface PlatformRevenue {
   platform_fees: number
   transaction_count: number
   saas_mrr: number
+  saas_mrr_waived?: number
   by_provider: ProviderRow[]
   by_tenant: TenantRow[]
   monthly: MonthlyRow[]
@@ -63,6 +67,7 @@ export default async function PlatformRevenuePage() {
   const platformFees = rev.platform_fees ?? 0
   const gmv = rev.gmv ?? 0
   const saasMrr = rev.saas_mrr ?? 0
+  const mrrWaived = rev.saas_mrr_waived ?? 0
   const txCount = rev.transaction_count ?? 0
   const byProvider = rev.by_provider ?? []
   const byTenant = rev.by_tenant ?? []
@@ -76,7 +81,11 @@ export default async function PlatformRevenuePage() {
       detail: 'Your cut of student sales, all time',
     },
     { label: 'Gross merchandise value', value: usd(gmv), detail: 'Total student purchase volume' },
-    { label: 'SaaS MRR', value: usd(saasMrr), detail: 'School subscriptions, normalised to monthly' },
+    { label: 'SaaS MRR', value: usd(saasMrr), detail:
+        mrrWaived > 0
+          ? `Paying schools only · ${usd(mrrWaived)}/mo given free to comped & internal`
+          : 'Paying schools only, normalised to monthly',
+    },
     { label: 'Transactions', value: txCount.toLocaleString('en-US'), detail: 'Successful student payments' },
   ]
 
@@ -164,6 +173,7 @@ export default async function PlatformRevenuePage() {
                   <tr>
                     <th className={TH}>School</th>
                     <th className={TH}>Plan</th>
+                    <th className={TH}>Billing</th>
                     <th className={TH_RIGHT}>GMV</th>
                     <th className={TH_RIGHT}>Platform fees</th>
                     <th className={TH_RIGHT}>Txns</th>
@@ -182,6 +192,9 @@ export default async function PlatformRevenuePage() {
                       </td>
                       <td className={TD}>
                         <PlanBadge plan={t.plan} />
+                      </td>
+                      <td className={TD}>
+                        <BillingModeBadge mode={normalizeBillingMode(t.billing_mode)} />
                       </td>
                       <td className={cn(TD, 'text-right tabular-nums')}>{usd(t.gmv)}</td>
                       <td className={cn(TD, 'text-right font-medium tabular-nums')}>{usd(t.fees)}</td>
