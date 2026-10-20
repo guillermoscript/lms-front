@@ -5181,16 +5181,19 @@ export type Database = {
       }
       platform_bank_accounts: {
         Row: {
-          account_holder: string
-          account_number: string
+          account_holder: string | null
+          account_number: string | null
           account_type: string | null
-          bank_name: string
+          bank_name: string | null
           created_at: string
           created_by: string | null
           currency: string
+          document: string | null
+          email: string | null
           extra_instructions: string | null
           id: string
           is_active: boolean
+          kind: string
           label: string
           routing_number: string | null
           sort_order: number
@@ -5199,16 +5202,19 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
-          account_holder: string
-          account_number: string
+          account_holder: string | null
+          account_number: string | null
           account_type?: string | null
-          bank_name: string
+          bank_name?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
+          document?: string | null
+          email?: string | null
           extra_instructions?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
           label: string
           routing_number?: string | null
           sort_order?: number
@@ -5217,16 +5223,19 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
-          account_holder?: string
-          account_number?: string
+          account_holder?: string | null
+          account_number?: string | null
           account_type?: string | null
-          bank_name?: string
+          bank_name?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
+          document?: string | null
+          email?: string | null
           extra_instructions?: string | null
           id?: string
           is_active?: boolean
+          kind?: string
           label?: string
           routing_number?: string | null
           sort_order?: number
@@ -8605,15 +8614,18 @@ export type Database = {
       }
       save_platform_bank_account: {
         Args: {
-          _account_holder: string
-          _account_number: string
+          _account_holder?: string
+          _account_number?: string
           _account_type?: string
           _actor: string
-          _bank_name: string
+          _bank_name?: string
           _currency: string
+          _document?: string
+          _email?: string
           _extra_instructions?: string
           _id: string
           _is_active?: boolean
+          _kind?: string
           _label: string
           _routing_number?: string
           _sort_order?: number

@@ -6322,7 +6322,7 @@
       "badgeTooltip": "{title} ({count})",
       "backToSchool": "Back to my school",
       "logout": "Log out",
-      "bankAccounts": "Bank accounts",
+      "bankAccounts": "Payment accounts",
       "webhooks": "Webhooks"
     },
     "fees": {
@@ -6432,20 +6432,20 @@
       "noBankAccountLink": "Add a bank account"
     },
     "bankAccounts": {
-      "title": "Bank accounts",
-      "description": "Where schools wire platform fee transfers. Schools see the active account in their balance currency, or the active USD account when there is none. One active account per currency. Every change is audited.",
+      "title": "Payment accounts",
+      "description": "Where schools pay platform fees: bank transfer, Zelle, Binance, PayPal, Zinli, cash or Pago Móvil. Schools see the active accounts in their balance currency, or the active USD ones when there are none. One active account per method and currency. Every change is audited.",
       "add": "Add account",
       "edit": "Edit",
       "activate": "Activate",
       "deactivate": "Deactivate",
       "active": "Active",
       "inactive": "Inactive",
-      "empty": "No bank accounts yet",
-      "emptyDesc": "Until you add one, schools paying by bank transfer are told the details will be emailed to them.",
-      "loadError": "Couldn't load the bank accounts. Refresh to try again.",
-      "noActiveWarning": "No active bank account. Schools paying by transfer see no bank details.",
-      "createTitle": "Add bank account",
-      "editTitle": "Edit bank account",
+      "empty": "No payment accounts yet",
+      "emptyDesc": "Until you add one, schools paying by transfer are told the details will be emailed to them.",
+      "loadError": "Couldn't load the payment accounts. Refresh to try again.",
+      "noActiveWarning": "No active payment account. Schools paying by transfer see no payment details.",
+      "createTitle": "Add payment account",
+      "editTitle": "Edit payment account",
       "formDescription": "Schools see every field except the internal name and sort order.",
       "optional": "optional",
       "hints": {
@@ -6465,7 +6465,10 @@
         "swiftCode": "SWIFT / BIC",
         "extraInstructions": "Additional instructions",
         "sortOrder": "Sort order",
-        "isActive": "Active"
+        "isActive": "Active",
+        "kind": "Method",
+        "email": "Email",
+        "document": "ID number (cédula / RIF)"
       },
       "headers": {
         "account": "Account",
@@ -6473,14 +6476,16 @@
         "bank": "Bank",
         "number": "Account number",
         "status": "Status",
-        "updated": "Updated"
+        "updated": "Updated",
+        "method": "Method",
+        "details": "Details"
       },
       "save": "Save",
       "saving": "Saving…",
       "cancel": "Cancel",
-      "saved": "Bank account saved.",
-      "activated": "Bank account activated.",
-      "deactivated": "Bank account deactivated.",
+      "saved": "Payment account saved.",
+      "activated": "Payment account activated.",
+      "deactivated": "Payment account deactivated.",
       "deactivateTitle": "Deactivate this account?",
       "deactivateBody": "Schools stop seeing it right away. You can activate it again later.",
       "errors": {
@@ -6488,7 +6493,7 @@
         "invalid": "Check the highlighted fields.",
         "invalid_id": "That account doesn't exist.",
         "not_found": "That account doesn't exist anymore.",
-        "duplicate_currency": "Another active account already uses this currency. Deactivate it first.",
+        "duplicate_currency": "Another active account already uses this method and currency. Deactivate it first.",
         "internal": "Something went wrong. Try again.",
         "generic": "Something went wrong. Try again."
       },
@@ -6503,7 +6508,63 @@
         "swiftCode": "Use 8 or 11 letters and digits.",
         "extraInstructions": "Up to 1000 characters.",
         "sortOrder": "Use a whole number.",
-        "isActive": "Invalid value."
+        "isActive": "Invalid value.",
+        "kind": "Choose a method.",
+        "email": "Enter a valid email address.",
+        "document": "Required, up to 40 characters."
+      },
+      "kinds": {
+        "bank": {
+          "name": "Bank transfer",
+          "description": "A bank account schools wire money to."
+        },
+        "zelle": {
+          "name": "Zelle",
+          "description": "Receive Zelle payments to an email.",
+          "fields": {
+            "email": "Zelle email",
+            "accountHolder": "Name on the account"
+          }
+        },
+        "binance": {
+          "name": "Binance",
+          "description": "Binance Pay: schools send to your Pay ID.",
+          "fields": {
+            "accountNumber": "Binance Pay ID",
+            "email": "Binance email"
+          }
+        },
+        "paypal": {
+          "name": "PayPal",
+          "description": "Receive PayPal payments to an email.",
+          "fields": {
+            "email": "PayPal email"
+          }
+        },
+        "zinli": {
+          "name": "Zinli",
+          "description": "Receive payments to a Zinli wallet.",
+          "fields": {
+            "email": "Zinli email",
+            "accountHolder": "Name on the account"
+          }
+        },
+        "cash": {
+          "name": "Cash",
+          "description": "Cash in person. Say where and when in the instructions.",
+          "fields": {
+            "extraInstructions": "Instructions"
+          }
+        },
+        "pago_movil": {
+          "name": "Pago Móvil",
+          "description": "Pago Móvil is paid in bolívares, converted from your USD amount.",
+          "fields": {
+            "bankName": "Bank",
+            "accountNumber": "Phone number",
+            "accountHolder": "Account holder"
+          }
+        }
       }
     }
   },
@@ -9588,7 +9649,7 @@
       "redirecting": "Opening checkout…",
       "nothingToPay": "There's nothing to pay right now.",
       "bank": {
-        "title": "Bank transfer details",
+        "title": "Payment details",
         "fallback": "We don't have bank details to show here yet. Once you register the transfer, we'll email them to your billing contact.",
         "reference": "Payment reference",
         "referenceHint": "Include it in the transfer description so we can match it.",
@@ -9603,12 +9664,26 @@
           "accountType": "Account type",
           "routingNumber": "Routing number",
           "swiftCode": "SWIFT / BIC",
-          "extraInstructions": "Additional instructions"
+          "extraInstructions": "Additional instructions",
+          "email": "Email",
+          "document": "ID number",
+          "payId": "Binance Pay ID",
+          "phone": "Phone number",
+          "vesAmount": "Amount to send"
         },
         "currencyNote": "This account receives {accountCurrency}. Transfer the equivalent of your {currency} balance.",
         "copyFailed": "Couldn't copy",
         "copyManual": "Press Ctrl/Cmd+C to copy",
-        "copyField": "Copy {field}"
+        "copyField": "Copy {field}",
+        "kinds": {
+          "zelle": "Zelle",
+          "binance": "Binance",
+          "paypal": "PayPal",
+          "zinli": "Zinli",
+          "cash": "Cash",
+          "pago_movil": "Pago Móvil"
+        },
+        "vesRate": "Rate: {rate} Bs per USD · {source} · {date}"
       },
       "instructions": {
         "title": "Transfer registered",
