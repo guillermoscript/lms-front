@@ -4,6 +4,7 @@ import { updateSession } from '@/lib/supabase/proxy'
 import { accessTokenFromCookies, jwtClaims } from '@/lib/supabase/session-cookie'
 import { getSafeNextPath } from '@/lib/auth/safe-next-path'
 import { isProtectedPath } from '@/lib/auth/route-access'
+import { cookieDomainForHost } from '@/lib/tenant/cookie-domain'
 import { createServerClient } from '@supabase/ssr'
 import { locales, defaultLocale } from './i18n'
 
@@ -90,8 +91,20 @@ function getTenantSlugFromHost(host: string): string | null {
     }
   }
 
-  // For localhost development: check x-tenant-slug header as override
   return null
+}
+
+/**
+ * A host that is neither the platform nor a platform subdomain is a candidate
+ * custom domain (tenants.domain), e.g. "academia.guille.tech".
+ */
+function getCustomDomainFromHost(host: string): string | null {
+  const hostname = host.split(':')[0].toLowerCase()
+  if (!hostname || PLATFORM_HOSTS.includes(hostname)) return null
+  if (hostname.endsWith(`.${PLATFORM_DOMAIN}`)) return null
+  // Local dev hosts (lvh.me, *.localhost) are never custom domains.
+  if (hostname === 'lvh.me' || hostname.endsWith('.lvh.me') || hostname.endsWith('.localhost')) return null
+  return hostname
 }
 
 /**
@@ -213,15 +226,17 @@ export default async function proxy(request: NextRequest) {
 
   // --- Tenant Resolution (runs for ALL routes including /api) ---
   const host = requestAuthority(request)
-  const tenantSlug = getTenantSlugFromHost(host)
+  const customDomain = getCustomDomainFromHost(host)
+  const tenantSlug = (customDomain ? null : getTenantSlugFromHost(host))
     // Dev override only — a caller-supplied header must never steer tenant
     // resolution once this is a real deployment (e.g. the platform's own
     // apex domain in production, where getTenantSlugFromHost returns null).
     || (process.env.NODE_ENV !== 'production' ? request.headers.get('x-tenant-slug') : null)
   let tenantId = DEFAULT_TENANT_ID
 
-  if (tenantSlug) {
-    let tenant = getCachedTenantLookup(tenantSlug)
+  if (tenantSlug || customDomain) {
+    const lookupKey = customDomain ? `domain:${customDomain}` : tenantSlug!
+    let tenant = getCachedTenantLookup(lookupKey)
 
     if (tenant === undefined) {
       // Look up tenant by slug using service client (no auth needed)
@@ -238,12 +253,12 @@ export default async function proxy(request: NextRequest) {
       const { data } = await supabaseLookup
         .from('tenants')
         .select('id, status')
-        .eq('slug', tenantSlug)
+        .eq(customDomain ? 'domain' : 'slug', customDomain ?? tenantSlug!)
         .eq('status', 'active')
-        .single()
+        .maybeSingle()
 
       tenant = data ?? null
-      setCachedTenantLookup(tenantSlug, tenant)
+      setCachedTenantLookup(lookupKey, tenant)
     }
 
     if (!tenant) {
@@ -422,11 +437,7 @@ export default async function proxy(request: NextRequest) {
       cookies: {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
-          const cookieDomain = (() => {
-            const d = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN?.split(':')[0]
-            if (!d || d === 'localhost' || d === '127.0.0.1') return undefined
-            return `.${d}`
-          })()
+          const cookieDomain = cookieDomainForHost(host)
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, {
