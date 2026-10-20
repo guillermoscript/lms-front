@@ -20,6 +20,7 @@ import {
 import type { PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
+import { normalizeBillingMode, subscriptionLifecycleApplies } from '@/lib/billing/billing-mode'
 import {
   abandonPlatformSubscriptionSwitch,
   reconcilePlatformSubscriptionSwitch,
@@ -88,7 +89,7 @@ type SubRow = {
   current_period_end: string | null
   payment_provider: string | null
   interval: string | null
-  tenants: { name: string | null } | null
+  tenants: { name: string | null; billing_mode?: string | null } | null
   platform_plans: { name: string | null; slug: string | null } | null
 }
 
@@ -97,7 +98,16 @@ type SubRow = {
 // the display name, or `subscription_expired` cannot be joined to
 // `plan_changed` / `platform_payment_succeeded`.
 const SUB_SELECT =
-  'tenant_id, current_period_end, payment_provider, interval, tenants(name), platform_plans(name, slug)'
+  'tenant_id, current_period_end, payment_provider, interval, tenants(name, billing_mode), platform_plans(name, slug)'
+
+/**
+ * Only `paid` schools run the subscription lifecycle (reminder, grace, downgrade,
+ * cancel). `comped` / `internal` are never touched here: comped has its own expiry
+ * and a real paid subscription flips it back to `paid` (billing_mode design doc).
+ */
+function lifecycleApplies(tenants: { billing_mode?: string | null } | null | undefined): boolean {
+  return subscriptionLifecycleApplies(normalizeBillingMode(tenants?.billing_mode))
+}
 
 type LapsedRequestRow = {
   request_id: string
@@ -108,7 +118,7 @@ type LapsedRequestRow = {
   status: string
   switch_id: string | null
   request_type?: string | null
-  tenants: { name: string | null } | null
+  tenants: { name: string | null; billing_mode?: string | null } | null
   platform_plans: { name: string | null } | null
 }
 
@@ -169,12 +179,15 @@ export async function GET(req: NextRequest) {
   // Closing them here first means phase 3 below sees the swept state.
   const { data: lapsedRequests } = await supabase
     .from('platform_payment_requests')
-    .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, request_type, tenants(name), platform_plans(name)')
+    .select('request_id, tenant_id, amount, currency, expires_at, status, switch_id, request_type, tenants(name, billing_mode), platform_plans(name)')
     .in('status', EXPIRABLE_REQUEST_STATUSES as unknown as string[])
     .not('expires_at', 'is', null)
     .lt('expires_at', nowIso)
 
   for (const req of (lapsedRequests as LapsedRequestRow[] | null) || []) {
+    // Non-paid schools get no dunning. Fee requests still lapse: the DB trigger
+    // that cancels their pending ledger payment hangs off the expiry.
+    if (req.request_type !== 'fee' && !lifecycleApplies(req.tenants)) continue
     const { data: expiredRequest, error } = await supabase
       .from('platform_payment_requests')
       .update({ status: 'expired', updated_at: nowIso })
@@ -222,6 +235,7 @@ export async function GET(req: NextRequest) {
     .gte('current_period_end', nowIso)
 
   for (const sub of (reminderSubs as SubRow[] | null) || []) {
+    if (!lifecycleApplies(sub.tenants)) continue
     const emails = await getTenantAdminEmails(supabase, sub.tenant_id)
     await safeEmail(emails, renewalReminderTemplate({
       schoolName: sub.tenants?.name || 'your school',
@@ -254,6 +268,7 @@ export async function GET(req: NextRequest) {
   const graceStartedNow = new Set<string>()
 
   for (const sub of (lapsedSubs as SubRow[] | null) || []) {
+    if (!lifecycleApplies(sub.tenants)) continue
     // Grace starts NOW, not at the (possibly long-past) period end (#546 §4).
     // Computing it from current_period_end meant that after a cron outage of
     // more than GRACE_DAYS the window was already closed the moment it opened:
@@ -299,6 +314,9 @@ export async function GET(req: NextRequest) {
     // A school that only just entered grace gets the full window, never a
     // same-pass downgrade.
     if (graceStartedNow.has(sub.tenant_id)) continue
+    // Guard BEFORE the provider cancel below: a comped/internal school must
+    // never lose its provider subscription or its plan here.
+    if (!lifecycleApplies(sub.tenants)) continue
 
     // End it at the provider BEFORE taking the plan away: a suspended PayPal
     // subscription can still be re-activated from the payer's account, and a
@@ -367,6 +385,7 @@ export async function GET(req: NextRequest) {
     .lt('current_period_end', nowIso)
 
   for (const sub of (cancelSubs as SubRow[] | null) || []) {
+    if (!lifecycleApplies(sub.tenants)) continue
     await downgradeTenantToFree(supabase, sub.tenant_id)
     const emails = await getTenantAdminEmails(supabase, sub.tenant_id)
     await safeEmail(emails, planDowngradedTemplate({

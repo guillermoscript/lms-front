@@ -6330,9 +6330,12 @@
       },
       "overdueSince": "Overdue since",
       "blockedAt": "Blocked at",
-      "exempt": "Exempt from block",
-      "exemptYes": "Yes: {reason}",
-      "exemptNo": "No",
+      "billingMode": "Billing mode",
+      "mode": {
+        "paid": "Paid",
+        "comped": "Comped (notify only)",
+        "internal": "Internal"
+      },
       "lastEvaluated": "Last evaluated",
       "never": "Never",
       "balances": "Balances",
@@ -6399,17 +6402,6 @@
         "reason": "Reason",
         "submit": "Reverse payment",
         "success": "Payment reversed."
-      },
-      "exemption": {
-        "set": "Exempt from block",
-        "clear": "End exemption",
-        "titleSet": "Exempt this school from the sales pause?",
-        "titleClear": "End this school's exemption?",
-        "bodySet": "Reminders still go out, but sales are never paused. An active pause is lifted now.",
-        "bodyClear": "The school can be paused again at the next evaluation if it is overdue.",
-        "reason": "Reason",
-        "submit": "Save",
-        "success": "Exemption updated."
       },
       "cancel": "Cancel",
       "saving": "Saving…",
@@ -9525,7 +9517,6 @@
         "overdue": "Overdue",
         "blocked": "Sales paused"
       },
-      "exempt": "Exempt from the sales pause",
       "notifyOnly": "Reminders only: sales are not paused for unpaid fees yet.",
       "payNow": "Pay now",
       "openRequest": "Transfer of {amount} waiting for our confirmation (requested {date}).",

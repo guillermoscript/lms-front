@@ -152,14 +152,16 @@ function makeClient() {
           renewal_reminder_sent_at: null,
           cancel_at_period_end: false,
           canceled_at: null,
-          plan_override_by: null,
-          plan_override_at: null,
         }
         if (existing) Object.assign(existing, values)
         else db.platform_subscriptions.push({ subscription_id: 'sub-confirmed', ...values })
 
         const tenant = db.tenants.find((t) => t.id === request.tenant_id)
-        if (tenant) Object.assign(tenant, { plan: plan?.slug, billing_status: 'active', billing_period_end: end.toISOString() })
+        if (tenant) {
+          Object.assign(tenant, { plan: plan?.slug, billing_status: 'active', billing_period_end: end.toISOString() })
+          // The RPC flips a comped school to paid on a real payment; internal is untouched.
+          if (tenant.billing_mode === 'comped') tenant.billing_mode = 'paid'
+        }
         const split = db.revenue_splits.find((s) => s.tenant_id === request.tenant_id)
         const splitValues = {
           tenant_id: request.tenant_id,
@@ -263,8 +265,6 @@ function seedSub(over: Row = {}) {
       grace_period_end: null,
       renewal_reminder_sent_at: null,
       provider_subscription_id: null,
-      plan_override_by: null,
-      plan_override_at: null,
       ...over,
     },
   ]
@@ -491,14 +491,14 @@ describe('#546 §1 — confirming a payment un-cancels', () => {
     expect(request.status).toBe('confirmed')
   })
 
-  it('clears a super-admin plan override, so portal changes sync again', async () => {
-    const sub = seedSub({ plan_override_by: 'super-1', plan_override_at: daysFromNow(-10) })
+  it('flips a comped school to paid, so portal changes sync again', async () => {
+    seedSub()
+    db.tenants[0].billing_mode = 'comped'
     const request = seedRequest({ request_type: 'renewal' })
 
     await confirmManualPayment(request.request_id as string)
 
-    expect(sub.plan_override_at).toBeNull()
-    expect(sub.plan_override_by).toBeNull()
+    expect(db.tenants[0].billing_mode).toBe('paid')
   })
 })
 
@@ -544,9 +544,9 @@ describe('#546 §1 — changePlan does not leave a cancellation behind', () => {
       provider_subscription_id: 'sub_live',
       cancel_at_period_end: true,
       canceled_at: daysFromNow(-2),
-      plan_override_at: daysFromNow(-20),
-      plan_override_by: 'super-1',
     })
+    db.tenants[0].billing_mode = 'comped'
+    Object.assign(db.tenants[0], { comped_reason: 'friend', fee_percent_override: 2 })
 
     await changePlan(PLAN_BUSINESS, 'yearly')
 
@@ -555,8 +555,19 @@ describe('#546 §1 — changePlan does not leave a cancellation behind', () => {
     expect(providerCalls[0].params).toMatchObject({ cancelAtPeriodEnd: false })
     expect(sub.cancel_at_period_end).toBe(false)
     expect(sub.canceled_at).toBeNull()
-    expect(sub.plan_override_at).toBeNull()
+    expect(db.tenants[0].billing_mode).toBe('paid')
+    expect(db.tenants[0].comped_reason).toBeNull()
+    expect(db.tenants[0].fee_percent_override).toBeNull()
     expect(sub.plan_id).toBe(PLAN_BUSINESS)
+  })
+
+  it('leaves an internal school internal when it changes plan', async () => {
+    seedSub({ payment_provider: 'stripe', provider_subscription_id: 'sub_live' })
+    db.tenants[0].billing_mode = 'internal'
+
+    await changePlan(PLAN_BUSINESS, 'yearly')
+
+    expect(db.tenants[0].billing_mode).toBe('internal')
   })
 })
 

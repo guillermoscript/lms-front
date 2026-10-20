@@ -15,6 +15,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { normalizeBillingMode, type BillingMode } from '@/lib/billing/billing-mode'
 
 export type PlanLimits = { max_courses?: number; max_students?: number } | null
 
@@ -68,46 +69,83 @@ export async function countTenantUsage(
   }
 }
 
+/** Plan used when a `comped` / `internal` school's own plan row is missing. */
+export const BILLING_MODE_FALLBACK_PLAN_SLUG = 'enterprise'
+
 export interface TenantPlanLimits {
   /** The tenant's current plan slug (`free` when the tenant row has none). */
   planSlug: string
   planName: string | null
   limits: PlanLimits
+  billingMode: BillingMode
+  /**
+   * `false` only when limits could not be resolved at all (a `paid` school whose
+   * plan row is missing). Callers must then treat "no violations" as "unknown":
+   * never schedule off it and never clear an existing cutoff on it (#550 §3).
+   */
+  limitsKnown: boolean
 }
 
 /**
  * Resolve the limits governing a tenant RIGHT NOW, from `platform_plans` and
- * nothing else (issue #546 §5).
+ * the tenant's `billing_mode` (issue #546 §5).
  *
  * Deliberately no `is_active` filter: retiring a plan must not silently change
- * what its existing subscribers are allowed to do. A missing plan row yields
- * `limits: null`, which `computePlanLimitViolations` reads as unlimited — the
- * same fail-open every other caller in this module uses, and the reason the old
- * hardcoded `PLAN_LIMITS_FALLBACK` map in `app/actions/teacher/courses.ts`
- * could be deleted instead of duplicated here.
+ * what its existing subscribers are allowed to do.
+ *
+ * Missing-row rule:
+ *  - `internal`: unlimited (`limits: null`), the plan row is irrelevant.
+ *  - `comped`: the plan stays the plan; if its row is missing, use `enterprise`.
+ *  - `paid`: `limits: null` (fail-open, same as every other caller here, which
+ *    is why the old hardcoded fallback map could be deleted) but
+ *    `limitsKnown: false`, which the reconciler reads as "don't cut off on
+ *    unknown data".
  */
+export async function fetchPlanRowForMode(
+  admin: SupabaseClient,
+  planSlug: string,
+  billingMode: BillingMode
+): Promise<{ name: string | null; limits: PlanLimits } | null> {
+  const { data: plan } = await admin
+    .from('platform_plans')
+    .select('name, limits')
+    .eq('slug', planSlug)
+    .maybeSingle()
+  if (plan || billingMode === 'paid') return (plan as { name: string | null; limits: PlanLimits } | null) ?? null
+
+  const { data: fallback } = await admin
+    .from('platform_plans')
+    .select('name, limits')
+    .eq('slug', BILLING_MODE_FALLBACK_PLAN_SLUG)
+    .maybeSingle()
+  return (fallback as { name: string | null; limits: PlanLimits } | null) ?? null
+}
+
 export async function getTenantPlanLimits(
   admin: SupabaseClient,
   tenantId: string
 ): Promise<TenantPlanLimits> {
   const { data: tenant } = await admin
     .from('tenants')
-    .select('plan')
+    .select('plan, billing_mode')
     .eq('id', tenantId)
     .maybeSingle()
 
   const planSlug = (tenant?.plan as string | null) || 'free'
+  const billingMode = normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode)
 
-  const { data: plan } = await admin
-    .from('platform_plans')
-    .select('name, limits')
-    .eq('slug', planSlug)
-    .maybeSingle()
+  if (billingMode === 'internal') {
+    return { planSlug, planName: null, limits: null, billingMode, limitsKnown: true }
+  }
+
+  const plan = await fetchPlanRowForMode(admin, planSlug, billingMode)
 
   return {
     planSlug,
     planName: (plan?.name as string | null) ?? null,
     limits: (plan?.limits as PlanLimits) ?? null,
+    billingMode,
+    limitsKnown: !!plan,
   }
 }
 

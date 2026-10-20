@@ -25,6 +25,26 @@
 /** Used when a tenant has no `revenue_splits` row (mirrors DEFAULT_SCHOOL_PERCENTAGE). */
 export const DEFAULT_SCHOOL_PERCENTAGE = 80;
 
+/**
+ * Mirror of lib/billing/effective-fee.ts (the web app's single fee rule; SQL twin
+ * `effective_school_percentage`). internal -> school keeps 100; comped -> 100 -
+ * (fee_percent_override ?? 0); paid -> revenue_splits.school_percentage (80 if no row).
+ */
+export function effectiveSchoolPercentage(input: {
+  billingMode?: string | null;
+  feePercentOverride?: number | string | null;
+  paidSchoolPercentage?: number | null;
+}): number {
+  if (input.billingMode === "internal") return 100;
+  if (input.billingMode === "comped") {
+    const o = input.feePercentOverride == null ? 0 : Number(input.feePercentOverride);
+    const fee = Number.isFinite(o) ? Math.min(100, Math.max(0, o)) : 0;
+    return 100 - fee;
+  }
+  const p = input.paidSchoolPercentage;
+  return p == null || !Number.isFinite(p) ? DEFAULT_SCHOOL_PERCENTAGE : p;
+}
+
 /** Half a cent: a residue below this reads as settled (#547). */
 export const MONEY_EPSILON = 0.005;
 

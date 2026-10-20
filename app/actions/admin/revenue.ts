@@ -7,6 +7,7 @@ import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { fetchAllRowsIn } from '@/lib/supabase/fetch-all-rows-in'
 import { computeRevenueTotals } from '@/lib/payments/revenue-share'
 import { netOfRefunds, roundMoney } from '@/lib/payments/payouts-owed'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 async function verifyAdminAccess() {
   const supabase = await createClient()
@@ -73,11 +74,7 @@ export async function getRevenueOverview() {
   // split to those same rows. Whether a fee is taken is now a property of the
   // provider (`bearsPlatformFee`), and the rate comes from each transaction's
   // own snapshot, which is exactly what the payout view uses.
-  const { data: split } = await adminClient
-    .from('revenue_splits')
-    .select('school_percentage')
-    .eq('tenant_id', tenantId)
-    .single()
+  const split = await getEffectiveRevenueSplit(adminClient, tenantId)
 
   const { grossRevenue: totalRevenue, platformFees, netRevenue } = computeRevenueTotals(
     transactions.map((t) => ({
@@ -87,7 +84,7 @@ export async function getRevenueOverview() {
       stripePaymentIntentId: t.stripe_payment_intent_id as string | null,
       schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
     })),
-    Number(split?.school_percentage ?? 80),
+    split.schoolPercentage,
   )
 
   // Revenue by product/course

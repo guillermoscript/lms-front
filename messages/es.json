@@ -6330,9 +6330,12 @@
       },
       "overdueSince": "Vencida desde",
       "blockedAt": "Bloqueada el",
-      "exempt": "Exenta del bloqueo",
-      "exemptYes": "Sí: {reason}",
-      "exemptNo": "No",
+      "billingMode": "Modo de facturación",
+      "mode": {
+        "paid": "De pago",
+        "comped": "Cortesía (solo avisos)",
+        "internal": "Interna"
+      },
       "lastEvaluated": "Última evaluación",
       "never": "Nunca",
       "balances": "Saldos",
@@ -6399,17 +6402,6 @@
         "reason": "Motivo",
         "submit": "Revertir pago",
         "success": "Pago revertido."
-      },
-      "exemption": {
-        "set": "Eximir del bloqueo",
-        "clear": "Retirar exención",
-        "titleSet": "¿Eximir a esta escuela de la pausa de ventas?",
-        "titleClear": "¿Retirar la exención de esta escuela?",
-        "bodySet": "Los recordatorios se siguen enviando, pero las ventas nunca se pausan. Una pausa activa se levanta ahora.",
-        "bodyClear": "La escuela puede volver a pausarse en la próxima evaluación si está vencida.",
-        "reason": "Motivo",
-        "submit": "Guardar",
-        "success": "Exención actualizada."
       },
       "cancel": "Cancelar",
       "saving": "Guardando…",
@@ -9525,7 +9517,6 @@
         "overdue": "Vencido",
         "blocked": "Ventas pausadas"
       },
-      "exempt": "Exenta de la pausa de ventas",
       "notifyOnly": "Solo recordatorios: todavía no se pausan las ventas por comisiones impagas.",
       "payNow": "Pagar ahora",
       "openRequest": "Transferencia de {amount} esperando nuestra confirmación (solicitada el {date}).",

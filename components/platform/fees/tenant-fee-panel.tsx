@@ -11,7 +11,6 @@ import { StatusDot } from '@/components/platform/badges'
 import { cn } from '@/lib/utils'
 import {
   ConfirmFeeRequestButton,
-  FeeExemptionButton,
   RecordFeePaymentDialog,
   ReverseFeePaymentButton,
 } from './fee-ledger-actions'
@@ -70,7 +69,6 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
       action={
         <div className="flex flex-wrap gap-2">
           <RecordFeePaymentDialog tenantId={tenantId} currencies={currencies} />
-          <FeeExemptionButton tenantId={tenantId} exempt={standing.enforcementExempt} />
         </div>
       }
     >
@@ -106,8 +104,8 @@ export async function TenantFeePanel({ tenantId, locale }: { tenantId: string; l
                 <dd className="text-red-700 dark:text-red-400">{fmt(standing.blockedAt)}</dd>
               </>
             )}
-            <dt className="text-muted-foreground">{t('exempt')}</dt>
-            <dd>{standing.enforcementExempt ? t('exemptYes', { reason: standing.exemptReason ?? '—' }) : t('exemptNo')}</dd>
+            <dt className="text-muted-foreground">{t('billingMode')}</dt>
+            <dd data-testid="tenant-fee-billing-mode">{t(`mode.${overview.billingMode}`)}</dd>
             <dt className="text-muted-foreground">{t('lastEvaluated')}</dt>
             <dd>{fmt(standing.lastEvaluatedAt)}</dd>
           </dl>

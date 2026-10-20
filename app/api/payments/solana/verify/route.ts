@@ -35,6 +35,7 @@ import { netOfRefunds } from '@/lib/payments/payouts-owed'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track, safeAnalytics } from '@/lib/analytics/server'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 export const runtime = 'nodejs'
 
@@ -372,12 +373,7 @@ async function handleSolanaSubsVerify(
   if (!wallet?.wallet_address) {
     return NextResponse.json({ error: 'School has not configured a Solana wallet' }, { status: 400 })
   }
-  const { data: split } = await admin
-    .from('revenue_splits')
-    .select('platform_percentage')
-    .eq('tenant_id', tx.tenant_id)
-    .maybeSingle()
-  const platformPercent = Number(split?.platform_percentage ?? 20)
+  const platformPercent = (await getEffectiveRevenueSplit(admin, tx.tenant_id)).platformPercentage
 
   // 5. Persist on-chain metadata on the subscription row (created by the trigger)
   //    so the crank cron can resolve the on-chain coordinates each period.

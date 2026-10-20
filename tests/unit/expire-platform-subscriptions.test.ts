@@ -536,3 +536,41 @@ describe('expire-platform-subscriptions: #479 suspended PayPal school', () => {
     expect(downgraded).toEqual([])
   })
 })
+
+describe('expire-platform-subscriptions: billing_mode guard', () => {
+  it.each(['comped', 'internal'])('leaves a %s school untouched in every phase', async (mode) => {
+    db.tenants[0].billing_mode = mode
+    // phase 1 candidate (about to lapse), plus a second school-shaped row per
+    // later phase is impossible (one sub per tenant), so run the phases one by one.
+    const reminder = seedSub({ current_period_end: daysFromNow(3) })
+    seedRequest({ expires_at: daysFromNow(-1) })
+    let body = await (await GET(req())).json()
+    expect(body).toMatchObject({ reminded: 0, requestsExpired: 0 })
+    expect(reminder.renewal_reminder_sent_at).toBeNull()
+
+    reminder.current_period_end = daysFromNow(-2) // phase 2
+    body = await (await GET(req())).json()
+    expect(body.graceStarted).toBe(0)
+    expect(reminder.status).toBe('active')
+    expect(db.tenants[0].billing_status).toBe('active')
+
+    Object.assign(reminder, { payment_provider: 'paypal', provider_subscription_id: 'I-1', status: 'past_due', grace_period_end: daysFromNow(-1) }) // phase 3
+    body = await (await GET(req())).json()
+    expect(body.downgraded).toBe(0)
+    expect(providerCancels.calls).toEqual([])
+
+    Object.assign(reminder, { status: 'active', cancel_at_period_end: true, grace_period_end: null }) // phase 4
+    body = await (await GET(req())).json()
+    expect(body.canceled).toBe(0)
+
+    expect(downgraded).toEqual([])
+    expect(emails).toEqual([])
+  })
+
+  it('still runs the lifecycle for a paid school', async () => {
+    db.tenants[0].billing_mode = 'paid'
+    seedSub({ current_period_end: daysFromNow(3) })
+    const body = await (await GET(req())).json()
+    expect(body.reminded).toBe(1)
+  })
+})

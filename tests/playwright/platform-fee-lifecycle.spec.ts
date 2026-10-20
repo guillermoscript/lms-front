@@ -516,47 +516,64 @@ test.describe('platform fee lifecycle (#929)', () => {
     expect(await standing(admin, QA.id)).toMatchObject({ state: 'ok', blocked_at: null })
   })
 
-  test('the default tenant is never blocked, however overdue', async ({ request }) => {
-    const admin = getAdmin()
-    const { data: prior } = await admin.from('tenant_fee_standing').select('*').eq('tenant_id', DEFAULT_TENANT).maybeSingle()
+  for (const mode of ['comped', 'internal'] as const) {
+    test(`a ${mode} tenant is never blocked, however overdue`, async ({ request }) => {
+      const admin = getAdmin()
+      const { data: prior } = await admin.from('tenant_fee_standing').select('*').eq('tenant_id', DEFAULT_TENANT).maybeSingle()
+      const { data: tenantRow } = await admin.from('tenants').select('billing_mode, fee_percent_override').eq('id', DEFAULT_TENANT).single()
+      const priorMode = tenantRow?.billing_mode ?? 'paid'
+      const priorOverride = tenantRow?.fee_percent_override ?? null
 
-    const seeded = await insertTxn(admin, {
-      product_id: null,
-      plan_id: null,
-      amount: 10,
-      status: 'successful',
-      tenant_id: DEFAULT_TENANT,
-      transaction_date: new Date(Date.now() - 70 * DAY_MS).toISOString(),
-    })
-    expect(seeded.error).toBeNull()
-    try {
-      const { error } = await admin.from('tenant_fee_standing').upsert(
-        {
-          tenant_id: DEFAULT_TENANT,
-          state: 'overdue',
-          overdue_since: new Date(Date.now() - 30 * DAY_MS).toISOString(),
-          blocked_at: null,
-          enforcement_exempt: false,
-        },
-        { onConflict: 'tenant_id' },
-      )
-      expect(error).toBeNull()
+      // Set the mode first: the sale's fee snapshot is stamped at INSERT. A comped
+      // school with a 20% override owes a real balance (and is still never blocked).
+      const { error: modeError } = await admin
+        .from('tenants')
+        .update({ billing_mode: mode, fee_percent_override: mode === 'comped' ? 20 : null })
+        .eq('id', DEFAULT_TENANT)
+      expect(modeError).toBeNull()
 
-      const dry = await runFeeCron(request, true)
-      expect(dry.actions ?? []).not.toContainEqual(expect.objectContaining({ tenantId: DEFAULT_TENANT, action: 'block' }))
+      const seeded = await insertTxn(admin, {
+        product_id: null,
+        plan_id: null,
+        amount: 10,
+        status: 'successful',
+        tenant_id: DEFAULT_TENANT,
+        transaction_date: new Date(Date.now() - 70 * DAY_MS).toISOString(),
+      })
+      expect(seeded.error).toBeNull()
+      try {
+        const { error } = await admin.from('tenant_fee_standing').upsert(
+          {
+            tenant_id: DEFAULT_TENANT,
+            state: 'overdue',
+            overdue_since: new Date(Date.now() - 30 * DAY_MS).toISOString(),
+            blocked_at: null,
+          },
+          { onConflict: 'tenant_id' },
+        )
+        expect(error).toBeNull()
 
-      await runFeeCron(request)
-      const s = await standing(admin, DEFAULT_TENANT)
-      expect(s?.blocked_at).toBeNull()
-      expect(s?.state).toBe('overdue')
-      expect(await isBlocked(admin, DEFAULT_TENANT)).toBe(false)
-    } finally {
-      await admin.from('transactions').delete().eq('transaction_id', seeded.data!.transaction_id)
-      if (prior) {
-        await admin.from('tenant_fee_standing').upsert(prior, { onConflict: 'tenant_id' })
-      } else {
-        await admin.from('tenant_fee_standing').delete().eq('tenant_id', DEFAULT_TENANT)
+        const dry = await runFeeCron(request, true)
+        expect(dry.actions ?? []).not.toContainEqual(expect.objectContaining({ tenantId: DEFAULT_TENANT, action: 'block' }))
+        if (mode === 'internal') {
+          // internal: skipped entirely, no action of any kind.
+          expect(dry.actions ?? []).not.toContainEqual(expect.objectContaining({ tenantId: DEFAULT_TENANT }))
+        }
+
+        await runFeeCron(request)
+        const s = await standing(admin, DEFAULT_TENANT)
+        expect(s?.blocked_at).toBeNull()
+        expect(s?.state).toBe('overdue')
+        expect(await isBlocked(admin, DEFAULT_TENANT)).toBe(false)
+      } finally {
+        await admin.from('transactions').delete().eq('transaction_id', seeded.data!.transaction_id)
+        await admin.from('tenants').update({ billing_mode: priorMode, fee_percent_override: priorOverride }).eq('id', DEFAULT_TENANT)
+        if (prior) {
+          await admin.from('tenant_fee_standing').upsert(prior, { onConflict: 'tenant_id' })
+        } else {
+          await admin.from('tenant_fee_standing').delete().eq('tenant_id', DEFAULT_TENANT)
+        }
       }
-    }
-  })
+    })
+  }
 })

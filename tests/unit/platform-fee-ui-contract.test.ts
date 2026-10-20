@@ -67,7 +67,7 @@ describe('platform fee UI contracts', () => {
     const src = read(FILES.actions)
     expect(src.startsWith("'use server'")).toBe(true)
     const bodies = src.split(/export async function /).slice(1)
-    expect(bodies.length).toBe(4)
+    expect(bodies.length).toBe(3)
     for (const body of bodies) {
       const verify = body.indexOf('await verifySuperAdmin()')
       expect(verify, body.slice(0, 40)).toBeGreaterThan(-1)

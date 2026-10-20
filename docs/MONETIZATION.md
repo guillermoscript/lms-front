@@ -339,7 +339,7 @@ The two sections above are **creation-time soft caps only** — they block a *ne
   - **Daily sweep:** `app/api/cron/enforce-plan-limits/route.ts` walks every tenant to catch organic over-limit growth with no associated plan-change event, and is the only call site that passes `notifyDueStages`.
 - **`removeTenantMember()` is the only action that changes the student count.** `deactivateUser()` stamps `profiles.deactivated_at`, which is read nowhere but the admin users screens; `countTenantUsage` counts `tenant_users` rows with `role = 'student' AND status = 'active'`. Removal sets that row to `status = 'removed'` rather than deleting it, so `joinCurrentSchool()` can reinstate the member through the same `max_students` pre-check a first-time join runs. A removed admin who re-joins comes back as a student or teacher, never an admin.
 - **A missing `platform_plans` row does not clear enforcement** (issue #550 §3). `decideAccessCutoffAction`'s `limitsKnown` flag makes an unresolvable plan lookup mean "limits unknown" rather than "limits met": no new cutoff is scheduled off limits that were never read, and an existing cutoff is left standing instead of cleared. The asymmetry is deliberate — a lookup miss is an operator error (a renamed slug, a deleted row), clearing on it lifts live enforcement school-wide with only a plan purchase or a super admin row edit to recover, whereas preserving it costs nothing because the next successful reconcile clears it anyway. Note this differs from `checkPlanLimits`'s blanket fail-open, which only ever governs whether a *new* restriction is applied.
-- Enforcement itself is in the database: once `access_cutoff_at` passes while the tenant is still over its plan's limits, `has_course_access()` (SQL function, migration `supabase/migrations/20260724130000_access_cutoff_enforcement.sql`) starts returning `false` for every student in that tenant. Access is restored automatically as soon as usage is back under the limit or the tenant upgrades.
+- Enforcement itself is in the database: once `access_cutoff_at` passes, `has_course_access()` (SQL function, migration `supabase/migrations/20260724130000_access_cutoff_enforcement.sql`) starts returning `false` for every student in that tenant. `has_course_access()` is intentionally cutoff-only: it never evaluates plan limits itself. The limit mechanism is the reconciler (`enforce-plan-limits` / plan-change events), which sets `access_cutoff_at` when a tenant is over its limits and clears it as soon as usage is back under the limit or the tenant upgrades; an `internal` school is never cut off.
 - That function is enforced in two layers (issue #509 — before it, the cutoff was a no-op on exactly the pages that serve content):
   - **RLS** (`supabase/migrations/20260724150000_content_entitlement_rls.sql`): the `authenticated` SELECT policies on `lessons`, `exercises`, `exams` and `lesson_resources` all require `has_course_access()`, with escape hatches for the course's author and for active teachers/admins of the tenant (`is_tenant_staff()`). Published preview lessons (`is_preview`) stay readable to everyone. This is the backstop — it holds even where a page uses the service-role client.
   - **Page gates**: `requireCourseAccess()` (`lib/services/course-access-guard.ts`) on every student course route — course detail, lessons, exercises (list + detail), exams (list, taker, result, review), community. A refusal caused by the tenant cutoff (rather than by a missing entitlement) sends the student to `/dashboard/student/access-suspended`, which explains that the school is over its limits and that their enrollment is intact.
@@ -382,6 +382,24 @@ Because the blast radius is this wide, the school has to be told more than once.
 - **Students**: `/dashboard/student/access-suspended` (shipped in #509, above) is the specific "your school's account needs attention" state — it names the school's plan limits as the cause and states that the enrolment is intact.
 
 ---
+
+## Billing mode (paid / comped / internal)
+
+`tenants.billing_mode` (#982, design: `docs/INTERNAL_COMPED_SCHOOLS.md`) decides whether the billing machinery applies; `tenants.plan` still decides features and limits.
+
+| | `paid` | `comped` | `internal` |
+|---|---|---|---|
+| Plan | what they pay for | editable, default `enterprise` | top plan, fixed |
+| Subscription expiry cron | yes | no (own `comped_until`) | never |
+| Over-limit access cutoff | yes | yes if the plan is lowered (top plan is unlimited) | never (stale cutoffs cleared) |
+| Platform fee on student sales | plan rate (`revenue_splits`, default 20) | `fee_percent_override` (0 if unset) | 0 |
+| Fee ledger enforcement | per ledger mode | notify only, never blocks | never |
+| Dunning / upsell | yes | no (expiry notices) | no |
+| Ends | n/a | `comped_until` optional | never |
+
+- **Single effective-fee rule:** `lib/billing/effective-fee.ts` (`effectivePlatformFeePercent`) and its SQL twin `effective_school_percentage(tenant_id)`; keep identical. Consumers: checkout, split snapshot trigger, platform fee ledger, platform revenue (a stored snapshot still wins).
+- **Missing `platform_plans` row:** `paid` fails closed (features `{}`, limit 0); `comped` and `internal` fall back to the `enterprise` plan.
+- **A real paid subscription flips `comped` -> `paid`** (`confirm_platform_payment_request`, `promote_platform_subscription_switch`). Non-paid schools are skipped by `downgrade_platform_subscription_if_current`.
 
 ## Currency Support
 

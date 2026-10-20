@@ -1,5 +1,6 @@
 'use server'
 
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -61,7 +62,7 @@ export async function getSubscriptionStatus() {
   const [tenantResult, subscriptionResult, billingCustomerResult, usage] = await Promise.all([
     adminClient
       .from('tenants')
-      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at')
+      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at, billing_mode')
       .eq('id', tenantId)
       .single(),
     adminClient
@@ -120,6 +121,7 @@ export async function getSubscriptionStatus() {
     billingEmail: tenant?.billing_email,
     canUseCustomerPortal,
     accessCutoffAt: tenant?.access_cutoff_at ?? null,
+    billingMode: normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode),
     subscription: subscription ? {
       status: subscription.status,
       // Named for the column it carries (#602). While this was `paymentMethod`
@@ -713,11 +715,6 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
       interval,
       cancel_at_period_end: false,
       canceled_at: null,
-      // An admin-initiated, Stripe-backed change supersedes a super-admin comp
-      // (#546 §3): Stripe and the DB now agree again, so the reconciler should
-      // resume applying portal changes for this tenant.
-      plan_override_by: null,
-      plan_override_at: null,
       updated_at: now,
     })
     .eq('tenant_id', tenantId)
@@ -725,6 +722,22 @@ export async function changePlan(planId: string, interval: 'monthly' | 'yearly' 
     .from('tenants')
     .update({ plan: ctx.plan.slug, updated_at: now })
     .eq('id', tenantId)
+  // An admin-initiated, provider-backed change supersedes a comp (#546 §3):
+  // the provider and the DB agree again, so the school is `paid` and portal
+  // changes reconcile normally. `internal` is untouched.
+  await adminClient
+    .from('tenants')
+    .update({
+      billing_mode: 'paid',
+      comped_until: null,
+      comped_reason: null,
+      comped_by: null,
+      comped_at: null,
+      fee_percent_override: null,
+      updated_at: now,
+    })
+    .eq('id', tenantId)
+    .eq('billing_mode', 'comped')
   await adminClient
     .from('revenue_splits')
     .upsert(

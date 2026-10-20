@@ -14,6 +14,8 @@ import {
 } from '@/lib/billing/plan-prices'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
 import { failPlatformSubscriptionSwitch } from '@/lib/billing/platform-subscription-switch'
+import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 
 async function verifySuperAdmin() {
   const userId = await getCurrentUserId()
@@ -384,15 +386,15 @@ export async function sendPaymentInstructions(requestId: string) {
  *
  * This never calls Stripe, so a tenant with a live Stripe subscription keeps
  * paying for the plan it actually bought while enjoying the comped one. The
- * override is stamped on the subscription row (#546 §3) so
- * `applyPortalPlanChange` can recognise the deliberate divergence and leave the
- * Stripe subscription alone — without the stamp the next
- * `customer.subscription.updated` read Stripe's real (unchanged) price as a
- * downgrade, found the tenant over the real plan's limits (the reason it was
- * comped) and "reverted" Stripe onto the comped plan's price, billing the
- * school for its own comp.
+ * divergence is recorded as `tenants.billing_mode = 'comped'` (billing_mode
+ * design): the portal-change reconciler, the expiry cron and dunning all skip
+ * non-paid schools. An already comped / internal school keeps its mode.
  *
- * Exits: `confirmManualPayment`, `changePlan`, or `clearTenantPlanOverride`.
+ * The cutoff is reconciled afterwards: the plan (and so its limits) just
+ * changed, and a lowered plan can put the school over its limits.
+ *
+ * Exits: a real payment (`confirmManualPayment`, `changePlan`) or
+ * `convertCompedTenantToPaid`.
  */
 export async function forceTenantPlanChange(tenantId: string, planSlug: string) {
   const superAdminId = await verifySuperAdmin()
@@ -407,6 +409,13 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
   if (!plan) throw new Error('Plan not found')
 
   const nowIso = new Date().toISOString()
+
+  const { data: modeRow } = await adminClient
+    .from('tenants')
+    .select('billing_mode')
+    .eq('id', tenantId)
+    .maybeSingle()
+  const currentMode = normalizeBillingMode((modeRow as { billing_mode?: unknown } | null)?.billing_mode)
 
   await adminClient
     .from('tenants')
@@ -443,8 +452,6 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
           plan_id: plan.plan_id,
           status: 'canceled',
           canceled_at: nowIso,
-          plan_override_by: superAdminId,
-          plan_override_at: nowIso,
           updated_at: nowIso,
         })
         .eq('tenant_id', tenantId)
@@ -466,8 +473,6 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
       .update({
         plan_id: plan.plan_id,
         status: 'active',
-        plan_override_by: superAdminId,
-        plan_override_at: nowIso,
         updated_at: nowIso,
         ...(liveCycle
           ? {}
@@ -500,39 +505,68 @@ export async function forceTenantPlanChange(tenantId: string, planSlug: string) 
         interval: 'monthly',
         current_period_start: nowIso,
         current_period_end: null,
-        plan_override_by: superAdminId,
-        plan_override_at: nowIso,
       })
   }
+
+  // Written last: the SQL that confirms a real payment flips comped -> paid, and a
+  // forced downgrade to `free` is not a comp. An already comped / internal school
+  // keeps its mode (and its fee override).
+  if (planSlug !== 'free' && currentMode === 'paid') {
+    const { error: modeError } = await adminClient
+      .from('tenants')
+      .update({
+        billing_mode: 'comped',
+        comped_by: superAdminId,
+        comped_at: nowIso,
+        comped_reason: 'plan forced by super admin',
+        updated_at: nowIso,
+      })
+      .eq('id', tenantId)
+    if (modeError) throw new Error(`Failed to mark school as comped: ${modeError.message}`)
+  }
+
+  // The plan (and so its limits) just changed: re-evaluate the access cutoff now
+  // instead of waiting for the nightly sweep.
+  await reconcileAccessCutoffSafely(adminClient, tenantId)
 
   revalidatePath('/platform/tenants')
   return { success: true }
 }
 
 /**
- * Super admin: end a plan override so portal-driven Stripe changes sync again
- * (#546 §3). The marker's explicit exit — without one, a comped tenant would be
- * frozen out of `applyPortalPlanChange` forever, which is the failure mode the
- * issue flags as the risk of adding the marker at all.
- *
- * The tenant keeps whatever plan it is on; only the "ignore portal changes"
- * behaviour is lifted, so the next `customer.subscription.updated` reconciles
- * the DB back onto whatever Stripe is actually charging.
+ * Super admin: convert a comped school back to `paid` (billing_mode design).
+ * The school keeps its current plan; the comp metadata and fee override are
+ * cleared so the normal subscription lifecycle, dunning and plan fee apply
+ * again. `internal` schools are refused (a separate, explicit conversion).
  */
-export async function clearTenantPlanOverride(tenantId: string) {
+export async function convertCompedTenantToPaid(tenantId: string) {
   await verifySuperAdmin()
   const adminClient = createAdminClient()
 
+  const { data: tenant } = await adminClient
+    .from('tenants')
+    .select('billing_mode')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (!tenant) throw new Error('Tenant not found')
+  const mode = normalizeBillingMode((tenant as { billing_mode?: unknown }).billing_mode)
+  if (mode === 'internal') throw new Error('Internal schools cannot be converted to paid here')
+  if (mode === 'paid') return { success: true }
+
   const { error } = await adminClient
-    .from('platform_subscriptions')
+    .from('tenants')
     .update({
-      plan_override_by: null,
-      plan_override_at: null,
+      billing_mode: 'paid',
+      comped_until: null,
+      comped_reason: null,
+      comped_by: null,
+      comped_at: null,
+      fee_percent_override: null,
       updated_at: new Date().toISOString(),
     })
-    .eq('tenant_id', tenantId)
+    .eq('id', tenantId)
 
-  if (error) throw new Error(`Failed to clear plan override: ${error.message}`)
+  if (error) throw new Error(`Failed to convert school to paid: ${error.message}`)
   revalidatePath('/platform/tenants')
   return { success: true }
 }

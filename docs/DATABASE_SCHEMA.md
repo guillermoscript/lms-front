@@ -100,15 +100,32 @@ School/organization records.
 | `name` | VARCHAR(255) | |
 | `domain` | VARCHAR(255) | Custom domain |
 | `logo_url` | TEXT | |
-| `plan` | VARCHAR(50) | Legacy — see `platform_subscriptions` |
+| `plan` | VARCHAR(50) | Plan slug; features/limits come from `platform_plans` |
 | `status` | VARCHAR(50) | `active`, etc. |
+| `country` | TEXT | ISO country chosen at school creation |
 | `stripe_account_id` | VARCHAR(255) | Stripe Connect (for student payments) |
-| `stripe_customer_id` | VARCHAR(255) | Platform billing (school pays platform) |
+| `stripe_charges_enabled` / `stripe_payouts_enabled` / `stripe_details_submitted` | BOOLEAN | Stripe Connect onboarding state |
 | `billing_email` | VARCHAR(255) | |
 | `billing_period_end` | TIMESTAMPTZ | |
 | `billing_status` | VARCHAR(50) | `free`, `active`, `past_due`, `canceled` |
-| `access_cutoff_at` | TIMESTAMPTZ | When an unpaid school's content access is suspended |
-| `stripe_charges_enabled` / `stripe_payouts_enabled` / `stripe_details_submitted` | BOOLEAN | Stripe Connect onboarding state |
+| `access_cutoff_at` | TIMESTAMPTZ | Set/cleared by the plan-limit reconciler; once past, `has_course_access()` denies every student of the tenant |
+| `billing_mode` | TEXT | `paid` (default) \| `comped` \| `internal` (#982, see `docs/INTERNAL_COMPED_SCHOOLS.md`) |
+| `comped_until` | TIMESTAMPTZ | Optional end of a comped grant |
+| `comped_reason` / `comped_by` / `comped_at` | TEXT / UUID FK → auth.users / TIMESTAMPTZ | Who comped the school, when and why |
+| `fee_percent_override` | NUMERIC(5,2) | Platform fee % for `comped` schools (NULL = 0); CHECK 0..100 |
+| `comped_notice_sent` | JSONB | Which comp-expiry notices were already sent (idempotency) |
+
+#### `tenant_billing_mode_log`
+Audit trail of `billing_mode` changes, written by a trigger on `tenants` (super-admin read only).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | BIGINT PK (identity) | |
+| `tenant_id` | UUID FK → tenants | CASCADE |
+| `old_mode` / `new_mode` | TEXT | |
+| `fee_percent_override` / `comped_until` / `reason` | | Snapshot at change time |
+| `changed_by` | UUID FK → auth.users | `auth.uid()` default |
+| `created_at` | TIMESTAMPTZ | |
 
 #### `tenant_users`
 Many-to-many user-tenant relationships. **Authoritative source for per-tenant roles.**

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { subscriptionLifecycleApplies, type BillingMode } from '@/lib/billing/billing-mode'
 import { BillingOverview } from '@/components/admin/billing-overview'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +58,7 @@ interface BillingDashboardClientProps {
     features: Record<string, unknown>
     transactionFeePercent: number
     accessCutoffAt: string | null
+    billingMode?: BillingMode
   }
   paymentRequests: Array<{
     request_id: string
@@ -202,7 +204,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
   const periodEnd = status.subscription?.currentPeriodEnd ? new Date(status.subscription.currentPeriodEnd) : null
   const now = new Date()
   const daysUntilEnd = periodEnd ? Math.ceil((periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
-  const showRenewalSection = isManualSub && daysUntilEnd !== null && daysUntilEnd <= 30
+  const showRenewalSection = subscriptionLifecycleApplies(status.billingMode ?? 'paid') && isManualSub && daysUntilEnd !== null && daysUntilEnd <= 30
   const hasPendingRenewal = paymentRequests.some(
     (r) => r.request_type === 'renewal' && !['confirmed', 'rejected', 'expired'].includes(r.status)
   )
@@ -223,6 +225,7 @@ export function BillingDashboardClient({ status, paymentRequests }: BillingDashb
         usage={status.usage}
         transactionFeePercent={status.transactionFeePercent}
         accessCutoffAt={status.accessCutoffAt}
+        billingMode={status.billingMode}
         onManageClick={status.canUseCustomerPortal ? handleManageBilling : undefined}
         onCancelClick={() => setCancelOpen(true)}
         onReactivateClick={handleReactivate}

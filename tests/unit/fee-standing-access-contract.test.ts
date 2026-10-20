@@ -58,8 +58,21 @@ describe('D5: fee standing never gates course access', () => {
       'gates NEW subscription course choices only (self_enroll_subscription_course); re-enrolling a held course stays allowed',
   }
 
+  // billing_mode core (#982) redefines has_course_access so an `internal` school is
+  // never suspended. That is plan/cutoff state, not fee state: the next test pins that
+  // its has_course_access body never reads fee standing.
+  const BILLING_MODE_MIGRATION = '20261020120000_billing_mode_core_982.sql'
+
+  it('billing_mode migration keeps fee standing out of has_course_access', () => {
+    const sql = read(BILLING_MODE_MIGRATION)
+    const body = sql.match(/FUNCTION\s+public\.has_course_access[\s\S]*?\$function\$;/i)?.[0] ?? ''
+    expect(body).not.toBe('')
+    expect(body).not.toMatch(/tenant_fee_standing|blocked_at|platform_fee/i)
+  })
+
   it('no migration that touches the fee ledger redefines course access or entitlements', () => {
     const offenders = files.filter((f) => {
+      if (f === BILLING_MODE_MIGRATION) return false
       const sql = read(f)
       if (!FEE_OBJECTS.test(sql)) return false
       if (/has_course_access/i.test(sql)) return true

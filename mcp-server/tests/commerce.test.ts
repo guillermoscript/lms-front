@@ -421,7 +421,7 @@ describe('lms_get_platform_fee_balance', () => {
     }
     fake.results.set('platform_fee_payments:select', [payments, payments])
     fake.results.set('tenant_fee_standing:select', [{
-      data: { state: 'overdue', overdue_since: '2026-10-04T00:00:00Z', blocked_at: null, enforcement_exempt: false, last_evaluated_at: null },
+      data: { state: 'overdue', overdue_since: '2026-10-04T00:00:00Z', blocked_at: null, last_evaluated_at: null },
       error: null,
     }])
     fake.results.set('platform_fee_statements:select', [{
@@ -436,7 +436,7 @@ describe('lms_get_platform_fee_balance', () => {
       due_boundary: { accrued_before: '2026-10-01T00:00:00.000Z', due_at: '2026-10-04T00:00:00.000Z' },
       // 20 + 4 + 5.46 accrued, 10 paid (the pending payment does not count).
       balances: [{ currency: 'USD', accrued: 29.46, paid: 10, net_owed: 19.46, overdue: 15.46, overpaid: 0, sales: 3 }],
-      standing: { state: 'overdue', blocked_at: null, enforcement_exempt: false },
+      standing: { state: 'overdue', blocked_at: null },
       converted_sales: [{ currency: 'VES', count: 1, sales_total: 1000, usd_total: 27.3, rates: [{ rate: 0.0273, source: 'bcv' }] }],
       statements: [{ statement_number: 'PF-202609-1', fee_amount: 25.46, sales: 2, status: 'overdue' }],
       recent_payments: [
@@ -460,7 +460,7 @@ describe('lms_get_platform_fee_balance', () => {
     expect(res.isError).toBeUndefined()
     expect(res.structuredContent).toMatchObject({
       balances: [],
-      standing: { state: 'ok', overdue_since: null, blocked_at: null, enforcement_exempt: false },
+      standing: { state: 'ok', overdue_since: null, blocked_at: null },
       statements: [],
       recent_payments: [],
       converted_sales: [],

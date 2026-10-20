@@ -13,6 +13,7 @@ import { RevenueChart } from '@/components/teacher/revenue-chart'
 import { PayoutHistory } from '@/components/teacher/payout-history'
 import { TransactionList } from '@/components/teacher/transaction-list'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 export default async function RevenuePage() {
   const role = await getUserRole()
@@ -39,9 +40,9 @@ export default async function RevenuePage() {
   // since #548 moved the read onto `fetchAllRows` (which throws on a page
   // error) this page did not render at all (#547 §2). `payouts.created_at`
   // below is a different table and does exist.
-  const [{ data: tenant }, { data: split }, transactions, { data: payouts }] = await Promise.all([
+  const [{ data: tenant }, split, transactions, { data: payouts }] = await Promise.all([
     supabase.from('tenants').select('name, stripe_account_id').eq('id', tenantId).single(),
-    supabase.from('revenue_splits').select('platform_percentage, school_percentage').eq('tenant_id', tenantId).single(),
+    getEffectiveRevenueSplit(supabase, tenantId),
     fetchAllRows('transactions', (from, to) =>
       supabase.from('transactions')
         .select('amount, refunded_amount, status, payment_provider, school_percentage_snapshot, stripe_payment_intent_id, transaction_date', { count: 'exact' })
@@ -67,7 +68,7 @@ export default async function RevenuePage() {
     schoolPercentageSnapshot: t.school_percentage_snapshot as number | null,
   }))
   const { grossRevenue: totalRevenue, platformFees: platformFee, netRevenue: schoolRevenue } =
-    computeRevenueTotals(revenueRows, split?.school_percentage ?? 80)
+    computeRevenueTotals(revenueRows, split.schoolPercentage)
 
   // Get recent transactions (last 30 days)
   const thirtyDaysAgo = new Date()
@@ -82,7 +83,7 @@ export default async function RevenuePage() {
       amount: parseFloat(t.amount),
       refundedAmount: t.refunded_amount as number | null,
     })),
-    split?.school_percentage ?? 80,
+    split.schoolPercentage,
   ).grossRevenue
 
   // Calculate pending payout
@@ -99,7 +100,7 @@ export default async function RevenuePage() {
       icon: IconCurrencyDollar,
     },
     {
-      title: t('stats.yourShare', { percentage: split?.school_percentage ?? 80 }),
+      title: t('stats.yourShare', { percentage: split.schoolPercentage }),
       value: `$${schoolRevenue.toFixed(2)}`,
       sub: t('stats.yourShareSub'),
       icon: IconTrendingUp,
@@ -157,7 +158,7 @@ export default async function RevenuePage() {
             <div className="rounded-xl bg-muted/40 p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('split.platformFee')}</span>
-                <Badge variant="secondary" className="text-[10px]">{split?.platform_percentage ?? 20}%</Badge>
+                <Badge variant="secondary" className="text-[10px]">{split.platformPercentage}%</Badge>
               </div>
               <div className="text-2xl font-bold tabular-nums text-muted-foreground">
                 ${platformFee.toFixed(2)}
@@ -170,7 +171,7 @@ export default async function RevenuePage() {
             <div className="rounded-xl bg-brand-tint p-4 ring-1 ring-primary/20 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium uppercase tracking-wider text-foreground">{t('split.yourRevenue')}</span>
-                <Badge variant="default" className="text-[10px]">{split?.school_percentage ?? 80}%</Badge>
+                <Badge variant="default" className="text-[10px]">{split.schoolPercentage}%</Badge>
               </div>
               <div className="text-2xl font-bold tabular-nums text-brand-text">
                 ${schoolRevenue.toFixed(2)}

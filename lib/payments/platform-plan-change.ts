@@ -26,6 +26,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { normalizeBillingMode, subscriptionLifecycleApplies } from '@/lib/billing/billing-mode'
 import { sendEmail } from '@/lib/email/send'
 import { downgradeBlockedTemplate } from '@/lib/email/templates/downgrade-blocked'
 import { countTenantUsage, computePlanLimitViolations } from '@/lib/billing/plan-limits'
@@ -138,10 +139,10 @@ export async function applyPortalPlanChange(
 
   const { data: currentSub } = (await admin
     .from('platform_subscriptions')
-    .select('plan_id, interval, plan_override_at')
+    .select('plan_id, interval')
     .eq('tenant_id', tenantId)
     .maybeSingle()) as {
-    data: { plan_id: string; interval: string | null; plan_override_at: string | null } | null
+    data: { plan_id: string; interval: string | null } | null
   }
 
   // No-op guard: the incoming price maps to the plan already recorded. This is
@@ -150,16 +151,20 @@ export async function applyPortalPlanChange(
     return { action: 'noop' }
   }
 
-  // Override guard (#546 §3). A super admin has deliberately put this tenant on
-  // a plan the provider knows nothing about, so its price and our plan_id are
-  // SUPPOSED to disagree. Reconciling here would read the comp as a portal
-  // downgrade and — because the tenant is typically over the real plan's limits,
-  // which is why it was comped — push the subscription onto the comped plan's
-  // price, billing the school for its own comp. A super admin lifts this with
-  // clearTenantPlanOverride, and a real payment (confirmManualPayment /
-  // changePlan) clears it automatically.
-  if (currentSub?.plan_override_at) {
-    return { action: 'ignored', reason: 'tenant plan is under a super-admin override' }
+  // Billing-mode guard (#546 §3, billing_mode design). A comped / internal school
+  // is deliberately on a plan the provider knows nothing about, so its price and
+  // our plan_id are SUPPOSED to disagree. Reconciling here would read the comp as
+  // a portal downgrade and — because such a school is typically over the real
+  // plan's limits — push the subscription onto the comped plan's price, billing
+  // it for its own comp. A real paid subscription flips the school back to
+  // `paid` (DB side), after which this path applies normally.
+  const { data: billingTenant } = (await admin
+    .from('tenants')
+    .select('billing_mode')
+    .eq('id', tenantId)
+    .maybeSingle()) as { data: { billing_mode: string | null } | null }
+  if (!subscriptionLifecycleApplies(normalizeBillingMode(billingTenant?.billing_mode))) {
+    return { action: 'ignored', reason: 'tenant billing_mode is not paid' }
   }
 
   const maxCourses = newPlan.limits?.max_courses ?? -1

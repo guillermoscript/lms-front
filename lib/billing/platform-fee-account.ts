@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeFeeBalances, type FeeBalance, type FeeLedgerOptions } from '@/lib/payments/platform-fee-owed'
 import { loadFeeConfig, loadTenantFeeLedger, type EnforcementMode } from '@/lib/billing/platform-fee-enforcement'
+import { normalizeBillingMode, type BillingMode } from '@/lib/billing/billing-mode'
 import { statementStatus, type FeeStatementStatus } from '@/lib/billing/platform-fee-statement'
 import { isRequestOpen, OPEN_REQUEST_STATUSES } from '@/lib/billing/payment-request-ttl'
 import {
@@ -43,6 +44,8 @@ export interface SchoolFeeAccount {
   balances: FeeBalance[]
   standing: FeeStandingSnapshot
   enforcementMode: EnforcementMode
+  /** tenants.billing_mode: only `paid` is ever blocked. */
+  billingMode: BillingMode
   graceDays: number
   converted: ConvertedSalesLine[]
   statements: SchoolFeeStatementSummary[]
@@ -51,14 +54,13 @@ export interface SchoolFeeAccount {
   payNow: PayNowBucket[]
 }
 
-const STANDING_COLUMNS = 'state, overdue_since, blocked_at, enforcement_exempt'
+const STANDING_COLUMNS = 'state, overdue_since, blocked_at'
 
 function toStanding(row: Record<string, unknown> | null): FeeStandingSnapshot {
   return {
     state: ((row?.state as FeeStandingState | undefined) ?? 'ok') as FeeStandingState,
     overdueSince: (row?.overdue_since as string | null | undefined) ?? null,
     blockedAt: (row?.blocked_at as string | null | undefined) ?? null,
-    enforcementExempt: row?.enforcement_exempt === true,
   }
 }
 
@@ -68,9 +70,10 @@ export async function loadSchoolFeeAccount(
   tenantId: string,
   now: Date = new Date(),
 ): Promise<SchoolFeeAccount> {
-  const [config, ledger, standingRes, statementsRes, requestRes, reviewRes] = await Promise.all([
+  const [config, ledger, tenantRes, standingRes, statementsRes, requestRes, reviewRes] = await Promise.all([
     loadFeeConfig(admin),
     loadTenantFeeLedger(admin, tenantId),
+    admin.from('tenants').select('billing_mode').eq('id', tenantId).maybeSingle(),
     admin.from('tenant_fee_standing').select(STANDING_COLUMNS).eq('tenant_id', tenantId).maybeSingle(),
     admin
       .from('platform_fee_statements')
@@ -94,7 +97,7 @@ export async function loadSchoolFeeAccount(
       .eq('status', 'pending')
       .not('review_reason', 'is', null),
   ])
-  for (const r of [standingRes, statementsRes, requestRes, reviewRes]) {
+  for (const r of [tenantRes, standingRes, statementsRes, requestRes, reviewRes]) {
     if (r.error) throw new Error(`platform fee account read failed: ${r.error.message}`)
   }
 
@@ -128,6 +131,7 @@ export async function loadSchoolFeeAccount(
     balances,
     standing: toStanding(standingRes.data as Record<string, unknown> | null),
     enforcementMode: config.enforcementMode,
+    billingMode: normalizeBillingMode((tenantRes.data as { billing_mode?: unknown } | null)?.billing_mode),
     graceDays: config.feeGraceDays,
     converted: summarizeConvertedSales(ledger.txns, opts),
     statements,
@@ -160,9 +164,10 @@ export async function loadFeeBannerNotice(admin: SupabaseClient, tenantId: strin
     const standing = toStanding(data as Record<string, unknown>)
     if (standing.state === 'ok') return null
 
-    const [config, ledger, latest] = await Promise.all([
+    const [config, ledger, tenantRes, latest] = await Promise.all([
       loadFeeConfig(admin),
       loadTenantFeeLedger(admin, tenantId),
+      admin.from('tenants').select('billing_mode').eq('id', tenantId).maybeSingle(),
       admin
         .from('platform_fee_statements')
         .select('due_at')
@@ -180,6 +185,7 @@ export async function loadFeeBannerNotice(admin: SupabaseClient, tenantId: strin
       balances,
       enforcementMode: config.enforcementMode,
       graceDays: config.feeGraceDays,
+      billingMode: normalizeBillingMode((tenantRes.data as { billing_mode?: unknown } | null)?.billing_mode),
       latestDueAt: (latest.data?.due_at as string | undefined) ?? null,
     })
   } catch (err) {

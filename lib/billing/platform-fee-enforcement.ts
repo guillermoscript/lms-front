@@ -41,6 +41,7 @@ import {
   type FeeLedgerTxn,
   type FeePayment,
 } from '@/lib/payments/platform-fee-owed'
+import { feeBlockingApplies, feeNoticesApply, normalizeBillingMode, type BillingMode } from '@/lib/billing/billing-mode'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
 import { formatCurrency } from '@/lib/currency'
 import {
@@ -50,12 +51,6 @@ import {
 
 /** Hard cap on tenants newly blocked in one run (design 3, "Safety rails"). */
 export const FEE_BLOCK_CAP_PER_RUN = 25
-
-/**
- * Never blocked by this job (design 3): the platform's own default school
- * cannot owe the platform. Statements and notices still run for it.
- */
-export const FEE_BLOCK_EXEMPT_TENANT_IDS: readonly string[] = ['00000000-0000-0000-0000-000000000001']
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -73,6 +68,8 @@ export interface FeeTenant {
   id: string
   name: string | null
   slug: string | null
+  /** tenants.billing_mode; absent = paid. internal: skipped entirely; comped: notices only, never blocked. */
+  billingMode?: BillingMode
 }
 
 export interface FeeTxnRow extends FeeLedgerTxn {
@@ -85,8 +82,6 @@ export interface FeeStanding {
   state: StandingState
   overdueSince: string | null
   blockedAt: string | null
-  /** Super-admin exemption (#929): notices still go out, the block never applies. */
-  enforcementExempt?: boolean
 }
 
 export interface FeeStatement {
@@ -280,6 +275,9 @@ export async function runPlatformFeeEnforcement(store: FeeStore, opts: Enforceme
   const tenants = await store.listTenants()
 
   for (const tenant of tenants) {
+    const billingMode = normalizeBillingMode(tenant.billingMode)
+    // internal: the platform's own school owes nothing: no statements, notices or standing changes.
+    if (!feeNoticesApply(billingMode)) continue
     try {
       const [{ txns, payments, fallbackSchoolPercentage }, standingRow] = await Promise.all([
         store.getLedger(tenant.id),
@@ -444,10 +442,9 @@ export async function runPlatformFeeEnforcement(store: FeeStore, opts: Enforceme
       if (overdue.length > 0 && standing === 'overdue' && overdueSince) {
         const graceOver = now.getTime() > Date.parse(overdueSince) + config.feeGraceDays * DAY_MS
         const overThreshold = overdue.some((o) => o.overdue >= config.minBlockingBalance)
-        const exempt = FEE_BLOCK_EXEMPT_TENANT_IDS.includes(tenant.id) || !!standingRow?.enforcementExempt
-        if (graceOver && overThreshold && !exempt) {
-          if (config.enforcementMode !== 'enforce') {
-            // notify_only: report, never write blocked_at.
+        if (graceOver && overThreshold) {
+          if (config.enforcementMode !== 'enforce' || !feeBlockingApplies(billingMode)) {
+            // notify_only, or a comped school (notify-only forever): report, never write blocked_at.
             act({ tenantId: tenant.id, action: 'would_block' })
             result.wouldBlock++
           } else if (result.blocked >= cap) {
@@ -632,10 +629,10 @@ export function createSupabaseFeeStore(
     getConfig: () => loadFeeConfig(admin),
 
     async listTenants() {
-      const rows = await fetchAllRows<{ id: string; name: string | null; slug: string | null }>('tenants', (from, to) =>
-        admin.from('tenants').select('id, name, slug', { count: 'exact' }).order('id').range(from, to),
+      const rows = await fetchAllRows<{ id: string; name: string | null; slug: string | null; billing_mode: string | null }>('tenants', (from, to) =>
+        admin.from('tenants').select('id, name, slug, billing_mode', { count: 'exact' }).order('id').range(from, to),
       )
-      return rows
+      return rows.map((r) => ({ id: r.id, name: r.name, slug: r.slug, billingMode: normalizeBillingMode(r.billing_mode) }))
     },
 
     getLedger: (tenantId) => loadTenantFeeLedger(admin, tenantId),
@@ -643,7 +640,7 @@ export function createSupabaseFeeStore(
     async getStanding(tenantId) {
       const { data, error } = await admin
         .from('tenant_fee_standing')
-        .select('tenant_id, state, overdue_since, blocked_at, enforcement_exempt')
+        .select('tenant_id, state, overdue_since, blocked_at')
         .eq('tenant_id', tenantId)
         .maybeSingle()
       if (error) throw new Error(`tenant_fee_standing read failed: ${error.message}`)
@@ -653,7 +650,6 @@ export function createSupabaseFeeStore(
         state: data.state as StandingState,
         overdueSince: data.overdue_since,
         blockedAt: data.blocked_at,
-        enforcementExempt: data.enforcement_exempt === true,
       }
     },
 

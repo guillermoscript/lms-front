@@ -21,7 +21,9 @@ interface PlanRow {
 interface FakeConfig {
   newPlan?: PlanRow | null
   oldPlan?: PlanRow | null
-  currentSub?: { plan_id: string; interval: string | null; plan_override_at?: string | null } | null
+  currentSub?: { plan_id: string; interval: string | null } | null
+  /** tenants.billing_mode; defaults to 'paid'. */
+  billingMode?: string
   courseCount?: number
   studentCount?: number
   adminUsers?: string[]
@@ -107,6 +109,9 @@ function makeFakeAdmin(cfg: FakeConfig) {
         }
         if (table === 'platform_subscriptions') {
           return Promise.resolve({ data: cfg.currentSub ?? null, error: null })
+        }
+        if (table === 'tenants') {
+          return Promise.resolve({ data: { billing_mode: cfg.billingMode ?? 'paid' }, error: null })
         }
         if (table === 'tenants') {
           return Promise.resolve({ data: { name: 'Test School' }, error: null })
@@ -354,18 +359,19 @@ describe('applyPortalPlanChange', () => {
  * invariant. #468 item 2 introduced the coupling; the dead webhook (#544) masked
  * it until that was fixed.
  */
-describe('applyPortalPlanChange — super-admin plan override (#546 §3)', () => {
-  const comped = (override: string | null) => ({
+describe('applyPortalPlanChange — non-paid billing_mode (#546 §3)', () => {
+  const comped = (billingMode: string) => ({
     newPlan: STARTER,
     oldPlan: PRO,
-    currentSub: { plan_id: PRO.plan_id, interval: 'monthly', plan_override_at: override },
+    billingMode,
+    currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
     // Over Starter's 15-course limit — the reason the comp exists.
     courseCount: 30,
     adminUsers: ['admin-a'],
   })
 
   it('never reprices a comped tenant on Stripe', async () => {
-    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped('2026-07-20T00:00:00.000Z'))
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped('comped'))
 
     const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
       admin,
@@ -373,15 +379,26 @@ describe('applyPortalPlanChange — super-admin plan override (#546 §3)', () =>
       sendEmailFn,
     })
 
-    expect(result).toMatchObject({ action: 'ignored' })
+    expect(result).toMatchObject({ action: 'ignored', reason: 'tenant billing_mode is not paid' })
     expect(calls.reverts).toHaveLength(0)
     expect(calls.updates).toHaveLength(0)
     expect(calls.upserts).toHaveLength(0)
     expect(calls.emails).toHaveLength(0)
   })
 
-  it('control: without the override marker the same event reprices Stripe onto the comped plan', async () => {
-    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped(null))
+  it('never reprices an internal tenant either', async () => {
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped('internal'))
+    const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
+      admin,
+      revertToPrice: makeRevert(),
+      sendEmailFn,
+    })
+    expect(result).toMatchObject({ action: 'ignored' })
+    expect(calls.reverts).toHaveLength(0)
+  })
+
+  it('control: for a paid tenant the same event reprices Stripe onto the comped plan', async () => {
+    const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin(comped('paid'))
 
     const result = await applyPortalPlanChange(subscriptionEvent('price_starter_m'), {
       admin,
@@ -394,11 +411,11 @@ describe('applyPortalPlanChange — super-admin plan override (#546 §3)', () =>
     expect(items[0].price).toBe('price_pro_m')
   })
 
-  it('clearing the override lets portal changes reconcile again', async () => {
+  it('a paid tenant reconciles portal changes normally', async () => {
     const { admin, calls, sendEmailFn, makeRevert } = makeFakeAdmin({
       newPlan: STARTER,
       oldPlan: PRO,
-      currentSub: { plan_id: PRO.plan_id, interval: 'monthly', plan_override_at: null },
+      currentSub: { plan_id: PRO.plan_id, interval: 'monthly' },
       courseCount: 5,
       studentCount: 10,
     })
