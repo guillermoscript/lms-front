@@ -4,13 +4,14 @@ import { escapeHtml, schoolButton, schoolHeadingStyle, schoolLogoHeader } from '
 export interface InvitationEmailData {
   schoolName: string
   inviterName: string
-  role: 'student' | 'teacher'
+  role: 'student' | 'teacher' | 'admin'
   joinUrl: string
   brand: SchoolBrand
 }
 
 export function invitationTemplate(data: InvitationEmailData): { subject: string; html: string } {
-  const roleLabel = data.role === 'teacher' ? 'teacher' : 'student'
+  const roleLabel =
+    data.role === 'admin' ? 'administrator' : data.role === 'teacher' ? 'teacher' : 'student'
 
   return {
     subject: `You're invited to join ${data.schoolName}`,
@@ -19,7 +20,7 @@ export function invitationTemplate(data: InvitationEmailData): { subject: string
 <body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1a1a1a">
   ${schoolLogoHeader(data.brand)}
   <h2 style="${schoolHeadingStyle(data.brand)}">You're invited!</h2>
-  <p>${escapeHtml(data.inviterName)} has invited you to join <strong>${escapeHtml(data.schoolName)}</strong> as a <strong>${roleLabel}</strong>.</p>
+  <p>${escapeHtml(data.inviterName)} has invited you to join <strong>${escapeHtml(data.schoolName)}</strong> as ${data.role === 'admin' ? 'an' : 'a'} <strong>${roleLabel}</strong>.</p>
   <p>Click the button below to create your account and get started.</p>
   <p style="text-align:center;margin:32px 0">
     ${schoolButton(data.brand, data.joinUrl, `Join ${escapeHtml(data.schoolName)}`)}

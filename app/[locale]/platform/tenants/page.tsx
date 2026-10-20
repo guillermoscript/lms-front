@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { IconExternalLink, IconSchool } from '@tabler/icons-react'
+import { Button } from '@/components/ui/button'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getTenantSiteUrl } from '@/lib/platform/tenant-site-url'
 import { PlatformPageHeader } from '@/components/platform/page-header'
@@ -81,6 +82,11 @@ export default async function TenantsPage({
     <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8" data-testid="platform-tenants-page">
       <PlatformPageHeader
         title="Schools"
+        actions={
+          <Button nativeButton={false} render={<Link href="./tenants/new" />} data-testid="create-school-link">
+            Create school
+          </Button>
+        }
         description={<span data-testid="tenants-count">{countCopy}</span>}
       />
 

@@ -74,6 +74,15 @@ Decisions made while implementing:
 
 - Expiry lifecycle implemented as `/api/cron/comped-expiry` (daily `0 2`, scheduled by `.github/workflows/cron.yml` + `vercel.json`; pure window logic in `lib/billing/comped-expiry.ts`). Notices: only the smallest reached window is sent (a school converted 10 days out gets one), larger reached windows are marked covered. At expiry the school flips to `paid` and the cron itself stamps its subscription `past_due` with a 7-day `grace_period_end` (override rows have `current_period_end NULL`, which `expire-platform-subscriptions` never visits); that cron then downgrades normally.
 
+### Resolved in PR 3 (#984)
+
+- `createSchoolOnBehalf` (`app/actions/platform/create-school-on-behalf.ts`, core in `lib/tenant/create-school-on-behalf.ts`, super admin only) inserts the tenant already in its `billing_mode`, writes the `site_name`/`currency` settings `create_school` wrote, runs `syncTenantPlan` + cutoff reconcile, then assigns the owner. UI: `/platform/tenants/new` (shared fields in `components/platform/billing-mode-fields.tsx`).
+- Owner: `internal` = the super admin (also gets `setActiveTenant`, as `create_school` does); existing account = `tenant_users` admin/active (no email, no active-school change); unknown email = pending `tenant_invitations` row with role `admin` (migration widens the CHECK), email via the shared `lib/tenant/invitations.ts` core; `joinSchool` turns it into an admin. The invitation matches by email: signing up with a different address joins as a student. If the mailer is unset the UI shows the join link.
+- No orphans: no DB transaction (the plan sync and invitation core are shared TS), so every step after the tenant insert is wrapped and a failure deletes the tenant; all child tables cascade. A failed rollback is logged and returned in the error text.
+- Slug rules: `create_school` only enforced uniqueness, so on-behalf adds `lib/tenant/school-slug.ts` (shape, 3-63 chars, reserved words, case-insensitive uniqueness). The self-serve flow is unchanged.
+- Legacy `createSchoolForUser` removed (no callers).
+- Audit: creating in `comped`/`internal` writes a `tenant_billing_mode_log` row via the insert trigger (`changed_by` is NULL because the admin client has no `auth.uid()`; `comped_by` records the super admin). A `paid` school created on behalf has no log row. No analytics event is emitted (`school_created` stays the self-serve funnel).
+
 ## Code map (from survey; re-verify before editing)
 
 - Plan resolution: `lib/plans/server.ts`, `lib/plans/features.ts`, `lib/billing/plan-limits.ts`
