@@ -11,22 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { IconDotsVertical } from "@tabler/icons-react"
-import { suspendTenant, forceTenantPlanChange } from "@/app/actions/platform/plans"
+import { suspendTenant } from "@/app/actions/platform/plans"
+import { BillingModeDialog } from "@/components/platform/billing-mode-dialog"
 import { ImpersonateDialog } from "./impersonate-dialog"
 
 interface TenantActionsMenuProps {
@@ -34,15 +21,23 @@ interface TenantActionsMenuProps {
   tenantName: string
   currentPlan: string
   isActive: boolean
+  billingMode?: string | null
+  compedUntil?: string | null
+  feePercentOverride?: number | null
 }
 
-const PLANS = ['free', 'starter', 'pro', 'business', 'enterprise']
-
-export function TenantActionsMenu({ tenantId, tenantName, currentPlan, isActive }: TenantActionsMenuProps) {
+export function TenantActionsMenu({
+  tenantId,
+  tenantName,
+  currentPlan,
+  isActive,
+  billingMode,
+  compedUntil,
+  feePercentOverride,
+}: TenantActionsMenuProps) {
   const router = useRouter()
-  const [showPlanModal, setShowPlanModal] = useState(false)
+  const [showBillingModal, setShowBillingModal] = useState(false)
   const [showImpersonate, setShowImpersonate] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState(currentPlan)
   const [loading, setLoading] = useState(false)
 
   async function handleSuspend() {
@@ -51,22 +46,8 @@ export function TenantActionsMenu({ tenantId, tenantName, currentPlan, isActive 
       await suspendTenant(tenantId, isActive)
       toast.success(isActive ? 'Tenant suspended' : 'Tenant reactivated')
       router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handlePlanChange() {
-    setLoading(true)
-    try {
-      await forceTenantPlanChange(tenantId, selectedPlan)
-      toast.success('Plan updated')
-      setShowPlanModal(false)
-      router.refresh()
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -88,8 +69,8 @@ export function TenantActionsMenu({ tenantId, tenantName, currentPlan, isActive 
             Impersonate User
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowPlanModal(true)}>
-            Change Plan
+          <DropdownMenuItem onClick={() => setShowBillingModal(true)} data-testid="tenant-billing-mode-action">
+            Billing mode
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -101,32 +82,18 @@ export function TenantActionsMenu({ tenantId, tenantName, currentPlan, isActive 
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Plan Change Modal */}
-      <Dialog open={showPlanModal} onOpenChange={setShowPlanModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Plan — {tenantName}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Select value={selectedPlan} onValueChange={(v) => v && setSelectedPlan(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select plan" />
-              </SelectTrigger>
-              <SelectContent>
-                {PLANS.map(p => (
-                  <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPlanModal(false)}>Cancel</Button>
-            <Button onClick={handlePlanChange} disabled={loading}>
-              {loading ? 'Saving…' : 'Apply Change'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {showBillingModal && (
+        <BillingModeDialog
+          open={showBillingModal}
+          onOpenChange={setShowBillingModal}
+          tenantId={tenantId}
+          tenantName={tenantName}
+          currentMode={billingMode}
+          currentPlan={currentPlan}
+          currentUntil={compedUntil}
+          currentFee={feePercentOverride}
+        />
+      )}
 
       {/* Impersonate Dialog */}
       <ImpersonateDialog

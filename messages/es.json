@@ -3099,6 +3099,13 @@
           "intervalYearly": "anual",
           "intervalMonthly": "mensual"
         },
+        "comped": {
+          "summaryUntil": "Plan cortesía: {plan} hasta {date} · fee {fee} %",
+          "summaryNoExpiry": "Plan cortesía: {plan}, sin vencimiento · fee {fee} %",
+          "expiredHint": "El periodo de cortesía terminó. Contrata un plan para conservar tus funciones.",
+          "cta": "Contratar plan",
+          "internalNote": "Escuela interna — sin facturación"
+        },
         "pendingRequests": {
           "title": "Solicitudes de pago pendientes",
           "descriptionOne": "Tu solicitud de transferencia está en la fila. La revisamos y activamos tu plan en cuanto se confirme el pago.",

@@ -19,6 +19,7 @@ import { ANALYTICS_EVENTS } from '@/lib/analytics/events'
 import { track } from '@/lib/analytics/server'
 import { revalidatePath } from 'next/cache'
 import { confirmFeeRequest } from '@/lib/billing/platform-fee-admin'
+import { effectivePlatformFeePercent } from '@/lib/billing/effective-fee'
 import {
   SwitchAlreadyPendingError,
   beginPlatformSubscriptionSwitch,
@@ -62,7 +63,7 @@ export async function getSubscriptionStatus() {
   const [tenantResult, subscriptionResult, billingCustomerResult, usage] = await Promise.all([
     adminClient
       .from('tenants')
-      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at, billing_mode')
+      .select('plan, billing_status, billing_period_end, billing_email, access_cutoff_at, billing_mode, comped_until, fee_percent_override')
       .eq('id', tenantId)
       .single(),
     adminClient
@@ -122,6 +123,13 @@ export async function getSubscriptionStatus() {
     canUseCustomerPortal,
     accessCutoffAt: tenant?.access_cutoff_at ?? null,
     billingMode: normalizeBillingMode((tenant as { billing_mode?: unknown } | null)?.billing_mode),
+    compedUntil: ((tenant as { comped_until?: string | null } | null)?.comped_until ?? null) as string | null,
+    // Effective fee through the shared helper (comped -> override ?? 0, internal -> 0).
+    feePercent: effectivePlatformFeePercent({
+      billingMode: (tenant as { billing_mode?: unknown } | null)?.billing_mode as string | null | undefined,
+      feePercentOverride: (tenant as { fee_percent_override?: number | string | null } | null)?.fee_percent_override,
+      paidPlatformPercent: planDetails?.transaction_fee_percent ?? null,
+    }),
     subscription: subscription ? {
       status: subscription.status,
       // Named for the column it carries (#602). While this was `paymentMethod`

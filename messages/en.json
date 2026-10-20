@@ -3099,6 +3099,13 @@
           "intervalYearly": "yearly",
           "intervalMonthly": "monthly"
         },
+        "comped": {
+          "summaryUntil": "Complimentary plan: {plan} until {date} · fee {fee}%",
+          "summaryNoExpiry": "Complimentary plan: {plan}, no expiry · fee {fee}%",
+          "expiredHint": "The complimentary period has ended. Get a plan to keep your features.",
+          "cta": "Get a plan",
+          "internalNote": "Internal school — no billing"
+        },
         "pendingRequests": {
           "title": "Pending payment requests",
           "descriptionOne": "Your bank transfer request is in the queue — our team will review it and activate your plan once payment is confirmed.",
