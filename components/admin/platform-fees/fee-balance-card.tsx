@@ -204,7 +204,7 @@ async function FeeBalanceBody({
         </div>
       )}
 
-      {(account.openRequest || account.underReview > 0 || account.standing.enforcementExempt || (hasDebt && account.enforcementMode !== 'enforce')) && (
+      {(account.openRequest || account.underReview > 0 || (hasDebt && (account.enforcementMode !== 'enforce' || account.billingMode !== 'paid'))) && (
         <ul className="space-y-1.5 text-sm text-muted-foreground">
           {account.openRequest && (
             <li className="flex gap-2" data-testid="fee-open-request">
@@ -221,13 +221,7 @@ async function FeeBalanceBody({
               {t('underReview', { count: account.underReview })}
             </li>
           )}
-          {account.standing.enforcementExempt && (
-            <li className="flex gap-2">
-              <IconInfoCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              {t('exempt')}
-            </li>
-          )}
-          {hasDebt && account.enforcementMode !== 'enforce' && !account.standing.enforcementExempt && (
+          {hasDebt && (account.enforcementMode !== 'enforce' || account.billingMode !== 'paid') && (
             <li className="flex gap-2">
               <IconInfoCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
               {t('notifyOnly')}

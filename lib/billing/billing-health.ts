@@ -38,6 +38,8 @@
  * for tests (mirrors lib/payments/payouts-owed.ts).
  */
 
+import { normalizeBillingMode, subscriptionLifecycleApplies } from '@/lib/billing/billing-mode'
+
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /** Why a tenant appears in the at-risk list. A tenant may qualify under several. */
@@ -58,6 +60,8 @@ export interface AtRiskTenantRow {
   tenantName: string
   plan: string | null
   accessCutoffAt: string | null
+  /** `tenants.billing_mode`; absent/unknown reads as `paid`. */
+  billingMode?: string | null
 }
 
 export interface AtRiskTenantInput extends AtRiskTenantRow {
@@ -105,10 +109,20 @@ export function mergeAtRiskTenants(input: {
 
   // A subscription id with no matching `tenants` row (deleted mid-read) is
   // dropped rather than rendered as a nameless row.
-  return [...tenantById.values()].map((tenant) => ({
-    ...tenant,
-    reasons: normalizeReasons([...(reasonsByTenant.get(tenant.tenantId) ?? [])]),
-  }))
+  //
+  // comped / internal schools are outside the subscription lifecycle, so a
+  // past-due flag on them is not a downgrade risk: those two reasons are
+  // dropped. A scheduled cutoff still counts (comped on a lowered plan), and a
+  // tenant left with no reason is not listed at all.
+  return [...tenantById.values()]
+    .map((tenant) => {
+      const lifecycle = subscriptionLifecycleApplies(normalizeBillingMode(tenant.billingMode))
+      const reasons = [...(reasonsByTenant.get(tenant.tenantId) ?? [])].filter(
+        (reason) => lifecycle || reason === 'access_cutoff_scheduled',
+      )
+      return { ...tenant, reasons: normalizeReasons(reasons) }
+    })
+    .filter((tenant) => tenant.reasons.length > 0)
 }
 
 export interface PastDueSubscriptionInput {

@@ -1,7 +1,6 @@
 /**
  * Super-admin platform fee ledger tools (#929, design 4.4): confirm a manual
- * fee payment, record an offline payment, waive or adjust with a reason, set a
- * tenant's enforcement exemption, view standing. Server-only.
+ * fee payment, record an offline payment, waive or adjust with a reason, view standing. Server-only.
  *
  * Every write is one SECURITY DEFINER SQL function (migration 20261009130000)
  * that re-checks `super_admins` for the actor, writes the ledger append-only,
@@ -10,6 +9,7 @@
  * pass the verified user id as `actorId`; never a client-supplied id.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { normalizeBillingMode, type BillingMode } from '@/lib/billing/billing-mode'
 import type { FeeBalance } from '@/lib/payments/platform-fee-owed'
 import { getTenantFeeBalances } from '@/lib/billing/platform-fee-paynow'
 
@@ -113,31 +113,14 @@ export async function reverseFeePayment(
   return String(data) as 'reversed' | 'duplicate' | 'not_settled' | 'not_found'
 }
 
-/** Exempt (or stop exempting) a tenant from the sales block. Exempting lifts an active block. */
-export async function setFeeExemption(
-  admin: SupabaseClient,
-  tenantId: string,
-  exempt: boolean,
-  reason: string,
-  actorId: string,
-): Promise<void> {
-  const { error } = await admin.rpc('set_tenant_fee_exemption', {
-    _tenant_id: tenantId,
-    _exempt: exempt,
-    _actor: actorId,
-    _reason: reason,
-  })
-  if (error) throw mapRpcError(error)
-}
-
 export interface TenantFeeOverview {
   tenantId: string
+  /** tenants.billing_mode: comped = notify-only, internal = no fee machinery. */
+  billingMode: BillingMode
   standing: {
     state: 'ok' | 'reminded' | 'overdue' | 'blocked'
     overdueSince: string | null
     blockedAt: string | null
-    enforcementExempt: boolean
-    exemptReason: string | null
     lastEvaluatedAt: string | null
   }
   /** Per currency, never summed across currencies. */
@@ -160,11 +143,12 @@ export interface TenantFeeOverview {
 
 /** Everything the super-admin fee panel shows for one tenant (admin client; caller verifies super admin). */
 export async function getTenantFeeOverview(admin: SupabaseClient, tenantId: string): Promise<TenantFeeOverview> {
-  const [balances, standingRes, paymentsRes, requestsRes, auditRes] = await Promise.all([
+  const [balances, tenantRes, standingRes, paymentsRes, requestsRes, auditRes] = await Promise.all([
     getTenantFeeBalances(admin, tenantId),
+    admin.from('tenants').select('billing_mode').eq('id', tenantId).maybeSingle(),
     admin
       .from('tenant_fee_standing')
-      .select('state, overdue_since, blocked_at, enforcement_exempt, exempt_reason, last_evaluated_at')
+      .select('state, overdue_since, blocked_at, last_evaluated_at')
       .eq('tenant_id', tenantId)
       .maybeSingle(),
     admin
@@ -188,18 +172,17 @@ export async function getTenantFeeOverview(admin: SupabaseClient, tenantId: stri
       .order('created_at', { ascending: false })
       .limit(50),
   ])
-  for (const r of [standingRes, paymentsRes, requestsRes, auditRes]) {
+  for (const r of [tenantRes, standingRes, paymentsRes, requestsRes, auditRes]) {
     if (r.error) throw new FeeLedgerActionError(r.error.message, 'internal')
   }
   const s = standingRes.data
   return {
     tenantId,
+    billingMode: normalizeBillingMode((tenantRes.data as { billing_mode?: unknown } | null)?.billing_mode),
     standing: {
       state: (s?.state as TenantFeeOverview['standing']['state']) ?? 'ok',
       overdueSince: s?.overdue_since ?? null,
       blockedAt: s?.blocked_at ?? null,
-      enforcementExempt: s?.enforcement_exempt === true,
-      exemptReason: s?.exempt_reason ?? null,
       lastEvaluatedAt: s?.last_evaluated_at ?? null,
     },
     balances,

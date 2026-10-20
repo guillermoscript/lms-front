@@ -32,6 +32,9 @@ interface WorldOpts {
   courses?: number
   students?: number
   cutoffAt?: string | null
+  billingMode?: string
+  /** Also seed an `enterprise` row (comped fallback). */
+  enterprise?: boolean
   ledger?: Array<{ cutoff_at: string; stage: string }>
   /** Which writes PostgREST should refuse. */
   failWrites?: (table: string, op: string) => { code: string; message: string } | null
@@ -48,6 +51,7 @@ function world(o: WorldOpts = {}) {
         name: 'Test School',
         plan: o.plan === undefined ? 'free' : o.plan,
         access_cutoff_at: o.cutoffAt ?? null,
+        ...(o.billingMode ? { billing_mode: o.billingMode } : {}),
       },
     ],
     platform_plans:
@@ -76,6 +80,8 @@ function world(o: WorldOpts = {}) {
       ...row,
     })),
   }
+
+  if (o.enterprise) db.platform_plans.push({ slug: 'enterprise', name: 'Enterprise', limits: { max_courses: -1, max_students: -1 } })
 
   const { client } = createFakeSupabase(db, {
     conflictKeys: { access_cutoff_notifications: 'stage' },
@@ -179,6 +185,53 @@ describe('reconcileAccessCutoff — scheduling and clearing', () => {
     await expect(
       reconcileAccessCutoff(client, 'no-such-tenant', { now: NOW })
     ).resolves.toEqual({ action: 'none' })
+  })
+})
+
+describe('reconcileAccessCutoff — billing_mode', () => {
+  it('internal: never schedules a cutoff, even over the limit, and sends nothing', async () => {
+    const { db, client } = world({ courses: 9, limits: { max_courses: 5, max_students: 50 }, billingMode: 'internal' })
+    const mail = mailer()
+
+    const decision = await reconcileAccessCutoff(client, TENANT, { now: NOW, sendEmailFn: mail.fn })
+
+    expect(decision).toEqual({ action: 'none' })
+    expect(tenantRow(db).access_cutoff_at).toBeNull()
+    expect(mail.sent).toEqual([])
+  })
+
+  it('internal: clears a stale cutoff and sends nothing', async () => {
+    const { db, client } = world({
+      courses: 9,
+      limits: { max_courses: 5, max_students: 50 },
+      billingMode: 'internal',
+      cutoffAt: CUTOFF,
+    })
+    const mail = mailer()
+
+    const decision = await reconcileAccessCutoff(client, TENANT, { now: NOW, sendEmailFn: mail.fn, notifyDueStages: true })
+
+    expect(decision.action).toBe('clear')
+    expect(tenantRow(db).access_cutoff_at).toBeNull()
+    expect(mail.sent).toEqual([])
+  })
+
+  it('comped: the plan stays the plan, so an over-limit school is cut off like any other', async () => {
+    const { db, client } = world({ courses: 9, limits: { max_courses: 5, max_students: 50 }, billingMode: 'comped' })
+    const mail = mailer()
+
+    const decision = await reconcileAccessCutoff(client, TENANT, { now: NOW, sendEmailFn: mail.fn })
+
+    expect(decision.action).toBe('schedule')
+    expect(tenantRow(db).access_cutoff_at).toBe(CUTOFF)
+    expect(mail.sent).toHaveLength(1)
+  })
+
+  it('comped with a missing plan row falls back to enterprise (unlimited): no cutoff', async () => {
+    const { db, client } = world({ courses: 99, limits: null, billingMode: 'comped', enterprise: true })
+    const decision = await reconcileAccessCutoff(client, TENANT, { now: NOW, sendEmailFn: mailer().fn })
+    expect(decision.action).toBe('none')
+    expect(tenantRow(db).access_cutoff_at).toBeNull()
   })
 })
 

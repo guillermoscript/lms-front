@@ -30,7 +30,11 @@ const TENANT = 'tenant-a'
 type Row = { tenant_id: string; platform_percentage: number; school_percentage: number } | null
 
 /** Minimal fake of `admin.from('revenue_splits').select().eq().maybeSingle()`. */
-function fakeAdmin(rows: Record<string, Row>, error: { message: string } | null = null) {
+function fakeAdmin(
+  rows: Record<string, Row>,
+  error: { message: string } | null = null,
+  tenants: Record<string, { billing_mode: string; fee_percent_override?: number | null }> = {},
+) {
   const calls: { table: string; tenantId?: string }[] = []
   const client = {
     from(table: string) {
@@ -39,10 +43,13 @@ function fakeAdmin(rows: Record<string, Row>, error: { message: string } | null 
       const q = {
         select: () => q,
         eq: (col: string, value: string) => {
-          if (col === 'tenant_id') call.tenantId = value
+          if (col === 'tenant_id' || col === 'id') call.tenantId = value
           return q
         },
-        maybeSingle: async () => ({ data: error ? null : (rows[call.tenantId ?? ''] ?? null), error }),
+        maybeSingle: async () =>
+          table === 'tenants'
+            ? { data: tenants[call.tenantId ?? ''] ?? { billing_mode: 'paid', fee_percent_override: null }, error: null }
+            : { data: error ? null : (rows[call.tenantId ?? ''] ?? null), error },
       }
       return q
     },
@@ -63,7 +70,24 @@ describe('getTenantRevenueSplit', () => {
   it('reads the split for exactly the tenant asked for', async () => {
     const { client, calls } = fakeAdmin({ [TENANT]: { tenant_id: TENANT, platform_percentage: 20, school_percentage: 80 } })
     await expect(getTenantRevenueSplit(TENANT, client)).resolves.toEqual({ platformPercentage: 20, schoolPercentage: 80 })
-    expect(calls).toEqual([{ table: 'revenue_splits', tenantId: TENANT }])
+    expect(calls.filter((c) => c.table === 'revenue_splits')).toEqual([{ table: 'revenue_splits', tenantId: TENANT }])
+    expect(calls.every((c) => c.tenantId === TENANT)).toBe(true)
+  })
+
+  it('internal school pays 0% even with a stale 20% row; no row needed', async () => {
+    const tenants = { [TENANT]: { billing_mode: 'internal' } }
+    const withRow = fakeAdmin({ [TENANT]: { tenant_id: TENANT, platform_percentage: 20, school_percentage: 80 } }, null, tenants)
+    await expect(getTenantRevenueSplit(TENANT, withRow.client)).resolves.toEqual({ platformPercentage: 0, schoolPercentage: 100 })
+    const noRow = fakeAdmin({}, null, tenants)
+    await expect(getTenantRevenueSplit(TENANT, noRow.client)).resolves.toEqual({ platformPercentage: 0, schoolPercentage: 100 })
+  })
+
+  it('comped school pays fee_percent_override ?? 0', async () => {
+    const row = { [TENANT]: { tenant_id: TENANT, platform_percentage: 20, school_percentage: 80 } }
+    const a = fakeAdmin(row, null, { [TENANT]: { billing_mode: 'comped', fee_percent_override: 5 } })
+    await expect(getTenantRevenueSplit(TENANT, a.client)).resolves.toEqual({ platformPercentage: 5, schoolPercentage: 95 })
+    const b = fakeAdmin({}, null, { [TENANT]: { billing_mode: 'comped', fee_percent_override: null } })
+    await expect(getTenantRevenueSplit(TENANT, b.client)).resolves.toEqual({ platformPercentage: 0, schoolPercentage: 100 })
   })
 
   it('keeps a 0% platform fee as 0, not "unset" (#605)', async () => {

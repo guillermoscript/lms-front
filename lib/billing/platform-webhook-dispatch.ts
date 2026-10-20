@@ -21,6 +21,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendEmail } from '@/lib/email/send'
+import { normalizeBillingMode, subscriptionLifecycleApplies } from '@/lib/billing/billing-mode'
 import { paymentFailedTemplate } from '@/lib/email/templates/payment-failed'
 import { downgradeTenantToFreeIfCurrent } from '@/lib/billing/downgrade-tenant'
 import { reconcileAccessCutoffSafely } from '@/lib/billing/access-cutoff'
@@ -587,6 +588,15 @@ export async function dispatchPlatformBillingEvent(
         .neq('status', 'past_due')
         .select('tenant_id'),
     )) as { tenant_id: string }[] | null
+    // comped / internal schools are out of the dunning lifecycle: record the
+    // provider's subscription state above, but never flag the TENANT past_due
+    // nor mail payment-failed dunning.
+    const { data: dunningTenant } = (await admin
+      .from('tenants')
+      .select('billing_mode')
+      .eq('id', tenantId)
+      .maybeSingle()) as { data: { billing_mode: string | null } | null }
+    if (!subscriptionLifecycleApplies(normalizeBillingMode(dunningTenant?.billing_mode))) return
     await unwrap(
       'tenants past_due',
       admin.from('tenants').update({ billing_status: status, updated_at: now }).eq('id', tenantId),

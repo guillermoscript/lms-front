@@ -9,6 +9,7 @@ import { IconCreditCard, IconCalendar, IconAlertTriangle, IconRefresh, IconX } f
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { PROVIDER_CAPABILITIES, type PaymentProvider } from '@/lib/payments/types'
+import { subscriptionLifecycleApplies, type BillingMode } from '@/lib/billing/billing-mode'
 
 interface BillingOverviewProps {
   plan: string
@@ -36,6 +37,8 @@ interface BillingOverviewProps {
   }
   transactionFeePercent: number
   accessCutoffAt: string | null
+  /** `comped` / `internal` schools are outside the subscription lifecycle: no dunning, renewal or upsell UI. */
+  billingMode?: BillingMode
   onManageClick?: () => void
   onCancelClick?: () => void
   onReactivateClick?: () => void
@@ -54,6 +57,7 @@ export function BillingOverview({
   usage,
   transactionFeePercent,
   accessCutoffAt,
+  billingMode = 'paid',
   onManageClick,
   onCancelClick,
   onReactivateClick,
@@ -63,6 +67,7 @@ export function BillingOverview({
 }: BillingOverviewProps) {
   const t = useTranslations('dashboard.admin.billing.overview')
   const isFree = plan === 'free'
+  const lifecycle = subscriptionLifecycleApplies(billingMode)
   const periodStart = subscription?.currentPeriodStart ? new Date(subscription.currentPeriodStart) : null
   const periodEnd = billingPeriodEnd ? new Date(billingPeriodEnd) : null
   const gracePeriodEnd = subscription?.gracePeriodEnd ? new Date(subscription.gracePeriodEnd) : null
@@ -73,8 +78,8 @@ export function BillingOverview({
   // (PayPal, #744) — see `supportsScheduledCancellation`.
   const providerCaps = subscription ? PROVIDER_CAPABILITIES[subscription.paymentProvider as PaymentProvider] : undefined
   const cancelIsFinal = !!providerCaps?.supportsNativeSubscriptions && !providerCaps.supportsScheduledCancellation
-  const isPastDue = billingStatus === 'past_due'
-  const showRenewalWarning = isManualSub && !isPastDue && daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0
+  const isPastDue = lifecycle && billingStatus === 'past_due'
+  const showRenewalWarning = lifecycle && isManualSub && !isPastDue && daysUntilEnd !== null && daysUntilEnd <= 30 && daysUntilEnd > 0
   const daysInGracePeriod = gracePeriodEnd ? Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null
   const formattedUpcomingAmount = upcomingPayment
     ? new Intl.NumberFormat(undefined, { style: 'currency', currency: upcomingPayment.currency }).format(upcomingPayment.amount)
@@ -94,23 +99,27 @@ export function BillingOverview({
               <CardDescription>
                 {isFree
                   ? t('freePlanDescription')
-                  : t('paidPlanDescription', { fee: transactionFeePercent })
+                  : lifecycle
+                    ? t('paidPlanDescription', { fee: transactionFeePercent })
+                    : null
                 }
               </CardDescription>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
-              {!isFree && onManageClick && (
+              {lifecycle && !isFree && onManageClick && (
                 <Button variant="outline" size="sm" onClick={onManageClick}>
                   <IconCreditCard className="mr-2 h-4 w-4" />
                   {t('manage')}
                 </Button>
               )}
-              <Link href="/dashboard/admin/billing/upgrade">
-                <Button size="sm">
-                  {isFree ? t('upgrade') : t('changePlan')}
-                </Button>
-              </Link>
-              {!isFree && onCancelClick && subscription?.status === 'active' && !subscription?.cancelAtPeriodEnd && (
+              {lifecycle && (
+                <Link href="/dashboard/admin/billing/upgrade">
+                  <Button size="sm">
+                    {isFree ? t('upgrade') : t('changePlan')}
+                  </Button>
+                </Link>
+              )}
+              {lifecycle && !isFree && onCancelClick && subscription?.status === 'active' && !subscription?.cancelAtPeriodEnd && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -128,7 +137,7 @@ export function BillingOverview({
                   cancel is final at PayPal (#744), so the action would refuse and
                   the button could only fail — the upgrade link above is how that
                   school subscribes again. */}
-              {!isFree && onReactivateClick && subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && !cancelIsFinal && (
+              {lifecycle && !isFree && onReactivateClick && subscription?.status === 'active' && subscription?.cancelAtPeriodEnd && !cancelIsFinal && (
                 <Button size="sm" variant="outline" onClick={onReactivateClick} disabled={reactivateLoading}>
                   <IconRefresh className="mr-2 h-4 w-4" />
                   {t('reactivatePlan')}
@@ -138,7 +147,7 @@ export function BillingOverview({
           </div>
         </CardHeader>
         <CardContent className="space-y-6 pt-6">
-          {!isFree && (periodStart || periodEnd || subscription) && (
+          {lifecycle && !isFree && (periodStart || periodEnd || subscription) && (
             <section aria-label={t('currentPlan')} className="grid gap-3 sm:grid-cols-2">
               {periodStart && periodEnd && (
                 <div className="flex min-w-0 items-start gap-3 rounded-lg border bg-card p-3.5">
@@ -172,7 +181,7 @@ export function BillingOverview({
             </section>
           )}
 
-          {upcomingPayment && formattedUpcomingAmount && !subscription?.cancelAtPeriodEnd && (
+          {lifecycle && upcomingPayment && formattedUpcomingAmount && !subscription?.cancelAtPeriodEnd && (
             <section aria-label={t('upcomingPayment')} className="flex flex-col gap-3 rounded-lg border bg-muted/25 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <IconCalendar className="mt-0.5 h-4 w-4 shrink-0 text-brand-text" />
@@ -268,6 +277,7 @@ export function BillingOverview({
                 current={usage.courses.current}
                 limit={usage.courses.limit}
                 cutoffAt={accessCutoffAt}
+                hideUpgrade={!lifecycle}
               />
             </div>
             <div className="space-y-3">
@@ -281,6 +291,7 @@ export function BillingOverview({
                 current={usage.students.current}
                 limit={usage.students.limit}
                 cutoffAt={accessCutoffAt}
+                hideUpgrade={!lifecycle}
               />
             </div>
             </div>

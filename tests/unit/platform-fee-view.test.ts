@@ -31,7 +31,6 @@ const standing = (over: Partial<FeeStandingSnapshot> = {}): FeeStandingSnapshot 
   state: 'ok',
   overdueSince: null,
   blockedAt: null,
-  enforcementExempt: false,
   ...over,
 })
 
@@ -155,11 +154,18 @@ describe('describeFeeBanner', () => {
     })
   })
 
-  it('overdue states when sales pause only in enforce mode and when not exempt', () => {
+  it('overdue states when sales pause only in enforce mode and for paid schools', () => {
     const overdue = standing({ state: 'overdue', overdueSince: '2026-10-05T00:00:00.000Z' })
     expect(describeFeeBanner({ ...base, standing: overdue })?.blockOn).toBe('2026-10-12T00:00:00.000Z')
     expect(describeFeeBanner({ ...base, enforcementMode: 'notify_only', standing: overdue })).toMatchObject({ variant: 'overdue', blockOn: null })
-    expect(describeFeeBanner({ ...base, standing: { ...overdue, enforcementExempt: true } })?.blockOn).toBeNull()
+    expect(describeFeeBanner({ ...base, billingMode: 'comped', standing: overdue })).toMatchObject({ variant: 'overdue', blockOn: null })
+  })
+
+  it('comped never shows a blocked banner; internal shows nothing', () => {
+    const blocked = standing({ state: 'blocked', overdueSince: '2026-10-05T00:00:00Z', blockedAt: '2026-10-13T00:00:00Z' })
+    expect(describeFeeBanner({ ...base, billingMode: 'comped', standing: blocked })).toMatchObject({ variant: 'overdue', blockOn: null })
+    expect(describeFeeBanner({ ...base, billingMode: 'internal', standing: blocked })).toBeNull()
+    expect(describeFeeBanner({ ...base, billingMode: 'internal', standing: standing({ state: 'reminded' }) })).toBeNull()
   })
 
   it('blocked wins whenever blocked_at is set', () => {

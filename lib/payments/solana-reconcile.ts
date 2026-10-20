@@ -20,6 +20,7 @@
 import { Connection, PublicKey } from '@solana/web3.js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { verifySplitTransfer } from './solana-split'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 /** The transaction columns the reconciler needs. */
 export interface OneTimeSolanaTx {
@@ -95,12 +96,7 @@ export async function reconcileSolanaOneTimeTransaction(
   if (tx.school_percentage_snapshot != null) {
     platformPercent = 100 - Number(tx.school_percentage_snapshot)
   } else {
-    const { data: split } = await admin
-      .from('revenue_splits')
-      .select('platform_percentage')
-      .eq('tenant_id', tx.tenant_id)
-      .maybeSingle()
-    platformPercent = Number(split?.platform_percentage ?? 20)
+    platformPercent = (await getEffectiveRevenueSplit(admin, tx.tenant_id)).platformPercentage
   }
 
   // Verify against the settlement LOCKED at checkout (amount + token), so a

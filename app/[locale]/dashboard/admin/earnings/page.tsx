@@ -6,7 +6,6 @@ import { IconAlertCircle, IconBuildingBank, IconClock, IconCalendarMonth, IconRe
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
 import { fetchAllRows } from '@/lib/supabase/fetch-all-rows'
-import { DEFAULT_SCHOOL_PERCENTAGE } from '@/lib/payments/payouts-owed'
 import { formatByCurrency, formatMoney } from '@/lib/payments/format-money'
 import {
   buildEarningsView,
@@ -28,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { FeeBalanceCard } from '@/components/admin/platform-fees/fee-balance-card'
+import { getEffectiveRevenueSplit } from '@/lib/billing/effective-fee'
 
 const PAGE_SIZE = 20
 
@@ -102,7 +102,7 @@ export default async function AdminEarningsPage({
         .order('payout_id')
         .range(from, to),
     ),
-    supabase.from('revenue_splits').select('school_percentage').eq('tenant_id', tenantId).maybeSingle(),
+    getEffectiveRevenueSplit(supabase, tenantId),
     // Same statuses as the "Open" tab on the payment-requests page.
     supabase
       .from('payment_requests')
@@ -117,7 +117,6 @@ export default async function AdminEarningsPage({
       .eq('status', 'succeeded'),
   ])
 
-  if (split.error) throw new Error(`revenue_splits: ${split.error.message}`)
   if (openRequests.error) throw new Error(`payment_requests: ${openRequests.error.message}`)
   if (feePayments.error) throw new Error(`platform_fee_payments: ${feePayments.error.message}`)
 
@@ -133,7 +132,7 @@ export default async function AdminEarningsPage({
       currency: p.currency || 'usd',
       coveredThrough: p.period_end ?? p.paid_at ?? p.created_at,
     })),
-    schoolPercentage: (split.data?.school_percentage as number | undefined) ?? DEFAULT_SCHOOL_PERCENTAGE,
+    schoolPercentage: split.schoolPercentage,
     openRequests: openRequests.count ?? 0,
     feePayments: (feePayments.data ?? []).map((p) => ({
       amount: Number(p.amount),

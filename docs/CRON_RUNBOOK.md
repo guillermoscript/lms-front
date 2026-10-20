@@ -106,6 +106,8 @@ gh workflow enable cron.yml
 | `send-pushes` | every minute (pg_cron only) | No push notification reaches the mobile app. Pending rows older than a day are then marked sent without a push, so a long outage drops those pushes rather than flooding devices when it recovers |
 | `solana-pull` | `*/10` | Native subscription renewal and missing-receipt reconciliation; see §5 |
 
+**Billing mode (#982).** `expire-platform-subscriptions` skips every tenant whose `billing_mode` is not `paid`. `enforce-plan-limits` clears (never schedules) the access cutoff of `internal` schools. `enforce-platform-fees` skips `internal` schools and never blocks `comped` ones (notify only). See docs/INTERNAL_COMPED_SCHOOLS.md.
+
 Every route is idempotent, so a late or repeated run is safe. `league-rollover`
 in particular resolves the previous week from the data and finalizes every
 unfinalized week, so running it late *is* the catch-up path (#549).

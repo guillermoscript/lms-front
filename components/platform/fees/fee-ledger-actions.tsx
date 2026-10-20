@@ -20,7 +20,6 @@ import {
   confirmPlatformFeeRequestAction,
   recordPlatformFeePaymentAction,
   reversePlatformFeePaymentAction,
-  setPlatformFeeExemptionAction,
   type FeeActionResult,
 } from '@/app/actions/platform/platform-fees'
 import { feeErrorKey } from '@/lib/billing/platform-fee-view'
@@ -284,42 +283,6 @@ export function ReverseFeePaymentButton({ paymentId, amountLabel }: { paymentId:
         }}
       >
         <ReasonField id={`fee-reverse-reason-${paymentId}`} value={reason} onChange={setReason} label={t('reverse.reason')} />
-      </ActionDialog>
-    </>
-  )
-}
-
-/** Exempt a school from the sales pause (lifts an active block), or end the exemption. */
-export function FeeExemptionButton({ tenantId, exempt }: { tenantId: string; exempt: boolean }) {
-  const { t, pending, run } = useFeeAction()
-  const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState('')
-  const next = !exempt
-  return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)} data-testid="fee-exemption-btn">
-        {exempt ? t('exemption.clear') : t('exemption.set')}
-      </Button>
-      <ActionDialog
-        open={open}
-        onOpenChange={(v) => {
-          setOpen(v)
-          if (!v) setReason('')
-        }}
-        title={next ? t('exemption.titleSet') : t('exemption.titleClear')}
-        description={next ? t('exemption.bodySet') : t('exemption.bodyClear')}
-        submitLabel={t('exemption.submit')}
-        pending={pending}
-        testId="fee-exemption-dialog"
-        onSubmit={async () => {
-          const r = await run(() => setPlatformFeeExemptionAction(tenantId, next, reason), t('exemption.success'))
-          if (r?.ok) {
-            setOpen(false)
-            setReason('')
-          }
-        }}
-      >
-        <ReasonField id="fee-exemption-reason" value={reason} onChange={setReason} label={t('exemption.reason')} />
       </ActionDialog>
     </>
   )

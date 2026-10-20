@@ -27,6 +27,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_SCHOOL_PERCENTAGE } from './payouts-owed'
+import { effectivePlatformFeePercent, effectiveSchoolPercentage } from '@/lib/billing/effective-fee'
+import { normalizeBillingMode } from '@/lib/billing/billing-mode'
 import { chargedAmount, effectiveFeeBearer, type FeeBearer } from './fee-bearer'
 
 /** The tenant's split, or null when the tenant has no `revenue_splits` row. */
@@ -85,22 +87,43 @@ export async function getTenantRevenueSplit(
   tenantId: string,
   admin: SupabaseClient = createAdminClient(),
 ): Promise<TenantRevenueSplit | null> {
-  const { data, error } = await admin
-    .from('revenue_splits')
-    .select('tenant_id, platform_percentage, school_percentage')
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
+  const [{ data: tenant, error: tErr }, { data, error }] = await Promise.all([
+    admin.from('tenants').select('billing_mode, fee_percent_override').eq('id', tenantId).maybeSingle(),
+    admin
+      .from('revenue_splits')
+      .select('tenant_id, platform_percentage, school_percentage')
+      .eq('tenant_id', tenantId)
+      .maybeSingle(),
+  ])
+  if (tErr) throw new Error(`tenants lookup failed for tenant ${tenantId}: ${tErr.message}`)
   if (error) throw new Error(`revenue_splits lookup failed for tenant ${tenantId}: ${error.message}`)
-  if (!data) return null
-  if (data.tenant_id !== tenantId) throw new Error('revenue_splits tenant mismatch')
+  if (data && data.tenant_id !== tenantId) throw new Error('revenue_splits tenant mismatch')
 
-  const school = Number(data.school_percentage)
-  if (!Number.isFinite(school) || school < 0 || school > 100) {
-    throw new Error(`revenue_splits for tenant ${tenantId} has an invalid school_percentage`)
+  const t = tenant as { billing_mode?: string | null; fee_percent_override?: number | string | null } | null
+  const mode = normalizeBillingMode(t?.billing_mode)
+
+  // `paid` with no revenue_splits row stays "no split" (callers apply their own default / refuse).
+  if (mode === 'paid' && !data) return null
+
+  let paidPlatform: number | null = null
+  if (data) {
+    const school = Number(data.school_percentage)
+    if (!Number.isFinite(school) || school < 0 || school > 100) {
+      throw new Error(`revenue_splits for tenant ${tenantId} has an invalid school_percentage`)
+    }
+    // Derived from school_percentage, the column the snapshot trigger and every
+    // payout sum read, so the gross-up and the school's share use one number.
+    paidPlatform = 100 - school
   }
-  // Derived from school_percentage, the column the snapshot trigger and every
-  // payout sum read, so the gross-up and the school's share use one number.
-  return { schoolPercentage: school, platformPercentage: 100 - school }
+  const input = {
+    billingMode: mode,
+    feePercentOverride: t?.fee_percent_override,
+    paidPlatformPercent: paidPlatform,
+  }
+  return {
+    schoolPercentage: effectiveSchoolPercentage(input),
+    platformPercentage: effectivePlatformFeePercent(input),
+  }
 }
 
 /** Split with the documented default for a tenant that has none (school bearer only). */
