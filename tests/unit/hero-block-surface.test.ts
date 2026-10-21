@@ -4,7 +4,7 @@ import { HeroBlock } from '@/lib/puck/components/lms/hero-block'
 
 const render = (props: Record<string, unknown>) =>
   renderToStaticMarkup(
-    (HeroBlock.render as unknown as (p: Record<string, unknown>) => React.ReactElement)({
+    (HeroBlock.render as unknown as (p: Record<string, unknown>) => import('react').ReactElement)({
       ...HeroBlock.defaultProps,
       title: 'Hello',
       ...props,
