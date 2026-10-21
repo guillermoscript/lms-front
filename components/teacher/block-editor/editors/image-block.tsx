@@ -2,12 +2,11 @@
 
 import { useTranslations } from 'next-intl'
 
-import { useRef, useState } from 'react'
 import type { ImageBlock } from '../types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { IconPhoto, IconUpload, IconLoader2 } from '@tabler/icons-react'
-import { uploadCourseImage } from '@/app/actions/teacher/course-images'
+import { IconPhoto, IconUpload } from '@tabler/icons-react'
+import { ImagePicker } from '@/components/teacher/image-picker'
 import { ExpiringUrlWarning } from './expiring-url-warning'
 
 interface ImageBlockEditorProps {
@@ -17,34 +16,6 @@ interface ImageBlockEditorProps {
 
 export function ImageBlockEditor({ block, onChange }: ImageBlockEditorProps) {
   const t = useTranslations('dashboard.teacher.lessonEditor.blockEditor')
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    setUploadError(null)
-    try {
-      const data = new FormData()
-      data.append('file', file)
-      const result = await uploadCourseImage(data)
-      if (result.success) {
-        // Public course-images bucket URL — permanent, readable by anyone
-        // (lesson content is served to logged-out visitors on preview lessons).
-        onChange({ src: result.url })
-      } else {
-        setUploadError(result.error)
-      }
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Error al subir la imagen')
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
   return (
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex items-center gap-2 text-sm font-medium">
@@ -58,32 +29,16 @@ export function ImageBlockEditor({ block, onChange }: ImageBlockEditorProps) {
           placeholder={t('image.urlPlaceholder')}
           className="flex-1"
         />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          onChange={handleFileChange}
-          className="hidden"
+        <ImagePicker
+          onSelect={(src) => onChange({ src })}
+          trigger={
+            <Button type="button" variant="outline" size="sm" className="flex-shrink-0 gap-1.5">
+              <IconUpload className="h-4 w-4" />
+              {t('image.upload')}
+            </Button>
+          }
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={uploading}
-          onClick={() => fileInputRef.current?.click()}
-          className="flex-shrink-0 gap-1.5"
-        >
-          {uploading ? (
-            <IconLoader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <IconUpload className="h-4 w-4" />
-          )}
-          {t('image.upload')}
-        </Button>
       </div>
-      {uploadError && (
-        <p className="text-xs text-destructive">{uploadError}</p>
-      )}
       <ExpiringUrlWarning
         url={block.src}
         hint={t('image.uploadHint')}

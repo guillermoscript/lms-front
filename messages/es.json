@@ -2597,6 +2597,19 @@
         "deterministic": "Estas preguntas se corrigen con la clave de respuestas, sin IA.",
         "correct": "Correcto",
         "incorrect": "Incorrecto"
+      },
+      "imagePicker": {
+        "title": "Elige una imagen",
+        "description": "Reutiliza una imagen que ya subiste o agrega una nueva.",
+        "libraryTab": "Mis imágenes",
+        "uploadTab": "Subir nueva",
+        "empty": "Aún no hay imágenes. Sube la primera.",
+        "selectImage": "Usar la imagen {name}",
+        "dropHint": "Arrastra una imagen aquí o haz clic para buscarla",
+        "limits": "JPEG, PNG, GIF o WebP · hasta 5MB",
+        "uploading": "Subiendo…",
+        "uploadError": "No se pudo subir la imagen",
+        "cancel": "Cancelar"
       }
     },
     "admin": {

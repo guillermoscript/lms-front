@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { createCourse, updateCourse, checkCourseLimit } from '@/app/actions/teacher/courses'
-import { uploadCourseImage } from '@/app/actions/teacher/course-images'
+import { ImagePicker } from '@/components/teacher/image-picker'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -44,9 +44,7 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
   const router = useRouter()
   const t = useTranslations('dashboard.teacher.courseForm')
   const [loading, setLoading] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [limitInfo, setLimitInfo] = useState<{
     canCreate: boolean
     currentCount: number
@@ -83,28 +81,6 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
       checkCourseLimit().then(setLimitInfo)
     }
   }, [initialData])
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    setError(null)
-    try {
-      const data = new FormData()
-      data.append('file', file)
-      const result = await uploadCourseImage(data)
-      if (result.success) {
-        setFormData((prev) => ({ ...prev, thumbnail_url: result.url }))
-      } else {
-        setError(result.error)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('uploadError'))
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -282,26 +258,15 @@ export function CourseForm({ categories, initialData }: CourseFormProps) {
               </div>
             )}
             <div className="flex items-center gap-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                className="hidden"
-                onChange={handleImageUpload}
+              <ImagePicker
+                onSelect={(url) => setFormData((prev) => ({ ...prev, thumbnail_url: url }))}
+                trigger={
+                  <Button type="button" variant="outline">
+                    <IconUpload className="mr-2 h-4 w-4" />
+                    {t('uploadImage')}
+                  </Button>
+                }
               />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? (
-                  <IconLoader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
-                ) : (
-                  <IconUpload className="mr-2 h-4 w-4" />
-                )}
-                {uploading ? t('uploading') : t('uploadImage')}
-              </Button>
               <span className="text-xs text-muted-foreground">{t('orPasteUrl')}</span>
             </div>
             <Input

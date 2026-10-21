@@ -14,12 +14,7 @@ import {
     Award,
     User
 } from "lucide-react";
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion";
+import { CourseCover } from '@/components/public/course-cover';
 import { Card, CardContent } from "@/components/ui/card";
 import { getTranslations } from 'next-intl/server';
 import { getCurrentTenantId, getCurrentUserId } from '@/lib/supabase/tenant'
@@ -86,6 +81,9 @@ interface Lesson {
     title: string;
     sequence: number;
     description: string | null;
+    summary: string | null;
+    image: string | null;
+    video_url: string | null;
     is_preview: boolean;
 }
 
@@ -126,11 +124,37 @@ export default async function CourseDetailsPage(props: {
     // only — never select content here.
     const lessonsPromise = createAdminClient()
         .from('lessons')
-        .select('id, title, sequence, description, is_preview')
+        .select('id, title, sequence, description, summary, image, video_url, is_preview')
         .eq('course_id', courseId)
         .eq('tenant_id', tenantId)
         .eq('status', 'published')
         .order('sequence', { ascending: true });
+
+    // Per-lesson exercises / resources and the course's exams, only to count and
+    // label them on the curriculum. Same admin-client rationale as the lessons.
+    const admin = createAdminClient();
+    const exercisesPromise = admin
+        .from('exercises')
+        .select('id, lesson_id')
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'published');
+    const examsPromise = admin
+        .from('exams')
+        .select('exam_id, title, duration')
+        .eq('course_id', courseId)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'published')
+        .order('sequence', { ascending: true });
+    const resourcesPromise = lessonsPromise.then(({ data }) => {
+        const ids = (data ?? []).map((l) => l.id);
+        if (ids.length === 0) return { data: [] as { lesson_id: number }[] };
+        return admin
+            .from('lesson_resources')
+            .select('lesson_id')
+            .in('lesson_id', ids)
+            .eq('tenant_id', tenantId);
+    });
 
     const authorPromise = course.author_id
         ? supabase
@@ -174,7 +198,7 @@ export default async function CourseDetailsPage(props: {
         })()
         : Promise.resolve(false);
 
-    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }, seo, freePreviewEnabled] = await Promise.all([
+    const [{ data: author }, hasAccess, { data: productCourses }, planCoversCourse, socialProof, { data: lessonRows }, seo, freePreviewEnabled, { data: exerciseRows }, { data: examRows }, { data: resourceRows }] = await Promise.all([
         authorPromise,
         accessPromise,
         productCoursesPromise,
@@ -183,6 +207,9 @@ export default async function CourseDetailsPage(props: {
         lessonsPromise,
         getSeoContext(),
         isFreePreviewEnabled(tenantId),
+        exercisesPromise,
+        examsPromise,
+        resourcesPromise,
     ]);
 
     const { averageRating, reviewCount, studentCount, recentReviews } = socialProof;
@@ -251,379 +278,336 @@ export default async function CourseDetailsPage(props: {
         durationMinutes: hasDuration ? durationMinutes : null,
     });
 
+    const metaItems = [
+        studentCount > 0 && { key: 'students', icon: Users, label: t('socialProof.students', { count: studentCount }) },
+        totalLessons > 0 && { key: 'lessons', icon: BookOpen, label: t('hero.lessons', { count: totalLessons }) },
+        hasDuration && { key: 'duration', icon: Clock, label: t('hero.duration', { h: estimatedHours, m: estimatedMinutes }) },
+        formattedDate && { key: 'published', icon: Calendar, label: t('hero.published', { date: formattedDate }) },
+    ].filter(Boolean) as { key: string; icon: typeof Users; label: string }[];
+
     return (
         <div className="min-h-screen bg-background text-foreground font-sans">
             <JsonLd data={structuredData} />
             {/* Breadcrumbs */}
-            <nav aria-label="Breadcrumb" className="bg-muted/50 border-b border-border">
+            <nav aria-label="Breadcrumb" className="border-b border-border">
                 <div className="container mx-auto px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
                     <Link href="/" className="hover:text-brand-text transition-colors duration-150">{t('breadcrumbs.home')}</Link>
-                    <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                    <ChevronRight className="w-3 h-3 shrink-0" aria-hidden="true" />
                     <Link href="/courses" className="hover:text-brand-text transition-colors duration-150">{t('breadcrumbs.courses')}</Link>
                     {course.category && (
                         <>
-                            <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                            <ChevronRight className="w-3 h-3 shrink-0" aria-hidden="true" />
                             <span className="text-foreground">{course.category.name}</span>
                         </>
                     )}
-                    <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                    <ChevronRight className="w-3 h-3 shrink-0" aria-hidden="true" />
                     <span className="text-brand-text truncate max-w-[200px]" aria-current="page">{course.title}</span>
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <div className="bg-muted border-b border-border py-12 lg:py-16">
-                <div className="container mx-auto px-4">
-                    <div className="max-w-4xl">
-                        {course.category && (
-                            <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-brand-tint text-brand-text border border-primary/25 mb-4">
-                                {course.category.name}
-                            </span>
-                        )}
+            {/* One grid for hero + body so the enroll card can start beside the
+                title and stay sticky all the way down the curriculum. The hero
+                band is the `shadow`/`clip-path` bleed on the first cell. */}
+            <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-x-12">
+                {/* Hero */}
+                <header className="lg:col-start-1 lg:row-start-1 py-10 lg:py-14 bg-muted shadow-[0_0_0_100vmax_var(--muted)] [clip-path:inset(0_-100vmax)]">
+                    {course.category && (
+                        <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-brand-tint text-brand-text border border-primary/25 mb-4">
+                            {course.category.name}
+                        </span>
+                    )}
 
-                        <h1 className="text-3xl lg:text-5xl font-bold mb-4 tracking-tight leading-tight text-foreground text-balance">
-                            {course.title}
-                        </h1>
+                    <h1 className="text-3xl lg:text-5xl font-bold mb-5 tracking-tight leading-tight text-foreground text-balance">
+                        {course.title}
+                    </h1>
 
-                        {course.description && (
-                            <p className="text-lg text-foreground/80 mb-8 leading-relaxed max-w-3xl text-pretty">
+                    {course.description && (
+                        <div className="mb-6 max-w-2xl">
+                            <p className="text-lg text-foreground/80 leading-relaxed text-pretty line-clamp-3">
                                 {course.description}
                             </p>
-                        )}
+                            {course.description.length > 220 && (
+                                <a href="#about" className="mt-1 inline-block text-sm font-medium text-brand-text hover:underline">
+                                    {t('hero.readMore')}
+                                </a>
+                            )}
+                        </div>
+                    )}
 
-                        <div className="flex flex-wrap items-center gap-6 text-sm text-foreground/80">
+                    {averageRating !== null && (
+                        <div className="flex items-center gap-1.5 text-sm mb-4">
+                            <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
+                            <StarRating rating={averageRating} />
+                            <span className="text-muted-foreground">{t('socialProof.reviewCount', { count: reviewCount })}</span>
+                        </div>
+                    )}
+
+                    {metaItems.length > 0 && (
+                        <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-foreground/80">
+                            {metaItems.map(({ key, icon: Icon, label }) => (
+                                <li key={key} className="flex items-center gap-1.5">
+                                    <Icon className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                    <span>{label}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {instructor && (
+                        <div className="mt-6 flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-background overflow-hidden ring-1 ring-border">
+                                {instructor.avatar_url ? (
+                                    <img src={instructor.avatar_url} alt={instructor.name} width={36} height={36} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <User className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                    </div>
+                                )}
+                            </div>
+                            <span className="text-sm text-foreground">{t('hero.createdBy', { name: instructor.name })}</span>
+                        </div>
+                    )}
+                </header>
+
+                {/* Enroll card: after the hero on mobile, right column on desktop */}
+                <aside className="mt-8 lg:mt-0 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:pt-10">
+                    <div className="lg:sticky lg:top-6">
+                        <Card className="shadow-xl overflow-hidden">
+                            <CourseCover
+                                title={course.title}
+                                thumbnailUrl={course.thumbnail_url}
+                                category={course.category?.name}
+                            />
+
+                            <CardContent className="p-6 space-y-5">
+                                <div className="text-3xl font-bold">{priceDisplay}</div>
+
+                                {/* CTA */}
+                                <div className="space-y-3">
+                                    {!userId ? (
+                                        <div className="space-y-2">
+                                            {/* A visitor who arrived by a shared link most likely has no
+                                                account yet, so the button goes to sign-up; the login link
+                                                below carries the same `next` for the ones who do (#685). */}
+                                            <Link href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}>
+                                                <Button data-testid="course-enroll-cta" className="w-full h-11 font-bold text-sm shadow-lg shadow-primary/20">
+                                                    {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
+                                                </Button>
+                                            </Link>
+                                            <AlreadyHaveAccountLink
+                                                next={anonymousNext}
+                                                testId="course-enroll-login"
+                                                linkClassName="text-brand-text"
+                                            />
+                                        </div>
+                                    ) : hasAccess ? (
+                                        <Link href={`/dashboard/student/courses/${course.course_id}`}>
+                                            <Button data-testid="course-go-to-course" className="w-full h-11 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm">
+                                                {t('pricing.goToCourse')}
+                                            </Button>
+                                        </Link>
+                                    ) : isFree ? (
+                                        searchParams.enroll === '1' ? (
+                                            <AutoFreeEnrollButton courseId={course.course_id} />
+                                        ) : (
+                                            <FreeEnrollButton courseId={course.course_id} />
+                                        )
+                                    ) : planCoversCourse ? (
+                                        <PlanEnrollButton courseId={course.course_id} />
+                                    ) : (
+                                        <Link href={`/checkout?courseId=${course.course_id}`}>
+                                            <Button className="w-full h-11 font-bold text-sm shadow-lg shadow-primary/20">
+                                                {t('pricing.buyNow')}
+                                            </Button>
+                                        </Link>
+                                    )}
+
+                                    {!hasAccess && !isFree && !planCoversCourse && (
+                                        <div className="text-center">
+                                            <span className="text-muted-foreground text-xs">{t('pricing.or')}</span>
+                                            <Link href="/pricing" className="block text-brand-text hover:underline text-sm mt-1">
+                                                {t('pricing.subscription')}
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Includes */}
+                                <div className="space-y-3 border-t border-border pt-5">
+                                    <div className="font-bold text-sm">{t('pricing.includes.title')}</div>
+                                    <ul className="space-y-2.5 text-sm text-foreground">
+                                        {totalLessons > 0 && (
+                                            <li className="flex items-center gap-3">
+                                                <BookOpen className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                                <span>{t('pricing.includes.lessons', { count: totalLessons })}</span>
+                                            </li>
+                                        )}
+                                        {hasDuration && (
+                                            <li className="flex items-center gap-3">
+                                                <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                                <span>{t('pricing.includes.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
+                                            </li>
+                                        )}
+                                        <li className="flex items-center gap-3">
+                                            <Infinity className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                            <span>{t('pricing.includes.lifetime')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-3">
+                                            <Smartphone className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                            <span>{t('pricing.includes.mobile')}</span>
+                                        </li>
+                                        <li className="flex items-center gap-3">
+                                            <Award className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                            <span>{t('pricing.includes.certificate')}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </aside>
+
+                {/* Body */}
+                <div className="lg:col-start-1 lg:row-start-2 py-12 space-y-14 min-w-0">
+                    {/* What you'll learn */}
+                    {whatYoullLearn.length > 0 && (
+                        <section className="bg-card border border-border rounded-xl p-6 md:p-8">
+                            <h2 className="text-2xl font-bold mb-6 text-foreground text-balance">{t('sections.whatYoullLearn')}</h2>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                {whatYoullLearn.map((item: string, i: number) => (
+                                    <li key={i} className="flex gap-3">
+                                        <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-brand-text" aria-hidden="true" />
+                                        <span className="text-foreground text-sm leading-relaxed">{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+
+                    {/* About: the full text the hero only teases */}
+                    {course.description && (
+                        <section id="about" className="scroll-mt-6">
+                            <h2 className="text-2xl font-bold mb-4 text-foreground">{t('sections.about')}</h2>
+                            <p className="max-w-[65ch] text-base leading-7 text-foreground whitespace-pre-line">
+                                {course.description}
+                            </p>
+                        </section>
+                    )}
+
+                    {/* Course Content: always open, so the curriculum is the first thing a visitor can scan */}
+                    <section>
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-4 mb-4">
+                            <h2 className="text-2xl font-bold text-foreground">{t('sections.content.title')}</h2>
+                            <p className="text-sm text-muted-foreground">
+                                {t('sections.content.lectures', { count: lessons.length })}
+                                {hasDuration && <> &middot; {t('sections.content.totalLength', { h: estimatedHours, m: estimatedMinutes })}</>}
+                            </p>
+                        </div>
+
+                        {lessons.length > 0 ? (
+                            <ol className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+                                {lessons.map((lesson: Lesson, index: number) => {
+                                    // The school-level switch (#799) wins over the per-lesson
+                                    // flag: this page is read via the admin client (bypasses
+                                    // RLS), so it must not keep badging/linking to a preview
+                                    // lesson the school just turned off tenant-wide.
+                                    const isPreview = lesson.is_preview && freePreviewEnabled;
+                                    const row = (
+                                        <>
+                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold tabular-nums ${isPreview ? 'bg-brand-tint text-brand-text' : 'bg-muted text-muted-foreground'}`}>
+                                                {isPreview ? <PlayCircle className="h-4 w-4" aria-hidden="true" /> : index + 1}
+                                            </span>
+                                            <div className="min-w-0 flex-1">
+                                                <div className={`text-sm font-medium text-foreground truncate ${isPreview ? 'group-hover:text-brand-text transition-colors duration-150' : ''}`}>
+                                                    {lesson.title}
+                                                </div>
+                                                {lesson.description && (
+                                                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{lesson.description}</p>
+                                                )}
+                                            </div>
+                                            {isPreview && (
+                                                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand-text border border-primary/25 bg-brand-tint rounded-full px-2 py-0.5">
+                                                    {t('sections.content.previewBadge')}
+                                                </span>
+                                            )}
+                                        </>
+                                    );
+                                    return (
+                                        <li key={lesson.id}>
+                                            {isPreview ? (
+                                                <Link
+                                                    href={`/courses/${params.id}/lessons/${lesson.id}`}
+                                                    className="group flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-150"
+                                                >
+                                                    {row}
+                                                </Link>
+                                            ) : (
+                                                <div className="flex items-center gap-3 px-4 py-3">{row}</div>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground rounded-xl border border-dashed border-border">
+                                {t('sections.content.noLessons')}
+                            </div>
+                        )}
+                    </section>
+
+                    {/* What students say */}
+                    {recentReviews.length > 0 && (
+                        <section>
+                            <h2 className="text-2xl font-bold mb-2 text-foreground">{t('socialProof.title')}</h2>
                             {averageRating !== null && (
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
                                     <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
                                     <StarRating rating={averageRating} />
                                     <span className="text-muted-foreground">{t('socialProof.reviewCount', { count: reviewCount })}</span>
                                 </div>
                             )}
-                            {studentCount > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                    <Users className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                    <span>{t('socialProof.students', { count: studentCount })}</span>
-                                </div>
-                            )}
-                            {totalLessons > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                    <BookOpen className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                    <span>{t('hero.lessons', { count: totalLessons })}</span>
-                                </div>
-                            )}
-                            {hasDuration && (
-                                <div className="flex items-center gap-1.5">
-                                    <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                    <span>{t('hero.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
-                                </div>
-                            )}
-                            {formattedDate && (
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                    <span>{t('hero.published', { date: formattedDate })}</span>
-                                </div>
-                            )}
-                        </div>
+                            <div className="space-y-4">
+                                {recentReviews.map((review) => (
+                                    <div key={review.reviewId} className="bg-card border border-border rounded-xl p-6">
+                                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                                            <span className="font-bold text-foreground text-sm">{review.reviewerName}</span>
+                                            <StarRating rating={review.rating} starClassName="w-3.5 h-3.5" />
+                                            <span className="text-xs text-muted-foreground">
+                                                {new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(review.createdAt))}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-foreground leading-relaxed">{review.reviewText}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
-                        {instructor && (
-                            <div className="mt-8 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-background overflow-hidden">
+                    {/* Instructor */}
+                    {instructor && (
+                        <section>
+                            <h2 className="text-2xl font-bold mb-4 text-foreground">{t('sections.instructor.title')}</h2>
+                            <div className="flex items-start gap-5 bg-card border border-border rounded-xl p-6">
+                                <div className="w-16 h-16 rounded-full bg-muted overflow-hidden shrink-0 ring-2 ring-border">
                                     {instructor.avatar_url ? (
-                                        <img src={instructor.avatar_url} alt={instructor.name} width={40} height={40} className="w-full h-full object-cover" />
+                                        <img src={instructor.avatar_url} alt={instructor.name} width={64} height={64} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center">
-                                            <User className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
+                                            <User className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
                                         </div>
                                     )}
                                 </div>
-                                <span className="text-foreground">{t('hero.createdBy', { name: instructor.name })}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="container mx-auto px-4 py-12">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    {/* Left Column */}
-                    <div className="lg:col-span-2 space-y-12">
-
-                        {/* What you'll learn */}
-                        {whatYoullLearn.length > 0 && (
-                            <section className="bg-card border border-border rounded-xl p-8">
-                                <h2 className="text-2xl font-bold mb-6 text-foreground text-balance">{t('sections.whatYoullLearn')}</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                                    {whatYoullLearn.map((item: string, i: number) => (
-                                        <div key={i} className="flex gap-3">
-                                            <div className="mt-0.5 flex-shrink-0">
-                                                <CheckCircle2 className="w-4 h-4 text-brand-text" aria-hidden="true" />
-                                            </div>
-                                            <span className="text-foreground text-sm leading-relaxed">{item}</span>
-                                        </div>
-                                    ))}
+                                <div className="min-w-0">
+                                    <div className="text-lg font-bold text-foreground">{instructor.name}</div>
+                                    {instructor.bio && (
+                                        <p className="text-muted-foreground leading-relaxed mt-2 text-sm max-w-[65ch]">
+                                            {instructor.bio}
+                                        </p>
+                                    )}
                                 </div>
-                            </section>
-                        )}
-
-                        {/* Course Content */}
-                        <section>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-2xl font-bold text-foreground">{t('sections.content.title')}</h2>
                             </div>
-                            <div className="text-sm text-muted-foreground mb-4 flex gap-3">
-                                <span>{t('sections.content.lectures', { count: lessons.length })}</span>
-                                {hasDuration && (
-                                    <>
-                                        <span aria-hidden="true">&middot;</span>
-                                        <span>{t('sections.content.totalLength', { h: estimatedHours, m: estimatedMinutes })}</span>
-                                    </>
-                                )}
-                            </div>
-
-                            {lessons.length > 0 ? (
-                                <Accordion className="w-full space-y-3">
-                                    <AccordionItem value="lessons" className="border border-border bg-card rounded-lg px-4 overflow-hidden">
-                                        <AccordionTrigger className="hover:no-underline py-4">
-                                            <div className="flex items-center gap-4 text-left">
-                                                <span className="font-bold text-foreground">{t('sections.content.allLessons')}</span>
-                                                <span className="text-xs text-muted-foreground font-normal">{t('sections.content.lectures', { count: lessons.length })}</span>
-                                            </div>
-                                        </AccordionTrigger>
-                                        <AccordionContent className="pb-4 space-y-1">
-                                            {lessons.map((lesson: Lesson, index: number) => (
-                                                // The school-level switch (#799) wins over the per-lesson
-                                                // flag: this page is read via the admin client (bypasses
-                                                // RLS), so it must not keep badging/linking to a preview
-                                                // lesson the school just turned off tenant-wide.
-                                                lesson.is_preview && freePreviewEnabled ? (
-                                                    <Link
-                                                        key={lesson.id}
-                                                        href={`/courses/${params.id}/lessons/${lesson.id}`}
-                                                        className="flex items-center justify-between gap-3 p-3 rounded-md hover:bg-muted/50 transition-colors duration-150 group"
-                                                    >
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <span className="text-xs text-muted-foreground font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
-                                                            <PlayCircle className="w-4 h-4 text-brand-text flex-shrink-0" aria-hidden="true" />
-                                                            <span className="text-sm text-foreground truncate group-hover:text-brand-text transition-colors duration-150">{lesson.title}</span>
-                                                        </div>
-                                                        <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand-text border border-primary/25 bg-brand-tint rounded-full px-2 py-0.5">
-                                                            {t('sections.content.previewBadge')}
-                                                        </span>
-                                                    </Link>
-                                                ) : (
-                                                    <div key={lesson.id} className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors duration-150">
-                                                        <div className="flex items-center gap-3 min-w-0">
-                                                            <span className="text-xs text-muted-foreground font-mono w-6 text-right tabular-nums flex-shrink-0">{index + 1}</span>
-                                                            <BookOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-                                                            <span className="text-sm text-foreground truncate">{lesson.title}</span>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            ))}
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                </Accordion>
-                            ) : (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    {t('sections.content.noLessons')}
-                                </div>
-                            )}
                         </section>
-
-                        {/* What students say */}
-                        {recentReviews.length > 0 && (
-                            <section>
-                                <h2 className="text-2xl font-bold mb-2 text-foreground">{t('socialProof.title')}</h2>
-                                {averageRating !== null && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-                                        <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
-                                        <StarRating rating={averageRating} />
-                                        <span className="text-muted-foreground">{t('socialProof.reviewCount', { count: reviewCount })}</span>
-                                    </div>
-                                )}
-                                <div className="space-y-4">
-                                    {recentReviews.map((review) => (
-                                        <div key={review.reviewId} className="bg-card border border-border rounded-xl p-6">
-                                            <div className="flex flex-wrap items-center gap-3 mb-3">
-                                                <span className="font-bold text-foreground text-sm">{review.reviewerName}</span>
-                                                <StarRating rating={review.rating} starClassName="w-3.5 h-3.5" />
-                                                <span className="text-xs text-muted-foreground">
-                                                    {new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(review.createdAt))}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-foreground leading-relaxed">{review.reviewText}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* About */}
-                        {course.description && (
-                            <section className="space-y-6">
-                                <h2 className="text-2xl font-bold text-foreground">{t('sections.about')}</h2>
-                                <div className="text-foreground text-base leading-relaxed whitespace-pre-line">
-                                    {course.description}
-                                </div>
-                            </section>
-                        )}
-
-                        {/* Instructor */}
-                        {instructor && (
-                            <section>
-                                <h2 className="text-2xl font-bold mb-8 text-foreground">{t('sections.instructor.title')}</h2>
-                                <div className="flex items-start gap-5 bg-card border border-border rounded-xl p-6">
-                                    <div className="w-20 h-20 rounded-full bg-muted overflow-hidden flex-shrink-0 ring-2 ring-border">
-                                        {instructor.avatar_url ? (
-                                            <img src={instructor.avatar_url} alt={instructor.name} width={80} height={80} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <User className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-lg font-bold text-foreground">{instructor.name}</div>
-                                        {instructor.bio && (
-                                            <p className="text-muted-foreground leading-relaxed mt-3 text-sm">
-                                                {instructor.bio}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </section>
-                        )}
-                    </div>
-
-                    {/* Right Column: Sticky Pricing Card */}
-                    <div className="lg:col-span-1">
-                        <div className="sticky top-8 space-y-6">
-                            <Card className="shadow-2xl overflow-hidden">
-                                {/* Thumbnail */}
-                                <div className="relative aspect-video">
-                                    {course.thumbnail_url ? (
-                                        <img
-                                            src={course.thumbnail_url}
-                                            alt={course.title}
-                                            width={400}
-                                            height={225}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                                            <PlayCircle className="w-16 h-16 text-muted-foreground" aria-hidden="true" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <CardContent className="p-6 space-y-6">
-                                    {/* Price */}
-                                    <div className="text-3xl font-bold">{priceDisplay}</div>
-
-                                    {/* Social proof */}
-                                    {(averageRating !== null || studentCount > 0) && (
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                                            {averageRating !== null && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="font-bold text-warning">{averageRating.toFixed(1)}</span>
-                                                    <StarRating rating={averageRating} starClassName="w-3.5 h-3.5" />
-                                                    <span className="text-muted-foreground text-xs">{t('socialProof.reviewCount', { count: reviewCount })}</span>
-                                                </div>
-                                            )}
-                                            {studentCount > 0 && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <Users className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                                    <span className="text-xs">{t('socialProof.students', { count: studentCount })}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* CTA */}
-                                    <div className="space-y-3">
-                                        {!userId ? (
-                                            <div className="space-y-2">
-                                                {/* A visitor who arrived by a shared link most likely has no
-                                                    account yet, so the button goes to sign-up; the login link
-                                                    below carries the same `next` for the ones who do (#685). */}
-                                                <Link href={`/auth/sign-up?next=${encodeURIComponent(anonymousNext)}`}>
-                                                    <Button data-testid="course-enroll-cta" className="w-full h-11 font-bold text-sm shadow-lg shadow-primary/20">
-                                                        {isFree ? t('pricing.enrollFree') : t('pricing.enrollNow')}
-                                                    </Button>
-                                                </Link>
-                                                <AlreadyHaveAccountLink
-                                                    next={anonymousNext}
-                                                    testId="course-enroll-login"
-                                                    linkClassName="text-brand-text"
-                                                />
-                                            </div>
-                                        ) : hasAccess ? (
-                                            <Link href={`/dashboard/student/courses/${course.course_id}`}>
-                                                <Button data-testid="course-go-to-course" className="w-full h-11 bg-success hover:bg-success/90 text-success-foreground font-bold text-sm">
-                                                    {t('pricing.goToCourse')}
-                                                </Button>
-                                            </Link>
-                                        ) : isFree ? (
-                                            searchParams.enroll === '1' ? (
-                                                <AutoFreeEnrollButton courseId={course.course_id} />
-                                            ) : (
-                                                <FreeEnrollButton courseId={course.course_id} />
-                                            )
-                                        ) : planCoversCourse ? (
-                                            <PlanEnrollButton courseId={course.course_id} />
-                                        ) : (
-                                            <Link href={`/checkout?courseId=${course.course_id}`}>
-                                                <Button className="w-full h-11 font-bold text-sm shadow-lg shadow-primary/20">
-                                                    {t('pricing.buyNow')}
-                                                </Button>
-                                            </Link>
-                                        )}
-
-                                        {!hasAccess && !isFree && !planCoversCourse && (
-                                            <div className="text-center">
-                                                <span className="text-muted-foreground text-xs">{t('pricing.or')}</span>
-                                                <Link href="/pricing" className="block text-brand-text hover:underline text-sm mt-1">
-                                                    {t('pricing.subscription')}
-                                                </Link>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Includes */}
-                                    <div className="space-y-4 border-t border-border pt-6">
-                                        <div className="font-bold text-sm">{t('pricing.includes.title')}</div>
-                                        <div className="space-y-3">
-                                            {totalLessons > 0 && (
-                                                <div className="flex items-center gap-3 text-sm text-foreground">
-                                                    <BookOpen className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                                    <span>{t('pricing.includes.lessons', { count: totalLessons })}</span>
-                                                </div>
-                                            )}
-                                            {hasDuration && (
-                                                <div className="flex items-center gap-3 text-sm text-foreground">
-                                                    <Clock className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                                    <span>{t('pricing.includes.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex items-center gap-3 text-sm text-foreground">
-                                                <Infinity className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                                <span>{t('pricing.includes.lifetime')}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3 text-sm text-foreground">
-                                                <Smartphone className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                                <span>{t('pricing.includes.mobile')}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3 text-sm text-foreground">
-                                                <Award className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                                <span>{t('pricing.includes.certificate')}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
