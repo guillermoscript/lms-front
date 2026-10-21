@@ -146,10 +146,11 @@ export default async function CourseDetailsPage(props: {
         .eq('tenant_id', tenantId)
         .eq('status', 'published')
         .order('sequence', { ascending: true });
-    const resourcesPromise = lessonsPromise.then(({ data }) => {
+    const resourcesPromise = lessonsPromise.then(async ({ data }) => {
         const ids = (data ?? []).map((l) => l.id);
         if (ids.length === 0) return { data: [] as { lesson_id: number }[] };
-        return admin
+        // Awaited so both branches share one plain-object type (the builder is a thenable).
+        return await admin
             .from('lesson_resources')
             .select('lesson_id')
             .in('lesson_id', ids)
