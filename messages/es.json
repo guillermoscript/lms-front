@@ -5856,7 +5856,9 @@
       "duration": "{h}h {m}m",
       "published": "Publicado el {date}",
       "language": "Español",
-      "createdBy": "Creado por {name}"
+      "createdBy": "Creado por {name}",
+      "readMore": "Leer más",
+      "tags": "Etiquetas"
     },
     "sections": {
       "whatYoullLearn": "Lo que aprenderás",
@@ -5867,7 +5869,23 @@
         "totalLength": "{h}h {m}m de duración total",
         "allLessons": "Todas las Lecciones",
         "noLessons": "No hay lecciones disponibles todavía.",
-        "previewBadge": "Vista previa"
+        "previewBadge": "Vista previa",
+        "stats": {
+          "videos": "{count, plural, one {video} other {videos}}",
+          "readings": "{count, plural, one {lectura} other {lecturas}}",
+          "exercises": "{count, plural, one {ejercicio} other {ejercicios}}",
+          "exams": "{count, plural, one {examen} other {exámenes}}",
+          "resources": "{count, plural, one {recurso} other {recursos}}"
+        },
+        "sequential": "Las lecciones se completan en orden: cada una desbloquea la siguiente.",
+        "kind": {
+          "video": "Video",
+          "reading": "Lectura",
+          "exam": "Examen"
+        },
+        "lessonExercises": "{count, plural, one {# ejercicio} other {# ejercicios}}",
+        "lessonResources": "{count, plural, one {# recurso} other {# recursos}}",
+        "examMinutes": "{count} min"
       },
       "instructor": {
         "title": "Instructor",
@@ -5895,7 +5913,10 @@
         "duration": "{h}h {m}m de contenido",
         "lifetime": "Acceso de por vida",
         "mobile": "Acceso en móvil y escritorio",
-        "certificate": "Certificado de finalización"
+        "certificate": "Certificado de finalización",
+        "exercises": "{count, plural, one {# ejercicio con feedback} other {# ejercicios con feedback}}",
+        "resources": "{count, plural, one {# recurso descargable} other {# recursos descargables}}",
+        "exams": "{count, plural, one {# examen final} other {# exámenes}}"
       }
     },
     "preview": {

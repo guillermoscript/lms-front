@@ -12,7 +12,11 @@ import {
     Infinity,
     Smartphone,
     Award,
-    User
+    User,
+    Code2,
+    FileText,
+    ClipboardCheck,
+    Lock,
 } from "lucide-react";
 import { CourseCover } from '@/components/public/course-cover';
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,6 +35,7 @@ import { getCourseSocialProof } from '@/lib/social-proof';
 import { StarRating } from '@/components/shared/star-rating';
 import { Users } from 'lucide-react';
 import { isFreePreviewEnabled } from '@/lib/settings/free-preview';
+import { lessonThumbnail } from '@/lib/lessons/video-thumbnail';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,13 +127,13 @@ export default async function CourseDetailsPage(props: {
     // Curriculum via admin client: the anon role can only read preview lessons
     // (RLS), but the public page lists every published lesson's title. Metadata
     // only — never select content here.
-    const lessonsPromise = createAdminClient()
+    const lessonsPromise = Promise.resolve(createAdminClient()
         .from('lessons')
         .select('id, title, sequence, description, summary, image, video_url, is_preview')
         .eq('course_id', courseId)
         .eq('tenant_id', tenantId)
         .eq('status', 'published')
-        .order('sequence', { ascending: true });
+        .order('sequence', { ascending: true }));
 
     // Per-lesson exercises / resources and the course's exams, only to count and
     // label them on the curriculum. Same admin-client rationale as the lessons.
@@ -216,6 +221,29 @@ export default async function CourseDetailsPage(props: {
 
     const lessons: Lesson[] = lessonRows ?? [];
     const totalLessons = lessons.length;
+
+    // Curriculum facts, all counted from real rows (nothing invented).
+    const exercisesByLesson = new Map<number, number>();
+    for (const e of exerciseRows ?? []) {
+        if (e.lesson_id != null) exercisesByLesson.set(e.lesson_id, (exercisesByLesson.get(e.lesson_id) ?? 0) + 1);
+    }
+    const resourcesByLesson = new Map<number, number>();
+    for (const r of resourceRows ?? []) {
+        resourcesByLesson.set(r.lesson_id, (resourcesByLesson.get(r.lesson_id) ?? 0) + 1);
+    }
+    const videoCount = lessons.filter((l) => !!l.video_url).length;
+    const readingCount = totalLessons - videoCount;
+    const exerciseCount = (exerciseRows ?? []).length;
+    const resourceCount = (resourceRows ?? []).length;
+    const exams = examRows ?? [];
+    const curriculumStats = ([
+        ['videos', videoCount],
+        ['readings', readingCount],
+        ['exercises', exerciseCount],
+        ['exams', exams.length],
+        ['resources', resourceCount],
+    ] as const).filter(([, n]) => n > 0);
+    const courseTags: string[] = (course.tags ?? []).filter((tag: string) => tag?.trim());
     // Duration comes only from the teacher-set estimate; hidden when unset (#425)
     const durationMinutes: number = course.estimated_duration_minutes ?? 0;
     const hasDuration = durationMinutes > 0;
@@ -353,8 +381,18 @@ export default async function CourseDetailsPage(props: {
                         </ul>
                     )}
 
+                    {courseTags.length > 0 && (
+                        <ul aria-label={t('hero.tags')} className="mt-5 flex flex-wrap gap-2">
+                            {courseTags.map((tag) => (
+                                <li key={tag} className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium">
+                                    {tag}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
                     {instructor && (
-                        <div className="mt-6 flex items-center gap-3">
+                        <div className="mt-5 flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-background overflow-hidden ring-1 ring-border">
                                 {instructor.avatar_url ? (
                                     <img src={instructor.avatar_url} alt={instructor.name} width={36} height={36} className="w-full h-full object-cover" />
@@ -448,6 +486,24 @@ export default async function CourseDetailsPage(props: {
                                                 <span>{t('pricing.includes.duration', { h: estimatedHours, m: estimatedMinutes })}</span>
                                             </li>
                                         )}
+                                        {exerciseCount > 0 && (
+                                            <li className="flex items-center gap-3">
+                                                <Code2 className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                                <span>{t('pricing.includes.exercises', { count: exerciseCount })}</span>
+                                            </li>
+                                        )}
+                                        {resourceCount > 0 && (
+                                            <li className="flex items-center gap-3">
+                                                <FileText className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                                <span>{t('pricing.includes.resources', { count: resourceCount })}</span>
+                                            </li>
+                                        )}
+                                        {exams.length > 0 && (
+                                            <li className="flex items-center gap-3">
+                                                <ClipboardCheck className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                                                <span>{t('pricing.includes.exams', { count: exams.length })}</span>
+                                            </li>
+                                        )}
                                         <li className="flex items-center gap-3">
                                             <Infinity className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                                             <span>{t('pricing.includes.lifetime')}</span>
@@ -504,6 +560,23 @@ export default async function CourseDetailsPage(props: {
                             </p>
                         </div>
 
+                        {curriculumStats.length > 0 && (
+                            <ul className="mb-4 flex flex-wrap gap-2">
+                                {curriculumStats.map(([key, n]) => (
+                                    <li key={key} className="rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium">
+                                        <strong className="font-bold">{n}</strong>{' '}
+                                        <span className="text-muted-foreground">{t(`sections.content.stats.${key}`, { count: n })}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {course.require_sequential_completion && (
+                            <p className="mb-4 flex items-center gap-2 text-[13px] text-muted-foreground">
+                                <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                {t('sections.content.sequential')}
+                            </p>
+                        )}
+
                         {lessons.length > 0 ? (
                             <ol className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
                                 {lessons.map((lesson: Lesson, index: number) => {
@@ -512,24 +585,45 @@ export default async function CourseDetailsPage(props: {
                                     // RLS), so it must not keep badging/linking to a preview
                                     // lesson the school just turned off tenant-wide.
                                     const isPreview = lesson.is_preview && freePreviewEnabled;
+                                    const isVideo = !!lesson.video_url;
+                                    const thumb = lessonThumbnail(lesson);
+                                    const blurb = lesson.summary?.trim() || lesson.description?.trim() || null;
+                                    const meta = [
+                                        isVideo ? t('sections.content.kind.video') : t('sections.content.kind.reading'),
+                                        exercisesByLesson.get(lesson.id) ? t('sections.content.lessonExercises', { count: exercisesByLesson.get(lesson.id)! }) : null,
+                                        resourcesByLesson.get(lesson.id) ? t('sections.content.lessonResources', { count: resourcesByLesson.get(lesson.id)! }) : null,
+                                    ].filter(Boolean).join(' · ');
                                     const row = (
                                         <>
-                                            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-semibold tabular-nums ${isPreview ? 'bg-brand-tint text-brand-text' : 'bg-muted text-muted-foreground'}`}>
-                                                {isPreview ? <PlayCircle className="h-4 w-4" aria-hidden="true" /> : index + 1}
-                                            </span>
-                                            <div className="min-w-0 flex-1">
-                                                <div className={`text-sm font-medium text-foreground truncate ${isPreview ? 'group-hover:text-brand-text transition-colors duration-150' : ''}`}>
-                                                    {lesson.title}
+                                            <div className={`relative aspect-video w-24 sm:w-28 shrink-0 overflow-hidden rounded-lg ${thumb ? 'bg-muted' : 'bg-gradient-to-br from-primary/15 to-primary/5'}`}>
+                                                {thumb && <img src={thumb} alt="" width={224} height={126} loading="lazy" className="h-full w-full object-cover" />}
+                                                <div className="absolute inset-0 flex items-center justify-center text-brand-text">
+                                                    {isVideo ? (
+                                                        <span className={thumb ? 'rounded-full bg-background/85 p-1' : ''}>
+                                                            <PlayCircle className="h-6 w-6" aria-hidden="true" />
+                                                        </span>
+                                                    ) : (
+                                                        <BookOpen className="h-5 w-5 opacity-60" aria-hidden="true" />
+                                                    )}
                                                 </div>
-                                                {lesson.description && (
-                                                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{lesson.description}</p>
-                                                )}
-                                            </div>
-                                            {isPreview && (
-                                                <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand-text border border-primary/25 bg-brand-tint rounded-full px-2 py-0.5">
-                                                    {t('sections.content.previewBadge')}
+                                                <span className="absolute left-1 top-1 rounded bg-background/85 px-1.5 py-[3px] text-[10px] font-bold leading-none tabular-nums text-foreground">
+                                                    {index + 1}
                                                 </span>
-                                            )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className={`text-sm font-semibold leading-snug text-foreground ${isPreview ? 'group-hover:text-brand-text transition-colors duration-150' : ''}`}>
+                                                        {lesson.title}
+                                                    </div>
+                                                    {isPreview && (
+                                                        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand-text border border-primary/25 bg-brand-tint rounded-full px-2 py-0.5">
+                                                            {t('sections.content.previewBadge')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {blurb && <p className="mt-1 text-[13px] leading-snug text-muted-foreground line-clamp-2">{blurb}</p>}
+                                                <div className="mt-1.5 text-xs font-medium text-muted-foreground">{meta}</div>
+                                            </div>
                                         </>
                                     );
                                     return (
@@ -537,16 +631,34 @@ export default async function CourseDetailsPage(props: {
                                             {isPreview ? (
                                                 <Link
                                                     href={`/courses/${params.id}/lessons/${lesson.id}`}
-                                                    className="group flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-150"
+                                                    className="group flex items-start gap-4 px-4 py-3.5 hover:bg-muted/50 transition-colors duration-150"
                                                 >
                                                     {row}
                                                 </Link>
                                             ) : (
-                                                <div className="flex items-center gap-3 px-4 py-3">{row}</div>
+                                                <div className="flex items-start gap-4 px-4 py-3.5">{row}</div>
                                             )}
                                         </li>
                                     );
                                 })}
+                                {exams.map((exam) => (
+                                    <li key={`exam-${exam.exam_id}`} className="flex items-start gap-4 px-4 py-3.5">
+                                        <div className="relative flex aspect-video w-24 sm:w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-tint text-brand-text">
+                                            <Award className="h-6 w-6 opacity-70" aria-hidden="true" />
+                                            <span className="absolute left-1 top-1 rounded bg-background/85 px-1.5 py-[3px] text-[10px] font-bold leading-none text-foreground">
+                                                {t('sections.content.kind.exam')}
+                                            </span>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-sm font-semibold leading-snug text-foreground">{exam.title}</div>
+                                            {exam.duration ? (
+                                                <div className="mt-1.5 text-xs font-medium text-muted-foreground">
+                                                    {t('sections.content.kind.exam')} &middot; {t('sections.content.examMinutes', { count: exam.duration })}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </li>
+                                ))}
                             </ol>
                         ) : (
                             <div className="text-center py-8 text-muted-foreground rounded-xl border border-dashed border-border">
