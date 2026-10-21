@@ -284,67 +284,83 @@ function renderCourseCard({
   palette: OgCardPalette
   headingFontFamily?: string
 }) {
-  const panel = (
+  // The thumbnail sits uncropped-ish in a roomy 10:7 frame (it usually carries its
+  // own lettering, which a half-width cover crop used to cut off) beside the
+  // brand column, instead of splitting the card into two cramped halves.
+  const IMG_W = 600
+  const IMG_H = 420
+  return (
     <div
       style={{
-        width: '50%',
+        width: '100%',
         height: '100%',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 64,
+        gap: 48,
+        padding: '0 64px',
         background: cardBackground(palette),
         color: palette.primaryText,
         fontFamily: 'sans-serif',
       }}
     >
-      <BrandRow logo={logo} label={site} textColor={palette.secondaryText} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {badge ? (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          flex: 1,
+          height: 500,
+        }}
+      >
+        <BrandRow logo={logo} label={site} textColor={palette.secondaryText} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          {badge ? (
+            <div
+              style={{
+                display: 'flex',
+                alignSelf: 'flex-start',
+                fontSize: 20,
+                letterSpacing: 4,
+                textTransform: 'uppercase',
+                color: palette.secondaryText,
+                border: `1px solid ${palette.accent}`,
+                borderRadius: 9999,
+                padding: '8px 22px',
+              }}
+            >
+              {badge}
+            </div>
+          ) : null}
           <div
             style={{
               display: 'flex',
-              alignSelf: 'flex-start',
-              fontSize: 20,
-              letterSpacing: 4,
-              textTransform: 'uppercase',
-              color: palette.secondaryText,
-              border: `1px solid ${palette.accent}`,
-              borderRadius: 9999,
-              padding: '8px 22px',
+              fontSize: title.length > 60 ? 42 : title.length > 36 ? 50 : 60,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              color: palette.primaryText,
+              ...headingFontStyle(headingFontFamily),
             }}
           >
-            {badge}
+            {title}
           </div>
-        ) : null}
-        <div
-          style={{
-            display: 'flex',
-            fontSize: title.length > 60 ? 44 : 56,
-            fontWeight: 700,
-            lineHeight: 1.12,
-            color: palette.primaryText,
-            ...headingFontStyle(headingFontFamily),
-          }}
-        >
-          {title}
         </div>
+        <AccentBar color={palette.accent} />
       </div>
-      <AccentBar color={palette.accent} />
-    </div>
-  )
-
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex' }}>
       {/* eslint-disable-next-line @next/next/no-img-element -- satori renders its own <img>, not the DOM's */}
       <img
         src={thumbnail}
         alt=""
-        width={WIDTH / 2}
-        height={HEIGHT}
-        style={{ width: '50%', height: '100%', objectFit: 'cover' }}
+        width={IMG_W}
+        height={IMG_H}
+        style={{
+          width: IMG_W,
+          height: IMG_H,
+          objectFit: 'cover',
+          borderRadius: 24,
+          border: `3px solid ${palette.accent}`,
+        }}
       />
-      {panel}
     </div>
   )
 }
@@ -355,7 +371,7 @@ function renderCourseCard({
  * Variants (via ?type=):
  *  - generic (default): site + title + subtitle — used by most public pages
  *  - certificate: student achievement card — used by /verify/[code]
- *  - course: thumbnail + brand panel (logo, school name, badge, course title),
+ *  - course: brand column (logo, school name, badge, course title) beside a framed thumbnail,
  *    or the generic layout with the course description when there is no
  *    thumbnail — used by /courses/[id]; falls back to the generic card when the course id
  *    does not resolve to a published course in the current tenant.
