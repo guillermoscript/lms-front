@@ -2590,6 +2590,19 @@
         "deterministic": "These questions are graded against the answer key, without AI.",
         "correct": "Correct",
         "incorrect": "Incorrect"
+      },
+      "imagePicker": {
+        "title": "Choose an image",
+        "description": "Reuse an image you already uploaded or add a new one.",
+        "libraryTab": "My images",
+        "uploadTab": "Upload new",
+        "empty": "No images yet. Upload your first one.",
+        "selectImage": "Use image {name}",
+        "dropHint": "Drag an image here or click to browse",
+        "limits": "JPEG, PNG, GIF or WebP · up to 5MB",
+        "uploading": "Uploading…",
+        "uploadError": "Could not upload the image",
+        "cancel": "Cancel"
       }
     },
     "admin": {
