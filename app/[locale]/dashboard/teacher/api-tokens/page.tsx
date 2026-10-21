@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { listMcpTokens } from '@/app/actions/mcp-tokens'
 import { PageShell } from '@/components/dashboard/page-shell'
 import { getUserSchools } from '@/lib/mcp/user-schools'
+import { tenantOrigin } from '@/lib/tenant/origin'
 import ApiTokensPage from '@/components/dashboard/api-tokens-page'
 
 export default async function TeacherApiTokensPage() {
@@ -16,10 +17,7 @@ export default async function TeacherApiTokensPage() {
   const userId = await getCurrentUserId()
   const schools = userId ? await getUserSchools(userId) : []
   const tenant = await getCurrentTenant()
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
-  const mcpUrl = tenant?.slug
-    ? `https://${tenant.slug}.${platformDomain}/api/mcp/cli`
-    : `https://${platformDomain}/api/mcp/cli`
+  const mcpUrl = `${tenantOrigin(tenant)}/api/mcp/cli`
 
   return (
     <PageShell variant="form">
