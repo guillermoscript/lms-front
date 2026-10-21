@@ -4,15 +4,13 @@ import { getUserSchools } from '@/lib/mcp/user-schools'
 import { ConnectClaudeCard } from '@/components/dashboard/connect-claude-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageShell, PageHeader } from '@/components/dashboard/page-shell'
+import { tenantOrigin } from '@/lib/tenant/origin'
 import { IconCircleCheck } from '@tabler/icons-react'
 
 export default async function StudentAiAssistantPage() {
   const t = await getTranslations('dashboard.student.aiAssistant')
   const tenant = await getCurrentTenant()
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'localhost:3000'
-  const connectorUrl = tenant?.slug
-    ? `https://${tenant.slug}.${platformDomain}/api/mcp`
-    : `https://${platformDomain}/api/mcp`
+  const connectorUrl = `${tenantOrigin(tenant)}/api/mcp`
 
   const userId = await getCurrentUserId()
   const schools = userId ? await getUserSchools(userId) : []
