@@ -5856,7 +5856,9 @@
       "duration": "{h}h {m}m",
       "published": "Published {date}",
       "language": "English",
-      "createdBy": "Created by {name}"
+      "createdBy": "Created by {name}",
+      "readMore": "Read more",
+      "tags": "Tags"
     },
     "sections": {
       "whatYoullLearn": "What you'll learn",
@@ -5867,7 +5869,23 @@
         "totalLength": "{h}h {m}m total length",
         "allLessons": "All Lessons",
         "noLessons": "No lessons available yet.",
-        "previewBadge": "Preview"
+        "previewBadge": "Preview",
+        "stats": {
+          "videos": "{count, plural, one {video} other {videos}}",
+          "readings": "{count, plural, one {reading} other {readings}}",
+          "exercises": "{count, plural, one {exercise} other {exercises}}",
+          "exams": "{count, plural, one {exam} other {exams}}",
+          "resources": "{count, plural, one {resource} other {resources}}"
+        },
+        "sequential": "Lessons are completed in order: each one unlocks the next.",
+        "kind": {
+          "video": "Video",
+          "reading": "Reading",
+          "exam": "Exam"
+        },
+        "lessonExercises": "{count, plural, one {# exercise} other {# exercises}}",
+        "lessonResources": "{count, plural, one {# resource} other {# resources}}",
+        "examMinutes": "{count} min"
       },
       "instructor": {
         "title": "Instructor",
@@ -5895,7 +5913,10 @@
         "duration": "{h}h {m}m of content",
         "lifetime": "Full lifetime access",
         "mobile": "Access on mobile and desktop",
-        "certificate": "Certificate of completion"
+        "certificate": "Certificate of completion",
+        "exercises": "{count, plural, one {# exercise with feedback} other {# exercises with feedback}}",
+        "resources": "{count, plural, one {# downloadable resource} other {# downloadable resources}}",
+        "exams": "{count, plural, one {# final exam} other {# exams}}"
       }
     },
     "preview": {

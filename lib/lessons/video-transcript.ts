@@ -1,5 +1,6 @@
 // Server-side only — fetches external URLs and writes via the caller's client.
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { extractYouTubeId } from './video-thumbnail'
 
 /** One caption segment with its start time in seconds. */
 export interface TranscriptSegment {
@@ -24,21 +25,6 @@ interface LessonForTranscript {
 
 const FETCH_TIMEOUT_MS = 10_000
 const MAX_SEGMENTS = 600
-
-function extractYouTubeId(url: string): string | null {
-  try {
-    const u = new URL(url)
-    if (u.hostname === 'youtu.be') return u.pathname.slice(1) || null
-    if (u.hostname.endsWith('youtube.com')) {
-      if (u.pathname === '/watch') return u.searchParams.get('v')
-      const embed = u.pathname.match(/^\/(embed|shorts|live)\/([\w-]{6,})/)
-      if (embed) return embed[2]
-    }
-  } catch {
-    return null
-  }
-  return null
-}
 
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, {
