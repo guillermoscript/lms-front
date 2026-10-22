@@ -48,7 +48,9 @@ export default async function LandingPageAdminPage({ searchParams }: PageProps) 
   const aiConfigured = await getTenantAiEnabled()
 
   const pagesResult = await getLandingPages(tenantId)
-  const pages = pagesResult.success ? (pagesResult.data ?? []) : []
+  const allRows = pagesResult.success ? (pagesResult.data ?? []) : []
+  const pages = allRows.filter((p) => p.kind === 'page')
+  const parts = allRows.filter((p) => p.kind !== 'page')
 
   // `?newForCourse=<id>` (the course page's "Landing page" button): open the page that already
   // sells this course, or create one from the course template. The course is resolved with the
@@ -60,7 +62,7 @@ export default async function LandingPageAdminPage({ searchParams }: PageProps) 
   // Resolve the ids every page binds (any of them may be opened in the editor); drafts are
   // included, flagged, so the editor can say "publish this course" instead of going blank.
   const landingData = await getLandingData(tenantId, {
-    puckData: [...pages.map((p) => p.puck_data), ...courseProbe],
+    puckData: [...allRows.map((p) => p.puck_data), ...courseProbe],
     includeDrafts: true,
   })
 
@@ -84,6 +86,7 @@ export default async function LandingPageAdminPage({ searchParams }: PageProps) 
       <main className="px-4 py-6 sm:px-6 lg:px-8">
         <LandingPagesClient
           pages={pages}
+          parts={parts}
           plan={plan}
           aiConfigured={aiConfigured}
           tenantId={tenantId}

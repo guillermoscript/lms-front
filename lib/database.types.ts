@@ -3785,6 +3785,7 @@ export type Database = {
         Row: {
           created_at: string
           is_published: boolean
+          kind: string
           page_id: string
           puck_data: Json
           slug: string
@@ -3795,6 +3796,7 @@ export type Database = {
         Insert: {
           created_at?: string
           is_published?: boolean
+          kind?: string
           page_id?: string
           puck_data?: Json
           slug: string
@@ -3805,6 +3807,7 @@ export type Database = {
         Update: {
           created_at?: string
           is_published?: boolean
+          kind?: string
           page_id?: string
           puck_data?: Json
           slug?: string

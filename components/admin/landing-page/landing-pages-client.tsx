@@ -40,6 +40,7 @@ const PuckEditor = dynamic(
 import { TemplatePicker } from './template-picker'
 import {
   createLandingPage,
+  ensureSitePart,
   deleteLandingPage,
   duplicateLandingPage,
   activateLandingPage,
@@ -68,6 +69,8 @@ import { toast } from 'sonner'
 
 interface Props {
   pages: LandingPage[]
+  /** The school's global header / footer rows (kind 'header' | 'footer'), when created. */
+  parts?: LandingPage[]
   plan: string
   /** The school has a usable AI key (BYOK): gates "describe your page". */
   aiConfigured?: boolean
@@ -123,7 +126,7 @@ function uniqueSlug(title: string, pages: LandingPage[]): string {
   return slug
 }
 
-export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = false, tenantId, templates, brandingSettings, landingData, courseIntent = null }: Props) {
+export function LandingPagesClient({ pages: initialPages, parts: initialParts = [], plan, aiConfigured = false, tenantId, templates, brandingSettings, landingData, courseIntent = null }: Props) {
   const router = useRouter()
   const t = useTranslations('landingPageBuilder')
   const locale = useLocale() === 'es' ? 'es' : 'en'
@@ -135,6 +138,13 @@ export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = f
   if (prevInitialPages !== initialPages) {
     setPrevInitialPages(initialPages)
     setPages(initialPages)
+  }
+
+  const [parts, setParts] = useState<LandingPage[]>(initialParts)
+  const [prevInitialParts, setPrevInitialParts] = useState(initialParts)
+  if (prevInitialParts !== initialParts) {
+    setPrevInitialParts(initialParts)
+    setParts(initialParts)
   }
 
   const [editingPage, setEditingPage] = useState<LandingPage | null>(() =>
@@ -289,6 +299,16 @@ export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = f
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseIntent])
 
+  async function handleEditPart(kind: 'header' | 'footer') {
+    const existing = parts.find((p) => p.kind === kind)
+    if (existing) return setEditingPage(existing)
+    const result = await withGuard(`part-${kind}`, () => ensureSitePart(kind))
+    if (!result) return
+    if (!result.success || !result.data) return void toast.error(t('siteParts.failed'))
+    setParts((prev) => [...prev, result.data!])
+    setEditingPage(result.data)
+  }
+
   // ── Puck Editor mode ──
   if (editingPage) {
     return (
@@ -302,10 +322,14 @@ export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = f
         landingData={landingData}
         aiEnabled={plan !== 'free'}
         initialPrompt={initialPrompt}
+        partKind={editingPage.kind === 'page' ? undefined : editingPage.kind}
         // The editor guards unsaved work itself; it hands back the row it last saved so
         // reopening the page before the refresh lands never starts from stale data.
         onBack={(latest) => {
-          if (latest) setPages(prev => prev.map(p => (p.id === latest.id ? latest : p)))
+          if (latest) {
+            setPages(prev => prev.map(p => (p.id === latest.id ? latest : p)))
+            setParts(prev => prev.map(p => (p.id === latest.id ? latest : p)))
+          }
           router.refresh()
           setInitialPrompt(undefined)
           setEditingPage(null)
@@ -340,6 +364,37 @@ export function LandingPagesClient({ pages: initialPages, plan, aiConfigured = f
           </CardContent>
         </Card>
       )}
+
+      {/* Site header & footer: the template parts shared by every public page */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('siteParts.title')}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t('siteParts.description')}</p>
+        </CardHeader>
+        <CardContent>
+          <ul className="divide-y">
+            {(['header', 'footer'] as const).map((kind) => {
+              const part = parts.find((p) => p.kind === kind)
+              return (
+                <li key={kind} className="flex items-center justify-between gap-3 py-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-2 w-2 shrink-0 rounded-full ${part?.is_active ? 'bg-success' : 'bg-border'}`} aria-hidden="true" />
+                    <span className="font-medium">{t(`siteParts.${kind}`)}</span>
+                    {!part && <span className="text-xs text-muted-foreground">{t('siteParts.notCreated')}</span>}
+                    {part && (
+                      <Badge variant={part.is_active ? 'default' : 'secondary'} className="text-xs">{part.status}</Badge>
+                    )}
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-2" disabled={isLoading} onClick={() => handleEditPart(kind)}>
+                    <IconEdit className="h-4 w-4" />
+                    {part ? t('siteParts.edit') : t('siteParts.create')}
+                  </Button>
+                </li>
+              )
+            })}
+          </ul>
+        </CardContent>
+      </Card>
 
       {/* Pages list */}
       <>

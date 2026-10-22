@@ -9,6 +9,7 @@ import { buildPageMetadata, getRequestBaseUrl } from "@/lib/seo";
 import { JsonLd, organizationJsonLd } from "@/lib/structured-data";
 import { PuckPageRenderer } from "@/components/public/landing-page/puck-page-renderer";
 import type { Data } from "@measured/puck";
+import { getGlobalParts } from "@/lib/puck/utils/global-parts-server";
 import { getLandingData } from "@/lib/puck/utils/landing-data";
 import { readRootMeta } from "@/lib/puck/utils/root-meta";
 
@@ -26,6 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       .select('puck_data')
       .eq('tenant_id', tenantId)
       .eq('slug', 'home')
+      .eq('kind', 'page')
       .eq('is_published', true)
       .maybeSingle()
     const meta = readRootMeta(home?.puck_data)
@@ -61,6 +63,7 @@ export default async function LandingPage() {
         .select('puck_data')
         .eq('tenant_id', tenantId)
         .eq('slug', 'home')
+        .eq('kind', 'page')
         .eq('is_published', true)
         .maybeSingle()
       if (customPage?.puck_data && typeof customPage.puck_data === 'object') {
@@ -68,7 +71,7 @@ export default async function LandingPage() {
         return (
           <>
             <JsonLd data={orgStructuredData} />
-            <PuckPageRenderer data={customPage.puck_data as unknown as Data} landingData={landingData} />
+            <PuckPageRenderer data={customPage.puck_data as unknown as Data} landingData={landingData} globalParts={await getGlobalParts(tenantId)} />
           </>
         )
       }

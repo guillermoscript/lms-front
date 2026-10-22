@@ -7306,6 +7306,16 @@
       "faq": "FAQ",
       "terms": "Terms",
       "events": "Events"
+    },
+    "siteParts": {
+      "title": "Site header & footer",
+      "description": "One header and footer shared by every public page of your school: landing pages, courses and checkout. Pages can opt out in their settings.",
+      "header": "Header",
+      "footer": "Footer",
+      "notCreated": "Not set up yet",
+      "edit": "Edit",
+      "create": "Set up",
+      "failed": "Could not open it. Try again."
     }
   },
   "exercises": {
