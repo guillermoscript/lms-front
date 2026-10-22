@@ -162,6 +162,14 @@ function publicRedirectUrl(request: NextRequest, path: string): URL {
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Internal identity headers are written by this proxy only. A caller-supplied
+  // value would otherwise survive to server code on every path that never
+  // reaches the verified `set` below (public pages, /api/*): getCurrentUserId()
+  // and isSuperAdmin() read x-user-id, so a forged one is an impersonation.
+  // Strip first, re-set after verification.
+  request.headers.delete('x-user-id')
+  request.headers.delete('x-tenant-id')
+
   if (pathname.startsWith('/_next')) {
     return NextResponse.next()
   }
